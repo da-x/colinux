@@ -85,7 +85,7 @@ diff -urN a/arch/i386/kernel/Makefile b/arch/i386/kernel/Makefile
 diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 --- a/arch/i386/kernel/cooperative.c
 +++ b/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,352 @@
+@@ -0,0 +1,356 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -217,11 +217,15 @@ diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 +	}
 +}
 +
-+void co_handle_incoming_message(co_message_node_t *node_message)
++void co_handle_incoming_message(co_message_node_t *node_message, struct pt_regs *orig_regs)
 +{
 +	unsigned long flags;
-+	struct pt_regs regs;
++	struct pt_regs regs = {0, };
 +	co_linux_message_t *message;
++
++	if (orig_regs != NULL) {
++		regs.xcs = orig_regs->xcs;
++	}
 +
 +	message = (co_linux_message_t *)&node_message->msg.data;
 +
@@ -552,7 +556,7 @@ diff -urN a/arch/i386/kernel/i8259.c b/arch/i386/kernel/i8259.c
 +	co_passage_page->params[2] = (unsigned long)(&((&interrupt)[10]));
 +	co_passage_page->host_state.flags &= ~(1 << 9); /* Turn IF off */
 +	co_switch_wrapper();
-+	co_callback(flags);
++	co_callback(flags, &regs);
 +}
 +
 +CO_TRACE_CONTINUE;
@@ -8567,7 +8571,7 @@ diff -urN a/include/linux/cooperative_fs.h b/include/linux/cooperative_fs.h
 diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_internal.h
 --- a/include/linux/cooperative_internal.h
 +++ b/include/linux/cooperative_internal.h
-@@ -0,0 +1,84 @@
+@@ -0,0 +1,85 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -8582,6 +8586,7 @@ diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_int
 +#include <linux/config.h>
 +#include <linux/cooperative.h>
 +#include <linux/list.h>
++#include <asm/ptrace.h>
 +
 +#ifdef CONFIG_COOPERATIVE
 +
@@ -8593,7 +8598,7 @@ diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_int
 +extern void co_debug(const char *fmt, ...);
 +extern void co_printk(const char *line);
 +
-+extern void co_callback(unsigned long flags);
++extern void co_callback(unsigned long flags, struct pt_regs *regs);
 +extern void co_switch_wrapper(void);
 +extern void co_idle_processor(void);
 +extern void co_terminate(co_termination_reason_t reason);
@@ -8617,8 +8622,8 @@ diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_int
 +
 +extern void cocd_interrupt(void);
 +
-+extern void co_handle_incoming_messages(void);
-+extern void co_handle_incoming_message(co_message_node_t *message);
++extern void co_handle_incoming_messages(struct pt_regs *regs);
++extern void co_handle_incoming_message(co_message_node_t *message, struct pt_regs *orig_regs);
 +extern void co_queue_incoming_message(co_message_node_t *message);
 +extern int co_get_message(co_message_node_t **message, co_device_t device);
 +extern void co_free_message(co_message_node_t *message);
@@ -8825,7 +8830,7 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +static unsigned long temp_storage_size = 0;
 +static unsigned char temp_storage[CO_VPTR_IO_AREA_SIZE];
 +
-+void co_callback(unsigned long flags)
++void co_callback(unsigned long flags, struct pt_regs *regs)
 +{
 +	long io_size;
 +	unsigned long new_jiffies;
@@ -8869,10 +8874,10 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +	co_passage_page_release(flags);
 +
 +	co_handle_jiffies(new_jiffies);
-+	co_handle_incoming_messages();
++	co_handle_incoming_messages(regs);
 +}
 +
-+void co_handle_incoming_messages(void)
++void co_handle_incoming_messages(struct pt_regs *regs)
 +{
 +	unsigned long flags;
 +
@@ -8907,7 +8912,7 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +		 * Let the interrupt routine of the arch dependant code
 +		 * handle the message, and be responsible to free it.
 +		 */
-+		co_handle_incoming_message(message);
++		co_handle_incoming_message(message, regs);
 +	}
 +
 +	local_irq_restore(flags);
@@ -8922,7 +8927,7 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +	co_passage_page_acquire(&flags);
 +	co_passage_page->operation = CO_OPERATION_IDLE;
 +	co_switch_wrapper();
-+	co_callback(flags);
++	co_callback(flags, NULL);
 +}
 +
 +void co_printk(const char *line)
