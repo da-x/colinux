@@ -438,7 +438,7 @@ missing=no
 
 # General tools for winnt and linux
 check_exec_tool "wget" "wget --version" ""
-check_exec_tool "Python interpreter" "python -V" "2.2.x"
+check_exec_tool "Python interpreter" "python -V" ""
 check_exec_tool "patch" "patch --version" ""
 check_exec_tool "make" "make --version" ""
 check_exec_tool "gnu/gcc" "gcc -dumpversion" "$gnugcc_needed" || gcc_helper
