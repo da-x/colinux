@@ -401,6 +401,8 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 		
 		co_debug("monitor: linux terminated (%d)\n", co_passage_page->params[0]);
 
+		co_passage_page_dump(co_passage_page);
+
 		message.message.from = CO_MODULE_MONITOR;
 		message.message.to = CO_MODULE_DAEMON;
 		message.message.priority = CO_PRIORITY_IMPORTANT;
@@ -412,6 +414,7 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 		co_message_switch_dup_message(&cmon->message_switch, &message.message);
 
 		cmon->state = CO_MONITOR_STATE_TERMINATED;
+
 		return PFALSE;
 	}
 	case CO_OPERATION_MESSAGE_FROM_MONITOR: {

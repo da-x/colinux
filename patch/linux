@@ -1,5 +1,5 @@
 # Old manifest: 999b177514109866d8d34382ff37f3e1e4ad6582
-# New manifest: 5518141481170c446b8afb82658a68ee28d46a05
+# New manifest: e41593d9eb7e0686852fede32bceaea3342c21b9
 # Summary of changes:
 # 
 #   add arch/i386/kernel/cooperative.c
@@ -66,7 +66,7 @@
 # 
 #   patch arch/i386/kernel/i8259.c
 #    from 3c2dcc7c559b0e2c9a27a696c097fff34cdf2837
-#      to bb11274d7fe637489e633e39ec2582dfb108cb49
+#      to 4c2de1ba441db5cd5f983775b795132bef130520
 # 
 #   patch arch/i386/kernel/ioport.c
 #    from 6cf2452a8c0079a0aaca8ecb19aeedf2eb3e2f7c
@@ -227,6 +227,10 @@
 #   patch include/linux/major.h
 #    from d6a0ab425ee2c409d6e7961d686fcc639fae0c5f
 #      to 5e7ab35d3f41a1b3e72747c3b1d8f6bdbe9149fd
+# 
+#   patch init/main.c
+#    from 145db53be1c5b9bde37eeb46c157f9121096ad43
+#      to e49d77317bdcdb87bb44a092640080db24957f04
 # 
 #   patch kernel/Makefile
 #    from a3e8d06b20cc3ad83e12a056ee1c9bf06f3c1628
@@ -2951,7 +2955,17 @@
  /*
   * This is the 'legacy' 8259A Programmable Interrupt Controller,
   * present in the majority of PC/AT boxes.
-@@ -407,6 +485,65 @@
+@@ -343,6 +421,9 @@
+ {
+ 	int i;
+ 
++	if (cooperative_mode_enabled())
++		return;
++
+ #ifdef CONFIG_X86_LOCAL_APIC
+ 	init_bsp_APIC();
+ #endif
+@@ -407,6 +410,65 @@
  
  device_initcall(init_timer_sysfs);
  
@@ -4191,6 +4205,24 @@
  
  #define SCSI_DISK8_MAJOR	128
  #define SCSI_DISK9_MAJOR	129
+--- init/main.c
++++ init/main.c
+@@ -43,6 +43,7 @@
+ #include <linux/efi.h>
+ #include <linux/unistd.h>
+ #include <linux/rmap.h>
++#include <linux/cooperative_internal.h>
+ 
+ #include <asm/io.h>
+ #include <asm/bugs.h>
+@@ -446,6 +447,7 @@
+ 		panic(panic_later, panic_param);
+ 	profile_init();
+ 	local_irq_enable();
++
+ #ifdef CONFIG_BLK_DEV_INITRD
+ 	if (initrd_start && !initrd_below_start_ok &&
+ 			initrd_start < min_low_pfn << PAGE_SHIFT) {
 --- kernel/Makefile
 +++ kernel/Makefile
 @@ -23,6 +23,7 @@
