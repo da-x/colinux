@@ -7691,7 +7691,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +
 +#include <asm/cooperative.h>
 +
-+#define CO_LINUX_API_VERSION    6
++#define CO_LINUX_API_VERSION    7
 +
 +#pragma pack(0)
 +
