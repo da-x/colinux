@@ -2215,8 +2215,8 @@ diff -urN a/drivers/net/Makefile b/drivers/net/Makefile
  obj-$(CONFIG_ZORRO8390) += zorro8390.o 8390.o
 diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 --- a/drivers/net/conet.c	1970-01-01 02:00:00.000000000 +0200
-+++ b/drivers/net/conet.c	2004-06-22 09:20:07.000000000 +0300
-@@ -0,0 +1,310 @@
++++ b/drivers/net/conet.c	2004-06-22 18:03:45.000000000 +0300
+@@ -0,0 +1,312 @@
 +/*
 + *  Copyright (C) 2003-2004 Dan Aloni <da-x@gmx.net>
 + *  Copyright (C) 2004 Pat Erley
@@ -2249,7 +2249,7 @@ diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 +
 +struct net_device *conet_dev[CO_MODULE_MAX_CONET];
 +
-+void conet_interrupt(int irq, void *dev_id, struct pt_regs *reg_ptr);
++irqreturn_t conet_interrupt(int irq, void *dev_id, struct pt_regs *reg_ptr);
 +
 +static int conet_get_mac(int unit, char *address)
 +{
@@ -2376,7 +2376,7 @@ diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 +	return;
 +}
 +
-+void conet_interrupt(int irq, void *dev_id, struct pt_regs *reg_ptr)
++irqreturn_t conet_interrupt(int irq, void *dev_id, struct pt_regs *reg_ptr)
 +{	
 +	co_linux_message_t *message;
 +
@@ -2386,7 +2386,7 @@ diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 +
 +		if (message->unit < 0  ||  message->unit >= CO_MODULE_MAX_CONET) {
 +			printk("conet intrrupt: buggy network reception\n");
-+			return;
++			return IRQ_HANDLED;
 +		}
 +
 +		dev = conet_dev[message->unit];
@@ -2405,6 +2405,8 @@ diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 +		priv->message = message;
 +		conet_rx(dev); 
 +	}
++
++	return IRQ_HANDLED;
 +}
 +
 +struct net_device_stats* conet_get_stats(struct net_device *dev)
