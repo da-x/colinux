@@ -102,7 +102,7 @@ asm(""							\
  * Read the 'other_map' field, which is the difference between the two
  * mappings.
  */ \
-    "    movl 0x60(%ebp), %eax"              "\n"       \
+    "    movl "CO_ARCH_STATE_STACK_OTHERMAP"(%ebp), %eax"   "\n"  \
    \
 /*  
  * First, we relocate EIP by putting it in 0x64(%ebp). That's why we load
@@ -112,7 +112,7 @@ asm(""							\
  * the 'ret' that follows will put us in 3 intead of 2, but in the other 
  * mapping.
  */ \
-    "    leal 0x68(%ebp), %esp"              "\n"       \
+    "    leal "CO_ARCH_STATE_STACK_RELOCATE_EIP_AFTER"(%ebp), %esp"              "\n"       \
     "    call 2f"                            "\n"       \
     "2:  addl %eax, (%esp)"                  "\n"       \
     "    addl $3f-2b, (%esp)"                "\n"       \
@@ -121,46 +121,46 @@ asm(""							\
     "    movl %ecx, %ebp"                    "\n"       \
 
 
-#define PASSAGE_CODE_WRAP_SWITCH(_inner_)               \
-/* save flags, disable interrupts */			\
-    "    pushfl"                             "\n"	\
-    "    cli"                                "\n"	\
-							\
-/* read return address and state pointers  */		\
-    "    movl 20(%esp), %ebx" /* return addr */ "\n"	\
-    "    movl 28(%esp), %ebp" /* current */     "\n"	\
-    "    movl 32(%esp), %ecx" /* other */       "\n"	\
-							\
-/* save and switch from old esp */			\
-    "    movl %esp, 0x40(%ebp)"              "\n"	\
-    "    movl %ss, 0x44(%ebp)"               "\n"	\
-							\
-/* save flags */					\
-    "    movl (%esp), %eax"                  "\n"	\
-    "    movl %eax, 0x3C(%ebp)"              "\n"	\
-							\
-/* save return address */				\
-    "    movl %ebx, 0x38(%ebp)"              "\n"	\
-							\
-/* save %cs for iret */					\
-    "    movl %cs, %ebx"                     "\n"	\
-    "    movl %ebx, 0x04(%ebp)"              "\n"	\
-							\
-    _inner_						\
-							\
-/* get old ESP in EAX */				\
-    "    lss 0x40(%ebp), %eax"               "\n"	\
-							\
-/* get return address */				\
-    "    movl 0x38(%ebp), %ebx"              "\n"	\
-    "    movl %ebx, 20(%eax)"                "\n"	\
-							\
-/* get flags */						\
-    "    movl 0x3C(%ebp), %ebx"              "\n"	\
-    "    movl %ebx, (%eax)"                  "\n"	\
-							\
-/* switch to old ESP */					\
-    "    lss 0x40(%ebp), %esp"               "\n"       \
+#define PASSAGE_CODE_WRAP_SWITCH(_inner_)				\
+/* save flags, disable interrupts */					\
+    "    pushfl"                             "\n"			\
+    "    cli"                                "\n"			\
+									\
+/* read return address and state pointers  */				\
+    "    movl 20(%esp), %ebx" /* return addr */ "\n"			\
+    "    movl 28(%esp), %ebp" /* current */     "\n"			\
+    "    movl 32(%esp), %ecx" /* other */       "\n"			\
+									\
+/* save and switch from old esp */					\
+    "    movl %esp, "CO_ARCH_STATE_STACK_ESP"(%ebp)"   "\n"		\
+    "    movl %ss, "CO_ARCH_STATE_STACK_SS"(%ebp)"   "\n"		\
+									\
+/* save flags */							\
+    "    movl (%esp), %eax"                  "\n"			\
+    "    movl %eax, "CO_ARCH_STATE_STACK_FLAGS"(%ebp)"    "\n"		\
+									\
+/* save return address */						\
+    "    movl %ebx, "CO_ARCH_STATE_STACK_RETURN_EIP"(%ebp)"   "\n"	\
+									\
+/* save %cs for iret */							\
+    "    movl %cs, %ebx"                     "\n"			\
+    "    movl %ebx, "CO_ARCH_STATE_STACK_CS"(%ebp)"      "\n"		\
+									\
+    _inner_								\
+									\
+/* get old ESP in EAX */						\
+    "    lss "CO_ARCH_STATE_STACK_ESP"(%ebp), %eax" "\n"		\
+									\
+/* get return address */						\
+    "    movl "CO_ARCH_STATE_STACK_RETURN_EIP"(%ebp), %ebx"  "\n"	\
+    "    movl %ebx, 20(%eax)"                "\n"			\
+									\
+/* get flags */								\
+    "    movl "CO_ARCH_STATE_STACK_FLAGS"(%ebp), %ebx"   "\n"		\
+    "    movl %ebx, (%eax)"                  "\n"			\
+									\
+/* switch to old ESP */							\
+    "    lss "CO_ARCH_STATE_STACK_ESP"(%ebp), %esp"   "\n"		\
                                                         \
 /*
  * The trick below creates an interrupt call stack frame, in order
@@ -177,123 +177,123 @@ asm(""							\
     "    iret"                               "\n"       \
     "2:  "                                   "\n"       \
 
-#define PASSAGE_PAGE_PRESERVATION_FXSAVE(_inner_)	\
-    "    fxsave 0x70(%ebp)"                  "\n"	\
-    "    fnclex"                             "\n"	\
-    _inner_						\
-    "    fxrstor 0x70(%ebp)"                 "\n"
-
-#define PASSAGE_PAGE_PRESERVATION_FNSAVE(_inner_)	\
-    "    fnsave 0x70(%ebp)"                  "\n"	\
-    "    fwait"                              "\n"	\
-    _inner_						\
-    "    frstor 0x70(%ebp)"                  "\n"
-
-#define PASSAGE_PAGE_PRESERVATION_DEBUG(_inner_)		\
-/* Put the virtual address of the passage page in EBX */	\
-    "    movl %ebp, %ebx"                    "\n"		\
-    "    andl $0xFFFFF000, %ebx"             "\n"		\
-    "    incb 0x20f(%ebx)"                   "\n"		\
-								\
-/* save DR0 */							\
-    "    movl %dr0, %eax"                    "\n"		\
-    "    movl %eax, 0x48(%ebp)"              "\n"		\
-    "    movl %eax, 0x4(%ebx)"               "\n"		\
-								\
-/* save DR1 */							\
-    "    movl %dr1, %eax"                    "\n"		\
-    "    movl %eax, 0x4C(%ebp)"              "\n"		\
-    "    movl %eax, 0x8(%ebx)"               "\n"		\
-								\
-/* save DR2 */							\
-    "    movl %dr2, %eax"                    "\n"		\
-    "    movl %eax, 0x50(%ebp)"              "\n"		\
-    "    movl %eax, 0xc(%ebx)"               "\n"		\
-								\
-/* save DR3 */							\
-    "    movl %dr3, %eax"                    "\n"		\
-    "    movl %eax, 0x54(%ebp)"              "\n"		\
-    "    movl %eax, 0x10(%ebx)"              "\n"		\
-								\
-/* save DR6 */							\
-    "    movl %dr6, %eax"                    "\n"		\
-    "    movl %eax, 0x58(%ebp)"              "\n"		\
-    "    movl %eax, 0x14(%ebx)"              "\n"		\
-								\
-/* save DR7 */							\
-    "    movl %dr7, %eax"                    "\n"		\
-    "    movl %eax, 0x5C(%ebp)"              "\n"		\
-    "    movl $0x00000700, %eax"             "\n"		\
-    "    movl %eax, 0x18(%ebx)"              "\n"		\
-    "    movl %eax, %dr7"                    "\n"		\
-								\
+#define PASSAGE_PAGE_PRESERVATION_FXSAVE(_inner_)		\
+    "    fxsave "CO_ARCH_STATE_STACK_FXSTATE"(%ebp)"  "\n"	\
+    "    fnclex"                             "\n"		\
     _inner_							\
-								\
-/* Put the virtual address of the passage page in EBX */	\
-    "    movl %ebp, %ebx"                    "\n"		\
-    "    andl $0xFFFFF000, %ebx"             "\n"		\
-								\
-/* load DR0 */							\
-    "    movl 0x48(%ebp), %eax"              "\n"		\
-    "    movl 0x4(%ebx), %ecx"               "\n"		\
-    "    cmpl %eax, %ecx"                    "\n"		\
-    "    jz 1f"                              "\n"		\
-    "    movl %eax, %dr0"                    "\n"		\
-    "1:"                                     "\n"		\
-								\
-/* load DR1 */							\
-    "    movl 0x4C(%ebp), %eax"              "\n"		\
-    "    movl 0x8(%ebx), %ecx"               "\n"		\
-    "    cmpl %eax, %ecx"                    "\n"		\
-    "    jz 1f"                              "\n"		\
-    "    movl %eax, %dr1"                    "\n"		\
-    "1:"                                     "\n"		\
-								\
-/* load DR2 */							\
-    "    movl 0x50(%ebp), %eax"              "\n"		\
-    "    movl 0xC(%ebx), %ecx"               "\n"		\
-    "    cmpl %eax, %ecx"                    "\n"		\
-    "    jz 1f"                              "\n"		\
-    "    movl %eax, %dr2"                    "\n"		\
-    "1:"                                     "\n"		\
-								\
-/* load DR3 */							\
-    "    movl 0x54(%ebp), %eax"              "\n"		\
-    "    movl 0x10(%ebx), %ecx"              "\n"		\
-    "    cmpl %eax, %ecx"                    "\n"		\
-    "    jz 1f"                              "\n"		\
-    "    movl %eax, %dr3"                    "\n"		\
-    "1:"                                     "\n"		\
-								\
-/* load DR6 */							\
-    "    movl 0x58(%ebp), %eax"              "\n"		\
-    "    movl 0x14(%ebx), %ecx"              "\n"		\
-    "    cmpl %eax, %ecx"                    "\n"		\
-    "    jz 1f"                              "\n"		\
-    "    movl %eax, %dr6"                    "\n"		\
-    "1:"                                     "\n"		\
-								\
-/* load DR7 */							\
-    "    movl 0x5C(%ebp), %eax"              "\n"		\
-    "    movl 0x18(%ebx), %ecx"              "\n"		\
-    "    cmpl %eax, %ecx"                    "\n"		\
-    "    jz 1f"                              "\n"		\
-    "    movl %eax, %dr7"                    "\n"		\
-    "1:"                                     "\n"               \
+    "    fxrstor "CO_ARCH_STATE_STACK_FXSTATE"(%ebp)"   "\n"
+
+#define PASSAGE_PAGE_PRESERVATION_FNSAVE(_inner_)		\
+    "    fnsave "CO_ARCH_STATE_STACK_FXSTATE"(%ebp)" "\n"	\
+    "    fwait"                              "\n"		\
+    _inner_							\
+    "    frstor "CO_ARCH_STATE_STACK_FXSTATE"(%ebp)" "\n"
+
+#define PASSAGE_PAGE_PRESERVATION_DEBUG(_inner_)			\
+/* Put the virtual address of the passage page in EBX */		\
+    "    movl %ebp, %ebx"                    "\n"			\
+    "    andl $0xFFFFF000, %ebx"             "\n"			\
+/*  "    incb 0x20f(%ebx)"                   "\n" */			\
+									\
+/* save DR0 */								\
+    "    movl %dr0, %eax"                    "\n"			\
+    "    movl %eax, "CO_ARCH_STATE_STACK_DR0"(%ebp)"              "\n"	\
+    "    movl %eax, 0x4(%ebx)"               "\n"			\
+									\
+/* save DR1 */								\
+    "    movl %dr1, %eax"                    "\n"			\
+    "    movl %eax, "CO_ARCH_STATE_STACK_DR1"(%ebp)"              "\n"	\
+    "    movl %eax, 0x8(%ebx)"               "\n"			\
+									\
+/* save DR2 */								\
+    "    movl %dr2, %eax"                    "\n"			\
+    "    movl %eax, "CO_ARCH_STATE_STACK_DR2"(%ebp)"              "\n"	\
+    "    movl %eax, 0xc(%ebx)"               "\n"			\
+									\
+/* save DR3 */								\
+    "    movl %dr3, %eax"                    "\n"			\
+    "    movl %eax, "CO_ARCH_STATE_STACK_DR3"(%ebp)"              "\n"	\
+    "    movl %eax, 0x10(%ebx)"              "\n"			\
+									\
+/* save DR6 */								\
+    "    movl %dr6, %eax"                    "\n"			\
+    "    movl %eax, "CO_ARCH_STATE_STACK_DR6"(%ebp)"              "\n"	\
+    "    movl %eax, 0x14(%ebx)"              "\n"			\
+									\
+/* save DR7 */								\
+    "    movl %dr7, %eax"                    "\n"			\
+    "    movl %eax, "CO_ARCH_STATE_STACK_DR7"(%ebp)"              "\n"	\
+    "    movl $0x00000700, %eax"             "\n"			\
+    "    movl %eax, 0x18(%ebx)"              "\n"			\
+    "    movl %eax, %dr7"                    "\n"			\
+									\
+    _inner_								\
+									\
+/* Put the virtual address of the passage page in EBX */		\
+    "    movl %ebp, %ebx"                    "\n"			\
+    "    andl $0xFFFFF000, %ebx"             "\n"			\
+									\
+/* load DR0 */								\
+    "    movl "CO_ARCH_STATE_STACK_DR0"(%ebp), %eax"    "\n"		\
+    "    movl 0x4(%ebx), %ecx"               "\n"			\
+    "    cmpl %eax, %ecx"                    "\n"			\
+    "    jz 1f"                              "\n"			\
+    "    movl %eax, %dr0"                    "\n"			\
+    "1:"                                     "\n"			\
+									\
+/* load DR1 */								\
+    "    movl "CO_ARCH_STATE_STACK_DR1"(%ebp), %eax"    "\n"		\
+    "    movl 0x8(%ebx), %ecx"               "\n"			\
+    "    cmpl %eax, %ecx"                    "\n"			\
+    "    jz 1f"                              "\n"			\
+    "    movl %eax, %dr1"                    "\n"			\
+    "1:"                                     "\n"			\
+									\
+/* load DR2 */								\
+    "    movl "CO_ARCH_STATE_STACK_DR2"(%ebp), %eax"    "\n"		\
+    "    movl 0xC(%ebx), %ecx"               "\n"			\
+    "    cmpl %eax, %ecx"                    "\n"			\
+    "    jz 1f"                              "\n"			\
+    "    movl %eax, %dr2"                    "\n"			\
+    "1:"                                     "\n"			\
+									\
+/* load DR3 */								\
+    "    movl "CO_ARCH_STATE_STACK_DR3"(%ebp), %eax"    "\n"		\
+    "    movl 0x10(%ebx), %ecx"              "\n"			\
+    "    cmpl %eax, %ecx"                    "\n"			\
+    "    jz 1f"                              "\n"			\
+    "    movl %eax, %dr3"                    "\n"			\
+    "1:"                                     "\n"			\
+									\
+/* load DR6 */								\
+    "    movl "CO_ARCH_STATE_STACK_DR6"(%ebp), %eax"    "\n"		\
+    "    movl 0x14(%ebx), %ecx"              "\n"			\
+    "    cmpl %eax, %ecx"                    "\n"			\
+    "    jz 1f"                              "\n"			\
+    "    movl %eax, %dr6"                    "\n"			\
+    "1:"                                     "\n"			\
+									\
+/* load DR7 */								\
+    "    movl "CO_ARCH_STATE_STACK_DR7"(%ebp), %eax"    "\n"		\
+    "    movl 0x18(%ebx), %ecx"              "\n"			\
+    "    cmpl %eax, %ecx"                    "\n"			\
+    "    jz 1f"                              "\n"			\
+    "    movl %eax, %dr7"                    "\n"			\
+    "1:"                                     "\n"			\
 
 #define PASSAGE_PAGE_PRESERVATION_COMMON(_inner_)			\
 /* save GDT */								\
-    "    leal 0x20(%ebp), %ebx"              "\n"			\
+    "    leal "CO_ARCH_STATE_STACK_GDT"(%ebp), %ebx"        "\n"	\
     "    sgdt (%ebx)"                        "\n"			\
 									\
 /* save TR */								\
     "    xor %eax, %eax"                     "\n"			\
     "    str %ax"                            "\n"			\
-    "    movw %ax, 0x36(%ebp)"               "\n"			\
+    "    movw %ax, "CO_ARCH_STATE_STACK_TR"(%ebp)"          "\n"	\
 									\
-/*									
- * If TR is not 0, turn off our task's BUSY bit so we don't get a GPF	
- * on the way back.							
+/*									\
+ * If TR is not 0, turn off our task's BUSY bit so we don't get a GPF	\
+ * on the way back.							\
  */									\
     "    cmpw $0, %ax"                       "\n"			\
     "    jz 1f"                              "\n"			\
@@ -303,20 +303,20 @@ asm(""							\
     "1:"                                     "\n"			\
 									\
 /* save LDT */								\
-    "    sldt 0x2E(%ebp)"                    "\n"			\
+    "    sldt "CO_ARCH_STATE_STACK_LDT"(%ebp)"                    "\n"	\
 									\
 /* save IDT */								\
-    "    sidt 0x30(%ebp)"                    "\n"			\
+    "    sidt "CO_ARCH_STATE_STACK_IDT"(%ebp)"                    "\n"	\
 									\
 /* save segment registers */						\
     "    movl %gs, %ebx"                     "\n"			\
-    "    movl %ebx, 0x2A(%ebp)"              "\n"			\
+    "    movl %ebx, "CO_ARCH_STATE_STACK_GS"(%ebp)"              "\n"	\
     "    movl %fs, %ebx"                     "\n"			\
-    "    movl %ebx, 0x26(%ebp)"              "\n"			\
+    "    movl %ebx, "CO_ARCH_STATE_STACK_FS"(%ebp)"              "\n"	\
     "    movl %ds, %ebx"                     "\n"			\
-    "    movl %ebx, 0x08(%ebp)"              "\n"			\
+    "    movl %ebx, "CO_ARCH_STATE_STACK_DS"(%ebp)"              "\n"	\
     "    movl %es, %ebx"                     "\n"			\
-    "    movl %ebx, 0x0C(%ebp)"              "\n"			\
+    "    movl %ebx, "CO_ARCH_STATE_STACK_ES"(%ebp)"              "\n"	\
 									\
 /* be on the safe side and nullify the segment registers */		\
     "    movl $0, %ebx"                      "\n"			\
@@ -325,68 +325,68 @@ asm(""							\
 									\
 /* save CR4 */								\
     "    movl %cr4, %eax"                    "\n"			\
-    "    movl %eax, 0x14(%ebp)"              "\n"			\
+    "    movl %eax, "CO_ARCH_STATE_STACK_CR4"(%ebp)"              "\n"	\
 									\
 /* save CR2 */								\
     "    movl %cr2, %eax"                    "\n"			\
-    "    movl %eax, 0x18(%ebp)"              "\n"			\
+    "    movl %eax, "CO_ARCH_STATE_STACK_CR2"(%ebp)"              "\n"	\
 									\
 /* save CR0 */								\
     "    movl %cr0, %eax"                    "\n"			\
-    "    movl %eax, 0x1C(%ebp)"              "\n"			\
+    "    movl %eax, "CO_ARCH_STATE_STACK_CR0"(%ebp)"              "\n"	\
 									\
 /* save CR3 */								\
     "    movl %cr3, %eax"                    "\n"			\
-    "    movl %eax, 0x10(%ebp)"              "\n"			\
+    "    movl %eax, "CO_ARCH_STATE_STACK_CR3"(%ebp)"      "\n"		\
 									\
 _inner_									\
 									\
 /* load other's CR3 */							\
 									\
-    "    movl 0x10(%ebp), %eax"              "\n"			\
+    "    movl "CO_ARCH_STATE_STACK_CR3"(%ebp), %eax"    "\n"		\
     "    movl %eax, %cr3"                    "\n"			\
 									\
 /* load other's CR0 */							\
 									\
-    "    movl 0x1C(%ebp), %eax"              "\n"			\
+    "    movl "CO_ARCH_STATE_STACK_CR0"(%ebp), %eax"              "\n"	\
     "    movl %eax, %cr0"                    "\n"			\
 									\
 /* load other's CR2 */							\
 									\
-    "    movl 0x18(%ebp), %eax"              "\n"			\
+    "    movl "CO_ARCH_STATE_STACK_CR2"(%ebp), %eax"              "\n"	\
     "    movl %eax, %cr2"                    "\n"			\
 									\
 /* load other's CR4 */							\
-    "    movl 0x14(%ebp), %eax"              "\n"			\
+    "    movl "CO_ARCH_STATE_STACK_CR4"(%ebp), %eax"              "\n"	\
     "    movl %eax, %cr4"                    "\n"			\
 									\
 /* load other's GDT */							\
-    "    lgdt 0x20(%ebp)"                    "\n"			\
+    "    lgdt "CO_ARCH_STATE_STACK_GDT"(%ebp)"                    "\n"	\
 									\
 /* load IDT */								\
-    "    lidt 0x30(%ebp)"                    "\n"			\
+    "    lidt "CO_ARCH_STATE_STACK_IDT"(%ebp)"                    "\n"	\
 									\
 /* load LDT */								\
-    "    lldt 0x2E(%ebp)"                    "\n"			\
+    "    lldt "CO_ARCH_STATE_STACK_LDT"(%ebp)"                    "\n"	\
 									\
 /* load segment registers */						\
-    "    movl 0x2A(%ebp), %ebx"              "\n"			\
+    "    movl "CO_ARCH_STATE_STACK_GS"(%ebp), %ebx"              "\n"	\
     "    movl %ebx, %gs"                     "\n"			\
-    "    movl 0x26(%ebp), %ebx"              "\n"			\
+    "    movl "CO_ARCH_STATE_STACK_FS"(%ebp), %ebx"              "\n"	\
     "    movl %ebx, %fs"                     "\n"			\
-    "    movl 0x0C(%ebp), %ebx"              "\n"			\
+    "    movl "CO_ARCH_STATE_STACK_ES"(%ebp), %ebx"              "\n"	\
     "    movl %ebx, %es"                     "\n"			\
-    "    movl 0x08(%ebp), %ebx"              "\n"			\
+    "    movl "CO_ARCH_STATE_STACK_DS"(%ebp), %ebx"              "\n"	\
     "    movl %ebx, %ds"                     "\n"			\
-    "    movl 0x44(%ebp), %ebx"              "\n"			\
+    "    movl "CO_ARCH_STATE_STACK_SS"(%ebp), %ebx"              "\n"	\
     "    movl %ebx, %ss"                     "\n"			\
 									\
 /* load TR */								\
-    "    movw 0x36(%ebp), %ax"               "\n"			\
+    "    movw "CO_ARCH_STATE_STACK_TR"(%ebp), %ax"               "\n"	\
     "    cmpw $0, %ax"                       "\n"			\
     "    jz 1f"                              "\n"			\
     "    ltr %ax"                            "\n"			\
-    "1:"                                     "\n"			\
+    "1:"                                     "\n"
 
 PASSAGE_CODE_WRAP_IBCS(
 	co_monitor_passage_func_fxsave, 

@@ -43,11 +43,11 @@ class console_widget_NT_t:public console_widget_t {
 
 	co_rc_t op_scroll_up(co_console_unit &topRow, co_console_unit &bottomRow, co_console_unit &lines);
 	co_rc_t op_scroll_down(co_console_unit &topRow, co_console_unit &bottomRow, co_console_unit &lines);
-	co_rc_t op_putcs(co_console_unit &Y, co_console_unit &X, co_console_code *data, co_console_unit &length);
+	co_rc_t op_putcs(co_console_unit &Y, co_console_unit &X, co_console_character *data, co_console_unit &length);
 	co_rc_t op_putc(co_console_unit &Y, co_console_unit &X, co_console_character &charattr);
 	co_rc_t op_cursor(co_cursor_pos_t & position);
 	co_rc_t op_clear(co_console_unit &T, co_console_unit &L,
-			 co_console_unit &B, co_console_unit &R);
+			 co_console_unit &B, co_console_unit &R, co_console_character charattr);
 	co_rc_t op_bmove(co_console_unit &Y, co_console_unit &X,
 			 co_console_unit &T, co_console_unit &L,
 			 co_console_unit &B, co_console_unit &R);

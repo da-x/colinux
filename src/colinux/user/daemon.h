@@ -66,5 +66,6 @@ extern co_rc_t co_daemon_start_monitor(co_daemon_t *daemon);
 extern co_rc_t co_daemon_run(co_daemon_t *daemon);
 extern void co_daemon_end_monitor(co_daemon_t *daemon);
 extern void co_daemon_destroy(co_daemon_t *daemon);
+extern void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon);
 
 #endif

@@ -227,7 +227,7 @@ console_widget_NT_t::op_scroll_down(co_console_unit &T, co_console_unit &B, co_c
 }
 
 co_rc_t
-console_widget_NT_t::op_putcs(co_console_unit &Y, co_console_unit &X, co_console_code *D, co_console_unit &C)
+console_widget_NT_t::op_putcs(co_console_unit &Y, co_console_unit &X, co_console_character *D, co_console_unit &C)
 {
 	int count;
 
@@ -295,10 +295,12 @@ console_widget_NT_t::op_cursor(co_cursor_pos_t & P)
 }
 
 co_rc_t
-console_widget_NT_t::op_clear(co_console_unit &T, co_console_unit &L, co_console_unit &B, co_console_unit &R)
+console_widget_NT_t::op_clear(co_console_unit &T, co_console_unit &L, co_console_unit &B, co_console_unit &R,
+			      co_console_character charattr)
 {
 	SMALL_RECT r;
 	CHAR_INFO *s;
+	CHAR_INFO clear_blank;
 	COORD c;
 	long y, x;
 
@@ -309,11 +311,14 @@ console_widget_NT_t::op_clear(co_console_unit &T, co_console_unit &L, co_console
 	if( B >= size.Y || R >= size.X )
 		return CO_RC(ERROR);
 
+	clear_blank.Attributes = charattr >> 8;
+	clear_blank.Char.AsciiChar = charattr & 0xff;
+
 	y = T;
 	while(y <= B) {
 		s = &screen[(size.X * y) + (x = L)];
 		while(x++ <= R)
-			*(s++) = blank;
+			*(s++) = clear_blank;
 		y++;
 	}
 
@@ -324,6 +329,7 @@ console_widget_NT_t::op_clear(co_console_unit &T, co_console_unit &L, co_console
 	
 	if (!WriteConsoleOutput(buffer, screen, size, c, &r))
 		co_debug("WriteConsoleOutput() error %d \n", GetLastError());
+
 	return CO_RC(OK);
 }
 

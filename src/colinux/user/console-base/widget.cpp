@@ -113,7 +113,8 @@ co_rc_t console_widget_t::event(co_console_message_t * message)	// UPDATE: & mes
 		co_debug("CO_OPERATION_CONSOLE_CLEAR\n");
 #endif
 		return op_clear(message->clear.top, message->clear.left,
-				message->clear.bottom, message->clear.right);
+				message->clear.bottom, message->clear.right,
+			        message->clear.charattr);
 	case CO_OPERATION_CONSOLE_BMOVE:
 #if NOISY
 		co_debug("CO_OPERATION_CONSOLE_BMOVE\n");

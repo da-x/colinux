@@ -116,6 +116,7 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 
 		while (x < console->x  &&  count > 0) {
 			console->screen[y*console->x + x] = *cells;
+
 			cells++;
 			x++;
 			count--;
@@ -130,6 +131,7 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 		
 		console->screen[y*console->x + x] = 
 			*(co_console_cell_t *)(&message->putc.charattr);
+
 		break;
 	}
 	case CO_OPERATION_CONSOLE_CURSOR_DRAW:
@@ -146,12 +148,13 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 		int l;
 		co_console_cell_t *cell;
 
-		while(t<=b) {
+		while (t <= b) {
 			l = message->clear.left;
 			cell = &console->screen[t*console->x+l];
-			while(l++<=r) {
-				cell->attr = 0x07;
-				(cell++)->ch = ' ';
+			while (l++ <= r) {
+				cell->attr = message->clear.charattr >> 8;
+				cell->ch = message->clear.charattr & 0xff;
+				cell++;
 			}
 			t++;
 		}

@@ -48,7 +48,7 @@ extern "C" {
 
 	virtual co_rc_t op_putcs(co_console_unit &Y,
 				 co_console_unit &X,
-				 co_console_code *data,
+				 co_console_character *data,
 				 co_console_unit &length) = 0;
 
 	virtual co_rc_t op_putc(co_console_unit &Y,
@@ -60,7 +60,8 @@ extern "C" {
 	virtual co_rc_t op_clear(co_console_unit &T,
 				 co_console_unit &L,
 				 co_console_unit &B,
-				 co_console_unit &R) = 0;
+				 co_console_unit &R,
+				 co_console_character charattr) = 0;
 
 	virtual co_rc_t op_bmove(co_console_unit &Y,
 				 co_console_unit &X,

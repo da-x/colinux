@@ -14,11 +14,25 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, char ***args)
 
 	param_scan = szCmdLine;
 
+	while (*param_scan == ' ')
+		param_scan++;
+
 	for (;;) {
 		unsigned long param_advance = 0;
-		while (*param_scan != ' '  &&  *param_scan) {
+		if (*param_scan == '"') {
 			param_scan++;
-			param_advance++;
+			while (*param_scan != '"' &&  *param_scan) {
+				param_scan++;
+				param_advance++;
+			}
+			if (*param_scan == '"')
+				param_scan++;
+		}
+		else {
+			while (*param_scan != ' ' &&  *param_scan) {
+				param_scan++;
+				param_advance++;
+			}
 		}
 
 		if (param_advance != 0)
@@ -41,6 +55,8 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, char ***args)
 	}
 
 	param_scan = szCmdLine;
+	while (*param_scan == ' ')
+		param_scan++;
 
 	for (i = 0; i < param_count; i++) {
 		unsigned long param_advance = 0;
@@ -49,12 +65,24 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, char ***args)
 		if (*param_scan == '\0')
 			break;
 
-		while (*param_scan != ' '  &&  *param_scan) {
+		if (*param_scan == '"') {
 			param_scan++;
-			param_advance++;
+			param_start++;
+			while (*param_scan != '"' &&  *param_scan) {
+				param_scan++;
+				param_advance++;
+			}
+			if (*param_scan == '"')
+				param_scan++;
+		}
+		else {
+			while (*param_scan != ' '  &&  *param_scan) {
+				param_scan++;
+				param_advance++;
+			}
 		}
 		
-		if (param_advance != 0) {
+		if (param_scan != param_start) {
 			param_array[i] = co_os_malloc(param_advance+1);
 			if (param_array[i] == NULL)
 				break;

@@ -835,7 +835,7 @@ co_rc_t co_monitor_run(co_monitor_t *cmon,
 
 	if (cmon->state == CO_MONITOR_STATE_RUNNING) {
 		/* Switch back and forth from Linux */
-		while (co_monitor_iteration(cmon));
+		while (co_monitor_iteration(cmon) == PTRUE);
 	}
 
 	/* Flush messages to userspace */

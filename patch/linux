@@ -3100,8 +3100,8 @@ diff -X bin/dontdiff -urN linux/drivers/video/Makefile linux/drivers/video/Makef
  obj-$(CONFIG_FONT_SUN8x16)        += font_sun8x16.o
 diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.c
 --- linux/drivers/video/cocon.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/drivers/video/cocon.c	2004-03-06 23:10:50.000000000 +0200
-@@ -0,0 +1,492 @@
++++ linux/drivers/video/cocon.c	2004-04-09 13:07:39.000000000 +0300
+@@ -0,0 +1,484 @@
 +/*
 + *  linux/drivers/video/cocon.c -- Cooperative Linux console VGA driver
 + *
@@ -3174,15 +3174,16 @@ diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.
 +static void cocon_init(struct vc_data *c, int init)
 +{
 +	unsigned long flags;
++	co_console_message_t *message;
++	co_message_t *co_message;
++
 +	/* We cannot be loaded as a module, therefore init is always 1 */
 +	c->vc_can_do_color = 1;
 +	c->vc_cols = 80;
 +	c->vc_rows = 25;
 +	c->vc_complement_mask = 0x7700;
-+	c->vc_visible_origin = 0 ;
-+	c->vc_origin = 0 ;
-+	co_console_message_t *message;
-+	co_message_t *co_message;
++	c->vc_visible_origin = 0;
++	c->vc_origin = 0;
 +
 +	co_message = co_send_message_save(&flags);
 +	message = (co_console_message_t *)co_message->data;
@@ -3194,13 +3195,6 @@ diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.
 +	message->type = CO_OPERATION_CONSOLE_INIT;
 +	co_send_message_restore(flags);
 +}
-+
-+/*
-+static inline void vga_set_mem_top(struct vc_data *c)
-+{
-+	co_debug("cocon: %s\n", __FUNCTION__);
-+}
-+*/
 +
 +static void cocon_deinit(struct vc_data *c)
 +{
@@ -3238,6 +3232,7 @@ diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.
 +	message->clear.left = left;
 +	message->clear.bottom = top + rows - 1;
 +	message->clear.right = left + cols - 1;
++	message->clear.charattr = c->vc_video_erase_char;
 +	co_send_message_restore(flags);
 +}
 +
@@ -3302,6 +3297,7 @@ diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.
 +		attr ^= 0x80;
 +	if (intensity == 2)
 +		attr ^= 0x08;
++
 +	return attr;
 +}
 +
@@ -3401,9 +3397,7 @@ diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.
 +	message->type = CO_OPERATION_CONSOLE_SWITCH;
 +	co_send_message_restore(flags);
 +
-+//	return 1;
-+
-+	return 0;	/* Redrawing not needed */
++	return 1;	/* Redrawing not needed */
 +}
 +
 +static int cocon_set_palette(struct vc_data *c, unsigned char *table)
@@ -3540,10 +3534,10 @@ diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.
 +	message->scroll.lines = lines;
 +	co_send_message_restore(flags);
 +
-+	return 1;
++	return 0;
 +}
 +
-+static int cocon_bmove(struct vc_data *c, int sy, int sx, int dy, int dx, int h, int w)
++static void cocon_bmove(struct vc_data *c, int sy, int sx, int dy, int dx, int h, int w)
 +{
 +	unsigned long flags;
 +	co_console_message_t *message;
@@ -3564,8 +3558,6 @@ diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.
 +	message->bmove.bottom = sy + h - 1;
 +	message->bmove.right = sx + w - 1;
 +	co_send_message_restore(flags);
-+
-+	return 1;
 +}
 +
 +/*
@@ -3596,8 +3588,8 @@ diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.
 +MODULE_LICENSE("GPL");
 diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm-i386/cooperative.h
 --- linux/include/asm-i386/cooperative.h	1970-01-01 02:00:00.000000000 +0200
-+++ linux/include/asm-i386/cooperative.h	2004-03-27 15:15:23.000000000 +0200
-@@ -0,0 +1,128 @@
++++ linux/include/asm-i386/cooperative.h	2004-04-09 17:32:40.000000000 +0300
+@@ -0,0 +1,175 @@
 +#ifndef __LINUX_ASM_COOPERATIVE_H__
 +#define __LINUX_ASM_COOPERATIVE_H__
 +
@@ -3614,40 +3606,87 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm
 +typedef struct {
 +	unsigned char border2[0x4];
 +
-+	unsigned long cs;    /* 0x04 */
-+	unsigned long ds;    /* 0x08 */
-+	unsigned long es;    /* 0x0C */
++	unsigned long cs;
++        #define CO_ARCH_STATE_STACK_CS "0x04"
 +
-+	unsigned long cr3;   /* 0x10 */
-+	unsigned long cr4;   /* 0x14 */
-+	unsigned long cr2;   /* 0x18 */
-+	unsigned long cr0;   /* 0x1C */
-+	x86_gdt_t gdt;       /* 0x20 */
++	unsigned long ds;
++        #define CO_ARCH_STATE_STACK_DS "0x08"
 +
-+	unsigned long fs;    /* 0x26 */
-+	unsigned long gs;    /* 0x2A */
-+	unsigned short ldt;  /* 0x2E */
-+	x86_idt_t idt;       /* 0x30 */ 
-+	unsigned short tr;   /* 0x36 */
-+	unsigned long return_eip; /* 0x38 */
-+	unsigned long flags;      /* 0x3C */ 
-+	unsigned long esp;        /* 0x40 */
-+	unsigned long ss;         /* 0x44 */
++	unsigned long es;
++        #define CO_ARCH_STATE_STACK_ES "0x0C"
 +
-+	unsigned long dr0;        /* 0x48 */
-+	unsigned long dr1;        /* 0x4C */
-+	unsigned long dr2;        /* 0x50 */
-+	unsigned long dr3;        /* 0x54 */
-+	unsigned long dr6;        /* 0x58 */
-+	unsigned long dr7;        /* 0x5C */
++	unsigned long cr3;   
++        #define CO_ARCH_STATE_STACK_CR3 "0x10"
 +
-+	unsigned long other_map;  /* 0x60 */
-+	unsigned long relocate_eip;  /* 0x64 */
++	unsigned long cr4;  
++        #define CO_ARCH_STATE_STACK_CR4 "0x14"
++
++	unsigned long cr2;
++        #define CO_ARCH_STATE_STACK_CR2 "0x18"
++
++	unsigned long cr0;
++        #define CO_ARCH_STATE_STACK_CR0 "0x1C"
++
++	x86_gdt_t gdt;
++        #define CO_ARCH_STATE_STACK_GDT "0x20"
++
++	unsigned long fs;    
++        #define CO_ARCH_STATE_STACK_FS  "0x26"
++
++	unsigned long gs;
++        #define CO_ARCH_STATE_STACK_GS  "0x2A"
++
++	unsigned short ldt;
++        #define CO_ARCH_STATE_STACK_LDT "0x2E"
++
++	x86_idt_t idt;
++        #define CO_ARCH_STATE_STACK_IDT "0x30"
++
++	unsigned short tr;   
++        #define CO_ARCH_STATE_STACK_TR  "0x36"
++
++	unsigned long return_eip; 
++        #define CO_ARCH_STATE_STACK_RETURN_EIP  "0x38"
++
++	unsigned long flags;     
++        #define CO_ARCH_STATE_STACK_FLAGS "0x3C"
++
++	unsigned long esp;        
++        #define CO_ARCH_STATE_STACK_ESP "0x40"
++
++	unsigned long ss;    
++        #define CO_ARCH_STATE_STACK_SS "0x44"
++
++	unsigned long dr0;        
++        #define CO_ARCH_STATE_STACK_DR0 "0x48"
++
++	unsigned long dr1;      
++        #define CO_ARCH_STATE_STACK_DR1 "0x4C"
++
++	unsigned long dr2;       
++        #define CO_ARCH_STATE_STACK_DR2 "0x50"
++
++	unsigned long dr3;
++        #define CO_ARCH_STATE_STACK_DR3 "0x54"
++
++	unsigned long dr6;
++        #define CO_ARCH_STATE_STACK_DR6 "0x58"
++
++	unsigned long dr7;
++        #define CO_ARCH_STATE_STACK_DR7 "0x5C"
++
++	unsigned long other_map;
++        #define CO_ARCH_STATE_STACK_OTHERMAP "0x60"
++
++	unsigned long relocate_eip; 
++        #define CO_ARCH_STATE_STACK_RELOCATE_EIP "0x64"
++        #define CO_ARCH_STATE_STACK_RELOCATE_EIP_AFTER "0x68"
 +
 +	unsigned long pad1;
 +	unsigned long pad2;
 +
-+	unsigned char fxstate[0x200]; /* 0x70 */
++	unsigned char fxstate[0x200];
++        #define CO_ARCH_STATE_STACK_FXSTATE "0x70"
 +} __attribute__((packed)) co_arch_state_stack_t;
 +
 +extern void co_debug(const char *fmt, ...);
@@ -3728,7 +3767,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm
 +#endif
 diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dma.h
 --- linux/include/asm-i386/dma.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/dma.h	2004-04-08 22:16:46.000000000 +0300
++++ linux/include/asm-i386/dma.h	2004-04-09 12:41:21.000000000 +0300
 @@ -268,6 +268,8 @@
   *
   * Assumes DMA flip-flop is clear.
@@ -3749,7 +3788,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dm
  extern int request_dma(unsigned int dmanr, const char * device_id);	/* reserve a DMA channel */
 diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.h
 --- linux/include/asm-i386/io.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/io.h	2004-04-08 22:16:14.000000000 +0300
++++ linux/include/asm-i386/io.h	2004-04-09 12:41:21.000000000 +0300
 @@ -2,6 +2,7 @@
  #define _ASM_IO_H
  
@@ -4025,8 +4064,8 @@ diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/cons
  
 diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/cooperative.h
 --- linux/include/linux/cooperative.h	1970-01-01 02:00:00.000000000 +0200
-+++ linux/include/linux/cooperative.h	2004-04-08 22:25:56.000000000 +0300
-@@ -0,0 +1,294 @@
++++ linux/include/linux/cooperative.h	2004-04-09 12:39:26.000000000 +0300
+@@ -0,0 +1,295 @@
 +#ifndef __LINUX_COOPERATIVE_H__
 +#define __LINUX_COOPERATIVE_H__
 +
@@ -4200,7 +4239,7 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +
 +
 +typedef char co_console_code;
-+typedef unsigned char co_console_character;
++typedef unsigned short co_console_character;
 +typedef unsigned short co_console_unit;
 +
 +typedef struct {
@@ -4221,7 +4260,7 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +			co_console_unit y;
 +			co_console_unit x;
 +			co_console_unit count;
-+			co_console_code data[];
++			co_console_character data[];
 +		} putcs;
 +		struct {
 +			co_console_unit x;
@@ -4233,6 +4272,7 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +			co_console_unit left;
 +			co_console_unit bottom;
 +			co_console_unit right;
++			co_console_character charattr;
 +		} clear;
 +		struct {
 +			co_console_unit y;

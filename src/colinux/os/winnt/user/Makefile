@@ -18,7 +18,6 @@ LOCAL_OBJS = \
 	daemon.o \
 	exec.o \
 
-
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 
 $(LOCAL_OBJS) : %.o : %.c 

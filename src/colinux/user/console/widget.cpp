@@ -187,9 +187,9 @@ void console_widget_t::draw()
 				fl_color(0xff, 0xff, 0xff);
 				fl_rectf(cx + letter_x * console->cursor.x, 
 					 cy + letter_y * console->cursor.y + 
-					 (letter_y * ((CO_CURSOR_POS_SIZE * console->cursor.height) / 100 )),
-					 letter_x,
-					 (letter_y * ((CO_CURSOR_POS_SIZE * console->cursor.height) / 100 )));
+					 (letter_y * (CO_CURSOR_POS_SIZE - console->cursor.height)) / CO_CURSOR_POS_SIZE,
+					 letter_x, 
+					 (letter_y * console->cursor.height) / CO_CURSOR_POS_SIZE);
 			}
 		}
 	}

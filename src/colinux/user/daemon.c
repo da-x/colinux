@@ -419,6 +419,27 @@ co_rc_t co_daemon_handle_printk(void *data, co_message_t *message)
 	return CO_RC(OK);
 }
 
+void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon)
+{
+	struct {
+		co_message_t message;
+		co_linux_message_t linux_msg;
+		co_linux_message_power_t data;
+	} message;
+
+	message.message.from = CO_MODULE_DAEMON;
+	message.message.to = CO_MODULE_LINUX;
+	message.message.priority = CO_PRIORITY_IMPORTANT;
+	message.message.type = CO_MESSAGE_TYPE_OTHER;
+	message.message.size = sizeof(message.linux_msg) + sizeof(message.data);
+	message.linux_msg.device = CO_DEVICE_POWER;
+	message.linux_msg.unit = 0;
+	message.linux_msg.size = sizeof(message.data);
+	message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
+
+	co_message_switch_dup_message(&daemon->message_switch, &message.message);
+}
+
 co_rc_t co_daemon_handle_daemon(void *data, co_message_t *message)
 {
 	co_daemon_t *daemon = (typeof(daemon))(data);
@@ -439,8 +460,7 @@ co_rc_t co_daemon_handle_daemon(void *data, co_message_t *message)
 			break;
 		}
 		case CO_MONITOR_MESSAGE_TYPE_DEBUG_LINE: {
-			extern void co_daemon_debug(const char *str);
-			co_daemon_debug(daemon_message->data);
+			debug(daemon, "DEBUG: %s", daemon_message->data);
 			break;
 		}
 		}
@@ -468,23 +488,7 @@ co_rc_t co_daemon_handle_daemon(void *data, co_message_t *message)
 			daemon->running = PFALSE;
 
 		} else if (console_message->console.type == CO_DAEMON_CONSOLE_MESSAGE_CTRL_ALT_DEL) {
-			struct {
-				co_message_t message;
-				co_linux_message_t linux_msg;
-				co_linux_message_power_t data;
-			} message;
-
-			message.message.from = CO_MODULE_DAEMON;
-			message.message.to = CO_MODULE_LINUX;
-			message.message.priority = CO_PRIORITY_IMPORTANT;
-			message.message.type = CO_MESSAGE_TYPE_OTHER;
-			message.message.size = sizeof(message.linux_msg) + sizeof(message.data);
-			message.linux_msg.device = CO_DEVICE_POWER;
-			message.linux_msg.unit = 0;
-			message.linux_msg.size = sizeof(message.data);
-			message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
-			
-			co_message_switch_dup_message(&daemon->message_switch, &message.message);
+			co_daemon_send_ctrl_alt_del(daemon);
 		}
 	}
 

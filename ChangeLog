@@ -1,12 +1,24 @@
 * Version 0.6.1 
   * Linux port (for systems running kernel 2.6.x)
+  * Added the ability to send Ctrl-Alt-Del.
   * Windows: 
     * Sizes of raw partition devices are now detected properly. This 
       means that the resierfs problems should be over, plus cat /dev/cobd* 
       would work for you.
     * Suspension of the host machine won't cause colinux-daemon problems like 
-      a memory leak.
-  * The console can now send Ctrl-Alt-Del.
+      memory leaks.
+    * NSIS installer: Install cygwin1.dll only if it is not already in
+      the user's search path. This will help to avoid multiply cygwin1.dll
+      versions on the system (NEBOR Regis)
+    * The daemon can install itself as a service (Jaroslaw Kowalski). 
+      Stopping the service sends Ctrl-Alt-Del so that the Linux machine
+      shuts down cleanly.
+  * Consoles: 
+    * Fixed a bug in the clear operation: let it clear with the right video 
+      erase character so that ncurses apps would appear properly.
+    * Fixed virtual console switching (alt-f1, alt-f2, etc.) so it will
+      save/redraw the screen like it should.
+    * FLTK: The cursor is visible again.
   * Updated the cobuild.sh script (gboutwel).
 	
 * Version 0.6.0 AKA "Getting even"

@@ -133,7 +133,18 @@ Section "coLinux" SeccoLinux
   File "premaid\vmlinux"
   File "premaid\vmlinux-modules.tar.gz"
   File "premaid\README"
+
+  ;Backup config file if present
+  IfFileExists "$INSTDIR\default.coLinux.xml" 0 +1
+  CopyFiles /SILENT "$INSTDIR\default.coLinux.xml" "$INSTDIR\default.coLinux.xml.old"
   File "..\..\..\..\..\..\conf\default.coLinux.xml"
+
+  ; Is the cygwin dll in our path ?
+  SearchPath $R0 "cygwin1.dll"
+  StrCmp $R0 "" 0 CygwinNotNeeded
+  File "premaid\cygwin1.dll"
+  CygwinNotNeeded:
+
 
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
@@ -278,22 +289,6 @@ Function StartDlImageFunc
 FunctionEnd
 
 
-Section "Cygwin DLL" SecCygwinDll
-
-  ;---------------------------------------------------------------FILES--
-  ;----------------------------------------------------------------------
-  ; Our Files . If you adds something here, Remember to delete it in 
-  ; the uninstall section
-
-  SetOutPath "$INSTDIR"
-  File "premaid\cygwin1.dll"
-
-  ;--------------------------------------------------------------/FILES--
-  ;----------------------------------------------------------------------
-
-SectionEnd
-
-
 ;--------------------
 ;Post-install section
 
@@ -356,14 +351,12 @@ SectionEnd
   LangString DESC_SeccoLinux ${LANG_ENGLISH} "Install coLinux"
   LangString DESC_SeccoLinuxNet ${LANG_ENGLISH} "Install coLinux Virtual Ethernet Driver, which allows to create a network link between Linux and Windows"
   LangString DESC_SeccoLinuxBridgedNet ${LANG_ENGLISH} "Install coLinux Bridge Ethernet support, which allows to join the coLinux machine to an existing network"
-  LangString DESC_SecCygwinDll ${LANG_ENGLISH} "Install the Cygwin DLL (only needed if you don't already have Cygwin installed, see www.cygwin.com)"
   LangString DESC_SecImage ${LANG_ENGLISH} "Download an image from sourceforge. Also provide useful links on how to use it"
 
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinux} $(DESC_SeccoLinux)
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxNet} $(DESC_SeccoLinuxNet)
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxBridgedNet} $(DESC_SeccoLinuxBridgedNet)
-    !insertmacro MUI_DESCRIPTION_TEXT ${SecCygwinDll} $(DESC_SecCygwinDll)
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxImage} $(DESC_SecImage)  
   !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
