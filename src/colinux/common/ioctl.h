@@ -88,6 +88,7 @@ typedef struct {
 
 typedef enum {
 	CO_MONITOR_MESSAGE_TYPE_TERMINATED,
+	CO_MONITOR_MESSAGE_TYPE_DEBUG_LINE,
 } co_monitor_message_type_t;
 
 typedef struct {

@@ -103,3 +103,4 @@ void co_monitor_file_block_shutdown(co_monitor_file_block_dev_t *dev)
 		dev->state = CO_MONITOR_FILE_BLOCK_CLOSED;
 	}
 }
+

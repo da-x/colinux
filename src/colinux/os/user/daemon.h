@@ -22,5 +22,6 @@ extern co_rc_t co_os_daemon_get_message(co_daemon_handle_t handle,
 					unsigned long timeout);
 extern co_rc_t co_os_daemon_send_message(co_daemon_handle_t handle, co_message_t *message);
 extern void co_os_daemon_close(co_daemon_handle_t handle);
+extern void co_daemon_debug(char *str);
 
 #endif

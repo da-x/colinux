@@ -541,6 +541,46 @@ co_rc_t co_monitor_send_messages_to_linux(co_monitor_t *cmon)
 	return CO_RC(OK);
 }
 
+void co_monitor_debug_line(co_monitor_t *cmon, const char *text)
+{
+	struct {
+		co_message_t message;
+		co_daemon_message_t payload;
+		char data[0];
+	} *message = NULL;
+	unsigned long size;
+
+	size = sizeof(message->payload) + strlen(text) + 1;
+	message = (typeof(message))co_os_malloc(size + sizeof(message->message));
+	if (message == NULL)
+		return;
+
+	message->message.from = CO_MODULE_MONITOR;
+	message->message.to = CO_MODULE_DAEMON;
+	message->message.priority = CO_PRIORITY_IMPORTANT;
+	message->message.type = CO_MESSAGE_TYPE_STRING;
+	message->message.size = size;
+	message->payload.type = CO_MONITOR_MESSAGE_TYPE_DEBUG_LINE;
+	memcpy(message->data, text, strlen(text)+1);
+
+	co_message_switch_message(&cmon->message_switch, &message->message);
+}
+
+void co_unsigned_long_to_hex(char *text, unsigned long number)
+{
+	int count = 8;
+
+	text += count;
+	while (count) {
+		int digit = number & 0xf;
+
+		count--;
+		*text = (digit >= 10) ? (digit + 'a') : (digit + '0');
+		number >>= 4;
+		text--;
+	}
+}
+
 bool_t co_monitor_iteration(co_monitor_t *cmon)
 {
 	switch (co_passage_page->operation) {
@@ -594,6 +634,35 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 
 		return PFALSE;
 	}
+
+        case CO_OPERATION_DEBUG_LINE: {
+		char *p = (char *)&co_passage_page->params[0];
+		p[0x200] = '\0';
+		co_monitor_debug_line(cmon, p);
+
+#if (1)	
+		{
+			/* DEBUG HACK */
+			char buf[0x50];
+			memset(buf, ' ', sizeof(buf));
+
+			co_unsigned_long_to_hex(&buf[0], co_passage_page->colx_state.cs);
+			co_unsigned_long_to_hex(&buf[0x9*1], co_passage_page->colx_state.ds);
+			co_unsigned_long_to_hex(&buf[0x9*2], co_passage_page->colx_state.es);
+			co_unsigned_long_to_hex(&buf[0x9*3], co_passage_page->colx_state.fs);
+			co_unsigned_long_to_hex(&buf[0x9*4], co_passage_page->colx_state.gs);
+			co_unsigned_long_to_hex(&buf[0x9*5], co_passage_page->colx_state.ss);
+			co_unsigned_long_to_hex(&buf[0x9*6], co_passage_page->colx_state.ldt);
+			buf[0x9*7] = '\n';
+			buf[0x9*7+1] = '\0';
+
+			co_monitor_debug_line(cmon, buf);
+		}
+#endif
+
+                return PFALSE;
+        }
+
 	case CO_OPERATION_MESSAGE_TO_MONITOR: {
 		co_message_t *message;
 		co_rc_t rc;
@@ -757,10 +826,14 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 		cmon->memory_size = cmon->config.ram_size;
 	}
 
+	co_debug("monitor: configured to %d MB\n", cmon->memory_size);
+
 	if (cmon->memory_size < 8)
 		cmon->memory_size = 8;
 	else if (cmon->memory_size > 192)
 		cmon->memory_size = 192;
+
+	co_debug("monitor: after adjustments: %d MB\n", cmon->memory_size);
 
 	/*
 	 * FIXME: Currently the number of bootmem pages is hardcored, but we can easily
@@ -769,7 +842,6 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	 * more smaller structures. 
 	 */
 	cmon->bootmem_pages = 0x800;
-
 	cmon->memory_size <<= 20; /* Megify */
 
 	cmon->physical_frames = cmon->memory_size >> PAGE_SHIFT;

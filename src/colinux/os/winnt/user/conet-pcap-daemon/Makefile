@@ -2,15 +2,14 @@
 ifeq ($(BUILD_ROOT),)
 BUILD_ROOT=../../../../..
 include $(BUILD_ROOT)/Makefile
-else
-BUILD_PATH := $(BUILD_PATH)/daemon
+else	
+BUILD_PATH := $(BUILD_PATH)/conet-pcap-daemon
 #-----------------------------------------------------------------
 
-LOCAL_EXE = $(BUILD_PATH)/colinux-daemon.exe
+LOCAL_EXE = $(BUILD_PATH)/colinux-pcap-daemon.exe
 USER_CFLAGS += $(CFLAGS) 
 
-LOCAL_OBJS = \
-	main.o \
+LOCAL_OBJS = main.o
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 
@@ -21,11 +20,11 @@ LOCAL_TARGETS = $(LOCAL_OBJS) $(LOCAL_EXE)
 
 $(LOCAL_EXE) : \
 	$(BUILD_ROOT)/colinux/common/common.o \
+	$(BUILD_ROOT)/colinux/user/user.a \
 	$(BUILD_ROOT)/colinux/os/current/user/user.o \
-	$(LOCAL_OBJS) \
-	$(BUILD_ROOT)/colinux/user/user.a
+	$(LOCAL_OBJS)
 
-	$(CC) $^ -o $@ -luser32 -lgdi32 -lkernel32 -lmxml
+	$(CC) $^ -o $@ -luser32 -lgdi32 -lkernel32 -lmxml -lwpcap -lwsock32
 
 CLEAN_FILES := $(CLEAN_FILES) \
 	$(LOCAL_OBJS) $(LOCAL_EXE)

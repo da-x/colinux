@@ -20,11 +20,11 @@ LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 $(LOCAL_OBJS) : %.o : %.c
 	$(TOOL_USER_CC)
 
-$(BUILD_PATH)/user.o : $(LOCAL_OBJS)
-	$(TOOL_LD_RELOC)
+$(BUILD_PATH)/user.a : $(LOCAL_OBJS)
+	$(TOOL_AR)
 
 CLEAN_FILES := $(CLEAN_FILES) \
-	$(LOCAL_OBJS) $(BUILD_PATH)/user.o 
+	$(LOCAL_OBJS) $(BUILD_PATH)/user.a
 
 #-----------------------------------------------------------------
 include $(call BUILD_SUBDIRS, console)

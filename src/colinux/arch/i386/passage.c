@@ -18,12 +18,15 @@
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/os/kernel/misc.h>
 
-#include <memory.h>
-
-#include <linux/kernel.h>
 #include <linux/cooperative.h>
+#include <linux/kernel.h>
 #include <asm/segment.h>
 #include <asm/pgtable.h>
+#include <asm/smp.h>
+
+/* A hack to reduce Linux kernel headers inclusion */ 
+#define __ASSEMBLY__
+#include <asm/desc.h>
 
 /*
  * These two pseudo variables mark the start and the end of the passage code.
@@ -53,7 +56,8 @@ asm(""
     "    movl 32(%esp), %ecx" /* other */       "\n"
 
 /* save and switch from old esp */
-    "    movl %esp, 0x44(%ebp)"              "\n"
+    "    movl %esp, 0x40(%ebp)"              "\n"
+    "    movl %ss, 0x44(%ebp)"               "\n"
 
 /* save flags */
     "    movl (%esp), %eax"                  "\n"
@@ -61,6 +65,9 @@ asm(""
 
 /* save return address */
     "    movl %ebx, 0x38(%ebp)"              "\n"
+
+/* save FPU / MMX / SSE state */
+    "    fxsave 0x70(%ebp)"                  "\n" 
 
 /* Put the virtual address of the passage page in EBX */
     "    movl %ecx, %ebx"                    "\n"
@@ -133,6 +140,13 @@ asm(""
     "    movl %ebx, 0x08(%ebp)"              "\n"
     "    movl %es, %ebx"                     "\n"
     "    movl %ebx, 0x0C(%ebp)"              "\n"
+    "    movl %cs, %ebx"                     "\n"
+    "    movl %ebx, 0x04(%ebp)"              "\n"
+
+/* be on the safe side and nullify the segment registers */
+    "    movl $0, %ebx"                      "\n"
+    "    movl %ebx, %fs"                     "\n"
+    "    movl %ebx, %gs"                     "\n"
 
 /* save CR4 */
     "    movl %cr4, %eax"                    "\n"
@@ -186,7 +200,7 @@ asm(""
  * ESP with 0x68(%esp). The call that follows puts the EIP where we want.
  * Afterwards the EIP is in %(esp) so we relocate it by adding the 
  * relocation offset. We also add the difference between 2 and 3 so that
- * the ret that follows will put us in 3 intead of 2, but in the other 
+ * the 'ret' that follows will put us in 3 intead of 2, but in the other 
  * mapping.
  */
     "    leal 0x68(%ebp), %esp"              "\n"
@@ -220,7 +234,6 @@ asm(""
     "    movl %eax, %cr4"                    "\n"
 
 /* load other's GDT */
-
     "    lgdt 0x20(%ebp)"                    "\n"
 
 /* load IDT */
@@ -238,13 +251,15 @@ asm(""
     "    movl %ebx, %es"                     "\n"
     "    movl 0x08(%ebp), %ebx"              "\n"
     "    movl %ebx, %ds"                     "\n"
+    "    movl 0x44(%ebp), %ebx"              "\n"
+    "    movl %ebx, %ss"                     "\n"
 
 /* load TR */
     "    movw 0x36(%ebp), %ax"               "\n"
     "    cmpw $0, %ax"                       "\n"
-    "    jz 1f"                              "\n"
+    "    jz 1f"                              "\n" 
     "    ltr %ax"                            "\n"
-    "1:"                                     "\n"
+    "1:"                                     "\n" 
 
 /* Put the virtual address of the passage page in EBX */
     "    movl %ebp, %ebx"                    "\n"
@@ -298,8 +313,11 @@ asm(""
     "    movl %eax, %dr7"                    "\n"
     "1:"                                     "\n"
 
+/* restore FPU / MMX / SSE state */
+    "    fxrstor 0x70(%ebp)"                 "\n" 
+
 /* get old ESP in EAX */
-    "    movl 0x44(%ebp), %eax"              "\n"
+    "    lss 0x40(%ebp), %eax"               "\n"
 
 /* get return address */
     "    movl 0x38(%ebp), %ebx"              "\n"
@@ -314,12 +332,26 @@ asm(""
     "    andl $0xFFFFF000, %ecx"             "\n"
 
 /* switch to old ESP */
-    "    movl %eax, %esp"                    "\n"
+    "    lss 0x40(%ebp), %esp"               "\n"
+
+/* switch to old CS:EIP. */
 
 /*
- * restore flags
+ * The trick below creates an interrupt call stack frame, in order
+ * to restore the other state's CS. The other's FR is already on the
+ * stack at that point. The two 'pushl's add the CS and EIP, so that
+ * stack layout is as required from a same-level interrupt return:
+ * FLAGS-CS-EIP.
  */
-    "    popfl"                              "\n"
+
+    "    call 1f"                            "\n"
+    "1:  popl %eax"                          "\n"
+    "    addl $2f-1b,%eax"                   "\n"
+    "    pushl 0x04(%ebp)"  /* cs */         "\n"
+    "    pushl %eax"        /* eip (2:) */   "\n"
+    "    iret"                               "\n"
+
+    "2:  "                                   "\n"
 
     "    popl %ebp"                          "\n"
     "    popl %edi"                          "\n"
@@ -383,6 +415,7 @@ void co_monitor_arch_passage_page_temp_pgd_init(co_arch_passage_page_t *pp, unsi
 	 * NOTE: If the two virtual addresses are identical then it
 	 * would still work (other_map will be 0 in both contexts).
 	 */
+
 	if (maps[0].pmd == maps[1].pmd){
 		/* Use one page table */
 
@@ -397,32 +430,6 @@ void co_monitor_arch_passage_page_temp_pgd_init(co_arch_passage_page_t *pp, unsi
 		pp->temp_pte[0][maps[0].pte] = _KERNPG_TABLE | pa;
 		pp->temp_pte[1][maps[1].pte] = _KERNPG_TABLE | pa;
 	}
-}
-
-co_rc_t co_monitor_arch_passage_page_init_gdt(co_monitor_t *cmon)
-{
-	unsigned long *win_gdt, *lin_gdt;
-	unsigned long gdt_size;
-	co_arch_passage_page_t *pp = cmon->passage_page;
-
-	/*
-	 * Currently we duplicate Windows' GDT table to Linux. This is not my 
-	 * original intention. I want Linux to have its own GDT like it always 
-	 * had.
-	 *
-	 * However, I had problems when I designed the passage page with loading
-	 * of segment registers (especially CS). So this is just temporary 
-	 * (hopefully).
-	 */
-
-	lin_gdt = (unsigned long *)CO_MONITOR_KERNEL_SYMBOL(gdt_table);
-	win_gdt = (unsigned long *)pp->colx_state.gdt.base;
-	gdt_size = (unsigned long)pp->colx_state.gdt.limit + 1;
-	memcpy(lin_gdt, win_gdt, gdt_size);	
-
-	pp->colx_state.gdt.limit = gdt_size - 1;
-
-	return CO_RC(OK);
 }
 
 co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
@@ -459,14 +466,16 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	 */
 	co_passage_page_func(colx_state, colx_state);
 
+	co_debug("Passage page dump (Windows context)\n");
+
+	co_passage_page_dump(pp);
+
 	/*
 	 * Link the two states to each other so that the passage code properly
 	 * relocates its EIP inside the temporary passage address space.
 	 */
 	pp->colx_state.other_map = va[1] - va[0];
 	pp->host_state.other_map = va[0] - va[1];
-
-	co_monitor_arch_passage_page_init_gdt(cmon);
 
 	/*
 	 * Init the Linux context.
@@ -476,6 +485,7 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	pgd = cmon->pgd;
 	pp->colx_state.cr3 = pgd_val(pgd);
 	pp->colx_state.gdt.base = (struct x86_dt_entry *)cmon->import.kernel_gdt_table;
+	pp->colx_state.gdt.limit = ((__TSS(NR_CPUS)) * 8) - 1;
 	pp->colx_state.idt.table = (struct x86_idt_entry *)cmon->import.kernel_idt_table;
 	pp->colx_state.idt.size = 256*8 - 1;
 
@@ -486,10 +496,16 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	pp->colx_state.esp = cmon->import.kernel_init_task_union + 0x2000 - 0x50;
 	pp->colx_state.flags &= ~(1 << 9); /* Turn IF off */
 	pp->colx_state.return_eip = cmon->import.kernel_colinux_start;
-	pp->colx_state.fs = __KERNEL_DS;
-	pp->colx_state.gs = __KERNEL_DS;
+	pp->colx_state.cs = __KERNEL_CS;
 	pp->colx_state.ds = __KERNEL_DS;
 	pp->colx_state.es = __KERNEL_DS;
+	pp->colx_state.fs = __KERNEL_DS;
+	pp->colx_state.gs = __KERNEL_DS;
+	pp->colx_state.ss = __KERNEL_DS;
+
+	co_debug("Passage page dump:\n");
+
+	co_passage_page_dump(pp);
 
 	return CO_RC_OK;
 }

@@ -16,9 +16,6 @@ typedef struct {
 	unsigned long kernel_init_task_union;
 	unsigned long kernel_colinux_start;
 	unsigned long kernel_swapper_pg_dir;
-	unsigned long kernel_pg0;
-	unsigned long kernel_pg1;
-	unsigned long kernel_pg2;
 	unsigned long kernel_idt_table;
 	unsigned long kernel_gdt_table;
 } co_symbols_import_t;

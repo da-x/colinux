@@ -11,6 +11,9 @@
 #include <stdio.h>
 #include <windows.h>
 #include <stdarg.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <colinux/user/daemon.h>
 #include <colinux/user/monitor.h>
@@ -19,6 +22,49 @@
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/pipe.h>
 #include <colinux/os/winnt/user/osdep.h>
+
+void co_daemon_debug_udp(char *str)
+{
+	/*
+	 * This code sends UDP packet per debug line.
+	 *
+	 * Proves useful for investigating hard crashes.
+	 *
+	 * Make sure you have a fast Ethernet.
+	 */
+
+	static int sock = -1;    /* We only need one global socket */
+	if (sock == -1) {
+		struct sockaddr_in server;
+		int ret;
+		sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+		bzero((char *) &server, sizeof(server));
+		server.sin_family = AF_INET;
+
+		/* 
+		 * Hardcoded for the meanwhile.
+		 * 
+		 * If someone actually uses this, please send a patch
+		 * to make this more configurable.
+		 */
+
+		server.sin_addr.s_addr = inet_addr("192.168.1.1");
+		server.sin_port = htons(5555);
+		
+		ret = connect(sock, (struct sockaddr *)&server, sizeof(server));
+	}
+
+	send(sock, str, strlen(str), 0);
+}
+
+void co_daemon_debug(const char *str) 
+{
+#if (0)
+	/* For dire situations... */
+	co_daemon_debug_udp()
+#endif
+}
 
 int WINAPI WinMain(HINSTANCE hInstance, 
 		   HINSTANCE hPrevInstance,

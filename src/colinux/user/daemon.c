@@ -40,6 +40,7 @@ co_rc_t co_load_config_file(co_daemon_t *daemon)
 	char *buf = NULL;
 	unsigned long size = 0 ;
 
+	co_terminal_print("colinux: loading configuration from %s\n", daemon->config.config_path);
 	rc = co_os_file_load(&daemon->config.config_path, &buf, &size);
 	if (!CO_OK(rc)) {
 		debug(daemon, "error loading configuration file\n");
@@ -82,7 +83,7 @@ co_rc_t co_daemon_parse_args(char **args, co_start_parameters_t *start_parameter
 	start_parameters->show_help = PFALSE;
 
 	co_snprintf(start_parameters->config_path, sizeof(start_parameters->config_path),
-		 "%s", "default.colinux.xml");
+		    "%s", "default.colinux.xml");
 
 	/* Parse command line */
 	while (*param_scan) {
@@ -212,18 +213,6 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 		goto out;
 
 	rc = co_daemon_load_symbol(daemon, "swapper_pg_dir", &import->kernel_swapper_pg_dir);
-	if (!CO_OK(rc)) 
-		goto out;
-
-	rc = co_daemon_load_symbol(daemon, "pg0", &import->kernel_pg0);
-	if (!CO_OK(rc)) 
-		goto out;
-
-	rc = co_daemon_load_symbol(daemon, "pg1", &import->kernel_pg1);
-	if (!CO_OK(rc)) 
-		goto out;
-
-	rc = co_daemon_load_symbol(daemon, "pg2", &import->kernel_pg2);
 	if (!CO_OK(rc)) 
 		goto out;
 
@@ -383,13 +372,21 @@ co_rc_t co_daemon_handle_daemon(void *data, co_message_t *message)
 		struct {
 			co_message_t message;
 			co_daemon_message_t payload;
+			char data[0];
 		} *daemon_message;
 		
 		daemon_message = (typeof(daemon_message))(message);
 
-		if (daemon_message->payload.type == CO_MONITOR_MESSAGE_TYPE_TERMINATED) {
+		switch (daemon_message->payload.type) {
+		case CO_MONITOR_MESSAGE_TYPE_TERMINATED: {
 			debug(daemon, "monitor terminated, reason %d\n", daemon_message->payload.terminated.reason);
 			daemon->running = PFALSE;
+			break;
+		}
+		case CO_MONITOR_MESSAGE_TYPE_DEBUG_LINE: {
+			co_daemon_debug(daemon_message->data);
+			break;
+		}
 		}
 	} else if (message->from == CO_MODULE_CONSOLE) {
 		struct {
@@ -584,7 +581,12 @@ void co_daemon_pipe_cb_disconnected(co_os_pipe_connection_t *conn,
 	co_os_free(module);
 }
 
-void co_daemon_timer_cb(void *data)
+/*
+ * This functions sends timer interrupt messages to coLinux every 1/HZ
+ * seconds.
+ */ 
+
+void co_daemon_idle(void *data)
 {
 	co_daemon_t *daemon = (typeof(daemon))data;
 	struct {
@@ -605,6 +607,13 @@ void co_daemon_timer_cb(void *data)
 
 	this_htime = co_os_timer_highres();
 	reminder = this_htime - daemon->last_htime + daemon->reminder_htime;
+
+	if (reminder < 0) {
+		co_debug("co_daemon_idle: Time going backwards? (%.7f)\n", 
+			 reminder);
+		reminder = 0;
+	}
+
 	while (reminder >= 0.010) {
 		reminder -= 0.010;
 		co_message_switch_dup_message(&daemon->message_switch, &message.message);
@@ -677,7 +686,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 		goto out;
 
 
-	debug(daemon, "launching net daemon\n");
+	co_terminal_print("colinux: launching net daemon\n");
 	rc = co_launch_process("colinux-net-daemon");
 	if (!CO_OK(rc)) {
 		debug(daemon, "error launching net daemon\n");
@@ -685,7 +694,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	}
 
 	if (daemon->start_parameters->launch_console) {
-		debug(daemon, "launching console\n");
+		co_terminal_print("colinux: launching console\n");
 		rc = co_launch_process("colinux-console -a 0");
 		if (!CO_OK(rc)) {
 			debug(daemon, "error launching console\n");
@@ -722,7 +731,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 
 		rc = co_os_pipe_server_service(ps, daemon->idle ? PTRUE : PFALSE);
 
-		co_daemon_timer_cb(daemon);
+		co_daemon_idle(daemon);
 
 		daemon->idle = PFALSE;
 	}
@@ -736,7 +745,7 @@ out:
 
 void co_daemon_end_monitor(co_daemon_t *daemon)
 {
-	debug(daemon, "monitor shutting down\n");
+	co_terminal_print("colinux: shutting down\n");
 
 	co_daemon_monitor_destroy(daemon);
 	co_os_file_free(daemon->buf);

@@ -126,7 +126,7 @@ co_rc_t co_os_file_block_read(co_monitor_t *colx,
 	
 	data.offset.QuadPart = request->offset;
 	data.fdev = fdev;
-	
+
 	rc = co_monitor_host_colx_transfer(colx, 
 					   &data, 
 					   co_os_transfer_file_block,
@@ -179,7 +179,7 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 
 	if (status == STATUS_SUCCESS) {
 		*size = fsi.EndOfFile.QuadPart;
-		co_debug("Reported block device size: %d bytes\n", *size);
+		co_debug("Reported block device size: %llu bytes\n", *size);
 		rc = CO_RC(OK);
 	}
 	else

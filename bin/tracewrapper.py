@@ -36,6 +36,9 @@ for param in params:
     if re.match(r'^(.+)?[.]c$', param):
         c_file = param
 
+if '-o' not in params:
+    params.append('-o')
+    params.append(os.path.splitext(c_file)[0]+'.o')
 
 if c_file == None or c_file == "init_task.c":
     sys.exit(reexec(params))
@@ -46,6 +49,7 @@ ppc_params = params[:]
 ppc_params.remove('-c')
 ppc_params.append('-E')
 
+    
 oparam = ppc_params.index('-o')
 
 ppc_file = ppc_params[oparam+1] = ppc_params[oparam+1] + '.ppc.c'

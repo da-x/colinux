@@ -55,7 +55,11 @@ LOCAL_FILES = \
 	$(BUILD_ROOT)/colinux/os/current/user/conet-daemon/colinux-net-daemon.exe \
 	$(DRIVER_TARGET) \
 
+#	$(BUILD_ROOT)/colinux/os/current/user/conet-pcap-daemon/colinux-pcap-daemon.exe \
+
 LOCAL_TARGETS := $(LOCAL_TARGET) $(BUILD_PATH)/driver.o
+
+pcap_daemon: $(BUILD_ROOT)/colinux/os/current/user/conet-pcap-daemon/colinux-pcap-daemon.exe
 
 colinux: $(LOCAL_FILES) 
 

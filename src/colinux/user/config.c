@@ -116,26 +116,63 @@ co_rc_t co_load_config_boot_params(co_config_t *out_config, mxml_node_t *node)
 	return CO_RC(OK);
 }
 
+static bool_t char_is_digit(char ch)
+{
+	return (ch >= '0'  &&  ch <= '9');
+}
+
+co_rc_t co_str_to_unsigned_long(const char *text, unsigned long *number_out)
+{
+	unsigned long number = 0;
+	unsigned long last_number = 0;
+
+	if (!char_is_digit(*text))
+		return CO_RC(ERROR);
+
+	while (char_is_digit(*text)) {
+		last_number = number;
+		number *= 10;
+
+		if (number < last_number) {
+			/* Overflow */
+			return CO_RC(ERROR);
+		}
+
+		number += (*text - '0');
+		text++;
+	}
+
+	if (*text == '\0') {
+		*number_out = number;
+		return CO_RC(OK);
+	}
+
+	return CO_RC(ERROR);
+}
+
 co_rc_t co_load_config_memory(co_config_t *out_config, mxml_element_t *element)
 {
 	int i;
-	char *size = "";
+	char *element_text = NULL;
+	co_rc_t rc;
 
 	for (i=0; i < element->num_attrs; i++) {
 		mxml_attr_t *attr = &element->attrs[i];
 
 		if (strcmp(attr->name, "size") == 0)
-			size = attr->value;
+			element_text = attr->value;
 	}
 	
-	if (size == NULL) {
-		co_debug("Invalid memory element: bad size\n");
+	if (element_text == NULL) {
+		printf("Invalid memory element: bad memory specification\n");
 		return CO_RC(ERROR);
 	}
 
-	out_config->ram_size = atoi(size);
+	rc = co_str_to_unsigned_long(element_text, &out_config->ram_size);
+	if (!CO_OK(rc))
+		printf("Invalid memory element: invalid size format\n");
 
-	return CO_RC(OK);
+	return rc;
 }
 
 co_rc_t co_load_config(char *text, co_config_t *out_config)

@@ -9,7 +9,9 @@ Creator and chief maintainer:
 
 Additional developers and contributors:
     Jun Okajima (Digital Infra Inc.) - Developer and
-    maintainer of cofbdev (Cooperative Frame Buffer device). 
+    maintainer of cofbdev (Cooperative Frame Buffer device, not yet merged)
+    Pat Erley (random patches)
+    Alejandro R. Sedeno <asedeno@mit.edu> (pcap support)
 
 Producer:
     Kuniyasu Suzaki, Senior Reseacher, AIST
