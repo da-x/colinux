@@ -38,13 +38,11 @@ console_window_t::~console_window_t()
 
 co_rc_t console_window_t::parse_args(int argc, char **argv)
 {
-	char **
-	    param_scan = argv;
+	char ** param_scan = argv;
 
 	/* Parse command line */
 	while (argc > 0) {
-		const char *
-		    option;
+		const char * option;
 
 		option = "-a";
 
@@ -71,8 +69,7 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 
 co_rc_t console_window_t::start()
 {
-	co_rc_t
-	    rc;
+	co_rc_t rc;
 
 	widget = co_console_widget_create();
 	if (!widget)
@@ -94,8 +91,7 @@ co_rc_t console_window_t::start()
 
 co_rc_t console_window_t::attach()
 {
-	co_rc_t
-	    rc;
+	co_rc_t rc;
 
 	if (state == CO_CONSOLE_STATE_ATTACHED)
 		return CO_RC(ERROR);
@@ -115,8 +111,7 @@ co_rc_t console_window_t::attached()
 
 	widget->redraw();
 
-	widget->
-	    title
+	widget->title
 	    ("Console - Cooperative Linux - [To Exit, Press Window+Alt Keys]");
 
 	log("Monitor%d: Attached\n", attached_id);
@@ -126,8 +121,7 @@ co_rc_t console_window_t::attached()
 
 co_rc_t console_window_t::attach_anyhow(co_id_t id)
 {
-	co_rc_t
-	    rc;
+	co_rc_t rc;
 
 	if (state == CO_CONSOLE_STATE_ATTACHED) {
 		rc = detach();
@@ -141,23 +135,19 @@ co_rc_t console_window_t::attach_anyhow(co_id_t id)
 
 co_rc_t console_window_t::detach()
 {
-	co_console_t *
-	    console;
+	co_console_t * console;
 
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return CO_RC(ERROR);
 
+	widget->co_console_update();
 	console = widget->co_console();
 
 	struct {
-		co_message_t
-		    message;
-		co_daemon_console_message_t
-		    console;
-		char
-		    data[0];
-	} *
-	    message;
+		co_message_t message;
+		co_daemon_console_message_t console;
+		char data[0];
+	} * message;
 
 	co_console_pickle(console);
 
@@ -210,24 +200,21 @@ co_rc_t console_window_t::online(bool ON)
 
 	switch (state) {
 
+	case CO_CONSOLE_STATE_ATTACHED:
+		detach();
+
 	case CO_CONSOLE_STATE_DETACHED:
 		state = CO_CONSOLE_STATE_OFFLINE;
 
 	case CO_CONSOLE_STATE_OFFLINE:
 		if (widget)
-			delete
-			    widget;
-		return CO_RC(OK);
-
-	case CO_CONSOLE_STATE_ATTACHED:
-		detach();
-		state = CO_CONSOLE_STATE_OFFLINE;
+			delete widget;
+		widget = 0;
 		return CO_RC(OK);
 
 	case CO_CONSOLE_STATE_ONLINE:
 		co_console_t * console;
-		co_rc_t
-		    rc;
+		co_rc_t rc;
 
 		state = CO_CONSOLE_STATE_OFFLINE;
 
@@ -387,7 +374,7 @@ void
 	vsnprintf(buf, sizeof (buf), format, ap);
 	va_end(ap);
 
-	co_debug("LOG: %s\n", buf);
+	co_debug("Console: %s\n", buf);
 }
 
 co_rc_t console_window_t::loop(void)
@@ -396,7 +383,7 @@ co_rc_t console_window_t::loop(void)
 	    rc;
 
 	rc = widget->loop();
-	if (!CO_OK(rc))
+	if (!(CO_OK(rc)&&widget))
 		return rc;
 
 	if (daemon_handle) {
@@ -406,8 +393,8 @@ co_rc_t console_window_t::loop(void)
 		if (!CO_OK(rc)) {
 			if (rc == CO_RC_BROKEN_PIPE) {
 				log("Monitor%d: Broken pipe\n", attached_id);
-				detach();
-				return rc;
+				online(false);
+				return CO_RC(OK);
 			}
 			if (rc != CO_RC_TIMEOUT)
 				return rc;

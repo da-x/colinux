@@ -754,7 +754,6 @@ co_rc_t co_monitor_load_configuration(co_monitor_t *cmon)
 			dev->dev.free = co_monitor_free_file_blockdevice;
 		} else {
 			co_monitor_free(cmon, dev);
-			co_debug("monitor: opening block device\n");
 			goto out;
 		}
 	}

@@ -12,7 +12,8 @@ Additional developers and contributors:
     maintainer of cofbdev (Cooperative Frame Buffer device, not yet merged)
     Pat Erley (random patches)
     Alejandro R. Sedeno <asedeno@mit.edu> (pcap support)
-    Ballard, Jonathan H. <californiakidd@users.sourceforge.net> (various patches)
+    Ballard, Jonathan H. <californiakidd@users.sourceforge.net> (various patches, 
+	native nt console)
 
 Producer:
     Kuniyasu Suzaki, Senior Reseacher, AIST

@@ -66,12 +66,18 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 {
 	switch (message->type) 
 	{
-	case CO_OPERATION_CONSOLE_SCROLL: {
-		unsigned long t = message->scroll.t; 
-		unsigned long b = message->scroll.b;
-		unsigned long dir = message->scroll.dir;
+	case CO_OPERATION_CONSOLE_SCROLL_UP:
+	case CO_OPERATION_CONSOLE_SCROLL_DOWN: {
+		unsigned long t = message->scroll.top;
+		unsigned long b = message->scroll.bottom+1;
+		unsigned long dir;
 		unsigned long lines = message->scroll.lines;
 		unsigned long x, y;
+
+		if(message->type==CO_OPERATION_CONSOLE_SCROLL_UP)
+			dir = 1;
+		else
+			dir = 2;
 
 		if (b > console->y)
 			return CO_RC(ERROR);
@@ -126,7 +132,9 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 			*(co_console_cell_t *)(&message->putc.charattr);
 		break;
 	}
-	case CO_OPERATION_CONSOLE_CURSOR: {
+	case CO_OPERATION_CONSOLE_CURSOR_DRAW:
+	case CO_OPERATION_CONSOLE_CURSOR_ERASE:
+	case CO_OPERATION_CONSOLE_CURSOR_MOVE: {
 		console->cursor = message->cursor;
 		break;
 	}
@@ -146,3 +154,4 @@ void co_console_unpickle(co_console_t *console)
 	((char *)console->screen) += ((unsigned long)console);
 	((char *)console->backlog) += ((unsigned long)console);
 }
+

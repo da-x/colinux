@@ -16,6 +16,13 @@
 extern "C" {
 #include <colinux/os/alloc.h>
 #include <colinux/os/current/user/daemon.h>
+
+	// Not found in w32api/mingw
+extern PASCAL BOOL GetCurrentConsoleFont(HANDLE hConsoleOutput,
+                                         BOOL bMaximumWindow,
+                                         PCONSOLE_FONT_INFO lpCurrentFont);
+extern PASCAL COORD GetConsoleFontSize(HANDLE hConsoleOutput,
+                                       DWORD nFont);
 }
 
 console_widget_t *
@@ -27,66 +34,70 @@ co_console_widget_create()
 console_widget_NT_t::console_widget_NT_t()
 :  console_widget_t()
 {
-	allocatedConsole = false;
 	keyed = 0;
 	buffer = 0;
 	screen = 0;
 	input = 0;
-	previous_output = 0;
+	output = 0;
+	blank.Attributes = FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED;
+	blank.Char.AsciiChar = ' ';
 }
 
 co_rc_t
 console_widget_NT_t::console_window(console_window_t * W)
 {
 	CONSOLE_CURSOR_INFO cci;
+	CONSOLE_FONT_INFO cfi;
+	COORD fs;
+	HWND hwnd;
+	RECT r;
 
 	window = W;
 
-	if (GetConsoleWindow() == NULL) {
-		AllocConsole();
-		allocatedConsole = true;
-	}
-
 	input = GetStdHandle(STD_INPUT_HANDLE);
-	previous_output = GetStdHandle(STD_OUTPUT_HANDLE);
-	GetConsoleCursorInfo(previous_output, &previous_cursor);
-	cci = previous_cursor;
-	cci.bVisible = false;
-	SetConsoleCursorInfo(previous_output, &cci);
+	SetConsoleMode(input, 0);
+
+	output = GetStdHandle(STD_OUTPUT_HANDLE);
+        GetCurrentConsoleFont(output, 0, &cfi);
+        fs = GetConsoleFontSize(output, cfi.nFont);
+        r.top = 0;
+        r.left = 0;
+        r.bottom = fs.Y * 25;
+        r.right = fs.X * 80;
+        AdjustWindowRect(&r, WS_CAPTION|WS_SYSMENU|WS_THICKFRAME
+                             |WS_MINIMIZEBOX|WS_MAXIMIZEBOX, 0);
+
+	hwnd = GetConsoleWindow();
+	SetWindowPos(hwnd, HWND_TOP, 0, 0,
+                     r.right - r.left, r.bottom - r.top,
+                     SWP_NOMOVE|SWP_SHOWWINDOW);
+
+        GetConsoleCursorInfo(output, &cursor);
+        cci = cursor;
+        cci.bVisible = 0;
+        SetConsoleCursorInfo(output, &cci);
+
+	size.X = 80 ;
+        size.Y = 25 ;
+	region.Top = 0;
+	region.Left = 0;
+        region.Right = 79;
+        region.Bottom = 24;
+
+        if( ! SetConsoleWindowInfo( output , TRUE , &region ) )
+         co_debug("SetConsoleWindowInfo() error code %d\n", GetLastError());
+
+	screen =
+	    (CHAR_INFO *) co_os_malloc(sizeof (CHAR_INFO) * size.X * size.Y);
 
 	buffer =
 	    CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE, 0, 0,
 				      CONSOLE_TEXTMODE_BUFFER, 0);
 
-	blank.Attributes = FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED;
-	blank.Char.AsciiChar = ' ';
-
-	CONSOLE_SCREEN_BUFFER_INFO i;
-	if (!GetConsoleScreenBufferInfo(buffer, &i))
-		co_debug("GetConsoleScreenBufferInfo() error code %d\n",
-			 GetLastError());
-
-	size = i.dwSize;	// UPDATE: fixed 80x25 size; let console be variable size
-//      region = i.srWindow ;
-
-//      size.X = 80 ;
-//      size.Y = 25 ;
-	region.Top = 0;
-	region.Left = 0;
-	region.Right = 80;
-	region.Bottom = 25;
-
-	screen =
-	    (CHAR_INFO *) co_os_malloc(sizeof (CHAR_INFO) * size.X * size.Y);
-
-//      if( ! SetConsoleWindowInfo( buffer , TRUE , &region ) )
-//              co_debug( "SetConsoleWindowInfo() error code %d\n" , GetLastError() ) ;
-//      if( ! SetConsoleScreenBufferSize( buffer , size ) )
-//              co_debug( "SetConsoleScreenBufferSize() error code %d\n" , GetLastError() ) ;
+	if( ! SetConsoleScreenBufferSize( buffer , size ) )
+          co_debug("SetConsoleScreenBufferSize() error %d\n", GetLastError());
 
 	SetConsoleMode(buffer, 0);
-
-	SetConsoleMode(input, ENABLE_WINDOW_INPUT);
 
 	cci.bVisible = true;
 	cci.dwSize = 10;
@@ -102,9 +113,7 @@ console_widget_NT_t::~console_widget_NT_t()
 	if (screen)
 		co_os_free(screen);
 	CloseHandle(buffer);
-	SetConsoleCursorInfo(previous_output, &previous_cursor);
-	if (allocatedConsole)
-		FreeConsole();
+        SetConsoleCursorInfo(output, &cursor);
 }
 
 void
@@ -132,7 +141,6 @@ console_widget_NT_t::draw()
 		ci->Attributes = cell->attr;
 		(ci++)->Char.AsciiChar = (cell++)->ch;
 	} while (--count);
-	co_debug("\n", cell->ch);
 
 	SMALL_RECT r = region;
 	COORD c = { 0, 0 };
@@ -141,20 +149,39 @@ console_widget_NT_t::draw()
 		co_debug("WriteConsoleOutput() error %d \n", GetLastError());
 }
 
+void
+console_widget_NT_t::co_console_update()
+{
+	SMALL_RECT r = region;
+	COORD c = { 0, 0 };
+
+	if (!ReadConsoleOutput(buffer, screen, size, c, &r))
+		co_debug("ReadConsoleOutput() error %d \n", GetLastError());
+
+	co_console_cell_t *cell = console->screen;
+	CHAR_INFO *ci = screen;
+	int count = size.X * size.Y;
+
+	do {
+		cell->attr = ci->Attributes;
+		(cell++)->ch = (ci++)->Char.AsciiChar;
+	} while (--count);
+}
+
 co_rc_t
-console_widget_NT_t::op_scroll(long &T, long &B, long &D, long &L)
+console_widget_NT_t::op_scroll_up(co_console_unit &T, co_console_unit &B, co_console_unit &L)
 {
 	SMALL_RECT r;
 	COORD c;
 
-	r.Left = 0;
-	r.Right = console->x;
+	r.Left = region.Left;
+	r.Right = region.Right;
 	r.Top = T;
 	r.Bottom = B;
 	c.X = 0;
-	c.Y = D == 1 ? r.Top - L : r.Top + L;
+	c.Y = r.Top - L;
 
-	if (!ScrollConsoleScreenBuffer(buffer, &r, &region, c, &blank))
+	if (!ScrollConsoleScreenBuffer(buffer, &r, &r, c, &blank))
 		co_debug("ScrollConsoleScreenBuffer() error code: %d \n",
 			 GetLastError());
 
@@ -162,12 +189,37 @@ console_widget_NT_t::op_scroll(long &T, long &B, long &D, long &L)
 }
 
 co_rc_t
-console_widget_NT_t::op_putcs(long &Y, long &X, char *D, long &C)
+console_widget_NT_t::op_scroll_down(co_console_unit &T, co_console_unit &B, co_console_unit &L)
+{
+	SMALL_RECT r;
+	COORD c;
+
+	r.Left = region.Left;
+	r.Right = region.Right;
+	r.Top = T;
+	r.Bottom = B;
+	c.X = 0;
+	c.Y = r.Top + L;
+
+	if (!ScrollConsoleScreenBuffer(buffer, &r, &r, c, &blank))
+		co_debug("ScrollConsoleScreenBuffer() error code: %d \n",
+			 GetLastError());
+
+	return CO_RC(OK);
+}
+
+co_rc_t
+console_widget_NT_t::op_putcs(co_console_unit &Y, co_console_unit &X, co_console_code *D, co_console_unit &C)
 {
 	int count;
 
 	if ((count = C) <= 0)
 		return CO_RC(ERROR);
+
+	if(Y >= size.Y || X >= size.X) {
+		co_debug("putc error\n");
+		return CO_RC(ERROR);
+	}
 
 	SMALL_RECT r;
 	COORD c;
@@ -192,10 +244,15 @@ console_widget_NT_t::op_putcs(long &Y, long &X, char *D, long &C)
 }
 
 co_rc_t
-console_widget_NT_t::op_putc(long &Y, long &X, unsigned short &C)
+console_widget_NT_t::op_putc(co_console_unit &Y, co_console_unit &X, co_console_character &C)
 {
 	SMALL_RECT r;
 	COORD c;
+
+	if(Y >= size.Y || X >= size.X) {
+		co_debug("putc error\n");
+		return CO_RC(ERROR);
+	}
 
 	c.X = r.Left = r.Right = X;
 	c.Y = r.Top = r.Bottom = Y;
@@ -216,6 +273,89 @@ console_widget_NT_t::op_cursor(co_cursor_pos_t & P)
 	c.X = P.x;
 	c.Y = P.y;
 	SetConsoleCursorPosition(buffer, c);
+	return CO_RC(OK);
+}
+
+co_rc_t
+console_widget_NT_t::op_clear(co_console_unit &T, co_console_unit &L, co_console_unit &B, co_console_unit &R)
+{
+	SMALL_RECT r;
+	CHAR_INFO *s;
+	COORD c;
+	long y, x;
+
+	if( B < T || R < L )
+		return CO_RC(ERROR);
+	if( T >= size.Y || L >= size.X )
+		return CO_RC(ERROR);
+	if( B >= size.Y || R >= size.X )
+		return CO_RC(ERROR);
+
+	y = T;
+	while(y <= B) {
+		s = &screen[(size.X * y) + (x = L)];
+		while(x++ <= R)
+			*(s++) = blank;
+		y++;
+	}
+
+	r.Top = c.Y = T;
+	r.Left = c.X = L;
+	r.Bottom = B;
+	r.Right = R;
+	
+	if (!WriteConsoleOutput(buffer, screen, size, c, &r))
+		co_debug("WriteConsoleOutput() error %d \n", GetLastError());
+	return CO_RC(OK);
+}
+
+co_rc_t
+console_widget_NT_t::op_bmove(co_console_unit &Y, co_console_unit &X,
+			      co_console_unit &T, co_console_unit &L,
+			      co_console_unit &B, co_console_unit &R)
+{
+	SMALL_RECT r;
+	COORD c;
+
+	c.Y = Y;
+	c.X = X;
+
+	r.Top = T;
+	r.Left = L;
+	r.Bottom = B;
+	r.Right = R;
+
+	if(!ScrollConsoleScreenBuffer(buffer, &r, &region, c, &blank))
+		co_debug("ScrollConsoleScreenBuffer() error %d\n", GetLastError());
+	return CO_RC(OK);
+}
+
+co_rc_t
+console_widget_NT_t::op_invert(co_console_unit &Y, co_console_unit &X, co_console_unit &C)
+{
+#if 0
+	SMALL_RECT r = region;
+	COORD c = { 0, 0 };
+
+	co_debug("invert (%d,%d,%d)\n",Y,X,C);
+
+	if (!ReadConsoleOutput(buffer, screen, size, c, &r))
+		co_debug("ReadConsoleOutput() error %d \n", GetLastError());
+
+	CHAR_INFO *ci = &screen[(Y*size.X)+X];
+	unsigned a;
+	unsigned count = C;
+
+	while(count--) {
+		a = ci->Attributes;
+		ci->Attributes = (((a) & 0x70) >> 4) | (((a) & 0x07) << 4);
+	}
+
+	r = region;
+
+	if (!WriteConsoleOutput(buffer, screen, size, c, &r))
+		co_debug("WriteConsoleOutput() error %d \n", GetLastError());
+#endif
 	return CO_RC(OK);
 }
 

@@ -36,15 +36,41 @@ keyboard_hook(int nCode, WPARAM wParam, LPARAM lParam)
 int
 main(int argc, char **argv)
 {
+	CONSOLE_CURSOR_INFO cursor;
+        bool allocatedConsole = false;
+	HANDLE output;
+        HANDLE input;
+        DWORD mode;
 	int status;
-#if 0
-	current_hook = SetWindowsHookEx(WH_KEYBOARD,
-					keyboard_hook,
-					NULL, GetCurrentThreadId());
-#endif
-	status = co_user_console_main(argc, argv);
+	HWND hwnd;
 
-	FlushConsoleInputBuffer(GetStdHandle(STD_INPUT_HANDLE));
+	if ((hwnd = GetConsoleWindow())==(HWND)0) {
+		AllocConsole();
+		allocatedConsole = true;
+		hwnd = GetConsoleWindow();
+	}
+	input = GetStdHandle(STD_INPUT_HANDLE);
+	output = GetStdHandle(STD_OUTPUT_HANDLE);
+	GetConsoleCursorInfo(output, &cursor);
+	GetConsoleMode(input, &mode);
+
+	try {
+		status = co_user_console_main(argc, argv);
+	} catch(...) {
+		co_debug("The console program encountered an exception.\n");
+		status = -1;
+	}
+
+	if(allocatedConsole) {
+		FreeConsole();
+		return status;
+	}
+
+	FlushConsoleInputBuffer(input);
+	SetConsoleMode(input, mode);
+	SetStdHandle(STD_INPUT_HANDLE, input);
+	SetStdHandle(STD_OUTPUT_HANDLE, output);
+	SetConsoleCursorInfo(output, &cursor);
 
 	return status;
 }

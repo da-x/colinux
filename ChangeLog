@@ -7,8 +7,12 @@
       A threaded implementation with with message queue,
       wait state, and error recovery.
     * merged the NT-native console. 
+    * console updates and improvements (cocon, console-nt)
   * Added more checks to the XML parsing.
-  * Made context switch code more sensitve about processor's capabilities.
+  * Made context switch code more sensitve about processor's capabilities,
+    running coLinux on old AMD processors will hopefully not cause a reboot 
+    anymore.
+  * Linux patch upgraded to 2.4.25.
   
 * Version 0.5.4 AKA "Focal Segmental Glomerulosclerosis" (%gs/%fs) release
   * Fixed an issue with i686-optimized pthread and the preservation of 

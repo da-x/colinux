@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <colinux>
     <block_device index="0" path="\DosDevices\c:\colinux\root_fs" enabled="true">
+    </block_device>
     <block_device index="1" path="\DosDevices\c:\colinux\swap_device" enabled="true">
     </block_device>
     <bootparams>root=/dev/cobd0</bootparams>

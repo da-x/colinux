@@ -8,6 +8,8 @@
  *
  */ 
 
+#define CO_CURSOR_POS_SIZE 30
+
 #include "widget.h"
 	
 static int default_red[] = {0x00,0xaa,0x00,0xaa,0x00,0xaa,0x00,0xaa,
@@ -185,9 +187,9 @@ void console_widget_t::draw()
 				fl_color(0xff, 0xff, 0xff);
 				fl_rectf(cx + letter_x * console->cursor.x, 
 					 cy + letter_y * console->cursor.y + 
-					 (letter_y * (CO_CURSOR_POS_SIZE - console->cursor.end)) / CO_CURSOR_POS_SIZE,
-					 letter_x, (letter_y * (console->cursor.end - 
-						     console->cursor.start)) / CO_CURSOR_POS_SIZE);
+					 (letter_y * ((CO_CURSOR_POS_SIZE * console->cursor.height) / 100 )),
+					 letter_x,
+					 (letter_y * ((CO_CURSOR_POS_SIZE * console->cursor.height) / 100 )));
 			}
 		}
 	}
@@ -219,7 +221,9 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
 
 	switch (message->type) 
 	{
-	case CO_OPERATION_CONSOLE_CURSOR: {
+	case CO_OPERATION_CONSOLE_CURSOR_DRAW:
+	case CO_OPERATION_CONSOLE_CURSOR_ERASE:
+	case CO_OPERATION_CONSOLE_CURSOR_MOVE: {
 		saved_cursor_pos = console->cursor;
 		break;
 	}
@@ -233,9 +237,10 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
 
 	switch (message->type) 
 	{
-	case CO_OPERATION_CONSOLE_SCROLL: {
-		unsigned long t = message->scroll.t;     /* Start of scroll region (row) */
-		unsigned long b = message->scroll.b;     /* End of scroll region (row) */
+	case CO_OPERATION_CONSOLE_SCROLL_UP:
+	case CO_OPERATION_CONSOLE_SCROLL_DOWN: {
+		unsigned long t = message->scroll.top;     /* Start of scroll region (row) */
+		unsigned long b = message->scroll.bottom;     /* End of scroll region (row) */
 
 		damage_console(0, t, console->x, b - t + 1);
 		break;
@@ -259,7 +264,9 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
 		damage_console(x, y, 1, 1);
 		break;
 	}
-	case CO_OPERATION_CONSOLE_CURSOR: {
+	case CO_OPERATION_CONSOLE_CURSOR_MOVE:
+	case CO_OPERATION_CONSOLE_CURSOR_DRAW:
+	case CO_OPERATION_CONSOLE_CURSOR_ERASE: {
 		damage_console(saved_cursor_pos.x, saved_cursor_pos.y, 1, 1);
 		damage_console(console->cursor.x, console->cursor.y, 1, 1);
 		break;

@@ -28,25 +28,30 @@ class console_widget_NT_t:public console_widget_t {
 	co_rc_t console_window(class console_window_t *);
 	co_rc_t idle();
 	co_rc_t title(const char *);
+	void co_console_update();
 
       protected:
-	 HANDLE buffer;
+	HANDLE buffer;
 	CHAR_INFO blank;
 	SMALL_RECT region;
 	COORD size;
 	CHAR_INFO *screen;
 	HANDLE input;
-	HANDLE previous_output;
-	CONSOLE_CURSOR_INFO previous_cursor;
-	bool allocatedConsole;
+	HANDLE output;
+	CONSOLE_CURSOR_INFO cursor;
 	unsigned keyed;
 
-	co_rc_t op_scroll(long &topRow, long &bottomRow, long &direction,
-			  long &lines);
-	co_rc_t op_putcs(long &Y, long &X, char *data, long &length);
-	co_rc_t op_putc(long &Y, long &X, unsigned short &charattr);
+	co_rc_t op_scroll_up(co_console_unit &topRow, co_console_unit &bottomRow, co_console_unit &lines);
+	co_rc_t op_scroll_down(co_console_unit &topRow, co_console_unit &bottomRow, co_console_unit &lines);
+	co_rc_t op_putcs(co_console_unit &Y, co_console_unit &X, co_console_code *data, co_console_unit &length);
+	co_rc_t op_putc(co_console_unit &Y, co_console_unit &X, co_console_character &charattr);
 	co_rc_t op_cursor(co_cursor_pos_t & position);
-
+	co_rc_t op_clear(co_console_unit &T, co_console_unit &L,
+			 co_console_unit &B, co_console_unit &R);
+	co_rc_t op_bmove(co_console_unit &Y, co_console_unit &X,
+			 co_console_unit &T, co_console_unit &L,
+			 co_console_unit &B, co_console_unit &R);
+	co_rc_t op_invert(co_console_unit &Y, co_console_unit &X, co_console_unit &C);
 };
 
 #endif
