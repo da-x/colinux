@@ -186,7 +186,7 @@ co_rc_t console_window_t::detach()
 	return CO_RC(OK);
 }
 
-co_rc_t console_window_t::online(bool ON)
+co_rc_t console_window_t::online(const bool ON)
 {
 	if (ON) {
 		if (online())
@@ -269,7 +269,7 @@ co_rc_t console_window_t::online(bool ON)
 }
 
 void
- console_window_t::event(co_message_t & message)
+console_window_t::event(co_message_t & message)
 {
 	switch (message.from) {
 
@@ -279,7 +279,7 @@ void
 
 			console_message =
 			    (typeof(console_message)) (message.data);
-			widget->event(console_message);
+			widget->event(*console_message);
 			break;
 		}
 
@@ -331,7 +331,7 @@ void
 	}
 }
 
-void console_window_t::handle_scancode(co_scan_code_t sc)
+void console_window_t::handle_scancode(co_scan_code_t sc) const
 {
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return;
@@ -361,7 +361,7 @@ void console_window_t::handle_scancode(co_scan_code_t sc)
 	co_os_daemon_send_message(daemon_handle, &message.message);
 }
 
-void console_window_t::log(const char *format, ...)
+void console_window_t::log(const char *format, ...) const
 {
 	char
 	    buf[0x100];

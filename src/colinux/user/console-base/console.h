@@ -42,21 +42,21 @@ class console_window_t {
 	co_rc_t start();
 
 	co_rc_t attach();
-	co_rc_t attach_anyhow(co_id_t id);
+	co_rc_t attach_anyhow(const co_id_t id);
 	co_rc_t detach();
 
 	void event(co_message_t & message);
 
-	void handle_scancode(co_scan_code_t sc);
+	void handle_scancode(const co_scan_code_t sc) const;
 
-	void log(const char *format, ...);
+	void log(const char *format, ...) const;
 
 	co_rc_t loop();
 
 	bool online() {
 		return state != CO_CONSOLE_STATE_OFFLINE;
 	}
-	co_rc_t online(bool);
+	co_rc_t online(const bool);
 
       protected:
 	co_console_start_parameters_t start_parameters;

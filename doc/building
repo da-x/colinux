@@ -1,4 +1,4 @@
-Building Cooperative Linux                Dan Aloni, da-x@gmx.net
+Building Cooperative Linux            Dan Aloni, da-x@colinux.org
 =================================================================
 
 Table of Contents
@@ -13,16 +13,19 @@ Table of Contents
 1. Prerequisites
 ----------------
 
-The components that compose coLinux need to be compiled using 2 
-differently targeted versions of GCC (http://gcc.gnu.org). One
-gcc is required for the native Linux architecture that coLinux
-designed to run on (e.g, i686-pc-linux), and the other version 
-is used to compiled binary executables and drivers for the host 
-OS (e.g, i686-pc-cygwin).
+When compiling coLinux to run on Linux of the same architecture,
+only one compiler can to be used.
+
+For cross compiling, the components that comprise coLinux need 
+to be compiled using 2 differently targeted versions of GCC 
+(http://gcc.gnu.org). One gcc is required for the native Linux 
+architecture that coLinux designed to run on (e.g, i686-pc-linux), 
+and the other version is used to compiled binary executables and 
+drivers for the host OS (e.g, i686-pc-mingw32).
 
 The versions of the two compilers need to match as closely as 
 possible. Versions 2.95.x, 3.1.x, 3.2.x and 3.3.x of gcc are 
-not guaranteed to be compatible. 
+not guaranteed to be ABI-compatible.
 
 
 2. Compiling the Cooperative Linux kernel
@@ -39,17 +42,16 @@ possible that there is a mismatch between the version of the kernel
 a the version that patch if designed to apply to.
 
 For example: 
-    ~/colinux-0.5.3/linux# patch -p1 < ../colinux/patch/linux
+    ~/linux-2.6.7# patch -p1 < ../colinux/patch/linux
 
 The coLinux package is supplied with a premaid Linux kernel 
 configuration file. Copy it to your Linux tree:
 
-    ~/colinux-0.5.3/linux# cp ../colinux/conf/linux-config .config
+    ~/linux-2.6.7# cp ../colinux/conf/linux-config .config
 
 And then, to build vmlinux:
-    ~/colinux-0.5.3/linux# make oldconfig
-    ~/colinux-0.5.3/linux# make dep
-    ~/colinux-0.5.3/linux# make vmlinux
+    ~/linux-2.6.7# make oldconfig
+    ~/linux-2.6.7# make vmlinux 
 
 
 3. Compiling the OS support code 
@@ -70,10 +72,43 @@ The coLinux daemon depends on:
 The coLinux console depends on:
   * FLTK (major version 1)
 
-3.2. For Microsoft Windows
+3.2. For Microsoft Windows as host
 
-Currently, we use the cygwin toolchain for building. Please read the 
-cygwin-cross-build for instructions concerning the creation of this 
-toolchain. The i686-pc-cygwin- prefix is assumed for gcc, ld, etc. 
-To build, run 'make colinux' in the ./src directory.
+[TBD...]
 
+3.3. For Linux as host
+
+For building and runnning coLinux on Linux you need:
+
+1. Tree or headers of the designated host kernel available, in order to build 
+the kernel module (colinux.ko).
+2. mxml-1.2 and a patched fltk-1.1.4 (see patch directory) installed in the 
+system (./configure ; make ; make install)
+3. Properly set the environment variables (e.g.):
+
+  export COLINUX_TARGET_KERNEL_PATH=/path/to/your/patched/colinux/kernel/tree
+  export COLINUX_HOST_KERNEL_DIR=/path/to/your/host/kernel
+  export COLINUX_HOST_OS=linux
+  
+And run make in the 'src' dir.
+
+Running it is quite simple. For example, consider these list of files:
+
+-rwxr-xr-x  1 root root  566805 Jun 21 13:02 colinux-console-fltk
+-rwxr-xr-x  1 root root  289478 Jun 21 09:58 colinux-daemon
+-rwxr-xr-x  1 root root  107509 Jun 21 09:58 colinux-net-daemon
+-rwxr-xr-x  1 root root  115637 Jun 21 13:02 colinux-serial-daemon
+-rw-r--r--  1 root root  341519 Jun 21 13:02 colinux.ko
+-rw-r--r--  1 root root     399 Jun  5 18:17 default.colinux.xml
+-rwxr-xr-x  1 root root 2614823 Jun 21 13:02 vmlinux
+
+The steps are basically:
+       
+    insmod colinux.ko
+    PATH=.:$PATH colinux-daemon -c default.colinux.xml
+
+This much like the Windows port except where the logic around the installation 
+of the driver is more simple.
+    
+PATH=.:$PATH is needed if the executables aren't installed in your e.g 
+/usr/local/bin or elsewhere in $PATH.

@@ -45,7 +45,7 @@ console_widget_t::co_console()
 
 #define NOISY 0
 
-co_rc_t console_widget_t::event(co_console_message_t * message)	// UPDATE: & message
+co_rc_t console_widget_t::event(co_console_message_t & message)
 {
 	co_rc_t
 	    rc;
@@ -53,11 +53,11 @@ co_rc_t console_widget_t::event(co_console_message_t * message)	// UPDATE: & mes
 	if (!console) {
 		return CO_RC(ERROR);
 	}
-	rc = co_console_op(console, message);
+	rc = co_console_op(console, &message);
 	if (!CO_OK(rc))
 		return rc;
 
-	switch (message->type) {
+	switch (message.type) {
 	case CO_OPERATION_CONSOLE_STARTUP:
 #if NOISY
 		co_debug("CO_OPERATION_CONSOLE_STARTUP\n");
@@ -77,28 +77,28 @@ co_rc_t console_widget_t::event(co_console_message_t * message)	// UPDATE: & mes
 #if NOISY
 		co_debug("CO_OPERATION_CONSOLE_PUTC\n");
 #endif
-		return op_putc(message->putc.y, message->putc.x,
-			       message->putc.charattr);
+		return op_putc(message.putc.y, message.putc.x,
+			       message.putc.charattr);
 
 	case CO_OPERATION_CONSOLE_PUTCS:
 #if NOISY
 		co_debug("CO_OPERATION_CONSOLE_PUTCS\n");
 #endif
-		return op_putcs(message->putcs.y, message->putcs.x,
-				message->putcs.data, message->putcs.count);
+		return op_putcs(message.putcs.y, message.putcs.x,
+				message.putcs.data, message.putcs.count);
 
 	case CO_OPERATION_CONSOLE_SCROLL_UP:
 #if NOISY
 		co_debug("CO_OPERATION_CONSOLE_SCROLL_UP\n");
 #endif
-		return op_scroll_up(message->scroll.top, message->scroll.bottom,
-				 message->scroll.lines);
+		return op_scroll_up(message.scroll.top, message.scroll.bottom,
+				 message.scroll.lines);
 	case CO_OPERATION_CONSOLE_SCROLL_DOWN:
 #if NOISY
 		co_debug("CO_OPERATION_CONSOLE_SCROLL_DOWN\n");
 #endif
-		return op_scroll_down(message->scroll.top, message->scroll.bottom,
-				 message->scroll.lines);
+		return op_scroll_down(message.scroll.top, message.scroll.bottom,
+				 message.scroll.lines);
 
 	case CO_OPERATION_CONSOLE_CURSOR_DRAW:
 	case CO_OPERATION_CONSOLE_CURSOR_MOVE:
@@ -106,22 +106,22 @@ co_rc_t console_widget_t::event(co_console_message_t * message)	// UPDATE: & mes
 #if NOISY
 		co_debug("CO_OPERATION_CONSOLE_CURSOR_\n");
 #endif
-		return op_cursor(message->cursor);
+		return op_cursor(message.cursor);
 
 	case CO_OPERATION_CONSOLE_CLEAR:
 #if NOISY
 		co_debug("CO_OPERATION_CONSOLE_CLEAR\n");
 #endif
-		return op_clear(message->clear.top, message->clear.left,
-				message->clear.bottom, message->clear.right,
-			        message->clear.charattr);
+		return op_clear(message.clear.top, message.clear.left,
+				message.clear.bottom, message.clear.right,
+			        message.clear.charattr);
 	case CO_OPERATION_CONSOLE_BMOVE:
 #if NOISY
 		co_debug("CO_OPERATION_CONSOLE_BMOVE\n");
 #endif
-		return op_bmove(message->bmove.row, message->bmove.column,
-				message->bmove.top, message->bmove.left,
-				message->bmove.bottom, message->bmove.right);
+		return op_bmove(message.bmove.row, message.bmove.column,
+				message.bmove.top, message.bmove.left,
+				message.bmove.bottom, message.bmove.right);
 	case CO_OPERATION_CONSOLE_SWITCH:
 #if NOISY
 		co_debug("CO_OPERATION_CONSOLE_SWITCH\n");
@@ -158,14 +158,14 @@ co_rc_t console_widget_t::event(co_console_message_t * message)	// UPDATE: & mes
 #endif
 		break;
 	case CO_OPERATION_CONSOLE_INVERT_REGION:
-		return op_invert(message->invert.y, message->invert.x,
-				 message->invert.count);
+		return op_invert(message.invert.y, message.invert.x,
+				 message.invert.count);
 #if NOISY
 		co_debug("CO_OPERATION_CONSOLE_INVERT_REGION\n");
 #endif
 		break;
 	default:
-		co_debug("CO_OPERATION_CONSOLE_%d\n", message->type);
+		co_debug("CO_OPERATION_CONSOLE_%d\n", message.type);
 	}
 
 	return CO_RC(ERROR);

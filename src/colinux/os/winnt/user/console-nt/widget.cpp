@@ -187,7 +187,10 @@ console_widget_NT_t::co_console_update()
 }
 
 co_rc_t
-console_widget_NT_t::op_scroll_up(co_console_unit &T, co_console_unit &B, co_console_unit &L)
+console_widget_NT_t::op_scroll_up(
+		const co_console_unit &T,
+		const co_console_unit &B,
+		const co_console_unit &L)
 {
 	SMALL_RECT r;
 	COORD c;
@@ -207,7 +210,10 @@ console_widget_NT_t::op_scroll_up(co_console_unit &T, co_console_unit &B, co_con
 }
 
 co_rc_t
-console_widget_NT_t::op_scroll_down(co_console_unit &T, co_console_unit &B, co_console_unit &L)
+console_widget_NT_t::op_scroll_down(
+		const co_console_unit &T,
+		const co_console_unit &B,
+		const co_console_unit &L)
 {
 	SMALL_RECT r;
 	COORD c;
@@ -227,7 +233,11 @@ console_widget_NT_t::op_scroll_down(co_console_unit &T, co_console_unit &B, co_c
 }
 
 co_rc_t
-console_widget_NT_t::op_putcs(co_console_unit &Y, co_console_unit &X, co_console_character *D, co_console_unit &C)
+console_widget_NT_t::op_putcs(
+		const co_console_unit &Y,
+		const co_console_unit &X,
+		const co_console_character *D,
+		const co_console_unit &C)
 {
 	int count;
 
@@ -262,7 +272,10 @@ console_widget_NT_t::op_putcs(co_console_unit &Y, co_console_unit &X, co_console
 }
 
 co_rc_t
-console_widget_NT_t::op_putc(co_console_unit &Y, co_console_unit &X, co_console_character &C)
+console_widget_NT_t::op_putc(
+		const co_console_unit &Y,
+		const co_console_unit &X,
+		const co_console_character &C)
 {
 	SMALL_RECT r;
 	COORD c;
@@ -285,7 +298,8 @@ console_widget_NT_t::op_putc(co_console_unit &Y, co_console_unit &X, co_console_
 }
 
 co_rc_t
-console_widget_NT_t::op_cursor(co_cursor_pos_t & P)
+console_widget_NT_t::op_cursor(
+		const co_cursor_pos_t & P)
 {
 	COORD c;
 	c.X = P.x;
@@ -295,8 +309,12 @@ console_widget_NT_t::op_cursor(co_cursor_pos_t & P)
 }
 
 co_rc_t
-console_widget_NT_t::op_clear(co_console_unit &T, co_console_unit &L, co_console_unit &B, co_console_unit &R,
-			      co_console_character charattr)
+console_widget_NT_t::op_clear(
+		const co_console_unit &T,
+		const co_console_unit &L,
+		const co_console_unit &B,
+		const co_console_unit &R,
+		const co_console_character charattr)
 {
 	SMALL_RECT r;
 	CHAR_INFO *s;
@@ -334,9 +352,13 @@ console_widget_NT_t::op_clear(co_console_unit &T, co_console_unit &L, co_console
 }
 
 co_rc_t
-console_widget_NT_t::op_bmove(co_console_unit &Y, co_console_unit &X,
-			      co_console_unit &T, co_console_unit &L,
-			      co_console_unit &B, co_console_unit &R)
+console_widget_NT_t::op_bmove(
+		const co_console_unit &Y,
+		const co_console_unit &X,
+		const co_console_unit &T,
+		const co_console_unit &L,
+		const co_console_unit &B,
+		const co_console_unit &R)
 {
 	SMALL_RECT r;
 	COORD c;
@@ -355,7 +377,10 @@ console_widget_NT_t::op_bmove(co_console_unit &Y, co_console_unit &X,
 }
 
 co_rc_t
-console_widget_NT_t::op_invert(co_console_unit &Y, co_console_unit &X, co_console_unit &C)
+console_widget_NT_t::op_invert(
+		const co_console_unit &Y,
+		const co_console_unit &X,
+		const co_console_unit &C)
 {
 #if 0
 	SMALL_RECT r = region;
