@@ -14,6 +14,7 @@ LOCAL_FILES = \
 	$(BUILD_ROOT)/colinux/os/current/user/console/colinux-console-fltk \
 	$(BUILD_ROOT)/colinux/os/current/user/daemon/colinux-daemon \
 	$(BUILD_ROOT)/colinux/os/current/user/conet-daemon/colinux-net-daemon \
+	$(BUILD_ROOT)/colinux/os/current/user/coserial-daemon/colinux-serial-daemon \
 
 LOCAL_TARGETS := $(LOCAL_TARGET) $(BUILD_PATH)/driver.o
 

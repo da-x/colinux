@@ -639,7 +639,8 @@ co_rc_t co_daemon_pipe_cb_packet(co_os_pipe_connection_t *conn,
 			id = *((co_module_t *)packet_data);
 				
 			if (!((id == CO_MODULE_CONSOLE) ||
-			      (CO_MODULE_CONET0 <= id  &&  id < CO_MODULE_CONET_END)))
+			      (CO_MODULE_CONET0 <= id  &&  id < CO_MODULE_CONET_END) |
+			      (CO_MODULE_SERIAL0 <= id  &&  id < CO_MODULE_SERIAL_END)))
 			{
 				rc = CO_RC(ERROR);
 				break;
@@ -650,8 +651,10 @@ co_rc_t co_daemon_pipe_cb_packet(co_os_pipe_connection_t *conn,
 
 			if (id == CO_MODULE_CONSOLE)
 				co_snprintf(module->name, sizeof(module->name), "console");
-			else
+			else if (CO_MODULE_CONET0 <= id  &&  id < CO_MODULE_CONET_END)
 				co_snprintf(module->name, sizeof(module->name), "conet%d", id - CO_MODULE_CONET0);
+			else
+				co_snprintf(module->name, sizeof(module->name), "serial%d", id - CO_MODULE_SERIAL0);
 
 			debug(module->daemon, "module connected: %s\n", module->name);
 
@@ -660,6 +663,7 @@ co_rc_t co_daemon_pipe_cb_packet(co_os_pipe_connection_t *conn,
 
 			rc = co_message_switch_set_rule(&module->daemon->message_switch, id, 
 							co_daemon_pipe_cb_packet_send, module);
+
 			if (CO_OK(rc)) {
 				struct {
 					co_message_t message;

@@ -1,12 +1,15 @@
 # Old manifest: 999b177514109866d8d34382ff37f3e1e4ad6582
-# New manifest: e41593d9eb7e0686852fede32bceaea3342c21b9
+# New manifest: 4d164e6e4df9cfe44ba1ca8cf7b780df3abadcbc
 # Summary of changes:
 # 
 #   add arch/i386/kernel/cooperative.c
-#    as 33d7c3a26fc4a5f3fa0c358de65259101cacd74b
+#    as 57a84f3cbb356b765bc869532c60f1c65886d60c
 # 
 #   add drivers/block/cobd.c
 #    as 10119d4ec60285a1594be304461d5ce4591e2fb8
+# 
+#   add drivers/char/cocd.c
+#    as ac74a25f793f3207b629b9dc51ea5f0587d91d16
 # 
 #   add drivers/input/mouse/comouse.c
 #    as 92b321d6e8704e451b6d1a8b416dfcfbb3f2bcff
@@ -24,7 +27,7 @@
 #    as d0922298d36b40d5463c79c3d0041975f37ab900
 # 
 #   add include/linux/cooperative.h
-#    as b6ab36be84be7f319f1d0dd7f889c8b825b03552
+#    as 2d91aeeae9f527a2185bc8cbc01cfaf17e4a001f
 # 
 #   add include/linux/cooperative_internal.h
 #    as 444481e8a89a5c74e47b55b53e35045332322914
@@ -122,7 +125,7 @@
 # 
 #   patch drivers/char/Makefile
 #    from 7bbbf214b90c8be862b62b882cdc22280b8defcb
-#      to 120150b304931a389053f8d626eab3c7aff4915a
+#      to f95e1164f68e3f395e443bbd0c678c6782c9cb10
 # 
 #   patch drivers/input/keyboard/Kconfig
 #    from 6c66b51ac8b2381d6556513585734c19d11264f0
@@ -198,7 +201,7 @@
 # 
 #   patch include/asm-i386/page.h
 #    from 2d01f24605c3645aa1414544fb60ab3b508c9150
-#      to f97bea61fe6ee81f0ad98928dba165b61fac13dc
+#      to 5fa74a970e0c90f0fb76be7e55b5b09a6a4cb903
 # 
 #   patch include/asm-i386/param.h
 #    from 5a7e5c11aede201b2266b27afa07b78d47564e2a
@@ -230,7 +233,7 @@
 # 
 #   patch init/main.c
 #    from 145db53be1c5b9bde37eeb46c157f9121096ad43
-#      to e49d77317bdcdb87bb44a092640080db24957f04
+#      to c151e53a4d6144cfaa40efc89ed779d5d72e9fd7
 # 
 #   patch kernel/Makefile
 #    from a3e8d06b20cc3ad83e12a056ee1c9bf06f3c1628
@@ -246,7 +249,7 @@
 # 
 --- arch/i386/kernel/cooperative.c
 +++ arch/i386/kernel/cooperative.c
-@@ -0,0 +1,196 @@
+@@ -0,0 +1,202 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -390,6 +393,12 @@
 +		co_queue_message(message);
 +		regs.orig_eax = NETWORK_IRQ;
 +		do_IRQ(regs);
++		break;
++	}
++
++	case CO_DEVICE_SERIAL: {
++		co_queue_message(message);
++		cocd_interrupt();
 +		break;
 +	}
 +
@@ -732,6 +741,298 @@
 +module_exit(cobd_exit);
 +
 +
+--- drivers/char/cocd.c
++++ drivers/char/cocd.c
+@@ -0,0 +1,289 @@
++/*
++ *  Copyright (C) 2004 Dan Aloni <da-x@colinux.org>
++ *
++ *  Cooperative Linux Serial Line implementation
++ * 
++ *  Compatible with UML, also based on some code from there.
++ *  Also based on The tiny_tty.c example driver by Greg Kroah-Hartman (greg@kroah.com).
++ */
++
++#include <linux/major.h>
++#include <linux/config.h>
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/fs.h>
++#include <linux/errno.h>
++#include <linux/major.h>
++#include <linux/stat.h>
++#include <linux/file.h>
++#include <linux/ioctl.h>
++#include <linux/device.h>
++#include <linux/console.h>
++
++#include <linux/devfs_fs_kernel.h>
++#include <linux/tty.h>
++#include <linux/tty_flip.h>
++
++#include <linux/cooperative_internal.h>
++
++struct cocd_tty {
++	struct tty_struct	*tty;		/* pointer to the tty for this device */
++	struct semaphore	sem;		/* locks this structure */
++	int			open_count;	/* number of times this port has been opened */
++};
++
++static struct tty_driver *cocd_driver = NULL;
++DECLARE_MUTEX(cocd_sem);
++
++int cocd_open(struct tty_struct *tty, struct file * filp)
++{
++	struct cocd_tty *cocd =  NULL;
++
++	down(&cocd_sem);
++
++	MOD_INC_USE_COUNT;
++
++	cocd = (struct cocd_tty *)tty->driver_data;
++	if (!cocd) {
++		cocd = kmalloc(sizeof(*cocd), GFP_KERNEL);
++		if (!cocd) {
++			MOD_DEC_USE_COUNT;
++
++			up(&cocd_sem);
++			return -ENOMEM;
++		}
++
++		init_MUTEX_LOCKED(&cocd->sem);
++		cocd->open_count = 0;
++		cocd->tty = tty;
++		tty->driver_data = cocd;
++	} else {
++		down (&cocd->sem);
++	}
++
++	cocd->open_count++;
++
++	up(&cocd->sem);
++	up(&cocd_sem);
++	
++	return 0;
++}
++
++void cocd_close(struct tty_struct *tty, struct file * filp)
++{
++	struct cocd_tty *cocd =  NULL;
++
++	down(&cocd_sem);
++
++	cocd = (struct cocd_tty *)tty->driver_data;
++	if (!cocd) {
++		printk("cocd: no attached struct\n");
++		goto out;
++	}
++
++	down(&cocd->sem);
++	if (cocd->open_count == 1) { /* last close */
++		tty->driver_data = NULL;
++	}
++	cocd->open_count--;
++	up(&cocd->sem);
++
++	if (tty->driver_data == NULL)
++		kfree(cocd);
++
++out:
++	MOD_DEC_USE_COUNT;
++
++	up(&cocd_sem);
++}
++
++void cocd_interrupt(void)
++{
++	co_linux_message_t *message;
++
++	if (!cocd_driver)
++		return;
++
++	while (co_get_message(&message, CO_DEVICE_SERIAL)) {
++		struct tty_struct *tty = NULL;
++		struct cocd_tty *cocd = NULL;
++		unsigned long i;
++
++		if (message->unit >= CO_MODULE_MAX_SERIAL)
++			goto next;
++		
++		tty = cocd_driver->ttys[message->unit];
++		if (!tty)
++			goto next;
++
++		cocd = (struct cocd_tty *)tty->driver_data;
++		if (!cocd)
++			goto next;
++		
++		down(&cocd->sem);
++
++		for (i=0; i < message->size; i++) {
++			if (tty->flip.count >= TTY_FLIPBUF_SIZE)
++				tty_flip_buffer_push(tty);
++
++			tty_insert_flip_char(tty, message->data[i], 0);
++		}
++
++		tty_flip_buffer_push(tty);
++
++		up(&cocd->sem);
++
++	next:
++		co_free_message(message);
++	}
++}
++
++int cocd_write(struct tty_struct * tty, int from_user,
++	       const unsigned char *buf, int count)
++{
++	const unsigned char *kbuf = NULL;
++	const unsigned char *kbuf_scan = NULL;
++	int count_left;
++
++	if (from_user) {
++		kbuf = kmalloc(count, GFP_KERNEL);
++		if (copy_from_user(kbuf, buf, count)) {
++			kfree(kbuf);
++			return -EFAULT;
++		}
++	} else {
++		kbuf = buf;
++	}
++
++	kbuf_scan = kbuf;
++	count_left = count;
++
++	while (count_left > 0) {
++		int count_partial = count_left;
++		if (count_partial > 1000)
++			count_partial = 1000;
++
++		co_send_message(CO_MODULE_LINUX,
++				CO_MODULE_SERIAL0 + tty->index,
++				CO_PRIORITY_DISCARDABLE,
++				CO_MESSAGE_TYPE_OTHER,
++				count_partial,
++				kbuf_scan);
++		
++		count_left -= count_partial;
++		kbuf_scan += count_partial;
++	}
++
++	if (from_user)
++		kfree(kbuf);
++
++	return count;
++}
++
++int cocd_write_room(struct tty_struct *tty)
++{
++	struct cocd_tty *cocd = NULL;
++
++	cocd = (struct cocd_tty *)tty->driver_data;
++	if (!cocd)
++		return 0;
++
++	down(&cocd->sem);
++	if (cocd->open_count == 0) {
++		/* port was not opened */
++		up(&cocd->sem);
++		return 0;
++	}
++
++	up(&cocd->sem);
++	return 255;
++}
++
++void cocd_hangup(struct tty_struct *tty)
++{
++}
++
++void cocd_unthrottle(struct tty_struct * tty)
++{
++}
++
++void cocd_flush_buffer(struct tty_struct *tty)
++{
++}
++
++void cocd_set_termios(struct tty_struct *tty, struct termios *old_termios)
++{
++}
++
++int cocd_chars_in_buffer(struct tty_struct *tty)
++{
++	return 0;
++}
++
++static struct tty_operations cocd_ops = {
++	.open = cocd_open,
++	.close = cocd_close,
++	.write = cocd_write,
++	.write_room = cocd_write_room,
++	.flush_buffer = cocd_flush_buffer,
++	.unthrottle = cocd_unthrottle,
++	.hangup = cocd_hangup, 
++	.chars_in_buffer = cocd_chars_in_buffer, 
++	.set_termios = cocd_set_termios,
++};
++
++static struct tty_driver *cocd_driver;
++
++static void cocd_console_write(struct console *c, const char *string,  unsigned len)
++{
++}
++
++static struct tty_driver *cocd_console_device(struct console *c, int *index)
++{
++        *index = c->index;
++        return cocd_driver;
++}
++
++static int cocd_console_setup(struct console *co, char *options)
++{
++        return(0);
++}
++
++static struct console cocd_cons = {
++        name:           "ttyS",
++        write:          cocd_console_write,
++        device:         cocd_console_device,
++        setup:          cocd_console_setup,
++        flags:          CON_PRINTBUFFER,
++        index:          -1,
++};
++
++static int __init cocd_init(void)
++{
++	cocd_driver = alloc_tty_driver(CO_MODULE_MAX_SERIAL);
++
++	if (!cocd_driver)
++		panic("Couldn't allocate cocd driver");
++
++	cocd_driver->owner = THIS_MODULE;
++	cocd_driver->driver_name = "Cooperative serial lines";
++	cocd_driver->name = "ttS";
++	cocd_driver->devfs_name = "tts/";
++	cocd_driver->major = TTY_MAJOR;
++	cocd_driver->minor_start = 64;
++	cocd_driver->type = TTY_DRIVER_TYPE_SERIAL;
++	cocd_driver->subtype = 0;
++	cocd_driver->init_termios = tty_std_termios;
++	cocd_driver->flags = TTY_DRIVER_REAL_RAW;
++
++	tty_set_operations(cocd_driver, &cocd_ops);
++	
++	if (tty_register_driver(cocd_driver))
++		panic("Couldn't register cocd driver");
++	
++	register_console(&cocd_cons);
++
++	return 0;
++}
++
++module_init(cocd_init);
 --- drivers/input/mouse/comouse.c
 +++ drivers/input/mouse/comouse.c
 @@ -0,0 +1,71 @@
@@ -1958,7 +2259,7 @@
 +#endif
 --- include/linux/cooperative.h
 +++ include/linux/cooperative.h
-@@ -0,0 +1,304 @@
+@@ -0,0 +1,309 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -2004,6 +2305,7 @@
 +
 +#define CO_MODULE_MAX_CONET  16
 +#define CO_MODULE_MAX_COBD  32
++#define CO_MODULE_MAX_SERIAL  64
 +
 +typedef enum {
 +	CO_MODULE_LINUX,
@@ -2020,6 +2322,9 @@
 +
 +	CO_MODULE_COBD0,
 +	CO_MODULE_COBD_END=CO_MODULE_COBD0+CO_MODULE_MAX_COBD-1,
++	
++	CO_MODULE_SERIAL0,
++	CO_MODULE_SERIAL_END=CO_MODULE_SERIAL0+CO_MODULE_MAX_SERIAL-1,
 +} co_module_t;
 +
 +typedef enum {
@@ -2048,6 +2353,7 @@
 +	CO_DEVICE_NETWORK,
 +	CO_DEVICE_TIMER,
 +	CO_DEVICE_POWER,
++	CO_DEVICE_SERIAL,
 +
 +	CO_DEVICES_TOTAL,
 +} co_device_t;
@@ -3625,15 +3931,14 @@
  obj-$(CONFIG_BLK_DEV_XD)	+= xd.o
 --- drivers/char/Makefile
 +++ drivers/char/Makefile
-@@ -9,6 +9,8 @@
- 
- obj-y	 += mem.o random.o tty_io.o n_tty.o tty_ioctl.o pty.o misc.o
- 
-+#obj-$(CONFIG_COOPERATIVE)       += colx_keyb.o
-+
- obj-$(CONFIG_VT)		+= vt_ioctl.o vc_screen.o consolemap.o \
- 				   consolemap_deftbl.o selection.o keyboard.o
- obj-$(CONFIG_HW_CONSOLE)	+= vt.o defkeymap.o
+@@ -24,6 +24,7 @@
+ obj-$(CONFIG_STALLION)		+= stallion.o
+ obj-$(CONFIG_ISTALLION)		+= istallion.o
+ obj-$(CONFIG_DIGI)		+= pcxx.o
++obj-$(CONFIG_COOPERATIVE)	+= cocd.o
+ obj-$(CONFIG_DIGIEPCA)		+= epca.o
+ obj-$(CONFIG_SPECIALIX)		+= specialix.o
+ obj-$(CONFIG_MOXA_INTELLIO)	+= moxa.o
 --- drivers/input/keyboard/Kconfig
 +++ drivers/input/keyboard/Kconfig
 @@ -16,7 +16,7 @@
@@ -4033,18 +4338,7 @@
  #else
 --- include/asm-i386/page.h
 +++ include/asm-i386/page.h
-@@ -1,6 +1,10 @@
- #ifndef _I386_PAGE_H
- #define _I386_PAGE_H
- 
-+#ifdef CONFIG_COOPERATIVE
-+#define WANT_PAGE_VIRTUAL
-+#endif
-+
- /* PAGE_SHIFT determines the page size */
- #define PAGE_SHIFT	12
- #define PAGE_SIZE	(1UL << PAGE_SHIFT)
-@@ -13,6 +17,7 @@
+@@ -13,6 +13,7 @@
  #ifndef __ASSEMBLY__
  
  #include <linux/config.h>
@@ -4207,15 +4501,7 @@
  #define SCSI_DISK9_MAJOR	129
 --- init/main.c
 +++ init/main.c
-@@ -43,6 +43,7 @@
- #include <linux/efi.h>
- #include <linux/unistd.h>
- #include <linux/rmap.h>
-+#include <linux/cooperative_internal.h>
- 
- #include <asm/io.h>
- #include <asm/bugs.h>
-@@ -446,6 +447,7 @@
+@@ -446,6 +446,7 @@
  		panic(panic_later, panic_param);
  	profile_init();
  	local_irq_enable();

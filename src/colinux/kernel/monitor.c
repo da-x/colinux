@@ -400,7 +400,7 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 		} message;
 		
 		co_debug("monitor: linux terminated (%d)\n", co_passage_page->params[0]);
-
+		
 		message.message.from = CO_MODULE_MONITOR;
 		message.message.to = CO_MODULE_DAEMON;
 		message.message.priority = CO_PRIORITY_IMPORTANT;

@@ -118,6 +118,27 @@ co_rc_t co_cmdline_params_one_arugment_parameter(co_command_line_params_t cmdlin
 	return one_arugment_parameter(cmdline, name, &argument, out_exists, out_arg_buf, arg_size);
 }
 
+co_rc_t co_cmdline_params_one_arugment_int_parameter(co_command_line_params_t cmdline, 
+						     const char *name, 
+						     bool_t *out_exists, int *out_int)
+{
+	char arg_buf[0x20];
+	co_rc_t rc;
+	char *end_ptr;
+
+	rc = co_cmdline_params_one_arugment_parameter(cmdline, name, out_exists, arg_buf, sizeof(arg_buf));
+	if (!CO_OK(rc))
+		return rc;
+
+	if (out_exists && *out_exists) { 
+		*out_int = strtol(arg_buf, &end_ptr, 10);
+		if (end_ptr == arg_buf)
+			return CO_RC(ERROR);
+	}
+
+	return CO_RC(OK);
+}
+
 co_rc_t co_cmdline_params_one_optional_arugment_parameter(co_command_line_params_t cmdline, 
 							  const char *name, 
 							  bool_t *out_exists, 
