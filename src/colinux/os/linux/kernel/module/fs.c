@@ -69,3 +69,10 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 	/* TODO */
 	return CO_RC(ERROR);
 }
+
+co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *statfs)
+{
+	/* TODO */
+	return CO_RC(ERROR);
+}
+

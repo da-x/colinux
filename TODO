@@ -74,7 +74,6 @@
      could also be specified in the XML.
    * Support to shutdown/suspend/resume (just!) coLinux so it becomes
      transportable between hosts.
-   * Hostfs support
    * Import features from UML
 
  * conet: 
