@@ -5,7 +5,7 @@ source ./build-common.sh
 # See ./commom.sh
 
 KERNEL_DIR=v2.6
-KERNEL_VERSION=2.6.7
+KERNEL_VERSION=2.6.8.1
 KERNEL=linux-$KERNEL_VERSION 
 KERNEL_URL=http://www.kernel.org/pub/linux/kernel/$KERNEL_DIR 
 KERNEL_ARCHIVE=$KERNEL.tar.bz2
