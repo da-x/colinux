@@ -1,99 +1,252 @@
-diff -X bin/dontdiff -urN linux/CREDITS linux/CREDITS
---- linux/CREDITS	2004-06-19 07:22:55.000000000 +0300
-+++ linux/CREDITS	2004-06-19 07:45:21.000000000 +0300
-@@ -54,6 +54,12 @@
- S: CH-1015 Lausanne
- S: Switzerland
- 
-+A: Dan Aloni
-+E: da-x@colinux.org
-+D: Copaertative Linux
-+D: Various kernel patches
-+S: Isreal
-+
- N: Tim Alpaerts
- E: tim_alpaerts@toyota-motor-europe.com
- D: 802.2 class II logical link control layer,
-diff -X bin/dontdiff -urN linux/Makefile linux/Makefile
---- linux/Makefile	2004-06-19 07:22:55.000000000 +0300
-+++ linux/Makefile	2004-06-19 08:16:59.000000000 +0300
-@@ -1,7 +1,7 @@
- VERSION = 2
- PATCHLEVEL = 6
- SUBLEVEL = 7
--EXTRAVERSION =
-+EXTRAVERSION = -co-0.6.2
- NAME=Zonked Quokka
- 
- # *DOCUMENTATION*
-@@ -283,6 +283,11 @@
- AS		= $(CROSS_COMPILE)as
- LD		= $(CROSS_COMPILE)ld
- CC		= $(CROSS_COMPILE)gcc
-+ifeq ($(GCCTRACE),Y)
-+CC              = $(CORSS_COMPILE)$(COLINUX_ROOT)/bin/tracewrapper.py gcc
-+else
-+CC		= $(CROSS_COMPILE)gcc
-+endif
- CPP		= $(CC) -E
- AR		= $(CROSS_COMPILE)ar
- NM		= $(CROSS_COMPILE)nm
-diff -X bin/dontdiff -urN linux/arch/i386/Kconfig linux/arch/i386/Kconfig
---- linux/arch/i386/Kconfig	2004-06-19 07:22:56.000000000 +0300
-+++ linux/arch/i386/Kconfig	2004-06-19 07:45:23.000000000 +0300
-@@ -201,6 +201,7 @@
- 
- config M586TSC
- 	bool "Pentium-Classic"
-+	depends on !COOPERATIVE
- 	help
- 	  Select this for a Pentium Classic processor with the RDTSC (Read
- 	  Time Stamp Counter) instruction for benchmarking.
-@@ -533,6 +534,10 @@
- 	  If you have a system with several CPUs, you do not need to say Y
- 	  here: the IO-APIC will be used automatically.
- 
-+config X86_UP_COPIC
-+	bool 'Cooperative PIC (COPIC) support' 
-+	depends on COOPERATIVE
-+
- config X86_LOCAL_APIC
- 	bool
- 	depends on !SMP && X86_UP_APIC
-@@ -545,7 +550,7 @@
- 
- config X86_TSC
- 	bool
--	depends on (MWINCHIP3D || MWINCHIP2 || MCRUSOE || MCYRIXIII || MK7 || MK6 || MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M686 || M586MMX || M586TSC || MK8 || MVIAC3_2) && !X86_NUMAQ
-+	depends on (MWINCHIP3D || MWINCHIP2 || MCRUSOE || MCYRIXIII || MK7 || MK6 || MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M686 || M586MMX || M586TSC || MK8 || MVIAC3_2) && !X86_NUMAQ && !COOPERATIVE
- 	default y
- 
- config X86_MCE
-@@ -872,6 +877,10 @@
- 
- source kernel/power/Kconfig
- 
-+config COOPERATIVE
-+	bool 'Cooperative Mode'
-+	default y
-+
- source "drivers/acpi/Kconfig"
- 
- menu "APM (Advanced Power Management) BIOS Support"
-diff -X bin/dontdiff -urN linux/arch/i386/kernel/Makefile linux/arch/i386/kernel/Makefile
---- linux/arch/i386/kernel/Makefile	2004-05-10 18:04:51.000000000 +0300
-+++ linux/arch/i386/kernel/Makefile	2004-06-14 17:38:51.000000000 +0300
-@@ -17,6 +17,7 @@
- obj-$(CONFIG_X86_MSR)		+= msr.o
- obj-$(CONFIG_X86_CPUID)		+= cpuid.o
- obj-$(CONFIG_MICROCODE)		+= microcode.o
-+obj-$(CONFIG_COOPERATIVE)       += cooperative.o
- obj-$(CONFIG_APM)		+= apm.o
- obj-$(CONFIG_X86_SMP)		+= smp.o smpboot.o
- obj-$(CONFIG_X86_TRAMPOLINE)	+= trampoline.o
-diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/kernel/cooperative.c
---- linux/arch/i386/kernel/cooperative.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/arch/i386/kernel/cooperative.c	2004-06-19 12:21:14.000000000 +0300
+# Old manifest: 999b177514109866d8d34382ff37f3e1e4ad6582
+# New manifest: 2acefa0fb4aa0593bbaf4b32219b5c7b45846263
+# Summary of changes:
+# 
+#   add arch/i386/kernel/cooperative.c
+#    as 04631ee5ff78eb1a42fc73ab29e7f51e59795973
+# 
+#   add drivers/block/cobd.c
+#    as af2d79b507ee175c9c5a791af29ad00742dc4a07
+# 
+#   add drivers/input/mouse/comouse.c
+#    as 6285b62f646dca96ee5bfce4322f6b2d4efea3b6
+# 
+#   add drivers/input/serio/cokbd.c
+#    as c1e3ce4f74a56fa093d4de78db0d28166997b417
+# 
+#   add drivers/net/conet.c
+#    as f6adb04153cc672588d47787492201e483800518
+# 
+#   add drivers/video/console/cocon.c
+#    as 5e55ab0b01474d6c3c47dd84516d9f0bf51bc569
+# 
+#   add include/asm-i386/cooperative.h
+#    as 23c64ba82bea6248cc018d967ed0e426958ff351
+# 
+#   add include/linux/cooperative.h
+#    as 9000a987d8e940c853473ef1583ce97487afbcce
+# 
+#   add kernel/cooperative.c
+#    as 23852a05167a84fd9e64f69c050faf977d72fbf0
+# 
+#   patch CREDITS
+#    from d848c2c364dce0a45758830abfb4b643ddea12ae
+#      to 3322ee8649719f4d621ccacc0c457ea91feedf5a
+# 
+#   patch Makefile
+#    from ea3ca0e687f47e679f270d52b4769cf2140c0a6c
+#      to a893bf47fbcf84b08a47ab02da922e46e5dd3846
+# 
+#   patch arch/i386/Kconfig
+#    from d6ebb7ecd7cada60b2b7e1a098ff01c733c9e9b9
+#      to da57c8b58176bc47b29a3c29140877a2b6b92414
+# 
+#   patch arch/i386/kernel/Makefile
+#    from 852f6fe17fed479a863425449c631781a4166908
+#      to b3b2a92072566782fb31a47a1d7f4580a3806d8e
+# 
+#   patch arch/i386/kernel/cpu/common.c
+#    from b99074a7097586b5e1e43e9846be3d6932c2ef9b
+#      to 48f7ddff539ac39706430f0d4a18aaa6059f1869
+# 
+#   patch arch/i386/kernel/entry.S
+#    from 2e737a0718e4099fc4f8ebb1c7494743d25c73e5
+#      to e366b33a8f0b419b6165eb1bf9a6e96a42b33036
+# 
+#   patch arch/i386/kernel/head.S
+#    from babf10d21c20d68a0e039e9b90e96351a32ceaf3
+#      to 8fe7c2ae5aaaeffc9e2ca4139e57d77f991339d3
+# 
+#   patch arch/i386/kernel/i387.c
+#    from 83c970f4869b5b28369b8312847dcd73f61e4cda
+#      to fbb384ed63080f5e261c58f133fb71a855e20647
+# 
+#   patch arch/i386/kernel/i8259.c
+#    from 3c2dcc7c559b0e2c9a27a696c097fff34cdf2837
+#      to 5963fd2bde02bd7e5cc1be18c7f0b343501aa526
+# 
+#   patch arch/i386/kernel/ioport.c
+#    from 6cf2452a8c0079a0aaca8ecb19aeedf2eb3e2f7c
+#      to eda3d10ffb613f3a52e77953d10a026ca4d31b39
+# 
+#   patch arch/i386/kernel/process.c
+#    from 18183f111df3dba7623109efdb12bad559089df6
+#      to 7d14ad1cb718ae9bc27f4ae59ff3b80787b1a54d
+# 
+#   patch arch/i386/kernel/reboot.c
+#    from 5587161a3d1828fdbae02b8d1228d98be1f74431
+#      to c29685f968e5a80732fa506d1b7ee5006546745b
+# 
+#   patch arch/i386/kernel/setup.c
+#    from d7984d0bf518eaae1f5ccd55028d601023b81835
+#      to 85dc024a590717f04f9e6e6a7d86cbd44d6cfd14
+# 
+#   patch arch/i386/kernel/sysenter.c
+#    from 030f859ef57cd7fd14def28f9c978eab1a6d7679
+#      to e30017aae3fb145e405e5eacd549edfc1045e009
+# 
+#   patch arch/i386/kernel/time.c
+#    from 3d7c6900e17386edaa3169d9a6683ef26b047a6f
+#      to 24485aa9ce79f9fdefedc6b98f53b301716527da
+# 
+#   patch arch/i386/kernel/timers/timer.c
+#    from ce821396562c466f779764c055540ed3a35e1bad
+#      to 1005576f7ab22614fc99d904554e4f5f8f28749a
+# 
+#   patch arch/i386/kernel/vmlinux.lds.S
+#    from ebaaefec3a8ec28cc63c57fa96cfc3c67c3a3d5e
+#      to cc4af234162b5339ba254979f126957569b4b44b
+# 
+#   patch arch/i386/mm/fault.c
+#    from a2f8463ea1c453e1e78a63517c16e259b27558d0
+#      to f3a706c214bc25c91620a6757161fff106548368
+# 
+#   patch arch/i386/mm/init.c
+#    from 8d466e7890a21c71d8a96d07e835e4313378e21e
+#      to 4d06fbed2e587493c85b54dd6cfa1b6b1d88e0d3
+# 
+#   patch arch/i386/mm/ioremap.c
+#    from 36cf45785c144745cd133e9344bec486fb44324b
+#      to a83cf5a7f52887d55bd7221d3adeb626db6e5e03
+# 
+#   patch arch/i386/mm/pgtable.c
+#    from 85d7f6298368515eecb659c1113bad9fab247040
+#      to c865e21cc4164fa96ca94bb31fae5fea66045033
+# 
+#   patch drivers/block/Kconfig
+#    from 3046b8060d3e917d6e657916e98a0a2265c2381b
+#      to 381820372c84b68108c1600d8a32efb07e384a58
+# 
+#   patch drivers/block/Makefile
+#    from 507fd204bfa054e1fc4d84ed968efa27aa4f9c57
+#      to 81ab4b161501983cc0dab065c80ebdae0a25f1e4
+# 
+#   patch drivers/char/Makefile
+#    from 7bbbf214b90c8be862b62b882cdc22280b8defcb
+#      to 120150b304931a389053f8d626eab3c7aff4915a
+# 
+#   patch drivers/input/keyboard/Kconfig
+#    from 6c66b51ac8b2381d6556513585734c19d11264f0
+#      to e6df2d63e83b7edd85ca5e42c5e269df19c33eec
+# 
+#   patch drivers/input/keyboard/atkbd.c
+#    from 2bdcb74c237869911bb782524e6d9c2c8cde0185
+#      to ea5f7c6d717ece6960a478345873e96ed15ee6bc
+# 
+#   patch drivers/input/mouse/Kconfig
+#    from 3305a6e0af365100eaa273b5f7e822a97a9d66a6
+#      to 9eb434a77828041f1694c152d7ef795f6a7125cd
+# 
+#   patch drivers/input/mouse/Makefile
+#    from f5fd7cbe2b10424b4c06e578976b1d461fe2e1f4
+#      to 0cb6898215b7d59c2eb70200b3afc93bc45eb9df
+# 
+#   patch drivers/input/serio/Kconfig
+#    from fa441e55e8ff5d40d8ecbb254801e72ee9d0db4e
+#      to 7d5ab904448b30241525e1391d2da7d8a054c1be
+# 
+#   patch drivers/input/serio/Makefile
+#    from 487790cd71d6a68f313e7764026ed9eeaff2b4c1
+#      to 82cd877a6486d3a65242f43ef50c9efe5ddb2364
+# 
+#   patch drivers/net/Kconfig
+#    from 5fd42a5bd8f9beeb9eb075a0dd4c429fd56937eb
+#      to af58996899ecad1ccf07b1536288453febb56641
+# 
+#   patch drivers/net/Makefile
+#    from cfca4c3ec0e28d5b6b5f2b8a16f3adb4e5db2c32
+#      to 5c931a07ab406c2de03a537762799901565c6e76
+# 
+#   patch drivers/video/console/Kconfig
+#    from 6ceb2095b701b987993e9ac8d4c90a0749ff4dd5
+#      to 9c6c7e834a4d9946848977cb4249bdc6b851eb11
+# 
+#   patch drivers/video/console/Makefile
+#    from 6c1486e1279fe8be380b1bb87b868633a439eaaa
+#      to 1295714053d1594861e613e1400c946e3a8150c8
+# 
+#   patch include/asm-i386/bug.h
+#    from a1741c951e74f86adbf8b191d42176e008099535
+#      to 1b5f65a6a8d5c5d2b1757d70e4dbb42c9b513084
+# 
+#   patch include/asm-i386/dma.h
+#    from 563c0b677758d07bc01975de31dc6e49c63ff108
+#      to 2706dc26503fc2e58a2bab08a8030ce9450abfb6
+# 
+#   patch include/asm-i386/fixmap.h
+#    from e037b82881298d12b58a029fe5c101a721eea91e
+#      to 016c5e424a24d4643f4b26c6bd94f8b6be4574f2
+# 
+#   patch include/asm-i386/io.h
+#    from 03c1630d5e76a7e846951d5af455ce750d53eed7
+#      to e1050c9cced5ec4d8dfe592631ccc5f6df877d53
+# 
+#   patch include/asm-i386/mach-default/irq_vectors.h
+#    from a8627a99795c7a601d5b8929aafcbfa66f2115f0
+#      to c32dfbea62faa07c84fd436f75c83d9fb33fd82c
+# 
+#   patch include/asm-i386/mach-default/irq_vectors_limits.h
+#    from 178d7fef0d6fae8bc7d282fd61c08bd17317dbea
+#      to e9870551563e2367f81e1dae073f6bb77cac3006
+# 
+#   patch include/asm-i386/mc146818rtc.h
+#    from 45c8b4f96c42fd656166150e64c073bf50781554
+#      to 85ff4c98ed7d9a0aeae28c5190a15ebe33692bf2
+# 
+#   patch include/asm-i386/mmzone.h
+#    from ba5f72830001becf0d0c9578a7f120b40a7be513
+#      to 398001434dc41426d2ca0e66617635cba543a65d
+# 
+#   patch include/asm-i386/page.h
+#    from 2d01f24605c3645aa1414544fb60ab3b508c9150
+#      to d73f40866d49d62900e0dabb91f44edb48423965
+# 
+#   patch include/asm-i386/param.h
+#    from 5a7e5c11aede201b2266b27afa07b78d47564e2a
+#      to 2b819a0e5d4617e79cca5780ba39b04d754db7eb
+# 
+#   patch include/asm-i386/pgalloc.h
+#    from c6c20cbc20c6e930f565e045bb61f71fd9683c64
+#      to b2948745b0a64b8028f30d7e39a7fa522f02add3
+# 
+#   patch include/asm-i386/pgtable-2level.h
+#    from eff80b0e5f738d323541ab35c00d3dcbfe4ecf31
+#      to a6b51b4a560c412798230f2d27627b13758fac6c
+# 
+#   patch include/asm-i386/pgtable.h
+#    from 09d20387bbe548b3089eb5b85e5c544435bc0ac7
+#      to 6b422bde8454f9bcad37268a1416477b5f2c33ff
+# 
+#   patch include/asm-i386/processor.h
+#    from 7a2d2aa52655f0383d57e37710476a7376f1a36b
+#      to 70720ed1bde73569731c879835bdef661c496789
+# 
+#   patch include/linux/console.h
+#    from 867c5f041944317deca00cd19eddfd01cbab0fc2
+#      to 1f58979340dba634bc0f3494ad4d0d2e9318f766
+# 
+#   patch include/linux/major.h
+#    from d6a0ab425ee2c409d6e7961d686fcc639fae0c5f
+#      to 5e7ab35d3f41a1b3e72747c3b1d8f6bdbe9149fd
+# 
+#   patch init/main.c
+#    from 145db53be1c5b9bde37eeb46c157f9121096ad43
+#      to 1d19e1f28819566b0d7f53269a6064915f0de213
+# 
+#   patch kernel/Makefile
+#    from a3e8d06b20cc3ad83e12a056ee1c9bf06f3c1628
+#      to 7785c076f61863f6ba1428c83c923eb496c87a4c
+# 
+#   patch kernel/panic.c
+#    from c5f6871e7e2d9865af5684e6f9cff422e96ad9e7
+#      to 9f2cb88f53c6c4b3f914a1fbbacd308a0fb87c61
+# 
+#   patch kernel/printk.c
+#    from 1544fa71899d3329ced3957e96126c9e24e1b24d
+#      to 337db51aae83bf2ce448e9d33cead2681e37d886
+# 
+--- arch/i386/kernel/cooperative.c
++++ arch/i386/kernel/cooperative.c
 @@ -0,0 +1,198 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
@@ -293,874 +446,8 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/k
 +EXPORT_SYMBOL(co_arch_info);
 +
 +CO_TRACE_CONTINUE;
-diff -X bin/dontdiff -urN linux/arch/i386/kernel/cpu/common.c linux/arch/i386/kernel/cpu/common.c
---- linux/arch/i386/kernel/cpu/common.c	2004-06-19 07:22:56.000000000 +0300
-+++ linux/arch/i386/kernel/cpu/common.c	2004-06-19 07:45:23.000000000 +0300
-@@ -565,11 +565,13 @@
- 
- 	/* Clear all 6 debug registers: */
- 
-+#ifndef CONFIG_COOPERATIVE
- #define CD(register) __asm__("movl %0,%%db" #register ::"r"(0) );
- 
- 	CD(0); CD(1); CD(2); CD(3); /* no db4 and db5 */; CD(6); CD(7);
- 
- #undef CD
-+#endif
- 
- 	/*
- 	 * Force FPU initialization:
-diff -X bin/dontdiff -urN linux/arch/i386/kernel/entry.S linux/arch/i386/kernel/entry.S
---- linux/arch/i386/kernel/entry.S	2004-06-19 07:22:56.000000000 +0300
-+++ linux/arch/i386/kernel/entry.S	2004-06-19 11:24:58.000000000 +0300
-@@ -192,7 +192,7 @@
- 	ALIGN
- ret_from_exception:
- 	preempt_stop
--ret_from_intr:
-+ENTRY(ret_from_intr)
- 	GET_THREAD_INFO(%ebp)
- 	movl EFLAGS(%esp), %eax		# mix EFLAGS and CS
- 	movb CS(%esp), %al
-diff -X bin/dontdiff -urN linux/arch/i386/kernel/head.S linux/arch/i386/kernel/head.S
---- linux/arch/i386/kernel/head.S	2004-06-19 07:22:56.000000000 +0300
-+++ linux/arch/i386/kernel/head.S	2004-06-19 07:45:23.000000000 +0300
-@@ -399,7 +399,7 @@
- .data
- 
- ENTRY(stack_start)
--	.long init_thread_union+THREAD_SIZE
-+	.long init_thread_union+THREAD_SIZE-100
- 	.long __BOOT_DS
- 
- ready:	.byte 0
-diff -X bin/dontdiff -urN linux/arch/i386/kernel/i387.c linux/arch/i386/kernel/i387.c
---- linux/arch/i386/kernel/i387.c	2004-06-19 07:22:56.000000000 +0300
-+++ linux/arch/i386/kernel/i387.c	2004-06-19 07:45:23.000000000 +0300
-@@ -17,6 +17,7 @@
- #include <asm/user.h>
- #include <asm/ptrace.h>
- #include <asm/uaccess.h>
-+#include <linux/cooperative.h>
- 
- #ifdef CONFIG_MATH_EMULATION
- #define HAVE_HWFP (boot_cpu_data.hard_math)
-@@ -37,7 +38,18 @@
- 		if (mask == 0) mask = 0x0000ffbf;
- 	} 
- 	mxcsr_feature_mask &= mask;
-+#ifndef CONFIG_COOPERATIVE
- 	stts();
-+#else
-+#if (0)
-+	clear_in_cr4(X86_CR4_PVI);
-+	clear_in_cr4(X86_CR4_DE);
-+	clear_in_cr4(X86_CR4_MCE);
-+	clear_in_cr4(X86_CR4_PGE);
-+	flush_tlb_all();
-+	clear_in_cr4(XF86_CR4_OSXMMEXCPT);
-+#endif
-+#endif
- }
- 
- /*
-@@ -328,6 +340,8 @@
- 	return 1;
- }
- 
-+CO_TRACE_STOP;
-+
- int save_i387( struct _fpstate __user *buf )
- {
- 	if ( !current->used_math )
-@@ -349,6 +363,8 @@
- 	}
- }
- 
-+CO_TRACE_CONTINUE;
-+
- static inline int restore_i387_fsave( struct _fpstate __user *buf )
- {
- 	struct task_struct *tsk = current;
-@@ -369,6 +385,8 @@
- 	return err ? 1 : convert_fxsr_from_user( &tsk->thread.i387.fxsave, buf );
- }
- 
-+CO_TRACE_STOP;
-+
- int restore_i387( struct _fpstate __user *buf )
- {
- 	int err;
-@@ -386,6 +404,8 @@
- 	return err;
- }
- 
-+CO_TRACE_CONTINUE;
-+
- /*
-  * ptrace request handlers.
-  */
-diff -X bin/dontdiff -urN linux/arch/i386/kernel/i8259.c linux/arch/i386/kernel/i8259.c
---- linux/arch/i386/kernel/i8259.c	2004-05-10 18:04:51.000000000 +0300
-+++ linux/arch/i386/kernel/i8259.c	2004-06-19 11:32:41.000000000 +0300
-@@ -25,9 +25,87 @@
- #include <asm/i8259.h>
- 
- #include <linux/irq.h>
-+#include <linux/cooperative.h>
- 
- #include <io_ports.h>
- 
-+#ifdef CONFIG_COOPERATIVE
-+
-+CO_TRACE_STOP;
-+
-+void proxy_interrupt_handler(unsigned long interrupt, struct pt_regs regs)
-+{
-+	co_passage_page->operation = CO_OPERATION_FORWARD_INTERRUPT;
-+	co_passage_page->params[0] = interrupt + 0x20;
-+	co_passage_page->params[1] = regs.eip;
-+	co_passage_page->params[2] = (unsigned long)(&((&interrupt)[10]));
-+	co_passage_page->host_state.flags &= ~(1 << 9); /* Turn IF off */
-+
-+	co_switch_wrapper();
-+	co_callback();
-+}
-+
-+CO_TRACE_CONTINUE;
-+
-+#define IRQLIST_16(x) \
-+	IRQ(x,0) IRQ(x,1) IRQ(x,2) IRQ(x,3) \
-+	IRQ(x,4) IRQ(x,5) IRQ(x,6) IRQ(x,7) \
-+	IRQ(x,8) IRQ(x,9) IRQ(x,a) IRQ(x,b) \
-+	IRQ(x,c) IRQ(x,d) IRQ(x,e) IRQ(x,f)
-+
-+#define IRQLIST_224 \
-+	IRQLIST_16(0x0) IRQLIST_16(0x1) IRQLIST_16(0x2) IRQLIST_16(0x3) \
-+	IRQLIST_16(0x4) IRQLIST_16(0x5) IRQLIST_16(0x6) IRQLIST_16(0x7) \
-+	IRQLIST_16(0x8) IRQLIST_16(0x9) IRQLIST_16(0xa) IRQLIST_16(0xb) \
-+	IRQLIST_16(0xc) IRQLIST_16(0xd)
-+
-+#define IRQ(x,y) \
-+	extern asmlinkage void IRQ_proxy_##x##y##_interrupt(void);
-+IRQLIST_224;
-+#undef IRQ
-+
-+#define BIRQ(id)						\
-+asm(								\
-+    "\n"__ALIGN_STR"\n"						\
-+    ".section .text\n"						\
-+    ".globl IRQ_proxy_" #id "_interrupt\n"			\
-+    "IRQ_proxy_" #id "_interrupt:\n"				\
-+    "push %eax\n\t"						\
-+    "cld;\n\t"							\
-+    "pushl %es;\n\t"						\
-+    "pushl %ds;\n\t"						\
-+    "pushl %eax;\n\t"						\
-+    "pushl %ebp;\n\t"						\
-+    "pushl %edi;\n\t"						\
-+    "pushl %esi;\n\t"						\
-+    "pushl %edx;\n\t"						\
-+    "pushl %ecx;\n\t"						\
-+    "pushl %ebx;\n\t"						\
-+    "movl $123, %edx;\n\t"			         	\
-+    "movl %edx, %ds;\n\t"					\
-+    "movl %edx, %es;\n\t"					\
-+    "pushl $" #id "\n\t"					\
-+    "call proxy_interrupt_handler\n\t"				\
-+    "popl %ebx\n\t"						\
-+    "jmp ret_from_intr\n"					\
-+    ".previous\n"						\
-+    );		                    				\
-+
-+#define IRQ(x,y) BIRQ(x##y)
-+IRQLIST_224;
-+#undef IRQ
-+
-+#define IRQ(x,y) &IRQ_proxy_##x##y##_interrupt,
-+void (*proxy_interrupt[NR_IRQS])(void) = {
-+    IRQLIST_224
-+};
-+#undef IRQ
-+
-+#undef IRQLIST_16
-+#undef IRQLIST_224
-+
-+#endif 
-+    
- /*
-  * This is the 'legacy' 8259A Programmable Interrupt Controller,
-  * present in the majority of PC/AT boxes.
-@@ -407,6 +485,63 @@
- 
- device_initcall(init_timer_sysfs);
- 
-+#ifdef CONFIG_X86_UP_COPIC
-+
-+/*
-+ * Not like you have any other choice other than using
-+ * COPIC in Cooperative mode.
-+ */
-+
-+static void end_COPIC_irq(unsigned int irq)
-+{
-+}
-+
-+#define shutdown_COPIC_irq	disable_COPIC_irq
-+
-+static void mask_and_ack_COPIC(unsigned int irq)
-+{
-+}
-+
-+static unsigned int startup_COPIC_irq(unsigned int irq)
-+{
-+	return 0;
-+}
-+
-+void disable_COPIC_irq(unsigned int irq)
-+{
-+}
-+
-+void enable_COPIC_irq(unsigned int irq)
-+{
-+}
-+
-+static struct hw_interrupt_type co_pic_irq_type = {
-+	"CO-PIC",
-+	startup_COPIC_irq,
-+	shutdown_COPIC_irq,
-+	enable_COPIC_irq,
-+	disable_COPIC_irq,
-+	mask_and_ack_COPIC,
-+	end_COPIC_irq,
-+	NULL
-+};
-+
-+void __init init_COPIC_irqs(void)
-+{
-+	int i;
-+
-+	for (i = 0; i < NR_IRQS; i++) {
-+		irq_desc[i].status = IRQ_DISABLED;
-+		irq_desc[i].action = 0;
-+		irq_desc[i].depth = 1;
-+
-+		irq_desc[i].handler = &co_pic_irq_type;
-+	}
-+	
-+}
-+
-+#endif
-+
- void __init init_IRQ(void)
- {
- 	int i;
-@@ -414,6 +549,7 @@
- 	/* all the set up before the call gates are initialised */
- 	pre_intr_init_hook();
- 
-+#ifndef CONFIG_COOPERATIVE
- 	/*
- 	 * Cover the whole vector space, no vector can escape
- 	 * us. (some of these will be overridden and become
-@@ -446,4 +582,21 @@
- 		setup_irq(FPU_IRQ, &fpu_irq);
- 
- 	irq_ctx_init(smp_processor_id());
-+
-+#else
-+	printk("Setting proxy interrupt vectors\n");
-+
-+#ifdef CONFIG_X86_UP_COPIC
-+	init_COPIC_irqs();
-+#endif
-+
-+	for (i = 0; i < (NR_VECTORS - FIRST_EXTERNAL_VECTOR); i++) {
-+		int vector = FIRST_EXTERNAL_VECTOR + i;
-+		if (i >= NR_IRQS)
-+			break;
-+		if (vector != SYSCALL_VECTOR)
-+			set_intr_gate(vector, proxy_interrupt[i]);
-+	}
-+
-+#endif
- }
-diff -X bin/dontdiff -urN linux/arch/i386/kernel/ioport.c linux/arch/i386/kernel/ioport.c
---- linux/arch/i386/kernel/ioport.c	2004-04-04 05:37:06.000000000 +0200
-+++ linux/arch/i386/kernel/ioport.c	2004-06-19 11:07:35.000000000 +0300
-@@ -56,6 +56,7 @@
-  */
- asmlinkage long sys_ioperm(unsigned long from, unsigned long num, int turn_on)
- {
-+#ifndef CONFIG_COOPERATIVE
- 	struct thread_struct * t = &current->thread;
- 	struct tss_struct * tss;
- 	unsigned long *bitmap;
-@@ -92,6 +93,9 @@
- 	}
- 	put_cpu();
- 	return 0;
-+#else
-+	return -EPERM;	
-+#endif
- }
- 
- /*
-@@ -107,6 +111,7 @@
- 
- asmlinkage long sys_iopl(unsigned long unused)
- {
-+#ifndef CONFIG_COOPERATIVE
- 	volatile struct pt_regs * regs = (struct pt_regs *) &unused;
- 	unsigned int level = regs->ebx;
- 	unsigned int old = (regs->eflags >> 12) & 3;
-@@ -122,4 +127,7 @@
- 	/* Make sure we return the long way (not sysenter) */
- 	set_thread_flag(TIF_IRET);
- 	return 0;
-+#else
-+	return -EPERM;	
-+#endif
- }
-diff -X bin/dontdiff -urN linux/arch/i386/kernel/process.c linux/arch/i386/kernel/process.c
---- linux/arch/i386/kernel/process.c	2004-06-19 07:22:56.000000000 +0300
-+++ linux/arch/i386/kernel/process.c	2004-06-19 10:08:22.000000000 +0300
-@@ -52,6 +52,7 @@
- 
- #include <linux/irq.h>
- #include <linux/err.h>
-+#include <linux/cooperative.h>
- 
- asmlinkage void ret_from_fork(void) __asm__("ret_from_fork");
- 
-@@ -141,6 +142,9 @@
- {
- 	/* endless idle loop with no priority at all */
- 	while (1) {
-+#ifdef CONFIG_COOPERATIVE
-+		co_idle_processor();
-+#else
- 		while (!need_resched()) {
- 			void (*idle)(void) = pm_idle;
- 
-@@ -150,6 +154,7 @@
- 			irq_stat[smp_processor_id()].idle_timestamp = jiffies;
- 			idle();
- 		}
-+#endif
- 		schedule();
- 	}
- }
-diff -X bin/dontdiff -urN linux/arch/i386/kernel/reboot.c linux/arch/i386/kernel/reboot.c
---- linux/arch/i386/kernel/reboot.c	2004-04-04 05:36:54.000000000 +0200
-+++ linux/arch/i386/kernel/reboot.c	2004-06-14 17:38:51.000000000 +0300
-@@ -137,6 +137,7 @@
-  */
- void machine_real_restart(unsigned char *code, int length)
- {
-+#ifndef CONFIG_COOPERATIVE	
- 	unsigned long flags;
- 
- 	local_irq_disable();
-@@ -215,10 +216,14 @@
- 	__asm__ __volatile__ ("ljmp $0x0008,%0"
- 				:
- 				: "i" ((void *) (0x1000 - sizeof (real_mode_switch) - 100)));
-+#else
-+	co_terminate(CO_TERMINATE_REBOOT);
-+#endif
- }
- 
- void machine_restart(char * __unused)
- {
-+#ifndef CONFIG_COOPERATIVE
- #ifdef CONFIG_SMP
- 	int cpuid;
- 	
-@@ -283,22 +288,32 @@
- 		efi.reset_system(EFI_RESET_WARM, EFI_SUCCESS, 0, 0);
- 
- 	machine_real_restart(jump_to_bios, sizeof(jump_to_bios));
-+#else
-+	co_terminate(CO_TERMINATE_REBOOT);
-+#endif
- }
- 
- EXPORT_SYMBOL(machine_restart);
- 
- void machine_halt(void)
- {
-+#ifdef CONFIG_COOPERATIVE
-+	co_terminate(CO_TERMINATE_HALT);
-+#endif
- }
- 
- EXPORT_SYMBOL(machine_halt);
- 
- void machine_power_off(void)
- {
-+#ifndef CONFIG_COOPERATIVE	
- 	if (efi_enabled)
- 		efi.reset_system(EFI_RESET_SHUTDOWN, EFI_SUCCESS, 0, 0);
- 	if (pm_power_off)
- 		pm_power_off();
-+#else
-+	co_terminate(CO_TERMINATE_POWEROFF);
-+#endif
- }
- 
- EXPORT_SYMBOL(machine_power_off);
-diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/setup.c
---- linux/arch/i386/kernel/setup.c	2004-06-19 07:22:56.000000000 +0300
-+++ linux/arch/i386/kernel/setup.c	2004-06-19 07:45:23.000000000 +0300
-@@ -39,6 +39,7 @@
- #include <linux/efi.h>
- #include <linux/init.h>
- #include <linux/edd.h>
-+#include <linux/cooperative.h>
- #include <video/edid.h>
- #include <asm/e820.h>
- #include <asm/mpspec.h>
-@@ -479,8 +480,17 @@
- 	int len = 0;
- 	int userdef = 0;
- 
-+#ifdef CONFIG_COOPERATIVE
-+	/*
-+	 * Better to have 'root=/dev/cobd0' here.
-+	 */
-+	from = co_boot_parameters;
-+	snprintf(saved_command_line, COMMAND_LINE_SIZE, "%s", 
-+	         co_boot_parameters);
-+#else
- 	/* Save unparsed command line copy for /proc/cmdline */
- 	saved_command_line[COMMAND_LINE_SIZE-1] = '\0';
-+#endif
- 
- 	for (;;) {
- 		/*
-@@ -812,15 +822,23 @@
- {
- 	unsigned long bootmap_size, start_pfn, max_low_pfn;
- 
-+#ifdef CONFIG_COOPERATIVE
-+	unsigned long bootmem_size;
-+	unsigned long bootmem_start;
-+#endif
- 	/*
- 	 * partially used pages are not usable - thus
- 	 * we are rounding upwards:
- 	 */
- 	start_pfn = PFN_UP(init_pg_tables_end);
- 
-+#ifdef CONFIG_COOPERATIVE
-+	max_low_pfn = max_pfn = co_memory_size / PAGE_SIZE;
-+#else
- 	find_max_pfn();
- 
- 	max_low_pfn = find_max_low_pfn();
-+#endif
- 
- #ifdef CONFIG_HIGHMEM
- 	highstart_pfn = highend_pfn = max_pfn;
-@@ -837,7 +855,16 @@
- 	 */
- 	bootmap_size = init_bootmem(start_pfn, max_low_pfn);
- 
--	register_bootmem_low_pages(max_low_pfn);
-+	{
-+		extern char _end;
-+		unsigned long bootmem_end = (((unsigned long)&_end) + bootmap_size + (0x10 << PAGE_SHIFT));
-+		unsigned long physical_end = __PAGE_OFFSET + (max_low_pfn << PAGE_SHIFT);
-+	    
-+		free_bootmem(__pa(bootmem_end), physical_end - bootmem_end);
-+	}
-+
-+#ifndef CONFIG_COOPERATIVE
-+	register_bootmem_low_pages(max_low_pfn); 
- 
- 	/*
- 	 * Reserve the bootmem bitmap itself as well. We do this in two
-@@ -881,8 +908,11 @@
- 	 */
- 	find_smp_config();
- #endif
-+#endif
- 
- #ifdef CONFIG_BLK_DEV_INITRD
-+#ifndef CONFIG_COOPERATIVE
-+
- 	if (LOADER_TYPE && INITRD_START) {
- 		if (INITRD_START + INITRD_SIZE <= (max_low_pfn << PAGE_SHIFT)) {
- 			reserve_bootmem(INITRD_START, INITRD_SIZE);
-@@ -898,6 +928,17 @@
- 			initrd_start = 0;
- 		}
- 	}
-+#else
-+	if (co_initrd != NULL) {
-+		printk(KERN_INFO "initrd enabled: start: 0x%08lx  size: 0x%08lx)\n",
-+		       co_initrd, co_initrd_size);
-+               
-+		initrd_start = co_initrd;
-+		initrd_end = co_initrd + co_initrd_size;
-+		
-+		reserve_bootmem(virt_to_phys(initrd_start), co_initrd_size);
-+	}
-+#endif
- #endif
- 	return max_low_pfn;
- }
-@@ -1082,8 +1123,9 @@
-  */
- void __init setup_arch(char **cmdline_p)
- {
-+#ifndef CONFIG_COOPERATIVE
- 	unsigned long max_low_pfn;
--
-+#endif
- 	memcpy(&boot_cpu_data, &new_cpu_data, sizeof(new_cpu_data));
- 	pre_setup_arch_hook();
- 	early_cpu_init();
-@@ -1100,6 +1142,7 @@
- 		efi_enabled = 1;
- #endif
- 
-+	boot_cpu_data.hard_math = 1;
-  	ROOT_DEV = old_decode_dev(ORIG_ROOT_DEV);
-  	drive_info = DRIVE_INFO;
-  	screen_info = SCREEN_INFO;
-@@ -1123,8 +1166,10 @@
- 	ARCH_SETUP
- 	if (efi_enabled)
- 		efi_init();
-+#ifndef CONFIG_COOPERATIVE	
- 	else
- 		setup_memory_region();
-+#endif
- 
- 	copy_edd();
- 
-@@ -1167,6 +1212,7 @@
- #endif
- 
- 
-+#ifndef CONFIG_COOPERATIVE	
- 	dmi_scan_machine();
- 
- #ifdef CONFIG_X86_GENERICARCH
-@@ -1186,8 +1232,12 @@
- #endif
- 
- 	register_memory(max_low_pfn);
-+#endif	
- 
- #ifdef CONFIG_VT
-+#ifdef CONFIG_COOPERATIVE_CONSOLE
-+	conswitchp = &colinux_con;
-+#else
- #if defined(CONFIG_VGA_CONSOLE)
- 	if (!efi_enabled || (efi_mem_type(0xa0000) != EFI_CONVENTIONAL_MEMORY))
- 		conswitchp = &vga_con;
-@@ -1195,6 +1245,7 @@
- 	conswitchp = &dummy_con;
- #endif
- #endif
-+#endif
- }
- 
- #include "setup_arch_post.h"
-diff -X bin/dontdiff -urN linux/arch/i386/kernel/sysenter.c linux/arch/i386/kernel/sysenter.c
---- linux/arch/i386/kernel/sysenter.c	2004-04-04 05:38:24.000000000 +0200
-+++ linux/arch/i386/kernel/sysenter.c	2004-06-19 09:35:54.000000000 +0300
-@@ -47,7 +47,11 @@
- 
- 	__set_fixmap(FIX_VSYSCALL, __pa(page), PAGE_READONLY);
- 
-+#ifndef CONFIG_COOPERATIVE
- 	if (!boot_cpu_has(X86_FEATURE_SEP)) {
-+#else
-+	{
-+#endif
- 		memcpy((void *) page,
- 		       &vsyscall_int80_start,
- 		       &vsyscall_int80_end - &vsyscall_int80_start);
-@@ -59,6 +63,7 @@
- 	       &vsyscall_sysenter_end - &vsyscall_sysenter_start);
- 
- 	on_each_cpu(enable_sep_cpu, NULL, 1, 1);
-+
- 	return 0;
- }
- 
-diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/time.c
---- linux/arch/i386/kernel/time.c	2004-04-04 05:37:06.000000000 +0200
-+++ linux/arch/i386/kernel/time.c	2004-06-14 17:38:51.000000000 +0300
-@@ -172,6 +172,7 @@
- 
- static int set_rtc_mmss(unsigned long nowtime)
- {
-+#ifndef CONFIG_COOPERATIVE	
- 	int retval;
- 
- 	/* gets recalled with irq locally disabled */
-@@ -183,6 +184,12 @@
- 	spin_unlock(&rtc_lock);
- 
- 	return retval;
-+#else
-+	/*
-+	 * Don't let Linux change the system time of the host machine.
-+	 */
-+	return -1;
-+#endif
- }
- 
- /* last time the cmos clock got updated */
-@@ -226,6 +233,7 @@
- 
- 	do_timer_interrupt_hook(regs);
- 
-+#ifndef CONFIG_COOPERATIVE	
- 	/*
- 	 * If we have an externally synchronized Linux clock, then update
- 	 * CMOS clock accordingly every ~11 minutes. Set_rtc_mmss() has to be
-@@ -248,6 +256,7 @@
- 		else
- 			last_rtc_update = xtime.tv_sec - 600; /* do it again in 60 s */
- 	}
-+#endif	
- 
- #ifdef CONFIG_MCA
- 	if( MCA_bus ) {
-@@ -293,6 +302,7 @@
- /* not static: needed by APM */
- unsigned long get_cmos_time(void)
- {
-+#ifndef CONFIG_COOPERATIVE	
- 	unsigned long retval;
- 
- 	spin_lock(&rtc_lock);
-@@ -305,6 +315,9 @@
- 	spin_unlock(&rtc_lock);
- 
- 	return retval;
-+#else
-+	return co_get_host_time();
-+#endif
- }
- 
- static long clock_cmos_diff;
-diff -X bin/dontdiff -urN linux/arch/i386/kernel/timers/timer.c linux/arch/i386/kernel/timers/timer.c
---- linux/arch/i386/kernel/timers/timer.c	2004-04-04 05:38:19.000000000 +0200
-+++ linux/arch/i386/kernel/timers/timer.c	2004-06-18 18:22:24.000000000 +0300
-@@ -13,6 +13,7 @@
- #endif
- /* list of timers, ordered by preference, NULL terminated */
- static struct timer_opts* timers[] = {
-+#ifndef CONFIG_COOPERATIVE
- #ifdef CONFIG_X86_CYCLONE_TIMER
- 	&timer_cyclone,
- #endif
-@@ -23,6 +24,7 @@
- 	&timer_pmtmr,
- #endif
- 	&timer_tsc,
-+#endif
- 	&timer_pit,
- 	NULL,
- };
-diff -X bin/dontdiff -urN linux/arch/i386/kernel/vmlinux.lds.S linux/arch/i386/kernel/vmlinux.lds.S
---- linux/arch/i386/kernel/vmlinux.lds.S	2004-05-10 18:04:51.000000000 +0300
-+++ linux/arch/i386/kernel/vmlinux.lds.S	2004-06-14 17:38:51.000000000 +0300
-@@ -13,6 +13,7 @@
- {
-   . = 0xC0000000 + 0x100000;
-   /* read-only */
-+  _kernel_start = .		; 
-   _text = .;			/* Text and read-only data */
-   .text : {
- 	*(.text)
-diff -X bin/dontdiff -urN linux/arch/i386/mm/fault.c linux/arch/i386/mm/fault.c
---- linux/arch/i386/mm/fault.c	2004-06-19 07:22:56.000000000 +0300
-+++ linux/arch/i386/mm/fault.c	2004-06-19 07:45:24.000000000 +0300
-@@ -222,6 +222,19 @@
- 	/* get the address */
- 	__asm__("movl %%cr2,%0":"=r" (address));
- 
-+#ifdef CONFIG_COOPERATIVE_XXX
-+	{
-+		printk("fault: %x %x [eax %x] [esp %x] (%d) [%d]\n", address, regs->eip, regs->orig_eax, regs->esp, error_code, current->pid);
-+		if (0xfe7fe018 == address) {
-+			static i = 0;
-+			i++;
-+			if (i == 1) {
-+				show_regs(regs);
-+			}
-+		}
-+	}
-+#endif
-+
- 	/* It's safe to allow irq's after cr2 has been saved */
- 	if (regs->eflags & (X86_EFLAGS_IF|VM_MASK))
- 		local_irq_enable();
-@@ -486,7 +499,11 @@
- 		pte_t *pte_k;
- 
- 		asm("movl %%cr3,%0":"=r" (pgd));
-+#ifndef CONFIG_COOPERATIVE		
- 		pgd = index + (pgd_t *)__va(pgd);
-+#else
-+		pgd = index + (pgd_t *)CO_VA(((unsigned long)pgd));
-+#endif
- 		pgd_k = init_mm.pgd + index;
- 
- 		if (!pgd_present(*pgd_k))
-diff -X bin/dontdiff -urN linux/arch/i386/mm/init.c linux/arch/i386/mm/init.c
---- linux/arch/i386/mm/init.c	2004-06-19 07:22:56.000000000 +0300
-+++ linux/arch/i386/mm/init.c	2004-06-19 09:40:29.000000000 +0300
-@@ -27,6 +27,7 @@
- #include <linux/slab.h>
- #include <linux/proc_fs.h>
- #include <linux/efi.h>
-+#include <linux/cooperative.h>
- 
- #include <asm/processor.h>
- #include <asm/system.h>
-@@ -75,7 +76,7 @@
- {
- 	if (pmd_none(*pmd)) {
- 		pte_t *page_table = (pte_t *) alloc_bootmem_low_pages(PAGE_SIZE);
--		set_pmd(pmd, __pmd(__pa(page_table) | _PAGE_TABLE));
-+		set_pmd(pmd, __pmd(CO_PPA_TO_PA(__pa(page_table)) | _PAGE_TABLE));
- 		if (page_table != pte_offset_kernel(pmd, 0))
- 			BUG();	
- 
-@@ -293,6 +294,7 @@
- 		set_pgd(pgd_base + i, __pgd(__pa(empty_zero_page) | _PAGE_PRESENT));
- #endif
- 
-+#ifndef CONFIG_COOPERATIVE	
- 	/* Enable PSE if available */
- 	if (cpu_has_pse) {
- 		set_in_cr4(X86_CR4_PSE);
-@@ -306,6 +308,7 @@
- 
- 	kernel_physical_mapping_init(pgd_base);
- 	remap_numa_kva();
-+#endif
- 
- 	/*
- 	 * Fixed mappings, only the page table structure has to be
-@@ -373,6 +376,7 @@
- 	unsigned long zones_size[MAX_NR_ZONES] = {0, 0, 0};
- 	unsigned int max_dma, high, low;
- 	
-+#ifndef CONFIG_COOPERATIVE	
- 	max_dma = virt_to_phys((char *)MAX_DMA_ADDRESS) >> PAGE_SHIFT;
- 	low = max_low_pfn;
- 	high = highend_pfn;
-@@ -386,6 +390,11 @@
- 		zones_size[ZONE_HIGHMEM] = high - low;
- #endif
- 	}
-+#else
-+	zones_size[ZONE_DMA] = 0;
-+	zones_size[ZONE_NORMAL] = max_low_pfn;
-+	zones_size[ZONE_HIGHMEM] = 0;
-+#endif
- 	free_area_init(zones_size);	
- }
- #else
-@@ -474,7 +483,6 @@
- 	if (!mem_map)
- 		BUG();
- #endif
--	
- 	bad_ppro = ppro_with_ram_bug();
- 
- #ifdef CONFIG_HIGHMEM
-@@ -530,8 +538,10 @@
- 	if (!cpu_has_pae)
- 		panic("cannot execute a PAE-enabled kernel on a PAE-less CPU!");
- #endif
-+#ifndef CONFIG_COOPERATIVE
- 	if (boot_cpu_data.wp_works_ok < 0)
- 		test_wp_bit();
-+#endif
- 
- 	/*
- 	 * Subtle. SMP is doing it's boot stuff late (because it has to
-@@ -539,9 +549,11 @@
- 	 * protected-mode entry to work. We zap these entries only after
- 	 * the WP-bit has been tested.
- 	 */
-+#ifndef  CONFIG_COOPERATIVE
- #ifndef CONFIG_SMP
- 	zap_low_mappings();
- #endif
-+#endif
- }
- 
- kmem_cache_t *pgd_cache;
-diff -X bin/dontdiff -urN linux/arch/i386/mm/ioremap.c linux/arch/i386/mm/ioremap.c
---- linux/arch/i386/mm/ioremap.c	2004-04-04 05:36:52.000000000 +0200
-+++ linux/arch/i386/mm/ioremap.c	2004-06-14 17:38:51.000000000 +0300
-@@ -190,6 +190,9 @@
- 
- void *ioremap_nocache (unsigned long phys_addr, unsigned long size)
- {
-+#ifdef CONFIG_COOPERATIVE
-+	panic("ioremap_nocache %ld:%ld\n", phys_addr, size);
-+#endif
- 	unsigned long last_addr;
- 	void *p = __ioremap(phys_addr, size, _PAGE_PCD);
- 	if (!p) 
-diff -X bin/dontdiff -urN linux/arch/i386/mm/pgtable.c linux/arch/i386/mm/pgtable.c
---- linux/arch/i386/mm/pgtable.c	2004-05-10 18:04:51.000000000 +0300
-+++ linux/arch/i386/mm/pgtable.c	2004-06-19 09:04:08.000000000 +0300
-@@ -123,6 +123,8 @@
- {
- 	unsigned long address = __fix_to_virt(idx);
- 
-+	printk("fixmap: %x %x %x %x\n", address, idx, phys, flags);
-+
- 	if (idx >= __end_of_fixed_addresses) {
- 		BUG();
- 		return;
-diff -X bin/dontdiff -urN linux/drivers/block/Kconfig linux/drivers/block/Kconfig
---- linux/drivers/block/Kconfig	2004-06-19 07:23:00.000000000 +0300
-+++ linux/drivers/block/Kconfig	2004-06-19 07:45:32.000000000 +0300
-@@ -339,6 +339,15 @@
- 	  "real" root file system, etc. See <file:Documentation/initrd.txt>
- 	  for details.
- 
-+config BLK_DEV_COBD
-+	tristate 'Cooperative block device support'
-+	default y
-+	depends on COOPERATIVE=y
-+	help
-+	  Virtual block device support for cooperative kernels.
-+
-+	  If unsure, say Y.
-+
- config LBD
- 	bool "Support for Large Block Devices"
- 	depends on X86 || MIPS32 || PPC32 || ARCH_S390_31 || SUPERH
-diff -X bin/dontdiff -urN linux/drivers/block/Makefile linux/drivers/block/Makefile
---- linux/drivers/block/Makefile	2004-05-10 18:04:58.000000000 +0300
-+++ linux/drivers/block/Makefile	2004-06-14 17:38:51.000000000 +0300
-@@ -29,6 +29,7 @@
- obj-$(CONFIG_ATARI_SLM)		+= acsi_slm.o
- obj-$(CONFIG_AMIGA_Z2RAM)	+= z2ram.o
- obj-$(CONFIG_BLK_DEV_RAM)	+= rd.o
-+obj-$(CONFIG_BLK_DEV_COBD)	+= cobd.o
- obj-$(CONFIG_BLK_DEV_LOOP)	+= loop.o
- obj-$(CONFIG_BLK_DEV_PS2)	+= ps2esdi.o
- obj-$(CONFIG_BLK_DEV_XD)	+= xd.o
-diff -X bin/dontdiff -urN linux/drivers/block/cobd.c linux/drivers/block/cobd.c
---- linux/drivers/block/cobd.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/drivers/block/cobd.c	2004-06-19 14:29:55.000000000 +0300
+--- drivers/block/cobd.c
++++ drivers/block/cobd.c
 @@ -0,0 +1,286 @@
 +/*
 + *  Copyright (C) 2003 Dan Aloni <da-x@colinux.org>
@@ -1448,178 +735,8 @@ diff -X bin/dontdiff -urN linux/drivers/block/cobd.c linux/drivers/block/cobd.c
 +module_exit(cobd_exit);
 +
 +
-diff -X bin/dontdiff -urN linux/drivers/char/Makefile linux/drivers/char/Makefile
---- linux/drivers/char/Makefile	2004-06-19 07:23:00.000000000 +0300
-+++ linux/drivers/char/Makefile	2004-06-19 07:45:32.000000000 +0300
-@@ -9,6 +9,8 @@
- 
- obj-y	 += mem.o random.o tty_io.o n_tty.o tty_ioctl.o pty.o misc.o
- 
-+#obj-$(CONFIG_COOPERATIVE)       += colx_keyb.o
-+
- obj-$(CONFIG_VT)		+= vt_ioctl.o vc_screen.o consolemap.o \
- 				   consolemap_deftbl.o selection.o keyboard.o
- obj-$(CONFIG_HW_CONSOLE)	+= vt.o defkeymap.o
-diff -X bin/dontdiff -urN linux/drivers/input/keyboard/Kconfig linux/drivers/input/keyboard/Kconfig
---- linux/drivers/input/keyboard/Kconfig	2004-06-19 07:23:03.000000000 +0300
-+++ linux/drivers/input/keyboard/Kconfig	2004-06-19 07:45:34.000000000 +0300
-@@ -16,7 +16,7 @@
- 	default y
- 	depends on INPUT && INPUT_KEYBOARD
- 	select SERIO
--	select SERIO_I8042 if PC
-+	select SERIO_I8042 if PC && !COOPERATIVE
- 	select SERIO_GSCPS2 if GSC
- 	help
- 	  Say Y here if you want to use a standard AT or PS/2 keyboard. Usually
-diff -X bin/dontdiff -urN linux/drivers/input/keyboard/atkbd.c linux/drivers/input/keyboard/atkbd.c
---- linux/drivers/input/keyboard/atkbd.c	2004-06-19 07:23:03.000000000 +0300
-+++ linux/drivers/input/keyboard/atkbd.c	2004-06-19 07:45:34.000000000 +0300
-@@ -514,6 +514,7 @@
- 
- static int atkbd_probe(struct atkbd *atkbd)
- {
-+#ifndef CONFIG_COOPERATIVE
- 	unsigned char param[2];
- 
- /*
-@@ -557,7 +558,7 @@
- 		printk(KERN_ERR "atkbd.c: controllers. Use i8042.direct=1 to disable translation.\n");
- 		return -1;
- 	}
--
-+#endif
- 	return 0;
- }
- 
-diff -X bin/dontdiff -urN linux/drivers/input/mouse/Kconfig linux/drivers/input/mouse/Kconfig
---- linux/drivers/input/mouse/Kconfig	2004-05-10 18:05:03.000000000 +0300
-+++ linux/drivers/input/mouse/Kconfig	2004-06-14 17:38:51.000000000 +0300
-@@ -14,7 +14,7 @@
- config MOUSE_PS2
- 	tristate "PS/2 mouse"
- 	default y
--	depends on INPUT && INPUT_MOUSE
-+	depends on INPUT && INPUT_MOUSE && !COOPERATIVE
- 	select SERIO
- 	select SERIO_I8042 if PC
- 	select SERIO_GSCPS2 if GSC
-@@ -38,9 +38,21 @@
- 	  To compile this driver as a module, choose M here: the
- 	  module will be called psmouse.
- 
-+config MOUSE_COOPERATIVE
-+	tristate "Cooperative Mouse driver"
-+	default y
-+	depends on INPUT && INPUT_MOUSE && COOPERATIVE
-+	---help---
-+	  Virtual mouse driver for cooperative kernels.
-+	  
-+	  If unsure, say Y.
-+
-+	  To compile this driver as a module, choose M here: the
-+	  module will be called psmouse.
-+
- config MOUSE_SERIAL
- 	tristate "Serial mouse"
--	depends on INPUT && INPUT_MOUSE
-+	depends on INPUT && INPUT_MOUSE && !COOPERATIVE
- 	select SERIO
- 	---help---
- 	  Say Y here if you have a serial (RS-232, COM port) mouse connected
-@@ -54,7 +66,7 @@
- 
- config MOUSE_INPORT
- 	tristate "InPort/MS/ATIXL busmouse"
--	depends on INPUT && INPUT_MOUSE && ISA
-+	depends on INPUT && INPUT_MOUSE && ISA && !COOPERATIVE
- 	help
- 	  Say Y here if you have an InPort, Microsoft or ATI XL busmouse.
- 	  They are rather rare these days.
-@@ -64,13 +76,13 @@
- 
- config MOUSE_ATIXL
- 	bool "ATI XL variant"
--	depends on MOUSE_INPORT
-+	depends on MOUSE_INPORT && !COOPERATIVE
- 	help
- 	  Say Y here if your mouse is of the ATI XL variety.
- 
- config MOUSE_LOGIBM
- 	tristate "Logitech busmouse"
--	depends on INPUT && INPUT_MOUSE && ISA
-+	depends on INPUT && INPUT_MOUSE && ISA && !COOPERATIVE
- 	help
- 	  Say Y here if you have a Logitech busmouse.
- 	  They are rather rare these days.
-@@ -80,7 +92,7 @@
- 
- config MOUSE_PC110PAD
- 	tristate "IBM PC110 touchpad"
--	depends on INPUT && INPUT_MOUSE && ISA
-+	depends on INPUT && INPUT_MOUSE && ISA && !COOPERATIVE
- 	help
- 	  Say Y if you have the IBM PC-110 micro-notebook and want its
- 	  touchpad supported.
-@@ -90,7 +102,7 @@
- 
- config MOUSE_MAPLE
- 	tristate "Maple bus mouse"
--	depends on SH_DREAMCAST && INPUT && INPUT_MOUSE && MAPLE
-+	depends on SH_DREAMCAST && INPUT && INPUT_MOUSE && MAPLE && !COOPERATIVE
- 	help
- 	  Say Y if you have a DreamCast console and a mouse attached to
- 	  its Maple bus.
-@@ -100,7 +112,7 @@
- 
- config MOUSE_AMIGA
- 	tristate "Amiga mouse"
--	depends on AMIGA && INPUT && INPUT_MOUSE
-+	depends on AMIGA && INPUT && INPUT_MOUSE && !COOPERATIVE
- 	help
- 	  Say Y here if you have an Amiga and want its native mouse
- 	  supported by the kernel.
-@@ -110,7 +122,7 @@
- 
- config MOUSE_RISCPC
- 	tristate "Acorn RiscPC mouse"
--	depends on ARCH_ACORN && INPUT && INPUT_MOUSE
-+	depends on ARCH_ACORN && INPUT && INPUT_MOUSE && !COOPERATIVE
- 	help
- 	  Say Y here if you have the Acorn RiscPC computer and want its
- 	  native mouse supported.
-@@ -120,7 +132,7 @@
- 
- config MOUSE_VSXXXAA
- 	tristate "DEC VSXXX-AA/GA mouse and VSXXX-AB tablet"
--	depends on INPUT && INPUT_MOUSE
-+	depends on INPUT && INPUT_MOUSE && !COOPERATIVE
- 	select SERIO
- 	help
- 	  Say Y (or M) if you want to use a DEC VSXXX-AA (hockey
-@@ -133,7 +145,7 @@
- 
- config MOUSE_PC9800
- 	tristate "NEC PC-9800 busmouse"
--	depends on X86_PC9800 && INPUT && INPUT_MOUSE && ISA
-+	depends on X86_PC9800 && INPUT && INPUT_MOUSE && ISA && !COOPERATIVE
- 	help
- 	  Say Y here if you have NEC PC-9801/PC-9821 computer and want its
- 	  native mouse supported.
-diff -X bin/dontdiff -urN linux/drivers/input/mouse/Makefile linux/drivers/input/mouse/Makefile
---- linux/drivers/input/mouse/Makefile	2004-04-04 05:36:26.000000000 +0200
-+++ linux/drivers/input/mouse/Makefile	2004-06-14 17:38:51.000000000 +0300
-@@ -12,6 +12,7 @@
- obj-$(CONFIG_MOUSE_PC110PAD)	+= pc110pad.o
- obj-$(CONFIG_MOUSE_PC9800)	+= 98busmouse.o
- obj-$(CONFIG_MOUSE_PS2)		+= psmouse.o
-+obj-$(CONFIG_MOUSE_COOPERATIVE)	+= comouse.o
- obj-$(CONFIG_MOUSE_SERIAL)	+= sermouse.o
- obj-$(CONFIG_MOUSE_VSXXXAA)	+= vsxxxaa.o
- 
-diff -X bin/dontdiff -urN linux/drivers/input/mouse/comouse.c linux/drivers/input/mouse/comouse.c
---- linux/drivers/input/mouse/comouse.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/drivers/input/mouse/comouse.c	2004-06-14 17:38:51.000000000 +0300
+--- drivers/input/mouse/comouse.c
++++ drivers/input/mouse/comouse.c
 @@ -0,0 +1,314 @@
 +/*
 + * comouse.c
@@ -1935,39 +1052,8 @@ diff -X bin/dontdiff -urN linux/drivers/input/mouse/comouse.c linux/drivers/inpu
 +
 +module_init(sermouse_init);
 +module_exit(sermouse_exit);
-diff -X bin/dontdiff -urN linux/drivers/input/serio/Kconfig linux/drivers/input/serio/Kconfig
---- linux/drivers/input/serio/Kconfig	2004-05-10 18:05:03.000000000 +0300
-+++ linux/drivers/input/serio/Kconfig	2004-06-19 02:21:54.000000000 +0300
-@@ -20,7 +20,7 @@
- 	tristate "i8042 PC Keyboard controller" if EMBEDDED || !X86
- 	default y
- 	select SERIO
--	depends on !PARISC
-+	depends on !PARISC && !COOPERATIVE
- 	---help---
- 	  i8042 is the chip over which the standard AT keyboard and PS/2
- 	  mouse are connected to the computer. If you use these devices,
-@@ -140,3 +140,8 @@
- 
- 	  To compile this driver as a module, choose M here: the
- 	  module will be called maceps2.
-+
-+config SERIO_COKBD
-+	tristate "Cooperative Linux virtual keyboard controller driver"
-+	depends on COOPERATIVE
-+	default y
-diff -X bin/dontdiff -urN linux/drivers/input/serio/Makefile linux/drivers/input/serio/Makefile
---- linux/drivers/input/serio/Makefile	2004-05-10 18:05:03.000000000 +0300
-+++ linux/drivers/input/serio/Makefile	2004-06-19 02:19:04.000000000 +0300
-@@ -17,3 +17,4 @@
- obj-$(CONFIG_SERIO_GSCPS2)	+= gscps2.o
- obj-$(CONFIG_SERIO_PCIPS2)	+= pcips2.o
- obj-$(CONFIG_SERIO_MACEPS2)	+= maceps2.o
-+obj-$(CONFIG_SERIO_COKBD)	+= cokbd.o
-\ No newline at end of file
-diff -X bin/dontdiff -urN linux/drivers/input/serio/cokbd.c linux/drivers/input/serio/cokbd.c
---- linux/drivers/input/serio/cokbd.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/drivers/input/serio/cokbd.c	2004-06-19 03:45:34.000000000 +0300
+--- drivers/input/serio/cokbd.c
++++ drivers/input/serio/cokbd.c
 @@ -0,0 +1,154 @@
 +/*
 + *  Cooperative Linux virtual keyboard controller driver
@@ -2123,34 +1209,8 @@ diff -X bin/dontdiff -urN linux/drivers/input/serio/cokbd.c linux/drivers/input/
 +
 +module_init(cokbdio_init);
 +module_exit(cokbdio_exit);
-diff -X bin/dontdiff -urN linux/drivers/net/Kconfig linux/drivers/net/Kconfig
---- linux/drivers/net/Kconfig	2004-06-19 07:23:04.000000000 +0300
-+++ linux/drivers/net/Kconfig	2004-06-19 07:45:36.000000000 +0300
-@@ -127,6 +127,10 @@
- 
- 	  If you don't know what to use this for, you don't need it.
- 
-+config COOPERATIVE_CONET
-+	tristate 'Cooperative Virtual Ethernet driver support'
-+	depends on COOPERATIVE
-+
- config NET_SB1000
- 	tristate "General Instruments Surfboard 1000"
- 	depends on NETDEVICES && PNP
-diff -X bin/dontdiff -urN linux/drivers/net/Makefile linux/drivers/net/Makefile
---- linux/drivers/net/Makefile	2004-06-19 07:23:04.000000000 +0300
-+++ linux/drivers/net/Makefile	2004-06-19 07:45:36.000000000 +0300
-@@ -147,6 +147,7 @@
- 
- # This is also a 82596 and should probably be merged
- obj-$(CONFIG_LP486E) += lp486e.o
-+obj-$(CONFIG_COOPERATIVE_CONET) += conet.o
- 
- obj-$(CONFIG_ETH16I) += eth16i.o
- obj-$(CONFIG_ZORRO8390) += zorro8390.o 8390.o
-diff -X bin/dontdiff -urN linux/drivers/net/conet.c linux/drivers/net/conet.c
---- linux/drivers/net/conet.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/drivers/net/conet.c	2004-06-19 14:26:23.000000000 +0300
+--- drivers/net/conet.c
++++ drivers/net/conet.c
 @@ -0,0 +1,310 @@
 +/*
 + *  Copyright (C) 2003-2004 Dan Aloni <da-x@gmx.net>
@@ -2462,56 +1522,8 @@ diff -X bin/dontdiff -urN linux/drivers/net/conet.c linux/drivers/net/conet.c
 +
 +module_init(conet_init_module);
 +module_exit(conet_cleanup_module);
-diff -X bin/dontdiff -urN linux/drivers/video/console/Kconfig linux/drivers/video/console/Kconfig
---- linux/drivers/video/console/Kconfig	2004-04-04 05:36:45.000000000 +0200
-+++ linux/drivers/video/console/Kconfig	2004-06-14 17:38:51.000000000 +0300
-@@ -6,7 +6,7 @@
- 
- config VGA_CONSOLE
- 	bool "VGA text console" if EMBEDDED || !X86
--	depends on !ARCH_ACORN && !ARCH_EBSA110 && !4xx && !8xx && !SPARC32 && !SPARC64 && !M68K
-+	depends on !COOPERATIVE && !ARCH_ACORN && !ARCH_EBSA110 && !4xx && !8xx && !SPARC32 && !SPARC64 && !M68K
- 	default y
- 	help
- 	  Saying Y here will allow you to use Linux in text mode through a
-@@ -26,6 +26,14 @@
- #	   fi
- #	fi
- 
-+config COOPERATIVE_CONSOLE
-+	bool 'coLinux Pseudo-VGA text console' if COOPERATIVE
-+	depends on !VGA_CONSOLE && COOPERATIVE
-+	default y
-+	help
-+	  You need to say Y here if you compile a Linux kernel in cooperative 
-+	  mode.
-+
- config VIDEO_SELECT
- 	bool "Video mode selection support"
- 	depends on  (X86 || X86_64) && VGA_CONSOLE
-@@ -99,7 +107,7 @@
- 
- config DUMMY_CONSOLE
- 	bool
--	depends on PROM_CONSOLE!=y || VGA_CONSOLE!=y || SGI_NEWPORT_CONSOLE!=y 
-+	depends on PROM_CONSOLE!=y || (COOPERATIVE_CONSOLE!=y && VGA_CONSOLE!=y) || SGI_NEWPORT_CONSOLE!=y 
- 	default y
- 
- config FRAMEBUFFER_CONSOLE
-diff -X bin/dontdiff -urN linux/drivers/video/console/Makefile linux/drivers/video/console/Makefile
---- linux/drivers/video/console/Makefile	2004-06-19 07:23:12.000000000 +0300
-+++ linux/drivers/video/console/Makefile	2004-06-19 07:45:47.000000000 +0300
-@@ -23,6 +23,7 @@
- obj-$(CONFIG_PROM_CONSOLE)        += promcon.o promcon_tbl.o
- obj-$(CONFIG_STI_CONSOLE)         += sticon.o sticore.o
- obj-$(CONFIG_VGA_CONSOLE)         += vgacon.o
-+obj-$(CONFIG_COOPERATIVE_CONSOLE) += cocon.o
- obj-$(CONFIG_MDA_CONSOLE)         += mdacon.o
- obj-$(CONFIG_FRAMEBUFFER_CONSOLE) += fbcon.o font.o
- 
-diff -X bin/dontdiff -urN linux/drivers/video/console/cocon.c linux/drivers/video/console/cocon.c
---- linux/drivers/video/console/cocon.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/drivers/video/console/cocon.c	2004-06-14 17:38:51.000000000 +0300
+--- drivers/video/console/cocon.c
++++ drivers/video/console/cocon.c
 @@ -0,0 +1,483 @@
 +/*
 + *  linux/drivers/video/cocon.c -- Cooperative Linux console VGA driver
@@ -2996,28 +2008,8 @@ diff -X bin/dontdiff -urN linux/drivers/video/console/cocon.c linux/drivers/vide
 +};
 +
 +MODULE_LICENSE("GPL");
-diff -X bin/dontdiff -urN linux/include/asm-i386/bug.h linux/include/asm-i386/bug.h
---- linux/include/asm-i386/bug.h	2004-04-04 05:36:25.000000000 +0200
-+++ linux/include/asm-i386/bug.h	2004-06-14 17:38:51.000000000 +0300
-@@ -10,11 +10,15 @@
-  */
- 
- #if 1	/* Set to zero for a slightly smaller kernel */
-+#ifdef CONFIG_COOPERATIVE
-+#define BUG() do { panic("BUG %s:%d\n", __FILE__, __LINE__); } while(0)
-+#else
- #define BUG()				\
-  __asm__ __volatile__(	"ud2\n"		\
- 			"\t.word %c0\n"	\
- 			"\t.long %c1\n"	\
- 			 : : "i" (__LINE__), "i" (__FILE__))
-+#endif
- #else
- #define BUG() __asm__ __volatile__("ud2\n")
- #endif
-diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm-i386/cooperative.h
---- linux/include/asm-i386/cooperative.h	1970-01-01 02:00:00.000000000 +0200
-+++ linux/include/asm-i386/cooperative.h	2004-06-19 18:30:50.000000000 +0300
+--- include/asm-i386/cooperative.h
++++ include/asm-i386/cooperative.h
 @@ -0,0 +1,181 @@
 +#ifndef __LINUX_ASM_COOPERATIVE_H__
 +#define __LINUX_ASM_COOPERATIVE_H__
@@ -3200,381 +2192,8 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm
 +} __attribute__((packed)) co_arch_info_t;
 +
 +#endif
-diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dma.h
---- linux/include/asm-i386/dma.h	2004-04-04 05:37:07.000000000 +0200
-+++ linux/include/asm-i386/dma.h	2004-06-14 17:38:51.000000000 +0300
-@@ -268,6 +268,7 @@
-  *
-  * Assumes DMA flip-flop is clear.
-  */
-+#ifndef CONFIG_COOPERATIVE
- static __inline__ int get_dma_residue(unsigned int dmanr)
- {
- 	unsigned int io_port = (dmanr<=3)? ((dmanr&3)<<1) + 1 + IO_DMA1_BASE
-@@ -281,6 +282,7 @@
- 	
- 	return (dmanr<=3)? count : (count<<1);
- }
-+#endif
- 
- 
- /* These are in kernel/dma.c: */
-diff -X bin/dontdiff -urN linux/include/asm-i386/fixmap.h linux/include/asm-i386/fixmap.h
---- linux/include/asm-i386/fixmap.h	2004-04-04 05:36:16.000000000 +0200
-+++ linux/include/asm-i386/fixmap.h	2004-06-19 18:27:16.000000000 +0300
-@@ -22,6 +22,7 @@
- #include <linux/threads.h>
- #include <asm/kmap_types.h>
- #endif
-+#include <asm/cooperative.h>
- 
- /*
-  * Here we define all the compile-time 'special' virtual
-@@ -104,6 +105,7 @@
-  * the start of the fixmap.
-  */
- #define FIXADDR_TOP	(0xfffff000UL)
-+
- #define __FIXADDR_SIZE	(__end_of_permanent_fixed_addresses << PAGE_SHIFT)
- #define FIXADDR_START	(FIXADDR_TOP - __FIXADDR_SIZE)
- 
-diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.h
---- linux/include/asm-i386/io.h	2004-04-04 05:38:24.000000000 +0200
-+++ linux/include/asm-i386/io.h	2004-06-14 17:38:51.000000000 +0300
-@@ -2,6 +2,7 @@
- #define _ASM_IO_H
- 
- #include <linux/config.h>
-+#include <linux/cooperative.h>
- 
- /*
-  * This file contains the definitions for the x86 IO instructions
-@@ -44,6 +45,7 @@
- #ifdef __KERNEL__
- 
- #include <linux/vmalloc.h>
-+#include <linux/cooperative.h>
- 
- /**
-  *	virt_to_phys	-	map virtual addresses to physical
-@@ -102,6 +104,9 @@
- 
- static inline void * ioremap (unsigned long offset, unsigned long size)
- {
-+#ifdef CONFIG_COOPERATIVE
-+	panic("ioremap %ld:%ld\n", offset, size);
-+#endif
- 	return __ioremap(offset, size, 0);
- }
- 
-diff -X bin/dontdiff -urN linux/include/asm-i386/mach-default/irq_vectors.h linux/include/asm-i386/mach-default/irq_vectors.h
---- linux/include/asm-i386/mach-default/irq_vectors.h	2004-05-10 18:05:16.000000000 +0300
-+++ linux/include/asm-i386/mach-default/irq_vectors.h	2004-06-14 17:38:51.000000000 +0300
-@@ -67,6 +67,11 @@
- 
- #define TIMER_IRQ 0
- 
-+#ifdef CONFIG_COOPERATIVE
-+#define KEYBOARD_IRQ 1
-+#define NETWORK_IRQ 2
-+#endif
-+
- /*
-  * 16 8259A IRQ's, 208 potential APIC interrupt sources.
-  * Right now the APIC is mostly only used for SMP.
-diff -X bin/dontdiff -urN linux/include/asm-i386/mach-default/irq_vectors_limits.h linux/include/asm-i386/mach-default/irq_vectors_limits.h
---- linux/include/asm-i386/mach-default/irq_vectors_limits.h	2004-05-10 18:05:16.000000000 +0300
-+++ linux/include/asm-i386/mach-default/irq_vectors_limits.h	2004-06-14 17:38:51.000000000 +0300
-@@ -5,7 +5,7 @@
- #define NR_IRQS FIRST_SYSTEM_VECTOR
- #define NR_IRQ_VECTORS NR_IRQS
- #else
--#ifdef CONFIG_X86_IO_APIC
-+#if defined(CONFIG_X86_IO_APIC) || defined(CONFIG_X86_UP_COPIC)
- #define NR_IRQS 224
- # if (224 >= 32 * NR_CPUS)
- # define NR_IRQ_VECTORS NR_IRQS
-diff -X bin/dontdiff -urN linux/include/asm-i386/mc146818rtc.h linux/include/asm-i386/mc146818rtc.h
---- linux/include/asm-i386/mc146818rtc.h	2004-04-04 05:37:37.000000000 +0200
-+++ linux/include/asm-i386/mc146818rtc.h	2004-06-14 17:38:51.000000000 +0300
-@@ -4,6 +4,7 @@
- #ifndef _ASM_MC146818RTC_H
- #define _ASM_MC146818RTC_H
- 
-+#include <linux/config.h>
- #include <asm/io.h>
- 
- #ifndef RTC_PORT
-@@ -11,6 +12,8 @@
- #define RTC_ALWAYS_BCD	1	/* RTC operates in binary mode */
- #endif
- 
-+#ifndef CONFIG_COOPERATIVE
-+
- /*
-  * The yet supported machines all access the RTC index register via
-  * an ISA port access but the way to access the date register differs ...
-@@ -24,6 +27,11 @@
- outb_p((val),RTC_PORT(1)); \
- })
- 
-+#else
-+#define CMOS_READ(addr) (0)
-+#define CMOS_WRITE(val, addr) do{}while(0)
-+#endif
-+
- #define RTC_IRQ 8
- 
- #endif /* _ASM_MC146818RTC_H */
-diff -X bin/dontdiff -urN linux/include/asm-i386/mmzone.h linux/include/asm-i386/mmzone.h
---- linux/include/asm-i386/mmzone.h	2004-04-04 05:37:07.000000000 +0200
-+++ linux/include/asm-i386/mmzone.h	2004-06-14 17:38:51.000000000 +0300
-@@ -6,6 +6,7 @@
- #ifndef _ASM_MMZONE_H_
- #define _ASM_MMZONE_H_
- 
-+#include <linux/config.h>
- #include <asm/smp.h>
- 
- #ifdef CONFIG_DISCONTIGMEM
-@@ -116,7 +117,12 @@
- 	(unsigned long)(__page - __zone->zone_mem_map)			\
- 		+ __zone->zone_start_pfn;				\
- })
-+
-+#ifndef CONFIG_COOPERATIVE
- #define pmd_page(pmd)		(pfn_to_page(pmd_val(pmd) >> PAGE_SHIFT))
-+#else
-+#define pmd_page(pmd)		(CO_VA_PAGE(pmd_val(pmd))
-+#endif
- 
- #ifdef CONFIG_X86_NUMAQ            /* we have contiguous memory on NUMA-Q */
- #define pfn_valid(pfn)          ((pfn) < num_physpages)
-diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/page.h
---- linux/include/asm-i386/page.h	2004-04-04 05:36:25.000000000 +0200
-+++ linux/include/asm-i386/page.h	2004-06-19 09:29:52.000000000 +0300
-@@ -1,6 +1,10 @@
- #ifndef _I386_PAGE_H
- #define _I386_PAGE_H
- 
-+#ifdef CONFIG_COOPERATIVE
-+#define WANT_PAGE_VIRTUAL
-+#endif
-+
- /* PAGE_SHIFT determines the page size */
- #define PAGE_SHIFT	12
- #define PAGE_SIZE	(1UL << PAGE_SHIFT)
-@@ -13,6 +17,7 @@
- #ifndef __ASSEMBLY__
- 
- #include <linux/config.h>
-+#include <asm/cooperative.h>
- 
- #ifdef CONFIG_X86_USE_3DNOW
- 
-@@ -120,6 +125,31 @@
- #define __PAGE_OFFSET		(0xC0000000UL)
- #endif
- 
-+#ifdef CONFIG_COOPERATIVE
-+
-+#define CO_PPTM_OFFSET		(CO_VPTR_PSEUDO_RAM_PAGE_TABLES)
-+#define CO_RPPTM_OFFSET		(CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP)
-+
-+#define CO_PFN(vaddr)		((((unsigned long)vaddr) - __PAGE_OFFSET) >> PAGE_SHIFT)
-+#define CO_PA(pfn)		(((unsigned long *)CO_PPTM_OFFSET)[pfn])
-+#define CO_PFN_PA(vaddr)	CO_PA(CO_PFN(vaddr))
-+#define CO_PPTM_SIZE		(max_low_pfn * sizeof(pte_t))
-+#define CO_PFN_PP_TO_P(pfn)	(CO_PA(pfn) >> PAGE_SHIFT)
-+
-+#define CO_VA_PFN(pa)		(((unsigned long *)CO_RPPTM_OFFSET)[((pa) >> PAGE_SHIFT)])
-+#define CO_VA_PAGE(pa)		(mem_map + CO_VA_PFN(pa))
-+#define CO_VA(pa)		((CO_VA_PFN(pa) << PAGE_SHIFT) + __PAGE_OFFSET)
-+#define CO_PFN_P_TO_PP(pfn)	(CO_VA_PFN(pfn << PAGE_SHIFT))
-+
-+#define CO_PPA_TO_PA(pa)	(CO_PFN_PP_TO_P(pa >> PAGE_SHIFT) << PAGE_SHIFT)
-+#define CO_PA_TO_PPA(pa)	(CO_PFN_P_TO_PP(pa >> PAGE_SHIFT) << PAGE_SHIFT)
-+
-+#else
-+#define CO_PFN_P_TO_PP(pfn)	pfn
-+#define CO_PFN_PP_TO_P(pfn)	pfn
-+#define CO_PPA_TO_PA(pa)	pa
-+#define CO_PA_TO_PPA(pa)	pa
-+#endif
- 
- #define PAGE_OFFSET		((unsigned long)__PAGE_OFFSET)
- #define VMALLOC_RESERVE		((unsigned long)__VMALLOC_RESERVE)
-diff -X bin/dontdiff -urN linux/include/asm-i386/param.h linux/include/asm-i386/param.h
---- linux/include/asm-i386/param.h	2004-06-19 07:23:22.000000000 +0300
-+++ linux/include/asm-i386/param.h	2004-06-19 07:47:15.000000000 +0300
-@@ -2,8 +2,12 @@
- #define _ASMi386_PARAM_H
- 
- #ifdef __KERNEL__
-+# include <linux/config.h>
-+# ifndef CONFIG_COOPERATIVE
- # define HZ		1000		/* Internal kernel timer frequency */
-+# else
- # define USER_HZ	100		/* .. some user interfaces are in "ticks" */
-+# endif
- # define CLOCKS_PER_SEC		(USER_HZ)	/* like times() */
- #endif
- 
-diff -X bin/dontdiff -urN linux/include/asm-i386/pgalloc.h linux/include/asm-i386/pgalloc.h
---- linux/include/asm-i386/pgalloc.h	2004-04-04 05:36:16.000000000 +0200
-+++ linux/include/asm-i386/pgalloc.h	2004-06-14 17:38:51.000000000 +0300
-@@ -7,14 +7,25 @@
- #include <linux/threads.h>
- #include <linux/mm.h>		/* for struct page */
- 
-+#ifndef CONFIG_COOPERATIVE
- #define pmd_populate_kernel(mm, pmd, pte) \
- 		set_pmd(pmd, __pmd(_PAGE_TABLE + __pa(pte)))
-+#else
-+#define pmd_populate_kernel(mm, pmd, pte) \
-+		set_pmd(pmd, __pmd(_PAGE_TABLE + (CO_PFN_PA(pte) & PAGE_MASK)))
-+#endif
- 
- static inline void pmd_populate(struct mm_struct *mm, pmd_t *pmd, struct page *pte)
- {
-+#ifndef CONFIG_COOPERATIVE
- 	set_pmd(pmd, __pmd(_PAGE_TABLE +
- 		((unsigned long long)page_to_pfn(pte) <<
- 			(unsigned long long) PAGE_SHIFT)));
-+#else
-+	set_pmd(pmd, __pmd(_PAGE_TABLE +
-+			   ((CO_PFN_PP_TO_P((unsigned long long)page_to_pfn(pte))) <<
-+			    (unsigned long long) PAGE_SHIFT)));
-+#endif
- }
- /*
-  * Allocate and free page tables.
-diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable-2level.h linux/include/asm-i386/pgtable-2level.h
---- linux/include/asm-i386/pgtable-2level.h	2004-04-04 05:37:07.000000000 +0200
-+++ linux/include/asm-i386/pgtable-2level.h	2004-06-14 17:38:51.000000000 +0300
-@@ -1,6 +1,8 @@
- #ifndef _I386_PGTABLE_2LEVEL_H
- #define _I386_PGTABLE_2LEVEL_H
- 
-+#include <linux/config.h>
-+
- /*
-  * traditional i386 two-level paging structure:
-  */
-@@ -48,8 +50,13 @@
- #define set_pmd(pmdptr, pmdval) (*(pmdptr) = pmdval)
- #define set_pgd(pgdptr, pgdval) (*(pgdptr) = pgdval)
- 
-+#ifndef CONFIG_COOPERATIVE
- #define pgd_page(pgd) \
- ((unsigned long) __va(pgd_val(pgd) & PAGE_MASK))
-+#else
-+#define pgd_page(pgd) \
-+(CO_VA_PAGE(pgd_val(pgd) & PAGE_MASK))
-+#endif
- 
- static inline pmd_t * pmd_offset(pgd_t * dir, unsigned long address)
- {
-@@ -57,11 +64,20 @@
- }
- #define ptep_get_and_clear(xp)	__pte(xchg(&(xp)->pte_low, 0))
- #define pte_same(a, b)		((a).pte_low == (b).pte_low)
-+
-+#ifndef CONFIG_COOPERATIVE
- #define pte_page(x)		pfn_to_page(pte_pfn(x))
--#define pte_none(x)		(!(x).pte_low)
- #define pte_pfn(x)		((unsigned long)(((x).pte_low >> PAGE_SHIFT)))
- #define pfn_pte(pfn, prot)	__pte(((pfn) << PAGE_SHIFT) | pgprot_val(prot))
- #define pfn_pmd(pfn, prot)	__pmd(((pfn) << PAGE_SHIFT) | pgprot_val(prot))
-+#else
-+#define pte_page(x)		CO_VA_PAGE((x).pte_low)
-+#define pte_pfn(x)		CO_VA_PFN((x).pte_low)
-+#define pfn_pte(pfn, prot)	__pte((CO_PFN_PP_TO_P(pfn) << PAGE_SHIFT) | pgprot_val(prot))
-+#define pfn_pmd(pfn, prot)	__pmd((CO_PFN_PP_TO_P(pfn) << PAGE_SHIFT) | pgprot_val(prot))
-+#endif
-+
-+#define pte_none(x)		(!(x).pte_low)
- 
- /*
-  * Bits 0, 6 and 7 are taken, split up the 29 bits of offset
-diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable.h linux/include/asm-i386/pgtable.h
---- linux/include/asm-i386/pgtable.h	2004-06-19 07:23:22.000000000 +0300
-+++ linux/include/asm-i386/pgtable.h	2004-06-19 07:45:58.000000000 +0300
-@@ -25,6 +25,8 @@
- #include <linux/list.h>
- #include <linux/spinlock.h>
- 
-+#include <linux/cooperative.h>
-+
- /*
-  * ZERO_PAGE is a global shared page that is always zero: used
-  * for zero-mapped memory areas etc..
-@@ -237,7 +239,11 @@
-  * and a page entry and page directory to the page they refer to.
-  */
- 
-+#ifndef CONFIG_COOPERATIVE
- #define mk_pte(page, pgprot)	pfn_pte(page_to_pfn(page), (pgprot))
-+#else
-+#define mk_pte(page, pgprot)	__pte((CO_PA(page_to_pfn(page)) & PAGE_MASK) | pgprot_val(pgprot))
-+#endif
- #define mk_pte_huge(entry) ((entry).pte_low |= _PAGE_PRESENT | _PAGE_PSE)
- 
- static inline pte_t pte_modify(pte_t pte, pgprot_t newprot)
-@@ -249,11 +255,16 @@
- 
- #define page_pte(page) page_pte_prot(page, __pgprot(0))
- 
-+#ifndef CONFIG_COOPERATIVE
- #define pmd_page_kernel(pmd) \
- ((unsigned long) __va(pmd_val(pmd) & PAGE_MASK))
-+#else
-+#define pmd_page_kernel(pmd) \
-+CO_VA(pmd_val(pmd))
-+#endif
- 
- #ifndef CONFIG_DISCONTIGMEM
--#define pmd_page(pmd) (pfn_to_page(pmd_val(pmd) >> PAGE_SHIFT))
-+#define pmd_page(pmd) (pfn_to_page(CO_PFN_P_TO_PP(pmd_val(pmd) >> PAGE_SHIFT)))
- #endif /* !CONFIG_DISCONTIGMEM */
- 
- #define pmd_large(pmd) \
-diff -X bin/dontdiff -urN linux/include/asm-i386/processor.h linux/include/asm-i386/processor.h
---- linux/include/asm-i386/processor.h	2004-06-19 07:23:22.000000000 +0300
-+++ linux/include/asm-i386/processor.h	2004-06-19 07:45:58.000000000 +0300
-@@ -179,8 +179,18 @@
- 	return edx;
- }
- 
-+#ifndef CONFIG_COOPERATIVE
- #define load_cr3(pgdir) \
- 	asm volatile("movl %0,%%cr3": :"r" (__pa(pgdir)))
-+#else
-+/*
-+ * In coLinux Mode we can't load CR3 with the pseudo physical
-+ * address, Instead, we need to translate the pseudo physical address
-+ * to the real physical address.
-+ */
-+#define load_cr3(pgdir) \
-+	asm volatile("movl %0,%%cr3": :"r" (CO_PFN_PA(pgdir)))
-+#endif
- 
- 
- /*
-diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/console.h
---- linux/include/linux/console.h	2004-06-19 07:23:24.000000000 +0300
-+++ linux/include/linux/console.h	2004-06-19 07:46:03.000000000 +0300
-@@ -57,6 +57,7 @@
- extern const struct consw dummy_con;	/* dummy console buffer */
- extern const struct consw fb_con;	/* frame buffer based console */
- extern const struct consw vga_con;	/* VGA text console */
-+extern const struct consw colinux_con;	/* coLinux Mode text console */
- extern const struct consw newport_con;	/* SGI Newport console  */
- extern const struct consw prom_con;	/* SPARC PROM console */
- 
-diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/cooperative.h
---- linux/include/linux/cooperative.h	1970-01-01 02:00:00.000000000 +0200
-+++ linux/include/linux/cooperative.h	2004-06-19 18:29:18.000000000 +0300
+--- include/linux/cooperative.h
++++ include/linux/cooperative.h
 @@ -0,0 +1,327 @@
 +#ifndef __LINUX_COOPERATIVE_H__
 +#define __LINUX_COOPERATIVE_H__
@@ -3903,58 +2522,8 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +#pragma pack()
 +
 +#endif
-diff -X bin/dontdiff -urN linux/include/linux/major.h linux/include/linux/major.h
---- linux/include/linux/major.h	2004-04-04 05:36:46.000000000 +0200
-+++ linux/include/linux/major.h	2004-06-14 17:38:51.000000000 +0300
-@@ -130,6 +130,7 @@
- #define VIOCD_MAJOR		113
- 
- #define ATARAID_MAJOR		114
-+#define COLINUX_MAJOR		117
- 
- #define SCSI_DISK8_MAJOR	128
- #define SCSI_DISK9_MAJOR	129
-diff -X bin/dontdiff -urN linux/init/main.c linux/init/main.c
---- linux/init/main.c	2004-06-19 07:23:25.000000000 +0300
-+++ linux/init/main.c	2004-06-19 07:46:06.000000000 +0300
-@@ -61,6 +61,8 @@
- #include <asm/smp.h>
- #endif
- 
-+#include <linux/cooperative.h>
-+
- /*
-  * Versions of gcc older than that listed below may actually compile
-  * and link okay, but the end product can have subtle run time bugs.
-@@ -308,7 +310,14 @@
- #ifdef CONFIG_X86_LOCAL_APIC
- static void __init smp_init(void)
- {
-+#ifdef CONFIG_COOPERATIVE
-+	/*
-+	 * It doesn't work yet because I haven't implemented the
-+	 * timer interrupt yet
-+	 */
-+#else
- 	APIC_init_uniprocessor();
-+#endif
- }
- #else
- #define smp_init()	do { } while (0)
-diff -X bin/dontdiff -urN linux/kernel/Makefile linux/kernel/Makefile
---- linux/kernel/Makefile	2004-05-10 18:05:20.000000000 +0300
-+++ linux/kernel/Makefile	2004-06-14 17:38:51.000000000 +0300
-@@ -23,6 +23,7 @@
- obj-$(CONFIG_STOP_MACHINE) += stop_machine.o
- obj-$(CONFIG_AUDIT) += audit.o
- obj-$(CONFIG_AUDITSYSCALL) += auditsc.o
-+obj-$(CONFIG_COOPERATIVE) += cooperative.o
- 
- ifneq ($(CONFIG_IA64),y)
- # According to Alan Modra <alan@linuxcare.com.au>, the -fno-omit-frame-pointer is
-diff -X bin/dontdiff -urN linux/kernel/cooperative.c linux/kernel/cooperative.c
---- linux/kernel/cooperative.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/kernel/cooperative.c	2004-06-19 12:20:36.000000000 +0300
+--- kernel/cooperative.c
++++ kernel/cooperative.c
 @@ -0,0 +1,348 @@
 +/*
 + *  linux/kernel/cooperative.c
@@ -4304,9 +2873,1633 @@ diff -X bin/dontdiff -urN linux/kernel/cooperative.c linux/kernel/cooperative.c
 +EXPORT_SYMBOL(co_info);
 +
 +CO_TRACE_CONTINUE;
-diff -X bin/dontdiff -urN linux/kernel/panic.c linux/kernel/panic.c
---- linux/kernel/panic.c	2004-04-04 05:38:18.000000000 +0200
-+++ linux/kernel/panic.c	2004-06-14 17:38:51.000000000 +0300
+--- CREDITS
++++ CREDITS
+@@ -54,6 +54,12 @@
+ S: CH-1015 Lausanne
+ S: Switzerland
+ 
++A: Dan Aloni
++E: da-x@colinux.org
++D: Copaertative Linux
++D: Various kernel patches
++S: Isreal
++
+ N: Tim Alpaerts
+ E: tim_alpaerts@toyota-motor-europe.com
+ D: 802.2 class II logical link control layer,
+--- Makefile
++++ Makefile
+@@ -1,7 +1,7 @@
+ VERSION = 2
+ PATCHLEVEL = 6
+ SUBLEVEL = 7
+-EXTRAVERSION =
++EXTRAVERSION = -co-0.6.2
+ NAME=Zonked Quokka
+ 
+ # *DOCUMENTATION*
+@@ -283,6 +283,11 @@
+ AS		= $(CROSS_COMPILE)as
+ LD		= $(CROSS_COMPILE)ld
+ CC		= $(CROSS_COMPILE)gcc
++ifeq ($(GCCTRACE),Y)
++CC              = $(CORSS_COMPILE)$(COLINUX_ROOT)/bin/tracewrapper.py gcc
++else
++CC		= $(CROSS_COMPILE)gcc
++endif
+ CPP		= $(CC) -E
+ AR		= $(CROSS_COMPILE)ar
+ NM		= $(CROSS_COMPILE)nm
+--- arch/i386/Kconfig
++++ arch/i386/Kconfig
+@@ -201,6 +201,7 @@
+ 
+ config M586TSC
+ 	bool "Pentium-Classic"
++	depends on !COOPERATIVE
+ 	help
+ 	  Select this for a Pentium Classic processor with the RDTSC (Read
+ 	  Time Stamp Counter) instruction for benchmarking.
+@@ -533,6 +534,10 @@
+ 	  If you have a system with several CPUs, you do not need to say Y
+ 	  here: the IO-APIC will be used automatically.
+ 
++config X86_UP_COPIC
++	bool 'Cooperative PIC (COPIC) support' 
++	depends on COOPERATIVE
++
+ config X86_LOCAL_APIC
+ 	bool
+ 	depends on !SMP && X86_UP_APIC
+@@ -545,7 +549,7 @@
+ 
+ config X86_TSC
+ 	bool
+-	depends on (MWINCHIP3D || MWINCHIP2 || MCRUSOE || MCYRIXIII || MK7 || MK6 || MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M686 || M586MMX || M586TSC || MK8 || MVIAC3_2) && !X86_NUMAQ
++	depends on (MWINCHIP3D || MWINCHIP2 || MCRUSOE || MCYRIXIII || MK7 || MK6 || MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M686 || M586MMX || M586TSC || MK8 || MVIAC3_2) && !X86_NUMAQ && !COOPERATIVE
+ 	default y
+ 
+ config X86_MCE
+@@ -872,6 +872,10 @@
+ 
+ source kernel/power/Kconfig
+ 
++config COOPERATIVE
++	bool 'Cooperative Mode'
++	default y
++
+ source "drivers/acpi/Kconfig"
+ 
+ menu "APM (Advanced Power Management) BIOS Support"
+--- arch/i386/kernel/Makefile
++++ arch/i386/kernel/Makefile
+@@ -17,6 +17,7 @@
+ obj-$(CONFIG_X86_MSR)		+= msr.o
+ obj-$(CONFIG_X86_CPUID)		+= cpuid.o
+ obj-$(CONFIG_MICROCODE)		+= microcode.o
++obj-$(CONFIG_COOPERATIVE)       += cooperative.o
+ obj-$(CONFIG_APM)		+= apm.o
+ obj-$(CONFIG_X86_SMP)		+= smp.o smpboot.o
+ obj-$(CONFIG_X86_TRAMPOLINE)	+= trampoline.o
+--- arch/i386/kernel/cpu/common.c
++++ arch/i386/kernel/cpu/common.c
+@@ -565,11 +565,13 @@
+ 
+ 	/* Clear all 6 debug registers: */
+ 
++#ifndef CONFIG_COOPERATIVE
+ #define CD(register) __asm__("movl %0,%%db" #register ::"r"(0) );
+ 
+ 	CD(0); CD(1); CD(2); CD(3); /* no db4 and db5 */; CD(6); CD(7);
+ 
+ #undef CD
++#endif
+ 
+ 	/*
+ 	 * Force FPU initialization:
+--- arch/i386/kernel/entry.S
++++ arch/i386/kernel/entry.S
+@@ -192,7 +192,7 @@
+ 	ALIGN
+ ret_from_exception:
+ 	preempt_stop
+-ret_from_intr:
++ENTRY(ret_from_intr)
+ 	GET_THREAD_INFO(%ebp)
+ 	movl EFLAGS(%esp), %eax		# mix EFLAGS and CS
+ 	movb CS(%esp), %al
+--- arch/i386/kernel/head.S
++++ arch/i386/kernel/head.S
+@@ -399,7 +399,7 @@
+ .data
+ 
+ ENTRY(stack_start)
+-	.long init_thread_union+THREAD_SIZE
++	.long init_thread_union+THREAD_SIZE-100
+ 	.long __BOOT_DS
+ 
+ ready:	.byte 0
+--- arch/i386/kernel/i387.c
++++ arch/i386/kernel/i387.c
+@@ -17,6 +17,7 @@
+ #include <asm/user.h>
+ #include <asm/ptrace.h>
+ #include <asm/uaccess.h>
++#include <linux/cooperative.h>
+ 
+ #ifdef CONFIG_MATH_EMULATION
+ #define HAVE_HWFP (boot_cpu_data.hard_math)
+@@ -37,7 +38,18 @@
+ 		if (mask == 0) mask = 0x0000ffbf;
+ 	} 
+ 	mxcsr_feature_mask &= mask;
++#ifndef CONFIG_COOPERATIVE
+ 	stts();
++#else
++#if (0)
++	clear_in_cr4(X86_CR4_PVI);
++	clear_in_cr4(X86_CR4_DE);
++	clear_in_cr4(X86_CR4_MCE);
++	clear_in_cr4(X86_CR4_PGE);
++	flush_tlb_all();
++	clear_in_cr4(XF86_CR4_OSXMMEXCPT);
++#endif
++#endif
+ }
+ 
+ /*
+@@ -328,6 +339,8 @@
+ 	return 1;
+ }
+ 
++CO_TRACE_STOP;
++
+ int save_i387( struct _fpstate __user *buf )
+ {
+ 	if ( !current->used_math )
+@@ -349,6 +351,8 @@
+ 	}
+ }
+ 
++CO_TRACE_CONTINUE;
++
+ static inline int restore_i387_fsave( struct _fpstate __user *buf )
+ {
+ 	struct task_struct *tsk = current;
+@@ -369,6 +371,8 @@
+ 	return err ? 1 : convert_fxsr_from_user( &tsk->thread.i387.fxsave, buf );
+ }
+ 
++CO_TRACE_STOP;
++
+ int restore_i387( struct _fpstate __user *buf )
+ {
+ 	int err;
+@@ -386,6 +388,8 @@
+ 	return err;
+ }
+ 
++CO_TRACE_CONTINUE;
++
+ /*
+  * ptrace request handlers.
+  */
+--- arch/i386/kernel/i8259.c
++++ arch/i386/kernel/i8259.c
+@@ -25,9 +25,87 @@
+ #include <asm/i8259.h>
+ 
+ #include <linux/irq.h>
++#include <linux/cooperative.h>
+ 
+ #include <io_ports.h>
+ 
++#ifdef CONFIG_COOPERATIVE
++
++CO_TRACE_STOP;
++
++void proxy_interrupt_handler(unsigned long interrupt, struct pt_regs regs)
++{
++	co_passage_page->operation = CO_OPERATION_FORWARD_INTERRUPT;
++	co_passage_page->params[0] = interrupt + 0x20;
++	co_passage_page->params[1] = regs.eip;
++	co_passage_page->params[2] = (unsigned long)(&((&interrupt)[10]));
++	co_passage_page->host_state.flags &= ~(1 << 9); /* Turn IF off */
++
++	co_switch_wrapper();
++	co_callback();
++}
++
++CO_TRACE_CONTINUE;
++
++#define IRQLIST_16(x) \
++	IRQ(x,0) IRQ(x,1) IRQ(x,2) IRQ(x,3) \
++	IRQ(x,4) IRQ(x,5) IRQ(x,6) IRQ(x,7) \
++	IRQ(x,8) IRQ(x,9) IRQ(x,a) IRQ(x,b) \
++	IRQ(x,c) IRQ(x,d) IRQ(x,e) IRQ(x,f)
++
++#define IRQLIST_224 \
++	IRQLIST_16(0x0) IRQLIST_16(0x1) IRQLIST_16(0x2) IRQLIST_16(0x3) \
++	IRQLIST_16(0x4) IRQLIST_16(0x5) IRQLIST_16(0x6) IRQLIST_16(0x7) \
++	IRQLIST_16(0x8) IRQLIST_16(0x9) IRQLIST_16(0xa) IRQLIST_16(0xb) \
++	IRQLIST_16(0xc) IRQLIST_16(0xd)
++
++#define IRQ(x,y) \
++	extern asmlinkage void IRQ_proxy_##x##y##_interrupt(void);
++IRQLIST_224;
++#undef IRQ
++
++#define BIRQ(id)						\
++asm(								\
++    "\n"__ALIGN_STR"\n"						\
++    ".section .text\n"						\
++    ".globl IRQ_proxy_" #id "_interrupt\n"			\
++    "IRQ_proxy_" #id "_interrupt:\n"				\
++    "push %eax\n\t"						\
++    "cld;\n\t"							\
++    "pushl %es;\n\t"						\
++    "pushl %ds;\n\t"						\
++    "pushl %eax;\n\t"						\
++    "pushl %ebp;\n\t"						\
++    "pushl %edi;\n\t"						\
++    "pushl %esi;\n\t"						\
++    "pushl %edx;\n\t"						\
++    "pushl %ecx;\n\t"						\
++    "pushl %ebx;\n\t"						\
++    "movl $123, %edx;\n\t"			         	\
++    "movl %edx, %ds;\n\t"					\
++    "movl %edx, %es;\n\t"					\
++    "pushl $" #id "\n\t"					\
++    "call proxy_interrupt_handler\n\t"				\
++    "popl %ebx\n\t"						\
++    "jmp ret_from_intr\n"					\
++    ".previous\n"						\
++    );		                    				\
++
++#define IRQ(x,y) BIRQ(x##y)
++IRQLIST_224;
++#undef IRQ
++
++#define IRQ(x,y) &IRQ_proxy_##x##y##_interrupt,
++void (*proxy_interrupt[NR_IRQS])(void) = {
++    IRQLIST_224
++};
++#undef IRQ
++
++#undef IRQLIST_16
++#undef IRQLIST_224
++
++#endif 
++    
+ /*
+  * This is the 'legacy' 8259A Programmable Interrupt Controller,
+  * present in the majority of PC/AT boxes.
+@@ -407,6 +485,63 @@
+ 
+ device_initcall(init_timer_sysfs);
+ 
++#ifdef CONFIG_X86_UP_COPIC
++
++/*
++ * Not like you have any other choice other than using
++ * COPIC in Cooperative mode.
++ */
++
++static void end_COPIC_irq(unsigned int irq)
++{
++}
++
++#define shutdown_COPIC_irq	disable_COPIC_irq
++
++static void mask_and_ack_COPIC(unsigned int irq)
++{
++}
++
++static unsigned int startup_COPIC_irq(unsigned int irq)
++{
++	return 0;
++}
++
++void disable_COPIC_irq(unsigned int irq)
++{
++}
++
++void enable_COPIC_irq(unsigned int irq)
++{
++}
++
++static struct hw_interrupt_type co_pic_irq_type = {
++	"CO-PIC",
++	startup_COPIC_irq,
++	shutdown_COPIC_irq,
++	enable_COPIC_irq,
++	disable_COPIC_irq,
++	mask_and_ack_COPIC,
++	end_COPIC_irq,
++	NULL
++};
++
++void __init init_COPIC_irqs(void)
++{
++	int i;
++
++	for (i = 0; i < NR_IRQS; i++) {
++		irq_desc[i].status = IRQ_DISABLED;
++		irq_desc[i].action = 0;
++		irq_desc[i].depth = 1;
++
++		irq_desc[i].handler = &co_pic_irq_type;
++	}
++	
++}
++
++#endif
++
+ void __init init_IRQ(void)
+ {
+ 	int i;
+@@ -414,6 +471,7 @@
+ 	/* all the set up before the call gates are initialised */
+ 	pre_intr_init_hook();
+ 
++#ifndef CONFIG_COOPERATIVE
+ 	/*
+ 	 * Cover the whole vector space, no vector can escape
+ 	 * us. (some of these will be overridden and become
+@@ -446,4 +447,21 @@
+ 		setup_irq(FPU_IRQ, &fpu_irq);
+ 
+ 	irq_ctx_init(smp_processor_id());
++
++#else
++	printk("Setting proxy interrupt vectors\n");
++
++#ifdef CONFIG_X86_UP_COPIC
++	init_COPIC_irqs();
++#endif
++
++	for (i = 0; i < (NR_VECTORS - FIRST_EXTERNAL_VECTOR); i++) {
++		int vector = FIRST_EXTERNAL_VECTOR + i;
++		if (i >= NR_IRQS)
++			break;
++		if (vector != SYSCALL_VECTOR)
++			set_intr_gate(vector, proxy_interrupt[i]);
++	}
++
++#endif
+ }
+--- arch/i386/kernel/ioport.c
++++ arch/i386/kernel/ioport.c
+@@ -56,6 +56,7 @@
+  */
+ asmlinkage long sys_ioperm(unsigned long from, unsigned long num, int turn_on)
+ {
++#ifndef CONFIG_COOPERATIVE
+ 	struct thread_struct * t = &current->thread;
+ 	struct tss_struct * tss;
+ 	unsigned long *bitmap;
+@@ -92,6 +93,9 @@
+ 	}
+ 	put_cpu();
+ 	return 0;
++#else
++	return -EPERM;	
++#endif
+ }
+ 
+ /*
+@@ -107,6 +110,7 @@
+ 
+ asmlinkage long sys_iopl(unsigned long unused)
+ {
++#ifndef CONFIG_COOPERATIVE
+ 	volatile struct pt_regs * regs = (struct pt_regs *) &unused;
+ 	unsigned int level = regs->ebx;
+ 	unsigned int old = (regs->eflags >> 12) & 3;
+@@ -122,4 +123,7 @@
+ 	/* Make sure we return the long way (not sysenter) */
+ 	set_thread_flag(TIF_IRET);
+ 	return 0;
++#else
++	return -EPERM;	
++#endif
+ }
+--- arch/i386/kernel/process.c
++++ arch/i386/kernel/process.c
+@@ -52,6 +52,7 @@
+ 
+ #include <linux/irq.h>
+ #include <linux/err.h>
++#include <linux/cooperative.h>
+ 
+ asmlinkage void ret_from_fork(void) __asm__("ret_from_fork");
+ 
+@@ -141,6 +142,9 @@
+ {
+ 	/* endless idle loop with no priority at all */
+ 	while (1) {
++#ifdef CONFIG_COOPERATIVE
++		co_idle_processor();
++#else
+ 		while (!need_resched()) {
+ 			void (*idle)(void) = pm_idle;
+ 
+@@ -150,6 +153,7 @@
+ 			irq_stat[smp_processor_id()].idle_timestamp = jiffies;
+ 			idle();
+ 		}
++#endif
+ 		schedule();
+ 	}
+ }
+--- arch/i386/kernel/reboot.c
++++ arch/i386/kernel/reboot.c
+@@ -137,6 +137,7 @@
+  */
+ void machine_real_restart(unsigned char *code, int length)
+ {
++#ifndef CONFIG_COOPERATIVE	
+ 	unsigned long flags;
+ 
+ 	local_irq_disable();
+@@ -215,10 +216,14 @@
+ 	__asm__ __volatile__ ("ljmp $0x0008,%0"
+ 				:
+ 				: "i" ((void *) (0x1000 - sizeof (real_mode_switch) - 100)));
++#else
++	co_terminate(CO_TERMINATE_REBOOT);
++#endif
+ }
+ 
+ void machine_restart(char * __unused)
+ {
++#ifndef CONFIG_COOPERATIVE
+ #ifdef CONFIG_SMP
+ 	int cpuid;
+ 	
+@@ -283,22 +287,32 @@
+ 		efi.reset_system(EFI_RESET_WARM, EFI_SUCCESS, 0, 0);
+ 
+ 	machine_real_restart(jump_to_bios, sizeof(jump_to_bios));
++#else
++	co_terminate(CO_TERMINATE_REBOOT);
++#endif
+ }
+ 
+ EXPORT_SYMBOL(machine_restart);
+ 
+ void machine_halt(void)
+ {
++#ifdef CONFIG_COOPERATIVE
++	co_terminate(CO_TERMINATE_HALT);
++#endif
+ }
+ 
+ EXPORT_SYMBOL(machine_halt);
+ 
+ void machine_power_off(void)
+ {
++#ifndef CONFIG_COOPERATIVE	
+ 	if (efi_enabled)
+ 		efi.reset_system(EFI_RESET_SHUTDOWN, EFI_SUCCESS, 0, 0);
+ 	if (pm_power_off)
+ 		pm_power_off();
++#else
++	co_terminate(CO_TERMINATE_POWEROFF);
++#endif
+ }
+ 
+ EXPORT_SYMBOL(machine_power_off);
+--- arch/i386/kernel/setup.c
++++ arch/i386/kernel/setup.c
+@@ -39,6 +39,7 @@
+ #include <linux/efi.h>
+ #include <linux/init.h>
+ #include <linux/edd.h>
++#include <linux/cooperative.h>
+ #include <video/edid.h>
+ #include <asm/e820.h>
+ #include <asm/mpspec.h>
+@@ -479,8 +480,17 @@
+ 	int len = 0;
+ 	int userdef = 0;
+ 
++#ifdef CONFIG_COOPERATIVE
++	/*
++	 * Better to have 'root=/dev/cobd0' here.
++	 */
++	from = co_boot_parameters;
++	snprintf(saved_command_line, COMMAND_LINE_SIZE, "%s", 
++	         co_boot_parameters);
++#else
+ 	/* Save unparsed command line copy for /proc/cmdline */
+ 	saved_command_line[COMMAND_LINE_SIZE-1] = '\0';
++#endif
+ 
+ 	for (;;) {
+ 		/*
+@@ -812,15 +821,23 @@
+ {
+ 	unsigned long bootmap_size, start_pfn, max_low_pfn;
+ 
++#ifdef CONFIG_COOPERATIVE
++	unsigned long bootmem_size;
++	unsigned long bootmem_start;
++#endif
+ 	/*
+ 	 * partially used pages are not usable - thus
+ 	 * we are rounding upwards:
+ 	 */
+ 	start_pfn = PFN_UP(init_pg_tables_end);
+ 
++#ifdef CONFIG_COOPERATIVE
++	max_low_pfn = max_pfn = co_memory_size / PAGE_SIZE;
++#else
+ 	find_max_pfn();
+ 
+ 	max_low_pfn = find_max_low_pfn();
++#endif
+ 
+ #ifdef CONFIG_HIGHMEM
+ 	highstart_pfn = highend_pfn = max_pfn;
+@@ -837,8 +845,17 @@
+ 	 */
+ 	bootmap_size = init_bootmem(start_pfn, max_low_pfn);
+ 
+-	register_bootmem_low_pages(max_low_pfn);
++	{
++		extern char _end;
++		unsigned long bootmem_end = (((unsigned long)&_end) + bootmap_size + (0x10 << PAGE_SHIFT));
++		unsigned long physical_end = __PAGE_OFFSET + (max_low_pfn << PAGE_SHIFT);
++	    
++		free_bootmem(__pa(bootmem_end), physical_end - bootmem_end);
++	}
+ 
++#ifndef CONFIG_COOPERATIVE
++	register_bootmem_low_pages(max_low_pfn); 
++
+ 	/*
+ 	 * Reserve the bootmem bitmap itself as well. We do this in two
+ 	 * steps (first step was init_bootmem()) because this catches
+@@ -881,8 +890,11 @@
+ 	 */
+ 	find_smp_config();
+ #endif
++#endif
+ 
+ #ifdef CONFIG_BLK_DEV_INITRD
++#ifndef CONFIG_COOPERATIVE
++
+ 	if (LOADER_TYPE && INITRD_START) {
+ 		if (INITRD_START + INITRD_SIZE <= (max_low_pfn << PAGE_SHIFT)) {
+ 			reserve_bootmem(INITRD_START, INITRD_SIZE);
+@@ -898,7 +901,18 @@
+ 			initrd_start = 0;
+ 		}
+ 	}
++#else
++	if (co_initrd != NULL) {
++		printk(KERN_INFO "initrd enabled: start: 0x%08lx  size: 0x%08lx)\n",
++		       co_initrd, co_initrd_size);
++               
++		initrd_start = co_initrd;
++		initrd_end = co_initrd + co_initrd_size;
++		
++		reserve_bootmem(virt_to_phys(initrd_start), co_initrd_size);
++	}
+ #endif
++#endif
+ 	return max_low_pfn;
+ }
+ #else
+@@ -1082,8 +1093,9 @@
+  */
+ void __init setup_arch(char **cmdline_p)
+ {
++#ifndef CONFIG_COOPERATIVE
+ 	unsigned long max_low_pfn;
+-
++#endif
+ 	memcpy(&boot_cpu_data, &new_cpu_data, sizeof(new_cpu_data));
+ 	pre_setup_arch_hook();
+ 	early_cpu_init();
+@@ -1100,6 +1101,7 @@
+ 		efi_enabled = 1;
+ #endif
+ 
++	boot_cpu_data.hard_math = 1;
+  	ROOT_DEV = old_decode_dev(ORIG_ROOT_DEV);
+  	drive_info = DRIVE_INFO;
+  	screen_info = SCREEN_INFO;
+@@ -1123,8 +1124,10 @@
+ 	ARCH_SETUP
+ 	if (efi_enabled)
+ 		efi_init();
++#ifndef CONFIG_COOPERATIVE	
+ 	else
+ 		setup_memory_region();
++#endif
+ 
+ 	copy_edd();
+ 
+@@ -1167,6 +1169,7 @@
+ #endif
+ 
+ 
++#ifndef CONFIG_COOPERATIVE	
+ 	dmi_scan_machine();
+ 
+ #ifdef CONFIG_X86_GENERICARCH
+@@ -1186,8 +1187,12 @@
+ #endif
+ 
+ 	register_memory(max_low_pfn);
++#endif	
+ 
+ #ifdef CONFIG_VT
++#ifdef CONFIG_COOPERATIVE_CONSOLE
++	conswitchp = &colinux_con;
++#else
+ #if defined(CONFIG_VGA_CONSOLE)
+ 	if (!efi_enabled || (efi_mem_type(0xa0000) != EFI_CONVENTIONAL_MEMORY))
+ 		conswitchp = &vga_con;
+@@ -1195,6 +1199,7 @@
+ 	conswitchp = &dummy_con;
+ #endif
+ #endif
++#endif
+ }
+ 
+ #include "setup_arch_post.h"
+--- arch/i386/kernel/sysenter.c
++++ arch/i386/kernel/sysenter.c
+@@ -47,7 +47,11 @@
+ 
+ 	__set_fixmap(FIX_VSYSCALL, __pa(page), PAGE_READONLY);
+ 
++#ifndef CONFIG_COOPERATIVE
+ 	if (!boot_cpu_has(X86_FEATURE_SEP)) {
++#else
++	{
++#endif
+ 		memcpy((void *) page,
+ 		       &vsyscall_int80_start,
+ 		       &vsyscall_int80_end - &vsyscall_int80_start);
+@@ -59,6 +63,7 @@
+ 	       &vsyscall_sysenter_end - &vsyscall_sysenter_start);
+ 
+ 	on_each_cpu(enable_sep_cpu, NULL, 1, 1);
++
+ 	return 0;
+ }
+ 
+--- arch/i386/kernel/time.c
++++ arch/i386/kernel/time.c
+@@ -172,6 +172,7 @@
+ 
+ static int set_rtc_mmss(unsigned long nowtime)
+ {
++#ifndef CONFIG_COOPERATIVE	
+ 	int retval;
+ 
+ 	/* gets recalled with irq locally disabled */
+@@ -183,6 +184,12 @@
+ 	spin_unlock(&rtc_lock);
+ 
+ 	return retval;
++#else
++	/*
++	 * Don't let Linux change the system time of the host machine.
++	 */
++	return -1;
++#endif
+ }
+ 
+ /* last time the cmos clock got updated */
+@@ -226,6 +232,7 @@
+ 
+ 	do_timer_interrupt_hook(regs);
+ 
++#ifndef CONFIG_COOPERATIVE	
+ 	/*
+ 	 * If we have an externally synchronized Linux clock, then update
+ 	 * CMOS clock accordingly every ~11 minutes. Set_rtc_mmss() has to be
+@@ -248,6 +249,7 @@
+ 		else
+ 			last_rtc_update = xtime.tv_sec - 600; /* do it again in 60 s */
+ 	}
++#endif	
+ 
+ #ifdef CONFIG_MCA
+ 	if( MCA_bus ) {
+@@ -293,6 +294,7 @@
+ /* not static: needed by APM */
+ unsigned long get_cmos_time(void)
+ {
++#ifndef CONFIG_COOPERATIVE	
+ 	unsigned long retval;
+ 
+ 	spin_lock(&rtc_lock);
+@@ -305,6 +306,9 @@
+ 	spin_unlock(&rtc_lock);
+ 
+ 	return retval;
++#else
++	return co_get_host_time();
++#endif
+ }
+ 
+ static long clock_cmos_diff;
+--- arch/i386/kernel/timers/timer.c
++++ arch/i386/kernel/timers/timer.c
+@@ -13,6 +13,7 @@
+ #endif
+ /* list of timers, ordered by preference, NULL terminated */
+ static struct timer_opts* timers[] = {
++#ifndef CONFIG_COOPERATIVE
+ #ifdef CONFIG_X86_CYCLONE_TIMER
+ 	&timer_cyclone,
+ #endif
+@@ -23,6 +24,7 @@
+ 	&timer_pmtmr,
+ #endif
+ 	&timer_tsc,
++#endif
+ 	&timer_pit,
+ 	NULL,
+ };
+--- arch/i386/kernel/vmlinux.lds.S
++++ arch/i386/kernel/vmlinux.lds.S
+@@ -13,6 +13,7 @@
+ {
+   . = 0xC0000000 + 0x100000;
+   /* read-only */
++  _kernel_start = .		; 
+   _text = .;			/* Text and read-only data */
+   .text : {
+ 	*(.text)
+--- arch/i386/mm/fault.c
++++ arch/i386/mm/fault.c
+@@ -222,6 +222,19 @@
+ 	/* get the address */
+ 	__asm__("movl %%cr2,%0":"=r" (address));
+ 
++#ifdef CONFIG_COOPERATIVE_XXX
++	{
++		printk("fault: %x %x [eax %x] [esp %x] (%d) [%d]\n", address, regs->eip, regs->orig_eax, regs->esp, error_code, current->pid);
++		if (0xfe7fe018 == address) {
++			static i = 0;
++			i++;
++			if (i == 1) {
++				show_regs(regs);
++			}
++		}
++	}
++#endif
++
+ 	/* It's safe to allow irq's after cr2 has been saved */
+ 	if (regs->eflags & (X86_EFLAGS_IF|VM_MASK))
+ 		local_irq_enable();
+@@ -486,7 +499,11 @@
+ 		pte_t *pte_k;
+ 
+ 		asm("movl %%cr3,%0":"=r" (pgd));
++#ifndef CONFIG_COOPERATIVE		
+ 		pgd = index + (pgd_t *)__va(pgd);
++#else
++		pgd = index + (pgd_t *)CO_VA(((unsigned long)pgd));
++#endif
+ 		pgd_k = init_mm.pgd + index;
+ 
+ 		if (!pgd_present(*pgd_k))
+--- arch/i386/mm/init.c
++++ arch/i386/mm/init.c
+@@ -27,6 +27,7 @@
+ #include <linux/slab.h>
+ #include <linux/proc_fs.h>
+ #include <linux/efi.h>
++#include <linux/cooperative.h>
+ 
+ #include <asm/processor.h>
+ #include <asm/system.h>
+@@ -75,7 +76,7 @@
+ {
+ 	if (pmd_none(*pmd)) {
+ 		pte_t *page_table = (pte_t *) alloc_bootmem_low_pages(PAGE_SIZE);
+-		set_pmd(pmd, __pmd(__pa(page_table) | _PAGE_TABLE));
++		set_pmd(pmd, __pmd(CO_PPA_TO_PA(__pa(page_table)) | _PAGE_TABLE));
+ 		if (page_table != pte_offset_kernel(pmd, 0))
+ 			BUG();	
+ 
+@@ -293,6 +293,7 @@
+ 		set_pgd(pgd_base + i, __pgd(__pa(empty_zero_page) | _PAGE_PRESENT));
+ #endif
+ 
++#ifndef CONFIG_COOPERATIVE	
+ 	/* Enable PSE if available */
+ 	if (cpu_has_pse) {
+ 		set_in_cr4(X86_CR4_PSE);
+@@ -306,6 +307,7 @@
+ 
+ 	kernel_physical_mapping_init(pgd_base);
+ 	remap_numa_kva();
++#endif
+ 
+ 	/*
+ 	 * Fixed mappings, only the page table structure has to be
+@@ -373,6 +374,7 @@
+ 	unsigned long zones_size[MAX_NR_ZONES] = {0, 0, 0};
+ 	unsigned int max_dma, high, low;
+ 	
++#ifndef CONFIG_COOPERATIVE	
+ 	max_dma = virt_to_phys((char *)MAX_DMA_ADDRESS) >> PAGE_SHIFT;
+ 	low = max_low_pfn;
+ 	high = highend_pfn;
+@@ -386,6 +387,11 @@
+ 		zones_size[ZONE_HIGHMEM] = high - low;
+ #endif
+ 	}
++#else
++	zones_size[ZONE_DMA] = 0;
++	zones_size[ZONE_NORMAL] = max_low_pfn;
++	zones_size[ZONE_HIGHMEM] = 0;
++#endif
+ 	free_area_init(zones_size);	
+ }
+ #else
+@@ -474,7 +479,6 @@
+ 	if (!mem_map)
+ 		BUG();
+ #endif
+-	
+ 	bad_ppro = ppro_with_ram_bug();
+ 
+ #ifdef CONFIG_HIGHMEM
+@@ -530,8 +529,10 @@
+ 	if (!cpu_has_pae)
+ 		panic("cannot execute a PAE-enabled kernel on a PAE-less CPU!");
+ #endif
++#ifndef CONFIG_COOPERATIVE
+ 	if (boot_cpu_data.wp_works_ok < 0)
+ 		test_wp_bit();
++#endif
+ 
+ 	/*
+ 	 * Subtle. SMP is doing it's boot stuff late (because it has to
+@@ -539,9 +541,11 @@
+ 	 * protected-mode entry to work. We zap these entries only after
+ 	 * the WP-bit has been tested.
+ 	 */
++#ifndef  CONFIG_COOPERATIVE
+ #ifndef CONFIG_SMP
+ 	zap_low_mappings();
+ #endif
++#endif
+ }
+ 
+ kmem_cache_t *pgd_cache;
+--- arch/i386/mm/ioremap.c
++++ arch/i386/mm/ioremap.c
+@@ -190,6 +190,9 @@
+ 
+ void *ioremap_nocache (unsigned long phys_addr, unsigned long size)
+ {
++#ifdef CONFIG_COOPERATIVE
++	panic("ioremap_nocache %ld:%ld\n", phys_addr, size);
++#endif
+ 	unsigned long last_addr;
+ 	void *p = __ioremap(phys_addr, size, _PAGE_PCD);
+ 	if (!p) 
+--- arch/i386/mm/pgtable.c
++++ arch/i386/mm/pgtable.c
+@@ -123,6 +123,8 @@
+ {
+ 	unsigned long address = __fix_to_virt(idx);
+ 
++	printk("fixmap: %x %x %x %x\n", address, idx, phys, flags);
++
+ 	if (idx >= __end_of_fixed_addresses) {
+ 		BUG();
+ 		return;
+--- drivers/block/Kconfig
++++ drivers/block/Kconfig
+@@ -339,6 +339,15 @@
+ 	  "real" root file system, etc. See <file:Documentation/initrd.txt>
+ 	  for details.
+ 
++config BLK_DEV_COBD
++	tristate 'Cooperative block device support'
++	default y
++	depends on COOPERATIVE=y
++	help
++	  Virtual block device support for cooperative kernels.
++
++	  If unsure, say Y.
++
+ config LBD
+ 	bool "Support for Large Block Devices"
+ 	depends on X86 || MIPS32 || PPC32 || ARCH_S390_31 || SUPERH
+--- drivers/block/Makefile
++++ drivers/block/Makefile
+@@ -29,6 +29,7 @@
+ obj-$(CONFIG_ATARI_SLM)		+= acsi_slm.o
+ obj-$(CONFIG_AMIGA_Z2RAM)	+= z2ram.o
+ obj-$(CONFIG_BLK_DEV_RAM)	+= rd.o
++obj-$(CONFIG_BLK_DEV_COBD)	+= cobd.o
+ obj-$(CONFIG_BLK_DEV_LOOP)	+= loop.o
+ obj-$(CONFIG_BLK_DEV_PS2)	+= ps2esdi.o
+ obj-$(CONFIG_BLK_DEV_XD)	+= xd.o
+--- drivers/char/Makefile
++++ drivers/char/Makefile
+@@ -9,6 +9,8 @@
+ 
+ obj-y	 += mem.o random.o tty_io.o n_tty.o tty_ioctl.o pty.o misc.o
+ 
++#obj-$(CONFIG_COOPERATIVE)       += colx_keyb.o
++
+ obj-$(CONFIG_VT)		+= vt_ioctl.o vc_screen.o consolemap.o \
+ 				   consolemap_deftbl.o selection.o keyboard.o
+ obj-$(CONFIG_HW_CONSOLE)	+= vt.o defkeymap.o
+--- drivers/input/keyboard/Kconfig
++++ drivers/input/keyboard/Kconfig
+@@ -16,7 +16,7 @@
+ 	default y
+ 	depends on INPUT && INPUT_KEYBOARD
+ 	select SERIO
+-	select SERIO_I8042 if PC
++	select SERIO_I8042 if PC && !COOPERATIVE
+ 	select SERIO_GSCPS2 if GSC
+ 	help
+ 	  Say Y here if you want to use a standard AT or PS/2 keyboard. Usually
+--- drivers/input/keyboard/atkbd.c
++++ drivers/input/keyboard/atkbd.c
+@@ -514,6 +514,7 @@
+ 
+ static int atkbd_probe(struct atkbd *atkbd)
+ {
++#ifndef CONFIG_COOPERATIVE
+ 	unsigned char param[2];
+ 
+ /*
+@@ -557,7 +558,7 @@
+ 		printk(KERN_ERR "atkbd.c: controllers. Use i8042.direct=1 to disable translation.\n");
+ 		return -1;
+ 	}
+-
++#endif
+ 	return 0;
+ }
+ 
+--- drivers/input/mouse/Kconfig
++++ drivers/input/mouse/Kconfig
+@@ -14,7 +14,7 @@
+ config MOUSE_PS2
+ 	tristate "PS/2 mouse"
+ 	default y
+-	depends on INPUT && INPUT_MOUSE
++	depends on INPUT && INPUT_MOUSE && !COOPERATIVE
+ 	select SERIO
+ 	select SERIO_I8042 if PC
+ 	select SERIO_GSCPS2 if GSC
+@@ -38,9 +38,21 @@
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called psmouse.
+ 
++config MOUSE_COOPERATIVE
++	tristate "Cooperative Mouse driver"
++	default y
++	depends on INPUT && INPUT_MOUSE && COOPERATIVE
++	---help---
++	  Virtual mouse driver for cooperative kernels.
++	  
++	  If unsure, say Y.
++
++	  To compile this driver as a module, choose M here: the
++	  module will be called psmouse.
++
+ config MOUSE_SERIAL
+ 	tristate "Serial mouse"
+-	depends on INPUT && INPUT_MOUSE
++	depends on INPUT && INPUT_MOUSE && !COOPERATIVE
+ 	select SERIO
+ 	---help---
+ 	  Say Y here if you have a serial (RS-232, COM port) mouse connected
+@@ -54,7 +66,7 @@
+ 
+ config MOUSE_INPORT
+ 	tristate "InPort/MS/ATIXL busmouse"
+-	depends on INPUT && INPUT_MOUSE && ISA
++	depends on INPUT && INPUT_MOUSE && ISA && !COOPERATIVE
+ 	help
+ 	  Say Y here if you have an InPort, Microsoft or ATI XL busmouse.
+ 	  They are rather rare these days.
+@@ -64,13 +64,13 @@
+ 
+ config MOUSE_ATIXL
+ 	bool "ATI XL variant"
+-	depends on MOUSE_INPORT
++	depends on MOUSE_INPORT && !COOPERATIVE
+ 	help
+ 	  Say Y here if your mouse is of the ATI XL variety.
+ 
+ config MOUSE_LOGIBM
+ 	tristate "Logitech busmouse"
+-	depends on INPUT && INPUT_MOUSE && ISA
++	depends on INPUT && INPUT_MOUSE && ISA && !COOPERATIVE
+ 	help
+ 	  Say Y here if you have a Logitech busmouse.
+ 	  They are rather rare these days.
+@@ -80,7 +80,7 @@
+ 
+ config MOUSE_PC110PAD
+ 	tristate "IBM PC110 touchpad"
+-	depends on INPUT && INPUT_MOUSE && ISA
++	depends on INPUT && INPUT_MOUSE && ISA && !COOPERATIVE
+ 	help
+ 	  Say Y if you have the IBM PC-110 micro-notebook and want its
+ 	  touchpad supported.
+@@ -90,7 +90,7 @@
+ 
+ config MOUSE_MAPLE
+ 	tristate "Maple bus mouse"
+-	depends on SH_DREAMCAST && INPUT && INPUT_MOUSE && MAPLE
++	depends on SH_DREAMCAST && INPUT && INPUT_MOUSE && MAPLE && !COOPERATIVE
+ 	help
+ 	  Say Y if you have a DreamCast console and a mouse attached to
+ 	  its Maple bus.
+@@ -100,7 +100,7 @@
+ 
+ config MOUSE_AMIGA
+ 	tristate "Amiga mouse"
+-	depends on AMIGA && INPUT && INPUT_MOUSE
++	depends on AMIGA && INPUT && INPUT_MOUSE && !COOPERATIVE
+ 	help
+ 	  Say Y here if you have an Amiga and want its native mouse
+ 	  supported by the kernel.
+@@ -110,7 +110,7 @@
+ 
+ config MOUSE_RISCPC
+ 	tristate "Acorn RiscPC mouse"
+-	depends on ARCH_ACORN && INPUT && INPUT_MOUSE
++	depends on ARCH_ACORN && INPUT && INPUT_MOUSE && !COOPERATIVE
+ 	help
+ 	  Say Y here if you have the Acorn RiscPC computer and want its
+ 	  native mouse supported.
+@@ -120,7 +120,7 @@
+ 
+ config MOUSE_VSXXXAA
+ 	tristate "DEC VSXXX-AA/GA mouse and VSXXX-AB tablet"
+-	depends on INPUT && INPUT_MOUSE
++	depends on INPUT && INPUT_MOUSE && !COOPERATIVE
+ 	select SERIO
+ 	help
+ 	  Say Y (or M) if you want to use a DEC VSXXX-AA (hockey
+@@ -133,7 +133,7 @@
+ 
+ config MOUSE_PC9800
+ 	tristate "NEC PC-9800 busmouse"
+-	depends on X86_PC9800 && INPUT && INPUT_MOUSE && ISA
++	depends on X86_PC9800 && INPUT && INPUT_MOUSE && ISA && !COOPERATIVE
+ 	help
+ 	  Say Y here if you have NEC PC-9801/PC-9821 computer and want its
+ 	  native mouse supported.
+--- drivers/input/mouse/Makefile
++++ drivers/input/mouse/Makefile
+@@ -12,6 +12,7 @@
+ obj-$(CONFIG_MOUSE_PC110PAD)	+= pc110pad.o
+ obj-$(CONFIG_MOUSE_PC9800)	+= 98busmouse.o
+ obj-$(CONFIG_MOUSE_PS2)		+= psmouse.o
++obj-$(CONFIG_MOUSE_COOPERATIVE)	+= comouse.o
+ obj-$(CONFIG_MOUSE_SERIAL)	+= sermouse.o
+ obj-$(CONFIG_MOUSE_VSXXXAA)	+= vsxxxaa.o
+ 
+--- drivers/input/serio/Kconfig
++++ drivers/input/serio/Kconfig
+@@ -20,7 +20,7 @@
+ 	tristate "i8042 PC Keyboard controller" if EMBEDDED || !X86
+ 	default y
+ 	select SERIO
+-	depends on !PARISC
++	depends on !PARISC && !COOPERATIVE
+ 	---help---
+ 	  i8042 is the chip over which the standard AT keyboard and PS/2
+ 	  mouse are connected to the computer. If you use these devices,
+@@ -140,3 +140,8 @@
+ 
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called maceps2.
++
++config SERIO_COKBD
++	tristate "Cooperative Linux virtual keyboard controller driver"
++	depends on COOPERATIVE
++	default y
+--- drivers/input/serio/Makefile
++++ drivers/input/serio/Makefile
+@@ -17,3 +17,4 @@
+ obj-$(CONFIG_SERIO_GSCPS2)	+= gscps2.o
+ obj-$(CONFIG_SERIO_PCIPS2)	+= pcips2.o
+ obj-$(CONFIG_SERIO_MACEPS2)	+= maceps2.o
++obj-$(CONFIG_SERIO_COKBD)	+= cokbd.o
+--- drivers/net/Kconfig
++++ drivers/net/Kconfig
+@@ -127,6 +127,10 @@
+ 
+ 	  If you don't know what to use this for, you don't need it.
+ 
++config COOPERATIVE_CONET
++	tristate 'Cooperative Virtual Ethernet driver support'
++	depends on COOPERATIVE
++
+ config NET_SB1000
+ 	tristate "General Instruments Surfboard 1000"
+ 	depends on NETDEVICES && PNP
+--- drivers/net/Makefile
++++ drivers/net/Makefile
+@@ -147,6 +147,7 @@
+ 
+ # This is also a 82596 and should probably be merged
+ obj-$(CONFIG_LP486E) += lp486e.o
++obj-$(CONFIG_COOPERATIVE_CONET) += conet.o
+ 
+ obj-$(CONFIG_ETH16I) += eth16i.o
+ obj-$(CONFIG_ZORRO8390) += zorro8390.o 8390.o
+--- drivers/video/console/Kconfig
++++ drivers/video/console/Kconfig
+@@ -6,7 +6,7 @@
+ 
+ config VGA_CONSOLE
+ 	bool "VGA text console" if EMBEDDED || !X86
+-	depends on !ARCH_ACORN && !ARCH_EBSA110 && !4xx && !8xx && !SPARC32 && !SPARC64 && !M68K
++	depends on !COOPERATIVE && !ARCH_ACORN && !ARCH_EBSA110 && !4xx && !8xx && !SPARC32 && !SPARC64 && !M68K
+ 	default y
+ 	help
+ 	  Saying Y here will allow you to use Linux in text mode through a
+@@ -26,6 +26,14 @@
+ #	   fi
+ #	fi
+ 
++config COOPERATIVE_CONSOLE
++	bool 'coLinux Pseudo-VGA text console' if COOPERATIVE
++	depends on !VGA_CONSOLE && COOPERATIVE
++	default y
++	help
++	  You need to say Y here if you compile a Linux kernel in cooperative 
++	  mode.
++
+ config VIDEO_SELECT
+ 	bool "Video mode selection support"
+ 	depends on  (X86 || X86_64) && VGA_CONSOLE
+@@ -99,7 +107,7 @@
+ 
+ config DUMMY_CONSOLE
+ 	bool
+-	depends on PROM_CONSOLE!=y || VGA_CONSOLE!=y || SGI_NEWPORT_CONSOLE!=y 
++	depends on PROM_CONSOLE!=y || (COOPERATIVE_CONSOLE!=y && VGA_CONSOLE!=y) || SGI_NEWPORT_CONSOLE!=y 
+ 	default y
+ 
+ config FRAMEBUFFER_CONSOLE
+--- drivers/video/console/Makefile
++++ drivers/video/console/Makefile
+@@ -23,6 +23,7 @@
+ obj-$(CONFIG_PROM_CONSOLE)        += promcon.o promcon_tbl.o
+ obj-$(CONFIG_STI_CONSOLE)         += sticon.o sticore.o
+ obj-$(CONFIG_VGA_CONSOLE)         += vgacon.o
++obj-$(CONFIG_COOPERATIVE_CONSOLE) += cocon.o
+ obj-$(CONFIG_MDA_CONSOLE)         += mdacon.o
+ obj-$(CONFIG_FRAMEBUFFER_CONSOLE) += fbcon.o font.o
+ 
+--- include/asm-i386/bug.h
++++ include/asm-i386/bug.h
+@@ -10,11 +10,15 @@
+  */
+ 
+ #if 1	/* Set to zero for a slightly smaller kernel */
++#ifdef CONFIG_COOPERATIVE
++#define BUG() do { panic("BUG %s:%d\n", __FILE__, __LINE__); } while(0)
++#else
+ #define BUG()				\
+  __asm__ __volatile__(	"ud2\n"		\
+ 			"\t.word %c0\n"	\
+ 			"\t.long %c1\n"	\
+ 			 : : "i" (__LINE__), "i" (__FILE__))
++#endif
+ #else
+ #define BUG() __asm__ __volatile__("ud2\n")
+ #endif
+--- include/asm-i386/dma.h
++++ include/asm-i386/dma.h
+@@ -268,6 +268,7 @@
+  *
+  * Assumes DMA flip-flop is clear.
+  */
++#ifndef CONFIG_COOPERATIVE
+ static __inline__ int get_dma_residue(unsigned int dmanr)
+ {
+ 	unsigned int io_port = (dmanr<=3)? ((dmanr&3)<<1) + 1 + IO_DMA1_BASE
+@@ -281,6 +282,7 @@
+ 	
+ 	return (dmanr<=3)? count : (count<<1);
+ }
++#endif
+ 
+ 
+ /* These are in kernel/dma.c: */
+--- include/asm-i386/fixmap.h
++++ include/asm-i386/fixmap.h
+@@ -22,6 +22,7 @@
+ #include <linux/threads.h>
+ #include <asm/kmap_types.h>
+ #endif
++#include <asm/cooperative.h>
+ 
+ /*
+  * Here we define all the compile-time 'special' virtual
+@@ -104,6 +105,7 @@
+  * the start of the fixmap.
+  */
+ #define FIXADDR_TOP	(0xfffff000UL)
++
+ #define __FIXADDR_SIZE	(__end_of_permanent_fixed_addresses << PAGE_SHIFT)
+ #define FIXADDR_START	(FIXADDR_TOP - __FIXADDR_SIZE)
+ 
+--- include/asm-i386/io.h
++++ include/asm-i386/io.h
+@@ -1,7 +1,8 @@
+ #ifndef _ASM_IO_H
+ #define _ASM_IO_H
+ 
+ #include <linux/config.h>
++#include <linux/cooperative.h>
+ 
+ /*
+  * This file contains the definitions for the x86 IO instructions
+@@ -44,6 +45,7 @@
+ #ifdef __KERNEL__
+ 
+ #include <linux/vmalloc.h>
++#include <linux/cooperative.h>
+ 
+ /**
+  *	virt_to_phys	-	map virtual addresses to physical
+@@ -102,6 +103,9 @@
+ 
+ static inline void * ioremap (unsigned long offset, unsigned long size)
+ {
++#ifdef CONFIG_COOPERATIVE
++	panic("ioremap %ld:%ld\n", offset, size);
++#endif
+ 	return __ioremap(offset, size, 0);
+ }
+ 
+--- include/asm-i386/mach-default/irq_vectors.h
++++ include/asm-i386/mach-default/irq_vectors.h
+@@ -67,6 +67,11 @@
+ 
+ #define TIMER_IRQ 0
+ 
++#ifdef CONFIG_COOPERATIVE
++#define KEYBOARD_IRQ 1
++#define NETWORK_IRQ 2
++#endif
++
+ /*
+  * 16 8259A IRQ's, 208 potential APIC interrupt sources.
+  * Right now the APIC is mostly only used for SMP.
+--- include/asm-i386/mach-default/irq_vectors_limits.h
++++ include/asm-i386/mach-default/irq_vectors_limits.h
+@@ -5,7 +5,7 @@
+ #define NR_IRQS FIRST_SYSTEM_VECTOR
+ #define NR_IRQ_VECTORS NR_IRQS
+ #else
+-#ifdef CONFIG_X86_IO_APIC
++#if defined(CONFIG_X86_IO_APIC) || defined(CONFIG_X86_UP_COPIC)
+ #define NR_IRQS 224
+ # if (224 >= 32 * NR_CPUS)
+ # define NR_IRQ_VECTORS NR_IRQS
+--- include/asm-i386/mc146818rtc.h
++++ include/asm-i386/mc146818rtc.h
+@@ -1,9 +1,10 @@
+ /*
+  * Machine dependent access functions for RTC registers.
+  */
+ #ifndef _ASM_MC146818RTC_H
+ #define _ASM_MC146818RTC_H
+ 
++#include <linux/config.h>
+ #include <asm/io.h>
+ 
+ #ifndef RTC_PORT
+@@ -11,6 +12,8 @@
+ #define RTC_ALWAYS_BCD	1	/* RTC operates in binary mode */
+ #endif
+ 
++#ifndef CONFIG_COOPERATIVE
++
+ /*
+  * The yet supported machines all access the RTC index register via
+  * an ISA port access but the way to access the date register differs ...
+@@ -24,6 +26,11 @@
+ outb_p((val),RTC_PORT(1)); \
+ })
+ 
++#else
++#define CMOS_READ(addr) (0)
++#define CMOS_WRITE(val, addr) do{}while(0)
++#endif
++
+ #define RTC_IRQ 8
+ 
+ #endif /* _ASM_MC146818RTC_H */
+--- include/asm-i386/mmzone.h
++++ include/asm-i386/mmzone.h
+@@ -6,6 +6,7 @@
+ #ifndef _ASM_MMZONE_H_
+ #define _ASM_MMZONE_H_
+ 
++#include <linux/config.h>
+ #include <asm/smp.h>
+ 
+ #ifdef CONFIG_DISCONTIGMEM
+@@ -116,7 +117,12 @@
+ 	(unsigned long)(__page - __zone->zone_mem_map)			\
+ 		+ __zone->zone_start_pfn;				\
+ })
++
++#ifndef CONFIG_COOPERATIVE
+ #define pmd_page(pmd)		(pfn_to_page(pmd_val(pmd) >> PAGE_SHIFT))
++#else
++#define pmd_page(pmd)		(CO_VA_PAGE(pmd_val(pmd))
++#endif
+ 
+ #ifdef CONFIG_X86_NUMAQ            /* we have contiguous memory on NUMA-Q */
+ #define pfn_valid(pfn)          ((pfn) < num_physpages)
+--- include/asm-i386/page.h
++++ include/asm-i386/page.h
+@@ -1,6 +1,10 @@
+ #ifndef _I386_PAGE_H
+ #define _I386_PAGE_H
+ 
++#ifdef CONFIG_COOPERATIVE
++#define WANT_PAGE_VIRTUAL
++#endif
++
+ /* PAGE_SHIFT determines the page size */
+ #define PAGE_SHIFT	12
+ #define PAGE_SIZE	(1UL << PAGE_SHIFT)
+@@ -13,6 +17,7 @@
+ #ifndef __ASSEMBLY__
+ 
+ #include <linux/config.h>
++#include <asm/cooperative.h>
+ 
+ #ifdef CONFIG_X86_USE_3DNOW
+ 
+@@ -120,7 +121,32 @@
+ #define __PAGE_OFFSET		(0xC0000000UL)
+ #endif
+ 
++#ifdef CONFIG_COOPERATIVE
+ 
++#define CO_PPTM_OFFSET		(CO_VPTR_PSEUDO_RAM_PAGE_TABLES)
++#define CO_RPPTM_OFFSET		(CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP)
++
++#define CO_PFN(vaddr)		((((unsigned long)vaddr) - __PAGE_OFFSET) >> PAGE_SHIFT)
++#define CO_PA(pfn)		(((unsigned long *)CO_PPTM_OFFSET)[pfn])
++#define CO_PFN_PA(vaddr)	CO_PA(CO_PFN(vaddr))
++#define CO_PPTM_SIZE		(max_low_pfn * sizeof(pte_t))
++#define CO_PFN_PP_TO_P(pfn)	(CO_PA(pfn) >> PAGE_SHIFT)
++
++#define CO_VA_PFN(pa)		(((unsigned long *)CO_RPPTM_OFFSET)[((pa) >> PAGE_SHIFT)])
++#define CO_VA_PAGE(pa)		(mem_map + CO_VA_PFN(pa))
++#define CO_VA(pa)		((CO_VA_PFN(pa) << PAGE_SHIFT) + __PAGE_OFFSET)
++#define CO_PFN_P_TO_PP(pfn)	(CO_VA_PFN(pfn << PAGE_SHIFT))
++
++#define CO_PPA_TO_PA(pa)	(CO_PFN_PP_TO_P(pa >> PAGE_SHIFT) << PAGE_SHIFT)
++#define CO_PA_TO_PPA(pa)	(CO_PFN_P_TO_PP(pa >> PAGE_SHIFT) << PAGE_SHIFT)
++
++#else
++#define CO_PFN_P_TO_PP(pfn)	pfn
++#define CO_PFN_PP_TO_P(pfn)	pfn
++#define CO_PPA_TO_PA(pa)	pa
++#define CO_PA_TO_PPA(pa)	pa
++#endif
++
+ #define PAGE_OFFSET		((unsigned long)__PAGE_OFFSET)
+ #define VMALLOC_RESERVE		((unsigned long)__VMALLOC_RESERVE)
+ #define MAXMEM			(-__PAGE_OFFSET-__VMALLOC_RESERVE)
+--- include/asm-i386/param.h
++++ include/asm-i386/param.h
+@@ -1,9 +1,13 @@
+ #ifndef _ASMi386_PARAM_H
+ #define _ASMi386_PARAM_H
+ 
+ #ifdef __KERNEL__
++# include <linux/config.h>
++# ifndef CONFIG_COOPERATIVE
+ # define HZ		1000		/* Internal kernel timer frequency */
++# else
+ # define USER_HZ	100		/* .. some user interfaces are in "ticks" */
++# endif
+ # define CLOCKS_PER_SEC		(USER_HZ)	/* like times() */
+ #endif
+ 
+--- include/asm-i386/pgalloc.h
++++ include/asm-i386/pgalloc.h
+@@ -7,14 +7,25 @@
+ #include <linux/threads.h>
+ #include <linux/mm.h>		/* for struct page */
+ 
++#ifndef CONFIG_COOPERATIVE
+ #define pmd_populate_kernel(mm, pmd, pte) \
+ 		set_pmd(pmd, __pmd(_PAGE_TABLE + __pa(pte)))
++#else
++#define pmd_populate_kernel(mm, pmd, pte) \
++		set_pmd(pmd, __pmd(_PAGE_TABLE + (CO_PFN_PA(pte) & PAGE_MASK)))
++#endif
+ 
+ static inline void pmd_populate(struct mm_struct *mm, pmd_t *pmd, struct page *pte)
+ {
++#ifndef CONFIG_COOPERATIVE
+ 	set_pmd(pmd, __pmd(_PAGE_TABLE +
+ 		((unsigned long long)page_to_pfn(pte) <<
+ 			(unsigned long long) PAGE_SHIFT)));
++#else
++	set_pmd(pmd, __pmd(_PAGE_TABLE +
++			   ((CO_PFN_PP_TO_P((unsigned long long)page_to_pfn(pte))) <<
++			    (unsigned long long) PAGE_SHIFT)));
++#endif
+ }
+ /*
+  * Allocate and free page tables.
+--- include/asm-i386/pgtable-2level.h
++++ include/asm-i386/pgtable-2level.h
+@@ -1,6 +1,8 @@
+ #ifndef _I386_PGTABLE_2LEVEL_H
+ #define _I386_PGTABLE_2LEVEL_H
+ 
++#include <linux/config.h>
++
+ /*
+  * traditional i386 two-level paging structure:
+  */
+@@ -48,8 +50,13 @@
+ #define set_pmd(pmdptr, pmdval) (*(pmdptr) = pmdval)
+ #define set_pgd(pgdptr, pgdval) (*(pgdptr) = pgdval)
+ 
++#ifndef CONFIG_COOPERATIVE
+ #define pgd_page(pgd) \
+ ((unsigned long) __va(pgd_val(pgd) & PAGE_MASK))
++#else
++#define pgd_page(pgd) \
++(CO_VA_PAGE(pgd_val(pgd) & PAGE_MASK))
++#endif
+ 
+ static inline pmd_t * pmd_offset(pgd_t * dir, unsigned long address)
+ {
+@@ -57,12 +62,21 @@
+ }
+ #define ptep_get_and_clear(xp)	__pte(xchg(&(xp)->pte_low, 0))
+ #define pte_same(a, b)		((a).pte_low == (b).pte_low)
++
++#ifndef CONFIG_COOPERATIVE
+ #define pte_page(x)		pfn_to_page(pte_pfn(x))
+-#define pte_none(x)		(!(x).pte_low)
+ #define pte_pfn(x)		((unsigned long)(((x).pte_low >> PAGE_SHIFT)))
+ #define pfn_pte(pfn, prot)	__pte(((pfn) << PAGE_SHIFT) | pgprot_val(prot))
+ #define pfn_pmd(pfn, prot)	__pmd(((pfn) << PAGE_SHIFT) | pgprot_val(prot))
++#else
++#define pte_page(x)		CO_VA_PAGE((x).pte_low)
++#define pte_pfn(x)		CO_VA_PFN((x).pte_low)
++#define pfn_pte(pfn, prot)	__pte((CO_PFN_PP_TO_P(pfn) << PAGE_SHIFT) | pgprot_val(prot))
++#define pfn_pmd(pfn, prot)	__pmd((CO_PFN_PP_TO_P(pfn) << PAGE_SHIFT) | pgprot_val(prot))
++#endif
+ 
++#define pte_none(x)		(!(x).pte_low)
++
+ /*
+  * Bits 0, 6 and 7 are taken, split up the 29 bits of offset
+  * into this range:
+--- include/asm-i386/pgtable.h
++++ include/asm-i386/pgtable.h
+@@ -25,6 +25,8 @@
+ #include <linux/list.h>
+ #include <linux/spinlock.h>
+ 
++#include <linux/cooperative.h>
++
+ /*
+  * ZERO_PAGE is a global shared page that is always zero: used
+  * for zero-mapped memory areas etc..
+@@ -237,7 +239,11 @@
+  * and a page entry and page directory to the page they refer to.
+  */
+ 
++#ifndef CONFIG_COOPERATIVE
+ #define mk_pte(page, pgprot)	pfn_pte(page_to_pfn(page), (pgprot))
++#else
++#define mk_pte(page, pgprot)	__pte((CO_PA(page_to_pfn(page)) & PAGE_MASK) | pgprot_val(pgprot))
++#endif
+ #define mk_pte_huge(entry) ((entry).pte_low |= _PAGE_PRESENT | _PAGE_PSE)
+ 
+ static inline pte_t pte_modify(pte_t pte, pgprot_t newprot)
+@@ -249,11 +253,16 @@
+ 
+ #define page_pte(page) page_pte_prot(page, __pgprot(0))
+ 
++#ifndef CONFIG_COOPERATIVE
+ #define pmd_page_kernel(pmd) \
+ ((unsigned long) __va(pmd_val(pmd) & PAGE_MASK))
++#else
++#define pmd_page_kernel(pmd) \
++CO_VA(pmd_val(pmd))
++#endif
+ 
+ #ifndef CONFIG_DISCONTIGMEM
+-#define pmd_page(pmd) (pfn_to_page(pmd_val(pmd) >> PAGE_SHIFT))
++#define pmd_page(pmd) (pfn_to_page(CO_PFN_P_TO_PP(pmd_val(pmd) >> PAGE_SHIFT)))
+ #endif /* !CONFIG_DISCONTIGMEM */
+ 
+ #define pmd_large(pmd) \
+--- include/asm-i386/processor.h
++++ include/asm-i386/processor.h
+@@ -179,8 +179,18 @@
+ 	return edx;
+ }
+ 
++#ifndef CONFIG_COOPERATIVE
+ #define load_cr3(pgdir) \
+ 	asm volatile("movl %0,%%cr3": :"r" (__pa(pgdir)))
++#else
++/*
++ * In coLinux Mode we can't load CR3 with the pseudo physical
++ * address, Instead, we need to translate the pseudo physical address
++ * to the real physical address.
++ */
++#define load_cr3(pgdir) \
++	asm volatile("movl %0,%%cr3": :"r" (CO_PFN_PA(pgdir)))
++#endif
+ 
+ 
+ /*
+--- include/linux/console.h
++++ include/linux/console.h
+@@ -57,6 +57,7 @@
+ extern const struct consw dummy_con;	/* dummy console buffer */
+ extern const struct consw fb_con;	/* frame buffer based console */
+ extern const struct consw vga_con;	/* VGA text console */
++extern const struct consw colinux_con;	/* coLinux Mode text console */
+ extern const struct consw newport_con;	/* SGI Newport console  */
+ extern const struct consw prom_con;	/* SPARC PROM console */
+ 
+--- include/linux/major.h
++++ include/linux/major.h
+@@ -130,6 +130,7 @@
+ #define VIOCD_MAJOR		113
+ 
+ #define ATARAID_MAJOR		114
++#define COLINUX_MAJOR		117
+ 
+ #define SCSI_DISK8_MAJOR	128
+ #define SCSI_DISK9_MAJOR	129
+--- init/main.c
++++ init/main.c
+@@ -61,6 +61,8 @@
+ #include <asm/smp.h>
+ #endif
+ 
++#include <linux/cooperative.h>
++
+ /*
+  * Versions of gcc older than that listed below may actually compile
+  * and link okay, but the end product can have subtle run time bugs.
+@@ -308,7 +310,14 @@
+ #ifdef CONFIG_X86_LOCAL_APIC
+ static void __init smp_init(void)
+ {
++#ifdef CONFIG_COOPERATIVE
++	/*
++	 * It doesn't work yet because I haven't implemented the
++	 * timer interrupt yet
++	 */
++#else
+ 	APIC_init_uniprocessor();
++#endif
+ }
+ #else
+ #define smp_init()	do { } while (0)
+--- kernel/Makefile
++++ kernel/Makefile
+@@ -23,6 +23,7 @@
+ obj-$(CONFIG_STOP_MACHINE) += stop_machine.o
+ obj-$(CONFIG_AUDIT) += audit.o
+ obj-$(CONFIG_AUDITSYSCALL) += auditsc.o
++obj-$(CONFIG_COOPERATIVE) += cooperative.o
+ 
+ ifneq ($(CONFIG_IA64),y)
+ # According to Alan Modra <alan@linuxcare.com.au>, the -fno-omit-frame-pointer is
+--- kernel/panic.c
++++ kernel/panic.c
 @@ -19,6 +19,7 @@
  #include <linux/syscalls.h>
  #include <linux/interrupt.h>
@@ -4326,9 +4519,8 @@ diff -X bin/dontdiff -urN linux/kernel/panic.c linux/kernel/panic.c
  #ifdef CONFIG_SMP
  	smp_send_stop();
  #endif
-diff -X bin/dontdiff -urN linux/kernel/printk.c linux/kernel/printk.c
---- linux/kernel/printk.c	2004-06-19 07:23:25.000000000 +0300
-+++ linux/kernel/printk.c	2004-06-19 07:46:06.000000000 +0300
+--- kernel/printk.c
++++ kernel/printk.c
 @@ -33,6 +33,8 @@
  
  #include <asm/uaccess.h>
