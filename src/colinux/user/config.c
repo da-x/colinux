@@ -695,6 +695,43 @@ static co_rc_t parse_args_networking(co_command_line_params_t cmdline, co_config
 	return CO_RC(OK);
 }
 
+static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_config_t *conf)
+{
+	bool_t exists;
+	char param[0x100];
+	co_rc_t rc;
+
+	do {
+		int index;
+		exists = PFALSE;
+
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cofs", &index, param, 
+							     sizeof(param), &exists);
+		if (!CO_OK(rc)) 
+			return rc;
+		
+		if (exists) {
+			co_cofsdev_desc_t *cofs;
+
+			if (index < 0  || index >= CO_MODULE_MAX_COFS) {
+				co_terminal_print("invalid cofs index: %d\n", index);
+				return CO_RC(ERROR);
+			}
+
+			cofs = &conf->cofs_devs[index];
+			cofs->enabled = PTRUE;
+
+			co_snprintf(cofs->pathname, sizeof(cofs->pathname), "%s", param);
+
+			/* co_canonize_cofs_path(&cobd->pathname); TODO */
+			
+			co_terminal_print("mapping cofs%d to %s\n", index, cofs->pathname);
+		}
+	} while (exists);
+
+	return CO_RC(OK);
+}
+
 static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *conf)
 {
 	co_rc_t rc;
@@ -727,6 +764,10 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 		return rc;
 
 	rc = parse_args_networking(cmdline, conf);
+	if (!CO_OK(rc))
+		return rc;
+
+	rc = parse_args_config_cofs(cmdline, conf);
 	if (!CO_OK(rc))
 		return rc;
 

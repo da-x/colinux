@@ -31,6 +31,7 @@
 #include "block.h"
 #include "fileblock.h"
 #include "transfer.h"
+#include "filesystem.h"
 
 co_rc_t co_monitor_malloc(co_monitor_t *cmon, unsigned long bytes, void **ptr)
 {
@@ -236,7 +237,7 @@ out_error:
 	return rc;
 }
 
-bool_t co_monitor_device_request(co_monitor_t *cmon, co_device_t device, unsigned long *params)
+static bool_t device_request(co_monitor_t *cmon, co_device_t device, unsigned long *params)
 {
 	switch (device) {
 	case CO_DEVICE_BLOCK: {
@@ -292,6 +293,10 @@ bool_t co_monitor_device_request(co_monitor_t *cmon, co_device_t device, unsigne
 
 		return PTRUE;
 	}
+	case CO_DEVICE_FILESYSTEM: {
+		co_monitor_file_system(cmon, params[0], params[1], &params[2]);
+		return PTRUE;
+	}
 	default:
 		break;
 	}	
@@ -299,7 +304,7 @@ bool_t co_monitor_device_request(co_monitor_t *cmon, co_device_t device, unsigne
 	return PTRUE;
 }
 
-static co_rc_t co_monitor_callback_return_messages(co_monitor_t *cmon)
+static co_rc_t callback_return_messages(co_monitor_t *cmon)
 {	
 	co_rc_t rc;
 	unsigned char *io_buffer, *io_buffer_end;
@@ -339,7 +344,7 @@ static co_rc_t co_monitor_callback_return_messages(co_monitor_t *cmon)
 	return CO_RC(OK);
 }
 
-static co_rc_t co_monitor_callback_return_jiffies(co_monitor_t *cmon)
+static co_rc_t callback_return_jiffies(co_monitor_t *cmon)
 {	
 	co_timestamp_t timestamp;
 	long long timestamp_diff;
@@ -359,12 +364,12 @@ static co_rc_t co_monitor_callback_return_jiffies(co_monitor_t *cmon)
 	return CO_RC(OK);
 }
 
-static co_rc_t co_monitor_callback_return(co_monitor_t *cmon)
+static co_rc_t callback_return(co_monitor_t *cmon)
 {
 	co_passage_page->operation = CO_OPERATION_MESSAGE_FROM_MONITOR;
 
-	co_monitor_callback_return_messages(cmon);
-	co_monitor_callback_return_jiffies(cmon);
+	callback_return_messages(cmon);
+	callback_return_jiffies(cmon);
 
 	return CO_RC(OK);
 }
@@ -431,33 +436,18 @@ bool_t co_monitor_trace_point(co_monitor_t *cmon)
 	return PFALSE;
 }
 
-void co_unsigned_long_to_hex(char *text, unsigned long number)
-{
-	int count = 8;
-
-	text += count;
-	while (count) {
-		int digit = number & 0xf;
-
-		count--;
-		*text = (digit >= 10) ? (digit + 'a') : (digit + '0');
-		number >>= 4;
-		text--;
-	}
-}
-
 /*
- * co_monitor_iteration - returning PTRUE means that the driver will 
- * return immediately to Linux instead of returning to the host's 
+ * iteration - returning PTRUE means that the driver will return 
+ * immediately to Linux instead of returning to the host's 
  * userspace and only then to Linux.
  */
 
-bool_t co_monitor_iteration(co_monitor_t *cmon)
+static bool_t iteration(co_monitor_t *cmon)
 {
 	switch (co_passage_page->operation) {
 	case CO_OPERATION_FORWARD_INTERRUPT: 
 	case CO_OPERATION_IDLE: 
-		co_monitor_callback_return(cmon);
+		callback_return(cmon);
 		break;
 	}
 
@@ -549,7 +539,7 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 
 		co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_DEVICE)\n");
 
-		return co_monitor_device_request(cmon, device, &co_passage_page->params[1]);
+		return device_request(cmon, device, &co_passage_page->params[1]);
 	}
 	case CO_OPERATION_GET_TIME: {
 		co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_GET_TIME)\n");
@@ -572,7 +562,7 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 	return PTRUE;
 }
 
-void co_monitor_free_file_blockdevice(co_monitor_t *cmon, co_block_dev_t *dev)
+static void free_file_blockdevice(co_monitor_t *cmon, co_block_dev_t *dev)
 {
 	co_monitor_file_block_dev_t *fdev = (co_monitor_file_block_dev_t *)dev;
 
@@ -580,7 +570,7 @@ void co_monitor_free_file_blockdevice(co_monitor_t *cmon, co_block_dev_t *dev)
 	co_monitor_free(cmon, dev);
 }
 
-co_rc_t co_monitor_load_configuration(co_monitor_t *cmon)
+static co_rc_t load_configuration(co_monitor_t *cmon)
 {
 	co_rc_t rc = CO_RC_OK; 
 	long i;
@@ -593,24 +583,38 @@ co_rc_t co_monitor_load_configuration(co_monitor_t *cmon)
 
 		rc = co_monitor_malloc(cmon, sizeof(co_monitor_file_block_dev_t), (void **)&dev);
 		if (!CO_OK(rc))
-			goto out;
+			goto error_1;
 
 		rc = co_monitor_file_block_init(dev, &conf_dev->pathname);
 		if (CO_OK(rc)) {
 			dev->dev.conf = conf_dev;
 			co_debug("cobd%d: enabled (%x)\n", i, dev);
 			co_monitor_block_register_device(cmon, i, (co_block_dev_t *)dev);
-			dev->dev.free = co_monitor_free_file_blockdevice;
+			dev->dev.free = free_file_blockdevice;
 		} else {
 			co_monitor_free(cmon, dev);
 			co_debug("cobd%d: cannot enable %d (%x)\n", i, rc);
-			goto out;
+			goto error_1;
 		}
 	}
 
-out:
-	if (!CO_OK(rc))
-		co_monitor_unregister_and_free_block_devices(cmon);
+	for (i=0; i < CO_MODULE_MAX_COFS; i++) {
+		co_cofsdev_desc_t *desc = &cmon->config.cofs_devs[i];
+		if (!desc->enabled)
+			continue;
+
+		rc = co_monitor_file_system_init(cmon, i, desc);
+		if (!CO_OK(rc))
+			goto error_2;
+
+	}
+
+	return rc;
+
+error_2:
+	co_monitor_unregister_filesystems(cmon);
+error_1:
+	co_monitor_unregister_and_free_block_devices(cmon);
 
 	return rc;
 }
@@ -855,7 +859,7 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
                 goto out_free_pp;
         }
 
-	rc = co_monitor_load_configuration(cmon);
+	rc = load_configuration(cmon);
 	if (!CO_OK(rc)) {
 		co_debug("loading monitor configuration (%d)\n", rc);
 		goto out_destroy_timer;
@@ -898,7 +902,7 @@ out:
 	return rc;
 }
 
-co_rc_t co_monitor_load_section(co_monitor_t *cmon, co_monitor_ioctl_load_section_t *params)
+static co_rc_t load_section(co_monitor_t *cmon, co_monitor_ioctl_load_section_t *params)
 {
 	co_rc_t rc = CO_RC(OK);
 
@@ -914,7 +918,7 @@ co_rc_t co_monitor_load_section(co_monitor_t *cmon, co_monitor_ioctl_load_sectio
 	return rc;
 }
 
-co_rc_t co_monitor_load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_t *params)
+static co_rc_t load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_t *params)
 {
 	co_rc_t rc = CO_RC(OK);
 	unsigned long address, pages;
@@ -985,7 +989,7 @@ co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
 	return CO_RC_OK;
 }
 
-co_rc_t co_monitor_start(co_monitor_t *cmon)
+static co_rc_t start(co_monitor_t *cmon)
 {
 	co_rc_t rc;
 
@@ -1019,10 +1023,10 @@ co_rc_t co_monitor_start(co_monitor_t *cmon)
 	return CO_RC(OK);
 }
 
-co_rc_t co_monitor_run(co_monitor_t *cmon,
-		       co_monitor_ioctl_run_t *params,
-		       unsigned long out_size,
-		       unsigned long *return_size)
+static co_rc_t run(co_monitor_t *cmon,
+		   co_monitor_ioctl_run_t *params,
+		   unsigned long out_size,
+		   unsigned long *return_size)
 {
 	char *params_data;
 	int i;
@@ -1045,7 +1049,7 @@ co_rc_t co_monitor_run(co_monitor_t *cmon,
 	if (cmon->state == CO_MONITOR_STATE_RUNNING) {
 		bool_t ret;
 		do {
-			ret = co_monitor_iteration(cmon);
+			ret = iteration(cmon);
 		} while (ret);
 	}
 
@@ -1086,16 +1090,16 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 		return CO_RC_OK;
 	}
 	case CO_MONITOR_IOCTL_LOAD_SECTION: {
-		return co_monitor_load_section(cmon, (co_monitor_ioctl_load_section_t *)io_buffer);
+		return load_section(cmon, (co_monitor_ioctl_load_section_t *)io_buffer);
 	}
 	case CO_MONITOR_IOCTL_LOAD_INITRD: {
-		return co_monitor_load_initrd(cmon, (co_monitor_ioctl_load_initrd_t *)io_buffer);
+		return load_initrd(cmon, (co_monitor_ioctl_load_initrd_t *)io_buffer);
 	}
 	case CO_MONITOR_IOCTL_START: {
-		return co_monitor_start(cmon);
+		return start(cmon);
 	}
 	case CO_MONITOR_IOCTL_RUN: {
-		return co_monitor_run(cmon, (co_monitor_ioctl_run_t *)io_buffer, out_size, return_size);
+		return run(cmon, (co_monitor_ioctl_run_t *)io_buffer, out_size, return_size);
 	}
 	default:
 		return rc;
