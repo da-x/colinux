@@ -848,6 +848,7 @@ co_rc_t co_monitor_destroy(co_monitor_t *cmon)
 	co_queue_flush(&cmon->linux_message_queue);
 	co_queue_flush(&cmon->user_message_queue);
 	co_message_switch_free(&cmon->message_switch);
+        co_os_timer_destroy(cmon->timer);
 
 	co_debug("monitor: after free: %d blocks\n", cmon->blocks_allocated);
 

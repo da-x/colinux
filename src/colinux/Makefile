@@ -13,6 +13,7 @@ CFLAGS = \
 ifneq ($(COLINUX_NDEBUG),Y)
 CFLAGS += -DCOLINUX_DEBUG 
 endif
+export COLINUX_NDEBUG
 
 #-----------------------------------------------------------------
 include $(call BUILD_SUBDIRS, arch kernel os user common)
