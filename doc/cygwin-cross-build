@@ -1,0 +1,51 @@
+Building Cygwin cross compilation tools for Linux
+=================================================
+
+First, choose an installation directory, for example: /usr/local/w32build.
+I'd refer to that directory as $PREFIX from this point in the document.
+
+Download the latest base cygwin tarball from cygwin.com, for example, 
+http://mirrors.xmission.com/cygwin/release/cygwin/cygwin-1.5.7-1.tar.bz2
+
+Extract that tarball to the installation directory in this manner:
+
+    tar -xjf cygwin-1.5.7-1.tar.bz2 
+    rename usr i686-pc-cygwin
+
+Now you have a ready $PREFIX/i686-pc-cygwin directory.
+
+
+Download binutils from GNU's website. Configure, build and install with:
+
+   ./configure --target=i686-pc-cygwin --prefix=$PREFIX
+   make 
+   make install
+  
+
+Download the latest gcc sources, both the gcc-core and gcc-g++ parts. Extract
+those in a separate directory, and build gcc using this procedure:
+
+   ./configure --prefix=$PREFIX -host=i686-pc-linux-gnu --target=i686-pc-cygwin --enable-languages=c,c++
+
+Run make, but it would fail at some point:
+   
+   make
+
+It's a chicken and egg problem. It fails because the i686-pc-cygwin-* compiler 
+is not installed yet in $PREFIX (and accessable from $PATH). Run (with the 
+proper privlieges):
+   
+   make install
+
+Make sure that i686-pc-cygwin-gcc is accessable from $PATH. In gcc's build 
+directory, run again:
+
+   make 
+
+It should now properly build the standard libs with the start object files.
+And then again run (with the proper privlieges):
+ 
+   make install
+
+To test it, try to produce a .exe file from a 'void main(){}' C program, 
+using i686-pc-cygwin-gcc.

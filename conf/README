@@ -1,0 +1,4 @@
+This directory contains example configuration files for the coLinux daemon.
+
+It also contain a configuration file that can be used as a .config for
+compling the cooperative Linux kernel.

@@ -1,0 +1,26 @@
+# Standard Makefile header
+ifeq ($(BUILD_ROOT),)
+BUILD_ROOT=../../..
+include $(BUILD_ROOT)/Makefile
+else
+BUILD_PATH := $(BUILD_PATH)/current
+#-----------------------------------------------------------------
+
+ifeq ($(COLINUX_ARCH),i386)
+CROSS_TARGET=i686-pc-cygwin-
+else
+$(error Other Windows architectures not supported yet!)
+endif
+
+ifeq ($(GCCTRACE),Y)
+CC=$(BUILD_ROOT)/../bin/tracewrapper.py $(CROSS_TARGET)gcc
+else
+CC=$(CROSS_TARGET)gcc
+endif
+GPP=$(CROSS_TARGET)g++
+LD=$(CROSS_TARGET)ld
+
+#-----------------------------------------------------------------
+include $(call BUILD_SUBDIRS, build kernel user)
+BUILD_PATH := $(shell dirname $(BUILD_PATH))
+endif

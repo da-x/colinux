@@ -1,0 +1,140 @@
+; ****************************************************************************
+; * COPYRIGHT (C) 2003 James Yonan                                           *
+; *  This program is free software; you can redistribute it and/or modify    *
+; *  it under the terms of the GNU General Public License as published by    *
+; *  the Free Software Foundation; either version 2 of the License, or       *
+; *  (at your option) any later version.                                     *
+; ****************************************************************************
+
+; SYNTAX CHECKER
+; cd \WINDDK\2600.1106\tools\chkinf
+; chkinf c:\src\openvpn\tap-win32\i386\oemwin2k.inf
+; OUTPUT -> file:///c:/WINDDK/2600.1106/tools/chkinf/htm/c++src+openvpn+tap-win32+i386__OemWin2k.htm
+
+[Version]
+   Signature = "$Windows NT$"
+   CatalogFile = tap.cat
+   ClassGUID = {4d36e972-e325-11ce-bfc1-08002be10318}
+   Provider = %l_Provider%
+   Class = Net
+   DriverVer=10/01/2003,3.00.00.0010
+
+[Strings]
+   l_DeviceDescription = "TAP-Win32 Adapter"
+   l_Provider = "TapWin32Project"
+
+;----------------------------------------------------------------
+;                      Manufacturer + Product Section (Done)
+;----------------------------------------------------------------
+[Manufacturer]
+   %l_Provider% = TapWin32Project
+
+[TapWin32Project]
+   %l_DeviceDescription% = TAP.ndi, TAP
+
+;---------------------------------------------------------------
+;                             Driver Section (Done)
+;---------------------------------------------------------------
+
+;----------------- Characteristics ------------
+;    NCF_PHYSICAL = 0x04
+;    NCF_VIRTUAL = 0x01
+;    NCF_SOFTWARE_ENUMERATED = 0x02
+;    NCF_HIDDEN = 0x08
+;    NCF_NO_SERVICE = 0x10
+;    NCF_HAS_UI = 0x80
+;----------------- Characteristics ------------
+
+[TAP.ndi]
+   CopyFiles       = TAP.driver, TAP.files
+   AddReg          = TAP.reg
+   AddReg          = TAP.params.reg
+   Characteristics = 0x81
+
+[TAP.ndi.Services]
+   AddService = TAP,        2, TAP.service
+
+[TAP.reg]
+   HKR, Ndi,            Service,      0, "TAP"
+   HKR, Ndi\Interfaces, UpperRange,   0, "ndis5"
+   HKR, Ndi\Interfaces, LowerRange,   0, "ethernet"
+   HKR, ,               Manufacturer, 0, "%l_Provider%"
+   HKR, ,               ProductName,  0, "TAP"
+
+[TAP.params.reg]
+   HKR, Ndi\params\MTU,                ParamDesc, 0, "MTU"
+   HKR, Ndi\params\MTU,                Type,      0, "int"
+   HKR, Ndi\params\MTU,                Default,   0, "1500"
+   HKR, Ndi\params\MTU,                Optional,  0, "0"
+   HKR, Ndi\params\MTU,                Min,       0, "100"
+   HKR, Ndi\params\MTU,                Max,       0, "1500"
+   HKR, Ndi\params\MTU,                Step,      0, "1"
+   HKR, Ndi\params\MediaStatus,        ParamDesc, 0, "Media Status"
+   HKR, Ndi\params\MediaStatus,        Type,      0, "enum"
+   HKR, Ndi\params\MediaStatus,        Default,   0, "0"
+   HKR, Ndi\params\MediaStatus,        Optional,  0, "0"
+   HKR, Ndi\params\MediaStatus\enum,   "0",       0, "Application Controlled"
+   HKR, Ndi\params\MediaStatus\enum,   "1",       0, "Always Connected"
+
+;----------------------------------------------------------------
+;                             Service Section
+;----------------------------------------------------------------
+
+;---------- Service Type -------------
+;    SERVICE_KERNEL_DRIVER     = 0x01
+;    SERVICE_WIN32_OWN_PROCESS = 0x10
+;---------- Service Type -------------
+
+;---------- Start Mode ---------------
+;    SERVICE_BOOT_START   = 0x0
+;    SERVICE_SYSTEM_START = 0x1
+;    SERVICE_AUTO_START   = 0x2
+;    SERVICE_DEMAND_START = 0x3
+;    SERVICE_DISABLED     = 0x4
+;---------- Start Mode ---------------
+
+[TAP.service]
+   DisplayName = %l_DeviceDescription%
+   ServiceType = 1
+   StartType = 3
+   ErrorControl = 1
+   LoadOrderGroup = NDIS
+   ServiceBinary = %12%\tapdrvr.sys
+
+;-----------------------------------------------------------------
+;                                File Installation
+;-----------------------------------------------------------------
+
+;----------------- Copy Flags ------------
+;    COPYFLG_NOSKIP = 0x02
+;    COPYFLG_NOVERSIONCHECK = 0x04
+;----------------- Copy Flags ------------
+
+; SourceDisksNames
+; diskid = description[, [tagfile] [, <unused>, subdir]]
+; 1 = "Intel Driver Disk 1",e100bex.sys,,
+
+[SourceDisksNames]
+   1 = %l_DeviceDescription%, tapdrvr.sys
+
+; SourceDisksFiles
+; filename_on_source = diskID[, [subdir][, size]]
+; e100bex.sys = 1,, ; on distribution disk 1
+
+[SourceDisksFiles]
+tapdrvr.sys = 1
+
+[DestinationDirs]
+   TAP.files  = 11
+   TAP.driver = 12
+
+[TAP.files]
+;   TapPanel.cpl,,,6   ; COPYFLG_NOSKIP | COPYFLG_NOVERSIONCHECK
+;   cipsrvr.exe,,,6     ; COPYFLG_NOSKIP | COPYFLG_NOVERSIONCHECK
+
+[TAP.driver]
+   tapdrvr.sys,,,6     ; COPYFLG_NOSKIP | COPYFLG_NOVERSIONCHECK
+
+;---------------------------------------------------------------
+;                                      End
+;---------------------------------------------------------------

@@ -1,0 +1,18 @@
+coLinux - Cooperative Linux.
+
+Sponsored by AIST 2004. (http://www.aist.go.jp/)
+
+Creator and chief maintainer:
+    Dan Aloni - responsible for the development of the basic
+    fundamentals: context switching, hardware abstraction, 
+    basic design. 
+
+Additional developers and contributors:
+    Jun Okajima (Digital Infra Inc.) - Developer and
+    maintainer of cofbdev (Cooperative Frame Buffer device). 
+
+Producer:
+    Kuniyasu Suzaki, Senior Reseacher, AIST
+
+Portion of this program is copyright (c) AIST, 2003-. All rights reserved.
+Licensed under GPL (see LICENSE).

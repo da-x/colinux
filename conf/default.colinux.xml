@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<colinux>
+    <block_device index="0" path="\DosDevices\c:\colinux\root_fs" enabled="true">
+    <block_device index="1" path="\DosDevices\c:\colinux\swap_device" enabled="true">
+    </block_device>
+    <bootparams>init=/bin/bash</bootparams>
+    <image path="vmlinux"></image>
+</colinux>
