@@ -389,14 +389,14 @@ co_rc_t console_window_t::loop(void)
 	if (daemon_handle) {
 		co_message_t *
 		    message = NULL;
-		rc = co_os_daemon_get_message(daemon_handle, &message, 0);
+		rc = co_os_daemon_get_message(daemon_handle, &message, 10);
 		if (!CO_OK(rc)) {
-			if (rc == CO_RC_BROKEN_PIPE) {
+			if (CO_RC_GET_CODE(rc) == CO_RC_BROKEN_PIPE) {
 				log("Monitor%d: Broken pipe\n", attached_id);
 				online(false);
 				return CO_RC(OK);
 			}
-			if (rc != CO_RC_TIMEOUT)
+			if (CO_RC_GET_CODE(rc) != CO_RC_TIMEOUT)
 				return rc;
 		}
 

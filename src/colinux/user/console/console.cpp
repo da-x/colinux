@@ -378,7 +378,7 @@ void console_window_t::idle()
 
 		rc = co_os_daemon_get_message(daemon_handle, &message, 10);
 		if (!CO_OK(rc)) {
-			if (rc == CO_RC_BROKEN_PIPE) {
+			if (CO_RC_GET_CODE(rc) == CO_RC_BROKEN_PIPE) {
 				log("Monitor%d: Broken pipe\n", attached_id);
 				detach(); 
 			}

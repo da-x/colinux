@@ -24,6 +24,8 @@
     Note that the first coLinux boot may be a little slower since Windows is 
     freeing cache and swapping out stuff in order to provide accommodation for 
     Linux's memory. You can see it in action by looking at the Task Manager.
+  * NSIS-based installer for the Windows binary distribution (based on 
+    work by NEBOR Regis.
 
 * Version 0.5.4 AKA "Focal Segmental Glomerulosclerosis" (%gs/%fs) release
   * Fixed an issue with i686-optimized pthread and the preservation of 

@@ -34,10 +34,22 @@ void co_os_free_pfn_tracker(co_os_mdl_ptr_t *current, int level, unsigned long *
 	int i;
 
 	if (level == 0) {
-		if (current->mdl != NULL) {
-			(*pages)++;
-			MmFreePagesFromMdl(current->mdl);
-			IoFreeMdl(current->mdl);
+		switch (current->type) {
+		case CO_OS_MDL_PTR_TYPE_MDL:
+			if (current->mdl != NULL) {
+				(*pages)++;
+				MmFreePagesFromMdl(current->mdl);
+				IoFreeMdl(current->mdl);
+			}
+			break;
+		case CO_OS_MDL_PTR_TYPE_PAGE:
+			if (current->page != NULL) {
+				(*pages)++;
+				co_os_free_pages(current->page, 1);
+			}
+			break;
+		default:
+			break;
 		}
 		return;
 	}
@@ -72,12 +84,8 @@ void co_os_manager_free(co_osdep_manager_t osdep)
 
 	co_os_free_pfn_tracker(&osdep->map_root, MDL_MAPPING_LEVELS, &pages, &lists);
 
-	osdep->blocks_allocated -= lists;
-	osdep->mdls_allocated -= pages;
-
-	co_debug("manager: peak allocation: %d mdls\n", osdep->mdls_peak_allocation);
+	co_debug("manager: peak allocation: %d mdls, %d aux\n", osdep->mdls_peak_allocation, osdep->auxiliary_peak_allocation);
 	co_debug("manager: freed: %d pages, %d lists\n", pages, lists);
-	co_debug("manager: blocks: %d, mdls: %d\n", osdep->blocks_allocated, osdep->mdls_allocated);
 
 	co_os_free(osdep);
 }

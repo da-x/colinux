@@ -117,8 +117,9 @@ co_os_daemon_get_message(co_daemon_handle_t handle,
 
 	r = MsgWaitForMultipleObjects(1, &handle->readable, FALSE, timeout,
 				      QS_ALLEVENTS);
-	if (r == WAIT_TIMEOUT || r == WAIT_OBJECT_0 + 1)
+	if (r == WAIT_TIMEOUT || r == WAIT_OBJECT_0 + 1) {
 		return CO_RC(TIMEOUT);
+	}
 
 	if (handle->message) {
 		*message_out = handle->message;

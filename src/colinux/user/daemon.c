@@ -694,8 +694,8 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 		}
 
 		if (!CO_OK(rc)) {
-			debug(daemon, "error launching net daemon\n");
-			break;
+			co_terminal_print("colinux: WARNING: error launching network daemon!\n");
+			rc = CO_RC(OK);
 		}
 	}
 
@@ -765,7 +765,6 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 		goto out;
 
 	co_terminal_print("colinux: launching net daemons\n");
-
 	rc = co_daemon_launch_net_daemons(daemon);
 	if (!CO_OK(rc))
 		goto out;
@@ -774,7 +773,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 		debug(daemon, "launching console\n");
 		rc = co_launch_process("colinux-console-fltk -a 0");
 		if (!CO_OK(rc)) {
-			debug(daemon, "error launching console\n");
+			co_terminal_print("colinux: error launching console\n");
 			goto out;
 		}
 	}
