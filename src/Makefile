@@ -96,6 +96,9 @@ TOOL_USER_GPP= $(GPP) $(COLINUX_ID_ADD) $(USER_CFLAGS) $(CO_INCLUDES) $(TARGETFL
 TOOL_KERNEL_CC= $(CC) $(COLINUX_ID_ADD) $(KERNEL_CFLAGS) $(CO_INCLUDES) $(TARGETFLAGS_._$(subst /,_,$<)) -c $< -o $@ 
 TOOL_AR=$(AR) cr $@ $^
 
+# Add additional TOOL_CC for special-case SLIRP compile:
+SLIRP_TOOL_USER_CC= $(CC) $(COLINUX_ID_ADD)  $(SLIRP_USER_CFLAGS) $(CO_INCLUDES) $(TARGETFLAGS_._$(subst /,_,$<)) -c $< -o $@
+
 TOOL_LD_RELOC=$(LD) -g -r -o $@ $^
 
 .phony: colinux
