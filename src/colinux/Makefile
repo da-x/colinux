@@ -21,7 +21,7 @@ CFLAGS += -O2
 endif
 
 # Add additional USER_CLAGS for special-case SLIRP compile:
-SLIRP_USER_CFLAGS= $(filter-out '-O -O0 -O1 -O2 -O3 -O4 -O5', $(USER_CFLAGS)) -O
+SLIRP_USER_CFLAGS= $(filter-out '-O -O0 -O1 -O2 -O3 -O4 -O5', $(USER_CFLAGS)) -O0
 
 export COLINUX_NDEBUG
 
