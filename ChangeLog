@@ -1,3 +1,15 @@
+* Version 0.6.0 AKA "Getting even"
+  * Ballard, Jonathan H.:  
+    * fixed implicit declarations
+    * added co_os_realloc()
+    * fixed overflow with the XML memory config
+    * reimplemented os/winnt/user/daemon.c.
+      A threaded implementation with with message queue,
+      wait state, and error recovery.
+    * merged the NT-native console. 
+  * Added more checks to the XML parsing.
+  * Made context switch code more sensitve about processor's capabilities.
+  
 * Version 0.5.4 AKA "Focal Segmental Glomerulosclerosis" (%gs/%fs) release
   * Fixed an issue with i686-optimized pthread and the preservation of 
     %gs and %fs. The crashes that were caused by the i686 Gentoo image 
@@ -21,7 +33,7 @@
 	
     If you want to use pcap (i.e, bridged Ethernet), add:
     <network index="0" name="XXXX" type="bridged"></network>
-    (Where XXXX is a subscript of your network adapter's name)
+    (Where XXXX is a substring of your network adapter's name)
       
     Optional attributes: mac="XX:XX:XX:XX:XX:XX" - specifies the MAC
     address of the interface in the Linux side. Recommended on bridged

@@ -13,7 +13,7 @@
 
 #include <colinux/common/common.h>
 
-extern co_rc_t co_parse_mac_address(const char *text, char *binary);
-extern void co_build_mac_address(char *text, int ntext, const char *mac);
+extern co_rc_t co_parse_mac_address(const char *text, unsigned char *binary);
+extern void co_build_mac_address(char *text, int ntext, const unsigned char *mac);
 
 #endif

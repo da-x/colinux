@@ -414,6 +414,7 @@ co_rc_t co_daemon_handle_daemon(void *data, co_message_t *message)
 			break;
 		}
 		case CO_MONITOR_MESSAGE_TYPE_DEBUG_LINE: {
+			extern void co_daemon_debug(const char *str);
 			co_daemon_debug(daemon_message->data);
 			break;
 		}
@@ -771,7 +772,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 
 	if (daemon->start_parameters->launch_console) {
 		debug(daemon, "launching console\n");
-		rc = co_launch_process("colinux-console -a 0");
+		rc = co_launch_process("colinux-console-fltk -a 0");
 		if (!CO_OK(rc)) {
 			debug(daemon, "error launching console\n");
 			goto out;

@@ -10,6 +10,8 @@
 
 #include <windows.h>
 
+#include <stdio.h>
+
 #include <colinux/os/user/exec.h>
 
 co_rc_t co_launch_process(char *command_line, ...)

@@ -5,7 +5,12 @@
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
- */ 
+ */
+
+/*
+ * Ballard, Jonathan H.  <californiakidd@users.sourceforge.net>
+ *  2004 02 22	: Redesigned co_daemon_handle for use with co_os_daemon_thread()
+ */
 
 #ifndef __COLINUX_USER_WINNT_DAEMON_H__
 #define __COLINUX_USER_WINNT_DAEMON_H__
@@ -14,17 +19,16 @@
 
 #include <colinux/os/user/daemon.h>
 
-#define CO_DAEMON_PIPE_BUFFER_SIZE 0x10000
-
 struct co_daemon_handle {
 	HANDLE handle;
-	char *read_buffer;
-	char *read_ptr;
-	char *read_ptr_end;
-	OVERLAPPED read_overlap;
-	unsigned long read_size;
-	bool_t read_pending;
+	HANDLE thread;
+	HANDLE readable;
+	HANDLE shifted;
+	co_message_t *message;
+	co_rc_t rc;
+	bool_t loop;
 };
 
+#define CO_OS_DAEMON_QUEUE_MINIMUM		0x100
 
 #endif

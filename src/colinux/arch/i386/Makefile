@@ -8,6 +8,7 @@ BUILD_PATH := $(BUILD_PATH)/current
 
 LOCAL_OBJS = \
 	passage.o \
+	cpuid.o \
 	interrupt.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))

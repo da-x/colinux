@@ -14,7 +14,8 @@
 #include <colinux/common/common.h>
 #include <colinux/common/config.h>
 
+#include "macaddress.h"
+
 co_rc_t co_load_config(char *text, co_config_t *out_config);
-co_rc_t co_parse_mac_address(const char *text, char *binary);
 
 #endif

@@ -300,9 +300,9 @@ int
 pcap_init()
 {
 	pcap_if_t *alldevs = NULL;
-	pcap_if_t *d;
+	pcap_if_t *device = NULL;
 	int exit_code = 0;
-	pcap_t *adhandle;
+	pcap_t *adhandle = NULL;
 	char errbuf[PCAP_ERRBUF_SIZE];
 	u_int netmask;
 	char packet_filter[0x100];
@@ -319,26 +319,27 @@ pcap_init()
 		goto pcap_out;
 	}
 
-	d = alldevs;
-	while (d) {
-		co_debug("bridged-net-daemon: Checking adapter: %s\n", d->description);
+	device = alldevs;
+	while (device) {
+		co_debug("bridged-net-daemon: Checking adapter: %s\n", device->description);
 
 		if (daemon_parameters->name_specified == PFALSE)
 			break;
 		
-		if (strstr(d->description, daemon_parameters->interface_name) != NULL)
+		if (strstr(device->description, daemon_parameters->interface_name) != NULL)
 			break;
 
-		d = d->next;
+		device = device->next;
 	}
 
-	if (d == NULL) {
+	if (device == NULL) {
 		co_debug("bridged-net-daemon: No matching adapter\n");
-		goto pcap_out;
+                exit_code = -1;
+                goto pcap_out_close;
 	}
 
 	/* Open the first adapter. */
-	if ((adhandle = pcap_open_live(d->name,	// name of the device
+	if ((adhandle = pcap_open_live(device->name,	// name of the device
 				       65536,	// captures entire packet.
 				       1,	// promiscuous mode
 				       1,	// read timeout
@@ -359,10 +360,10 @@ pcap_init()
 		goto pcap_out_close;
 	}
 
-	if (d->addresses != NULL) {
+	if (device->addresses != NULL) {
 		/* Retrieve the mask of the first address of the interface */
 		netmask =
-		    ((struct sockaddr_in *) (d->addresses->netmask))->sin_addr.
+		    ((struct sockaddr_in *) (device->addresses->netmask))->sin_addr.
 		    S_un.S_addr;
 	} else {
 		/* If the interface is without addresses we suppose to be in a C
@@ -385,7 +386,7 @@ pcap_init()
 		goto pcap_out_close;
 	}
 
-	co_debug("bridged-net-daemon: Listening on: %s...\n", d->description);
+	co_debug("bridged-net-daemon: Listening on: %s...\n", device->description);
 	co_debug("bridged-net-daemon: Listening for: %s\n", packet_filter);
 
 	pcap_packet.adhandle = adhandle;

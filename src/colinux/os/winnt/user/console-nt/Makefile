@@ -3,13 +3,14 @@ ifeq ($(BUILD_ROOT),)
 BUILD_ROOT=../../../../..
 include $(BUILD_ROOT)/Makefile
 else
-BUILD_PATH := $(BUILD_PATH)/console
+BUILD_PATH := $(BUILD_PATH)/console-nt
 #-----------------------------------------------------------------
 
-LOCAL_EXE = $(BUILD_PATH)/colinux-console-fltk.exe
+LOCAL_EXE = $(BUILD_PATH)/colinux-console-nt.exe
 
 LOCAL_OBJS = \
 	head.o \
+	widget.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 
@@ -20,12 +21,11 @@ LOCAL_TARGETS = $(LOCAL_OBJS) $(LOCAL_EXE)
 
 $(LOCAL_EXE) : \
 	$(BUILD_ROOT)/colinux/common/common.o \
-	$(BUILD_ROOT)/colinux/user/console/user-console.o \
+	$(BUILD_ROOT)/colinux/user/console-base/user-console.o \
 	$(BUILD_ROOT)/colinux/os/current/user/user.o \
-	$(LOCAL_OBJS) \
-	$(BUILD_ROOT)/colinux/user/user.a
+	$(LOCAL_OBJS)
 
-	$(GPP) $^ -o $@ -luser32 -lgdi32 -lkernel32 -lfltk \
+	$(GPP) $^ -o $@ -luser32 -lgdi32 -lkernel32 \
         -lole32 -luuid -lgdi32 -lmxml # -Wl,--subsystem,windows
 
 CLEAN_FILES := $(CLEAN_FILES) \

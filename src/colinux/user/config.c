@@ -130,18 +130,17 @@ co_rc_t co_str_to_unsigned_long(const char *text, unsigned long *number_out)
 	if (!char_is_digit(*text))
 		return CO_RC(ERROR);
 
-	while (char_is_digit(*text)) {
+	do {
 		last_number = number;
 		number *= 10;
+		number += (*text - '0');
 
 		if (number < last_number) {
 			/* Overflow */
 			return CO_RC(ERROR);
 		}
 
-		number += (*text - '0');
-		text++;
-	}
+	} while (char_is_digit(*++text)) ;
 
 	if (*text == '\0') {
 		*number_out = number;
@@ -254,9 +253,17 @@ co_rc_t co_load_config(char *text, co_config_t *out_config)
 	co_rc_t rc = CO_RC(OK);
 
 	tree = mxmlLoadString(NULL, text, NULL);
+	if (tree == NULL) {
+		printf("Error parsing config XML. Please check XML's validity\n");
+		return CO_RC(ERROR);
+	}
 
-	node = mxmlFindElement(tree, tree, "colinux", NULL, NULL,
-			       MXML_DESCEND);
+	node = mxmlFindElement(tree, tree, "colinux", NULL, NULL, MXML_DESCEND);
+
+	if (node == NULL) {
+		printf("Couldn't find colinux element within XML\n");
+		return CO_RC(ERROR);
+	}
 
 	for (walk = node->child; walk; walk = walk->next) {
 		if (walk->type == MXML_ELEMENT) {

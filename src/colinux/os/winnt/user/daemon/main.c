@@ -25,6 +25,7 @@
 
 void co_daemon_debug_udp(char *str)
 {
+	extern u_short htons(u_short);		//in #include <winsock2.h>
 	/*
 	 * This code sends UDP packet per debug line.
 	 *

@@ -35,7 +35,16 @@ diff -X bin/dontdiff -urN linux/Documentation/devices.txt linux/Documentation/de
  		  1 = /dev/solnp1
 diff -X bin/dontdiff -urN linux/Makefile linux/Makefile
 --- linux/Makefile	2004-02-02 22:53:38.000000000 +0200
-+++ linux/Makefile	2004-02-23 08:59:51.000000000 +0200
++++ linux/Makefile	2004-02-27 10:37:53.000000000 +0200
+@@ -1,7 +1,7 @@
+ VERSION = 2
+ PATCHLEVEL = 4
+ SUBLEVEL = 24
+-EXTRAVERSION =
++EXTRAVERSION = -co-0.5.4
+ 
+ KERNELRELEASE=$(VERSION).$(PATCHLEVEL).$(SUBLEVEL)$(EXTRAVERSION)
+ 
 @@ -27,7 +27,11 @@
  
  AS		= $(CROSS_COMPILE)as
@@ -3415,7 +3424,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm
 +#endif
 diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dma.h
 --- linux/include/asm-i386/dma.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/dma.h	2004-02-25 03:41:54.000000000 +0200
++++ linux/include/asm-i386/dma.h	2004-02-27 18:09:08.000000000 +0200
 @@ -268,6 +268,8 @@
   *
   * Assumes DMA flip-flop is clear.
@@ -3436,7 +3445,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dm
  extern int request_dma(unsigned int dmanr, const char * device_id);	/* reserve a DMA channel */
 diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.h
 --- linux/include/asm-i386/io.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/io.h	2004-02-25 03:41:54.000000000 +0200
++++ linux/include/asm-i386/io.h	2004-02-27 18:09:08.000000000 +0200
 @@ -2,6 +2,7 @@
  #define _ASM_IO_H
  
@@ -3596,7 +3605,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/p
  #define VM_DATA_DEFAULT_FLAGS	(VM_READ | VM_WRITE | VM_EXEC | \
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgalloc.h linux/include/asm-i386/pgalloc.h
 --- linux/include/asm-i386/pgalloc.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/pgalloc.h	2004-02-24 13:46:49.000000000 +0200
++++ linux/include/asm-i386/pgalloc.h	2004-02-27 18:09:07.000000000 +0200
 @@ -11,8 +11,13 @@
  #define pte_quicklist (current_cpu_data.pte_quick)
  #define pgtable_cache_size (current_cpu_data.pgtable_cache_sz)
@@ -3633,7 +3642,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable-2level.h linux/include/
  #endif /* _I386_PGTABLE_2LEVEL_H */
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable.h linux/include/asm-i386/pgtable.h
 --- linux/include/asm-i386/pgtable.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/pgtable.h	2004-02-24 13:46:49.000000000 +0200
++++ linux/include/asm-i386/pgtable.h	2004-02-27 18:09:07.000000000 +0200
 @@ -320,8 +320,13 @@
  
  #define page_pte(page) page_pte_prot(page, __pgprot(0))
@@ -3651,7 +3660,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable.h linux/include/asm-i38
  #define pgd_index(address) ((address >> PGDIR_SHIFT) & (PTRS_PER_PGD-1))
 diff -X bin/dontdiff -urN linux/include/asm-i386/processor.h linux/include/asm-i386/processor.h
 --- linux/include/asm-i386/processor.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/processor.h	2004-02-24 13:46:48.000000000 +0200
++++ linux/include/asm-i386/processor.h	2004-02-27 18:09:05.000000000 +0200
 @@ -181,8 +181,18 @@
  #define X86_CR4_OSFXSR		0x0200	/* enable fast FPU save and restore */
  #define X86_CR4_OSXMMEXCPT	0x0400	/* enable unmasked SSE exceptions */
@@ -3674,7 +3683,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/processor.h linux/include/asm-i
   * Save the cr4 feature set we're using (ie
 diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/console.h
 --- linux/include/linux/console.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/linux/console.h	2004-02-24 13:46:54.000000000 +0200
++++ linux/include/linux/console.h	2004-02-27 18:09:09.000000000 +0200
 @@ -55,6 +55,7 @@
  extern const struct consw dummy_con;	/* dummy console buffer */
  extern const struct consw fb_con;	/* frame buffer based console */
