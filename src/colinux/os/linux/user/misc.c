@@ -23,12 +23,19 @@ void co_terminal_print(const char *format, ...)
 {
 	char buf[0x100];
 	va_list ap;
+	int len;
 
 	va_start(ap, format);
 	vsnprintf(buf, sizeof(buf), format, ap);
 	va_end(ap);
 
-	printf("%s", buf);
+	printf("%s: %s", _colinux_module, buf);
+
+	len = strlen(buf);
+	while (len > 0  &&  buf[len-1] == '\n')
+		buf[len - 1] = '\0';
+		
+	co_debug_lvl(9, "prints \"%s\"\n", buf);
 }
 
 double co_os_timer_highres()
