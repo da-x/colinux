@@ -346,11 +346,7 @@ co_rc_t co_load_config(char *text, co_config_t *out_config)
 
 /************************/
 
-/* 
- * "New" command line configuration gathering scheme. It existed a long time in 
- * User Mode Linux and should be less hussle than handling XML files for the
- * novice users.
- */
+/* new command line configuration gathering scheme */
 
 static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_config_t *conf)
 {
@@ -484,188 +480,6 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 	return CO_RC(OK);
 }
 
-static bool_t strmatch_identifier(const char *str, const char *identifier, const char **end)
-{
-	while (*str == *identifier  &&  *str != '\0') {
-		str++;
-		identifier++;
-	}
-
-	if (end)
-		*end = str;
-
-	if (*identifier != '\0')
-		return PFALSE;
-
-	if (!((*str >= 'a'  &&  *str <= 'z') || (*str >= 'A'  &&  *str <= 'Z'))) {
-		if (end) {
-			if (*str != '\0')
-				(*end)++;
-		}
-		return PTRUE;
-	}
-
-	return PFALSE;
-}
-
-static void split_comma_separated(const char *source, char **out_array, int *array_sizes, int array_length)
-{
-	int index = 0, j;
-	
-	for (index=0 ; index < array_length ; index++) {
-		out_array[index][0] = '\0';
-		j = 0;
-		while (*source != ','  &&  *source != '\0') {
-			if (j == array_sizes[index] - 1) {
-				out_array[index][j] = '\0';
-				break;
-			}
-			
-			out_array[index][j] = *source;
-			source++;
-			j++;
-		}
-		
-		if (*source == '\0')
-			break;
-		
-		source++;
-	}
-}
-
-static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, const char *param)
-{
-	char host_ip[40] = {0, };
-	char mac_address[40] = {0, };
-	co_rc_t rc;
-
-	char *array[3] = {
-		conf->net_devs[index].desc,
-		mac_address,
-		host_ip,
-	};
-	int sizes[3] = {
-		sizeof(conf->net_devs[index].desc),
-		sizeof(mac_address),
-		sizeof(host_ip),
-	};
-
-	split_comma_separated(param, array, sizes, 3);
-
-	conf->net_devs[index].type = CO_NETDEV_TYPE_TAP;
-	conf->net_devs[index].enabled = PTRUE;
-
-	if (strlen(mac_address) > 0) {
-		rc = co_parse_mac_address(mac_address, conf->net_devs[index].mac_address);
-		if (!CO_OK(rc)) {
-			co_terminal_print("error parsing MAC address: %s\n", mac_address);
-			return rc;
-		}
-	}
-
-	co_terminal_print("configured TAP device as eth%d\n", index);
-
-	if (strlen(mac_address) > 0)
-		co_terminal_print("MAC address: %s\n", mac_address);
-	else
-		co_terminal_print("MAC address: auto generated\n");
-
-	if (strlen(host_ip) > 0)
-		co_terminal_print("Host IP address: %s (currently ignored)\n", host_ip);
-
-	return CO_RC(OK);
-}
-
-static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, const char *param)
-{
-	char mac_address[40] = {0, };
-	co_rc_t rc;
-
-	char *array[3] = {
-		conf->net_devs[index].desc,
-		mac_address,
-	};
-	int sizes[3] = {
-		sizeof(conf->net_devs[index].desc),
-		sizeof(mac_address),
-	};
-
-	split_comma_separated(param, array, sizes, 3);
-
-	conf->net_devs[index].type = CO_NETDEV_TYPE_BRIDGED_PCAP;
-	conf->net_devs[index].enabled = PTRUE;
-
-	if (strlen(mac_address) > 0) {
-		rc = co_parse_mac_address(mac_address, conf->net_devs[index].mac_address);
-		if (!CO_OK(rc)) {
-			co_terminal_print("error parsing MAC address: %s\n", mac_address);
-			return rc;
-		}
-	}
-
-	if (strlen(conf->net_devs[index].desc) == 0) {
-		co_terminal_print("error, the name of the network interface to attach was not specified\n");
-		return CO_RC(ERROR);
-	}
-
-	co_terminal_print("configured PCAP bridged at '%s' device as eth%d\n", 
-			  conf->net_devs[index].desc, index);
-
-	if (strlen(mac_address) > 0)
-		co_terminal_print("MAC address: %s\n", mac_address);
-	else
-		co_terminal_print("MAC address: auto generated\n");
-
-	return CO_RC(OK);
-}
-
-static co_rc_t parse_args_networking_device(co_config_t *conf, int index, const char *param)
-{
-	const char *next = NULL;
-
-	if (strmatch_identifier(param, "tuntap", &next)) {
-		return parse_args_networking_device_tap(conf, index, next);
-	} else if (strmatch_identifier(param, "pcap-bridge", &next)) {
-		return parse_args_networking_device_pcap(conf, index, next);
-	} else {
-		co_terminal_print("unsupported network transport type: %s\n", param);
-		co_terminal_print("supported types are: tuntap, pcap-bridge\n");
-		return CO_RC(ERROR);
-	}
-
-	return CO_RC(OK);
-}
-
-static co_rc_t parse_args_networking(co_command_line_params_t cmdline, co_config_t *conf)
-{
-	bool_t exists;
-	char param[0x100];
-	co_rc_t rc;
-
-	do {
-		int index;
-		exists = PFALSE;
-
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "eth", &index, param, 
-							     sizeof(param), &exists);
-		if (!CO_OK(rc)) 
-			return rc;
-		
-		if (exists) {
-			if (index < 0  || index >= CO_MODULE_MAX_CONET) {
-				co_terminal_print("invalid network index: %d\n", index);
-				return CO_RC(ERROR);
-			}
-
-			rc = parse_args_networking_device(conf, index, param);
-			if (!CO_OK(rc))
-				return rc;
-		}
-	} while (exists);
-
-	return CO_RC(OK);
-}
-
 static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *conf)
 {
 	co_rc_t rc;
@@ -697,10 +511,6 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = parse_args_networking(cmdline, conf);
-	if (!CO_OK(rc))
-		return rc;
-
 	return rc;
 }
 
@@ -715,7 +525,6 @@ co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_paramete
 	rc = co_cmdline_get_next_equality(cmdline, "kernel", 0, NULL, 0, 
 					  conf->vmlinux_path, sizeof(conf->vmlinux_path),
 					  &start_parameters->cmdline_config);
-
 	if (!CO_OK(rc))
 		return rc;
 
@@ -736,7 +545,6 @@ co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_paramete
 		co_terminal_print("\n");
 		start_parameters->config_specified = PTRUE;
 	}
-
 	
 	return rc;
 }

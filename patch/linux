@@ -22,7 +22,7 @@ diff -urN a/Makefile b/Makefile
  PATCHLEVEL = 6
  SUBLEVEL = 8
 -EXTRAVERSION = .1
-+EXTRAVERSION = .1-co-0.6.2-pre1
++EXTRAVERSION = .1-co-0.6.2-pre2
  NAME=Zonked Quokka
  
  # *DOCUMENTATION*
@@ -1572,7 +1572,7 @@ diff -urN a/drivers/block/Makefile b/drivers/block/Makefile
 diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 --- a/drivers/block/cobd.c
 +++ b/drivers/block/cobd.c
-@@ -0,0 +1,536 @@
+@@ -0,0 +1,540 @@
 +/*
 + *  Copyright (C) 2003 Dan Aloni <da-x@colinux.org>
 + *
@@ -1942,6 +1942,8 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +{
 +	const char *index_str_start = &alias_name_requested[strlen(alias->name)];
 +	const char *index_str_end = index_str_start;
++	struct cobd_device *cobd;
++	struct gendisk *disk;
 +
 +	int index = skip_atoi(&index_str_end);
 +
@@ -1954,6 +1956,8 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +	if (alias->gendisk == NULL) {
 +		static struct gendisk **gendisks;
 +		gendisks = kmalloc(alias->minor_count * sizeof(struct gendisk *), GFP_KERNEL);
++		memset(gendisks, 0, alias->minor_count * sizeof(struct gendisk *));
++
 +		if (!gendisks) {
 +			printk(KERN_WARNING "cannot allocate gendisk array for %s\n", alias->name);
 +			return -ENOMEM;
@@ -1979,7 +1983,7 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +		return -1;
 +	}
 +	
-+	struct gendisk *disk = alloc_disk(1);
++	disk = alloc_disk(1);
 +	if (!disk) {
 +		printk(KERN_WARNING "cannot allocate disk for alias %s\n", alias_name_requested);
 +		return -1;
@@ -1992,7 +1996,7 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +		return -1;
 +	}
 +
-+	struct cobd_device *cobd = &cobd_devs[cobd_unit];
++	cobd = &cobd_devs[cobd_unit];
 +	blk_queue_hardsect_size(disk->queue, hardsect_size);
 +	disk->major = alias->major->number;
 +	disk->first_minor = alias->minor_start + index;
@@ -4279,7 +4283,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +
 +#include <asm/cooperative.h>
 +
-+#define CO_LINUX_API_VERSION    4
++#define CO_LINUX_API_VERSION    5
 +
 +#pragma pack(0)
 +
