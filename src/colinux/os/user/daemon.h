@@ -22,5 +22,6 @@ extern co_rc_t co_os_daemon_send_message(co_daemon_handle_t handle, co_message_t
 extern void co_os_daemon_close(co_daemon_handle_t handle);
 extern void co_daemon_debug(char *str);
 extern void co_daemon_print_header(void);
+extern void co_os_daemon_deallocate_message(co_message_t*);
 
 #endif

@@ -451,7 +451,7 @@ void console_window_t::idle()
 
 		if (message) {
 			handle_message(message);
-			co_os_free(message);
+			co_os_daemon_deallocate_message(message);
 		}
 	}
 }

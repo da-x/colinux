@@ -2207,7 +2207,7 @@ diff -urN a/drivers/char/Makefile b/drivers/char/Makefile
 diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 --- a/drivers/char/cocd.c
 +++ b/drivers/char/cocd.c
-@@ -0,0 +1,384 @@
+@@ -0,0 +1,368 @@
 +/*
 + *  Copyright (C) 2004 Dan Aloni <da-x@colinux.org>
 + *
@@ -2421,26 +2421,13 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +	co_free_message(input);
 +}
 +
-+int cocd_write(struct tty_struct * tty, int from_user,
++int cocd_write(struct tty_struct * tty,
 +	       const unsigned char *buf, int count)
 +{
-+	char *allocated_kbuf = NULL;
-+	const char *kbuf = NULL;
 +	const char *kbuf_scan = NULL;
 +	int count_left;
 +
-+	if (from_user) {
-+		allocated_kbuf = kmalloc(count, GFP_KERNEL);
-+		if (copy_from_user(allocated_kbuf, buf, count)) {
-+			kfree(allocated_kbuf);
-+			return -EFAULT;
-+		}
-+		kbuf = allocated_kbuf;
-+	} else {
-+		kbuf = buf;
-+	}
-+
-+	kbuf_scan = kbuf;
++	kbuf_scan = buf;
 +	count_left = count;
 +
 +	while (count_left > 0) {
@@ -2458,9 +2445,6 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +		count_left -= count_partial;
 +		kbuf_scan += count_partial;
 +	}
-+
-+	if (from_user)
-+		kfree(allocated_kbuf);
 +
 +	return count;
 +}

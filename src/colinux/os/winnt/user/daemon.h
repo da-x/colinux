@@ -8,8 +8,9 @@
  */
 
 /*
- * Ballard, Jonathan H.  <californiakidd@users.sourceforge.net>
- *  2004 02 22	: Redesigned co_daemon_handle for use with co_os_daemon_thread()
+ * Ballard, Jonathan H.  <jhballard@hotmail.com>
+ *  20040222 : Redesigned co_daemon_handle for use with co_os_daemon_thread()
+ *  20050117 : added packets, qFirst & qLast to co_daemon_handle
  */
 
 #ifndef __COLINUX_USER_WINNT_DAEMON_H__
@@ -24,11 +25,13 @@ struct co_daemon_handle {
 	HANDLE thread;
 	HANDLE readable;
 	HANDLE shifted;
+	HANDLE heap;
 	co_message_t *message;
+	void *qOut;
+	void *qIn;
+	void *packets;
 	co_rc_t rc;
 	bool_t loop;
 };
-
-#define CO_OS_DAEMON_QUEUE_MINIMUM		0x100
 
 #endif

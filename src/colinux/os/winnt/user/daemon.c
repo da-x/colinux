@@ -8,10 +8,12 @@
  */
 
 /*
- * Ballard, Jonathan H.  <californiakidd@users.sourceforge.net>
- *  2004 02 22	: Designed and implemented co_os_daemon_thread()
- *		: with message queue, wait state, and error
- *		: recovery.
+ * Ballard, Jonathan H.  <jhballard@hotmail.com>
+ *  20040222 : Designed and implemented co_os_daemon_thread()
+ *           : with message queue, wait state, and error
+ *           : recovery.
+ *  20050117 : Updated message queue to use co_message_packet_t,
+ *           : allocate_message() and co_os_daemon_deallocate_message()
  */
 
 #include <windows.h>
@@ -23,6 +25,13 @@
 #include <colinux/common/messages.h>
 
 static DWORD WINAPI co_os_daemon_thread(LPVOID data);
+
+typedef struct co_message_packet {
+	struct co_message_packet *next;
+	unsigned size;
+	unsigned free;
+	co_message_t data[0];
+} co_message_packet_t;
 
 co_rc_t
 co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
@@ -58,7 +67,6 @@ co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
 	/* Identify ourselves to the daemon */
 	if (!WriteFile(handle, &module_id, sizeof (module_id), &written, NULL)) {
 		co_debug("attachment failed\n");
-
 		goto co_os_open_daemon_pipe_error;
 	}
 
@@ -74,6 +82,7 @@ co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
 	if (!(daemon_handle->shifted && daemon_handle->readable))
 		goto co_os_open_daemon_pipe_error;
 
+	co_debug_lvl(pipe,10,"user daemon thread starting");
 	daemon_handle->thread =
 	    CreateThread(0, 0, co_os_daemon_thread, daemon_handle, 0, 0);
 
@@ -84,7 +93,8 @@ co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
 
 	co_debug("co_os_daemon_thread() did not start\n");
 
-      co_os_open_daemon_pipe_error:
+	co_os_open_daemon_pipe_error:
+	
 	if (daemon_handle) {
 		if (daemon_handle->readable)
 			CloseHandle(daemon_handle->readable);
@@ -99,6 +109,54 @@ co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
 		CloseHandle(handle);
 
 	return CO_RC(ERROR);
+}
+
+static co_message_packet_t *
+allocate_message(co_daemon_handle_t D, size_t size)
+{
+	co_message_packet_t *m = D->packets;
+	co_message_packet_t **p = (co_message_packet_t**)&D->packets;
+
+	while(m) {
+		if(m->free) {
+			if(m->size >= size && size >= (m->size >> 1)) {
+				m->free = 0;
+				*p = m->next;
+				m->next = 0;
+				return m;
+			}
+			if(++m->free <= 3) {  // retention threshold
+				p = &m->next;
+				m = m->next;
+				continue;
+			}
+			*p = m->next;
+			HeapFree(D->heap, HEAP_NO_SERIALIZE, m);
+//			co_os_free(m);
+			m = *p;
+			continue;
+		}
+		p = &m->next;
+		m = m->next;
+	}
+
+	m = HeapAlloc(D->heap, HEAP_NO_SERIALIZE, sizeof(struct co_message_packet)+size);
+//	m = co_os_malloc(sizeof(struct co_message_packet)+size);
+	if(!m)
+		return NULL;
+	m->next = 0;
+	m->free = 0;
+	m->size = size;
+	return m;
+}
+
+void
+co_os_daemon_deallocate_message(co_message_t *m)
+{
+	co_message_packet_t *p;
+	
+	p = (co_message_packet_t*)((unsigned)m - sizeof(struct co_message_packet));
+	p->free = 1;
 }
 
 co_rc_t
@@ -163,39 +221,21 @@ co_os_daemon_thread(LPVOID D)
 	HANDLE w[2];
 	OVERLAPPED overlapped;
 	DWORD r;
-	co_message_t *data = 0;
+	co_message_packet_t *data = 0;
+	co_message_packet_t *p = 0;
 	bool_t async = PFALSE;
-	unsigned qItems = 0;
-	unsigned qOut = 0;
-	unsigned qIn = 0;
-	co_message_t **queue = 0;
 	co_rc_t rc;
 
-	co_message_t **_q;
-	unsigned _i;
-	unsigned _o;
-
-#	define Q_REALLOC_1() \
-	    (_q = co_os_realloc( \
-			(void *) queue, \
-			sizeof (co_message_t *) * (_i = (qItems * 2))))
-
-#	define Q_REALLOC_2() \
-	    (_q = (co_message_t **) co_os_realloc( \
-			(void *) queue, \
-			sizeof (co_message_t *) * (_i = (qItems * 2))))
-
-#	define Q_COPY_2() \
-	    memcpy( \
-			_q + (qOut += qItems), _q + _o, \
-			sizeof (co_message_t *) * (qItems - _o))
-
 #	define NT_ERROR(_1) { \
-		co_debug("co_os_daemon_thread() error [ %x , %s ]\n", \
+		co_debug_lvl(pipe,1,"co_os_daemon_thread() error [ %x , %s ]\n", \
 			GetLastError(), \
 			_1); \
 		goto co_os_daemon_thread_error; \
 	}
+	
+	d->qIn = d->qOut = d->packets = 0;
+	co_debug_lvl(pipe,10,"user daemon thread started");
+	d->heap = HeapCreate(HEAP_NO_SERIALIZE, 0x10000, 0x100000);
 
 	memset(&overlapped, 0, sizeof (overlapped));
 	overlapped.hEvent = CreateEvent(0, TRUE, FALSE, 0);
@@ -210,24 +250,16 @@ co_os_daemon_thread(LPVOID D)
 	if (WaitForSingleObject(w[1], INFINITE) == WAIT_FAILED)
 		NT_ERROR("W0001");
 
-	if (!queue) {
-		queue = co_os_malloc((qItems =
-				      CO_OS_DAEMON_QUEUE_MINIMUM) *
-				     sizeof (co_message_t *));
-		if (!queue)
-			goto co_os_daemon_thread_loop;
-	}
-
 	while (d->loop) {
-		if (!(d->message || qIn == qOut)) {
-			d->message = queue[qOut++];
+		if ((!d->message) && d->qOut) {
+			p = d->qOut;
+			if(! (d->qOut = p->next) )
+				d->qIn = 0;
+			p->next = d->packets;
+			d->packets = p;
+			d->message = p->data;
 			if (!SetEvent(d->readable))
 				NT_ERROR("SE0001");
-			if (qOut == qItems) {
-				qOut = 0;
-				if (qIn == qItems)
-					qIn = 0;
-			}
 		}
 		if (async) {
 			r = WaitForMultipleObjects(2, w, FALSE, INFINITE);
@@ -249,42 +281,32 @@ co_os_daemon_thread(LPVOID D)
 				NT_ERROR("GOR01");
 			}
 			if(!r)	{
-				co_os_free(data);
-				data = 0 ;
+				data->free = 1;
+				data->next = d->packets;
+				d->packets = data;
 				}
 			else	{
 				if(r < sizeof(co_message_t))
 					NT_ERROR("DS0001");
-				if(r != data->size + sizeof(co_message_t))
+				if(r != data->data->size + sizeof(co_message_t))
 					NT_ERROR("DS0002");
-				queue[qIn++] = data;
-			}
-			async = PFALSE;
-		}
-		if (data) {
-			if (qIn == qItems) {
-				if (qOut)
-					qIn = 0;
-				else if (Q_REALLOC_1())
-					queue = _q, qItems = _i;
-				else
-					goto co_os_daemon_thread_loop;
-			} else if (qIn == qOut) {
-				if (!Q_REALLOC_2())
-					goto co_os_daemon_thread_loop;
-				_o = qOut;
-				Q_COPY_2();
-				queue = _q, qItems = _i;
+				if(!d->qOut) {
+					d->qOut = d->qIn = data;
+				} else {
+					((co_message_packet_t*)d->qIn)->next = data;
+					d->qIn = data;
+				}
 			}
 			data = 0;
+			async = PFALSE;
 		}
 		if (!async) {
 			if (!PeekNamedPipe(h, 0, 0, 0, 0, &r))
 				NT_ERROR("PNP01");
-			if (!(data = co_os_malloc(r)))
+			if (!(data = allocate_message(d,r)))
 				goto co_os_daemon_thread_loop;
 			async = PTRUE;
-			if (!ReadFile(h, data, r, 0, &overlapped)) {
+			if (!ReadFile(h, data->data, r, 0, &overlapped)) {
 				r = GetLastError();
 				if (r == ERROR_IO_INCOMPLETE)
 					continue;
@@ -299,22 +321,26 @@ co_os_daemon_thread(LPVOID D)
 
 	rc = CO_RC(OK);
 
-      co_os_daemon_thread_return:
+	co_os_daemon_thread_return:
 	if (async) {
 		CancelIo(h);
-		co_os_free(data);
+		HeapFree(d->heap, HEAP_NO_SERIALIZE, data);
+//		co_os_free(data);
 		async = 0;
 	}
-	while (d->loop && qIn != qOut) {
+	while (d->loop && d->qOut) {
 		if (!d->message) {
-			d->message = queue[qOut++];
+			p = d->qOut;
+			if(! (d->qOut = p->next) )
+				d->qIn = 0;
+			p->next = d->packets;
+			d->packets = p;
+			d->message = p->data;
 			if (!SetEvent(d->readable)) {
 				if (!CO_OK(rc))
 					break;
 				NT_ERROR("SE0002");
 			}
-			if (qOut == qItems)
-				qOut = 0;
 		}
 		if (WaitForSingleObject(w[1], INFINITE) == WAIT_FAILED) {
 			if (!CO_OK(rc))
@@ -328,22 +354,25 @@ co_os_daemon_thread(LPVOID D)
 				NT_ERROR("RE0002");
 			}
 	}
-	while (qIn != qOut) {
-		co_os_free(queue[qOut++]);
-		if (qOut == qItems)
-			qOut = 0;
+	if(d->packets) {
+		data = d->packets;
+		do {
+			p = data->next;
+			HeapFree(d->heap, HEAP_NO_SERIALIZE, data);
+//			co_os_free(data);
+		} while( (data = p) );
 	}
-	if (queue)
-		co_os_free(queue);
 	if (overlapped.hEvent)
 		if ((!CloseHandle(overlapped.hEvent)) && CO_OK(rc))
-			co_debug("co_os_daemon_thread() error"
+			co_debug_lvl(pipe,1,"co_os_daemon_thread() error"
 				 " [ %x , CH0001 ]\n", GetLastError());
 	d->rc = rc;
 	if (d->loop)
 		if ((!SetEvent(d->readable)) && CO_OK(rc))
-			co_debug("co_os_daemon_thread() error"
+			co_debug_lvl(pipe,1,"co_os_daemon_thread() error"
 				 " [ %x , SE0003 ]\n", GetLastError());
+
+	HeapDestroy(d->heap);
 	return 0;
 
       co_os_daemon_thread_error:

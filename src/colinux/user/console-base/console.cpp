@@ -396,7 +396,7 @@ co_rc_t console_window_t::loop(void)
 
 		if (message) {
 			event(*message);
-			co_os_free(message);
+			co_os_daemon_deallocate_message(message);
 		}
 	}
 
