@@ -17,7 +17,7 @@ diff -urN a/CREDITS b/CREDITS
 diff -urN a/Makefile b/Makefile
 --- a/Makefile
 +++ b/Makefile
-@@ -319,6 +319,11 @@
+@@ -318,6 +318,11 @@
  AS		= $(CROSS_COMPILE)as
  LD		= $(CROSS_COMPILE)ld
  CC		= $(CROSS_COMPILE)gcc
@@ -40,7 +40,7 @@ diff -urN a/arch/i386/Kconfig b/arch/i386/Kconfig
  	help
  	  Select this for a Pentium Classic processor with the RDTSC (Read
  	  Time Stamp Counter) instruction for benchmarking.
-@@ -543,6 +544,10 @@
+@@ -558,6 +559,10 @@
  	  If you have a system with several CPUs, you do not need to say Y
  	  here: the IO-APIC will be used automatically.
  
@@ -51,7 +51,7 @@ diff -urN a/arch/i386/Kconfig b/arch/i386/Kconfig
  config X86_LOCAL_APIC
  	bool
  	depends on !SMP && X86_UP_APIC
-@@ -555,7 +560,7 @@
+@@ -570,7 +575,7 @@
  
  config X86_TSC
  	bool
@@ -60,7 +60,7 @@ diff -urN a/arch/i386/Kconfig b/arch/i386/Kconfig
  	default y
  
  config X86_MCE
-@@ -882,6 +887,10 @@
+@@ -896,6 +901,10 @@
  
  source kernel/power/Kconfig
  
@@ -449,7 +449,7 @@ diff -urN a/arch/i386/kernel/cpu/common.c b/arch/i386/kernel/cpu/common.c
  #include <asm/semaphore.h>
  #include <asm/processor.h>
  #include <asm/i387.h>
-@@ -570,11 +571,13 @@
+@@ -619,11 +620,13 @@
  
  	/* Clear all 6 debug registers: */
  
@@ -479,7 +479,7 @@ diff -urN a/arch/i386/kernel/entry.S b/arch/i386/kernel/entry.S
 diff -urN a/arch/i386/kernel/head.S b/arch/i386/kernel/head.S
 --- a/arch/i386/kernel/head.S
 +++ b/arch/i386/kernel/head.S
-@@ -238,6 +238,7 @@
+@@ -236,6 +236,7 @@
  	rep
  	movsl
  1:
@@ -487,7 +487,7 @@ diff -urN a/arch/i386/kernel/head.S b/arch/i386/kernel/head.S
  checkCPUtype:
  
  	movl $-1,X86_CPUID		#  -1 for no CPUID initially
-@@ -425,7 +426,7 @@
+@@ -423,7 +424,7 @@
  .data
  
  ENTRY(stack_start)
@@ -518,7 +518,7 @@ diff -urN a/arch/i386/kernel/i387.c b/arch/i386/kernel/i387.c
  	stts();
  }
  
-@@ -386,6 +391,7 @@
+@@ -388,6 +393,7 @@
  	return err;
  }
  
@@ -760,40 +760,58 @@ diff -urN a/arch/i386/kernel/process.c b/arch/i386/kernel/process.c
  
  asmlinkage void ret_from_fork(void) __asm__("ret_from_fork");
  
-@@ -147,21 +148,24 @@
+@@ -145,22 +146,25 @@
+  */
+ void cpu_idle (void)
+ {
+-	int cpu = _smp_processor_id();
+-
++ 	int cpu = _smp_processor_id();
++ 
  	/* endless idle loop with no priority at all */
  	while (1) {
  		while (!need_resched()) {
 -			void (*idle)(void);
--			/*
--			 * Mark this as an RCU critical section so that
--			 * synchronize_kernel() in the unload path waits
--			 * for our completion.
--			 */
--			rcu_read_lock();
--			idle = pm_idle;
 +			void (*idle)(void) = pm_idle;
-+
-+ 			/*
-+ 			 * Mark this as an RCU critical section so that
-+ 			 * synchronize_kernel() in the unload path waits
-+ 			 * for our completion.
-+ 			 */
-+ 			rcu_read_lock();
-+
++ 
++ 			if (cpu_isset(cpu, cpu_idle_map))
++ 				cpu_clear(cpu, cpu_idle_map);
+ 
+-			if (cpu_isset(cpu, cpu_idle_map))
+-				cpu_clear(cpu, cpu_idle_map);
+ 			rmb();
+-			idle = pm_idle;
 +			if (cooperative_mode_enabled())
 +				idle = co_idle_processor;
++			
  
  			if (!idle)
  				idle = default_idle;
  
- 			irq_stat[smp_processor_id()].idle_timestamp = jiffies;
+-			irq_stat[cpu].idle_timestamp = jiffies;
++ 			irq_stat[cpu].idle_timestamp = jiffies;
  			idle();
--			rcu_read_unlock();
-+ 			rcu_read_unlock();
  		}
  		schedule();
- 	}
+@@ -172,6 +176,9 @@
+ 	int cpu;
+ 	cpumask_t map;
+ 
++	if (cooperative_mode_enabled())
++		co_terminate(CO_TERMINATE_INVALID_OPERATION);
++
+ 	for_each_online_cpu(cpu)
+ 		cpu_set(cpu, cpu_idle_map);
+ 
+@@ -183,6 +190,8 @@
+ }
+ EXPORT_SYMBOL_GPL(cpu_idle_wait);
+ 
++
++
+ /*
+  * This uses new MONITOR/MWAIT instructions on P4 processors with PNI,
+  * which can obviate IPI to trigger checking of need_resched.
 diff -urN a/arch/i386/kernel/reboot.c b/arch/i386/kernel/reboot.c
 --- a/arch/i386/kernel/reboot.c
 +++ b/arch/i386/kernel/reboot.c
@@ -854,7 +872,7 @@ diff -urN a/arch/i386/kernel/reboot.c b/arch/i386/kernel/reboot.c
 diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
 --- a/arch/i386/kernel/setup.c
 +++ b/arch/i386/kernel/setup.c
-@@ -39,6 +39,7 @@
+@@ -40,6 +40,7 @@
  #include <linux/efi.h>
  #include <linux/init.h>
  #include <linux/edd.h>
@@ -862,7 +880,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  #include <video/edid.h>
  #include <asm/e820.h>
  #include <asm/mpspec.h>
-@@ -668,8 +669,17 @@
+@@ -671,8 +672,17 @@
  	int len = 0;
  	int userdef = 0;
  
@@ -881,17 +899,16 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
 +	}
  
  	for (;;) {
- 		/*
-@@ -1019,6 +1029,8 @@
+ 		if (c != ' ')
+@@ -1029,6 +1039,7 @@
  static unsigned long __init setup_memory(void)
  {
  	unsigned long bootmap_size, start_pfn, max_low_pfn;
-+	extern char _end;
 +	unsigned long start_va = 0;
  
  	/*
  	 * partially used pages are not usable - thus
-@@ -1026,9 +1038,16 @@
+@@ -1036,9 +1047,16 @@
  	 */
  	start_pfn = PFN_UP(init_pg_tables_end);
  
@@ -911,7 +928,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  
  #ifdef CONFIG_HIGHMEM
  	highstart_pfn = highend_pfn = max_pfn;
-@@ -1040,37 +1059,47 @@
+@@ -1050,37 +1068,47 @@
  #endif
  	printk(KERN_NOTICE "%ldMB LOWMEM available.\n",
  			pages_to_mb(max_low_pfn));
@@ -983,7 +1000,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  
  #ifdef CONFIG_SMP
  	/*
-@@ -1094,6 +1123,7 @@
+@@ -1104,6 +1132,7 @@
  #endif
  
  #ifdef CONFIG_BLK_DEV_INITRD
@@ -991,7 +1008,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  	if (LOADER_TYPE && INITRD_START) {
  		if (INITRD_START + INITRD_SIZE <= (max_low_pfn << PAGE_SHIFT)) {
  			reserve_bootmem(INITRD_START, INITRD_SIZE);
-@@ -1109,6 +1139,17 @@
+@@ -1119,6 +1148,17 @@
  			initrd_start = 0;
  		}
  	}
@@ -1009,7 +1026,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  #endif
  	return max_low_pfn;
  }
-@@ -1315,6 +1356,7 @@
+@@ -1371,6 +1411,7 @@
  		efi_enabled = 1;
  #endif
  
@@ -1017,7 +1034,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
   	ROOT_DEV = old_decode_dev(ORIG_ROOT_DEV);
   	drive_info = DRIVE_INFO;
   	screen_info = SCREEN_INFO;
-@@ -1338,7 +1380,7 @@
+@@ -1395,7 +1436,7 @@
  	ARCH_SETUP
  	if (efi_enabled)
  		efi_init();
@@ -1026,7 +1043,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  		printk(KERN_INFO "BIOS-provided physical RAM map:\n");
  		print_memory_map(machine_specific_memory_setup());
  	}
-@@ -1392,8 +1434,9 @@
+@@ -1449,8 +1490,9 @@
  	}
  #endif
  
@@ -1038,13 +1055,13 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  
  #ifdef CONFIG_X86_GENERICARCH
  	generic_apic_probe(*cmdline_p);
-@@ -1411,9 +1454,14 @@
+@@ -1469,9 +1511,14 @@
  		get_smp_config();
  #endif
  
--	register_memory(max_low_pfn);
+-	register_memory();
 +	if (!cooperative_mode_enabled()) {
-+	     register_memory(max_low_pfn);
++	     register_memory();
 +	}
  
  #ifdef CONFIG_VT
@@ -1054,7 +1071,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  #if defined(CONFIG_VGA_CONSOLE)
  	if (!efi_enabled || (efi_mem_type(0xa0000) != EFI_CONVENTIONAL_MEMORY))
  		conswitchp = &vga_con;
-@@ -1421,6 +1469,7 @@
+@@ -1479,6 +1526,7 @@
  	conswitchp = &dummy_con;
  #endif
  #endif
@@ -1098,15 +1115,15 @@ diff -urN a/arch/i386/kernel/sysenter.c b/arch/i386/kernel/sysenter.c
 diff -urN a/arch/i386/kernel/time.c b/arch/i386/kernel/time.c
 --- a/arch/i386/kernel/time.c
 +++ b/arch/i386/kernel/time.c
-@@ -45,6 +45,7 @@
- #include <linux/sysdev.h>
+@@ -46,6 +46,7 @@
  #include <linux/bcd.h>
  #include <linux/efi.h>
+ #include <linux/mca.h>
 +#include <linux/cooperative_internal.h>
  
  #include <asm/io.h>
  #include <asm/smp.h>
-@@ -94,8 +95,9 @@
+@@ -95,8 +96,9 @@
  void do_gettimeofday(struct timeval *tv)
  {
  	unsigned long seq;
@@ -1118,7 +1135,7 @@ diff -urN a/arch/i386/kernel/time.c b/arch/i386/kernel/time.c
  
  	do {
  		unsigned long lost;
-@@ -129,6 +131,13 @@
+@@ -130,6 +132,13 @@
  		sec++;
  	}
  
@@ -1132,7 +1149,7 @@ diff -urN a/arch/i386/kernel/time.c b/arch/i386/kernel/time.c
  	tv->tv_sec = sec;
  	tv->tv_usec = usec;
  }
-@@ -174,6 +183,9 @@
+@@ -175,6 +184,9 @@
  {
  	int retval;
  
@@ -1142,7 +1159,7 @@ diff -urN a/arch/i386/kernel/time.c b/arch/i386/kernel/time.c
  	/* gets recalled with irq locally disabled */
  	spin_lock(&rtc_lock);
  	if (efi_enabled)
-@@ -243,7 +255,8 @@
+@@ -244,7 +256,8 @@
  	 * CMOS clock accordingly every ~11 minutes. Set_rtc_mmss() has to be
  	 * called as close as possible to 500 ms before the new second starts.
  	 */
@@ -1152,7 +1169,7 @@ diff -urN a/arch/i386/kernel/time.c b/arch/i386/kernel/time.c
  	    xtime.tv_sec > last_rtc_update + 660 &&
  	    (xtime.tv_nsec / 1000)
  			>= USEC_AFTER - ((unsigned) TICK_SIZE) / 2 &&
-@@ -307,6 +320,9 @@
+@@ -306,6 +319,9 @@
  {
  	unsigned long retval;
  
@@ -1425,10 +1442,10 @@ diff -urN a/arch/i386/kernel/traps.c b/arch/i386/kernel/traps.c
  		if (!fixup_exception(regs))
  			die(str, regs, error_code);
  		return;
-@@ -683,9 +692,15 @@
+@@ -682,9 +691,15 @@
+ {
  	unsigned int condition;
  	struct task_struct *tsk = current;
- 	siginfo_t info;
 -
 +	
  	__asm__ __volatile__("movl %%db6,%0" : "=r" (condition));
@@ -1462,7 +1479,7 @@ diff -urN a/arch/i386/kernel/vmlinux.lds.S b/arch/i386/kernel/vmlinux.lds.S
 diff -urN a/arch/i386/mm/fault.c b/arch/i386/mm/fault.c
 --- a/arch/i386/mm/fault.c
 +++ b/arch/i386/mm/fault.c
-@@ -449,7 +449,8 @@
+@@ -447,7 +447,8 @@
  	printk(KERN_ALERT " printing eip:\n");
  	printk("%08lx\n", regs->eip);
  	asm("movl %%cr3,%0":"=r" (page));
@@ -1472,7 +1489,7 @@ diff -urN a/arch/i386/mm/fault.c b/arch/i386/mm/fault.c
  	printk(KERN_ALERT "*pde = %08lx\n", page);
  	/*
  	 * We must not directly access the pte in the highpte
-@@ -462,6 +463,7 @@
+@@ -460,6 +461,7 @@
  		page &= PAGE_MASK;
  		address &= 0x003ff000;
  		page = ((unsigned long *) __va(page))[address >> PAGE_SHIFT];
@@ -1480,7 +1497,7 @@ diff -urN a/arch/i386/mm/fault.c b/arch/i386/mm/fault.c
  		printk(KERN_ALERT "*pte = %08lx\n", page);
  	}
  #endif
-@@ -522,7 +524,7 @@
+@@ -521,7 +523,7 @@
  		pte_t *pte_k;
  
  		asm("movl %%cr3,%0":"=r" (pgd_paddr));
@@ -1500,7 +1517,7 @@ diff -urN a/arch/i386/mm/init.c b/arch/i386/mm/init.c
  
  #include <asm/processor.h>
  #include <asm/system.h>
-@@ -76,7 +77,7 @@
+@@ -79,7 +80,7 @@
  {
  	if (pmd_none(*pmd)) {
  		pte_t *page_table = (pte_t *) alloc_bootmem_low_pages(PAGE_SIZE);
@@ -1509,7 +1526,7 @@ diff -urN a/arch/i386/mm/init.c b/arch/i386/mm/init.c
  		if (page_table != pte_offset_kernel(pmd, 0))
  			BUG();	
  
-@@ -313,21 +314,23 @@
+@@ -319,21 +320,23 @@
  		set_pgd(pgd_base + i, __pgd(__pa(empty_zero_page) | _PAGE_PRESENT));
  #endif
  
@@ -1546,7 +1563,7 @@ diff -urN a/arch/i386/mm/init.c b/arch/i386/mm/init.c
  	/*
  	 * Fixed mappings, only the page table structure has to be
  	 * created - mappings will be set by set_fixmap():
-@@ -394,19 +397,26 @@
+@@ -400,19 +403,26 @@
  	unsigned long zones_size[MAX_NR_ZONES] = {0, 0, 0};
  	unsigned int max_dma, high, low;
  	
@@ -1583,7 +1600,7 @@ diff -urN a/arch/i386/mm/init.c b/arch/i386/mm/init.c
  	free_area_init(zones_size);	
  }
  #else
-@@ -574,7 +584,6 @@
+@@ -576,7 +586,6 @@
  	if (!mem_map)
  		BUG();
  #endif
@@ -1591,7 +1608,7 @@ diff -urN a/arch/i386/mm/init.c b/arch/i386/mm/init.c
  	bad_ppro = ppro_with_ram_bug();
  
  #ifdef CONFIG_HIGHMEM
-@@ -630,8 +639,10 @@
+@@ -632,8 +641,10 @@
  	if (!cpu_has_pae)
  		panic("cannot execute a PAE-enabled kernel on a PAE-less CPU!");
  #endif
@@ -1615,7 +1632,7 @@ diff -urN a/arch/i386/mm/ioremap.c b/arch/i386/mm/ioremap.c
  #include <asm/io.h>
  #include <asm/fixmap.h>
  #include <asm/cacheflush.h>
-@@ -190,7 +191,14 @@
+@@ -195,7 +196,14 @@
  void __iomem *ioremap_nocache (unsigned long phys_addr, unsigned long size)
  {
  	unsigned long last_addr;
@@ -1634,7 +1651,7 @@ diff -urN a/arch/i386/mm/ioremap.c b/arch/i386/mm/ioremap.c
 diff -urN a/drivers/block/Kconfig b/drivers/block/Kconfig
 --- a/drivers/block/Kconfig
 +++ b/drivers/block/Kconfig
-@@ -358,6 +358,15 @@
+@@ -408,6 +408,15 @@
  	  "real" root file system, etc. See <file:Documentation/initrd.txt>
  	  for details.
  
@@ -1648,7 +1665,7 @@ diff -urN a/drivers/block/Kconfig b/drivers/block/Kconfig
 +	  If unsure, say Y.
 +
  config INITRAMFS_SOURCE
- 	string "Source directory of cpio_list"
+ 	string "Initramfs source file(s)"
  	default ""
 diff -urN a/drivers/block/Makefile b/drivers/block/Makefile
 --- a/drivers/block/Makefile
@@ -2208,7 +2225,7 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 diff -urN a/drivers/char/Makefile b/drivers/char/Makefile
 --- a/drivers/char/Makefile
 +++ b/drivers/char/Makefile
-@@ -27,6 +27,7 @@
+@@ -26,6 +26,7 @@
  obj-$(CONFIG_STALLION)		+= stallion.o
  obj-$(CONFIG_ISTALLION)		+= istallion.o
  obj-$(CONFIG_DIGI)		+= pcxx.o
@@ -2652,11 +2669,13 @@ diff -urN a/drivers/char/mem.c b/drivers/char/mem.c
 diff -urN a/drivers/input/keyboard/Kconfig b/drivers/input/keyboard/Kconfig
 --- a/drivers/input/keyboard/Kconfig
 +++ b/drivers/input/keyboard/Kconfig
-@@ -16,7 +16,7 @@
+@@ -16,8 +16,8 @@
  	default y
  	depends on INPUT && INPUT_KEYBOARD
  	select SERIO
+-	select SERIO_LIBPS2
 -	select SERIO_I8042 if PC
++ 	select SERIO_LIBPS2
 +	select SERIO_I8042 if PC && !COOPERATIVE
  	select SERIO_GSCPS2 if GSC
  	help
@@ -2664,16 +2683,16 @@ diff -urN a/drivers/input/keyboard/Kconfig b/drivers/input/keyboard/Kconfig
 diff -urN a/drivers/input/keyboard/atkbd.c b/drivers/input/keyboard/atkbd.c
 --- a/drivers/input/keyboard/atkbd.c
 +++ b/drivers/input/keyboard/atkbd.c
-@@ -26,6 +26,7 @@
- #include <linux/input.h>
+@@ -27,6 +27,7 @@
  #include <linux/serio.h>
  #include <linux/workqueue.h>
+ #include <linux/libps2.h>
 +#include <linux/cooperative_internal.h>
  
  #define DRIVER_DESC	"AT and PS/2 keyboard driver"
  
-@@ -640,6 +641,9 @@
- {
+@@ -496,6 +497,9 @@
+ 	struct ps2dev *ps2dev = &atkbd->ps2dev;
  	unsigned char param[2];
  
 +	if (cooperative_mode_enabled())
@@ -2692,9 +2711,9 @@ diff -urN a/drivers/input/mouse/Kconfig b/drivers/input/mouse/Kconfig
 -	depends on INPUT && INPUT_MOUSE
 +	depends on INPUT && INPUT_MOUSE && !COOPERATIVE
  	select SERIO
+ 	select SERIO_LIBPS2
  	select SERIO_I8042 if PC
- 	select SERIO_GSCPS2 if GSC
-@@ -36,9 +36,21 @@
+@@ -37,9 +37,21 @@
  	  To compile this driver as a module, choose M here: the
  	  module will be called psmouse.
  
@@ -2717,7 +2736,7 @@ diff -urN a/drivers/input/mouse/Kconfig b/drivers/input/mouse/Kconfig
  	select SERIO
  	---help---
  	  Say Y here if you have a serial (RS-232, COM port) mouse connected
-@@ -52,7 +64,7 @@
+@@ -53,7 +65,7 @@
  
  config MOUSE_INPORT
  	tristate "InPort/MS/ATIXL busmouse"
@@ -2726,7 +2745,7 @@ diff -urN a/drivers/input/mouse/Kconfig b/drivers/input/mouse/Kconfig
  	help
  	  Say Y here if you have an InPort, Microsoft or ATI XL busmouse.
  	  They are rather rare these days.
-@@ -62,13 +74,13 @@
+@@ -63,13 +75,13 @@
  
  config MOUSE_ATIXL
  	bool "ATI XL variant"
@@ -2742,7 +2761,7 @@ diff -urN a/drivers/input/mouse/Kconfig b/drivers/input/mouse/Kconfig
  	help
  	  Say Y here if you have a Logitech busmouse.
  	  They are rather rare these days.
-@@ -78,7 +90,7 @@
+@@ -79,7 +91,7 @@
  
  config MOUSE_PC110PAD
  	tristate "IBM PC110 touchpad"
@@ -2751,7 +2770,7 @@ diff -urN a/drivers/input/mouse/Kconfig b/drivers/input/mouse/Kconfig
  	help
  	  Say Y if you have the IBM PC-110 micro-notebook and want its
  	  touchpad supported.
-@@ -88,7 +100,7 @@
+@@ -89,7 +101,7 @@
  
  config MOUSE_MAPLE
  	tristate "Maple bus mouse"
@@ -2760,7 +2779,7 @@ diff -urN a/drivers/input/mouse/Kconfig b/drivers/input/mouse/Kconfig
  	help
  	  Say Y if you have a DreamCast console and a mouse attached to
  	  its Maple bus.
-@@ -98,7 +110,7 @@
+@@ -99,7 +111,7 @@
  
  config MOUSE_AMIGA
  	tristate "Amiga mouse"
@@ -2769,7 +2788,7 @@ diff -urN a/drivers/input/mouse/Kconfig b/drivers/input/mouse/Kconfig
  	help
  	  Say Y here if you have an Amiga and want its native mouse
  	  supported by the kernel.
-@@ -108,7 +120,7 @@
+@@ -109,7 +121,7 @@
  
  config MOUSE_RISCPC
  	tristate "Acorn RiscPC mouse"
@@ -2778,7 +2797,7 @@ diff -urN a/drivers/input/mouse/Kconfig b/drivers/input/mouse/Kconfig
  	help
  	  Say Y here if you have the Acorn RiscPC computer and want its
  	  native mouse supported.
-@@ -118,7 +130,7 @@
+@@ -119,7 +131,7 @@
  
  config MOUSE_VSXXXAA
  	tristate "DEC VSXXX-AA/GA mouse and VSXXX-AB tablet"
@@ -2888,8 +2907,8 @@ diff -urN a/drivers/input/serio/Kconfig b/drivers/input/serio/Kconfig
  	---help---
  	  i8042 is the chip over which the standard AT keyboard and PS/2
  	  mouse are connected to the computer. If you use these devices,
-@@ -132,17 +132,22 @@
- 	  module will be called maceps2.
+@@ -142,17 +142,22 @@
+ 	  module will be called libps2.
  
  config SERIO_RAW
 -	tristate "Raw access to serio ports"
@@ -2928,9 +2947,9 @@ diff -urN a/drivers/input/serio/Kconfig b/drivers/input/serio/Kconfig
 diff -urN a/drivers/input/serio/Makefile b/drivers/input/serio/Makefile
 --- a/drivers/input/serio/Makefile
 +++ b/drivers/input/serio/Makefile
-@@ -18,3 +18,4 @@
- obj-$(CONFIG_SERIO_PCIPS2)	+= pcips2.o
+@@ -19,3 +19,4 @@
  obj-$(CONFIG_SERIO_MACEPS2)	+= maceps2.o
+ obj-$(CONFIG_SERIO_LIBPS2)	+= libps2.o
  obj-$(CONFIG_SERIO_RAW)		+= serio_raw.o
 +obj-$(CONFIG_SERIO_COKBD)	+= cokbd.o
 \ No newline at end of file
@@ -3096,7 +3115,7 @@ diff -urN a/drivers/input/serio/cokbd.c b/drivers/input/serio/cokbd.c
 diff -urN a/drivers/net/Kconfig b/drivers/net/Kconfig
 --- a/drivers/net/Kconfig
 +++ b/drivers/net/Kconfig
-@@ -127,6 +127,10 @@
+@@ -128,6 +128,10 @@
  
  	  If you don't know what to use this for, you don't need it.
  
@@ -3990,7 +4009,7 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 diff -urN a/fs/Kconfig b/fs/Kconfig
 --- a/fs/Kconfig
 +++ b/fs/Kconfig
-@@ -1098,6 +1098,19 @@
+@@ -993,6 +993,19 @@
  	  containing the directory /) cannot be compiled as a module.
  
  
@@ -4013,10 +4032,10 @@ diff -urN a/fs/Kconfig b/fs/Kconfig
 diff -urN a/fs/Makefile b/fs/Makefile
 --- a/fs/Makefile
 +++ b/fs/Makefile
-@@ -94,3 +94,5 @@
- obj-$(CONFIG_BEFS_FS)		+= befs/
+@@ -95,3 +95,5 @@
  obj-$(CONFIG_HOSTFS)		+= hostfs/
  obj-$(CONFIG_HPPFS)		+= hppfs/
+ obj-$(CONFIG_DEBUG_FS)		+= debugfs/
 +obj-$(CONFIG_COFUSE_FS)		+= cofusefs/
 +
 diff -urN a/fs/cofusefs/Makefile b/fs/cofusefs/Makefile
@@ -7385,8 +7404,8 @@ diff -urN a/include/asm-i386/bug.h b/include/asm-i386/bug.h
 @@ -10,11 +10,16 @@
   */
  
- #if 1	/* Set to zero for a slightly smaller kernel */
-+#if CONFIG_COOPERATIVE
+ #ifdef CONFIG_DEBUG_BUGVERBOSE
++#ifdef CONFIG_COOPERATIVE
 +extern void co_terminate_bug(int code, int line, const char *file);
 +#define BUG() do { co_terminate_bug(0, __LINE__, __FILE__); } while(0)
 +#else
@@ -7766,16 +7785,6 @@ diff -urN a/include/asm-i386/mmzone.h b/include/asm-i386/mmzone.h
  
  #ifdef CONFIG_DISCONTIGMEM
  
-@@ -116,7 +118,8 @@
- 	(unsigned long)(__page - __zone->zone_mem_map)			\
- 		+ __zone->zone_start_pfn;				\
- })
--#define pmd_page(pmd)		(pfn_to_page(pmd_val(pmd) >> PAGE_SHIFT))
-+
-+#define pmd_page(pmd)		(pfn_to_page(CO_P_TO_PP(pmd_val(pmd)) >> PAGE_SHIFT))
- 
- #ifdef CONFIG_X86_NUMAQ            /* we have contiguous memory on NUMA-Q */
- #define pfn_valid(pfn)          ((pfn) < num_physpages)
 diff -urN a/include/asm-i386/page.h b/include/asm-i386/page.h
 --- a/include/asm-i386/page.h
 +++ b/include/asm-i386/page.h
@@ -7787,7 +7796,7 @@ diff -urN a/include/asm-i386/page.h b/include/asm-i386/page.h
  
  #ifdef CONFIG_X86_USE_3DNOW
  
-@@ -126,6 +127,19 @@
+@@ -127,6 +128,19 @@
  #define __PAGE_OFFSET		(0xC0000000UL)
  #endif
  
@@ -7826,7 +7835,7 @@ diff -urN a/include/asm-i386/param.h b/include/asm-i386/param.h
 diff -urN a/include/asm-i386/pgalloc.h b/include/asm-i386/pgalloc.h
 --- a/include/asm-i386/pgalloc.h
 +++ b/include/asm-i386/pgalloc.h
-@@ -6,15 +6,16 @@
+@@ -6,13 +6,14 @@
  #include <asm/fixmap.h>
  #include <linux/threads.h>
  #include <linux/mm.h>		/* for struct page */
@@ -7836,14 +7845,11 @@ diff -urN a/include/asm-i386/pgalloc.h b/include/asm-i386/pgalloc.h
 -		set_pmd(pmd, __pmd(_PAGE_TABLE + __pa(pte)))
 +		set_pmd(pmd, __pmd(_PAGE_TABLE + CO_PP_TO_P(__pa(pte))))
  
- static inline void pmd_populate(struct mm_struct *mm, pmd_t *pmd, struct page *pte)
- {
- 	set_pmd(pmd, __pmd(_PAGE_TABLE +
--		((unsigned long long)page_to_pfn(pte) <<
--			(unsigned long long) PAGE_SHIFT)));
-+			   ((CO_PFN_PP_TO_P((unsigned long long)page_to_pfn(pte))) <<
-+			    (unsigned long long) PAGE_SHIFT)));
- }
+ #define pmd_populate(mm, pmd, pte) 				\
+ 	set_pmd(pmd, __pmd(_PAGE_TABLE +			\
+-		((unsigned long long)page_to_pfn(pte) <<	\
++       (CO_PFN_PP_TO_P((unsigned long long)page_to_pfn(pte)) << \
+ 			(unsigned long long) PAGE_SHIFT)))
  /*
   * Allocate and free page tables.
 diff -urN a/include/asm-i386/pgtable-2level.h b/include/asm-i386/pgtable-2level.h
@@ -7857,20 +7863,13 @@ diff -urN a/include/asm-i386/pgtable-2level.h b/include/asm-i386/pgtable-2level.
 +#include <asm/cooperative.h>
 +
  /*
-  * The "pgd_xxx()" functions here are trivial for a folded two-level
-  * setup: the pgd is never bad, and a pmd always exists (as it's folded
-@@ -33,19 +36,21 @@
- #define set_pgd(pgdptr, pgdval) (*(pgdptr) = pgdval)
- 
- #define pgd_page(pgd) \
--((unsigned long) __va(pgd_val(pgd) & PAGE_MASK))
-+	((unsigned long) __va(CO_P_TO_PP(pgd_val(pgd)) & PAGE_MASK))
- 
- static inline pmd_t * pmd_offset(pgd_t * dir, unsigned long address)
- {
- 	return (pmd_t *) dir;
- }
-+
+  * Certain architectures need to do special things when PTEs
+  * within a page table are directly modified.  Thus, the following
+@@ -16,19 +19,19 @@
+ #define set_pte(pteptr, pteval) (*(pteptr) = pteval)
+ #define set_pte_atomic(pteptr, pteval) set_pte(pteptr,pteval)
+ #define set_pmd(pmdptr, pmdval) (*(pmdptr) = (pmdval))
+-
  #define ptep_get_and_clear(xp)	__pte(xchg(&(xp)->pte_low, 0))
  #define pte_same(a, b)		((a).pte_low == (b).pte_low)
 +
@@ -7882,6 +7881,14 @@ diff -urN a/include/asm-i386/pgtable-2level.h b/include/asm-i386/pgtable-2level.
 -#define pte_pfn(x)		((unsigned long)(((x).pte_low >> PAGE_SHIFT)))
 -#define pfn_pte(pfn, prot)	__pte(((pfn) << PAGE_SHIFT) | pgprot_val(prot))
 -#define pfn_pmd(pfn, prot)	__pmd(((pfn) << PAGE_SHIFT) | pgprot_val(prot))
+-
+-#define pmd_page(pmd) (pfn_to_page(pmd_val(pmd) >> PAGE_SHIFT))
+ 
++#define pmd_page(pmd) (pfn_to_page(CO_P_TO_PP(pmd_val(pmd)) >> PAGE_SHIFT))
++ 
+ #define pmd_page_kernel(pmd) \
+-((unsigned long) __va(pmd_val(pmd) & PAGE_MASK))
++	((unsigned long) __va(CO_P_TO_PP(pmd_val(pmd)) & PAGE_MASK))
  
  /*
   * All present user pages are user-executable:
@@ -7897,23 +7904,19 @@ diff -urN a/include/asm-i386/pgtable.h b/include/asm-i386/pgtable.h
  /*
   * ZERO_PAGE is a global shared page that is always zero: used
   * for zero-mapped memory areas etc..
-@@ -294,10 +296,10 @@
+@@ -294,7 +296,7 @@
  #define page_pte(page) page_pte_prot(page, __pgprot(0))
  
- #define pmd_page_kernel(pmd) \
--((unsigned long) __va(pmd_val(pmd) & PAGE_MASK))
-+((unsigned long) __va(CO_P_TO_PP(pmd_val(pmd)) & PAGE_MASK))
- 
- #ifndef CONFIG_DISCONTIGMEM
--#define pmd_page(pmd) (pfn_to_page(pmd_val(pmd) >> PAGE_SHIFT))
-+#define pmd_page(pmd) (pfn_to_page(CO_PFN_P_TO_PP(pmd_val(pmd) >> PAGE_SHIFT)))
- #endif /* !CONFIG_DISCONTIGMEM */
- 
  #define pmd_large(pmd) \
+-((pmd_val(pmd) & (_PAGE_PSE|_PAGE_PRESENT)) == (_PAGE_PSE|_PAGE_PRESENT))
++	((pmd_val(pmd) & (_PAGE_PSE|_PAGE_PRESENT)) == (_PAGE_PSE|_PAGE_PRESENT))
+ 
+ /*
+  * the pgd page can be thought of an array like this: pgd_t[PTRS_PER_PGD]
 diff -urN a/include/asm-i386/processor.h b/include/asm-i386/processor.h
 --- a/include/asm-i386/processor.h
 +++ b/include/asm-i386/processor.h
-@@ -182,8 +182,7 @@
+@@ -192,8 +192,7 @@
  }
  
  #define load_cr3(pgdir) \
@@ -8663,7 +8666,7 @@ diff -urN a/include/linux/major.h b/include/linux/major.h
 diff -urN a/init/do_mounts.c b/init/do_mounts.c
 --- a/init/do_mounts.c
 +++ b/init/do_mounts.c
-@@ -175,6 +175,7 @@
+@@ -176,6 +176,7 @@
  	for (p = s; *p; p++)
  		if (*p == '/')
  			*p = '!';
@@ -8671,17 +8674,6 @@ diff -urN a/init/do_mounts.c b/init/do_mounts.c
  	res = try_name(s, 0);
  	if (res)
  		goto done;
-diff -urN a/init/main.c b/init/main.c
---- a/init/main.c
-+++ b/init/main.c
-@@ -537,6 +537,7 @@
- 		panic(panic_later, panic_param);
- 	profile_init();
- 	local_irq_enable();
-+
- #ifdef CONFIG_BLK_DEV_INITRD
- 	if (initrd_start && !initrd_below_start_ok &&
- 			initrd_start < min_low_pfn << PAGE_SHIFT) {
 diff -urN a/kernel/Makefile b/kernel/Makefile
 --- a/kernel/Makefile
 +++ b/kernel/Makefile
@@ -8717,7 +8709,7 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +CO_TRACE_STOP;
 +
 +void start_kernel(void);
-+extern char _kernel_start, _end;
++extern char _kernel_start;
 +
 +
 +unsigned long co_core_end = 0;
@@ -8939,7 +8931,7 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +	int size;
 +	char *dest;
 +
-+	co_passage_page_assert_valid();	
++	co_passage_page_assert_valid();
 +
 +	co_passage_page_acquire(&flags);
 +	size = strlen(line);
@@ -9152,7 +9144,7 @@ diff -urN a/kernel/printk.c b/kernel/printk.c
  #define __LOG_BUF_LEN	(1 << CONFIG_LOG_BUF_SHIFT)
  
  /* printk's without a loglevel use this.. */
-@@ -538,6 +540,8 @@
+@@ -541,6 +543,8 @@
  	/* Emit the output into the temporary buffer */
  	printed_len = vscnprintf(printk_buf, sizeof(printk_buf), fmt, args);
  
@@ -9176,8 +9168,8 @@ diff -urN a/mm/bootmem.c b/mm/bootmem.c
 +#include <linux/cooperative_internal.h>
  #include <asm/dma.h>
  #include <asm/io.h>
- 
-@@ -248,6 +249,23 @@
+ #include "internal.h"
+@@ -249,6 +250,23 @@
  	for (i = start; i < start+areasize; i++)
  		if (unlikely(test_and_set_bit(i, bdata->node_bootmem_map)))
  			BUG();
@@ -9204,29 +9196,75 @@ diff -urN a/mm/bootmem.c b/mm/bootmem.c
 diff -urN a/mm/page_alloc.c b/mm/page_alloc.c
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
-@@ -32,7 +32,7 @@
- #include <linux/sysctl.h>
+@@ -33,11 +33,11 @@
  #include <linux/cpu.h>
  #include <linux/nodemask.h>
--
+ #include <linux/vmalloc.h>
 +#include <linux/cooperative_internal.h>
- #include <asm/tlbflush.h>
  
- nodemask_t node_online_map = NODE_MASK_NONE;
-@@ -184,6 +184,9 @@
- {
- 	unsigned long page_idx, index, mask;
+ #include <asm/tlbflush.h>
+ #include "internal.h"
+ 
+-/* MCD - HACK: Find somewhere to initialize this EARLY, or make this initializer cleaner */
+ nodemask_t node_online_map = { { [0] = 1UL } };
+ nodemask_t node_possible_map = NODE_MASK_ALL;
+ struct pglist_data *pgdat_list;
+@@ -240,10 +240,13 @@
+ 	struct page *coalesced;
+ 	int order_size = 1 << order;
  
 +	if (cooperative_mode_enabled())
-+		co_free_pages((unsigned long)page_address(page), 1 << order);
++		co_free_pages((unsigned long)page_address(page), order_size);
 +
- 	if (order)
- 		destroy_compound_page(page, order);
- 	mask = (~0UL) << order;
-@@ -738,6 +741,37 @@
+ 	if (unlikely(order))
+-		destroy_compound_page(page, order);
++  		destroy_compound_page(page, order);
+ 
+-	page_idx = page - base;
++ 	page_idx = page - base;
+ 
+ 	BUG_ON(page_idx & (order_size - 1));
+ 	BUG_ON(bad_range(zone, page));
+@@ -259,15 +262,15 @@
+ 		if (bad_range(zone, buddy))
+ 			break;
+ 		if (!page_is_buddy(buddy, order))
+-			break;
+-		/* Move the buddy up one level. */
++  			break;
++  		/* Move the buddy up one level. */
+ 		list_del(&buddy->lru);
+ 		area = zone->free_area + order;
+ 		area->nr_free--;
+ 		rmv_page_order(buddy);
+ 		page_idx &= buddy_idx;
+ 		order++;
+-	}
++  	}
+ 	coalesced = base + page_idx;
+ 	set_page_order(coalesced, order);
+ 	list_add(&coalesced->lru, &zone->free_area[order].free_list);
+@@ -603,9 +606,16 @@
+ {
+ 	int i;
+ 
++	if (cooperative_mode_enabled()) {
++		int result;
++		result = co_alloc_pages((unsigned long)page_address(page), 1 << order);
++		BUG_ON(result != 0);
++	}
++
+ 	BUG_ON((gfp_flags & (__GFP_WAIT | __GFP_HIGHMEM)) == __GFP_HIGHMEM);
+ 	for(i = 0; i < (1 << order); i++)
+ 		clear_highpage(page + i);
++
+ }
+ 
+ /*
+@@ -852,6 +862,37 @@
+ 	return NULL;
  got_pg:
  	zone_statistics(zonelist, z);
- 	kernel_map_pages(page, 1 << order, 1);
 +
 +	if (cooperative_mode_enabled()) {
 +		int result, retries_left;
@@ -9264,7 +9302,7 @@ diff -urN a/mm/page_alloc.c b/mm/page_alloc.c
 diff -urN a/mm/vmscan.c b/mm/vmscan.c
 --- a/mm/vmscan.c
 +++ b/mm/vmscan.c
-@@ -1180,7 +1180,7 @@
+@@ -1205,7 +1205,7 @@
  	wake_up_interruptible(&zone->zone_pgdat->kswapd_wait);
  }
  
