@@ -718,7 +718,8 @@ static co_rc_t alloc_pp_ram_mapping(co_monitor_t *monitor)
 	co_memset(monitor->pp_pfns, 0, sizeof(co_pfn_t *)*PTRS_PER_PGD);
 
 	full_page_tables_size = CO_ARCH_PAGE_SIZE * (monitor->memory_size >> CO_ARCH_PMD_SHIFT);
-	partial_page_table_size = ((monitor->memory_size & ~CO_ARCH_PMD_MASK) >> CO_ARCH_PAGE_SHIFT);
+	partial_page_table_size = sizeof(unsigned long) *
+		((monitor->memory_size & ~CO_ARCH_PMD_MASK) >> (CO_ARCH_PAGE_SHIFT));
 
 	rc = co_monitor_scan_and_create_pfns(
 		monitor, 
