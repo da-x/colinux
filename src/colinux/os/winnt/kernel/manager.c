@@ -26,6 +26,7 @@ co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
 	memset(*osdep, 0, sizeof(**osdep));
 
 	co_list_init(&(*osdep)->mdl_list);
+	co_list_init(&(*osdep)->mapped_allocated_list);
 	co_list_init(&(*osdep)->pages_unused);
 	for (i=0; i < PFN_HASH_SIZE; i++)
 		co_list_init(&(*osdep)->pages_hash[i]);

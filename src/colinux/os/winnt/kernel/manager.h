@@ -42,7 +42,10 @@ typedef struct co_os_pfn_ptr {
 		void *page;
 	};
 	co_list_t node;
-	co_list_t unused;
+	union {
+		co_list_t unused;
+		co_list_t mapped_allocated_node;
+	};
 } co_os_pfn_ptr_t;
 
 #define PFN_HASH(pfn) (pfn % PFN_HASH_SIZE)
@@ -52,6 +55,7 @@ struct co_osdep_manager {
 	co_list_t pages_hash[PFN_HASH_SIZE]; /* array of lists of co_os_pfn_ptr_t */
 	co_list_t pages_unused;
 	co_list_t mdl_list;
+	co_list_t mapped_allocated_list;
 
 	unsigned long mdls_allocated;
 	unsigned long pages_allocated;

@@ -86,6 +86,39 @@ error_free_mdl_ptr:
 	return rc;
 }
 
+static co_rc_t co_winnt_new_mapped_allocated_page(struct co_manager *manager, co_pfn_t *pfn)
+{
+	co_os_pfn_ptr_t *pfn_ptr;
+	void *page;
+
+	pfn_ptr = co_os_malloc(sizeof(*pfn_ptr));
+	if (!pfn_ptr)
+		return CO_RC(OUT_OF_MEMORY);
+
+	page = MmAllocateNonCachedMemory(PAGE_SIZE);
+	if (!page) {
+		co_os_free(pfn_ptr);
+		return CO_RC(OUT_OF_MEMORY);
+	}
+
+	pfn_ptr->type = CO_OS_PFN_PTR_TYPE_PAGE;
+	pfn_ptr->pfn = co_os_virt_to_phys(page) >> CO_ARCH_PAGE_SHIFT;
+	pfn_ptr->page = page;
+	co_list_add_head(&pfn_ptr->node, &manager->osdep->pages_hash[PFN_HASH(pfn_ptr->pfn)]);
+	co_list_add_head(&pfn_ptr->mapped_allocated_node, &manager->osdep->mapped_allocated_list);
+	*pfn = pfn_ptr->pfn;
+
+	return CO_RC(OK);
+}
+
+static void co_winnt_free_mapped_allocated_page(co_osdep_manager_t osdep, co_os_pfn_ptr_t *pfn_ptr)
+{
+	co_list_del(&pfn_ptr->mapped_allocated_node);
+	co_list_del(&pfn_ptr->node);
+	MmFreeNonCachedMemory(pfn_ptr->page, PAGE_SIZE);
+	co_os_free(pfn_ptr);
+}
+
 static void co_winnt_free_mdl_bucket_no_lists(co_osdep_manager_t osdep, co_os_mdl_ptr_t *mdl_ptr)
 {
 	MmFreePagesFromMdl(mdl_ptr->mdl);
@@ -108,8 +141,8 @@ static void co_winnt_free_mdl_bucket(struct co_manager *manager, co_os_mdl_ptr_t
 	
 	co_winnt_free_mdl_bucket_no_lists(manager->osdep, mdl_ptr);
 }
-
-static void co_os_get_unused_page(struct co_manager *manager, co_pfn_t *pfn)
+ 
+static void co_os_get_unused_mdl_page(struct co_manager *manager, co_pfn_t *pfn)
 {
 	co_os_pfn_ptr_t *pfn_ptr;
 
@@ -117,29 +150,33 @@ static void co_os_get_unused_page(struct co_manager *manager, co_pfn_t *pfn)
 	pfn_ptr->mdl->use_count++;
 	co_list_del(&pfn_ptr->unused);
 	*pfn = pfn_ptr->pfn;
-
 	manager->osdep->pages_allocated++;
 }
 
-static void co_os_put_unused_page(struct co_manager *manager, co_os_pfn_ptr_t *pfn_ptr)
+static void co_winnt_put_unused_mdl_page(struct co_manager *manager, co_os_pfn_ptr_t *pfn_ptr)
 {
 	co_os_mdl_ptr_t *mdl_ptr = pfn_ptr->mdl;
-
+	
 	mdl_ptr->use_count--;
 	co_list_add_head(&pfn_ptr->unused, &manager->osdep->pages_unused);
 	if (mdl_ptr->use_count == 0)
 		co_winnt_free_mdl_bucket(manager, mdl_ptr);
-
 	manager->osdep->pages_allocated--;
 }
 
 void co_winnt_free_all_pages(co_osdep_manager_t osdep)
 {
 	co_os_mdl_ptr_t *mdl_ptr;
-
+	co_os_pfn_ptr_t *pfn_ptr;
+	
 	while (!co_list_empty(&osdep->mdl_list)) {
 		mdl_ptr = co_list_entry(osdep->mdl_list.next, co_os_mdl_ptr_t, node);
 		co_winnt_free_mdl_bucket_no_lists(osdep, mdl_ptr);
+	}
+
+	while (!co_list_empty(&osdep->mapped_allocated_list)) {
+		pfn_ptr = co_list_entry(osdep->mapped_allocated_list.next, co_os_pfn_ptr_t, mapped_allocated_node);
+		co_winnt_free_mapped_allocated_page(osdep, pfn_ptr);
 	}
 
 	osdep->pages_allocated = 0;
@@ -147,24 +184,25 @@ void co_winnt_free_all_pages(co_osdep_manager_t osdep)
 
 co_rc_t co_os_get_page(struct co_manager *manager, co_pfn_t *pfn)
 {
+	co_rc_t rc = CO_RC(OK);
+
 	co_os_mutex_acquire(manager->osdep->mutex);
 
 	if (!co_list_empty(&manager->osdep->pages_unused)) {
-		co_os_get_unused_page(manager, pfn);
-		co_os_mutex_release(manager->osdep->mutex);
-		return CO_RC(OK);
+		co_os_get_unused_mdl_page(manager, pfn);
+		goto out;
 	}
 	
-	co_rc_t rc = co_winnt_new_mdl_bucket(manager);
-	if (!CO_OK(rc)) {
-		co_os_mutex_release(manager->osdep->mutex);
-		return rc;
+	rc = co_winnt_new_mdl_bucket(manager);
+	if (CO_OK(rc)) {
+		co_os_get_unused_mdl_page(manager, pfn);
+	} else {
+		rc = co_winnt_new_mapped_allocated_page(manager, pfn);
 	}
-	
-	co_os_get_unused_page(manager, pfn);
 
+out:
 	co_os_mutex_release(manager->osdep->mutex);
-	return CO_RC(OK);
+	return rc;
 }
 
 void co_os_put_page(struct co_manager *manager, co_pfn_t pfn)
@@ -179,7 +217,9 @@ void co_os_put_page(struct co_manager *manager, co_pfn_t pfn)
 			continue;
 
 		if (pfn_ptr->type == CO_OS_PFN_PTR_TYPE_MDL)
-			co_os_put_unused_page(manager, pfn_ptr);
+			co_winnt_put_unused_mdl_page(manager, pfn_ptr);
+		else
+			co_winnt_free_mapped_allocated_page(manager->osdep, pfn_ptr);
 		
 		break;
 	}
