@@ -51,7 +51,7 @@ co_rc_t co_os_sendn(int sock, char *data, unsigned long size)
 	co_os_set_blocking(sock, PTRUE);
 
 	do {
-		int sent = send(sock, data, size, 0);
+		int sent = write(sock, data, size);
 		if (sent < 0) {
 			rc = CO_RC(ERROR);
 			break;

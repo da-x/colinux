@@ -18,7 +18,7 @@ co_manager_t *global_manager = NULL;
 
 static int __init test_module_init(void)
 {
-	printk("colinux: module loaded (%s, %s)\n", COLINUX_VERSION, COLINUX_COMPILE_TIME);
+	printk("colinux: loaded version %s (compiled on %s)\n", COLINUX_VERSION, COLINUX_COMPILE_TIME);
 
 	global_manager = co_os_malloc(sizeof(co_manager_t));
 	if (global_manager == NULL) {

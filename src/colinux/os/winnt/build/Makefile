@@ -60,7 +60,7 @@ LOCAL_TARGETS := $(LOCAL_TARGET) $(BUILD_PATH)/driver.o
 
 bridged_net_daemon: $(BUILD_ROOT)/colinux/os/current/user/conet-bridged-daemon/colinux-bridged-net-daemon.exe
 
-colinux: $(LOCAL_FILES) 
+colinux: $(BUILD_ROOT)/colinux/common/version.h $(LOCAL_FILES)
 
 driver: $(BUILD_PATH)/driver.o
 

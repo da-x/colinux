@@ -30,33 +30,34 @@ function get_files()
      binutils_2.14.90.0.7.orig.tar.gz \
      3211f9065fd85f5f726f08c2f0c3db0c 
   download http://ftp.debian.org/debian/pool/main/b/binutils \
-     binutils_2.14.90.0.7-5.diff.gz \
-     3f1bf28faa4e82a97fc92d4f1508bf44                                                        
+     binutils_2.14.90.0.7-6.diff.gz \
+     6955115ca84ea584de2e1df4b53c8914                                           
 # gcc-core + gcc-g++ + patch
-  download ftp://ftp.gwdg.de/pub/misc/gcc/releases/gcc-3.3.2 \
-     gcc-core-3.3.2.tar.bz2 \
-     42d1314aaa11a40e4c7c9fcb0f49259a
-  download ftp://ftp.gwdg.de/pub/misc/gcc/releases/gcc-3.3.2 \
-     gcc-g++-3.3.2.tar.gz \
-     310cfb09876935692f949eef79d3c594
+  download ftp://ftp.gwdg.de/pub/misc/gcc/releases/gcc-3.3.3 \
+     gcc-core-3.3.3.tar.bz2 \
+     f878a455b14b3830aaf2da0a17f003c0
+  download ftp://ftp.gwdg.de/pub/misc/gcc/releases/gcc-3.3.3 \
+     gcc-g++-3.3.3.tar.bz2 \
+     29830b52f2c112fc660d662427660641
   download http://www.noto.de/colinux \
      gcc-3.3.2.diff \
      3efa14af3b00d511c6cc44dbc5fe9b49
 # cygwin - used in gcc build process
   download http://ftp.gwdg.de/pub/linux/sources.redhat.com/cygwin/release/cygwin \
-     cygwin-1.5.7-1.tar.bz2 \
-     baca557381e4c11391aa71e5ed341c1d
+     cygwin-1.5.9-1.tar.bz2 \
+     9b77c06efdd8e768e81584b90ec75418
 # w32api + colinux ddk patch
   download http://heanet.dl.sourceforge.net/sourceforge/mingw \
      w32api-2.4-src.tar.gz \
      931b25da6223bd72ada13e83443cc6ed
-  download http://www.noto.de/colinux/ \
-     w32api.diff \
-     bb914806d321b0bac831907e5c4ebab0
-# Linux-Kernel 2.4.24
+# Removed replaced 'inline' as part of this script.
+# download http://www.noto.de/colinux/ \
+#     w32api.diff \
+#     906b53f5fd10cedc1f8f0f1c715eaad6
+# Linux-Kernel 2.4.25
   download http://www.kernel.org/pub/linux/kernel/v2.4 \
-     linux-2.4.24.tar.bz2 \
-     1e055c42921b2396a559d84df4c3d9aa
+     linux-2.4.25.tar.bz2 \
+     5fc8e9f43fa44ac29ddf9a9980af57d8
 # mini-xml
   download http://www.easysw.com/~mike/mxml \
      mxml-1.3.tar.gz \
@@ -68,15 +69,10 @@ function get_files()
   download http://www.noto.de/colinux/ \
      fltk1.diff \
       c6c74b7db501863ee134f54d84c55c67
-#     b92aefbbb51f75e5f0d9ad82971de5b4
-# coLinux-0.5.3-pre1 + network-patch
+# coLinux-0.6.0
   download http://heanet.dl.sourceforge.net/sourceforge/colinux \
-     colinux-20040210.tar.gz \
-     f6f794a13d06c8b2c533363b9bab43de
-#     66d055e5de1c8f8214cdc031e906b8dc
-#  download http://www.noto.de/colinux/ \
-#     colinux-0.5.3-pre1_1.diff \
-#     77ae2e5e02c1363d8ab0ca4e72520867
+     colinux-0.6.0.tar.gz \
+     f755537da9ed4924eafb6ca5a81639c6
 }
 
 
@@ -106,7 +102,7 @@ function build_gcc()
   fi
   cd $CO_BUILD
   tar xfj $CO_ROOT/gcc*core*.tar.bz2
-  tar xfz $CO_ROOT/gcc-g++*.tar.gz
+  tar xfj $CO_ROOT/gcc-g++*.tar.bz2
   cd gcc*
   patch -p1 < $CO_ROOT/gcc-3.3.2.diff >> $CO_LOG 2>&1
   ./configure --prefix=$CO_PREFIX --target=$CO_TARGET \
@@ -151,7 +147,31 @@ function build_w32api()
   cd $CO_BUILD
   tar xfz $CO_ROOT/w32api-*
   cd w32api*
-  patch -p1 < $CO_ROOT/w32api.diff >> $CO_LOG 2>&1  
+  patch -p1 > w32api.diff <<EOT
+ --- w32api-2.4/lib/ddk/ntoskrnl.def    2003-02-09 13:26:01.000000000 +0000
+ +++ w32api-2.4-patched/lib/ddk/ntoskrnl.def    2004-03-14 18:55:39.000000000 +0000
+ @@ -596,8 +596,8 @@
+  KeSetTargetProcessorDpc@8
+  ;KeSetTimeIncrement
+  @KeSetTimeUpdateNotifyRoutine@4
+ -KeSetTimer@12
+ -KeSetTimerEx@16
+ +KeSetTimer@16
+ +KeSetTimerEx@20
+  ;KeStackAttachProcess
+  KeSynchronizeExecution@12
+  ;KeTerminateThread
+ @@ -644,7 +644,7 @@
+  MmAllocateContiguousMemorySpecifyCache@20
+  MmAllocateMappingAddress@8
+  MmAllocateNonCachedMemory@4
+ -MmAllocatePagesForMdl@16
+ +MmAllocatePagesForMdl@28
+  MmBuildMdlForNonPagedPool@4
+  ;MmCanFileBeTruncated
+  MmCreateMdl@12
+EOT
+  >> $CO_LOG 2>&1 
   ./configure --prefix=$CO_PREFIX --target=$CO_TARGET >> $CO_LOG 2>&1  
   make PATH=$PATH:$CO_PREFIX/bin \
        CC=$CO_TARGET-gcc \

@@ -19,12 +19,8 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include "frame.h"
-
-struct co_daemon_handle {
-	int sock;
-	co_os_frame_collector_t frame;
-};
+#include "daemon.h"
+#include "pipe.h"
 
 co_rc_t
 co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
@@ -35,6 +31,10 @@ co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
 	co_daemon_handle_t handle;
 	struct sockaddr_un saddr;
 
+	rc = co_os_pipe_get_colinux_pipe_path(linux_id, saddr.sun_path, sizeof(saddr.sun_path));
+	if (!CO_OK(rc))
+		return rc;
+
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sock == -1)
 		return CO_RC(ERROR);
@@ -44,8 +44,6 @@ co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
 		return rc;
 
 	saddr.sun_family = AF_UNIX;
-	snprintf(saddr.sun_path, sizeof(saddr.sun_path), 
-		 "%s/colinux_%s.%d", "/tmp", "test", linux_id);
 
 	ret = connect(sock, (struct sockaddr *)&saddr, sizeof (saddr));
 	if (ret == -1) {
@@ -74,6 +72,22 @@ co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
 
 	*handle_out = handle;
 out:
+	return rc;
+}
+
+co_rc_t
+co_os_daemon_get_message_ready(co_daemon_handle_t handle,
+			       co_message_t **message_out)
+{
+	unsigned long size;
+	co_message_t *message = NULL;
+	co_rc_t rc;
+
+	rc = co_os_frame_recv(&handle->frame, handle->sock, (char **)&message, &size);
+	if (!CO_OK(rc))
+		return rc;
+
+	*message_out = message;
 	return rc;
 }
 

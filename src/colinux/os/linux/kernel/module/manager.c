@@ -36,12 +36,6 @@ int co_os_manager_ioctl(struct inode *inode, struct file *file,
 	if (copy_from_user(&ioctl, (void *)arg, sizeof(ioctl)))
                 return -EFAULT;
 
-#if (0)
-	co_debug("code %x\n", ioctl.code);
-	co_debug("input %x %x\n", ioctl.input_buffer, ioctl.input_buffer_size);
-	co_debug("output %x %x\n", ioctl.output_buffer, ioctl.output_buffer_size);
-#endif
-
 	buffer_size = ioctl.input_buffer_size;
 	if (buffer_size > ioctl.output_buffer_size)
 		buffer_size = ioctl.output_buffer_size;

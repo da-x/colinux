@@ -12,6 +12,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/poll.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 #include <colinux/os/alloc.h>
 #include <colinux/os/user/pipe.h>
@@ -206,16 +209,63 @@ co_rc_t co_os_pipe_server_service(co_os_pipe_server_t *ps, bool_t infinite)
 	return CO_RC(OK);
 }
 
+co_rc_t co_os_pipe_get_colinux_pipe_path(co_id_t instance, char *out_path, int size)
+{
+	char *home = getenv("HOME");
+
+	if (home == NULL)
+		home = "/tmp";
+
+	snprintf(out_path, size, "%s/.colinux.%d.pipe", home, instance);
+
+	return CO_RC(OK);
+}
+
 co_rc_t co_os_pipe_server_create(co_os_pipe_server_func_connected_t connected_func,
 				 co_os_pipe_server_func_packet_t packet_func,
 				 co_os_pipe_server_func_disconnected_t disconnected_func,
 				 void *data,
-				 co_os_pipe_server_t **ps_out)
+				 co_os_pipe_server_t **ps_out,
+				 co_id_t *id_out)
 {
 	co_os_pipe_server_t *ps;
 	struct sockaddr_un saddr;
+	struct stat st;
 	int sock, ret;
+	co_id_t id = 0;
 	co_rc_t rc;
+
+	saddr.sun_family = AF_UNIX;
+
+	for (;;) {
+		rc = co_os_pipe_get_colinux_pipe_path(id, saddr.sun_path, sizeof(saddr.sun_path));
+		if (!CO_OK(rc))
+			return rc;
+
+		/*
+		 * If the named pipe exists already, delete it if it cannot be opened
+		 */
+		if (stat(saddr.sun_path, &st) == 0) {
+			sock = socket(AF_UNIX, SOCK_STREAM, 0);
+			if (sock == -1)
+				return CO_RC(ERROR);
+			
+			ret = connect(sock, (struct sockaddr *)&saddr, sizeof (saddr));
+			if (ret < 0) {
+				if (errno == ECONNREFUSED)
+					unlink(saddr.sun_path);
+			}
+			else {
+				close(ret);
+				id++;
+				continue;
+			}
+		}
+		
+		break;
+	}
+
+	*id_out = id;
 
 	sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sock == -1)
@@ -226,15 +276,6 @@ co_rc_t co_os_pipe_server_create(co_os_pipe_server_func_connected_t connected_fu
 		close(sock);
 		return CO_RC(ERROR);
 	}
-
-	/* 
-	 * TODO: rewrite this so would better pick the 
-	 * next free pathname.
-	 */
-
-	saddr.sun_family = AF_UNIX;
-	snprintf(saddr.sun_path, sizeof(saddr.sun_path), 
-		 "%s/colinux_%s.%d", "/tmp", "test", 0);
 
 	ret = bind(sock, (struct sockaddr *)&saddr, sizeof (saddr));
 	if (ret == -1) {

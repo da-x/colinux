@@ -40,7 +40,8 @@ extern co_rc_t co_os_pipe_server_create(co_os_pipe_server_func_connected_t conne
 					co_os_pipe_server_func_packet_t packet_func,
 					co_os_pipe_server_func_disconnected_t disconnected_func,
 					void *data,
-					co_os_pipe_server_t **ps_out);
+					co_os_pipe_server_t **ps_out,
+					co_id_t *id_out);
 
 extern void co_os_pipe_server_destroy(co_os_pipe_server_t *ps);
 

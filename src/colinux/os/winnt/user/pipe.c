@@ -29,6 +29,7 @@ struct co_os_pipe_connection {
 };
 
 struct co_os_pipe_server {
+	co_id_t id;
 	void *user_data;
 	co_os_pipe_server_func_connected_t connected_func;
 	co_os_pipe_server_func_packet_t packet_func;
@@ -294,7 +295,8 @@ co_rc_t co_os_pipe_server_create(co_os_pipe_server_func_connected_t connected_fu
 				 co_os_pipe_server_func_packet_t packet_func,
 				 co_os_pipe_server_func_disconnected_t disconnected_func,
 				 void *data,
-				 co_os_pipe_server_t **ps_out)
+				 co_os_pipe_server_t **ps_out,
+				 co_id_t *id_out)
 {
 	co_os_pipe_server_t *ps;
 
@@ -310,6 +312,9 @@ co_rc_t co_os_pipe_server_create(co_os_pipe_server_func_connected_t connected_fu
 	ps->connected_func = connected_func;
 	ps->disconnected_func = disconnected_func;
 	ps->user_data = data;
+	ps->id = 0;
+
+	*id_out = ps->id;
 
 	co_os_pipe_server_create_client(ps);
 

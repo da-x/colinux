@@ -9,6 +9,7 @@
  */ 
 
 #include <colinux/common/common.h>
+#include <colinux/common/version.h>
 #include <colinux/os/user/file.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/pipe.h>
@@ -63,7 +64,9 @@ co_rc_t co_load_config_file(co_daemon_t *daemon)
 
 void co_daemon_syntax()
 {
-	co_terminal_print("Cooperative Linux Daemon\n");
+	co_terminal_print("Cooperative Linux Daemon, %s\n", colinux_version);
+	co_terminal_print("Compiled on %s\n", colinux_compile_time);
+	co_terminal_print("\n");
 	co_terminal_print("syntax: \n");
 	co_terminal_print("\n");
 	co_terminal_print("    colinux-daemon [-h] [-c config.xml] [-d]\n");
@@ -728,6 +731,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 {
 	co_rc_t rc;
 	co_os_pipe_server_t *ps;
+	co_id_t id = 0;
 
 	rc = co_user_monitor_start(daemon->monitor);
 	if (!CO_OK(rc))
@@ -737,7 +741,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 		co_daemon_pipe_cb_connected,
 		co_daemon_pipe_cb_packet,
 		co_daemon_pipe_cb_disconnected,
-		daemon, &ps);
+		daemon, &ps, &id);
 
 	if (!CO_OK(rc))
 		return rc;

@@ -86,7 +86,7 @@ co_rc_t co_win32_overlapped_read_received(co_win32_overlapped_t *overlapped)
 		message.linux.unit = 0;
 		message.linux.size = overlapped->size;
 		memcpy(message.data, overlapped->buffer, overlapped->size);
-		
+
 		co_win32_overlapped_write_async(&daemon_overlapped, &message, sizeof(message));
 	}
 

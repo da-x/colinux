@@ -802,11 +802,9 @@ co_rc_t co_monitor_start(co_monitor_t *cmon)
 
 	co_passage_page->operation = CO_OPERATION_START;
 	co_passage_page->params[0] = cmon->core_end;
-	co_passage_page->params[1] = 0x800;
-	co_passage_page->params[2] = cmon->memory_size;
-	co_passage_page->params[3] = 0; /* cmon->manager->pa_maps_size; */
+	co_passage_page->params[1] = cmon->memory_size;
 
-	memcpy(&co_passage_page->params[4], cmon->config.boot_parameters_line, 
+	memcpy(&co_passage_page->params[2], cmon->config.boot_parameters_line, 
 	       sizeof(cmon->config.boot_parameters_line));
 
 	cmon->state = CO_MONITOR_STATE_RUNNING;

@@ -12,4 +12,5 @@
 #include <linux/fs.h>
 #include <linux/timer.h>
 #include <linux/time.h>
+#include <linux/vmalloc.h>
 

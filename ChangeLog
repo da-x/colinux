@@ -1,5 +1,8 @@
-* Version 0.6.1
+* Version 0.6.1 
   * Linux port (for systems running kernel 2.6.x)
+  * Windows: Sizes of raw partition devices are now detected properly. This 
+    means that the resierfs problems should be over, plus cat /dev/cobd* would
+    work for you.
 	
 * Version 0.6.0 AKA "Getting even"
   * Ballard, Jonathan H.:  

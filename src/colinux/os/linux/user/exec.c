@@ -28,7 +28,7 @@ co_rc_t co_launch_process(char *command_line, ...)
 	co_debug("executing: %s\n", buf);
 	ret = system(buf);
 
-	if (ret== -1) {
+	if (ret == -1) {
 		co_debug("error in execution (%d)\n", errno);
 		return CO_RC(ERROR);
 	}

@@ -21,6 +21,8 @@ LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 $(LOCAL_OBJS) : %.o : %.c
 	$(TOOL_USER_CC)
 
+$(BUILD_PATH)/daemon.o : $(BUILD_ROOT)/colinux/common/version.h
+
 $(BUILD_PATH)/user.a : $(LOCAL_OBJS)
 	$(TOOL_AR)
 

@@ -15,6 +15,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <colinux/common/version.h>
 #include <colinux/user/daemon.h>
 #include <colinux/user/monitor.h>
 #include <colinux/user/manager.h>
@@ -80,7 +81,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	bool_t installed = PFALSE;
 	int ret;
 
-	co_terminal_print("Cooperative Linux daemon\n");
+	co_terminal_print("Cooperative Linux Daemon %s (winnt)\n", colinux_version);
 
 	rc = co_os_parse_args(szCmdLine, &args);
 	if (!CO_OK(rc)) {

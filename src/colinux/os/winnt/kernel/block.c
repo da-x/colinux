@@ -158,6 +158,77 @@ co_rc_t co_os_file_block_write(co_monitor_t *linuxvm,
 	return rc;
 }
 
+static bool_t probe_byte(HANDLE handle, LARGE_INTEGER offset)
+{
+	IO_STATUS_BLOCK isb;
+	char one_byte[1];
+	NTSTATUS status;
+
+	status = ZwReadFile(handle, NULL, NULL,
+			    NULL, &isb, one_byte, 1,
+			    &offset, NULL);
+
+	if (status != STATUS_SUCCESS)
+		return PFALSE;
+
+	return PTRUE;
+}
+
+static co_rc_t co_os_file_block_detect_size(HANDLE handle, unsigned long long *out_size)
+{
+	/* 
+	 * Binary search the size of the device.
+	 *
+	 * Yep, it's ugly.
+	 *
+	 * I haven't found a more reliable way. I thought about switching between
+	 * IOCTL_DISK_GET_DRIVE_GEOMETRY, IOCTL_DISK_GET_PARTITION_INFORMATION, 
+	 * and even IOCTL_CDROM_GET_DRIVE_GEOMETRY depending on the device's type, 
+	 * but I'm not sure if would work in all cases.
+	 *
+	 * This *would* work in all cases.
+	 */
+
+	LARGE_INTEGER scan_bit;
+	LARGE_INTEGER build_size;
+
+	build_size.QuadPart = 0;
+
+	if (!probe_byte(handle, build_size)) {
+		*out_size = 0;
+		return CO_RC(ERROR);
+	}
+
+	scan_bit.QuadPart = 1;
+
+	/* 
+	 * Find the smallest invalid power of 2.
+	 */
+	while (scan_bit.QuadPart != 0) {
+		if (!probe_byte(handle, scan_bit))
+			break;
+		scan_bit.QuadPart <<= 1;
+	}
+
+	if (scan_bit.QuadPart == 0)
+		return CO_RC(ERROR);
+
+	while (scan_bit.QuadPart) {
+		LARGE_INTEGER with_bit;
+
+		scan_bit.QuadPart >>= 1;
+		with_bit.QuadPart = build_size.QuadPart | scan_bit.QuadPart;
+		if (probe_byte(handle, with_bit))
+			build_size = with_bit;
+	}
+
+	build_size.QuadPart += 1;
+
+	*out_size = build_size.QuadPart;
+
+	return CO_RC(OK);
+}
+
 co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned long long *size)
 {
 	NTSTATUS status;
@@ -165,10 +236,18 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 	IO_STATUS_BLOCK IoStatusBlock;
 	FILE_STANDARD_INFORMATION fsi;
 	co_rc_t rc;
+	bool_t opened = PFALSE;
 
-	status = co_os_open_file(fdev->pathname, &FileHandle);
-	if (status != STATUS_SUCCESS)
-		return CO_RC(ERROR);
+	if (fdev->sysdep == NULL) {
+		status = co_os_open_file(fdev->pathname, &FileHandle);
+		if (status != STATUS_SUCCESS)
+			return CO_RC(ERROR);
+
+		opened = TRUE;
+	}
+	else {
+		FileHandle = (HANDLE)(fdev->sysdep);
+	}
 
 	status = ZwQueryInformationFile(FileHandle,
 					&IoStatusBlock,
@@ -176,16 +255,21 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 					sizeof(fsi),
 					FileStandardInformation);
 
-
 	if (status == STATUS_SUCCESS) {
 		*size = fsi.EndOfFile.QuadPart;
-		co_debug("Reported block device size: %llu bytes\n", *size);
+		co_debug("%s: reported block device size: %llu bytes\n", __FUNCTION__, *size);
 		rc = CO_RC(OK);
 	}
-	else
-		rc = CO_RC(ERROR);
+	else {
+		rc = co_os_file_block_detect_size(FileHandle, size);
+		if (CO_OK(rc)) {
+			co_debug("%s: detected block device size: %llu bytes\n", __FUNCTION__, *size);
+		}
+	}
+	
+	if (opened)
+		co_os_close_file(FileHandle);
 
-	co_os_close_file(FileHandle);
 	return rc;
 }
 
@@ -209,6 +293,8 @@ co_rc_t co_os_file_block_close(co_monitor_file_block_dev_t *fdev)
 	FileHandle = (HANDLE)(fdev->sysdep);
 
 	co_os_close_file(FileHandle);
+
+	fdev->sysdep = NULL;
 
 	return CO_RC(OK);
 }
