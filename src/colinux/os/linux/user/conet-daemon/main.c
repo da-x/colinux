@@ -114,7 +114,7 @@ co_rc_t tap_events(co_daemon_handle_t daemon_handle, int tap, int revents)
 		message.msg_linux.unit = 0;
 		message.msg_linux.size = read_size;
 
-		rc = co_os_daemon_send_message(daemon_handle, &message.message);
+		rc = co_os_daemon_message_send(daemon_handle, &message.message);
 	}
 
 	if (revents & (POLLERR | POLLHUP)) {
@@ -208,14 +208,14 @@ int main(int argc, char *argv[])
 
 	co_terminal_print("TAP interface %s created\n", tap_name);
 
-	rc = co_os_open_daemon_pipe(0, CO_MODULE_CONET0, &daemon_handle_);
+	rc = co_os_daemon_pipe_open(0, CO_MODULE_CONET0, &daemon_handle_);
 	if (!CO_OK(rc)) {
 		co_terminal_print("Error opening a pipe to the daemon\n");
 		goto out_close;
 	}
 
 	wait_loop(daemon_handle_, tap_fd);
-	co_os_daemon_close(daemon_handle_);
+	co_os_daemon_pipe_close(daemon_handle_);
 
 out_close:
 	close(tap_fd);

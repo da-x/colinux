@@ -247,7 +247,7 @@ co_rc_t console_window_t::attach()
 		goto out;
 	}
 
-	rc = co_os_open_daemon_pipe(attached_id, CO_MODULE_CONSOLE, &daemon_handle);
+	rc = co_os_daemon_pipe_open(attached_id, CO_MODULE_CONSOLE, &daemon_handle);
 	if (!CO_OK(rc))
 		goto out;
 
@@ -328,7 +328,7 @@ co_rc_t console_window_t::detach()
 		message->console.size = console->size;
 		memcpy(message->data, console, console->size);
 		
-		co_os_daemon_send_message(daemon_handle, &message->message);
+		co_os_daemon_message_send(daemon_handle, &message->message);
 		co_os_free(message);
 	}
 
@@ -342,7 +342,7 @@ co_rc_t console_window_t::detach()
         menu_item_deactivate(console_detach_cb);
         menu_item_activate(console_attach_cb);	
 
-	co_os_daemon_close(daemon_handle);
+	co_os_daemon_pipe_close(daemon_handle);
 
 	Fl::remove_idle(console_idle, this);
 
@@ -375,7 +375,7 @@ co_rc_t console_window_t::terminate()
 	message.console.type = CO_DAEMON_CONSOLE_MESSAGE_TERMINATE;
 	message.console.size = 0;
 
-	co_os_daemon_send_message(daemon_handle, &message.message);
+	co_os_daemon_message_send(daemon_handle, &message.message);
 	
 	return detach();
 }
@@ -398,7 +398,7 @@ co_rc_t console_window_t::send_ctrl_alt_del()
 	message.console.type = CO_DAEMON_CONSOLE_MESSAGE_CTRL_ALT_DEL;
 	message.console.size = 0;
 
-	co_os_daemon_send_message(daemon_handle, &message.message);
+	co_os_daemon_message_send(daemon_handle, &message.message);
 
 	return CO_RC(OK);
 }
@@ -440,7 +440,7 @@ void console_window_t::idle()
 		co_rc_t rc = CO_RC(OK);
 		co_message_t *message = NULL;
 
-		rc = co_os_daemon_get_message(daemon_handle, &message, 10);
+		rc = co_os_daemon_message_receive(daemon_handle, &message, 10);
 		if (!CO_OK(rc)) {
 			if (CO_RC_GET_CODE(rc) == CO_RC_BROKEN_PIPE) {
 				log("Monitor%d: Broken pipe\n", attached_id);
@@ -451,7 +451,7 @@ void console_window_t::idle()
 
 		if (message) {
 			handle_message(message);
-			co_os_daemon_deallocate_message(message);
+			co_os_daemon_message_deallocate(daemon_handle, message);
 		}
 	}
 }
@@ -544,7 +544,7 @@ void console_window_t::handle_scancode(co_scan_code_t sc)
 	message.msg_linux.size = sizeof(message.code);
 	message.code = sc;
 
-	co_os_daemon_send_message(daemon_handle, &message.message);
+	co_os_daemon_message_send(daemon_handle, &message.message);
 }
 
 Fl_Menu_Item *console_window_t::find_menu_item_by_callback(Fl_Callback *cb)

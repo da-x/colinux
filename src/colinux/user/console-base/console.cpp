@@ -2,7 +2,7 @@
  * This source code is a part of coLinux source package.
  *
  * Dan Aloni <da-x@gmx.net>, 2003 (c)
- * Ballard, Jonathan H. <californiakidd@users.sourceforge.net>, 2004 (c)
+ * Ballard, Jonathan H. <jhballard@hotmail.com>, 2004 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -96,7 +96,7 @@ co_rc_t console_window_t::attach()
 	if (state == CO_CONSOLE_STATE_ATTACHED)
 		return CO_RC(ERROR);
 
-	rc = co_os_open_daemon_pipe(attached_id, CO_MODULE_CONSOLE, &daemon_handle);
+	rc = co_os_daemon_pipe_open(attached_id, CO_MODULE_CONSOLE, &daemon_handle);
 	if (!CO_OK(rc))
 		return rc;
 
@@ -164,14 +164,14 @@ co_rc_t console_window_t::detach()
 		message->console.size = console->size;
 		memcpy(message->data, console, console->size);
 
-		co_os_daemon_send_message(daemon_handle, &message->message);
+		co_os_daemon_message_send(daemon_handle, &message->message);
 		co_os_free(message);
 	}
 
 	co_console_unpickle(console);
 	co_console_destroy(console);
 
-	co_os_daemon_close(daemon_handle);
+	co_os_daemon_pipe_close(daemon_handle);
 
 	daemon_handle = 0;
 
@@ -250,7 +250,7 @@ co_rc_t console_window_t::online(const bool ON)
 			message->console.size = console->size;
 			memcpy(message->data, console, console->size);
 
-			co_os_daemon_send_message(daemon_handle,
+			co_os_daemon_message_send(daemon_handle,
 						  &message->message);
 			co_os_free(message);
 		}
@@ -258,7 +258,7 @@ co_rc_t console_window_t::online(const bool ON)
 		co_console_unpickle(console);
 		co_console_destroy(console);
 
-		co_os_daemon_close(daemon_handle);
+		co_os_daemon_pipe_close(daemon_handle);
 
 		daemon_handle = 0;
 
@@ -321,7 +321,7 @@ console_window_t::event(co_message_t & message)
 
 	case CO_MODULE_CONSOLE:{
 			if (daemon_handle)
-				co_os_daemon_send_message(daemon_handle,
+				co_os_daemon_message_send(daemon_handle,
 							  &message);
 			break;
 		}
@@ -354,7 +354,7 @@ void console_window_t::handle_scancode(co_scan_code_t sc) const
 	message.linux.size = sizeof (message.code);
 	message.code = sc;
 
-	co_os_daemon_send_message(daemon_handle, &message.message);
+	co_os_daemon_message_send(daemon_handle, &message.message);
 }
 
 void console_window_t::log(const char *format, ...) const
@@ -383,7 +383,7 @@ co_rc_t console_window_t::loop(void)
 	if (daemon_handle) {
 		co_message_t *
 		    message = NULL;
-		rc = co_os_daemon_get_message(daemon_handle, &message, 10);
+		rc = co_os_daemon_message_receive(daemon_handle, &message, 10);
 		if (!CO_OK(rc)) {
 			if (CO_RC_GET_CODE(rc) == CO_RC_BROKEN_PIPE) {
 				log("Monitor%d: Broken pipe\n", attached_id);
@@ -396,7 +396,7 @@ co_rc_t console_window_t::loop(void)
 
 		if (message) {
 			event(*message);
-			co_os_daemon_deallocate_message(message);
+			co_os_daemon_message_deallocate(daemon_handle, message);
 		}
 	}
 

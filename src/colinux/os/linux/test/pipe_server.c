@@ -17,10 +17,10 @@ int client()
 	} message = {{0,}}, *in_message;
 	int i = 0;
 
-	rc = co_os_open_daemon_pipe(0, 41234, &handle);
+	rc = co_os_daemon_pipe_open(0, 41234, &handle);
 
 	if (!CO_OK(rc)) {
-		co_debug("co_os_open_daemon_pipe: %x\n", rc);
+		co_debug("co_os_daemon_pipe_open: %x\n", rc);
 		return rc;
 	}
 
@@ -32,10 +32,10 @@ int client()
 		message.message.size = 0x2000;
 		message.message.from = 0x10;
 		snprintf(message.payload, sizeof(message.payload), "asd");
-		co_os_daemon_send_message(handle, &message.message);
+		co_os_daemon_message_send(handle, &message.message);
 
 		printf("receiving %d\n", i);
-		rc = co_os_daemon_get_message(handle, &in_message, 10);
+		rc = co_os_daemon_message_receive(handle, &in_message, 10);
 
 		if (!CO_OK(rc)) {
 			printf("error: %08x\n", rc);
@@ -48,7 +48,7 @@ int client()
 
 	}
 
-	co_os_daemon_close(handle);
+	co_os_daemon_pipe_close(handle);
 
 	return 0;
 }

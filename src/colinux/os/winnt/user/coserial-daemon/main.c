@@ -327,7 +327,7 @@ int main(int argc, char *argv[])
 
 	daemon_parameters = &start_parameters;
 
-	rc = co_os_open_daemon_pipe(daemon_parameters->instance, 
+	rc = co_os_daemon_pipe_open(daemon_parameters->instance, 
 				    CO_MODULE_SERIAL0 + daemon_parameters->index, &daemon_handle_);
 	if (!CO_OK(rc)) {
 		co_terminal_print("Error opening a pipe to the daemon\n");
@@ -336,7 +336,7 @@ int main(int argc, char *argv[])
 
 	daemon_handle = daemon_handle_->handle;
 	exit_code = wait_loop(daemon_handle);
-	co_os_daemon_close(daemon_handle_);
+	co_os_daemon_pipe_close(daemon_handle_);
 
 out:
 	co_debug_end();

@@ -23,7 +23,7 @@
 #include "pipe.h"
 
 co_rc_t
-co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
+co_os_daemon_pipe_open(co_id_t linux_id, co_module_t module_id,
 		       co_daemon_handle_t *handle_out)
 {
 	int sock, ret;
@@ -92,7 +92,7 @@ co_os_daemon_get_message_ready(co_daemon_handle_t handle,
 }
 
 co_rc_t
-co_os_daemon_get_message(co_daemon_handle_t handle,
+co_os_daemon_message_get(co_daemon_handle_t handle,
 			 co_message_t **message_out, 
 			 unsigned long timeout)
 {
@@ -119,13 +119,13 @@ co_os_daemon_get_message(co_daemon_handle_t handle,
 }
 
 co_rc_t
-co_os_daemon_send_message(co_daemon_handle_t handle, co_message_t *message)
+co_os_daemon_message_receive(co_daemon_handle_t handle, co_message_t *message)
 {
 	return co_os_frame_send(handle->sock, (char *)message, message->size + sizeof(*message));
 }
 
 void
-co_os_daemon_close(co_daemon_handle_t handle)
+co_os_daemon_pipe_close(co_daemon_handle_t handle)
 {
 	close(handle->sock);
 	co_os_free(handle);

@@ -61,7 +61,7 @@ void slirp_output(const uint8_t *pkt, int pkt_len)
 
 	memcpy(message.data, pkt, pkt_len);
 
-	co_os_daemon_send_message(daemon_handle, &message.message);
+	co_os_daemon_message_send(daemon_handle, &message.message);
 }
 
 static co_rc_t wait_loop(void)
@@ -134,7 +134,7 @@ co_rc_t daemon_mode(int unit, int instance)
 {
 	co_rc_t rc = CO_RC(ERROR);
 
-	rc = co_os_open_daemon_pipe(instance, CO_MODULE_CONET0 + unit, &daemon_handle);
+	rc = co_os_daemon_pipe_open(instance, CO_MODULE_CONET0 + unit, &daemon_handle);
 	if (!CO_OK(rc)) {
 		co_terminal_print("conet_slirp: error opening a pipe to the daemon\n");
 		goto out;
@@ -142,7 +142,7 @@ co_rc_t daemon_mode(int unit, int instance)
 
 	rc = wait_loop();
 
-	co_os_daemon_close(daemon_handle);
+	co_os_daemon_pipe_close(daemon_handle);
 out:
 	return rc;
 }

@@ -94,7 +94,7 @@ static co_rc_t program_events(co_daemon_handle_t daemon_handle, int unit, int re
 		message.msg_linux.unit = unit;
 		message.msg_linux.size = read_size;
 
-		rc = co_os_daemon_send_message(daemon_handle, &message.message);
+		rc = co_os_daemon_message_send(daemon_handle, &message.message);
 	}
 
 	if (revents & (POLLERR | POLLHUP)) {
@@ -159,7 +159,7 @@ co_rc_t daemon_mode(int unit, int instance)
 	co_rc_t rc = CO_RC(ERROR);
 	struct termios term;
 
-	rc = co_os_open_daemon_pipe(instance, CO_MODULE_SERIAL0 + unit, &daemon_handle_);
+	rc = co_os_daemon_pipe_open(instance, CO_MODULE_SERIAL0 + unit, &daemon_handle_);
 	if (!CO_OK(rc)) {
 		co_terminal_print("coserial: error opening a pipe to the daemon\n");
 		goto out;
@@ -175,7 +175,7 @@ co_rc_t daemon_mode(int unit, int instance)
 
 	rc = wait_loop(daemon_handle_, unit, 0, 1);
 
-	co_os_daemon_close(daemon_handle_);
+	co_os_daemon_pipe_close(daemon_handle_);
 out:
 	return rc;
 }
