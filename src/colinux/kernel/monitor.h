@@ -18,10 +18,12 @@
 #include <colinux/common/messages.h>
 #include <colinux/arch/current/mmu.h>
 #include <colinux/os/kernel/mutex.h>
+#include <colinux/os/kernel/wait.h>
 #include <colinux/os/timer.h>
 
 struct co_monitor_device;
 struct co_monitor;
+struct co_manager_open_desc;
 
 typedef co_rc_t (*co_monitor_service_func_t)(struct co_monitor *cmon, 
 					     struct co_monitor_device *device,
@@ -48,15 +50,18 @@ typedef enum {
 
 #define CO_MAX_LINUX_MESSAGES    10
 
+#define CO_MONITOR_MODULES_COUNT CO_MODULES_MAX
 /*
  * We use the following struct for each coLinux system. 
  */
 typedef struct co_monitor {
 	/*
-	 * Pointer back to the manager that controls us and
-	 * our id in that manager.
+	 * Pointer back to the manager.
 	 */
 	struct co_manager *manager; 
+	int refcount;
+	bool_t listed_in_manager;
+	co_list_t node;
 	co_id_t id;
 
 	/*
@@ -130,6 +135,7 @@ typedef struct co_monitor {
 	co_timestamp_t timestamp;
 	co_timestamp_t timestamp_freq;
 	unsigned long long timestamp_reminder;
+	co_os_wait_t idle_wait;
 
 	/* 
 	 * Block devices
@@ -144,13 +150,18 @@ typedef struct co_monitor {
 	/*
 	 * Message passing stuff
 	 */ 
-	co_message_switch_t message_switch;
-	co_queue_t user_message_queue;
 	co_queue_t linux_message_queue;
+	co_os_mutex_t linux_message_queue_mutex;
+
 	unsigned char *io_buffer;
 	co_monitor_user_kernel_shared_t *shared;
 	void *shared_user_address;
 	void *shared_handle;
+
+	struct co_manager_open_desc *connected_modules[CO_MONITOR_MODULES_COUNT];
+	co_os_mutex_t connected_modules_write_lock;
+
+	co_console_t *console;
 
         /*
 	 * initrd
@@ -167,21 +178,22 @@ typedef struct co_monitor {
 	co_arch_info_t arch_info;
 } co_monitor_t;
 
-struct co_manager_per_fd_state;
 
-extern co_rc_t co_monitor_create(struct co_manager *manager, co_manager_ioctl_create_t *params, 
-				 co_monitor_t **cmon_out);
-extern co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context);
+extern co_rc_t co_monitor_create(struct co_manager *manager, co_manager_ioctl_create_t *params, co_monitor_t **cmon_out);
+extern co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monitor_owner);
 
+struct co_manager_open_desc;
 extern co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buffer,
 				unsigned long in_size, unsigned long out_size, 
-				unsigned long *return_size, struct co_manager_per_fd_state *fd_state);
+				unsigned long *return_size, struct co_manager_open_desc *opened_manager);
 
 extern co_rc_t co_monitor_alloc_pages(co_monitor_t *cmon, unsigned long pages, void **address);
 extern co_rc_t co_monitor_free_pages(co_monitor_t *cmon, unsigned long pages, void *address);
 
 extern co_rc_t co_monitor_malloc(co_monitor_t *cmon, unsigned long bytes, void **ptr);
 extern co_rc_t co_monitor_free(co_monitor_t *cmon, void *ptr);
+
+extern co_rc_t co_monitor_message_from_user(co_monitor_t *monitor, struct co_manager_open_desc *opened, co_message_t *message);
 
 /*
  * An accessors to values of our core's kernel symbols.

@@ -17,6 +17,7 @@ LOCAL_OBJS = \
 	daemon.o \
 	cmdline.o \
 	debug.o \
+	reactor.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 
@@ -32,6 +33,6 @@ CLEAN_FILES := $(CLEAN_FILES) \
 	$(LOCAL_OBJS) $(BUILD_PATH)/user.a
 
 #-----------------------------------------------------------------
-include $(call BUILD_SUBDIRS, console-base console debug slirp)
+include $(call BUILD_SUBDIRS, console-base console control debug slirp)
 BUILD_PATH := $(shell dirname $(BUILD_PATH))
 endif

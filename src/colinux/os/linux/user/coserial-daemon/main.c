@@ -62,7 +62,7 @@ static co_rc_t daemon_events(co_daemon_handle_t daemon_handle, int write_fd, int
 	}
 
 	if (revents & (POLLERR | POLLHUP)) {
-		co_terminal_print("coserial: daemon closed socket\n");
+		co_terminal_print("coserial-daemon: daemon closed socket\n");
 		return CO_RC(ERROR);
 	}
 
@@ -161,7 +161,7 @@ co_rc_t daemon_mode(int unit, int instance)
 
 	rc = co_os_daemon_pipe_open(instance, CO_MODULE_SERIAL0 + unit, &daemon_handle_);
 	if (!CO_OK(rc)) {
-		co_terminal_print("coserial: error opening a pipe to the daemon\n");
+		co_terminal_print("coserial-daemon: error opening a pipe to the daemon\n");
 		goto out;
 	}
 
@@ -193,7 +193,7 @@ static co_rc_t coserial_main(int argc, char *argv[])
 
 	rc = co_cmdline_params_alloc(&argv[1], argc-1, &cmdline);
 	if (!CO_OK(rc)) {
-		co_terminal_print("coserial: error parsing arguments\n");
+		co_terminal_print("coserial-daemon: error parsing arguments\n");
 		goto out_clean;
 	}
 

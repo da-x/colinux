@@ -16,7 +16,6 @@
 
 extern "C" {
 #include <colinux/os/alloc.h>
-#include <colinux/os/winnt/user/daemon.h>
 
 	// Not found in w32api/mingw
 extern PASCAL BOOL GetCurrentConsoleFont(HANDLE hConsoleOutput,
@@ -70,7 +69,7 @@ console_widget_NT_t::console_widget_NT_t()
 }
 
 co_rc_t
-console_widget_NT_t::console_window(console_window_t * W)
+console_widget_NT_t::set_window(console_window_t * W)
 {
 	CONSOLE_CURSOR_INFO cci;
 	CONSOLE_FONT_INFO cfi;
@@ -177,7 +176,7 @@ console_widget_NT_t::draw()
 }
 
 void
-console_widget_NT_t::co_console_update()
+console_widget_NT_t::update()
 {
 	SMALL_RECT r = region;
 	COORD c = { 0, 0 };
@@ -429,8 +428,8 @@ console_widget_NT_t::loop()
 
 	INPUT_RECORD i;
 	ReadConsoleInput(input, &i, 1, &r);
-	if(ctrl_exit) {
-		window->online(false);
+	if (ctrl_exit) {
+		window->detach();
 		return CO_RC(OK);
 	}
 	switch ( i.EventType )
@@ -459,16 +458,6 @@ console_widget_NT_t::title(const char *T)
 co_rc_t
 console_widget_NT_t::idle()
 {
-	co_daemon_handle_t d = window->daemonHandle();
-
-	if (d == static_cast < co_daemon_handle_t > (0))	// UPDATE: need a daemon_handle C++ class
-	{
-		WaitForSingleObject(input, INFINITE);
-		return CO_RC(OK);
-	}
-
-	HANDLE h[2] = { input, d->readable };
-	WaitForMultipleObjects(2, h, FALSE, INFINITE);
 	return CO_RC(OK);
 }
 
@@ -498,23 +487,40 @@ void console_widget_NT_t::ProcessKeyEvent( KEY_EVENT_RECORD& ker )
 	switch ( vkey )
 	{
 	case VK_LWIN:
-	case VK_RWIN:
+	case VK_RWIN: {
+
 		// Check if LeftAlt+Win (detach from colinux)
 		if ( !released && (flags & LEFT_ALT_PRESSED) )
 		{
-			window->online(false);
+			window->detach();
 			return;
 		}
 		// Signal Win key pressed/released
-		if ( released )	vkey_state[255] &= ~1;
-		else			vkey_state[255] |=  1;
+		if ( released )	
+			vkey_state[255] &= ~1;
+		else	
+			vkey_state[255] |=  1;
+		break;
+	}
+	case VK_DELETE: {
+		if (!released  && 
+		    ((flags & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED)) &&
+		     (flags & (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED)) &&
+		     (flags & (SHIFT_PRESSED))))
+		{
+			window->send_ctrl_alt_del();
+			return;
+		}
+
+		break;
+	}
 	case VK_APPS:	// Window Context Menu
 		return;		// Let windows process this keys
 	case VK_MENU:
 		// Check if Win+LeftAlt (detach from colinux)
 		if ( (vkey_state[255] & 1) && !released )
 		{
-			window->online(false);
+			window->detach();
 			return;
 		}
 		break;

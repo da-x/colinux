@@ -75,6 +75,18 @@ void co_manager_debug(co_manager_handle_t handle, const char *buf, long size)
 			    (void *)buf, size, &ret, sizeof(ret), &returned);
 }
 
+co_rc_t co_manager_attach(co_manager_handle_t handle, co_manager_ioctl_attach_t *params)
+{
+	co_rc_t rc;
+	unsigned long returned = 0;
+
+	rc = co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_ATTACH,
+				 params, sizeof(*params), params, sizeof(*params), &returned);
+
+	return rc;
+}
+
+
 co_rc_t co_manager_debug_reader(co_manager_handle_t handle, co_manager_ioctl_debug_reader_t *debug_reader)
 {
 	co_rc_t rc;
@@ -85,6 +97,7 @@ co_rc_t co_manager_debug_reader(co_manager_handle_t handle, co_manager_ioctl_deb
 
 	return rc;
 }
+
 
 co_rc_t co_manager_debug_levels(co_manager_handle_t handle, co_manager_ioctl_debug_levels_t *levels)
 {

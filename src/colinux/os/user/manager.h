@@ -13,6 +13,7 @@
 
 #include <colinux/common/common.h>
 #include <colinux/os/kernel/manager.h>
+#include <colinux/user/reactor.h>
 
 struct co_manager_handle;
 typedef struct co_manager_handle *co_manager_handle_t; 
@@ -30,6 +31,14 @@ extern co_rc_t co_os_manager_ioctl(
 	unsigned long *output_returned);
 
 extern co_rc_t co_os_manager_is_installed(bool_t *installed);
+
+
+extern co_rc_t co_os_reactor_monitor_create(
+	co_reactor_t reactor, co_manager_handle_t whandle,
+	co_reactor_user_receive_func_t receive,
+	co_reactor_user_t *handle_out);
+
+extern void co_os_reactor_monitor_destroy(co_reactor_user_t handle);
 
 
 #endif

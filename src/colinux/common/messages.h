@@ -67,8 +67,10 @@ extern co_rc_t co_message_switch_message(co_message_switch_t *ms, co_message_t *
 extern co_rc_t co_message_switch_dup_message(co_message_switch_t *ms, co_message_t *message);
 extern void co_message_switch_free(co_message_switch_t *ms);
 extern co_rc_t co_message_dup(co_message_t *message, co_message_t **dup_message_out);
+extern co_rc_t co_message_dup_to_queue(co_message_t *message, co_queue_t *queue);
 extern co_rc_t co_message_write_queue(co_queue_t *queue, char *buffer, unsigned long size,
 				      unsigned long *sent_count, unsigned long *sent_size);
+
 extern char *co_module_repr(co_module_t module, co_module_name_t *str);
 
 #endif

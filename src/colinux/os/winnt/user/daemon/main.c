@@ -24,7 +24,6 @@
 #include <colinux/user/cmdline.h>
 #include <colinux/os/user/manager.h>
 #include <colinux/os/user/misc.h>
-#include <colinux/os/user/pipe.h>
 
 #include "../osdep.h"
 #include "cmdline.h"

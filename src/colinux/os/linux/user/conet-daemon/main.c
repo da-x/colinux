@@ -80,7 +80,7 @@ co_rc_t daemon_events(co_daemon_handle_t daemon_handle, int tap, int revents)
 	}
 
 	if (revents & (POLLERR | POLLHUP)) {
-		co_terminal_print("daemon closed socket\n");
+		co_terminal_print("conet-daemon: daemon closed socket\n");
 		return CO_RC(ERROR);
 	}
 
@@ -118,7 +118,7 @@ co_rc_t tap_events(co_daemon_handle_t daemon_handle, int tap, int revents)
 	}
 
 	if (revents & (POLLERR | POLLHUP)) {
-		co_terminal_print("tap was closed socket\n");
+		co_terminal_print("conet-daemon: tap was closed socket\n");
 		return CO_RC(ERROR);
 	}
 

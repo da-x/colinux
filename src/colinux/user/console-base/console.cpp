@@ -20,16 +20,16 @@ extern "C" {
 #include <colinux/user/monitor.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/alloc.h>
-#include <colinux/os/user/daemon.h>
 }
 
 console_window_t::console_window_t()
 {
-	start_parameters.attach_id = 0;
-	attached_id = CO_INVALID_ID;
-	state = CO_CONSOLE_STATE_OFFLINE;
-	widget = 0;
-	daemon_handle = 0;
+	start_parameters.attach_id = CO_INVALID_ID;
+	instance_id = CO_INVALID_ID;
+	widget = NULL;
+	message_monitor = NULL;
+	attached = PFALSE;
+	co_reactor_create(&reactor);
 }
 
 console_window_t::~console_window_t()
@@ -67,6 +67,33 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 	return CO_RC(OK);
 }
 
+co_rc_t console_window_t::send_ctrl_alt_del()
+{
+	if (!attached)
+		return CO_RC(ERROR);
+
+	struct {
+		co_message_t message;
+		co_linux_message_t linux_msg;
+		co_linux_message_power_t data;
+	} message;
+	
+	message.message.from = CO_MODULE_DAEMON;
+	message.message.to = CO_MODULE_LINUX;
+	message.message.priority = CO_PRIORITY_IMPORTANT;
+	message.message.type = CO_MESSAGE_TYPE_OTHER;
+	message.message.size = sizeof(message.linux_msg) + sizeof(message.data);
+	message.linux_msg.device = CO_DEVICE_POWER;
+	message.linux_msg.unit = 0;
+	message.linux_msg.size = sizeof(message.data);
+	message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
+	
+	co_user_monitor_message_send(message_monitor, &message.message);
+
+	return CO_RC(OK);
+}
+
+
 co_rc_t console_window_t::start()
 {
 	co_rc_t rc;
@@ -77,254 +104,118 @@ co_rc_t console_window_t::start()
 
 	widget->title("Console - [ONLINE] - [To Exit, Press Window+Alt Keys]");
 
-	rc = widget->console_window(this);
+	rc = widget->set_window(this);
 	if (!CO_OK(rc))
 		return rc;
 
 	log("Coopeartive Linux console started\n");
 
 	if (start_parameters.attach_id != CO_INVALID_ID)
-		attached_id = start_parameters.attach_id;
+		instance_id = start_parameters.attach_id;
 
-	return online(true);
+	return attach();
+}
+
+static console_window_t *g_console;
+
+co_rc_t console_window_t::message_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
+{
+	co_message_t *message;
+	unsigned long message_size;
+	long size_left = size;
+	long position = 0;
+
+	while (size_left > 0) {
+		message = (typeof(message))(&buffer[position]);
+		message_size = message->size + sizeof(*message);
+		size_left -= message_size;
+		if (size_left >= 0) {
+			g_console->event(message);
+		}
+		position += message_size;
+	}
+
+	return CO_RC(OK);
 }
 
 co_rc_t console_window_t::attach()
 {
+	co_module_t modules[] = {CO_MODULE_CONSOLE, };
+	co_monitor_ioctl_get_console_t get_console;
+	co_console_t *console = NULL;
 	co_rc_t rc;
 
-	if (state == CO_CONSOLE_STATE_ATTACHED)
+	if (attached)
 		return CO_RC(ERROR);
 
-	rc = co_os_daemon_pipe_open(attached_id, CO_MODULE_CONSOLE, &daemon_handle);
+	g_console = this;
+
+	rc = co_user_monitor_open(reactor, message_receive,
+				  instance_id, modules, 
+				  sizeof(modules)/sizeof(co_module_t),
+				  &message_monitor);
+	if (!CO_OK(rc)) {
+		log("Monitor%d: Error connecting\n", instance_id);
+		return rc;
+	}
+
+	rc = co_user_monitor_get_console(message_monitor, &get_console);
+	if (!CO_OK(rc)) {
+		log("Monitor%d: Error getting console\n");
+		return rc;
+	}
+
+	rc = co_console_create(get_console.x, get_console.y, 0, &console);
 	if (!CO_OK(rc))
 		return rc;
 
-	state = CO_CONSOLE_STATE_ONLINE;
-
-	return CO_RC(OK);
-}
-
-co_rc_t console_window_t::attached()
-{
-	state = CO_CONSOLE_STATE_ATTACHED;
+	widget->set_console(console);
 
 	widget->redraw();
+	widget->title("Console - Cooperative Linux - [To Exit, Press Window+Alt Keys]");
 
-	widget->title
-	    ("Console - Cooperative Linux - [To Exit, Press Window+Alt Keys]");
-
-	log("Monitor%d: Attached\n", attached_id);
+	attached = PTRUE;
 
 	return CO_RC(OK);
-}
-
-co_rc_t console_window_t::attach_anyhow(co_id_t id)
-{
-	co_rc_t rc;
-
-	if (state == CO_CONSOLE_STATE_ATTACHED) {
-		rc = detach();
-		if (!CO_OK(rc))
-			return rc;
-	}
-
-	attached_id = id;
-	return attach();
 }
 
 co_rc_t console_window_t::detach()
 {
-	co_console_t * console;
-
-	if (state != CO_CONSOLE_STATE_ATTACHED)
+	if (!attached)
 		return CO_RC(ERROR);
 
-	widget->co_console_update();
-	console = widget->co_console();
+	widget->update();
 
-	struct {
-		co_message_t message;
-		co_daemon_console_message_t console;
-		char data[0];
-	} * message;
+	co_user_monitor_close(message_monitor);	
+	message_monitor = NULL;
 
-	co_console_pickle(console);
-
-	message =
-	    (typeof(message)) (co_os_malloc(sizeof (*message) + console->size));
-	if (message) {
-		message->message.to = CO_MODULE_DAEMON;
-		message->message.from = CO_MODULE_CONSOLE;
-		message->message.size =
-		    sizeof (message->console) + console->size;
-		message->message.type = CO_MESSAGE_TYPE_STRING;
-		message->message.priority = CO_PRIORITY_IMPORTANT;
-		message->console.type = CO_DAEMON_CONSOLE_MESSAGE_DETACH;
-		message->console.size = console->size;
-		memcpy(message->data, console, console->size);
-
-		co_os_daemon_message_send(daemon_handle, &message->message);
-		co_os_free(message);
-	}
-
-	co_console_unpickle(console);
-	co_console_destroy(console);
-
-	co_os_daemon_pipe_close(daemon_handle);
-
-	daemon_handle = 0;
-
-	widget->co_console(0);
-
-	state = CO_CONSOLE_STATE_DETACHED;
+	widget->set_console(0);
 
 	widget->title("Console [detached]");
 
-	log("Monitor%d: Detached\n", attached_id);
+	attached = PFALSE;
+
+	log("Monitor%d: Detached\n", instance_id);
 
 	return CO_RC(OK);
 }
 
-co_rc_t console_window_t::online(const bool ON)
+void console_window_t::event(co_message_t *message)
 {
-	if (ON) {
-		if (online())
-			return CO_RC(OK);
-
-		if (attached_id != CO_INVALID_ID)
-			return attach();
-
-		return CO_RC(ERROR);
-	}
-
-	switch (state) {
-
-	case CO_CONSOLE_STATE_ATTACHED:
-		detach();
-
-	case CO_CONSOLE_STATE_DETACHED:
-		state = CO_CONSOLE_STATE_OFFLINE;
-
-	case CO_CONSOLE_STATE_OFFLINE:
-		if (widget)
-			delete widget;
-		widget = 0;
-		return CO_RC(OK);
-
-	case CO_CONSOLE_STATE_ONLINE:
-		co_console_t * console;
-		co_rc_t rc;
-
-		state = CO_CONSOLE_STATE_OFFLINE;
-
-		/* tries to recover from not being fully attached and sends a blank screen  */
-		rc = co_console_create(80, 25, 25, &console);
-		if (!CO_OK(rc))
-			return rc;
-
-		struct {
-			co_message_t
-			    message;
-			co_daemon_console_message_t
-			    console;
-			char
-			    data[0];
-		} *
-		    message;
-
-		co_console_pickle(console);
-
-		message =
-		    (typeof(message)) (co_os_malloc
-				       (sizeof (*message) + console->size));
-		if (message) {
-			message->message.to = CO_MODULE_DAEMON;
-			message->message.from = CO_MODULE_CONSOLE;
-			message->message.size =
-			    sizeof (message->console) + console->size;
-			message->message.type = CO_MESSAGE_TYPE_STRING;
-			message->message.priority = CO_PRIORITY_IMPORTANT;
-			message->console.type =
-			    CO_DAEMON_CONSOLE_MESSAGE_DETACH;
-			message->console.size = console->size;
-			memcpy(message->data, console, console->size);
-
-			co_os_daemon_message_send(daemon_handle,
-						  &message->message);
-			co_os_free(message);
-		}
-
-		co_console_unpickle(console);
-		co_console_destroy(console);
-
-		co_os_daemon_pipe_close(daemon_handle);
-
-		daemon_handle = 0;
-
-		return CO_RC(OK);
-	}
-
-	return CO_RC(ERROR);
-}
-
-void
-console_window_t::event(co_message_t & message)
-{
-	switch (message.from) {
+	switch (message->from) {
 
 	case CO_MODULE_LINUX:{
-			co_console_message_t *
-			    console_message;
-
-			console_message =
-			    (typeof(console_message)) (message.data);
-			widget->event(*console_message);
-			break;
-		}
-
-	case CO_MODULE_DAEMON:{
-
-			struct {
-				co_message_t
-				    message;
-				co_daemon_console_message_t
-				    console;
-				char
-				    data[0];
-			} *
-			    console_message;
-
-			console_message = (typeof(console_message)) & message;
-
-			if (console_message->console.type ==
-			    CO_DAEMON_CONSOLE_MESSAGE_ATTACH) {
-				co_console_t *
-				    console;
-
-				console = (co_console_t *)
-				    co_os_malloc(console_message->console.size);
-				if (!console)
-					break;
-
-				memcpy(console, console_message->data,
-				       console_message->console.size);
-				co_console_unpickle(console);
-
-				widget->co_console(console);
-
-				attached();
-			}
-
-			break;
-		}
+		co_console_message_t *console_message;
+		console_message = (typeof(console_message)) (message->data);
+		widget->event(console_message);
+		break;
+	}
 
 	case CO_MODULE_CONSOLE:{
-			if (daemon_handle)
-				co_os_daemon_message_send(daemon_handle,
-							  &message);
-			break;
-		}
+		if (message_monitor)
+			co_user_monitor_message_send(message_monitor, message);
+		break;
+	}
 
 	default:
 		break;
@@ -335,7 +226,7 @@ console_window_t::event(co_message_t & message)
 //         in colinux\user\console\console.cpp.
 void console_window_t::handle_scancode(co_scan_code_t sc) const
 {
-	if (state != CO_CONSOLE_STATE_ATTACHED)
+	if (!attached)
 		return;
 
 	struct {
@@ -354,15 +245,13 @@ void console_window_t::handle_scancode(co_scan_code_t sc) const
 	message.linux.size = sizeof (message.code);
 	message.code = sc;
 
-	co_os_daemon_message_send(daemon_handle, &message.message);
+	co_user_monitor_message_send(message_monitor, &message.message);
 }
 
 void console_window_t::log(const char *format, ...) const
 {
-	char
-	    buf[0x100];
-	va_list
-	    ap;
+	char buf[0x100];
+	va_list ap;
 
 	va_start(ap, format);
 	vsnprintf(buf, sizeof (buf), format, ap);
@@ -377,28 +266,10 @@ co_rc_t console_window_t::loop(void)
 	    rc;
 
 	rc = widget->loop();
-	if (!(CO_OK(rc)&&widget))
+	if (!(CO_OK(rc) && widget))
 		return rc;
 
-	if (daemon_handle) {
-		co_message_t *
-		    message = NULL;
-		rc = co_os_daemon_message_receive(daemon_handle, &message, 10);
-		if (!CO_OK(rc)) {
-			if (CO_RC_GET_CODE(rc) == CO_RC_BROKEN_PIPE) {
-				log("Monitor%d: Broken pipe\n", attached_id);
-				online(false);
-				return CO_RC(OK);
-			}
-			if (CO_RC_GET_CODE(rc) != CO_RC_TIMEOUT)
-				return rc;
-		}
-
-		if (message) {
-			event(*message);
-			co_os_daemon_message_deallocate(daemon_handle, message);
-		}
-	}
+	co_reactor_select(reactor, 1);
 
 	return widget->idle();
 }

@@ -1,34 +1,26 @@
 # Standard Makefile header
 ifeq ($(BUILD_ROOT),)
 .DEFAULT:
-	make -C ../.. $(MAKECMDGOALS)
+	make -C ../../.. $(MAKECMDGOALS)
 else
-BUILD_PATH := $(BUILD_PATH)/kernel
+BUILD_PATH := $(BUILD_PATH)/control
 #-----------------------------------------------------------------
 
-KERNEL_CFLAGS = $(CFLAGS) -D__KERNEL__ -DCO_KERNEL -DCO_HOST_KERNEL
+# -DDEBUG_CO_RC
 
 LOCAL_OBJS = \
-	monitor.o \
-	block.o \
-	fileblock.o \
-	transfer.o \
-	manager.o \
-	pages.o \
-	debug.o \
-	filesystem.o \
-	reversedpfns.o \
+	main.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 
 $(LOCAL_OBJS) : %.o : %.c
-	$(TOOL_KERNEL_CC)
+	$(TOOL_USER_GCC)
 
-$(BUILD_PATH)/kernel.o : $(LOCAL_OBJS)
+$(BUILD_PATH)/control.o : $(LOCAL_OBJS)
 	$(TOOL_LD_RELOC)
 
 CLEAN_FILES := $(CLEAN_FILES) \
-	$(LOCAL_OBJS) $(BUILD_PATH)/kernel.o
+	$(LOCAL_OBJS)
 
 #-----------------------------------------------------------------
 # include $(call BUILD_SUBDIRS, )

@@ -13,11 +13,10 @@ LOCAL_OBJS = \
 	misc.o \
 	osdep.o \
 	timer.o \
-	pipe.o \
-	daemon.o \
 	exec.o \
 	udp.o \
 	cobdpath.o \
+	reactor.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 
@@ -33,6 +32,6 @@ CLEAN_FILES := $(CLEAN_FILES) \
 #-----------------------------------------------------------------
 include $(call BUILD_SUBDIRS, daemon conet-daemon console \
 	console-nt conet-bridged-daemon coserial-daemon \
-	conet-slirp-daemon install debug)
+	conet-slirp-daemon install debug control)
 BUILD_PATH := $(shell dirname $(BUILD_PATH))
 endif

@@ -26,6 +26,7 @@ typedef enum {
 	CO_MANAGER_IOCTL_DEBUG_READER,
 	CO_MANAGER_IOCTL_DEBUG_LEVELS,
 	CO_MANAGER_IOCTL_INFO,
+	CO_MANAGER_IOCTL_ATTACH,
 } co_manager_ioctl_t;
 
 /*
@@ -44,18 +45,20 @@ typedef struct {
 	co_arch_info_t arch_info;
 	unsigned long actual_memsize_used;
 	void *shared_user_address;
+	co_id_t id;
 } co_manager_ioctl_create_t;
 
 /* 
  * ioctls()s under CO_MANAGER_IOCTL_MONITOR: 
  */
 typedef enum {
-	CO_MONITOR_IOCTL_DESTROY,
+	CO_MONITOR_IOCTL_CLOSE,
 	CO_MONITOR_IOCTL_LOAD_SECTION, 
 	CO_MONITOR_IOCTL_START,
 	CO_MONITOR_IOCTL_RUN,
 	CO_MONITOR_IOCTL_STATUS,
 	CO_MONITOR_IOCTL_LOAD_INITRD, 
+	CO_MONITOR_IOCTL_GET_CONSOLE,
 } co_monitor_ioctl_op_t;
 
 /* interface for CO_MANAGER_IOCTL_MONITOR: */
@@ -79,6 +82,16 @@ typedef struct {
 	unsigned long hostmem_usage_limit;
 	unsigned long hostmem_used;
 } co_manager_ioctl_info_t;
+
+#define CO_MANAGER_ATTACH_MAX_MODULES 0x10
+
+/* interface for CO_MANAGER_IOCTL_ATTACH: */
+typedef struct {
+	co_rc_t rc;
+	co_id_t id;
+	int num_modules;
+	co_module_t modules[CO_MANAGER_ATTACH_MAX_MODULES];
+} co_manager_ioctl_attach_t;
 
 /* interface for CO_MANAGER_IOCTL_DEBUG_READER: */
 typedef struct {
@@ -115,11 +128,15 @@ typedef struct {
 	unsigned char buf[0];
 } co_monitor_ioctl_load_initrd_t;
 
+/* interface for CO_MONITOR_IOCTL_GET_CONSOLE: */
+typedef struct {
+	co_manager_ioctl_monitor_t pc;
+	unsigned long x, y;
+} co_monitor_ioctl_get_console_t;
+
 /* interface for CO_MONITOR_IOCTL_RUN: */
 typedef struct {
 	co_manager_ioctl_monitor_t pc;
-	unsigned long num_messages;
-	char data[];
 } co_monitor_ioctl_run_t;
 
 typedef enum {

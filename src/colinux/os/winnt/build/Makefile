@@ -45,6 +45,8 @@ $(DRIVER_TARGET): $(BUILD_PATH)/driver.o $(BUILD_PATH)/driver.base.exp
         -mdll -nostartfiles -nostdlib \
         -o $@ $(word 1,$^) -lntoskrnl -lhal -lgcc
 
+# TODO
+
 LOCAL_TARGET += $(DRIVER_TARGET)
 LOCAL_FILES_PATH = $(BUILD_ROOT)/colinux/os/current/user
 LOCAL_FILES = \
@@ -52,10 +54,11 @@ LOCAL_FILES = \
 	$(LOCAL_FILES_PATH)/console/colinux-console-fltk.exe \
 	$(LOCAL_FILES_PATH)/debug/colinux-debug-daemon.exe \
 	$(LOCAL_FILES_PATH)/console-nt/colinux-console-nt.exe \
-	$(LOCAL_FILES_PATH)/coserial-daemon/colinux-serial-daemon.exe \
 	$(LOCAL_FILES_PATH)/conet-daemon/colinux-net-daemon.exe \
 	$(LOCAL_FILES_PATH)/conet-bridged-daemon/colinux-bridged-net-daemon.exe \
 	$(LOCAL_FILES_PATH)/conet-slirp-daemon/colinux-slirp-net-daemon.exe \
+	$(LOCAL_FILES_PATH)/coserial-daemon/colinux-serial-daemon.exe \
+	$(LOCAL_FILES_PATH)/control/colinux.exe \
 	$(DRIVER_TARGET) \
 
 LOCAL_TARGETS := $(LOCAL_TARGET) $(BUILD_PATH)/driver.o

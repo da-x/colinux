@@ -25,10 +25,11 @@ class console_widget_NT_t:public console_widget_t {
 
 	void draw();
 	co_rc_t loop();
+	co_rc_t set_window(console_window_t *w);
 	co_rc_t console_window(class console_window_t *);
 	co_rc_t idle();
 	co_rc_t title(const char *);
-	void co_console_update();
+	void update();
 
       protected:
 	HANDLE buffer;
