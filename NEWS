@@ -72,6 +72,10 @@
     using the familiar TAP prefix (00:FF:XX:XX:XX:XX).
   * Enhanced coLinux keyboard handling support (sends raw scan codes
     from Windows to linux) (Nuno Lucas).
+  * Change memory allocation so that the RAM for the VM is not
+    allocated on startup, but on-demand. This means the coLinux
+    loads faster and less prune to memory allocation failures
+    in the host.
 
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).
