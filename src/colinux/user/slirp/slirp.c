@@ -26,11 +26,30 @@ fd_set *global_readfds, *global_writefds, *global_xfds;
 
 #ifdef _WIN32
 
+#include <iphlpapi.h>
+
 static int get_dns_addr(struct in_addr *pdns_addr)
 {
-	/* TEMP */ /* TODO */
-	inet_aton("62.219.186.7", pdns_addr);
-		
+	FIXED_INFO *info;
+	ULONG len;
+	int ret;
+	
+	info = (FIXED_INFO *)malloc(sizeof(FIXED_INFO));
+	len = sizeof( FIXED_INFO );
+	ret = GetNetworkParams(info, &len);
+   
+	if (ret == ERROR_BUFFER_OVERFLOW) {
+		free(info);
+		info = malloc(len);
+	}
+
+	ret = GetNetworkParams(info, &len);
+	if (ret)
+		return ret;
+
+	printf("DNS: %s\n", info->DnsServerList.IpAddress.String);
+	inet_aton(info->DnsServerList.IpAddress.String, pdns_addr);
+	
 	return 0;
 }
 

@@ -304,16 +304,115 @@ co_rc_t co_os_file_set_attr(char *filename, unsigned long valid, struct fuse_att
 	return rc;
 } 
 
-co_rc_t co_os_file_get_attr(char *filename, struct fuse_attr *attr)
+static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 {
-	FILE_BASIC_INFORMATION fbi;
-	FILE_STANDARD_INFORMATION fsi;
-	OBJECT_ATTRIBUTES attributes;
+	co_pathname_t dirname;
+	co_pathname_t filename;
 	UNICODE_STRING dirname_unicode;
-	IO_STATUS_BLOCK io_status;
-	ANSI_STRING ansi_string;
+	UNICODE_STRING filename_unicode;
+	ANSI_STRING dirname_ansi;
+	ANSI_STRING filename_ansi;
+	OBJECT_ATTRIBUTES attributes;
 	NTSTATUS status;
 	HANDLE handle;
+	struct {
+		FILE_FULL_DIRECTORY_INFORMATION entry;
+		WCHAR name[0x80];
+	} entry_buffer;
+	IO_STATUS_BLOCK io_status;
+	co_rc_t rc;
+	int len;
+
+	co_snprintf(dirname, sizeof(dirname), "%s", fullname);
+	
+	len = strlen(dirname);
+	
+	while (len > 0 && (dirname[len-1] != '\\'))
+		len--;
+
+	co_snprintf(filename, sizeof(filename), "%s", &dirname[len]);
+
+	dirname[len] = '\0';
+
+        dirname_ansi.Length = len;
+        dirname_ansi.MaximumLength = dirname_ansi.Length;
+        dirname_ansi.Buffer = &dirname[0];
+ 
+        status = RtlAnsiStringToUnicodeString(&dirname_unicode, &dirname_ansi, TRUE);
+        if (!NT_SUCCESS(status))
+                return status_convert(status);
+ 
+        filename_ansi.Length = strlen(filename);
+        filename_ansi.MaximumLength = filename_ansi.Length;
+        filename_ansi.Buffer = filename;
+ 
+        status = RtlAnsiStringToUnicodeString(&filename_unicode, &filename_ansi, TRUE);
+        if (!NT_SUCCESS(status)) {
+                rc = status_convert(status);
+                goto error_1;
+        }
+ 
+        InitializeObjectAttributes(&attributes, &dirname_unicode,
+                                   OBJ_CASE_INSENSITIVE, NULL, NULL);
+ 
+        status = ZwCreateFile(&handle, FILE_LIST_DIRECTORY,
+                             &attributes, &io_status, NULL, 0, FILE_SHARE_READ | FILE_SHARE_WRITE /* TODO: add | FILE_SHARE_DELETE */, 
+                             FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT | FILE_DIRECTORY_FILE, 
+                             NULL, 0);
+
+	if (!NT_SUCCESS(status)) {
+                rc = status_convert(status);
+                goto error_2;
+        }
+ 
+        status = ZwQueryDirectoryFile(handle, NULL, NULL, 0, &io_status, 
+                                      &entry_buffer, sizeof(entry_buffer), 
+                                      FileFullDirectoryInformation, PTRUE, &filename_unicode, 
+                                      PTRUE);
+        if (!NT_SUCCESS(status)) {
+                rc = status_convert(status);
+                goto error_3;
+        }
+ 
+        attr->uid = 0;
+        attr->gid = 0;
+        attr->rdev = 0;
+        attr->_dummy = 0;
+ 
+        attr->atime = windows_time_to_unix_time(entry_buffer.entry.LastAccessTime);
+        attr->mtime = windows_time_to_unix_time(entry_buffer.entry.LastWriteTime);
+        attr->ctime = windows_time_to_unix_time(entry_buffer.entry.ChangeTime);
+ 
+        attr->mode = FUSE_S_IRWXU | FUSE_S_IRGRP | FUSE_S_IROTH;
+ 
+        if (entry_buffer.entry.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                attr->mode |= FUSE_S_IFDIR;
+        else
+                attr->mode |= FUSE_S_IFREG;
+
+	attr->nlink = 1;
+        attr->size = entry_buffer.entry.EndOfFile.QuadPart;
+        attr->blocks = (entry_buffer.entry.EndOfFile.QuadPart + ((1<<10)-1)) >> 10;
+	
+        rc = CO_RC(OK);
+	
+error_3:
+        ZwClose(handle);
+error_2:
+        RtlFreeUnicodeString(&filename_unicode);
+error_1:
+        RtlFreeUnicodeString(&dirname_unicode);
+        return rc;
+}
+ 
+
+co_rc_t co_os_file_get_attr(char *filename, struct fuse_attr *attr)
+{
+	FILE_NETWORK_OPEN_INFORMATION fi;
+	NTSTATUS status;
+	OBJECT_ATTRIBUTES attributes;
+	UNICODE_STRING dirname_unicode;
+	ANSI_STRING ansi_string;
 	int len;
 	co_rc_t rc = CO_RC(OK);
 
@@ -332,72 +431,40 @@ co_rc_t co_os_file_get_attr(char *filename, struct fuse_attr *attr)
 	InitializeObjectAttributes(&attributes, &dirname_unicode,
 				   OBJ_CASE_INSENSITIVE, NULL, NULL);
 
-	status = ZwCreateFile(&handle, FILE_READ_ATTRIBUTES,
-			      &attributes, &io_status, NULL, 0, FILE_SHARE_READ | 
-			      FILE_SHARE_WRITE | FILE_SHARE_DELETE, 
-			      FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT, 
-			      NULL, 0);
+	status = ZwQueryFullAttributesFile(&attributes, &fi);
 
-	if (!NT_SUCCESS(status)) {
-		status = ZwCreateFile(&handle, FILE_READ_ATTRIBUTES,
-				      &attributes, &io_status, NULL, 0, FILE_SHARE_READ | 
-				      FILE_SHARE_DELETE, FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT, 
-				      NULL, 0);
-		if (!NT_SUCCESS(status)) {
-			status = ZwCreateFile(&handle, FILE_READ_ATTRIBUTES,
-					      &attributes, &io_status, NULL, 0, 0, 
-					      FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT,
-					      NULL, 0);
-			if (!NT_SUCCESS(status)) {
-				rc = status_convert(status);
-				goto error;
-			}
-
-			rc = status_convert(status);
-			goto error;
-		}
-	}
-
-	status = ZwQueryInformationFile(handle, &io_status, &fbi,
-					sizeof(fbi), FileBasicInformation);
 	if (!NT_SUCCESS(status)) {
 		rc = status_convert(status);
-		goto error_2;
-	}
+		goto error;
 
+	}
 	attr->uid = 0;
 	attr->gid = 0;
 	attr->rdev = 0;
 	attr->_dummy = 0;
 	attr->blocks = 0;
 
-	attr->atime = windows_time_to_unix_time(fbi.LastAccessTime);
-	attr->mtime = windows_time_to_unix_time(fbi.LastWriteTime);
-	attr->ctime = windows_time_to_unix_time(fbi.ChangeTime);
+	attr->atime = windows_time_to_unix_time(fi.LastAccessTime);
+	attr->mtime = windows_time_to_unix_time(fi.LastWriteTime);
+	attr->ctime = windows_time_to_unix_time(fi.ChangeTime);
 
 	attr->mode = FUSE_S_IRGRP | FUSE_S_IXGRP | FUSE_S_IRWXU | FUSE_S_IROTH | FUSE_S_IWOTH;
 
-	if (fbi.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+	if (fi.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 		attr->mode |= FUSE_S_IFDIR;
 	else
 		attr->mode |= FUSE_S_IFREG;
 
-	status = ZwQueryInformationFile(handle, &io_status, &fsi,
-					sizeof(fsi), FileStandardInformation);
-	if (!NT_SUCCESS(status)) {
-		rc = CO_RC(ERROR);
-		goto error_2;
-	}
-	
 	attr->nlink = 1;
-	attr->size = fsi.EndOfFile.QuadPart;
-	attr->blocks = (fsi.EndOfFile.QuadPart + ((1<<10)-1)) >> 10;
-
-error_2:
-	co_os_file_close(handle);
+	attr->size = fi.EndOfFile.QuadPart;
+	attr->blocks = (fi.EndOfFile.QuadPart + ((1<<10)-1)) >> 10;
 
 error:
 	RtlFreeUnicodeString(&dirname_unicode);
+
+	if (!CO_OK(rc)) {
+		rc = file_get_attr_alt(filename, attr);
+	}
 
 	return rc;
 }

@@ -1,11 +1,39 @@
 * Version 0.6.2
-  * Linux patch ported to Linux 2.6.7. Linux 2.4.x will not be
-    officially supported anymore. (Dan Aloni and George Boutwell)
+  * The entire configuration can be passed on the command line instead
+    of using an XML file (working towards UML compatibility). Read
+    doc/colinux-daemon. 
+  * Linux patch ported to Linux 2.6.8. Linux 2.4.x will not be
+    officially supported anymore. (Dan Aloni and George Boutwell).
+    If you use an old root file image you might need to fix it, 
+    read about moving to 2.6.x in the Wiki site 
+    (http://www.colinux.org/wiki/)
+  * Implemented a Cooperative file system driver in Linux, that
+    makes it possible to mount host OS directories in Linux, similar 
+    to UML's hostfs. It lets you access your C:\ without using
+    Samba or other network file systems. Read doc/cofs.
+  * coLinux should now work under PAE setups and AMD64 setups that 
+    enable the NX bit (specifically, Windows XP SP2).
+  * The slirp network daemon was added. This network daemon provides
+    easy-to-set-up outbound network communication from coLinux 
+    without using the TAP driver or PCAP library.
   * initrd support was added (teesoft2004 at yahoo.com.cn).
     To activate it you can specify e.g. <initrd path="..." /> in the
-    configuration
+    configuration, or initrd=filename in the command line.
+  * Bug fix: Reception and delivery of network packets bigger than
+    2kb.
+  * Bug fix: Consoles and/or other daemons fail to connect to 
+    colinux-daemon on startup (this is Windows only).
+  * Bug fix: Stop reboots where different gcc compiler versions are 
+    used to compile linux.sys & vmlinux, with an error/warning 
+    (George Boutwell).
+  * Bug fix: Proper floating point state preservation in the Linux
+    guest. coLinux now passes the flops20 test program.
+  * Bug fix: A tiny memory leak when coLinux is shutting down.
+  * Bug fix: Proper reference counting of the driver in the Linux
+    port.
+  * Bug fix: The network driver (conet) now verifies checksums (as
   * Changed PCAP handling to use Connection Name instead of 
-    Adapter/Device/Driver name. Name is +now uniform between PCAP & 
+    Adapter/Device/Driver name. Name is now uniform between PCAP & 
     TAP and multiple devices of the same/make/model should be able 
     to be connected to. (George Boutwell)
   * Support AltGr for both FLTK & NT consoles. (Sascha Kettler)
@@ -21,18 +49,11 @@
   * An API version number was added to make sure that you use the
     right vmlinux and user-space executables with the right coLinux 
     driver (previously it caused crashes if the APIs changed).
-  * Bug fix: A tiny memory leak when coLinux is shutting down.
-  * Bug fix: Proper reference counting of the driver in the Linux
-    port.
-  * Bug fix: The network driver (conet) now verifies checksums (as
-    network packets that are received by PCAP can indeed be bad).
   * Added block device aliasing, e.g alias="hda2". You can specify
     such an alias in the <block_device> element in the configuration 
     XML and expect coLinux to mount it, even when passed with root=.
     NOTE: The cobdX device and its alias are mutual exclusive, which
     means that you can't mount both of them at the same time. 
-  * Bug fix: Proper floating point state preservation in the Linux
-    guest. coLinux now passes the flops20 test program.
   * Implemented a new timer for the Linux guest, this should fix
     time-going-back issues.
   * Improved message passing, which may boost networking a bit.
@@ -49,19 +70,8 @@
     driver will remain until it is uninstalled.
   * If the MAC address is unspecified, a random MAC is choosed 
     using the familiar TAP prefix (00:FF:XX:XX:XX:XX).
-  * Bug fix: Reception and delivery of network packets bigger than
-    2kb.
-  * Bug fix: Consoles and/or other daemons fail to connect to 
-    colinux-daemon on startup (this is Windows only).
-  * Bug fix: Stop reboots where different gcc compiler versions are 
-    used to compile linux.sys & vmlinux, with an error/warning 
-    (George Boutwell).
   * Enhanced coLinux keyboard handling support (sends raw scan codes
     from Windows to linux) (Nuno Lucas).
-  * Should now work under PAE setups and AMD64 setups that enable
-    the NX bit (specifically, Windows XP SP2).
-  * The entire configuration can be passed on the command line instead
-    of using an XML file (working towards UML compatibility).
 
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).

@@ -26,7 +26,8 @@ $(LOCAL_EXE) : \
 	$(BUILD_ROOT)/colinux/os/current/user/manager.o \
 	$(BUILD_ROOT)/colinux/os/current/user/timer.o \
 
-	$(CC) $^ -o $@ -luser32 -lgdi32 -lkernel32 -lmxml -lws2_32
+	$(CC) $^ -o $@ -luser32 -lgdi32 -lkernel32 -lmxml -lws2_32 \
+	-liphlpapi
 
 CLEAN_FILES := $(CLEAN_FILES) \
 	$(LOCAL_OBJS) $(LOCAL_EXE)
