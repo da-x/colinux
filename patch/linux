@@ -94,7 +94,7 @@ diff -urN a/arch/i386/kernel/Makefile b/arch/i386/kernel/Makefile
 diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 --- a/arch/i386/kernel/cooperative.c
 +++ b/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,324 @@
+@@ -0,0 +1,333 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -181,6 +181,15 @@ diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 +
 +	__asm__ __volatile__("movl %%cr4, %0" : "=r" (mmu_cr4_features));
 +}
++
++asm(
++	""
++	".section .text\n"
++	".globl co_arch_start_kernel\n"
++	"co_arch_start_kernel:\n"
++	"       call co_startup_entry\n"
++	".previous\n"
++	"");
 +
 +void co_start_arch(void)
 +{
@@ -460,7 +469,15 @@ diff -urN a/arch/i386/kernel/entry.S b/arch/i386/kernel/entry.S
 diff -urN a/arch/i386/kernel/head.S b/arch/i386/kernel/head.S
 --- a/arch/i386/kernel/head.S
 +++ b/arch/i386/kernel/head.S
-@@ -425,7 +425,7 @@
+@@ -238,6 +238,7 @@
+ 	rep
+ 	movsl
+ 1:
++ENTRY(co_startup_entry)
+ checkCPUtype:
+ 
+ 	movl $-1,X86_CPUID		#  -1 for no CPUID initially
+@@ -425,7 +426,7 @@
  .data
  
  ENTRY(stack_start)
@@ -4532,7 +4549,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_internal.h
 --- a/include/linux/cooperative_internal.h
 +++ b/include/linux/cooperative_internal.h
-@@ -0,0 +1,77 @@
+@@ -0,0 +1,78 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -4563,6 +4580,7 @@ diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_int
 +extern void co_idle_processor(void);
 +extern void co_terminate(co_termination_reason_t reason);
 +extern void co_start_kernel(void);
++extern void co_arch_start_kernel(void);
 +extern void co_handle_jiffies(long count);
 +
 +extern void co_send_message(co_module_t from, 
@@ -4657,7 +4675,7 @@ diff -urN a/kernel/Makefile b/kernel/Makefile
 diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 --- a/kernel/cooperative.c
 +++ b/kernel/cooperative.c
-@@ -0,0 +1,321 @@
+@@ -0,0 +1,322 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -4708,8 +4726,9 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +        memcpy(co_boot_parameters, &co_passage_page->params[10], 
 +               sizeof(co_boot_parameters));
 +
-+	start_kernel();
++	co_arch_start_kernel();
 +
++	/* should never be reached */
 +	co_terminate(CO_TERMINATE_END);
 +}
 +
