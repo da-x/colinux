@@ -36,6 +36,17 @@
   * Implemented a new timer for the Linux guest, this should fix
     time-going-back issues.
   * Improved message passing, which may boost networking a bit.
+  * Win32-TAP driver upgraded to version 8.1. This version doesn't 
+    bring any changes to the actual driver code. However it was 
+    released in order to notify the other projects that bundle the 
+    TAP driver along with their software, to modfiy the name 
+    identifer of the driver so multiple TAP driver users can 
+    coexist (e.g, OpenVPN with coLinux). Therefore, coLinux now 
+    installs it's TAP driver as TAPxxxxco (where xxxx is the driver 
+    version).
+    After installing it, you will notice " (coLinux)" appended to
+    the device name in the Network Connections manager. The old
+    driver will remain until it is uninstalled.
   
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).
