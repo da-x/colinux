@@ -5,7 +5,8 @@
   * Changed PCAP handling to use Connection Name instead of 
     Adapter/Device/Driver name. Name is +now uniform between PCAP & 
     TAP and multiple devices of the same/make/model should be able 
-    to be connected to. (George Boutwell).  
+    to be connected to. (George Boutwell)
+  * Support AltGr for both FLTK & NT consoles. (Sascha Kettler)
 
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).

@@ -4,11 +4,6 @@ Thu Jun 10 10:58:13 2004  George Boutwell  <gboutwel@praize.com>
 	* src/colinux/os/winnt/user/conet-bridged-daemon/main.c:
 	Added pcap-registry.h, changed PCAP handling to use Connection Name instead of Adapter/Device/Driver name.  Name is now uniform between PCAP & TAP and multiple devices of the same/make/model should be able to be connected to.
 	
-Mon May 31 08:56:00 2004  Sascha Kettler <kettler@users.sourceforge.net>
-
-	* src/colinux/os/winnt/user/console/head.cpp
-	* src/colinux/os/winnt/user/console-nt/widget.cpp:
-	Handles Windows's weird way of handling the AltGr key and makes it usable for the linux guest system. Handled in console-fltk and console-nt.
 
 Sat May 29 16:15:04 2004  Dan Aloni  <da-x@colinux.org>
 
