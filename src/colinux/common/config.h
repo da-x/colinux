@@ -40,6 +40,7 @@ typedef struct co_block_dev_desc {
 typedef enum {
 	CO_NETDEV_TYPE_BRIDGED_PCAP,
 	CO_NETDEV_TYPE_TAP,
+	CO_NETDEV_TYPE_SLIRP,
 } co_netdev_type_t;
 
 #define CO_NETDEV_DESC_STR_SIZE 0x40

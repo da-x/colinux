@@ -19,6 +19,7 @@
 #include <colinux/os/alloc.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/common/common.h>
+#include <colinux/user/debug.h>
 #include "../daemon.h"
 #include "../unix.h"
 

@@ -15,6 +15,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <colinux/common/libc.h>
 #include <colinux/user/debug.h>
 
 void co_daemon_trace_point(co_trace_point_info_t *info)
@@ -34,7 +35,7 @@ void co_daemon_trace_point(co_trace_point_info_t *info)
 		int ret;
 		sock = socket(AF_INET, SOCK_DGRAM, 0);
 
-		bzero((char *) &server, sizeof(server));
+		co_bzero((char *) &server, sizeof(server));
 		server.sin_family = AF_INET;
 
 		/* 

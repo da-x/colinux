@@ -94,7 +94,7 @@ void co_daemon_syntax()
 	co_terminal_print("        the -c option is not needed. Instead, you pass all configuration via\n");
 	co_terminal_print("        the command line, for example:\n");
 	co_terminal_print("\n");
-	co_terminal_print("          colinux-daemon kernel=vmlinux cobd0=root_fs root=/dev/cobd0 hda1=cobd0\n");
+	co_terminal_print("          colinux-daemon kernel=vmlinux cobd0=root_fs root=/dev/cobd0 hda1=:cobd0\n");
 	co_terminal_print("\n");
 	co_terminal_print("      Use of new aliases automatically allocates cobd(s), for example:\n");
 	co_terminal_print("\n");
@@ -812,6 +812,11 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 
 		case CO_NETDEV_TYPE_TAP: {
 			rc = co_launch_process("colinux-net-daemon -c %d %s -i %d", daemon->id, interface_name, i);
+			break;
+		}
+
+		case CO_NETDEV_TYPE_SLIRP: {
+			rc = co_launch_process("colinux-slirp-net-daemon -c %d -i %d", daemon->id, i);
 			break;
 		}
 

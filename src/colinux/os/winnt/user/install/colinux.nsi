@@ -136,6 +136,7 @@ Section "coLinux" SeccoLinux
   File "..\console\coLinux-console-fltk.exe"
   File "..\console-nt\coLinux-console-nt.exe"
   File "..\conet-daemon\coLinux-net-daemon.exe"
+  File "..\conet-slirp-daemon\coLinux-slirp-net-daemon.exe"
   File "..\daemon\coLinux-daemon.exe"
   File "..\debug\coLinux-debug-daemon.exe"
   ;Enable when working correctly

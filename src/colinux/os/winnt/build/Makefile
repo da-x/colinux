@@ -55,6 +55,7 @@ LOCAL_FILES = \
 	$(BUILD_ROOT)/colinux/os/current/user/console-nt/colinux-console-nt.exe \
 	$(BUILD_ROOT)/colinux/os/current/user/coserial-daemon/colinux-serial-daemon.exe \
 	$(BUILD_ROOT)/colinux/os/current/user/conet-daemon/colinux-net-daemon.exe \
+	$(BUILD_ROOT)/colinux/os/current/user/conet-slirp-daemon/colinux-slirp-net-daemon.exe \
 	$(DRIVER_TARGET) \
 
 LOCAL_TARGETS := $(LOCAL_TARGET) $(BUILD_PATH)/driver.o

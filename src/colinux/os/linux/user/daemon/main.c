@@ -14,9 +14,11 @@
 #include <unistd.h>
 #include <sched.h>
 
+#include <colinux/common/libc.h>
 #include <colinux/user/daemon.h>
 #include <colinux/user/monitor.h>
 #include <colinux/user/manager.h>
+#include <colinux/user/debug.h>
 #include <colinux/os/user/manager.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/pipe.h>
@@ -43,7 +45,7 @@ static int daemon_main(int argc, char *argv[])
 
 	co_daemon_print_header();
 
-	memset(&start_parameters, 0, sizeof(start_parameters));
+	co_memset(&start_parameters, 0, sizeof(start_parameters));
 
 	rc = co_cmdline_params_alloc(argv, argc, &cmdline);
 	if (!CO_OK(rc)) {

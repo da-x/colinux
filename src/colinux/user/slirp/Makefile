@@ -1,37 +1,27 @@
 # Standard Makefile header
 ifeq ($(BUILD_ROOT),)
-BUILD_ROOT=../..
+BUILD_ROOT=../../..
 include $(BUILD_ROOT)/Makefile
 else
-BUILD_PATH := $(BUILD_PATH)/user
+BUILD_PATH := $(BUILD_PATH)/slirp
 #-----------------------------------------------------------------
 
-# -DDEBUG_CO_RC
-
 LOCAL_OBJS = \
-	monitor.o \
-	manager.o \
-	config.o \
-	elf_load.o \
-	macaddress.o \
-	daemon.o \
-	cmdline.o \
-	debug.o \
+	cksum.o if.o ip_icmp.o ip_input.o ip_output.o mbuf.o misc.o  \
+	sbuf.o  tcp_input.o tcp_output.o compat.o bootp.o \
+	tcp_timer.o udp.o socket.o tcp_subr.o  slirp.o
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 
 $(LOCAL_OBJS) : %.o : %.c
 	$(TOOL_USER_CC)
 
-$(BUILD_PATH)/daemon.o : $(BUILD_ROOT)/colinux/common/version.h
-
-$(BUILD_PATH)/user.a : $(LOCAL_OBJS)
+$(BUILD_PATH)/slirp.a : $(LOCAL_OBJS)
 	$(TOOL_AR)
 
 CLEAN_FILES := $(CLEAN_FILES) \
-	$(LOCAL_OBJS) $(BUILD_PATH)/user.a
+	$(LOCAL_OBJS) $(BUILD_PATH)/slirp.a
 
 #-----------------------------------------------------------------
-include $(call BUILD_SUBDIRS, console-base console debug slirp)
 BUILD_PATH := $(shell dirname $(BUILD_PATH))
 endif

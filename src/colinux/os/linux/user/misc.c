@@ -19,6 +19,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <colinux/common/libc.h>
 #include <colinux/os/alloc.h>
 #include <colinux/os/timer.h>
 #include <colinux/os/user/misc.h>
@@ -36,7 +37,7 @@ void co_terminal_print(const char *format, ...)
 	//printf("%s: %s", _colinux_module, buf);
 	printf("%s", buf);
 
-	len = strlen(buf);
+	len = co_strlen(buf);
 	while (len > 0  &&  buf[len-1] == '\n')
 		buf[len - 1] = '\0';
 		
@@ -71,7 +72,7 @@ int co_udp_socket_connect(const char *addr, unsigned short int port)
 	if (sock == -1)
 		return -1;
 
-	bzero((char *)&server, sizeof(server));
+	co_bzero((char *)&server, sizeof(server));
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = inet_addr(addr);
 	server.sin_port = htons(port);

@@ -266,6 +266,8 @@ co_rc_t co_load_config_network(co_config_t *out_config, mxml_element_t *element)
 
 			if (strcmp(element_text, "bridged") == 0) {
 				desc.type = CO_NETDEV_TYPE_BRIDGED_PCAP;
+			} else if (strcmp(element_text, "slirp") == 0) {
+				desc.type = CO_NETDEV_TYPE_SLIRP;
 			} else if (strcmp(element_text, "tap") == 0) {
 				desc.type = CO_NETDEV_TYPE_TAP;
 			} else {
@@ -561,6 +563,7 @@ static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, co
 			co_terminal_print("error parsing MAC address: %s\n", mac_address);
 			return rc;
 		}
+		conf->net_devs[index].manual_mac_address = PTRUE;
 	}
 
 	co_terminal_print("configured TAP device as eth%d\n", index);
@@ -601,6 +604,7 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 			co_terminal_print("error parsing MAC address: %s\n", mac_address);
 			return rc;
 		}
+		conf->net_devs[index].manual_mac_address = PTRUE;
 	}
 
 	if (strlen(conf->net_devs[index].desc) == 0) {
@@ -608,13 +612,37 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 		return CO_RC(ERROR);
 	}
 
-	co_terminal_print("configured PCAP bridged at '%s' device as eth%d\n", 
+	co_terminal_print("configured PCAP bridge at '%s' device as eth%d\n", 
 			  conf->net_devs[index].desc, index);
 
 	if (strlen(mac_address) > 0)
 		co_terminal_print("MAC address: %s\n", mac_address);
 	else
 		co_terminal_print("MAC address: auto generated\n");
+
+	return CO_RC(OK);
+}
+
+static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, const char *param)
+{
+	char mac_address[40] = {0, };
+
+	char *array[3] = {
+		conf->net_devs[index].desc,
+		mac_address,
+	};
+	int sizes[3] = {
+		sizeof(conf->net_devs[index].desc),
+		sizeof(mac_address),
+	};
+
+	split_comma_separated(param, array, sizes, 3);
+
+	conf->net_devs[index].type = CO_NETDEV_TYPE_SLIRP;
+	conf->net_devs[index].enabled = PTRUE;
+
+	co_terminal_print("configured Slirp at '%s' device as eth%d\n", 
+			  conf->net_devs[index].desc, index);
 
 	return CO_RC(OK);
 }
@@ -627,9 +655,11 @@ static co_rc_t parse_args_networking_device(co_config_t *conf, int index, const 
 		return parse_args_networking_device_tap(conf, index, next);
 	} else if (strmatch_identifier(param, "pcap-bridge", &next)) {
 		return parse_args_networking_device_pcap(conf, index, next);
+	} else if (strmatch_identifier(param, "slirp", &next)) {
+		return parse_args_networking_device_slirp(conf, index, next);
 	} else {
 		co_terminal_print("unsupported network transport type: %s\n", param);
-		co_terminal_print("supported types are: tuntap, pcap-bridge\n");
+		co_terminal_print("supported types are: tuntap, pcap-bridge, slirp\n");
 		return CO_RC(ERROR);
 	}
 

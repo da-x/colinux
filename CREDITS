@@ -34,7 +34,13 @@ Additional developers and contributors:
     
     Regis NEBOR <rnebor@hotmail.com>
     NSIS installer script
-    
+
+Incoroprated code from the following contributers / projects:
+    slirp, QEMU 
+    Copyright (c) 2004 Fabrice Bellard
+    Copyright (c) 1995 Danny Gasparovski.
+    See: src/colinux/user/slirp/COPYRIGHT
+   
 Producer:
     Kuniyasu Suzaki, Senior Reseacher, AIST
 

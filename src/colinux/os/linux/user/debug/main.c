@@ -15,6 +15,7 @@
 
 #include <colinux/user/manager.h>
 #include <colinux/user/daemon.h>
+#include <colinux/user/debug/main.h>
 
 COLINUX_DEFINE_MODULE("colinux-debug-daemon");
 
