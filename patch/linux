@@ -3755,7 +3755,7 @@ diff -urN a/fs/cofusefs/Makefile b/fs/cofusefs/Makefile
 diff -urN a/fs/cofusefs/dev.c b/fs/cofusefs/dev.c
 --- a/fs/cofusefs/dev.c
 +++ b/fs/cofusefs/dev.c
-@@ -0,0 +1,877 @@
+@@ -0,0 +1,889 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
@@ -4455,6 +4455,18 @@ diff -urN a/fs/cofusefs/dev.c b/fs/cofusefs/dev.c
 +	char *str;
 +
 +	switch ((unsigned long)in->h.opcode) {
++	case FUSE_STATFS: {
++		struct fuse_statfs_out *arg;
++
++		arg = (struct fuse_statfs_out *)out->args[0].value;
++
++		cofuse_request_start(&flags, fc, in);
++		co_switch_wrapper();
++		*arg = *(struct fuse_statfs_out *)&co_passage_page->params[5];
++		cofuse_request_end(flags, out);
++		return;
++	}
++
 +	case FUSE_OPEN: {
 +		struct fuse_open_in *opin = (struct fuse_open_in *)in->args[0].value;
 +
@@ -4636,7 +4648,7 @@ diff -urN a/fs/cofusefs/dev.c b/fs/cofusefs/dev.c
 diff -urN a/fs/cofusefs/dir.c b/fs/cofusefs/dir.c
 --- a/fs/cofusefs/dir.c
 +++ b/fs/cofusefs/dir.c
-@@ -0,0 +1,967 @@
+@@ -0,0 +1,961 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
@@ -5176,10 +5188,9 @@ diff -urN a/fs/cofusefs/dir.c b/fs/cofusefs/dir.c
 +	
 +	co_passage_page_release(flags);
 +	
-+	if (ret < 0) {
++	if (ret) {
 +		printk("fuse_readdir: host returned error: %x\n", ret);
 +		kfree(buf);	
-+		ret = -EIO;
 +		return ret;
 +	}
 +	
@@ -5325,13 +5336,11 @@ diff -urN a/fs/cofusefs/dir.c b/fs/cofusefs/dir.c
 +
 +	co_passage_page_release(flags);
 +
-+	if (ret < 0) {
++	if (ret) {
 +		printk("fuse_readdir: host returned error: %x\n", ret);
 +		kfree(rd);
-+		ret = -EIO;
 +	} else {
 +		file->private_data = (void *)rd;
-+		ret = 0;
 +	}
 +
 +	return ret;
@@ -5359,12 +5368,9 @@ diff -urN a/fs/cofusefs/dir.c b/fs/cofusefs/dir.c
 +
 +	co_passage_page_release(flags);
 +
-+	if (ret < 0) {
++	if (ret) {
 +		printk("fuse_readdir: host returned error: %x\n", ret);
-+		ret = -EIO;
-+	} else {
-+		ret = 0;
-+	}
++	} 
 +
 +	kfree(rd);
 +

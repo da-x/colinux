@@ -91,8 +91,6 @@ co_rc_t co_os_fs_dir_join_unix_path(co_pathname_t *dirname, const char *addition
 	if ((total_len > 0) && (*dirname)[total_len-1] == '\\') {
 		(*dirname)[total_len-1] = '\0';
 	}
-		
-	co_debug_system("dir_join_unix_path: mounting '%s'\n", dirname);
 	
 	return CO_RC(OK);
 }

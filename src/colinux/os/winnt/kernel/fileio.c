@@ -656,3 +656,48 @@ error:
 	RtlFreeUnicodeString(&dirname_unicode);
 	return rc;
 }
+
+co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *statfs)
+{
+	FILE_FS_FULL_SIZE_INFORMATION fsi;
+	HANDLE handle;
+	NTSTATUS status;
+	IO_STATUS_BLOCK io_status;
+	co_pathname_t pathname;
+	co_rc_t rc;
+	int len;
+	
+	memcpy(&pathname, &filesystem->base_path, sizeof(co_pathname_t));
+
+	len = strlen(pathname);
+	do {
+		rc = co_os_file_create(pathname, &handle, 
+				       FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE,
+				       FILE_OPEN, FILE_DIRECTORY_FILE | FILE_OPEN_FOR_FREE_SPACE_QUERY);
+		
+		if (CO_OK(rc)) 
+			break;
+		
+		while (len > 0  &&  pathname[len-1] != '\\')
+			len--;
+
+		pathname[len] = '\0';
+	} while (len > 0);
+	
+	status = ZwQueryVolumeInformationFile(handle, &io_status, &fsi,
+					      sizeof(fsi), FileFsFullSizeInformation);
+
+	if (NT_SUCCESS(status)) {
+		statfs->st.block_size = fsi.SectorsPerAllocationUnit * fsi.BytesPerSector;
+		statfs->st.blocks = fsi.TotalAllocationUnits.QuadPart;
+		statfs->st.blocks_free = fsi.CallerAvailableAllocationUnits.QuadPart;
+		statfs->st.files = 0;
+		statfs->st.files_free = 0;
+		statfs->st.namelen = sizeof(co_pathname_t);
+	}
+
+	rc = status_convert(status);
+
+	co_os_file_close(handle);
+	return rc;
+}

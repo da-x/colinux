@@ -19,7 +19,7 @@ diff -urN -x '*.o' -x '*.a' -x Makefile -x 'config.*' w32api-2.5/include/ddk/win
   * RtlEqualLuid( 
 diff -urN -x '*.o' -x '*.a' -x Makefile -x 'config.*' w32api-2.5/lib/ddk/ntoskrnl.def w32api-2.5-mod/lib/ddk/ntoskrnl.def
 --- w32api-2.5/lib/ddk/ntoskrnl.def	2004-02-15 09:32:37.000000000 +0200
-+++ w32api-2.5-mod/lib/ddk/ntoskrnl.def	2004-10-18 23:54:01.000000000 +0200
++++ w32api-2.5-mod/lib/ddk/ntoskrnl.def	2004-10-23 10:53:30.000000000 +0200
 @@ -644,7 +644,7 @@
  MmAllocateContiguousMemorySpecifyCache@20
  MmAllocateMappingAddress@8
@@ -47,3 +47,12 @@ diff -urN -x '*.o' -x '*.a' -x Makefile -x 'config.*' w32api-2.5/lib/ddk/ntoskrn
  ZwQueryDirectoryObject@28
  ;ZwQueryEaFile
  ;ZwQueryFullAttributesFile
+@@ -1333,7 +1333,7 @@
+ ZwQuerySymbolicLinkObject@12
+ ZwQuerySystemInformation@16
+ ZwQueryValueKey@24
+-;ZwQueryVolumeInformationFile
++ZwQueryVolumeInformationFile@20
+ ZwReadFile@36
+ ZwReplaceKey@12
+ ZwRequestWaitReplyPort@12

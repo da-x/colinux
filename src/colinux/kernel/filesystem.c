@@ -490,6 +490,11 @@ static co_rc_t fs_mount(co_filesystem_t *filesystem, const char *pathname,
 	return rc;
 }
 
+static co_rc_t fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *statfs)
+{
+	return filesystem->ops->fs_stat(filesystem, statfs);	
+}
+
 void co_monitor_file_system(co_monitor_t *cmon, unsigned long unit, 
 			    enum fuse_opcode opcode, unsigned long *params)
 {
@@ -504,7 +509,8 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned long unit,
 		goto out;
 	}
 
-	if (opcode == FUSE_MOUNT) {
+	switch (opcode) {
+	case FUSE_MOUNT:
 		result = fs_mount(filesystem, (char*)(&co_passage_page->params[30]),
 				  co_passage_page->params[5],
 				  co_passage_page->params[6],
@@ -512,25 +518,18 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned long unit,
 				  co_passage_page->params[8]);
 		result = translate_code(result);
 		goto out;
+	case FUSE_STATFS:
+		result = fs_stat(filesystem, (struct fuse_statfs_out *)(&co_passage_page->params[5]));
+		result = translate_code(result);
+		goto out;
+	default:
+		break;
 	}
 
 	ino = params[0];
 	inode = ino_num_to_inode(ino, filesystem);
 
 	switch (opcode) {
-	case FUSE_MOUNT:
-		break;
-
-	case FUSE_READLINK:
-	case FUSE_SYMLINK:
-	case FUSE_LINK:
-	case FUSE_STATFS:
-	case FUSE_RELEASE:
-	case FUSE_INVALIDATE:
-	case FUSE_FSYNC:
-	case FUSE_RELEASE2: 
-		break;
-
 	case FUSE_SETATTR: {
 		result = inode_set_attr(filesystem, inode, 
 					co_passage_page->params[5],
@@ -624,6 +623,7 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned long unit,
 
 	case FUSE_DIR_OPEN:
 		result = inode_dir_open(filesystem, inode);
+		result = translate_code(result);
 		break;
 
 	case FUSE_DIR_READ:
@@ -632,10 +632,12 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned long unit,
 					co_passage_page->params[5], 
 					&co_passage_page->params[7],
 					co_passage_page->params[8]);
+		result = translate_code(result);
 		break;
 
 	case FUSE_DIR_RELEASE:
 		result = inode_dir_release(inode);
+		result = translate_code(result);
 		break;
 
 	case FUSE_GETDIR:
@@ -646,7 +648,6 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned long unit,
 
 out:
 	co_passage_page->params[4] = result;
-	co_debug_system("code %d, return %x\n", opcode, result);
 }
 
 void co_monitor_unregister_filesystems(co_monitor_t *cmon)
@@ -767,6 +768,11 @@ static co_rc_t flat_mode_inode_rmdir(co_filesystem_t *filesystem, co_inode_t *in
 }
 
 
+static co_rc_t flat_mode_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *statfs)
+{
+	return co_os_file_fs_stat(filesystem, statfs);
+}
+
 static struct co_filesystem_ops flat_mode = {
 	.getattr = flat_mode_getattr,
 	.getdir = flat_mode_getdir,
@@ -776,4 +782,5 @@ static struct co_filesystem_ops flat_mode = {
 	.inode_mkdir = flat_mode_inode_mkdir,
 	.inode_unlink = flat_mode_inode_unlink,
 	.inode_rmdir = flat_mode_inode_rmdir,
+	.fs_stat = flat_mode_fs_stat,
 };

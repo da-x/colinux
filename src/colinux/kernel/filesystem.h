@@ -73,6 +73,7 @@ typedef struct co_filesystem_ops {
 			       unsigned long mode, char *name);
 	co_rc_t (*inode_unlink)(co_filesystem_t *filesystem, co_inode_t *inode, char *name);
 	co_rc_t (*inode_rmdir)(co_filesystem_t *filesystem, co_inode_t *inode, char *name);
+	co_rc_t (*fs_stat)(co_filesystem_t *filesystem, struct fuse_statfs_out *statfs);
 } co_filesystem_ops_t;
 
 struct co_monitor;
