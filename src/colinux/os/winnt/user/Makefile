@@ -20,6 +20,8 @@ LOCAL_OBJS = \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 
+COLINUX_WINNT_ICON = $(BUILD_ROOT)/colinux/os/current/user/daemon/res/daemon.res
+
 $(LOCAL_OBJS) : %.o : %.c 
 	$(TOOL_USER_CC) $(HOST_API_CFLAGS)
 

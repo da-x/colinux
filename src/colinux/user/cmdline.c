@@ -74,11 +74,12 @@ static param_parse_state_action_t parser_states[PARAM_PARSE_STATE_NUM_STATES][0x
 		[0x00 ... 0x20] = {PARAM_PARSE_STATE_INIT, PARAM_PARSE_MARK_END_OF_PARAM},
 		[0x21 ... 0xff] = {PARAM_PARSE_STATE_PARAM, },
 		['='] = {PARAM_PARSE_STATE_PARAM_EQUAL, },
+		['"'] = {PARAM_PARSE_STATE_PARAM_EQUAL_STR, },
 		['#'] = {PARAM_PARSE_STATE_COMMENT, PARAM_PARSE_MARK_END_OF_PARAM},
 	},
 	[PARAM_PARSE_STATE_PARAM_EQUAL] = {
 		[0x00 ... 0x20] = {PARAM_PARSE_STATE_INIT, PARAM_PARSE_MARK_END_OF_PARAM},
-		[0x21 ... 0xff] = {PARAM_PARSE_STATE_PARAM, },
+		[0x21 ... 0xff] = {PARAM_PARSE_STATE_PARAM_EQUAL, },
 		['"'] = {PARAM_PARSE_STATE_PARAM_EQUAL_STR, },
 		['#'] = {PARAM_PARSE_STATE_COMMENT, PARAM_PARSE_MARK_END_OF_PARAM},
 	},
@@ -123,6 +124,7 @@ static co_rc_t get_params_list(char *filename, int *count, char ***list_output)
 			cur_char = *filescan;
 			action = &parser_states[state][(unsigned char)cur_char];
 			state = action->new_state;
+
 			switch (action->mark) {
 			case PARAM_PARSE_MARK_START_OF_PARAM:
 				param_start = filescan;

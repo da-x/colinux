@@ -18,6 +18,7 @@ $(LOCAL_OBJS) : %.o : %.c
 LOCAL_TARGETS = $(LOCAL_OBJS) $(LOCAL_EXE)
 
 $(LOCAL_EXE) : \
+	$(COLINUX_WINNT_ICON) \
 	$(LOCAL_OBJS) \
 	$(BUILD_ROOT)/colinux/user/reactor.o \
 	$(BUILD_ROOT)/colinux/user/debug/daemon.a \

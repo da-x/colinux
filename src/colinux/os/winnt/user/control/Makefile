@@ -23,6 +23,7 @@ $(BUILD_PATH)/res/daemon.res: $(BUILD_PATH)/res $(BUILD_PATH)/res/daemon.rc
 	$(CROSS_TARGET)windres -O coff -I $(word 1, $^) $(word 2, $^) -o $@
 
 $(LOCAL_EXE) : \
+	$(COLINUX_WINNT_ICON) \
 	$(LOCAL_OBJS) \
 	$(BUILD_ROOT)/colinux/user/reactor.o \
 	$(BUILD_ROOT)/colinux/common/debug.o \

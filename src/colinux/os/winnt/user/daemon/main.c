@@ -140,6 +140,12 @@ out:
 	return ret; 
 }
 
+static void co_winnt_help(void)
+{
+	co_terminal_print("\n");
+	co_terminal_print("NOTE: Run without arguments to receive help about command line syntax.\n");
+}
+
 co_rc_t co_winnt_main(LPSTR szCmdLine)
 {
 	co_rc_t rc = CO_RC_OK;
@@ -157,7 +163,7 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 	rc = co_os_parse_args(szCmdLine, &argc, &args);
 	if (!CO_OK(rc)) {
 		co_terminal_print("daemon: error parsing arguments\n");
-		co_daemon_syntax();
+		co_winnt_help();
 		return rc;
 	}
 
@@ -173,24 +179,20 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 		if (!CO_OK(rc)) {
 			co_terminal_print("daemon: error parsing parameters\n");
 		}
-
-		co_daemon_syntax();
-		co_winnt_daemon_syntax();
+		co_winnt_help();
 		return CO_RC(ERROR);
 	}
 
 	rc = co_winnt_daemon_parse_args(cmdline, &winnt_parameters);
 	if (!CO_OK(rc)) {
 		co_terminal_print("daemon: error parsing parameters\n");
-		co_daemon_syntax();
-		co_winnt_daemon_syntax();
+		co_winnt_help();
 		return CO_RC(ERROR);
 	}
 
 	rc = co_cmdline_params_check_for_no_unparsed_parameters(cmdline, PFALSE);
 	if (!CO_OK(rc)) {
-		co_daemon_syntax();
-		co_winnt_daemon_syntax();
+		co_winnt_help();
 		co_terminal_print("\n");
 		co_cmdline_params_check_for_no_unparsed_parameters(cmdline, PTRUE);
 		return CO_RC(ERROR);
@@ -235,8 +237,7 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 
 	if (!start_parameters.config_specified){
 		if (!start_parameters.cmdline_config) {
-			co_daemon_syntax();
-			co_winnt_daemon_syntax();
+			co_winnt_help();
 		}
 		return CO_RC(ERROR);
 	}

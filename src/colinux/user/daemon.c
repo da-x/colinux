@@ -85,7 +85,7 @@ void co_daemon_syntax()
 	co_terminal_print("      Use of new aliases automatically allocates cobd(s), for example:\n");
 	co_terminal_print("\n");
 	co_terminal_print("          colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1 \\\n");
-	co_terminal_print("          eth0=pcap-brigde,\"Local Area Connection\"\n");
+	co_terminal_print("          eth0=pcap-bridge,\"Local Area Connection\"\n");
 	co_terminal_print("\n");
 	co_terminal_print("      See README.txt for more details about command-line usage.\n");
 	co_terminal_print("\n");

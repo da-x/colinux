@@ -19,6 +19,7 @@ $(LOCAL_OBJS) : %.o : %.cpp
 LOCAL_TARGETS = $(LOCAL_OBJS) $(LOCAL_EXE)
 
 $(LOCAL_EXE) : \
+	$(COLINUX_WINNT_ICON) \
 	$(BUILD_ROOT)/colinux/user/console/user-console.o \
 	$(BUILD_ROOT)/colinux/user/reactor.o \
 	$(LOCAL_OBJS) \

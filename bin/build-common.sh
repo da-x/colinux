@@ -102,10 +102,14 @@ WINPCAP_SRC_ARCHIVE="$WINPCAP_SRC"_3_0.zip
 
 # Kernel version we are targeting
 # Remember: Please update also conf/kernel-config, if changing kernel version!
+# Read version from filename of patchfile,
+# as patch/linux-2.6.11 or (better) patch/linux-2.6.11.diff
+# KERNEL_VERSION: full kernel version (e.g. 2.6.11)
+# KERNEL_DIR: sub-dir in www.kernel.org for the download (e.g. v2.6)
 #
-KERNEL_DIR="v2.6"
-KERNEL_VERSION="2.6.10"
-
+KERNEL_PATCH_FILE=`ls ../patch/linux-*`
+KERNEL_VERSION=`echo $KERNEL_PATCH_FILE | sed -r -e 's/^.*([0-9]+).([0-9]+).([0-9]+).*$/\1.\2.\3/'`
+KERNEL_DIR=`echo $KERNEL_VERSION | sed -r -e 's/^([0-9]+)\.([0-9]+)\.([0-9]+).*$/v\1.\2/'`
 
 # (from build-kernel.sh) #
 
@@ -134,14 +138,10 @@ if [ "$COLINUX_TARGET_KERNEL_PATH" = "" ] ; then
 fi
 
 # coLinux kernel we are targeting
-# KERNEL_DIR: sub-dir in www.kernel.org for the download (e.g. v2.6)
-if [ "$KERNEL_DIR" = "" ] ; then
-    echo "Please specify the $""KERNEL_DIR in user-build.cfg (e.g. KERNEL_DIR=v2.6"
-    exit -1
-fi
-# KERNEL_VERSION: the full kernel version (e.g. 2.6.10)
-if [ "$KERNEL_VERSION" = "" ] ; then
-    echo "Please specify the $""KERNEL_VERSION in user-build.cfg (e.g. KERNEL_VERSION=2.6.10"
+if [ -z "$KERNEL_VERSION" -o -z "$KERNEL_DIR" ] ; then
+    # What's wrong here?
+    echo "Can't find the kernel patch, probably wrong script, or"
+    echo "file $KERNEL_PATCH_FILES don't exist?"
     exit -1
 fi
 

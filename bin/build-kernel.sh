@@ -76,11 +76,14 @@ extract_kernel()
 
 patch_kernel()
 {
-	cd "$COLINUX_TARGET_KERNEL_PATH"
 	# A minor hack for now.  allowing linux patch to be 'version specific' 
 	#  in the future, but keeping backwards compatability.
-	cp "$TOPDIR/../patch/linux" "$TOPDIR/../patch/linux-$KERNEL_VERSION.diff"
-	patch -p1 < "$TOPDIR/../patch/linux-$KERNEL_VERSION.diff"
+
+	# FIXME: A Hack in a hack (for md5sum)
+	cp "$KERNEL_PATCH_FILE" "../patch/linux"
+
+	cd "$COLINUX_TARGET_KERNEL_PATH"
+	patch -p1 < "$TOPDIR/$KERNEL_PATCH_FILE"
 	test $? -ne 0 && error_exit 1 "$KERNEL_VERSION patch failed"
 	# Copy coLinux Version into kernel localversion
 	echo "-co-$CO_VERSION" > localversion-cooperative
