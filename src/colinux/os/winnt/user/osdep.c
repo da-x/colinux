@@ -9,43 +9,39 @@
 co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 {
 	char *param_scan;
-	long param_count = 0, i;
+	long param_count = 0, i, j;
 	char **param_array;
 
 	param_scan = szCmdLine;
-
-	while (*param_scan == ' ')
-		param_scan++;
-
-	for (;;) {
-		unsigned long param_advance = 0;
-		if (*param_scan == '"') {
-			param_scan++;
-			while (*param_scan != '"' &&  *param_scan) {
-				param_scan++;
-				param_advance++;
-			}
-			if (*param_scan == '"')
-				param_scan++;
-		}
-		else {
-			while (*param_scan != ' ' &&  *param_scan) {
-				param_scan++;
-				param_advance++;
-			}
-		}
-
-		if (param_advance != 0)
-			param_count++;
-
-		if (*param_scan == '\0')
-			break;
-	
+	while (*param_scan != '\0') {
 		while (*param_scan == ' ')
 			param_scan++;
 
 		if (*param_scan == '\0')
 			break;
+
+		for (;;param_scan++) {
+			if (*param_scan == '"') {
+				param_scan++;
+				while (*param_scan != '"'  &&  *param_scan != '\0') {
+					if (*param_scan == '\\')
+						param_scan++;
+					if (*param_scan == '\0')
+						return CO_RC(ERROR);
+					param_scan++;
+				}
+				if (*param_scan == '\0')
+					break;
+				param_scan++;
+			}
+			
+			if (*param_scan == '\0')
+				break;
+			
+			if (*param_scan == ' ')
+				break;
+		}
+		param_count++;
 	}
 
 	param_array = (char **)co_os_malloc(sizeof(char *)*param_count + 1);
@@ -53,61 +49,104 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 		free(param_array);
 		return CO_RC(ERROR);
 	}
+	memset(param_array, 0, sizeof(char *)*param_count + 1);
 
+	i = 0;
 	param_scan = szCmdLine;
-	while (*param_scan == ' ')
-		param_scan++;
+	while (*param_scan != '\0') {
+		int size = 0;
 
-	for (i = 0; i < param_count; i++) {
-		unsigned long param_advance = 0;
-		char *param_start = param_scan;
+		while (*param_scan == ' ')
+			param_scan++;
 
 		if (*param_scan == '\0')
 			break;
 
-		if (*param_scan == '"') {
-			param_scan++;
-			param_start++;
-			while (*param_scan != '"' &&  *param_scan) {
+		for (;;param_scan++) {
+			if (*param_scan == '"') {
 				param_scan++;
-				param_advance++;
+				while (*param_scan != '"'  &&  *param_scan != '\0') {
+					if (*param_scan == '\\')
+						param_scan++;
+					if (*param_scan == '\0')
+						goto error;
+					size++;
+					param_scan++;
+				}
+				if (*param_scan == '\0')
+					break;
+				param_scan++;
 			}
-			if (*param_scan == '"')
-				param_scan++;
-		}
-		else {
-			while (*param_scan != ' '  &&  *param_scan) {
-				param_scan++;
-				param_advance++;
-			}
-		}
-		
-		if (param_scan != param_start) {
-			param_array[i] = co_os_malloc(param_advance+1);
-			if (param_array[i] == NULL)
+			
+			if (*param_scan == '\0')
 				break;
-				
-			memcpy(param_array[i], param_start, param_advance);
-			param_array[i][param_advance] = '\0';
+			
+			if (*param_scan == ' ')
+				break;
+
+			size++;
 		}
 
+		param_array[i] = co_os_malloc(size + 1);
+		if (!param_array[i])
+			goto error;
+		i++;
+	}
+
+	i = 0;
+	param_scan = szCmdLine;
+	while (*param_scan != '\0') {
 		while (*param_scan == ' ')
 			param_scan++;
-	}
 
-	if (i == param_count) {
-		*count = param_count;
-		param_array[param_count] = NULL;
-		*args = param_array;
-		return CO_RC(OK);
-	} else {
-		/* Error path */
+		if (*param_scan == '\0')
+			break;
 
-		int j;
-		for (j=0; j < i; j++)
-			free(param_array[j]);
+		j = 0;
+		for (;;param_scan++) {
+			if (*param_scan == '"') {
+				param_scan++;
+				while (*param_scan != '"'  &&  *param_scan != '\0') {
+					if (*param_scan == '\\')
+						param_scan++;
+					if (*param_scan == '\0')
+						goto error;
+
+					param_array[i][j] = *param_scan;
+					j++;
+					param_scan++;
+				}
+				if (*param_scan == '\0')
+					break;
+				param_scan++;
+			}
+			
+			if (*param_scan == '\0')
+				break;
+			
+			if (*param_scan == ' ')
+				break;
+
+			param_array[i][j] = *param_scan;
+			j++;
+		}
+
+		param_array[i][j] = '\0';
+
+		i++;
 	}
-	free(param_array);
+	
+	*args = param_array;
+	*count = param_count;
+
+	return CO_RC(OK);
+
+error:
+	for (i=0; i < param_count; i++)
+		if (param_array[i])
+			co_os_free(param_array[i]);
+
+	co_os_free(param_array);
 
 	return CO_RC(ERROR);
 }

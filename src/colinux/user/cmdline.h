@@ -15,16 +15,20 @@
 typedef struct co_command_line_params *co_command_line_params_t;
 
 extern co_rc_t co_cmdline_params_alloc(char **argv, int argc, co_command_line_params_t *cmdline_out);
+
 extern co_rc_t co_cmdline_params_argumentless_parameter(co_command_line_params_t cmdline, 
 							const char *name,
 							bool_t *out_exists);
+
 extern co_rc_t co_cmdline_params_one_arugment_parameter(co_command_line_params_t cmdline, 
 							const char *name, 
 							bool_t *out_exists, 
 							char *out_arg_buf, int arg_size);
+
 extern co_rc_t co_cmdline_params_one_arugment_int_parameter(co_command_line_params_t cmdline, 
 							    const char *name, 
 							    bool_t *out_exists, int *out_int);
+
 extern co_rc_t co_cmdline_params_one_optional_arugment_parameter(co_command_line_params_t cmdline, 
 								 const char *name, 
 								 bool_t *out_exists, 
