@@ -138,15 +138,18 @@ Section "coLinux" SeccoLinux
   File "..\conet-daemon\coLinux-net-daemon.exe"
   File "..\conet-slirp-daemon\coLinux-slirp-net-daemon.exe"
   File "..\daemon\coLinux-daemon.exe"
-  File "..\debug\coLinux-debug-daemon.exe"
+  File /oname=README.txt "..\..\..\..\..\..\RUNNING"
+  File /oname=news.txt "..\..\..\..\..\..\NEWS" 
+  File /oname=cofs.txt  "..\..\..\..\..\..\doc\cofs"
+  File /oname=colinux-daemon.txt "..\..\..\..\..\..\doc\colinux-daemon"
+  
   ;Enable when working correctly
   ;File "..\debug\coLinux-serial-daemon.exe"
   File "..\..\build\linux.sys"
   File "premaid\vmlinux"
-  ;File "premaid\vmlinux-modules.tar.gz"
+  File "premaid\vmlinux-modules.tar.gz"
   ; initrd replaces vmlinux-modules.tar.gz as preferred way to ship modules.
   File "premaid\initrd.gz"
-  File "premaid\README"
 
   ;Backup config file if present
   IfFileExists "$INSTDIR\default.colinux.xml" 0 +1
@@ -418,11 +421,14 @@ Section "Uninstall"
   Delete "$INSTDIR\coLinux-net-daemon.exe"
   Delete "$INSTDIR\coLinux-bridged-net-daemon.exe"
   Delete "$INSTDIR\linux.sys"
-  Delete "$INSTDIR\README"
   Delete "$INSTDIR\vmlinux"
   Delete "$INSTDIR\initrd.gz"
   Delete "$INSTDIR\vmlinux-modules.tar.gz"
   Delete "$INSTDIR\default.coLinux.xml"
+  Delete "$INSTDIR\README.txt"
+  Delete "$INSTDIR\news.txt"
+  Delete "$INSTDIR\cofs.txt"
+  Delete "$INSTDIR\colinux-daemon.txt"
 
   Delete "$INSTDIR\netdriver\OemWin2k.inf"
   Delete "$INSTDIR\netdriver\tap0801co.sys"
