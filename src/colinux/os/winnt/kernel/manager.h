@@ -13,38 +13,51 @@
 
 #include <colinux/os/kernel/manager.h>
 #include <colinux/os/kernel/alloc.h>
+#include <colinux/os/kernel/mutex.h>
 
 #include "ddk.h"
 
+#define PFN_ALLOCATION_COUNT       (64)
+#define PFN_HASH_SIZE              (0x1000)
+
 typedef enum {
-	CO_OS_MDL_PTR_TYPE_NONE=0,
-	CO_OS_MDL_PTR_TYPE_MDL,
-	CO_OS_MDL_PTR_TYPE_PAGE,
-} co_os_mdl_ptr_type_t;
+	CO_OS_PFN_PTR_TYPE_MDL,
+	CO_OS_PFN_PTR_TYPE_PAGE,
+} co_os_pfn_ptr_type_t;
+
+struct co_os_mdl_ptr;
 
 typedef struct co_os_mdl_ptr {
-	co_os_mdl_ptr_type_t type;
-	union {
-		PMDL mdl;
-		struct co_os_mdl_ptr *more_mdls;
-		void *page;
-	};
+	PMDL mdl;
+	int use_count;
+	struct co_os_pfn_ptr *pfn_ptrs;
+	co_list_t node;
 } co_os_mdl_ptr_t;
 
-#define MDL_MAPPING_LEVELS         (3)
-#define MDL_MAPPING_ENTRIES_SCALE  (10)
-#define MDL_MAPPING_ENTRIES        (1 << MDL_MAPPING_ENTRIES_SCALE)
+typedef struct co_os_pfn_ptr {
+	co_os_pfn_ptr_type_t type;
+	co_pfn_t pfn;
+	union {
+		co_os_mdl_ptr_t *mdl;
+		void *page;
+	};
+	co_list_t node;
+	co_list_t unused;
+} co_os_pfn_ptr_t;
+
+#define PFN_HASH(pfn) (pfn % PFN_HASH_SIZE)
 
 struct co_osdep_manager {
-	co_os_mdl_ptr_t map_root;
+	co_os_mutex_t mutex;
+	co_list_t pages_hash[PFN_HASH_SIZE]; /* array of lists of co_os_pfn_ptr_t */
+	co_list_t pages_unused;
+	co_list_t mdl_list;
+
 	unsigned long mdls_allocated;
-	unsigned long auxiliary_allocated;
-	unsigned long auxiliary_peak_allocation;
-	unsigned long mdls_peak_allocation;
-	unsigned long blocks_allocated;
+	unsigned long pages_allocated;
 	unsigned long pages_mapped;
 };
 
-co_rc_t co_os_get_pfn_ptr(struct co_manager *manager, co_pfn_t pfn, co_os_mdl_ptr_t **mdl_out);
+extern void co_winnt_free_all_pages(co_osdep_manager_t osdep);
 
 #endif
