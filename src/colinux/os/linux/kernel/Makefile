@@ -30,7 +30,7 @@ $(BUILD_PATH)/module/prelinked_driver.o : \
 prelinked_driver: $(BUILD_PATH)/module/prelinked_driver.o
 
 $(BUILD_PATH)/module/colinux.ko: $(BUILD_PATH)/module $(BUILD_PATH)/module/prelinked_driver.o
-	(cd $(word 1, $^) ; make COLINUX_PWD=$(BUILD_ROOT) COLINUX_PWD=`pwd`/../../../../..)
+	(export COLINUX_PWD=`pwd` ; cd $(word 1, $^) ; make V=1)
 
 kernel_module: $(BUILD_PATH)/module/colinux.ko
 
