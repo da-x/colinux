@@ -32,7 +32,7 @@ static int __init test_module_init(void)
 			printk("colinux: PAE is enabled, cannot continue\n");
 			return -ENOSYS;
 		}
-		printk("colinux: manager load failure: %x\n", rc);
+		printk("colinux: manager load failure: %x\n", (int)rc);
 		return -ENXIO;
 	}
 

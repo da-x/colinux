@@ -19,6 +19,7 @@
 #include <colinux/os/user/misc.h>
 #include <colinux/user/manager.h>
 #include <colinux/user/cmdline.h>
+#include <colinux/common/libc.h>
 
 #define BUFFER_SIZE   (0x100000)
 
@@ -53,7 +54,7 @@ static void co_debug_download(void)
 				debug_reader.filled = 0;
 				rc = co_manager_debug_reader(handle, &debug_reader);
 				if (!CO_OK(rc)) {
-					fprintf(stderr, "log ended: %x\n", rc);
+					fprintf(stderr, "log ended: %x\n", (int)rc);
 					return;
 				}
 
@@ -99,7 +100,7 @@ static void co_debug_download_to_network(void)
 		debug_reader.filled = 0;
 		rc = co_manager_debug_reader(handle, &debug_reader);
 		if (!CO_OK(rc)) {
-			fprintf(stderr, "log ended: %x\n", rc);
+			fprintf(stderr, "log ended: %x\n", (int)rc);
 			return;
 		}
 			
@@ -276,7 +277,7 @@ void co_debug_download_and_parse(void)
 				debug_reader.filled = 0;
 				co_rc_t rc = co_manager_debug_reader(handle, &debug_reader);
 				if (!CO_OK(rc)) {
-					fprintf(stderr, "log ended: %x\n", rc);
+					fprintf(stderr, "log ended: %x\n", (int)rc);
 					return;
 				}
 
@@ -326,20 +327,20 @@ void co_update_settings(void)
 			desc_ptr->facility_name, *current_setting);
 
 		if (parameters.settings_change_specified) {
-			char *settings_found = NULL;
-
-			char string_to_search[strlen(desc_ptr->facility_name)+2];
+			const char *settings_found = NULL;
+			
+			char string_to_search[co_strlen(desc_ptr->facility_name)+2];
 			snprintf(string_to_search, sizeof(string_to_search), "%s=", desc_ptr->facility_name);
 
-			settings_found = strstr(parameters.settings_change, string_to_search);
+			settings_found = co_strstr(parameters.settings_change, string_to_search);
 			if (settings_found) {
-				char *number_scan  = settings_found + strlen(string_to_search);
-				char *number = number_scan;
+				const char *number_scan = settings_found + co_strlen(string_to_search);
+				const char *number = number_scan;
 
 				while (isdigit(*number_scan))
 					number_scan++;
 				char number_buf[number_scan - number + 1];
-				memcpy(number_buf, number, number_scan - number);
+				co_memcpy(number_buf, number, number_scan - number);
 				number_buf[number_scan - number] = '\0';
 				int setting = atoi(number);
 				

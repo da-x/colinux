@@ -34,7 +34,7 @@ co_rc_t co_canonize_cobd_path(co_pathname_t *pathname)
 		} 
 		
 		getcwd(cwd_path, sizeof(cwd_path));
-		co_snprintf(pathname, sizeof(*pathname), "\\DosDevices\\%s\\%s", cwd_path, copied_path);
+		co_snprintf(*pathname, sizeof(*pathname), "\\DosDevices\\%s\\%s", cwd_path, copied_path);
 	}
 
 	return CO_RC(OK);

@@ -25,10 +25,14 @@ void *co_memcpy(void *dest, const void *src, long n)
 	return memcpy(dest, src, n);
 }
 
+void *co_memmove(void *dest, const void *src, long n)
+{
+	return memmove(dest, src, n);
+}
+
 void co_bzero(void *s, long n)
 {
-	/* bzero is nowhere define in any of ming32's headers, urgh */
-	bzero(s, n);
+	co_memmove(s, 0, n);
 }
 
 const char *co_strstr(const char *haystack, const char *needle)

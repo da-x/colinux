@@ -20,6 +20,7 @@
 #include <colinux/os/kernel/misc.h>
 #include <colinux/os/kernel/monitor.h>
 #include <colinux/os/kernel/time.h>
+#include <colinux/os/timer.h>
 #include <colinux/os/current/kernel/main.h>
 #include <colinux/arch/passage.h>
 #include <colinux/arch/interrupt.h>
@@ -377,7 +378,7 @@ void co_monitor_debug_line(co_monitor_t *cmon, const char *text)
 	} *message = NULL;
 	unsigned long size;
 
-	size = sizeof(message->payload) + strlen(text) + 1;
+	size = sizeof(message->payload) + co_strlen(text) + 1;
 	message = (typeof(message))co_os_malloc(size + sizeof(message->message));
 	if (message == NULL)
 		return;
@@ -388,7 +389,7 @@ void co_monitor_debug_line(co_monitor_t *cmon, const char *text)
 	message->message.type = CO_MESSAGE_TYPE_STRING;
 	message->message.size = size;
 	message->payload.type = CO_MONITOR_MESSAGE_TYPE_DEBUG_LINE;
-	co_memcpy(message->data, text, strlen(text)+1);
+	co_memcpy(message->data, text, co_strlen(text)+1);
 
 	co_message_switch_message(&cmon->message_switch, &message->message);
 }
@@ -558,8 +559,8 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 		return PTRUE;
 	}
 	case CO_OPERATION_GET_HIGH_PREC_TIME: {
-		co_os_get_timestamp(&co_passage_page->params[0]);
-		co_os_get_timestamp_freq(&co_passage_page->params[2]);
+		co_os_get_timestamp((co_timestamp_t *)&co_passage_page->params[0]);
+		co_os_get_timestamp_freq((co_timestamp_t *)&co_passage_page->params[2]);
 		return PTRUE;
 	}
 

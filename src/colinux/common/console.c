@@ -209,13 +209,13 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 
 void co_console_pickle(co_console_t *console)
 {
-	((char *)console->screen) -= (unsigned long)console;
-	((char *)console->backlog) -= (unsigned long)console;
+	console->screen = (co_console_cell_t *)(((char *)console->screen) - (unsigned long)console);
+	console->backlog = (co_console_cell_t *)(((char *)console->backlog) - (unsigned long)console);
 }
 
 void co_console_unpickle(co_console_t *console)
 {
-	((char *)console->screen) += ((unsigned long)console);
-	((char *)console->backlog) += ((unsigned long)console);
+	console->screen = (co_console_cell_t *)(((char *)console->screen) + (unsigned long)console);
+	console->backlog = (co_console_cell_t *)(((char *)console->backlog) + (unsigned long)console);
 }
 

@@ -224,7 +224,7 @@ co_manager_create_pfns_copy_callback(
 	)
 {
 	co_memcpy(mapped_ptr, *data, size);
-	((char *)(*data)) += size;
+	*data = (void *)(((char *)(*data)) + size);
 	return CO_RC(OK);
 }
 
@@ -286,7 +286,7 @@ co_manager_create_pfns_create_ptes_callback(
 		ptes++;
 	}
 
-	((char *)(*data)) = (char *)pfns;
+	*data = (void *)pfns;
 
 	return CO_RC(OK);
 }

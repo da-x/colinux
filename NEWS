@@ -58,7 +58,10 @@
     (George Boutwell).
   * Enhanced coLinux keyboard handling support (sends raw scan codes
     from Windows to linux) (Nuno Lucas).
-  * Should now work under PAE setups.
+  * Should now work under PAE setups and AMD64 setups that enable
+    the NX bit (specifically, Windows XP SP2).
+  * The entire configuration can be passed on the command line instead
+    of using an XML file (working towards UML compatibility).
 
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).

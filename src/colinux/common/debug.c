@@ -10,6 +10,7 @@
 #include "common.h"
 #include "debug.h"
 
+#include <colinux/common/libc.h>
 #include <colinux/os/timer.h>
 #include <stdarg.h>
 
@@ -32,8 +33,8 @@ void co_trace_ent_name(void *ptr, const char *name)
 static inline co_debug_tlv_t *tlv_add_const_string(co_debug_type_t type, const char *str, co_debug_tlv_t *sub_tlv)
 {
 	sub_tlv->type = type;
-	sub_tlv->length = strlen(str) + 1;
-	memcpy(sub_tlv->value, str, sub_tlv->length);
+	sub_tlv->length = co_strlen(str) + 1;
+	co_memcpy(sub_tlv->value, str, sub_tlv->length);
 	return (co_debug_tlv_t *)&sub_tlv->value[sub_tlv->length];
 }
 
@@ -75,9 +76,9 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 {
 	long packet_size = 0;
 
-	packet_size += sizeof(co_debug_type_t) + strlen(module) + 1;
-	packet_size += sizeof(co_debug_type_t) + strlen(filename) + 1;
-	packet_size += sizeof(co_debug_type_t) + strlen(func) + 1;
+	packet_size += sizeof(co_debug_type_t) + co_strlen(module) + 1;
+	packet_size += sizeof(co_debug_type_t) + co_strlen(filename) + 1;
+	packet_size += sizeof(co_debug_type_t) + co_strlen(func) + 1;
 	packet_size += sizeof(co_debug_type_t) + sizeof(co_timestamp_t);
 	packet_size += sizeof(co_debug_type_t) + sizeof(unsigned long);
 	packet_size += sizeof(co_debug_type_t) + sizeof(unsigned long);
@@ -102,7 +103,7 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 	va_start(ap, fmt);
 	co_vsnprintf(sub_tlv->value, sizeof(buffer) - (sub_tlv->value - (char *)buffer) - 1, fmt, ap);
 	va_end(ap);
-	sub_tlv->length = strlen(sub_tlv->value) + 1;
+	sub_tlv->length = co_strlen(sub_tlv->value) + 1;
 
 	co_debug_buf(buffer, (&sub_tlv->value[sub_tlv->length]) - buffer);
 }

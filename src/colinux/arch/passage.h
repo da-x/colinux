@@ -16,5 +16,6 @@ extern co_rc_t co_monitor_arch_passage_page_alloc(co_monitor_t *cmon);
 extern co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon);
 extern void co_monitor_arch_passage_page_free(co_monitor_t *cmon);
 extern void co_host_switch_wrapper(co_monitor_t *cmon);
+extern void co_monitor_arch_enable_interrupts(void);
 
 #endif
