@@ -524,6 +524,7 @@ co_rc_t co_daemon_handle_printk(void *data, co_message_t *message)
 		{
 			string_start += 3;
 		}
+
 		co_terminal_print("%s", string_start);
 		if (co_strstr(string_start, "Kernel panic: VFS: Unable to mount root fs on") == string_start) {
 			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 

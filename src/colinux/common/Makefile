@@ -1,7 +1,7 @@
 # Standard Makefile header
 ifeq ($(BUILD_ROOT),)
-BUILD_ROOT=../..
-include $(BUILD_ROOT)/Makefile
+.DEFAULT:
+	make -C ../.. $(MAKECMDGOALS)
 else
 BUILD_PATH := $(BUILD_PATH)/common
 #-----------------------------------------------------------------
@@ -16,16 +16,21 @@ LOCAL_OBJS = \
 	libc.o \
 	libc_strtol.o \
 	snprintf.o \
+	file_ids.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 
 $(LOCAL_OBJS) : %.o : %.c
 	$(TOOL_KERNEL_CC)
 
+$(BUILD_PATH)/file_ids.c : $(FILES_LIST_FILE) $(BUILD_PATH)/file_ids.py
+	cat $(word 1, $^) | python $(word 2, $^) > $@
+
 $(BUILD_PATH)/libc_strtol.c : $(BUILD_PATH)/libc.c
 	ln -s $(notdir $^) $@
 
 CLEAN_FILES := $(CLEAN_FILES) \
+	$(BUILD_PATH)/file_ids.c \
 	$(BUILD_PATH)/libc_strtol.c
 
 $(TARGET_FLAGS)_libc.c = -DCO_LIBC__MISC

@@ -1,7 +1,7 @@
 # Standard Makefile header
 ifeq ($(BUILD_ROOT),)
-BUILD_ROOT=../..
-include $(BUILD_ROOT)/Makefile
+.DEFAULT:
+	make -C ../.. $(MAKECMDGOALS)
 else
 BUILD_PATH := $(BUILD_PATH)/kernel
 #-----------------------------------------------------------------

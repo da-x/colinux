@@ -19,6 +19,7 @@
 extern void co_debug_system(const char *fmt, ...);
 
 extern char _colinux_module[0x30];
+extern const char *colinux_obj_filenames[];
 
 #define COLINUX_DEFINE_MODULE(str) \
 char _colinux_module[] = str;

@@ -38,8 +38,8 @@ void co_rc_format_error(co_rc_t rc, char *buf, int size)
 
 		file_id = CO_RC_GET_FILE_ID(rc);
 		
-		co_snprintf(buf, size, "error - %s, line %d, file id %d",
-			    code_string, CO_RC_GET_LINE(rc), file_id);
+		co_snprintf(buf, size, "error - %s, line %d, file %s (%d)",
+			    code_string, CO_RC_GET_LINE(rc), colinux_obj_filenames[file_id], file_id);
 	}
 }
 

@@ -1,10 +1,8 @@
 # Standard Makefile header
 ifeq ($(BUILD_ROOT),)
-BUILD_ROOT=../../../..
-
+.DEFAULT:
+	make -C ../../../.. $(MAKECMDGOALS)
 all: colinux
-
-include $(BUILD_ROOT)/Makefile
 else
 
 BUILD_PATH := $(BUILD_PATH)/build

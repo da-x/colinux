@@ -89,9 +89,10 @@ AR=$(CROSS_TARGET)ar
 
 TARGET_FLAGS = TARGETFLAGS_$(subst /,_,$(BUILD_PATH))
 
-TOOL_USER_CC=$(CC) $(USER_CFLAGS) $(CO_INCLUDES) $(TARGETFLAGS_._$(subst /,_,$<)) -c $< -o $@ 
-TOOL_USER_GPP=$(GPP) $(USER_CFLAGS) $(CO_INCLUDES) $(TARGETFLAGS_._$(subst /,_,$<)) -c $< -o $@ 
-TOOL_KERNEL_CC=$(CC) $(KERNEL_CFLAGS) $(CO_INCLUDES) $(TARGETFLAGS_._$(subst /,_,$<)) -c $< -o $@ 
+COLINUX_ID_ADD = -DCOLINUX_FILE_ID=`python ../bin/file_id.py create $(FILES_LIST_FILE) $@`
+TOOL_USER_CC= $(CC) $(COLINUX_ID_ADD) $(USER_CFLAGS) $(CO_INCLUDES) $(TARGETFLAGS_._$(subst /,_,$<)) -c $< -o $@ 
+TOOL_USER_GPP= $(GPP) $(COLINUX_ID_ADD) $(USER_CFLAGS) $(CO_INCLUDES) $(TARGETFLAGS_._$(subst /,_,$<)) -c $< -o $@ 
+TOOL_KERNEL_CC= $(CC) $(COLINUX_ID_ADD) $(KERNEL_CFLAGS) $(CO_INCLUDES) $(TARGETFLAGS_._$(subst /,_,$<)) -c $< -o $@ 
 TOOL_AR=$(AR) cr $@ $^
 
 TOOL_LD_RELOC=$(LD) -g -r -o $@ $^
@@ -99,7 +100,14 @@ TOOL_LD_RELOC=$(LD) -g -r -o $@ $^
 .phony: colinux
 
 BUILD_PATH=$(BUILD_ROOT)
+FILES_LIST_FILE = ./colinux/common/files_list.txt
+
 include $(BUILD_PATH)/colinux/Makefile
+
+$(shell python ../bin/file_id.py update $(FILES_LIST_FILE) $(filter %.o,$(CLEAN_FILES)))
+
+CLEAN_FILES := $(CLEAN_FILES) \
+	$(FILES_LIST_FILE)
 
 clean:
 	@$(foreach file,$(CLEAN_FILES), echo rm -f $(file) ; rm -f $(file) ; )
