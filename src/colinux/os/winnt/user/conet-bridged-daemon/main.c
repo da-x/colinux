@@ -533,7 +533,10 @@ conet_bridged_main(int argc, char *argv[])
 	}
 
 	while (1) {
-		co_reactor_select(g_reactor, 10);
+		co_rc_t rc;
+		rc = co_reactor_select(g_reactor, 10);
+		if (!CO_OK(rc))
+			break;
 	}
 
 out:

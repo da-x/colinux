@@ -31,6 +31,7 @@ struct co_reactor_user {
 	co_reactor_os_user_t os_data;
 	void *private_data;
 	co_reactor_t reactor;
+	co_rc_t last_read_rc;
 	
 	co_reactor_user_receive_func_t received;
 	co_reactor_user_send_func_t send;

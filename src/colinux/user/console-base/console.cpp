@@ -269,7 +269,9 @@ co_rc_t console_window_t::loop(void)
 	if (!(CO_OK(rc) && widget))
 		return rc;
 
-	co_reactor_select(reactor, 1);
+	rc = co_reactor_select(reactor, 1);
+	if (!CO_OK(rc))
+		return rc;
 
 	return widget->idle();
 }

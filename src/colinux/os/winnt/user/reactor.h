@@ -19,7 +19,7 @@ struct co_reactor_os_user {
 	bool_t read_enabled;
 	bool_t write_enabled;
 
-	void (*read)(co_reactor_user_t user);
+	co_rc_t (*read)(co_reactor_user_t user);
 	void (*write)(co_reactor_user_t user);
 };
 

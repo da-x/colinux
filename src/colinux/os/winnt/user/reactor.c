@@ -12,6 +12,7 @@ co_rc_t co_os_reactor_select(co_reactor_t handle, int miliseconds)
 	co_reactor_user_t users[handle->num_users*2];
 	co_reactor_user_t user;
 	int index = 0, count = 0;
+	co_rc_t rc = CO_RC(OK);
 	ULONG wait_time;
 	ULONG status;
 
@@ -42,18 +43,19 @@ co_rc_t co_os_reactor_select(co_reactor_t handle, int miliseconds)
 
 		if (user->os_data->read_enabled) {
 			if (user->os_data->read_event == wait_list[index]) {
-				user->os_data->read(user);
+				rc = user->last_read_rc = user->os_data->read(user);
 			}
 		}
-
-		if (user->os_data->write_enabled) {
-			if (user->os_data->write_event == wait_list[index]) {
-				user->os_data->write(user);
+		if (CO_OK(rc)) {
+			if (user->os_data->write_enabled) {
+				if (user->os_data->write_event == wait_list[index]) {
+					user->os_data->write(user);
+				}
 			}
 		}
 	}
 
-	return CO_RC(OK);
+	return rc;
 }
 
 static co_rc_t packet_read_async(co_winnt_reactor_packet_user_t handle)
@@ -96,7 +98,7 @@ static co_rc_t packet_read_completed(co_winnt_reactor_packet_user_t handle)
 	
 	if (result) {
 		handle->user.received(&handle->user, handle->buffer, handle->size);
-		packet_read_async(handle);
+		return packet_read_async(handle);
 	} else {
 		if (GetLastError() == ERROR_BROKEN_PIPE) {
 			co_debug("Pipe broken, exiting\n");
@@ -135,9 +137,9 @@ static co_rc_t packet_send_whole(co_winnt_reactor_packet_user_t handle,
 	return CO_RC(OK);
 }
 
-static void packet_read(co_reactor_user_t user)
+static co_rc_t packet_read(co_reactor_user_t user)
 {
-	packet_read_completed((co_winnt_reactor_packet_user_t)user);
+	return packet_read_completed((co_winnt_reactor_packet_user_t)user);
 }
 
 static co_rc_t packet_send(co_reactor_user_t user, unsigned char *buffer, unsigned long size)

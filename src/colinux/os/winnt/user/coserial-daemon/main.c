@@ -206,8 +206,10 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-	while (1) {
-		co_reactor_select(g_reactor, 10);
+	while (1) {	
+		rc = co_reactor_select(g_reactor, 10);
+		if (!CO_OK(rc))
+			break;
 	}
 
 out:

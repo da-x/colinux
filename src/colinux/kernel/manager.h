@@ -85,6 +85,7 @@ extern co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 				unsigned long out_size, unsigned long *return_size,
 				co_manager_open_desc_t opened);
 
+extern co_rc_t co_manager_send_eof(co_manager_t *manager, co_manager_open_desc_t opened);
 extern co_rc_t co_manager_send(co_manager_t *manager, co_manager_open_desc_t opened, co_message_t *message);
 extern co_rc_t co_manager_open(co_manager_t *manager, co_manager_open_desc_t *opened_out);
 extern co_rc_t co_manager_open_ref(co_manager_open_desc_t opened);

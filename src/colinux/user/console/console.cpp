@@ -433,8 +433,14 @@ void console_window_t::global_resize_constraint()
 
 void console_window_t::idle()
 {
+	co_rc_t rc;
+
 	global_resize_constraint();
-	co_reactor_select(reactor, 1);
+	rc = co_reactor_select(reactor, 1);
+
+	if (!CO_OK(rc)) {
+		detach();
+	}
 }
 
 void console_window_t::select_monitor()

@@ -26,4 +26,8 @@ extern bool_t co_os_manager_userspace_try_send_direct(
 	co_manager_open_desc_t opened,
 	co_message_t *message);
 
+extern co_rc_t co_os_manager_userspace_eof(
+	co_manager_t *manager,
+	co_manager_open_desc_t opened);
+
 #endif

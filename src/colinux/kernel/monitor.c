@@ -404,7 +404,9 @@ static void incoming_message(co_monitor_t *cmon, co_message_t *message)
 
 	switch (message->to) {
 	case CO_MODULE_CONSOLE:
-		co_console_op(cmon->console, (co_console_message_t *)message->data);
+		if (message->from == CO_MODULE_LINUX) {
+			co_console_op(cmon->console, (co_console_message_t *)message->data);
+		}
 		break;
 	default:
 		break;
@@ -990,6 +992,22 @@ static co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
 	return CO_RC_OK;
 }
 
+static void send_monitor_end_messages(co_monitor_t *cmon)
+{
+	co_manager_open_desc_t opened;
+	int i;
+	
+	co_os_mutex_acquire(cmon->connected_modules_write_lock);
+	for (i = 0; i <  CO_MONITOR_MODULES_COUNT; i++) {
+		opened = cmon->connected_modules[i];
+		if (!opened)
+			continue;
+
+		co_manager_send_eof(cmon->manager, opened);
+	}
+	co_os_mutex_release(cmon->connected_modules_write_lock);
+}
+
 co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monitor_owner)
 {
 	co_manager_t *manager;
@@ -1010,6 +1028,9 @@ co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monit
 			manager->monitors_count--;
 			co_list_del(&cmon->node);
 		}
+
+		if (monitor_owner)
+			send_monitor_end_messages(cmon);
 
 		if (cmon->refcount == 0) {
 			destroy = PTRUE;

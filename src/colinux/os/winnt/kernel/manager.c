@@ -123,6 +123,29 @@ bool_t co_os_manager_userspace_try_send_direct(
 	return PFALSE;
 }
 
+co_rc_t co_os_manager_userspace_eof(co_manager_t *manager, co_manager_open_desc_t opened)
+{
+	PIRP Irp;
+
+	Irp = opened->os->irp;
+	if (Irp) {
+		KIRQL irql;
+
+		IoAcquireCancelSpinLock(&irql);
+		fixme_IoSetCancelRoutine(Irp, NULL);
+		opened->os->irp = NULL;
+		IoReleaseCancelSpinLock(irql);
+
+		co_manager_close(manager, opened);
+
+		Irp->IoStatus.Status =  STATUS_PIPE_BROKEN;
+		Irp->IoStatus.Information = 0;
+		IoCompleteRequest(Irp, IO_NO_INCREMENT);
+	}
+
+	return PFALSE;
+}
+
 co_id_t co_os_current_id(void)
 {
 	return (co_id_t)(PsGetCurrentProcessId());

@@ -58,6 +58,14 @@ static NTSTATUS manager_read(co_manager_t *manager, co_manager_open_desc_t opene
 	char *buffer;
 	co_queue_t *queue;
 
+	if (!opened->active) {
+		ntStatus = STATUS_PIPE_BROKEN;
+		Irp->IoStatus.Status = ntStatus;
+		Irp->IoStatus.Information = 0;
+		IoCompleteRequest(Irp, IO_NO_INCREMENT);
+		return ntStatus;
+	}
+
 	buffer = Irp->AssociatedIrp.SystemBuffer;
 	
 	co_os_mutex_acquire(opened->lock);
@@ -129,6 +137,14 @@ static NTSTATUS manager_read(co_manager_t *manager, co_manager_open_desc_t opene
 static NTSTATUS manager_write(co_manager_t *manager, co_manager_open_desc_t opened, PIRP Irp)
 {
 	NTSTATUS ntStatus = STATUS_UNSUCCESSFUL;
+
+	if (!opened->active) {
+		ntStatus = STATUS_PIPE_BROKEN;
+		Irp->IoStatus.Status = ntStatus;
+		Irp->IoStatus.Information = 0;
+		IoCompleteRequest(Irp, IO_NO_INCREMENT);
+		return ntStatus;
+	}
 
 	if (opened->monitor) {
 		char *buffer;

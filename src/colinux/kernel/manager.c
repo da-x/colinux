@@ -148,6 +148,13 @@ co_rc_t co_manager_send(co_manager_t *manager, co_manager_open_desc_t opened, co
 	return rc;
 }
 
+co_rc_t co_manager_send_eof(co_manager_t *manager, co_manager_open_desc_t opened)
+{
+	opened->active = PFALSE;
+	
+	return co_os_manager_userspace_eof(manager, opened);
+}
+
 co_rc_t co_manager_open(co_manager_t *manager, co_manager_open_desc_t *opened_out)
 {
 	co_manager_open_desc_t opened;

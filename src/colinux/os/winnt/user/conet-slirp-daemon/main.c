@@ -94,10 +94,12 @@ int wait_loop()
 	int ret, nfds;
 	fd_set rfds, wfds, xfds;
 	struct timeval tv;
-	
+	co_rc_t rc;
 
 	while (1) {
-		co_reactor_select(g_reactor, 1);
+		rc = co_reactor_select(g_reactor, 1);
+		if (!CO_OK(rc))
+			break;
 
 		nfds = -1;
 		FD_ZERO(&rfds);
