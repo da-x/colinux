@@ -79,11 +79,15 @@ void co_daemon_syntax()
 	co_terminal_print("        the -c option is not needed. Instead, you pass all configuration via\n");
 	co_terminal_print("        the command line, for example:\n");
 	co_terminal_print("\n");
-	co_terminal_print("          colinux-daemon kernel=vmlinux cobd0=root_fs root=/dev/cobd0 hda1=:cobd0\n");
+	co_terminal_print("          colinux-daemon kernel=vmlinux cobd0=root_fs root=/dev/cobd0 hda1=:cobd0 \\ \n");
+	co_terminal_print("          eth0=tuntap,"Local Area Connection"\n");
 	co_terminal_print("\n");
 	co_terminal_print("      Use of new aliases automatically allocates cobd(s), for example:\n");
 	co_terminal_print("\n");
-	co_terminal_print("          colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1\n");
+	co_terminal_print("          colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1 \\\n");
+	co_terminal_print("          eth0=pcap-brigde,"Local Area Connection\n");
+	co_terminal_print("\n");
+	co_terminal_print("      See README.txt for more details about command-line usage.\n");
 	co_terminal_print("\n");
 	co_terminal_print("      Unhandled paramters are forwarded to the kernel's boot parameters string.\n");
 	co_terminal_print("\n");
@@ -134,6 +138,9 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 	start_parameters->launch_console = !dont_launch_console;
 
 	rc = co_parse_config_args(cmdline, start_parameters);
+
+	if (!CO_OK(rc))
+		return rc;
 	
 	return CO_RC(OK);
 }
