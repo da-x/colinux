@@ -1,7 +1,7 @@
 ;Cooeprative Linux installer
 ;Written by NEBOR Regis
 ;Modified by Dan Aloni (c) 2004
-;Modified 8/20/2004 by George P Boutwell
+;Modified 8/20/2004,2/4/2004 by George P Boutwell
 
 ;-------------------------------------
 ;Good look
@@ -215,13 +215,13 @@ Section "Root Filesystem image Download" SeccoLinuxImage
     tryGentoo:
     StrCmp $GENTOO "1" "" tryDebian
     ;MessageBox MB_OK "Gentoo"
-    StrCpy $R0 "gentoo-i586-ext3-2g-deluxe.bz2"
+    StrCpy $R0 "Gentoo-colinux-stage3-x86-2004.3.bz2"
     Goto tryDownload
 
     tryDebian:
     StrCmp $DEBIAN "1" "" End ; tryOImage
     ;MessageBox MB_OK "Debian"
-    StrCpy $R0 "Debian-3.0r0.ext3.1gb.bz2"
+    StrCpy $R0 "Debian-3.0r2.ext3-mit-backports.1gb.bz2"
 
     ; ....
     ;tryOImage:

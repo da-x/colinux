@@ -1,19 +1,36 @@
-        Notes about running the Cooperative Linux binaries on Windows
--------------------------------------------------------------------------------
+Cooperative Linux README
+----------------------------------------------------------------------------
+
+  Instructions for running Cooperative Linux for Windows (see source for 
+how to build and run coLinux for Linux)
 
 WARNING: 
 
-Although Cooperative Linux may be actually useful on
-some setups (e.g, stable setups), it is meant for testing purposes only, 
-which means that running it may crash your Windows system.
+  Although Cooperative Linux may be actually useful on some setups
+(e.g, stable setups), it is still meant for testing purposes only. 
+This means that running it may crash the host (Windows or Linux system).
 
 PLEASE REPORT and read about problems on the colinux-devel@sourceforge.net 
-mailing list.
+mailing list or file an Bug report at 
+http://www.sourceforge.net/projects/colinux
 
+NOTES ON UPGRADING:
 
-
-NOTE: If upgrading, please backup or copy your current default.colinux.XML file
+ 1) If upgrading, please backup or copy your current default.colinux.XMfile
       before installing!
+
+ 2) If you are upgrading from 0.6.1 to 0.6.2 the kernel version has 
+changed (2.4.x in 0.6.1 and 2.6.x in 0.6.2), make sure you get 
+module-init-tools if you want to work with modules in this new version. 
+See other 2.6 upgrade resources for information about other changes.
+
+ 3) Gentoo users need to be careful, Gentoo tends to use devfs when 
+upgrading to 0.6.2 and so block device names change from cobdX to cobd/X 
+and render the image unbootable.  For more details and solutions see the
+2.6 related information on the Wiki (http://wiki.colinux.org)
+
+
+RUNNING:
 
 To run Cooperative Linux, please follow these instructions before trying to run 
 anything.
@@ -30,19 +47,19 @@ anything.
 	a. TAP driver - This method installs a virtual network adapter that can 
 	then be either shared or bridged with a physical network connection. 
 	Note that this requires Internet Connection Sharing or Bridging 
-	(Windows XP or higher)or a 3rd party Internet connection sharing 
-	application. See the Wiki at www.colinux.org for more information/help.
+	(Windows XP or higher) or a 3rd party Internet connection 
+        sharing application. See the Wiki at wiki.colinux.org for more 
+        information/help. The TAP method autmatically chooses the TAP 
+        first TAP adapter it finds, if this is not correct for you, you 
+        can specify the specific adapter by name (name="TAP1"). 
 
   	b. Bridging - This method allows the Cooperative Linux network 
 	interface to directly interoperate with one of your built in networking 
 	interfaces. You'll need to edit the configuration XML file to reflect 
 	that type="bridged" and the 'name' parameter needs to be set to a 
-	substring of the network adapter name that you will be bridging with. 
-	Go the the network properties of your machine, and get the properties 
-	of the adapter you will be bridging. Look at the text under the 
-	'Connect Using' label. If it says, for example "Intel Pro Adapter",
-	then you would set the 'name' in the XML file to: name="Intel Pro". 
-	See the Wiki at www.colinux.org for more information/help.
+	substring of the network connection name that you will be bridging 
+	with (e.g. name="Local Area Connection"). See the Wiki at 
+	http://wiki.colinux.org for more information/help.
 
 4. Choose whether to download a root file system from the Cooperative Linux 
    sourceforge page. The installer will try to download directly in 
@@ -52,11 +69,11 @@ anything.
    http://sourceforge.net/project/showfiles.php?group_id=98788&package_id=108058
 
    NOTE ABOUT DISK SPACE: Each image extracts to over 1GB (or more), so make 
-   sure you   have enough  space there before you start downloading/extracting 
+   sure you have enough space there before you start downloading/extracting 
    it. If you are manually downloading, put the extracted file in the 
    installation directory. To unzip .bz2 files, you can use Winzip or 7-Zip 
    (or the bzip utilities in Cygwin, etc). The image MUST be extracted from 
-   the .bz2 archive before use!   
+   the .bz2 archive before use!
 
 5. Edit the XML file to point to whatever root file system you downloaded. 
    
@@ -66,12 +83,13 @@ anything.
    configuration that may be needed.
 
 7. Run coLinux. The current directory should be the installation directory, 
-   because that is where it will look for default.colinux.xml.
+   if not, then you man need to change paths (especially for vmlinux)
+   in the XML config file..
 
 	a. Running as an service.  
-		colinux-daemon.exe --install-service "Cooperative Linux"
+		colinux-daemon.exe -c config.xml --install-service "Cooperative Linux"
 		Also, to remove the service:
-		colinux-daemon.exe --remove-service.
+		colinux-daemon.exe --remove-service "Cooopeative Linux".
 	   Then go to the Service Manager and start the "Cooperative Linux" 
 	   service,
 	   OR net start "Cooperative Linux"
@@ -79,7 +97,9 @@ anything.
 	   	colinux-console-fltk.exe OR
 		colinux-console-nt.exe		
 	b. As an regular application. 
-		colinux-daemon.exe
+		colinux-daemon.exe -c config.xml
+           See colinux-daemon --help for details about possible 
+	   command-line arguments.
    
    The console window opens and you would see a Linux machine booting in 
    that window.
@@ -89,7 +109,8 @@ Post Installation
 
 You may wish to set up some post installation parameters, including increasing
 the amount of memory allocated to Cooperative Linux, or adding a swap 
-partition. See the Wiki at www.colinux.org for additional help on these tasks.
+partition. See the Wiki at wiki.colinux.org for additional help on these 
+tasks.
 
 
 Command Line Parameters
@@ -127,6 +148,53 @@ Linux.
 		Linux. BIG NOTE: This already happens during the uninstall
                 of coLinux, on most cases you don't need to run it at all.
 
+OR
+
+	If the first command-line argument on the command line is 
+kernel= you will be able to give all the configuration on the 
+command-line, in this "mode" the command-line arguments are:
+
+	kernel=<path to vmlinux file>
+		This specifies the path to the vmlinux file, typically
+                kernel=vmlinux works.
+
+	initrd=<path to initrd file>
+		This specifies the path to the initrd file, typeically
+ 		initrd=initrd.gz
+
+	mem=<mem size>
+		This specifies the memory size, assumes MB is the the
+		unit type, so 64 is same as 64MB. Default if you leave
+		this parameter out is 1/4 of your RAM if your RAM is >= 
+		128, otherwise it's 16.  Default value is generally ok.
+
+	cobdX=<path to image file>
+		Use any number of these to specify the block device's
+                image files
+
+	alias=<path to image file> | :cobdX
+		Use any number of these to specify an alias (hda1, etc)
+                for an block device's image file.  <path to image file 
+                can be to an partition using standard 
+                \HardDiskX\PartitionY format.
+
+	cofsX=<path to windows directory>
+		Use any number of these to specify a Cooperative 
+		Host filesystem device (mount Host directory to coLinux
+		local mount point). There are some limitations in it's
+		use currently (namely non-ASCII files).
+
+	ethX=tap | pcap-bridge,<network connection name>,<MAC> 
+		Use any number of these to specify network interfaces,
+		<network connection name & <MAC> are optional.
+		
+	root=<root device>
+		This is the device (as coLinux gues sees it) to the root
+		device.
+
+	ANY additional parameters are passed to the coLinux kernel as is 
+(unmodified).
+
 
 Common Problems
 ---------------
@@ -134,6 +202,13 @@ Common Problems
 	"Unable to mount root fs"
 		Generally this means that the root filesystem image is 
 		missing, or was specified incorrectly.
+
+Developing, Helping out the Project
+-----------------------------------
+
+   Check out the source code, and or the Home page 
+(http://www.colinux.org) for more on developing coLinux and/or helping 
+the project out.  Also, subscribing to the Mailing List is helpful.
 
 
 Getting Help
@@ -148,7 +223,16 @@ bugs, etc.
 
 	WEB
 		The official website, containing downloads, documentation, 
-		FAQ, WIKI, etc., is at http://www.colinux.org.
+		FAQ, WIKI, etc., is at http://www.colinux.org
+
+	Project Web-site
+		Source Forge Project website is at 
+http://www.sourceforge.net/project/colinux
+	
+	WIKI
+		The community has contributed wonderful and helpful 
+                information on numerous topics, which is available at
+                http://wiki.colinux.org (You can contribute here too!)
 	
 	Mailing Lists
 		Visit the colinux.org website and choose from the available 
@@ -162,3 +246,6 @@ da-x@gmx.net
 
 Richard Goodwin (readme portions)
 colinux@newdiversions.com
+
+George P Boutwell (readme updates, fixes, etc)
+gboutwel@praize.com
