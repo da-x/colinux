@@ -55,8 +55,6 @@ static unsigned char interrupt_recall_array[0x100][4] = {
 	INTERRUPT_GATE_PROXY
 };
 
-static unsigned long interrupt_counter = 0;
-
 void co_monitor_arch_real_hardware_interrupt(co_monitor_t *cmon)
 {
 	/* Raise the interrupt */
@@ -65,11 +63,4 @@ void co_monitor_arch_real_hardware_interrupt(co_monitor_t *cmon)
 	forward_thunk = (unsigned char *)&interrupt_recall_array[co_passage_page->params[0]];
 	
 	((void (*)())forward_thunk)();
-
-	/* For debugging */
-	interrupt_counter++;
-	
-	if (interrupt_counter % 10000 == 0) 
-		co_debug("EIP: %08x, ESP: %08x\n", co_passage_page->params[1],
-			 co_passage_page->params[2]);
 }

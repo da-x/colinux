@@ -302,6 +302,8 @@ int daemon_main(char *argv[])
 		}
 	}
 
+	SetProcessAffinityMask(GetCurrentProcess(), 1);
+
 	co_terminal_print("daemon: installing kernel driver\n");
 	rc = co_os_manager_install();
 	if (!CO_OK(rc)) {

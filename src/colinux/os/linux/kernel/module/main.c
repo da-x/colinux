@@ -18,15 +18,21 @@ co_manager_t *global_manager = NULL;
 
 static int __init test_module_init(void)
 {
+	co_rc_t rc;
+
 	printk("colinux: loaded version %s (compiled on %s)\n", COLINUX_VERSION, COLINUX_COMPILE_TIME);
 
 	global_manager = co_os_malloc(sizeof(co_manager_t));
 	if (global_manager == NULL) {
 		printk("colinux: allocation error\n");
-		return -1;
+		return -ENOMEM;
 	}
 
-	co_manager_load(global_manager);
+	rc = co_manager_load(global_manager);
+	if (!CO_OK(rc)) {
+		printk("colinux: manager load failure: %x\n", rc);
+		return -ENXIO;
+	}
 
 	return 0;
 }

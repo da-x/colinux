@@ -20,3 +20,8 @@ unsigned long co_os_virt_to_phys(void *addr)
 
 	return pa.QuadPart;
 }
+
+unsigned long co_os_current_processor(void)
+{
+	return KeGetCurrentProcessorNumber();
+}

@@ -26,7 +26,7 @@ kernel_module: $(BUILD_PATH)/module/colinux.ko
 LOCAL_TARGETS := $(BUILD_PATH)/prelinked_driver.o
 
 CLEAN_FILES := $(CLEAN_FILES) \
-	$(LOCAL_TARGETS)
+	$(LOCAL_TARGETS) $(BUILD_PATH)/module/*.o
 
 #-----------------------------------------------------------------
 BUILD_PATH := $(shell dirname $(BUILD_PATH))

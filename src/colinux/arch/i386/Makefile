@@ -10,6 +10,8 @@ LOCAL_OBJS = \
 	passage.o \
 	cpuid.o \
 	interrupt.o \
+	manager.o \
+	apic.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

@@ -31,6 +31,7 @@
 #include <asm/desc.h>
 
 #include "cpuid.h"
+#include "manager.h"
 
 #ifdef __MINGW32__
 #define SYMBOL_PREFIX "_"
@@ -495,24 +496,16 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	co_rc_t rc;
 	unsigned long caps = 0;
 
-	has_cpuid = co_i386_has_cpuid();
-	if (has_cpuid == PFALSE) {
-		co_debug("Error, no CPUID, not supported! Sorry!\n");
+	if (co_os_current_processor() == 1) { /* TODO: REMOVE THIS HACK */
+		co_debug("Not main CPU\n");
 		return CO_RC(ERROR);
 	}
 
-	rc = co_i386_get_cpuid_capabilities(&caps);
-	if (!CO_OK(rc)) {
-		co_debug("Error, couldn't get CPU capabilities\n");
-		return rc;
-	}
-
-	co_debug("CPU capabilities: %08x\n", caps);
+	caps = cmon->manager->archdep->caps;
 
 	/*
 	 * TODO: Add sysenter / sysexit restoration support 
 	 */
-
 	if (caps & (1 << X86_FEATURE_FXSR)) {
 		co_debug("CPU supports fxsave/fxrstor\n");
 		memcpy_co_monitor_passage_func_fxsave(&pp->code[0]);

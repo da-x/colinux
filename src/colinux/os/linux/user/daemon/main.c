@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <signal.h>
+#include <unistd.h>
+#include <sched.h>
 
 #include <colinux/user/daemon.h>
 #include <colinux/user/monitor.h>
@@ -19,13 +21,22 @@
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/pipe.h>
 
-static co_daemon_t *daemon = NULL;
+static co_daemon_t *colinux_daemon = NULL;
 
 void sighup_handler(int sig)
 {
 	co_terminal_print("Receieved SIGHUP\n");	
 
-	daemon->send_ctrl_alt_del = PTRUE;
+	colinux_daemon->send_ctrl_alt_del = PTRUE;
+}
+
+void set_affinity() 
+{
+	unsigned long set = 0;
+	int ret;
+
+	set = 1; /* Bind to the first CPU */
+	sched_setaffinity(getpid(), &set, sizeof(set));
 }
 
 int main(int argc, char *argv[]) 
@@ -130,23 +141,25 @@ int main(int argc, char *argv[])
 		co_os_manager_close(handle);
 	}
 
-	rc = co_daemon_create(&start_parameters, &daemon);
+	set_affinity();
+
+	rc = co_daemon_create(&start_parameters, &colinux_daemon);
 	if (!CO_OK(rc))
 		goto out;
 
-	rc = co_daemon_start_monitor(daemon);
+	rc = co_daemon_start_monitor(colinux_daemon);
 	if (!CO_OK(rc))
 		goto out_destroy;
 
 	signal(SIGHUP, sighup_handler);
-	rc = co_daemon_run(daemon);
+	rc = co_daemon_run(colinux_daemon);
 	signal(SIGHUP, SIG_DFL);
 
-	co_daemon_end_monitor(daemon);
+	co_daemon_end_monitor(colinux_daemon);
 
 out_destroy:
-	co_daemon_destroy(daemon);
-	daemon = NULL;
+	co_daemon_destroy(colinux_daemon);
+	colinux_daemon = NULL;
 
 out:
 	

@@ -158,6 +158,11 @@ configure_w32api_src()
 {
 	cd "$SRCDIR/$W32API_SRC"
 	echo "Configuring w32api source"
+	if [ "${CC}x" != "$TARGET-gccx" ]; then
+		echo "Warning: CC is set, may cause problems with make/build"
+		echo " of w32api source, unsetting."
+		unset CC
+	fi
 	./configure --host=i686-pc-mingw32 --prefix=$PREFIX/$TARGET &> configure.log
 	if test $? -ne 0; then
 	        echo "w32api source configure failed"
@@ -175,7 +180,7 @@ configure_w32api_src()
 install_w32api_src()
 {
 	cd "$SRCDIR/$W32API_SRC"
-	echo "Installing W32API_SRC"
+	echo "Installing $W32API_SRC"
 	make install &> configure.log
 	if test $? -ne 0; then
 	        echo "w32api make install failed"

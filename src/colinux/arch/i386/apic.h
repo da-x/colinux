@@ -5,13 +5,13 @@
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
- *
  */
 
-#ifndef __CO_OS_KERNEL_MISC_H__
-#define __CO_OS_KERNEL_MISC_H__
+#ifndef __COLINUX_ARCH_I386_APIC_H__
+#define __COLINUX_ARCH_I386_APIC_H__
 
-extern unsigned long co_os_virt_to_phys(void *addr);
-extern unsigned long co_os_current_processor(void);
+#include "manager.h"
+
+extern co_rc_t co_manager_arch_init_apic(co_archdep_manager_t manager);
 
 #endif

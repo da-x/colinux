@@ -1,9 +1,12 @@
 * Version 0.6.1 
   * Added the ability to send Ctrl-Alt-Del to the Linux machine.
-  * coLinux patch:	  
-    * Linux patch updated to 2.4.26	
-    * Linux port (for systems running kernel 2.6.x)
-    * Fixed a crash that could happen on swapoff().
+  * Linux patch updated to 2.4.26	
+  * Linux port (for systems running kernel 2.6.x)
+  * Fixed a crash that could happen on swapoff().
+  * Initmem is freed (no more 'missing implementation')
+  * The number of maximum cobd block devices was increased to 32.
+  * The daemon process is pinned to the first processor until
+    we get the SMP stability issue fixed.	 
   * Windows: 
     * Sizes of raw partition devices are now detected properly. This 
       means that the resierfs problems should be over, plus cat /dev/cobd* 
@@ -11,8 +14,8 @@
     * Suspension of the host machine won't cause colinux-daemon problems like 
       memory leaks.
     * The daemon can install itself as a service (Jaroslaw Kowalski). 
-      Stopping the service sends Ctrl-Alt-Del so that the Linux machine
-      shuts down cleanly.
+      Stopping the service sends Ctrl-Alt-Del to let the Linux VM
+      shutdown cleanly.
     * coLinux now builds using MingW32 and no longer depends on cygwin1.dll.
     * Added scripts for building the MingW32 cross compiler on Linux,
       plus scripts that download, compile, and install the libraries

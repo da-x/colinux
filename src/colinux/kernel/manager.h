@@ -11,7 +11,9 @@
 #define __COLINUX_KERNEL_MANAGER_H__
 
 #include "monitor.h"
+
 #include <colinux/common/ioctl.h>
+#include <colinux/arch/manager.h>
 
 typedef struct co_osdep_manager *co_osdep_manager_t;
 
@@ -33,6 +35,7 @@ typedef struct co_manager {
 
 	int monitors_count;
 	co_osdep_manager_t osdep;
+	co_archdep_manager_t archdep;
 } co_manager_t;
 
 extern co_rc_t co_manager_set_reversed_pfn(co_manager_t *manager, 

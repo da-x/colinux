@@ -31,7 +31,14 @@ co_rc_t co_manager_load(co_manager_t *manager)
 	manager->state = CO_MANAGER_STATE_NOT_INITIALIZED;
 	memset(manager, 0, sizeof(*manager));
 
+	rc = co_manager_arch_init(manager, &manager->archdep);
+	if (!CO_OK(rc))
+		return rc;
+
 	rc = co_os_manager_init(manager, &manager->osdep);
+	if (!CO_OK(rc)) {
+		co_manager_arch_free(manager->archdep);
+	}
 
 	return rc;
 }
@@ -160,6 +167,7 @@ void co_manager_unload(co_manager_t *manager)
 
 	free_reversed_pfns(manager);
 	co_os_manager_free(manager->osdep);
+	co_manager_arch_free(manager->archdep);
 }
 
 co_rc_t co_manager_init(co_manager_t *manager, void *io_buffer)

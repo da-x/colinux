@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <colinux>
-    <block_device index="0" path="\DosDevices\c:\colinux\root_fs" enabled="true">
-    </block_device>
-    <block_device index="1" path="\DosDevices\c:\colinux\swap_device" enabled="true">
-    </block_device>
+    <block_device index="0" path="\DosDevices\c:\colinux\root_fs" enabled="true" />
+    <block_device index="1" path="\DosDevices\c:\colinux\swap_device" enabled="true" />
     <bootparams>root=/dev/cobd0</bootparams>
-    <image path="vmlinux"></image>
-    <memory size="64"></memory>
-    <network index="0" type="tap" name="TAP"></network>
+    <image path="vmlinux" /><>
+    <memory size="64" />
+    <network index="0" type="tap" name="TAP" />
 </colinux>

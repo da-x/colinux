@@ -17,3 +17,7 @@ unsigned long co_os_virt_to_phys(void *addr)
 	return virt_to_phys(addr);
 }
 
+unsigned long co_os_current_processor(void)
+{
+	return smp_processor_id();
+}
