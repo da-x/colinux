@@ -79,14 +79,6 @@ int main(int argc, char *argv[])
 		rc = co_manager_status(handle, &status);
 		if (CO_OK(rc)) {
 			co_terminal_print("daemon: manager is loaded\n");
-			if (status.state == CO_MANAGER_STATE_NOT_INITIALIZED) {
-    				co_terminal_print("daemon: initializing manager\n");
-				rc = co_manager_init(handle, PTRUE);
-				if (!CO_OK(rc)) {
-					co_terminal_print("daemon: error initializing driver\n", rc);
-					return -1;
-				}	
-    			}
 		} else {
 			co_terminal_print("daemon: can't get manager status\n");
 			return -1;

@@ -11,34 +11,13 @@
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/os/kernel/monitor.h>
 #include <colinux/os/kernel/manager.h>
+#include <colinux/os/kernel/misc.h>
 #include <colinux/os/kernel/mutex.h>
 #include <colinux/arch/mmu.h>
 
 #include "manager.h"
 #include "monitor.h"
 #include "pages.h"
-
-co_rc_t co_manager_load(co_manager_t *manager)
-{
-	co_rc_t rc;
-
-	co_debug("manager: loaded to host kernel\n");
-
-	co_memset(manager, 0, sizeof(*manager));
-
-	manager->state = CO_MANAGER_STATE_NOT_INITIALIZED;
-
-	rc = co_manager_arch_init(manager, &manager->archdep);
-	if (!CO_OK(rc))
-		return rc;
-
-	rc = co_os_manager_init(manager, &manager->osdep);
-	if (!CO_OK(rc)) {
-		co_manager_arch_free(manager->archdep);
-	}
-
-	return rc;
-}
 
 static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 {
@@ -117,6 +96,42 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 	return CO_RC(OK);
 }
 
+co_rc_t co_manager_load(co_manager_t *manager)
+{
+	co_rc_t rc;
+
+	co_debug("loaded to host kernel\n");
+
+	co_memset(manager, 0, sizeof(*manager));
+
+	rc = co_os_physical_memory_pages(&manager->host_memory_pages);
+	if (!CO_OK(rc))
+		return rc;
+
+	if (manager->host_memory_pages > 0x100000) {
+		co_debug("error, machines with more than 4GB are not currently supported\n");
+		return CO_RC(ERROR);
+	}
+
+	co_debug("machine has %d MB of RAM\n", (manager->host_memory_pages >> 8));
+
+	manager->host_memory_amount = manager->host_memory_pages << CO_ARCH_PAGE_SHIFT;
+	manager->state = CO_MANAGER_STATE_INITIALIZED;
+
+	rc = co_manager_arch_init(manager, &manager->archdep);
+	if (!CO_OK(rc))
+		return rc;
+
+	rc = co_os_manager_init(manager, &manager->osdep);
+	if (!CO_OK(rc)) {
+		co_manager_arch_free(manager->archdep);
+	}
+
+	rc = alloc_reversed_pfns(manager);
+
+	return rc;
+}
+
 static void free_reversed_pfns(co_manager_t *manager)
 {
 	int i;
@@ -168,26 +183,6 @@ void co_manager_unload(co_manager_t *manager)
 	co_manager_arch_free(manager->archdep);
 }
 
-co_rc_t co_manager_init(co_manager_t *manager, void *io_buffer)
-{
-	co_manager_ioctl_init_t *params;
-	co_rc_t rc = CO_RC(OK);
-
-	params = (typeof(params))(io_buffer);
-
-	manager->host_memory_amount = params->physical_memory_size;
-	manager->host_memory_pages = manager->host_memory_amount >> CO_ARCH_PAGE_SHIFT;
-	manager->lazy_unload = params->lazy_unload;
-
-	co_debug("initialized (%d MB physical RAM)\n", manager->host_memory_amount/(1024*1024));
-
-	rc = alloc_reversed_pfns(manager);
-
-	manager->state = CO_MANAGER_STATE_INITIALIZED;
-
-	return rc;
-}
-
 co_rc_t co_manager_cleanup(co_manager_t *manager, void **private_data)
 {
 	co_monitor_t *cmon = NULL;
@@ -234,14 +229,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 	}
 
 	if (manager->state == CO_MANAGER_STATE_NOT_INITIALIZED) {
-		if (ioctl == CO_MANAGER_IOCTL_INIT) {
-			return co_manager_init(manager, io_buffer);
-		} else {
-			co_debug("invalid ioctl when not initialized\n");
-			return CO_RC_ERROR;
-		}
-
-		return rc;
+		return CO_RC_ERROR;
 	}
 
 	switch (ioctl) {

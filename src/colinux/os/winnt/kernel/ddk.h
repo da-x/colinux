@@ -16,6 +16,7 @@
 #include <ddk/winddk.h>
 #include <ddk/ntddk.h>
 
+#if (0)
 #undef IoCompleteRequest 
 
 static inline void
@@ -31,5 +32,6 @@ IoCompleteRequest(
 	: 
 	: "m" (Irp), "m" (PriorityBoost));
 }
+#endif
 
 #endif

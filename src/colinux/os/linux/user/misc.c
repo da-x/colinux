@@ -19,24 +19,6 @@
 #include <colinux/os/alloc.h>
 #include <colinux/os/user/misc.h>
 
-co_rc_t co_os_get_physical_ram_size(unsigned long *mem_size)
-{
-	struct stat statf;
-	int ret;
-
-	ret = stat("/proc/kcore", &statf);
-	if (ret == -1)
-		return CO_RC(ERROR);
-
-	*mem_size = statf.st_size;
-
-	/* Round by 16 MB */
-	*mem_size = 0xFF000000 & ((*mem_size) + 0xFFFFFF);
-
-	co_debug("Memory size: %d\n", *mem_size);
-
-	return CO_RC(OK);
-}
 
 void co_terminal_print(const char *format, ...)
 {

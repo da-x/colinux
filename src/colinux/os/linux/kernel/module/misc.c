@@ -21,3 +21,16 @@ unsigned long co_os_current_processor(void)
 {
 	return smp_processor_id();
 }
+
+co_rc_t co_os_physical_memory_pages(unsigned long *pages)
+{
+	*pages = num_physpages;
+
+	/* 
+	 * Round to 16 MB boundars, since Linux doesn't return the 
+	 * exact amount but a bit lower.
+	 */
+	*pages = 0xff000 & ((*pages) + 0xfff);
+
+	return CO_RC(OK);
+}

@@ -19,17 +19,10 @@
 typedef enum {
 	CO_MANAGER_IOCTL_BASE=0x10,
 
-	CO_MANAGER_IOCTL_INIT,
 	CO_MANAGER_IOCTL_CREATE,
 	CO_MANAGER_IOCTL_MONITOR,
 	CO_MANAGER_IOCTL_STATUS,
 } co_manager_ioctl_t;
-
-/* interface for CO_MANAGER_IOCTL_INIT: */
-typedef struct {
-	unsigned long physical_memory_size;
-	bool_t lazy_unload;
-} co_manager_ioctl_init_t;
 
 /* interface for CO_MANAGER_IOCTL_CREATE: */
 typedef struct {

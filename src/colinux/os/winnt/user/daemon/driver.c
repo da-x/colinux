@@ -76,13 +76,6 @@ co_rc_t co_winnt_install_driver(void)
 		return CO_RC(ERROR);
 	}
 	
-	rc = co_manager_init(handle, PTRUE); /* lazy unload */
-	if (!CO_OK(rc)) {
-		co_terminal_print("daemon: error initializing kernel driver\n");
-		co_os_manager_close(handle);
-		return CO_RC(ERROR);
-	}
-
 	return CO_RC(OK);
 }
 
@@ -115,18 +108,6 @@ co_rc_t co_winnt_initialize_driver(bool_t lazy_unload)
 		return CO_RC(VERSION_MISMATCHED);
 	}
 
-	if (status.state == CO_MANAGER_STATE_NOT_INITIALIZED) {
-		rc = co_manager_init(handle, lazy_unload);
-		if (!CO_OK(rc)) {
-			co_terminal_print("daemon: error initializing kernel driver\n");
-			co_os_manager_close(handle);
-			return rc;
-		}
-	}
-
-	/* 
-	 * Alright, driver is initialized.
-	 */
 	return CO_RC(OK);
 }
 

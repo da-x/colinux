@@ -11,7 +11,10 @@
 #ifndef __CO_OS_KERNEL_MISC_H__
 #define __CO_OS_KERNEL_MISC_H__
 
+#include <colinux/common/common.h>
+
 extern unsigned long co_os_virt_to_phys(void *addr);
 extern unsigned long co_os_current_processor(void);
+extern co_rc_t co_os_physical_memory_pages(unsigned long *pages);
 
 #endif
