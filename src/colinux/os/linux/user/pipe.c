@@ -163,6 +163,7 @@ co_rc_t co_os_pipe_server_service(co_os_pipe_server_t *ps, bool_t infinite)
 	for (i=1; i < ps->num_clients + 1; i++)
 		ps->poll_array[i].revents = 0;
 	
+
 	ret = poll(ps->poll_array, ps->num_clients + 1, infinite ? 5 : 0);
 
 	if (ps->poll_array[0].revents & POLLIN) {

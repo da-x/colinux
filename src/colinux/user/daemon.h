@@ -42,7 +42,6 @@ typedef struct co_daemon {
 	bool_t running;
 	bool_t idle;
 	char *buf;
-	double last_htime;
 	double reminder_htime;
 	bool_t send_ctrl_alt_del;
 } co_daemon_t;

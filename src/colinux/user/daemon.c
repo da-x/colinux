@@ -803,8 +803,6 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	co_debug("colinux: allocated id %d\n", id);
 	
 	daemon->id = id;
-	daemon->last_htime = co_os_timer_highres();
-	daemon->reminder_htime = 0;
 
 	co_message_switch_init(&daemon->message_switch, CO_MODULE_USER_SWITCH);
 
