@@ -31,6 +31,7 @@ CLEAN_FILES := $(CLEAN_FILES) \
 
 #-----------------------------------------------------------------
 include $(call BUILD_SUBDIRS, daemon conet-daemon console \
-	console-nt conet-bridged-daemon install debug)
+	console-nt conet-bridged-daemon coserial-daemon \
+	install debug)
 BUILD_PATH := $(shell dirname $(BUILD_PATH))
 endif

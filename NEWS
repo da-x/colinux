@@ -47,6 +47,8 @@
     After installing it, you will notice " (coLinux)" appended to
     the device name in the Network Connections manager. The old
     driver will remain until it is uninstalled.
+  * If the MAC address is unspecified, a random MAC is choosed 
+    using the familiar TAP prefix (00:FF:XX:XX:XX:XX).
   
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).
