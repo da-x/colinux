@@ -29,7 +29,7 @@ void co_trace_ent_name(void *ptr, const char *name)
 	reenter--;
 }
 
-static co_debug_tlv_t *tlv_add_const_string(co_debug_type_t type, const char *str, co_debug_tlv_t *sub_tlv)
+static inline co_debug_tlv_t *tlv_add_const_string(co_debug_type_t type, const char *str, co_debug_tlv_t *sub_tlv)
 {
 	sub_tlv->type = type;
 	sub_tlv->length = strlen(str) + 1;
@@ -37,7 +37,7 @@ static co_debug_tlv_t *tlv_add_const_string(co_debug_type_t type, const char *st
 	return (co_debug_tlv_t *)&sub_tlv->value[sub_tlv->length];
 }
 
-static co_debug_tlv_t *tlv_add_timestamp(co_debug_tlv_t *sub_tlv)
+static inline co_debug_tlv_t *tlv_add_timestamp(co_debug_tlv_t *sub_tlv)
 {
 	sub_tlv->type = CO_DEBUG_TYPE_TIMESTAMP;
 	sub_tlv->length = sizeof(co_debug_timestamp_t);
@@ -46,7 +46,7 @@ static co_debug_tlv_t *tlv_add_timestamp(co_debug_tlv_t *sub_tlv)
 	return (co_debug_tlv_t *)&sub_tlv->value[sub_tlv->length];
 }
 
-static co_debug_tlv_t *tlv_add_unsigned_long(co_debug_type_t type, unsigned long data, co_debug_tlv_t *sub_tlv)
+static inline co_debug_tlv_t *tlv_add_unsigned_long(co_debug_type_t type, unsigned long data, co_debug_tlv_t *sub_tlv)
 {
 	sub_tlv->type = type;
 	sub_tlv->length = sizeof(data);
@@ -54,7 +54,7 @@ static co_debug_tlv_t *tlv_add_unsigned_long(co_debug_type_t type, unsigned long
 	return (co_debug_tlv_t *)&sub_tlv->value[sub_tlv->length];
 }
 
-static co_debug_tlv_t *tlv_add_char(co_debug_type_t type, unsigned long data, co_debug_tlv_t *sub_tlv)
+static inline co_debug_tlv_t *tlv_add_char(co_debug_type_t type, unsigned long data, co_debug_tlv_t *sub_tlv)
 {
 	sub_tlv->type = type;
 	sub_tlv->length = sizeof(data);
@@ -62,8 +62,7 @@ static co_debug_tlv_t *tlv_add_char(co_debug_type_t type, unsigned long data, co
 	return (co_debug_tlv_t *)&sub_tlv->value[sub_tlv->length];
 }
 
-
-static int local_index = 0;
+extern int co_debug_local_index = 0;
 #define X(facility, static_level, default_dynamic_level) .facility##_level=default_dynamic_level,
 co_debug_levels_t co_global_debug_levels = {
 	CO_DEBUG_LIST
@@ -76,7 +75,6 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 {
 	long packet_size = 0;
 
-	packet_size += sizeof(co_debug_type_t);
 	packet_size += sizeof(co_debug_type_t) + strlen(module) + 1;
 	packet_size += sizeof(co_debug_type_t) + strlen(filename) + 1;
 	packet_size += sizeof(co_debug_type_t) + strlen(func) + 1;
@@ -88,15 +86,12 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 	packet_size += sizeof(co_debug_type_t) + 80;
 
 	char buffer[packet_size];
-	co_debug_tlv_t *tlv = (co_debug_tlv_t *)&buffer;
-	tlv->type = CO_DEBUG_TYPE_TLV;
-	tlv->length = 0;
 
-	co_debug_tlv_t *sub_tlv = (co_debug_tlv_t *)&tlv->value;
+	co_debug_tlv_t *sub_tlv = (co_debug_tlv_t *)buffer;
 	sub_tlv = tlv_add_const_string(CO_DEBUG_TYPE_MODULE, module, sub_tlv);
 	sub_tlv = tlv_add_const_string(CO_DEBUG_TYPE_FILE, filename, sub_tlv);
 	sub_tlv = tlv_add_timestamp(sub_tlv);
-	sub_tlv = tlv_add_unsigned_long(CO_DEBUG_TYPE_LOCAL_INDEX, ++local_index, sub_tlv);
+	sub_tlv = tlv_add_unsigned_long(CO_DEBUG_TYPE_LOCAL_INDEX, ++co_debug_local_index, sub_tlv);
 	sub_tlv = tlv_add_char(CO_DEBUG_TYPE_FACILITY, facility, sub_tlv);
 	sub_tlv = tlv_add_const_string(CO_DEBUG_TYPE_FUNC, func, sub_tlv);
 	sub_tlv = tlv_add_unsigned_long(CO_DEBUG_TYPE_LINE, line, sub_tlv);
@@ -108,9 +103,8 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 	co_vsnprintf(sub_tlv->value, sizeof(buffer) - (sub_tlv->value - (char *)buffer) - 1, fmt, ap);
 	va_end(ap);
 	sub_tlv->length = strlen(sub_tlv->value) + 1;
-	tlv->length = (&sub_tlv->value[sub_tlv->length]) - ((char *)&tlv->value);
 
-	co_debug_buf(buffer, sizeof(*tlv) + tlv->length);
+	co_debug_buf(buffer, (&sub_tlv->value[sub_tlv->length]) - buffer);
 }
 
 CO_TRACE_CONTINUE;

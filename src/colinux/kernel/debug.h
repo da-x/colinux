@@ -48,13 +48,36 @@ struct co_manager_per_fd_state;
 
 extern co_rc_t co_debug_init(co_manager_debug_t *manager);
 
+typedef struct co_debug_write_vector {
+	bool_t vec_size;
+	long size;
+	union {
+		const char *ptr;
+		struct co_debug_write_vector *vec;
+	};
+} co_debug_write_vector_t;
+
+static inline long co_debug_write_vector_size(co_debug_write_vector_t *vec, int vec_size)
+{
+	long size = 0;
+	while (vec_size--) {
+		size += vec->size;
+		vec++;
+	}
+	return size;
+}
+
+extern co_rc_t co_debug_writev(co_manager_debug_t *manager, 
+			       struct co_debug_section **section_ptr,
+			       co_debug_write_vector_t *vec, int vec_size);
+
 extern co_rc_t co_debug_write(co_manager_debug_t *manager, 
 			      struct co_debug_section **section_ptr,
 			      const char *buf, long size);
 
-extern co_rc_t co_debug_write_str(co_manager_debug_t *manager, 
+extern co_rc_t co_debug_write_log(co_manager_debug_t *debug, 
 				  struct co_debug_section **section_ptr,
-				  const char *str);
+				  co_debug_write_vector_t *vec, int vec_size);
 
 extern co_rc_t co_debug_read(co_manager_debug_t *manager, 
 			     char *buf, unsigned long size, 

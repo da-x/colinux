@@ -87,6 +87,7 @@ typedef enum {
 	CO_DEBUG_TYPE_LINE,
 	CO_DEBUG_TYPE_FUNC,
 	CO_DEBUG_TYPE_FILE,
+	CO_DEBUG_TYPE_DRIVER_INDEX,
 } co_debug_type_t;
 
 typedef struct {
@@ -100,6 +101,7 @@ typedef struct {
 	char value[];
 } co_debug_tlv_t;
 
+extern int co_debug_local_index;
 extern void co_debug_buf(const char *buf, long size);
 
 #define co_debug_ulong(name)     co_debug("%s: 0x%x\n", #name, name)

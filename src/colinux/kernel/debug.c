@@ -103,21 +103,35 @@ static void resize_section(co_manager_debug_t *debug, co_debug_section_t *sectio
 	co_os_free(old_buffer);
 }
 
-static co_rc_t append_to_buffer(co_manager_debug_t *debug, 
-				co_debug_section_t *section, 
-				const char *buf, unsigned long size)
+static void memcpy_vector(char *dest, co_debug_write_vector_t *vec, int vec_size)
+{
+	while (vec_size--) {
+		if (vec->vec_size)
+			memcpy_vector(dest, vec->vec, vec->vec_size);
+		else
+			co_memcpy(dest, vec->ptr, vec->size);
+		dest += vec->size;
+		vec++;
+	}
+}
+
+static co_rc_t append_to_buffer(co_manager_debug_t *debug, co_debug_section_t *section, 
+				co_debug_write_vector_t *vec, int vec_size)
 {
 	co_rc_t rc = CO_RC(OK);
+	long vec_length = 0;
 
 	resize_section(debug, section);
 
+	vec_length = co_debug_write_vector_size(vec, vec_size);
+
 	/* Check if there's not enough space left in the buffer */
-	if (section->buffer_size - section->filled < size) {
+	if (section->buffer_size - section->filled < vec_length) {
 		rc = CO_RC(ERROR);
 	} else {
-		co_memcpy(&section->buffer[section->filled], buf, size);
-		section->filled += size;
-		debug->sections_total_filled += size;
+		memcpy_vector(&section->buffer[section->filled], vec, vec_size);
+		section->filled += vec_length;
+		debug->sections_total_filled += vec_length;
 	}
 
 	return rc;
@@ -147,9 +161,9 @@ static bool_t put_section(co_manager_debug_t *debug,
 	return PTRUE;
 }
 
-co_rc_t co_debug_write(co_manager_debug_t *debug, 
-		       struct co_debug_section **section_ptr,
-		       const char *buf, long size)
+co_rc_t co_debug_writev(co_manager_debug_t *debug, 
+			struct co_debug_section **section_ptr,
+			co_debug_write_vector_t *vec, int vec_size)
 {
 	co_rc_t rc;
 	co_debug_section_t *section;
@@ -182,7 +196,7 @@ co_rc_t co_debug_write(co_manager_debug_t *debug,
 		get_section(section);
 	}
 
-	rc = append_to_buffer(debug, section, buf, size);
+	rc = append_to_buffer(debug, section, vec, vec_size);
 
 	if (!put_section(debug, section))
 		*section_ptr = NULL;
@@ -195,11 +209,51 @@ out:
 	return rc;
 }
 
-co_rc_t co_debug_write_str(co_manager_debug_t *debug, 
+static int debug_driver_index;
+static co_debug_tlv_t debug_tlv_index = {
+	.type = CO_DEBUG_TYPE_DRIVER_INDEX,
+	.length = sizeof(debug_driver_index),
+};
+
+static co_debug_write_vector_t driver_local_vec[2] = {
+	{
+	.size = sizeof(debug_tlv_index),
+	},
+	{
+	.size = sizeof(debug_driver_index),
+	}
+};
+
+co_rc_t co_debug_write_log(co_manager_debug_t *debug, 
 			   struct co_debug_section **section_ptr,
-			   const char *str)
+			   co_debug_write_vector_t *vec, int vec_size)
 {
-	return co_debug_write(debug, section_ptr, str, strlen(str));
+	unsigned long size;
+
+	size = co_debug_write_vector_size(vec, vec_size);
+	if (size > 0xf8)
+		return CO_RC(OK);
+
+	debug_driver_index++;
+
+	co_debug_tlv_t tlv;
+	tlv.type = CO_DEBUG_TYPE_TLV;
+	tlv.length = size + sizeof(debug_tlv_index) + sizeof(debug_driver_index);
+	
+	co_debug_write_vector_t local_vec[3];
+	local_vec[0].vec_size = 0;
+	local_vec[0].size = sizeof(tlv);
+	local_vec[0].ptr = (void *)&tlv;
+	local_vec[1].vec_size = vec_size;
+	local_vec[1].size = size;
+	local_vec[1].vec = vec;
+	local_vec[2].vec_size = 2;
+	local_vec[2].size = sizeof(debug_tlv_index) + sizeof(debug_driver_index);
+	local_vec[2].vec = driver_local_vec;
+	driver_local_vec[0].ptr = (void *)&debug_tlv_index;
+	driver_local_vec[1].ptr = (void *)&debug_driver_index;
+	
+	return co_debug_writev(debug, section_ptr, local_vec, 3);
 }
 
 co_rc_t co_debug_read(co_manager_debug_t *debug, 
@@ -336,6 +390,11 @@ void co_debug_buf(const char *buf, long size)
 		return;
 	}
 
-	co_debug_write(&co_global_manager->debug, &co_global_manager->debug.section, buf, size);
+	co_debug_write_vector_t vec;
+	vec.vec_size = 0;
+	vec.size = size;
+	vec.ptr = buf;
+
+	co_debug_write_log(&co_global_manager->debug, &co_global_manager->debug.section, &vec, 1);
 }
 

@@ -119,6 +119,10 @@ static void parse_tlv(const co_debug_tlv_t *tlv, const char *block)
 			fprintf(output_file, "    <local_index>%d</local_index>\n", *(int *)ptlv->value);
 			break;
 		}
+		case CO_DEBUG_TYPE_DRIVER_INDEX: {
+			fprintf(output_file, "    <driver_index>%d</driver_index>\n", *(int *)ptlv->value);
+			break;
+		}
 		case CO_DEBUG_TYPE_STRING: {
 			fprintf(output_file, "    <string>");
 			print_xml_text(ptlv->value);
@@ -276,7 +280,6 @@ void co_update_settings(void)
 		
 		desc_ptr++;
 	}
-
 
 	levels.modify = PTRUE;
 	rc = co_manager_debug_levels(handle, &levels);

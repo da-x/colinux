@@ -280,8 +280,14 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 
 		rc = create_private_data(private_data, &fd_state);
 
-		if (CO_OK(rc))
-			co_debug_write(&manager->debug, &fd_state->debug_section, io_buffer, in_size);
+		if (CO_OK(rc)) {
+			co_debug_write_vector_t vec;
+			vec.vec_size = 0;
+			vec.size = in_size;
+			vec.ptr = io_buffer;
+			
+			co_debug_write_log(&co_global_manager->debug, &fd_state->debug_section,  &vec, 1);
+		}
 
 		return CO_RC(OK);
 	}
