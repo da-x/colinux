@@ -204,7 +204,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 long)(cmon->io_buffer);
 
 	for (io_buffer_page=0; io_buffer_page < io_buffer_num_pages; io_buffer_page++) {
-		unsigned long io_buffer_pfn = co_os_virt_to_phys(io_buffer_host_address) >> CO_ARCH_PAGE_SHIFT;
+		unsigned long io_buffer_pfn = co_os_virt_to_phys((void *)io_buffer_host_address) >> CO_ARCH_PAGE_SHIFT;
 
 		rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP + io_buffer_offset, 
 					    sizeof(linux_pte_t), &io_buffer_pfn);
@@ -715,7 +715,8 @@ static co_rc_t alloc_pp_ram_mapping(co_monitor_t *monitor)
 	co_memset(monitor->pp_pfns, 0, sizeof(co_pfn_t *)*PTRS_PER_PGD);
 
 	full_page_tables_size = CO_ARCH_PAGE_SIZE * (monitor->memory_size >> CO_ARCH_PMD_SHIFT);
-	partial_page_table_size = ((monitor->memory_size & ~CO_ARCH_PMD_MASK) >> CO_ARCH_PAGE_SHIFT);
+	partial_page_table_size = sizeof(unsigned long) * 
+                                  ((monitor->memory_size & ~CO_ARCH_PMD_MASK) >> CO_ARCH_PAGE_SHIFT);
 
 	rc = co_monitor_scan_and_create_pfns(
 		monitor, 
@@ -730,7 +731,6 @@ static co_rc_t alloc_pp_ram_mapping(co_monitor_t *monitor)
 				partial_page_table_size);
 		}
 	}
-
 	
 	if (!CO_OK(rc)) {
 		free_pseudo_physical_memory(monitor);

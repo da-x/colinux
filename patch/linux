@@ -7385,7 +7385,7 @@ diff -urN a/include/asm-i386/bug.h b/include/asm-i386/bug.h
 diff -urN a/include/asm-i386/cooperative.h b/include/asm-i386/cooperative.h
 --- a/include/asm-i386/cooperative.h
 +++ b/include/asm-i386/cooperative.h
-@@ -0,0 +1,184 @@
+@@ -0,0 +1,194 @@
 +/*
 + *  linux/include/asm/cooperative.h
 + *
@@ -7481,8 +7481,12 @@ diff -urN a/include/asm-i386/cooperative.h b/include/asm-i386/cooperative.h
 +	unsigned long dr7;
 +        #define CO_ARCH_STATE_STACK_DR7 "0x5C"
 +
-+	unsigned long temp_cr3;
++	union {
++		unsigned long temp_cr3;
++		unsigned long other_map;
++	} __attribute__((packed));
 +        #define CO_ARCH_STATE_STACK_TEMP_CR3 "0x60"
++        #define CO_ARCH_STATE_STACK_OTHERMAP "0x60"
 +
 +	unsigned long relocate_eip; 
 +        #define CO_ARCH_STATE_STACK_RELOCATE_EIP "0x64"
@@ -7515,7 +7519,10 @@ diff -urN a/include/asm-i386/cooperative.h b/include/asm-i386/cooperative.h
 +		struct {
 +			union {
 +				struct {
-+					unsigned long self_physical_address;
++					union {
++						unsigned long self_physical_address;
++						unsigned long temp_pgd_physical;
++					} __attribute__((packed));
 +					unsigned long dr0;
 +					unsigned long dr1;
 +					unsigned long dr2;
@@ -7545,7 +7552,10 @@ diff -urN a/include/asm-i386/cooperative.h b/include/asm-i386/cooperative.h
 +	};
 +
 +	/* page tables for passage address spaces */
-+	co_arch_passage_page_normal_address_space_t guest_normal;
++	union {
++		co_arch_passage_page_normal_address_space_t guest_normal;
++		co_arch_passage_page_normal_address_space_t temp_space;
++	} __attribute__((packed));
 +	union {
 +		co_arch_passage_page_normal_address_space_t host_normal;
 +		co_arch_passage_page_pae_address_space_t host_pae;
