@@ -20,11 +20,12 @@ $(LOCAL_OBJS) : %.o : %.cpp
 LOCAL_TARGETS = $(LOCAL_OBJS) $(LOCAL_EXE)
 
 $(LOCAL_EXE) : \
+	$(LOCAL_OBJS) \
 	$(BUILD_ROOT)/colinux/user/console-base/user-console.o \
 	$(BUILD_ROOT)/colinux/user/user.a \
-	$(BUILD_ROOT)/colinux/os/current/user/user.o \
-	$(LOCAL_OBJS) \
+	$(BUILD_ROOT)/colinux/os/current/user/user.a \
 	$(BUILD_ROOT)/colinux/common/common.a \
+	$(BUILD_ROOT)/colinux/os/current/user/timer.o \
 
 	$(GPP) $^ -o $@ $(USER_DEFAULT_LIBS) 
 

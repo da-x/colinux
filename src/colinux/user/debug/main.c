@@ -28,6 +28,8 @@ typedef struct co_debug_parameters {
 	char output_filename[0x100];
 	bool_t settings_change_specified;
 	char settings_change[0x100];
+	bool_t network_server_specified;
+	char network_server[0x100];
 } co_debug_parameters_t;
 
 static co_debug_parameters_t parameters;
@@ -53,6 +55,7 @@ static void co_debug_download(void)
 					fprintf(stderr, "log ended: %x\n", rc);
 					return;
 				}
+
 				fwrite(buffer, 1, debug_reader.filled, output_file);
 			}
 		}
@@ -62,10 +65,67 @@ static void co_debug_download(void)
 	co_os_manager_close(handle);
 }
 
-static void print_xml_text(char *str)
+static void co_debug_download_to_network(void)
+{
+	co_manager_handle_t handle;
+	co_rc_t rc;
+	int sock;
+	int port = 63000;
+
+	fprintf(stderr, "sending UDP packets to %s:%d\n", parameters.network_server, port);
+
+	sock = co_udp_socket_connect(parameters.network_server, port);
+	if (sock == -1)
+		return;
+
+	handle = co_os_manager_open();
+	if (!handle) {
+		co_udp_socket_close(sock);
+		return;
+	}
+
+	char *buffer = (char *)co_os_malloc(BUFFER_SIZE);
+	if (!buffer) {
+		co_udp_socket_close(sock);
+		co_os_manager_close(handle);
+		return;
+	}
+
+	co_manager_ioctl_debug_reader_t debug_reader;
+	debug_reader.user_buffer = buffer;
+	debug_reader.user_buffer_size = BUFFER_SIZE;
+	while (1) {
+		debug_reader.filled = 0;
+		rc = co_manager_debug_reader(handle, &debug_reader);
+		if (!CO_OK(rc)) {
+			fprintf(stderr, "log ended: %x\n", rc);
+			return;
+		}
+			
+		co_debug_tlv_t *tlv;
+		unsigned long size = debug_reader.filled;
+		char *block = debug_reader.user_buffer;
+			
+		while (size > 0) {
+			tlv = (co_debug_tlv_t *)block;
+			if (size < sizeof(*tlv))
+				return;
+				
+			co_udp_socket_send(sock, (char *)tlv, tlv->length + sizeof(*tlv));
+					
+			block += sizeof(*tlv) + tlv->length;
+			size -= sizeof(*tlv) + tlv->length;
+		}
+	}
+	co_os_free(buffer);
+	co_os_manager_close(handle);
+	co_udp_socket_close(sock);
+}
+
+static void print_xml_text(const char *str)
 {
 	while (*str) {
-		char *str_start = str;
+		const char *str_start = str;
 		while (*str  &&  *str != '&')
 			str++;
 		fwrite(str_start, str - str_start, 1, stdout);
@@ -79,11 +139,14 @@ static void print_xml_text(char *str)
 
 static void parse_tlv(const co_debug_tlv_t *tlv, const char *block)
 {
-	co_debug_tlv_t *ptlv;
+	const co_debug_tlv_t *ptlv;
 	
 	fprintf(output_file, "  <log>\n");
-	ptlv = (co_debug_tlv_t *)block;
+	ptlv = (const co_debug_tlv_t *)block;
 	while ((char *)ptlv < (char *)&block[tlv->length]) {
+#if (0)
+		printf("%x of %x: %02x\n", ((const char *)ptlv) - block, tlv->length, ptlv->type); 
+#endif
 		switch (ptlv->type) {
 		case CO_DEBUG_TYPE_TIMESTAMP: {
 			co_debug_timestamp_t *ts = (typeof(ts))(ptlv->value);
@@ -296,6 +359,7 @@ static co_rc_t co_debug_parse_args(co_command_line_params_t cmdline, co_debug_pa
 	parameters->download_mode = PFALSE;
 	parameters->parse_mode = PFALSE;
 	parameters->output_filename_specified = PFALSE;
+	parameters->network_server_specified = PFALSE;
 
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-d", &parameters->download_mode);
 	if (!CO_OK(rc)) 
@@ -315,6 +379,11 @@ static co_rc_t co_debug_parse_args(co_command_line_params_t cmdline, co_debug_pa
 	if (!CO_OK(rc)) 
 		return rc;
 
+	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-n", &parameters->network_server_specified,
+						      parameters->network_server, sizeof(parameters->network_server));
+	if (!CO_OK(rc)) 
+		return rc;
+
 
 	return CO_RC(OK);
 }
@@ -326,14 +395,17 @@ static void syntax(void)
 	printf("\n");
 	printf("    colinux-daemon [-h] [-c config.xml] [-d]\n");
 	printf("\n");
-	printf("      -d             Download debug information on the fly\n");
-	printf("      -p             Parse the debug information and output an XML\n");
-	printf("                     Without -d, uses standard input, otherwise parses\n");
-	printf("                     the downloaded information\n");
-	printf("      -f [filename]  File to append the output instead of writing to\n");
-	printf("                     standard output\n");
+	printf("      -d              Download debug information on the fly\n");
+	printf("      -p              Parse the debug information and output an XML\n");
+	printf("                      Without -d, uses standard input, otherwise parses\n");
+	printf("                      the downloaded information\n");
+	printf("      -f [filename]   File to append the output instead of writing to\n");
+	printf("                      standard output\n");
 	printf("      -s level=num,level2=num2,...\n");
-	printf("                     Change the levels of the given debug facilities\n");
+	printf("                      Change the levels of the given debug facilities\n");
+	printf("      -n [ip-address] Send as UDP packets to [ip-address]:63000\n");
+	printf("                      (requires -d and no -f)\n");
+	printf("\n");
 }
 
 int co_debug_main(int argc, char *argv[])
@@ -356,14 +428,16 @@ int co_debug_main(int argc, char *argv[])
 	}
 
 	if (parameters.output_filename_specified) {
-		output_file = fopen(parameters.output_filename, "a");
+		output_file = fopen(parameters.output_filename, "ab");
 		if (!output_file)
 			return CO_RC(ERROR);
 	}
 
 	co_update_settings();
 
-	if (parameters.download_mode  &&  parameters.parse_mode) {
+	if (parameters.download_mode  &&  parameters.network_server_specified) {
+		co_debug_download_to_network();
+	} else if (parameters.download_mode  &&  parameters.parse_mode) {
 		co_debug_download_and_parse();
 	} else if (parameters.download_mode) {
 		co_debug_download();

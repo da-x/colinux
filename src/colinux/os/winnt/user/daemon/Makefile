@@ -35,7 +35,7 @@ $(LOCAL_EXE) : \
 	$(LOCAL_OBJS) \
 	$(BUILD_ROOT)/colinux/user/user.a \
 	$(BUILD_ROOT)/colinux/common/common.a \
-	$(BUILD_ROOT)/colinux/os/current/user/user.o \
+	$(BUILD_ROOT)/colinux/os/current/user/user.a \
 
 	$(CC) $^ -o $@ -lmxml $(USER_DEFAULT_LIBS)
 

@@ -115,7 +115,7 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 
 	rc = colinux_get_pfn(cmon, cmon->import.kernel_swapper_pg_dir, &swapper_pg_dir_pfn);
 	if (!CO_OK(rc)) {
-		co_debug("monitor: error getting swapper_pg_dir pfn (%x)\n", rc);
+		co_debug("error getting swapper_pg_dir pfn (%x)\n", rc);
 		goto out_error;
 	}	
 	
@@ -124,26 +124,26 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 
 	rc = co_monitor_arch_passage_page_alloc(cmon);
 	if (!CO_OK(rc)) {
-		co_debug("monitor: error allocating passage page (%d)\n", rc);
+		co_debug("error allocating passage page (%d)\n", rc);
 		goto out_error;
 	}
 
 	rc = co_monitor_arch_passage_page_init(cmon);
 	if (!CO_OK(rc)) {
-		co_debug("monitor: error initializing the passage page (%d)\n", rc);
+		co_debug("error initializing the passage page (%d)\n", rc);
 		goto out_error;
 	}
 
 	pp_pagetables_pgd = CO_VPTR_PSEUDO_RAM_PAGE_TABLES >> PGDIR_SHIFT;
 	pfns = cmon->pp_pfns[pp_pagetables_pgd];
 	if (pfns == NULL) {
-		co_debug("monitor: CO_VPTR_PSEUDO_RAM_PAGE_TABLES is not mapped, huh? (%x)\n");
+		co_debug("CO_VPTR_PSEUDO_RAM_PAGE_TABLES is not mapped, huh? (%x)\n");
 		goto out_error;
 	}
 
 	rc = co_monitor_create_ptes(cmon, cmon->import.kernel_swapper_pg_dir, CO_ARCH_PAGE_SIZE, pfns);
 	if (!CO_OK(rc)) {
-		co_debug("monitor: error initializing swapper_pg_dir (%x)\n", rc);
+		co_debug("error initializing swapper_pg_dir (%x)\n", rc);
 		goto out_error;
 	}
 
@@ -155,19 +155,19 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 					     sizeof(linux_pgd_t)*cmon->manager->reversed_map_pgds_count, 
 					     (void *)cmon->manager->reversed_map_pgds);
 	if (!CO_OK(rc)) {
-		co_debug("monitor: error adding reversed physical mapping (%x)\n", rc);
+		co_debug("error adding reversed physical mapping (%x)\n", rc);
 		goto out_error;
 	}	
 
 	rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP, CO_ARCH_PAGE_SIZE, pfns);
 	if (!CO_OK(rc)) {
-		co_debug("monitor: error initializing self map (%x)\n", rc);
+		co_debug("error initializing self map (%x)\n", rc);
 		goto out_error;
 	}
 
 	rc = colinux_get_pfn(cmon, CO_VPTR_SELF_MAP, &self_map_pfn);
 	if (!CO_OK(rc)) {
-		co_debug("monitor: error getting self_map pfn (%x)\n", rc);
+		co_debug("error getting self_map pfn (%x)\n", rc);
 		goto out_error;
 	}
 
@@ -181,7 +181,7 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 		&self_map_pfn);
 
 	if (!CO_OK(rc)) {
-		co_debug("monitor: error getting self_map pfn (%x)\n", rc);
+		co_debug("error getting self_map pfn (%x)\n", rc);
 		goto out_error;
 	}	
 
@@ -198,11 +198,11 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 		&passage_page_pfn);
 	
 	if (!CO_OK(rc)) {
-		co_debug("monitor: error initializing self_map (%x)\n", rc);
+		co_debug("error initializing self_map (%x)\n", rc);
 		goto out_error;
 	}	
 
-	co_debug("monitor: initialization finished\n");
+	co_debug("initialization finished\n");
 
 out_error:
 	return rc;
@@ -215,6 +215,8 @@ bool_t co_monitor_device_request(co_monitor_t *cmon, co_device_t device, unsigne
 		co_block_request_t *request;
 		unsigned long dev_index = params[0];
 		co_rc_t rc;
+
+		co_debug_lvl(blockdev, 13, "blockdev requested (unit %d)\n", dev_index);
 
 		request = (co_block_request_t *)(&params[1]);
 
@@ -230,15 +232,23 @@ bool_t co_monitor_device_request(co_monitor_t *cmon, co_device_t device, unsigne
 	case CO_DEVICE_NETWORK: {
 		co_network_request_t *network = NULL;
 
+		co_debug_lvl(network, 13, "network requested\n");
+
 		network = (co_network_request_t *)(params);
 		network->result = 0;
 
-		if (network->unit < 0  ||  network->unit >= CO_MODULE_MAX_CONET)
+		if (network->unit < 0  ||  network->unit >= CO_MODULE_MAX_CONET) {
+			co_debug_lvl(network, 12, "invalid network unit %d\n", network->unit);
 			break;
+		}
+
+		co_debug_lvl(network, 12, "network unit %d requested\n", network->unit);
 
 		switch (network->type) {
 		case CO_NETWORK_GET_MAC: {
 			co_netdev_desc_t *dev = &cmon->config.net_devs[network->unit];
+
+			co_debug_lvl(network, 10, "CO_NETWORK_GET_MAC requested\n");
 
 			network->result = dev->enabled;
 
@@ -282,6 +292,9 @@ co_rc_t co_monitor_send_messages_to_linux(co_monitor_t *cmon)
 
 	message = message_item->message;
 	total_size = message->size + sizeof(*message);
+
+	co_debug_lvl(messages, 12, "sending message to linux (size %d, %d left)\n", total_size,
+		     num_messages - 1);
 
 	if (total_size > 2000)
 		return CO_RC(OK);
@@ -400,7 +413,7 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 			co_daemon_message_t payload;
 		} message;
 		
-		co_debug("monitor: linux terminated (%d)\n", co_passage_page->params[0]);
+		co_debug("linux terminated (%d)\n", co_passage_page->params[0]);
 		
 		message.message.from = CO_MODULE_MONITOR;
 		message.message.to = CO_MODULE_DAEMON;
@@ -453,7 +466,7 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 
 #if (0)
 		if (message->to != 3)
-			co_debug("monitor: message: %d:%d [%d] <%d> (%d) '%c%c%c'\n", 
+			co_debug("message: %d:%d [%d] <%d> (%d) '%c%c%c'\n", 
 				 message->from, message->to, message->priority,
 				 message->type, message->size, 
 				 message->size >= 1 ? message->data[0] : ' ',
@@ -537,7 +550,7 @@ static void free_pseudo_physical_memory(co_monitor_t *monitor)
 {
 	int i, j;
 
-	co_debug("monitor: freeing page frames for pseudo physical RAM\n");
+	co_debug("freeing page frames for pseudo physical RAM\n");
 
 	for (i=0; i < PTRS_PER_PGD; i++) {
 		if (!monitor->pp_pfns[i])
@@ -553,7 +566,7 @@ static void free_pseudo_physical_memory(co_monitor_t *monitor)
 	co_monitor_free(monitor, monitor->pp_pfns);
 	monitor->pp_pfns = NULL;
 
-	co_debug("monitor: done freeing\n");
+	co_debug("done freeing\n");
 }
 
 static co_rc_t alloc_pseudo_physical_memory(co_monitor_t *monitor)
@@ -562,7 +575,7 @@ static co_rc_t alloc_pseudo_physical_memory(co_monitor_t *monitor)
 	int i, j;
 	co_pfn_t pseudo_pfn = 0, first_pp_pgd;
 
-	co_debug("monitor: allocating page frames for pseudo physical RAM...\n");
+	co_debug("allocating page frames for pseudo physical RAM...\n");
 
 	rc = co_monitor_malloc(monitor, sizeof(co_pfn_t *)*PTRS_PER_PGD, (void **)&monitor->pp_pfns);
 	if (!CO_OK(rc))
@@ -576,7 +589,7 @@ static co_rc_t alloc_pseudo_physical_memory(co_monitor_t *monitor)
 		return rc;
 	}
 
-	co_debug("monitor: setting reversed map\n");
+	co_debug("setting reversed map\n");
 
 	for (i=0; i < PTRS_PER_PGD; i++) {
 		if (monitor->pp_pfns[i] == NULL)
@@ -597,7 +610,7 @@ static co_rc_t alloc_pseudo_physical_memory(co_monitor_t *monitor)
 		}
 	}
 
-	co_debug("monitor: creating page tables\n");
+	co_debug("creating page tables\n");
 
 	first_pp_pgd = CO_ARCH_KERNEL_OFFSET >> PGDIR_SHIFT;
 	for (i=first_pp_pgd; i < PTRS_PER_PGD; i++) {
@@ -609,7 +622,7 @@ static co_rc_t alloc_pseudo_physical_memory(co_monitor_t *monitor)
 
 		address = CO_VPTR_PSEUDO_RAM_PAGE_TABLES + ((i - first_pp_pgd) * CO_ARCH_PAGE_SIZE);
 
-		co_debug("monitor: creating one page table (at %x)\n", address);
+		co_debug("creating one page table (at %x)\n", address);
 
 		rc = co_monitor_create_ptes(monitor, address, CO_ARCH_PAGE_SIZE, pfns);
 		if (!CO_OK(rc)) {
@@ -709,14 +722,14 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 		cmon->memory_size = cmon->config.ram_size;
 	}
 
-	co_debug("monitor: configured to %d MB\n", cmon->memory_size);
+	co_debug("configured to %d MB\n", cmon->memory_size);
 
 	if (cmon->memory_size < 8)
 		cmon->memory_size = 8;
 	else if (cmon->memory_size > 512)
 		cmon->memory_size = 512;
 
-	co_debug("monitor: after adjustments: %d MB\n", cmon->memory_size);
+	co_debug("after adjustments: %d MB\n", cmon->memory_size);
 
 	cmon->memory_size <<= 20; /* Megify */
 
@@ -731,13 +744,13 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 
         rc = co_os_timer_create(&timer_callback, cmon, 10, &cmon->timer);
         if (!CO_OK(rc)) {
-                co_debug("monitor: creating host OS timer (%d)\n", rc);
+                co_debug("creating host OS timer (%d)\n", rc);
                 goto out_free_pp;
         }
 
 	rc = co_monitor_load_configuration(cmon);
 	if (!CO_OK(rc)) {
-		co_debug("monitor: loading monitor configuration (%d)\n", rc);
+		co_debug("loading monitor configuration (%d)\n", rc);
 		goto out_destroy_timer;
 	}
 
@@ -780,7 +793,7 @@ co_rc_t co_monitor_load_section(co_monitor_t *cmon, co_monitor_ioctl_load_sectio
 		return CO_RC(ERROR);
 
 	if (params->user_ptr) {
-		co_debug("monitor: loading section at 0x%x (0x%x bytes)\n", params->address, params->size);
+		co_debug("loading section at 0x%x (0x%x bytes)\n", params->address, params->size);
 		rc = co_monitor_copy_and_create_pfns(
 			cmon, params->address, params->size, params->buf);
 	}
@@ -803,10 +816,10 @@ co_rc_t co_monitor_load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_
 	 */
 	address = CO_ARCH_KERNEL_OFFSET + cmon->memory_size - (pages << CO_ARCH_PAGE_SHIFT);
 	
-	co_debug("monitor: initrd address: %x (0x%x pages)\n", address, pages);
+	co_debug("initrd address: %x (0x%x pages)\n", address, pages);
 
 	if (address <= cmon->core_end + 0x100000) {
-		co_debug("monitor: initrd is too close to the kernel code, not enough memory)\n");
+		co_debug("initrd is too close to the kernel code, not enough memory)\n");
 
 		/* We are too close to the kernel code, not enough memory */
 		return CO_RC(ERROR);
@@ -815,7 +828,7 @@ co_rc_t co_monitor_load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_
 	rc = co_monitor_copy_and_create_pfns(cmon, address, params->size, params->buf);
 
 	if (!CO_OK(rc)) {
-		co_debug("monitor: initrd copy failed (%x)\n", rc);
+		co_debug("initrd copy failed (%x)\n", rc);
 		return rc;
 	}
 
@@ -829,8 +842,8 @@ co_rc_t co_monitor_destroy(co_monitor_t *cmon)
 {
 	co_manager_t *manager;
 	
-	co_debug("monitor: cleaning up\n");
-	co_debug("monitor: before free: %d blocks\n", cmon->blocks_allocated);
+	co_debug("cleaning up\n");
+	co_debug("before free: %d blocks\n", cmon->blocks_allocated);
 
 	manager = cmon->manager;
 
@@ -845,7 +858,7 @@ co_rc_t co_monitor_destroy(co_monitor_t *cmon)
 	co_message_switch_free(&cmon->message_switch);
         co_os_timer_destroy(cmon->timer);
 
-	co_debug("monitor: after free: %d blocks\n", cmon->blocks_allocated);
+	co_debug("after free: %d blocks\n", cmon->blocks_allocated);
 
 	co_os_free(cmon);
 
@@ -859,13 +872,13 @@ co_rc_t co_monitor_start(co_monitor_t *cmon)
 	co_rc_t rc;
 
 	if (cmon->state != CO_MONITOR_STATE_INITIALIZED) {
-		co_debug("monitor: invalid state\n");
+		co_debug("invalid state\n");
 		return CO_RC(ERROR);
 	}
 		
 	rc = colinux_init(cmon);
 	if (!CO_OK(rc)) {
-		co_debug("monitor: error initializing coLinux context (%d)\n", rc);
+		co_debug("error initializing coLinux context (%d)\n", rc);
 		return rc;
 	}
 
@@ -906,7 +919,12 @@ co_rc_t co_monitor_run(co_monitor_t *cmon,
 	}
 
 	if (cmon->state == CO_MONITOR_STATE_RUNNING) {
-		  while (co_monitor_iteration(cmon) == PTRUE);
+		bool_t ret;
+		do {
+			co_debug_lvl(context_switch, 14, "switching to linux\n");
+			ret = co_monitor_iteration(cmon);
+			co_debug_lvl(context_switch, 14, "back from linux (%d)\n", ret);
+		} while (ret);
 	}
 
 	/* Flush messages to userspace */

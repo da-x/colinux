@@ -20,10 +20,10 @@ LOCAL_TARGETS = $(LOCAL_OBJS) $(LOCAL_EXE)
 
 $(LOCAL_EXE) : \
 	$(BUILD_ROOT)/colinux/user/console/user-console.o \
-	$(BUILD_ROOT)/colinux/os/current/user/user.o \
 	$(LOCAL_OBJS) \
+	$(BUILD_ROOT)/colinux/common/common.a \
 	$(BUILD_ROOT)/colinux/user/user.a \
-	$(BUILD_ROOT)/colinux/common/common.a
+	$(BUILD_ROOT)/colinux/os/current/user/user.a \
 
 	$(GPP) $^ -o $@ -lmxml -lfltk $(USER_DEFAULT_LIBS)
 

@@ -79,16 +79,20 @@ co_win32_overlapped_write_async(co_win32_overlapped_t * overlapped,
 	BOOL result;
 	DWORD error;
 
+	co_debug_lvl(network, 12, "sending to daemon (0x%x size 0x%x)\n", buffer, size);
 	result = WriteFile(overlapped->handle, buffer, size,
 			   &write_size, &overlapped->write_overlapped);
+	co_debug_lvl(network, 13, "packet sent (0x%x written)\n", write_size);
 
 	if (!result) {
 		switch (error = GetLastError()) {
 		case ERROR_IO_PENDING:
+			co_debug_lvl(network, 13, "pending\n");
 			WaitForSingleObject(overlapped->write_event, INFINITE);
+			co_debug_lvl(network, 14, "awakened\n");
 			break;
 		default:
-			co_debug("packet tx: daemon - FAILED");
+			co_debug_lvl(network, 5, "daemon failed (%x)\n", error);
 			return CO_RC(ERROR);
 		}
 	}
@@ -106,12 +110,11 @@ co_win32_daemon_read_received(co_win32_overlapped_t * overlapped)
 	co_message_t *message;
 	message = (co_message_t *) overlapped->buffer;
 
+	co_debug_lvl(network, 12, "sending to pcap (0x%x size 0x%x)\n", message->data, message->size);
 	/* Send packet using pcap. */
 	pcap_rc = pcap_sendpacket(pcap_packet.adhandle,
 				  message->data, message->size);
-
-	if (pcap_rc)
-		co_debug("packet tx: pcap - FAILED\n");
+	co_debug_lvl(network, 13, "sent (%x)\n", pcap_rc);
 
 	return CO_RC(OK);
 }
@@ -166,7 +169,7 @@ co_win32_overlapped_read_async(co_win32_overlapped_t * overlapped)
 				return CO_RC(OK);
 
 			default:
-				co_debug("Error: %x\n", error);
+				co_debug_lvl(network, 5, "error: %x\n", error);
 				return CO_RC(ERROR);
 			}
 		} else
@@ -283,7 +286,7 @@ pcap2Daemon(LPVOID lpParam)
 
 		default:
 			/* Error or EOF(offline capture only) */
-			co_debug("Unexpected error reading from winPCap.\n");
+			co_debug_lvl(network, 5, "unexpected error reading from winPCap.\n");
 			ExitProcess(0);
 			return 0;
 			break;
@@ -291,7 +294,7 @@ pcap2Daemon(LPVOID lpParam)
 	}
 
 	// We should never get to here.
-	co_debug("Unexpected exit of winPCap read loop.\n");
+	co_debug_lvl(network, 5, "unexpected exit of winPCap read loop.\n");
 	ExitProcess(0);
 	return 0;
 }

@@ -29,6 +29,7 @@ typedef struct co_debug_section {
 	long filled;
 	co_os_mutex_t mutex;
 	int refcount;
+	long max_size;
 	bool_t folded;
 } co_debug_section_t;
 
@@ -49,7 +50,7 @@ struct co_manager_per_fd_state;
 extern co_rc_t co_debug_init(co_manager_debug_t *manager);
 
 typedef struct co_debug_write_vector {
-	bool_t vec_size;
+	int vec_size;
 	long size;
 	union {
 		const char *ptr;

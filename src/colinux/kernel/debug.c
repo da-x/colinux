@@ -49,6 +49,7 @@ static co_rc_t create_section(co_debug_section_t **section_out)
 	section->refcount = 0;
 	section->folded = PFALSE;
 	section->peak_size = section->buffer_size;
+	section->max_size = CO_DEBUG_SECTION_BUFFER_MAX_SIZE;
 
 	*section_out = section;
 	
@@ -68,7 +69,7 @@ static void resize_section(co_manager_debug_t *debug, co_debug_section_t *sectio
 		 */
 
 		new_size = section->buffer_size * 2;
-		if (new_size > CO_DEBUG_SECTION_BUFFER_MAX_SIZE)
+		if (new_size > section->max_size)
 			return;
 	} else if (section->filled < CO_DEBUG_SECTION_BUFFER_START_SIZE) {
 		/*
@@ -351,7 +352,6 @@ co_rc_t co_debug_init(co_manager_debug_t *debug)
 		goto out;
 	}
 
-	/* co_debug_write_str(debug, &debug->section, "driver logging started\n"); */
 	debug->ready = PTRUE;
 
 out:
