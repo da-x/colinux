@@ -286,6 +286,11 @@ co_rc_t co_load_config(char *text, co_config_t *out_config)
 	char *name;
 	co_rc_t rc = CO_RC(OK);
 
+	/* Check presence of an UTF-8 BOM marker.
+	 * Our XML library doesn't like Byte Order Markers */
+	if ( text[0] == '\xEF' && text[1] == '\xBB' && text[2] == '\xBF' )
+		text += 3;	// skip it
+
 	out_config->initrd_enabled = PFALSE;
 
 	tree = mxmlLoadString(NULL, text, NULL);
