@@ -306,6 +306,7 @@ static co_rc_t co_monitor_callback_return_messages(co_monitor_t *cmon)
 	io_buffer = cmon->io_buffer;
 	if (!io_buffer)
 		return CO_RC(ERROR);
+
 	io_buffer_end = io_buffer + CO_VPTR_IO_AREA_SIZE;
 	
 	co_queue_t *queue = &cmon->linux_message_queue;
@@ -444,6 +445,12 @@ void co_unsigned_long_to_hex(char *text, unsigned long number)
 	}
 }
 
+/*
+ * co_monitor_iteration - returning PTRUE means that the driver will 
+ * return immediately to Linux instead of returning to the host's 
+ * userspace and only then to Linux.
+ */
+
 bool_t co_monitor_iteration(co_monitor_t *cmon)
 {
 	switch (co_passage_page->operation) {
@@ -463,7 +470,10 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 		co_debug_lvl(context_switch, 15, "switching from linux (CO_OPERATION_FORWARD_INTERRUPT), %d\n",
 			     cmon->timer_interrupt);
 
-		cmon->timer_interrupt = PFALSE;
+		if (cmon->timer_interrupt) {
+			cmon->timer_interrupt = PFALSE;
+			return PTRUE;
+		}
 		return PFALSE;
 	}
 	case CO_OPERATION_TERMINATE: {
@@ -522,7 +532,9 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 		
 		co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_MESSAGE_TO_MONITOR)\n");
 
-		message = (co_message_t *)(&co_passage_page->params[1]);
+		message = (co_message_t *)cmon->io_buffer;
+
+		/* message = (co_message_t *)(&co_passage_page->params[0]); */
 
 		rc = co_message_switch_dup_message(&cmon->message_switch, message);
 
@@ -694,6 +706,29 @@ static co_rc_t alloc_pseudo_physical_memory(co_monitor_t *monitor)
 	return rc;
 }
 
+static co_rc_t alloc_shared_page(co_monitor_t *cmon)
+{
+	co_rc_t rc = CO_RC_OK;
+	
+	cmon->shared = co_os_alloc_pages(1);
+	if (!cmon->shared)
+		return CO_RC(ERROR);
+
+	rc = co_os_userspace_map(cmon->shared, 1, &cmon->shared_user_address, &cmon->shared_handle);
+	if (!CO_OK(rc)) {
+		co_os_free_pages(cmon->shared, 1);
+		return rc;
+	}
+
+	return rc;
+}
+
+static void free_shared_page(co_monitor_t *cmon)
+{
+	co_os_userspace_unmap(cmon->shared_user_address, cmon->shared_handle, 1);
+	co_os_free_pages(cmon->shared, 1);
+}
+
 co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *params, co_monitor_t **cmon_out)
 {
 	co_symbols_import_t *import = &params->import;
@@ -716,11 +751,16 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	if (cmon->io_buffer == NULL)
 		goto out_free_monitor;
 
+	rc = alloc_shared_page(cmon);
+	if (!CO_OK(rc))
+		goto out_free_buffer;
+
+	params->shared_user_address = cmon->shared_user_address;
 	co_message_switch_init(&cmon->message_switch, CO_MODULE_KERNEL_SWITCH);
 
 	rc = co_queue_init(&cmon->user_message_queue);
 	if (!CO_OK(rc))
-		goto out_free_buffer;
+		goto out_free_shared_page;
 
 	rc = co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_PRINTK, &cmon->user_message_queue);
 	if (!CO_OK(rc))
@@ -839,8 +879,11 @@ out_free_linux_message_queue:
 out_free_user_message_queue:
 	co_queue_flush(&cmon->user_message_queue);
 
-out_free_buffer:
+out_free_shared_page:
+	free_shared_page(cmon);
 	co_message_switch_free(&cmon->message_switch);
+
+out_free_buffer:
 	co_os_free(cmon->io_buffer);
 
 out_free_monitor:
@@ -904,7 +947,7 @@ co_rc_t co_monitor_load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_
 	return rc;
 }
 
-co_rc_t co_monitor_destroy(co_monitor_t *cmon)
+co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
 {
 	co_manager_t *manager;
 	
@@ -916,9 +959,13 @@ co_rc_t co_monitor_destroy(co_monitor_t *cmon)
 	if (cmon->state >= CO_MONITOR_STATE_RUNNING)
                 co_os_timer_deactivate(cmon->timer);
 
+	if (!user_context)
+		cmon->shared_user_address = NULL;
+
 	co_monitor_unregister_and_free_block_devices(cmon);
 	free_pseudo_physical_memory(cmon);
 	co_os_free(cmon->io_buffer);
+	free_shared_page(cmon);
 	co_monitor_os_exit(cmon);
 	co_queue_flush(&cmon->linux_message_queue);
 	co_queue_flush(&cmon->user_message_queue);
@@ -1031,7 +1078,7 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 	switch (io_buffer->op) {
 	case CO_MONITOR_IOCTL_DESTROY: {
 		fd_state->monitor = NULL;
-		co_monitor_destroy(cmon);
+		co_monitor_destroy(cmon, PTRUE);
 		return CO_RC_OK;
 	}
 	case CO_MONITOR_IOCTL_LOAD_SECTION: {

@@ -48,12 +48,6 @@ typedef enum {
 
 #define CO_MAX_LINUX_MESSAGES    10
 
-typedef struct {
-	co_message_t *message;
-	unsigned long guest_message;
-	unsigned long size;
-} co_sent_message_t;
-
 /*
  * We use the following struct for each coLinux system. 
  */
@@ -148,6 +142,9 @@ typedef struct co_monitor {
 	co_queue_t user_message_queue;
 	co_queue_t linux_message_queue;
 	unsigned char *io_buffer;
+	co_monitor_user_kernel_shared_t *shared;
+	void *shared_user_address;
+	void *shared_handle;
 
         /*
 	 * initrd
@@ -168,7 +165,7 @@ struct co_manager_per_fd_state;
 
 extern co_rc_t co_monitor_create(struct co_manager *manager, co_manager_ioctl_create_t *params, 
 				 co_monitor_t **cmon_out);
-extern co_rc_t co_monitor_destroy(co_monitor_t *cmon);
+extern co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context);
 
 extern co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buffer,
 				unsigned long in_size, unsigned long out_size, 

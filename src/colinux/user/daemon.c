@@ -21,6 +21,7 @@
 
 #include <memory.h>
 #include <stdarg.h>
+#include <stdlib.h>
 
 #include "daemon.h"
 #include "manager.h"
@@ -121,10 +122,21 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 	return CO_RC(OK);
 }
 
+static void init_srand(void)
+{
+	co_timestamp_t t;
+
+	co_os_get_timestamp(&t);
+
+	srand(t.low ^ t.high);
+}
+
 co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **co_daemon_out)
 {
 	co_rc_t rc;
 	co_daemon_t *daemon;
+
+	init_srand();
 
 	daemon = (co_daemon_t *)co_os_malloc(sizeof(co_daemon_t));
 	if (daemon == NULL) {
@@ -232,23 +244,18 @@ void co_daemon_prepare_net_macs(co_daemon_t *daemon)
 			continue;
 			
 		if (net_dev->manual_mac_address == PFALSE) {
+			unsigned long rand_mac = rand();
+			int i;
 
-			/*
-			 * Pick a MAC address based on device index.
-			 *
-			 * TODO: Add the standard random MAC address 
-			 * strategy for virtual devices, which
-			 * suggests that the 32 LSBs should be 
-			 * randomized somehow.
-			 *
-			 */
+			for (i=0; i < 10; i++)
+				rand_mac *= rand() + 1234;
 
 			net_dev->mac_address[0] = 0;
-			net_dev->mac_address[1] = 'C';
-			net_dev->mac_address[2] = 'O';
-			net_dev->mac_address[3] = 'N';
-			net_dev->mac_address[4] = 'E';
-			net_dev->mac_address[5] = '0' + i;
+			net_dev->mac_address[1] = 0xFF;
+			net_dev->mac_address[2] = rand_mac >> 030;
+			net_dev->mac_address[3] = rand_mac >> 020;
+			net_dev->mac_address[4] = rand_mac >> 010;
+			net_dev->mac_address[5] = rand_mac >> 000;
 		}
 	}
 }
@@ -341,6 +348,12 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 	rc = co_user_monitor_create(&daemon->monitor, &create_params);
 	if (!CO_OK(rc))
 		goto out;
+
+	daemon->shared = (co_monitor_user_kernel_shared_t *)create_params.shared_user_address;
+	if (!daemon->shared)
+		return CO_RC(ERROR); 
+
+	daemon->shared->userspace_msgwait_count = 0;
 
 	rc = co_load_initrd(daemon);
 

@@ -42,8 +42,8 @@ typedef struct co_daemon {
 	bool_t running;
 	bool_t idle;
 	char *buf;
-	double reminder_htime;
 	bool_t send_ctrl_alt_del;
+	co_monitor_user_kernel_shared_t *shared;
 } co_daemon_t;
 
 typedef enum {

@@ -86,3 +86,36 @@ void co_os_free(void *ptr)
 
 	ExFreePoolWithTag(ptr, CO_OS_POOL_TAG);
 }
+
+co_rc_t co_os_userspace_map(void *address, unsigned long pages, void **user_address_out, void **handle_out)
+{
+	void *user_address;
+	unsigned long memory_size = pages << CO_ARCH_PAGE_SHIFT;
+	PMDL mdl;
+
+	mdl = IoAllocateMdl(address, memory_size, FALSE, FALSE, NULL);
+	if (!mdl) 
+		return CO_RC(ERROR);
+	
+	MmBuildMdlForNonPagedPool(mdl);
+	user_address = MmMapLockedPagesSpecifyCache(mdl, UserMode, MmCached, NULL, FALSE, HighPagePriority);
+	if (!user_address) {
+		IoFreeMdl(mdl);
+		return CO_RC(ERROR);
+	}
+	
+	*handle_out = (void *)mdl;
+	*user_address_out = PAGE_ALIGN(user_address) + MmGetMdlByteOffset(mdl);
+	
+	return CO_RC(OK);
+}
+
+void co_os_userspace_unmap(void *user_address, void *handle, unsigned long pages)
+{
+	PMDL mdl = (PMDL)handle;
+	
+	if (user_address)
+		MmUnmapLockedPages(user_address, mdl); 
+
+	IoFreeMdl(mdl);
+}

@@ -237,7 +237,7 @@ co_rc_t co_manager_cleanup(co_manager_t *manager, void **private_data)
 		co_monitor_t *mon = fd_state->monitor;
 		co_debug("process exited abnormally, removing attached monitor\n");
 		fd_state->monitor = NULL;
-		co_monitor_destroy(mon);
+		co_monitor_destroy(mon, PFALSE);
 	}
 
 	if (fd_state->debug_section != NULL) {

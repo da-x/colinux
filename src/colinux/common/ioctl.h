@@ -27,6 +27,13 @@ typedef enum {
 	CO_MANAGER_IOCTL_DEBUG_LEVELS,
 } co_manager_ioctl_t;
 
+/*
+ * This struct is mapped both in kernel space and userspace.
+ */
+typedef struct {
+	unsigned long userspace_msgwait_count;
+} co_monitor_user_kernel_shared_t;
+
 /* interface for CO_MANAGER_IOCTL_CREATE: */
 typedef struct {
 	co_rc_t rc;
@@ -34,6 +41,7 @@ typedef struct {
 	co_config_t config;
 	co_info_t info;
 	co_arch_info_t arch_info;
+	void *shared_user_address;
 } co_manager_ioctl_create_t;
 
 /* 
