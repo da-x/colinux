@@ -12,6 +12,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include <colinux/os/alloc.h>
 #include <colinux/os/user/misc.h>
@@ -25,6 +26,8 @@ typedef struct co_debug_parameters {
 	bool_t parse_mode;
 	bool_t output_filename_specified;
 	char output_filename[0x100];
+	bool_t settings_change_specified;
+	char settings_change[0x100];
 } co_debug_parameters_t;
 
 static co_debug_parameters_t parameters;
@@ -184,8 +187,6 @@ static void co_debug_parse(int fd)
 void co_debug_download_and_parse(void)
 {
 	co_manager_handle_t handle;
-	co_rc_t rc;
-
 	xml_start();
 
 	handle = co_os_manager_open();
@@ -197,7 +198,7 @@ void co_debug_download_and_parse(void)
 			debug_reader.user_buffer_size = BUFFER_SIZE;
 			while (1) {
 				debug_reader.filled = 0;
-				rc = co_manager_debug_reader(handle, &debug_reader);
+				co_rc_t rc = co_manager_debug_reader(handle, &debug_reader);
 				if (!CO_OK(rc)) {
 					fprintf(stderr, "log ended: %x\n", rc);
 					return;
@@ -207,12 +208,83 @@ void co_debug_download_and_parse(void)
 			}
 		}
 		co_os_free(buffer);
+		co_os_manager_close(handle);
 	}
-
-	co_os_manager_close(handle);
 
 	xml_end();
 }
+
+typedef struct {
+	char *facility_name;
+	unsigned long facility_offset;
+} facility_descriptor_t;
+
+static facility_descriptor_t facility_descriptors[] = {
+#define X(facility, static_level, default_dynamic_level) \
+	{#facility, (((unsigned long)&(((co_debug_levels_t *)0)->facility##_level)))/sizeof(int)},
+		CO_DEBUG_LIST
+#undef X
+		{NULL, 0},
+	};
+
+void co_update_settings(void) 
+{
+	co_manager_handle_t handle;
+	handle = co_os_manager_open();
+	if (!handle)
+		return;
+
+	co_manager_ioctl_debug_levels_t levels = {{0}, };
+	levels.modify = PFALSE;
+
+	co_rc_t rc;
+	rc = co_manager_debug_levels(handle, &levels);
+	if (!CO_OK(rc)) 
+		goto out;
+
+	facility_descriptor_t *desc_ptr = facility_descriptors;
+	while (desc_ptr->facility_name) {
+		int *current_setting = &(((int *)&levels.levels)[desc_ptr->facility_offset]);
+
+		fprintf(stderr, "current facility %s level: %d\n",
+			desc_ptr->facility_name, *current_setting);
+
+		if (parameters.settings_change_specified) {
+			char *settings_found = NULL;
+
+			char string_to_search[strlen(desc_ptr->facility_name)+2];
+			snprintf(string_to_search, sizeof(string_to_search), "%s=", desc_ptr->facility_name);
+
+			settings_found = strstr(parameters.settings_change, string_to_search);
+			if (settings_found) {
+				char *number_scan  = settings_found + strlen(string_to_search);
+				char *number = number_scan;
+
+				while (isdigit(*number_scan))
+					number_scan++;
+				char number_buf[number_scan - number + 1];
+				memcpy(number_buf, number, number_scan - number);
+				number_buf[number_scan - number] = '\0';
+				int setting = atoi(number);
+				
+				*current_setting = setting;
+				
+				fprintf(stderr, "setting facility %s to %d\n", 
+					desc_ptr->facility_name, setting);
+			}
+		}
+		
+		desc_ptr++;
+	}
+
+
+	levels.modify = PTRUE;
+	rc = co_manager_debug_levels(handle, &levels);
+
+out:
+	co_os_manager_close(handle);
+}
+
 
 static co_rc_t co_debug_parse_args(co_command_line_params_t cmdline, co_debug_parameters_t *parameters)
 {
@@ -235,7 +307,30 @@ static co_rc_t co_debug_parse_args(co_command_line_params_t cmdline, co_debug_pa
 	if (!CO_OK(rc)) 
 		return rc;
 
+	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-s", &parameters->settings_change_specified,
+						      parameters->settings_change, sizeof(parameters->settings_change));
+	if (!CO_OK(rc)) 
+		return rc;
+
+
 	return CO_RC(OK);
+}
+
+static void syntax(void)
+{
+	printf("colinux-debug-daemon\n");
+	printf("syntax: \n");
+	printf("\n");
+	printf("    colinux-daemon [-h] [-c config.xml] [-d]\n");
+	printf("\n");
+	printf("      -d             Download debug information on the fly\n");
+	printf("      -p             Parse the debug information and output an XML\n");
+	printf("                     Without -d, uses standard input, otherwise parses\n");
+	printf("                     the downloaded information\n");
+	printf("      -f [filename]  File to append the output instead of writing to\n");
+	printf("                     standard output\n");
+	printf("      -s level=num,level2=num2,...\n");
+	printf("                     Change the levels of the given debug facilities\n");
 }
 
 int co_debug_main(int argc, char *argv[])
@@ -263,12 +358,16 @@ int co_debug_main(int argc, char *argv[])
 			return CO_RC(ERROR);
 	}
 
+	co_update_settings();
+
 	if (parameters.download_mode  &&  parameters.parse_mode) {
 		co_debug_download_and_parse();
 	} else if (parameters.download_mode) {
 		co_debug_download();
 	} else if (parameters.parse_mode) {
 		co_debug_parse(0);
+	} else {
+		syntax();
 	}
 
 	if (output_file != stdout) 

@@ -24,6 +24,7 @@ typedef enum {
 	CO_MANAGER_IOCTL_STATUS,
 	CO_MANAGER_IOCTL_DEBUG,
 	CO_MANAGER_IOCTL_DEBUG_READER,
+	CO_MANAGER_IOCTL_DEBUG_LEVELS,
 } co_manager_ioctl_t;
 
 /* interface for CO_MANAGER_IOCTL_CREATE: */
@@ -70,6 +71,12 @@ typedef struct {
 	unsigned long user_buffer_size;
 	unsigned long filled;
 } co_manager_ioctl_debug_reader_t;
+
+/* interface for CO_MANAGER_IOCTL_DEBUG_LEVELS: */
+typedef struct {
+	co_debug_levels_t levels;
+	bool_t modify;
+} co_manager_ioctl_debug_levels_t;
 
 /*
  * Monitor ioctl()s

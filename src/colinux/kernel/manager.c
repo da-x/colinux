@@ -296,6 +296,20 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 
 		return CO_RC(OK);
 	}
+	case CO_MANAGER_IOCTL_DEBUG_LEVELS: {
+		co_manager_ioctl_debug_levels_t *params;
+
+		params = (typeof(params))(io_buffer);
+		if (params->modify) {
+			co_global_debug_levels = params->levels;
+		} else {
+			params->levels = co_global_debug_levels;
+		}
+
+		*return_size = sizeof(*params);
+
+		return CO_RC(OK);
+	}
 	default:
 		break;
 	}

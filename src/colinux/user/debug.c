@@ -21,7 +21,18 @@ void co_debug_start(void)
 {
 	if (handle != NULL)
 		return;
+
 	handle = co_os_manager_open();
+	if (handle) {
+		co_rc_t rc;
+		co_manager_ioctl_debug_levels_t levels = {0, };
+		levels.modify = PFALSE;
+
+		rc = co_manager_debug_levels(handle, &levels);
+		if (CO_OK(rc)) {
+			co_global_debug_levels = levels.levels;
+		}
+	}
 }
 
 void co_debug_buf(const char *buf, long size)

@@ -17,9 +17,8 @@ typedef int bool_t;
 
 #define PACKED_STRUCT __attribute__((packed))
 
-#define CO_MAX_MONITORS 16
-
-#define CO_LINUX_PERIPHERY_API_VERSION    10
+#define CO_MAX_MONITORS                   16
+#define CO_LINUX_PERIPHERY_API_VERSION    11
 
 typedef enum {
     CO_RC_OK                         = 0,

@@ -34,4 +34,8 @@ extern void co_manager_debug(co_manager_handle_t handle,
 extern co_rc_t co_manager_debug_reader(co_manager_handle_t handle, 
 				       co_manager_ioctl_debug_reader_t *debug_reader);
 
+extern co_rc_t co_manager_debug_levels(co_manager_handle_t handle, 
+				       co_manager_ioctl_debug_levels_t *levels);
+
+
 #endif

@@ -74,3 +74,14 @@ co_rc_t co_manager_debug_reader(co_manager_handle_t handle, co_manager_ioctl_deb
 
 	return rc;
 }
+
+co_rc_t co_manager_debug_levels(co_manager_handle_t handle, co_manager_ioctl_debug_levels_t *levels)
+{
+	co_rc_t rc;
+	unsigned long returned = 0;
+
+	rc = co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_DEBUG_LEVELS,
+				 levels, sizeof(*levels), levels, sizeof(*levels), &returned);
+
+	return rc;
+}
