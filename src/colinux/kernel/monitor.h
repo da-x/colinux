@@ -38,17 +38,12 @@ typedef struct co_monitor_device {
 } co_monitor_device_t;
 
 typedef enum {
+	CO_MONITOR_STATE_EMPTY,
 	CO_MONITOR_STATE_INITIALIZED,
 	CO_MONITOR_STATE_RUNNING,
+	CO_MONITOR_STATE_STARTED,
 	CO_MONITOR_STATE_TERMINATED,
 } co_monitor_state_t;
-
-typedef enum {
-	CO_MONITOR_CONSOLE_STATE_DETACHED,
-	CO_MONITOR_CONSOLE_STATE_ATTACHED,
-} co_monitor_console_state_t;
-
-#define CO_MAX_LINUX_MESSAGES    10
 
 #define CO_MONITOR_MODULES_COUNT CO_MODULES_MAX
 /*
@@ -73,11 +68,7 @@ typedef struct co_monitor {
 	 * State of monitor.
 	 */ 
 	co_monitor_state_t state;
-
-	/*
-	 * State of the connected console.
-	 */
-	co_monitor_console_state_t console_state;
+	co_termination_reason_t termination_reason;
 
 	/*
 	 * Configuration data.

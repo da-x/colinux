@@ -200,6 +200,20 @@ co_rc_t co_user_monitor_get_console(co_user_monitor_t *umon,
 					     &params->pc, sizeof(*params));
 }
 
+co_rc_t co_user_monitor_get_state(co_user_monitor_t *umon, 
+				  co_monitor_ioctl_get_state_t *params)
+{
+	return co_manager_io_monitor_unisize(umon->handle, 
+					     CO_MONITOR_IOCTL_GET_STATE, 
+					     &params->pc, sizeof(*params));
+}
+
+co_rc_t co_user_monitor_reset(co_user_monitor_t *umon)
+{
+	return co_manager_io_monitor_simple(umon->handle, CO_MONITOR_IOCTL_RESET);
+}
+
+
 co_rc_t co_user_monitor_message_send(co_user_monitor_t *umon,  co_message_t *message)
 {
 	return umon->reactor_user->send(umon->reactor_user, (unsigned char *)message, message->size  + sizeof(*message));

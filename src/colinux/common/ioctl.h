@@ -59,6 +59,8 @@ typedef enum {
 	CO_MONITOR_IOCTL_STATUS,
 	CO_MONITOR_IOCTL_LOAD_INITRD, 
 	CO_MONITOR_IOCTL_GET_CONSOLE,
+	CO_MONITOR_IOCTL_GET_STATE,
+	CO_MONITOR_IOCTL_RESET,
 } co_monitor_ioctl_op_t;
 
 /* interface for CO_MANAGER_IOCTL_MONITOR: */
@@ -133,6 +135,13 @@ typedef struct {
 	co_manager_ioctl_monitor_t pc;
 	unsigned long x, y;
 } co_monitor_ioctl_get_console_t;
+
+/* interface for CO_MONITOR_IOCTL_GET_STATE: */
+typedef struct {
+	co_manager_ioctl_monitor_t pc;
+	unsigned long monitor_state;
+	co_termination_reason_t termination_reason;
+} co_monitor_ioctl_get_state_t;
 
 /* interface for CO_MONITOR_IOCTL_RUN: */
 typedef struct {

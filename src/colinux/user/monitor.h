@@ -37,7 +37,10 @@ extern co_rc_t co_user_monitor_run(co_user_monitor_t *umon, co_monitor_ioctl_run
 extern co_rc_t co_user_monitor_start(co_user_monitor_t *umon);
 
 extern co_rc_t co_user_monitor_get_console(co_user_monitor_t *umon, 
-					   co_monitor_ioctl_get_console_t*params);
+					   co_monitor_ioctl_get_console_t *params);
+extern co_rc_t co_user_monitor_get_state(co_user_monitor_t *umon, 
+					   co_monitor_ioctl_get_state_t *params);
+extern co_rc_t co_user_monitor_reset(co_user_monitor_t *umon);
 extern co_rc_t co_user_monitor_status(co_user_monitor_t *umon, 
 				      co_monitor_ioctl_status_t *status);
 

@@ -583,21 +583,42 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 	return rc;
 }
 
+static co_rc_t co_daemon_restart(co_daemon_t *daemon)
+{
+	co_rc_t rc = co_user_monitor_reset(daemon->monitor);
+
+	if (!CO_OK(rc)) {
+		co_terminal_print("colinux: reset unsuccessful\n");
+		return rc;
+	}
+
+	rc = co_elf_image_load(daemon);
+	if (!CO_OK(rc)) {
+		co_terminal_print("colinux: error reloading vmlinux\n");
+		return rc;
+	}
+
+	rc = co_load_initrd(daemon);
+	if (!CO_OK(rc)) {
+		co_terminal_print("colinux: error reloading initrd\n");
+		return rc;
+	}
+
+	return rc;
+}
+
 co_rc_t co_daemon_run(co_daemon_t *daemon)
 {
 	co_rc_t rc;
 	co_reactor_t reactor;
 	co_user_monitor_t *message_monitor;
 	co_module_t modules[] = {CO_MODULE_PRINTK, };
+	bool_t restarting = PFALSE;
 
 	rc = co_reactor_create(&reactor);
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_user_monitor_start(daemon->monitor);
-	if (!CO_OK(rc))
-		goto out;
-	
 	co_terminal_print("PID: %d\n", daemon->id);
 	
 	rc = co_user_monitor_open(reactor, message_receive,
@@ -624,21 +645,61 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 
 	co_terminal_print("colinux: booting\n");
 
-	daemon->running = PTRUE;
-	while (daemon->running) {
-		co_monitor_ioctl_run_t params;
+	do {
+		restarting = PFALSE;
 
-		rc = co_user_monitor_run(daemon->monitor, &params);
+		rc = co_user_monitor_start(daemon->monitor);
 		if (!CO_OK(rc))
-			break;
+			goto out;
+		
+		daemon->running = PTRUE;
+		while (daemon->running) {
+			co_monitor_ioctl_run_t params;
+			
+			rc = co_user_monitor_run(daemon->monitor, &params);
+			if (!CO_OK(rc))
+				break;
 
-		co_reactor_select(reactor, 0);
-	}
+			co_reactor_select(reactor, 0);
+		}
 
-	if (CO_RC_GET_CODE(rc) == CO_RC_INSTANCE_TERMINATED) {
-		co_terminal_print("colinux: Linux VM terminated\n");
-		return CO_RC(OK);
-	}
+		if (CO_RC_GET_CODE(rc) == CO_RC_INSTANCE_TERMINATED) {
+			co_monitor_ioctl_get_state_t params;
+			co_termination_reason_t reason;
+
+			co_terminal_print("colinux: Linux VM terminated\n");
+
+			rc = co_user_monitor_get_state(daemon->monitor, &params);
+			if (!CO_OK(rc)) {
+				co_terminal_print("colinux: unable to get reason for termination (bug?), aborting\n");
+				break;
+			}
+
+			reason = params.termination_reason;
+
+			switch (reason) {
+			case CO_TERMINATE_REBOOT:
+				co_terminal_print("colinux: rebooted.\n");
+				rc = co_daemon_restart(daemon);
+				if (CO_OK(rc))
+					restarting = PTRUE;
+
+				break;
+
+			case CO_TERMINATE_POWEROFF:
+				co_terminal_print("colinux: powered off, exiting.\n");
+				break;
+
+			case CO_TERMINATE_HALT:
+				co_terminal_print("colinux: halted, exiting.\n");
+				break;
+
+			default:
+				co_terminal_print("colinux: terminated with code %d - abnormal exit, aborting\n", reason);
+				break;
+			}
+		}
+	} while (restarting);
 
 	co_user_monitor_close(message_monitor);
 
