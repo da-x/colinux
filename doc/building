@@ -34,7 +34,7 @@ not guaranteed to be ABI-compatible.
 -----------------------------------------
 
 Unpack the source tarball of coLinux and the Linux kernel tarball 
-(version 2.6.8.1 for instance, can be obtained from www.kernel.org)
+(version 2.6.9 for instance, can be obtained from www.kernel.org)
 in the same  directory. Make sure that the directory of the Linux 
 kernel is named 'linux'. 
 
@@ -272,7 +272,7 @@ directories will automatic detect. You can overwrite with --hostkerneldir.
 Sample for Linux as host:
   ./configure --target=i686-pc-linux \
         --downloaddir=/home/$USER/src/colinux-devel/download \
-        --targetkerneldir=/home/$USER/src/colinux-devel/download/linux-2.6.8.1
+        --targetkerneldir=/home/$USER/src/colinux-devel/download/linux-2.6.9
         --hostkerneldir=/usr/src/linux
 
 
@@ -342,11 +342,11 @@ Store patch/linux-private.patch, before call bin/build-kernel.sh or make.
 To create private configfile, you should diff colinux config with your config
 and store this in file patch/linux-private.patch.
 Run this steps, if you have patched colinux kernel in download directory:
- # cd coLinuxDownloadPath/linux-2.6.8.1
+ # cd coLinuxDownloadPath/linux-2.6.9
  # make menuconfig
  ... configure your kernel and save file .config ...
  # cd ..
- # diff -urN coLinuxDevelPath/patch/linux linux-2.6.8.1/.config > linux-private.patch
+ # diff -urN coLinuxDevelPath/patch/linux linux-2.6.9/.config > linux-private.patch
 
 
 5.2 Private kernel patches and config
@@ -357,8 +357,8 @@ kernel with your kernel source and configuration.
 "KPRIVATE" is your kernel, configured and also patched for colinux.
 Please remember: Your private kernel tree should start one directory up
 from source (patch will be call with -p1)!
- # VANILLA=linux-2.6.8.1
- # PRIVATE=/home/$USER/src/linux-2.6.8.1-private
+ # VANILLA=linux-2.6.9
+ # PRIVATE=/home/$USER/src/linux-2.6.9-private
  # cd /tmp
  # tar xfj $VANILLA.bz2
  # cd $VANILLA
