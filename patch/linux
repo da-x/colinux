@@ -6460,7 +6460,7 @@ diff -urN a/fs/cofusefs/fuse_i.h b/fs/cofusefs/fuse_i.h
 diff -urN a/fs/cofusefs/inode.c b/fs/cofusefs/inode.c
 --- a/fs/cofusefs/inode.c
 +++ b/fs/cofusefs/inode.c
-@@ -0,0 +1,544 @@
+@@ -0,0 +1,546 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001	Miklos Szeredi (miklos@szeredi.hu)
@@ -6952,6 +6952,8 @@ diff -urN a/fs/cofusefs/inode.c b/fs/cofusefs/inode.c
 +		return ERR_PTR(-EINVAL);
 +
 +	md.rootmode = S_IFDIR | S_IRWXU | S_IRUGO | S_IXUGO;
++	md.uid = co_md.uid;
++	md.flags = FUSE_ALLOW_OTHER | FUSE_DEFAULT_PERMISSIONS;
 +
 +	co_md.fuse = &md;
 +	snprintf(co_md.name, sizeof(co_md.name), "%s", dev_name);
