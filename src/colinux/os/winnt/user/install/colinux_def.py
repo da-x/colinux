@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
-import os, sys, time
+import os, sys, time, re
 
 def main_by_string(input_string):
     version = input_string.strip()
+    m = re.match("([^-]+)-pre[0-9]", version)
+    if m:
+        version = m.groups(0)[0]
     output_lines = []
     output_lines.append('!define VERSION "%s"' % (version, ));
     output_lines.append('!define LONGVERSION "%s.1"' % (version, ));
