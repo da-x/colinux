@@ -24,6 +24,11 @@ static inline void co_list_init(co_list_t *list)
 	list->prev = list;
 }
 
+static inline int co_list_empty(co_list_t *list)
+{
+	return (list->next == list);
+}
+
 static inline void co_list_add(co_list_t *new, co_list_t *prev, co_list_t *next)
 {
 	next->prev = new;

@@ -3,14 +3,16 @@ ifeq ($(BUILD_ROOT),)
 BUILD_ROOT=../../../../..
 include $(BUILD_ROOT)/Makefile
 else
-BUILD_PATH := $(BUILD_PATH)/daemon
+BUILD_PATH := $(BUILD_PATH)/conet-daemon
 #-----------------------------------------------------------------
 
-LOCAL_EXE = $(BUILD_PATH)/colinux-daemon.exe
+LOCAL_EXE = $(BUILD_PATH)/colinux-net-daemon.exe
 USER_CFLAGS += $(CFLAGS) 
 
 LOCAL_OBJS = \
 	main.o \
+	tap-win32.o \
+
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

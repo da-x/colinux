@@ -160,10 +160,10 @@ typedef struct co_monitor {
 	co_monitor_device_t devices[CO_DEVICES_TOTAL];
 	bool_t timer_interrupt;
 
-	/*
-	 * Timer
-	 */
-	co_os_timer_t timer;
+        /*
+         * Timer
+         */
+        co_os_timer_t timer;
 
 	/* 
 	 * Block devices
@@ -171,13 +171,8 @@ typedef struct co_monitor {
 	struct co_block_dev *block_devs[CO_MAX_BLOCK_DEVICES];
 
 	/*
-	 * Our virtaal VGA console: 
-	 */
-	co_os_mutex_t console_mutex;
-	co_queue_t console_queue;
-	co_console_t *console;
-	unsigned long console_poll_cancel;
-
+	 * Message passing stuff
+	 */ 
 	co_message_switch_t message_switch;
 	co_queue_t user_message_queue;
 	co_queue_t linux_message_queue;

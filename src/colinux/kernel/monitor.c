@@ -28,8 +28,6 @@
 
 #include "monitor.h"
 #include "manager.h"
-#include "console.h"
-#include "network.h"
 #include "block.h"
 #include "devices.h"
 #include "fileblock.h"
@@ -558,32 +556,18 @@ co_rc_t co_monitor_send_messages_to_linux(co_monitor_t *cmon)
 
 bool_t co_monitor_iteration(co_monitor_t *cmon)
 {
+	switch (co_passage_page->operation) {
+	case CO_OPERATION_FORWARD_INTERRUPT: 
+	case CO_OPERATION_IDLE: 
+		co_monitor_send_messages_to_linux(cmon);
+		break;
+	}
+
 	co_switch();
 
 	switch (co_passage_page->operation) {
 	case CO_OPERATION_FORWARD_INTERRUPT: {
 		co_monitor_arch_real_hardware_interrupt(cmon);
-		if (cmon->timer_interrupt) {
-			struct {
-				co_message_t message;
-				co_linux_message_t linux;
-			} message;
-
-			cmon->timer_interrupt = PFALSE;
-
-			message.message.from = CO_MODULE_MONITOR;
-			message.message.to = CO_MODULE_LINUX;
-			message.message.priority = CO_PRIORITY_DISCARDABLE;
-			message.message.type = CO_MESSAGE_TYPE_OTHER;
-			message.message.size = sizeof(message.linux);
-			message.linux.device = CO_DEVICE_TIMER;
-			message.linux.unit = 0;
-			message.linux.size = 0;
-
-			co_message_switch_dup_message(&cmon->message_switch, &message.message);
-		}
-
-		co_monitor_send_messages_to_linux(cmon);
 		return PFALSE;
 	}
 	case CO_OPERATION_TERMINATE: {
@@ -610,27 +594,37 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 		co_monitor_send_messages_to_linux(cmon);
 		return PTRUE;
 	}
+	case CO_OPERATION_IDLE: {
+		co_message_t message;
+		
+		message.from = CO_MODULE_MONITOR;
+		message.to = CO_MODULE_IDLE;
+		message.priority = CO_PRIORITY_DISCARDABLE;
+		message.type = CO_MESSAGE_TYPE_STRING;
+		message.size = 0;
+
+		co_message_switch_dup_message(&cmon->message_switch, &message);
+
+		return PFALSE;
+	}
 	case CO_OPERATION_MESSAGE_TO_MONITOR: {
-		co_message_t *message, *copy;
+		co_message_t *message;
 		co_rc_t rc;
 
 		message = (co_message_t *)(&co_passage_page->params[1]);
 
 #if (0)
-		co_debug("Message: %d:%d [%d] <%d> (%d) '%c%c%c'\n", 
-			 message->from, message->to, message->priority,
-			 message->type, message->size, 
-			 message->size >= 1 ? message->data[0] : ' ',
-			 message->size >= 2 ? message->data[1] : ' ',
-			 message->size >= 3 ? message->data[2] : ' ');
+		if (message->to != 3)
+			co_debug("Message: %d:%d [%d] <%d> (%d) '%c%c%c'\n", 
+				 message->from, message->to, message->priority,
+				 message->type, message->size, 
+				 message->size >= 1 ? message->data[0] : ' ',
+				 message->size >= 2 ? message->data[1] : ' ',
+				 message->size >= 3 ? message->data[2] : ' ');
 #endif
 
-		rc = co_message_dup(message, &copy);
-		if (!CO_OK(rc))
-			return PFALSE;
+		rc = co_message_switch_dup_message(&cmon->message_switch, message);
 
-		rc = co_message_switch_message(&cmon->message_switch, copy);
-		
 		return PFALSE;
 	}
 	case CO_OPERATION_DEVICE: {
@@ -689,9 +683,9 @@ out:
 
 void co_monitor_timer_cb(void *data)
 {
-	co_monitor_t *cmon = (co_monitor_t *)data;
+        co_monitor_t *cmon = (co_monitor_t *)data;
 
-	cmon->timer_interrupt = PTRUE;
+        cmon->timer_interrupt = PTRUE;
 }
 
 co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *params, co_monitor_t **cmon_out)
@@ -714,22 +708,17 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	cmon->manager = manager;
 	cmon->state = CO_MONITOR_STATE_INITIALIZED;
 	cmon->console_state = CO_MONITOR_CONSOLE_STATE_DETACHED;
-	co_message_switch_init(&cmon->message_switch);
-
-	rc = co_console_create(80, 25, 25, &cmon->console);
-	if (!CO_OK(rc))
-		goto out_free;
-
-	rc = co_queue_init(&cmon->console_queue);
-	if (!CO_OK(rc))
-		goto out_free_console;
+	co_message_switch_init(&cmon->message_switch, CO_MODULE_KERNEL_SWITCH);
 
 	rc = co_queue_init(&cmon->user_message_queue);
 	if (!CO_OK(rc))
-		goto out_free_console_queue;
+		goto out_free;
 
 	co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_PRINTK, &cmon->user_message_queue);
 	co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_DAEMON, &cmon->user_message_queue);
+	co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_IDLE, &cmon->user_message_queue);
+	co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_USER_SWITCH, &cmon->user_message_queue);
+	co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_CONSOLE, &cmon->user_message_queue);
 
 	rc = co_queue_init(&cmon->linux_message_queue);
 	if (!CO_OK(rc))
@@ -737,13 +726,9 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 
 	co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_LINUX, &cmon->linux_message_queue);
 
-	rc = co_os_mutex_create(&cmon->console_mutex);
-	if (!CO_OK(rc))
-		goto out_free_linux_message_queue;
-	
 	rc = co_monitor_os_init(cmon);
 	if (!CO_OK(rc))
-		goto out_free_console_mutex;
+		goto out_free_linux_message_queue;
 
 	cmon->core_vaddr = import->kernel_start;
 	cmon->core_pages = (import->kernel_end - import->kernel_start + 
@@ -784,11 +769,11 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	cmon->end_physical = __PAGE_OFFSET + cmon->memory_size;
 	cmon->passage_page_vaddr = cmon->core_end + (cmon->bootmem_pages << PAGE_SHIFT);
 
-	rc = co_os_timer_create(&co_monitor_timer_cb, cmon, 10, &cmon->timer);
-	if (!CO_OK(rc)) {
-		co_debug("Error creating host OS timer (%d)\n", rc);
-		goto out_free_image;
-	}
+        rc = co_os_timer_create(&co_monitor_timer_cb, cmon, 10, &cmon->timer);
+        if (!CO_OK(rc)) {
+                co_debug("Error creating host OS timer (%d)\n", rc);
+                goto out_free_image;
+        }
 
 	rc = co_monitor_load_configuration(cmon);
 	if (!CO_OK(rc)) {
@@ -812,7 +797,7 @@ out_unregister_block_devs:
 	co_monitor_unregister_and_free_block_devices(cmon);
 
 out_destroy_timer:
-	co_os_timer_destroy(cmon->timer);
+        co_os_timer_destroy(cmon->timer);
 
 out_free_image:
 	co_monitor_free_kernel_image(cmon);
@@ -820,20 +805,11 @@ out_free_image:
 out_free_os_dep:
 	co_monitor_os_exit(cmon);
 
-out_free_console_mutex:
-	co_os_mutex_destroy(cmon->console_mutex);
-
 out_free_linux_message_queue:
 	co_queue_flush(&cmon->linux_message_queue);
 
 out_free_user_message_queue:
 	co_queue_flush(&cmon->user_message_queue);
-
-out_free_console_queue:
-	co_queue_flush(&cmon->console_queue);
-
-out_free_console:
-	co_console_destroy(cmon->console);
 
 out_free:
 	co_os_free_pages(cmon, pages);
@@ -879,7 +855,7 @@ co_rc_t co_monitor_destroy(co_monitor_t *cmon)
 	manager = cmon->manager;
 
 	if (cmon->state >= CO_MONITOR_STATE_RUNNING) {
-		co_os_timer_deactivate(cmon->timer);
+                co_os_timer_deactivate(cmon->timer);
 		co_monitor_colinux_context_free(cmon);
 	}
 
@@ -887,11 +863,8 @@ co_rc_t co_monitor_destroy(co_monitor_t *cmon)
 	co_monitor_cleanup_devices(cmon);
 	co_monitor_free_kernel_image(cmon);
 	co_monitor_os_exit(cmon);
-	co_os_mutex_destroy(cmon->console_mutex);
 	co_queue_flush(&cmon->linux_message_queue);
 	co_queue_flush(&cmon->user_message_queue);
-	co_queue_flush(&cmon->console_queue);
-	co_console_destroy(cmon->console);
 
 	co_debug("cmon after free: %d kb, %d blocks\n", 
 		 (cmon->allocated_pages_num << PAGE_SHIFT) >> 10,
@@ -938,19 +911,16 @@ co_rc_t co_monitor_run(co_monitor_t *cmon,
 		       unsigned long out_size,
 		       unsigned long *return_size)
 {
-	unsigned long queue_items, size_left;
-	co_rc_t rc = CO_RC_OK;
 	char *params_data;
 	int i;
 
 	/* Get messages from userspace */
 	params_data = params->data;
-	for (i=0; i < params->num_messages; i++) {
-		co_message_t *message = (typeof(message))params_data, *copy;
 
-		rc = co_message_dup(message, &copy);
-		if (CO_OK(rc))
-			co_message_switch_message(&cmon->message_switch, copy);
+	for (i=0; i < params->num_messages; i++) {
+		co_message_t *message = (typeof(message))params_data;
+
+		co_message_switch_dup_message(&cmon->message_switch, message);
 		
 		params_data += message->size + sizeof(*message);
 	}
@@ -967,40 +937,14 @@ co_rc_t co_monitor_run(co_monitor_t *cmon,
 
 	if (co_queue_size(&cmon->user_message_queue) == 0)
 		return CO_RC(OK);
+
+	*return_size = 0;
+
+	co_message_write_queue(&cmon->user_message_queue, params->data, 
+			       out_size - sizeof(*params), &params->num_messages,
+			       return_size);
 		
-	params_data = params->data;
-	size_left = out_size - sizeof(*params);
-
-	queue_items = co_queue_size(&cmon->user_message_queue);
-	while (queue_items > 0) {
-		co_message_queue_item_t *message_item;
-		unsigned long total_size;
-		co_message_t *message;
-			
-		rc = co_queue_pop_tail(&cmon->user_message_queue, (void **)&message_item);
-		if (!CO_OK(rc))
-			break;
-
-		message = message_item->message;
-		total_size = message->size + sizeof(*message);
-
-		if (total_size > size_left) {
-			co_queue_add_tail(&cmon->user_message_queue, message_item);
-			break;
-		}				
-			
-		memcpy(params_data, message, total_size);
-
-		queue_items -= 1;
-		size_left -= total_size;
-		params_data += total_size;
-		params->num_messages += 1;
-
-		co_queue_free(&cmon->user_message_queue, message_item);
-		co_os_free(message);
-	}
-
-	*return_size = (char *)params_data - (char *)params;
+	*return_size += sizeof(*params);
 
 	return CO_RC(OK);
 }

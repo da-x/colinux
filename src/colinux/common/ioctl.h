@@ -46,19 +46,6 @@ typedef enum {
 	CO_MONITOR_IOCTL_START,
 	CO_MONITOR_IOCTL_RUN,
 
-	CO_MONITOR_IOCTL_ATTACH_CONSOLE, 
-	CO_MONITOR_IOCTL_DOWNLOAD_CONSOLE, 
-	CO_MONITOR_IOCTL_CONSOLE_POLL,
-	CO_MONITOR_IOCTL_CONSOLE_CANCEL_POLL,
-	CO_MONITOR_IOCTL_CONSOLE_MESSAGES, 
-	CO_MONITOR_IOCTL_UPLOAD_CONSOLE, 
-	CO_MONITOR_IOCTL_DETACH_CONSOLE, 
-
-	CO_MONITOR_IOCTL_NETWORK_PACKET_POLL, 
-	CO_MONITOR_IOCTL_NETWORK_PACKET_CANCEL_POLL,
-	CO_MONITOR_IOCTL_NETWORK_PACKET_RECEIVE, 
-	CO_MONITOR_IOCTL_NETWORK_PACKET_SEND,
-
 	CO_MONITOR_IOCTL_KEYBOARD, 
 	CO_MONITOR_IOCTL_TERMINATE, 
 	CO_MONITOR_IOCTL_SYSDEP, 
@@ -98,13 +85,6 @@ typedef struct {
 	unsigned char buf[0];
 } co_monitor_ioctl_load_section_t;
 
-/* interface for CO_MONITOR_IOCTL_CONSOLE_MESSAGE: */
-typedef struct {
-	co_manager_ioctl_monitor_t pc;
-	unsigned long num_messages;
-	char data[];
-} co_monitor_ioctl_console_messages_t;
-
 /* interface for CO_MONITOR_IOCTL_RUN: */
 typedef struct {
 	co_manager_ioctl_monitor_t pc;
@@ -125,28 +105,6 @@ typedef struct {
 	};
 } co_daemon_message_t;
 
-typedef enum {
-	CO_MONITOR_IOCTL_CONSOLE_MESSAGE_NORMAL,
-	CO_MONITOR_IOCTL_CONSOLE_MESSAGE_TERMINATED,
-} co_monitor_ioctl_console_message_type_t;
-
-typedef struct {
-	unsigned long size;
-	co_monitor_ioctl_console_message_type_t type;
-	union {
-		struct {
-			unsigned long reason;
-		} terminated;
-		char extra_data[1];
-	};
-} co_monitor_ioctl_console_message_t;
-
-/* interface for CO_MONITOR_IOCTL_ATTACH_CONSOLE: */
-typedef struct {
-	co_manager_ioctl_monitor_t pc;
-	unsigned long size;
-} co_monitor_ioctl_attach_console_t;
-
 /* interface for CO_MONITOR_IOCTL_KEYBOARD: */
 typedef enum {
 	CO_OPERATION_KEYBOARD_ACTION,
@@ -158,14 +116,6 @@ typedef struct co_monitor_ioctl_keyboard {
 	co_scan_code_t sc;
 	int down;
 } co_monitor_ioctl_keyboard_t;
-
-/* interface for CO_MONITOR_IOCTL_NETWORK_PACKET_RECEIVE */
-typedef struct {
-	co_manager_ioctl_monitor_t pc;
-	unsigned long size;
-	unsigned long more;
-	char data[];
-} co_monitor_ioctl_network_receive_t;
 
 /* interface for CO_MONITOR_IOCTL_STATUS */
 typedef struct co_monitor_ioctl_status {

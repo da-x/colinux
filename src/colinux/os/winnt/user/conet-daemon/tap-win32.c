@@ -22,7 +22,7 @@
 #include "../../kernel/tap-win32/constants.h"
 
 bool_t
-is_tap_win32_dev (const char *guid)
+is_tap_win32_dev(const char *guid)
 {
 	HKEY netcard_key;
 	LONG status;
@@ -258,7 +258,7 @@ co_rc_t coui_set_network_device_name(struct co_handle *kernel_device)
 
 #endif
 
-co_rc_t open_win32_tap(HANDLE *phandle)
+co_rc_t open_tap_win32(HANDLE *phandle)
 {
 	char device_path[256];
 	char device_guid[0x100];
@@ -296,11 +296,11 @@ co_rc_t open_win32_tap(HANDLE *phandle)
 }
 
 
-BOOL win32_tap_set_status(HANDLE handle, BOOL status)
+BOOL tap_win32_set_status(HANDLE handle, BOOL status)
 {
 	unsigned long len = 0;
 
-	return !DeviceIoControl(handle, TAP_IOCTL_SET_MEDIA_STATUS,
+	return DeviceIoControl(handle, TAP_IOCTL_SET_MEDIA_STATUS,
 				&status, sizeof (status),
 				&status, sizeof (status), &len, NULL);
 }

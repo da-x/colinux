@@ -70,7 +70,8 @@ co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 	}
 	case CO_BLOCK_STAT: {
 		rc = fdev->op->get_size((co_monitor_file_block_dev_t *)dev, &fdev->dev.size);
-		if (CO_RC(OK))
+
+		if (CO_OK(rc))
 			request->disk_size = fdev->dev.size;
 		
 		return rc;

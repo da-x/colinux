@@ -31,8 +31,6 @@ VOID CALLBACK co_os_timer_routine(
 {
 	co_os_timer_t timer = global_timer;
 
-	co_debug("Callback\n");
-
 	timer->func(timer->data);
 }
 
@@ -79,4 +77,18 @@ void co_os_timer_destroy(co_os_timer_t timer)
 {
 	if (timer != NULL) 
 		co_os_free(timer);
+}
+
+double co_os_timer_highres()
+{
+	LARGE_INTEGER lpFrequency;
+	LARGE_INTEGER lpPerformanceCount;
+
+	if (QueryPerformanceFrequency(&lpFrequency)) {
+		if (QueryPerformanceCounter(&lpPerformanceCount)) {
+			return ((double)lpPerformanceCount.QuadPart)/((double)lpFrequency.QuadPart);
+		}
+	}
+
+	return 0;
 }

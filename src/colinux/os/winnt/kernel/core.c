@@ -11,7 +11,6 @@
 #include "ddk.h"
 
 #include <colinux/kernel/monitor.h>
-#include <colinux/kernel/network.h>
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/os/current/monitor.h>
 

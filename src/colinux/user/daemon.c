@@ -10,6 +10,7 @@
 
 #include <colinux/os/user/file.h>
 #include <colinux/os/user/misc.h>
+#include <colinux/os/user/pipe.h>
 #include <colinux/os/alloc.h>
 #include <colinux/os/timer.h>
 
@@ -116,7 +117,11 @@ co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **
 		rc = CO_RC(ERROR);
 		goto out;
 	}
+
 	memset(daemon, 0, sizeof(*daemon));
+
+	co_list_init(&daemon->connected_modules);
+	co_queue_init(&daemon->up_queue);
 
 	daemon->start_parameters = start_parameters;
 	memcpy(daemon->config.config_path, start_parameters->config_path, 
@@ -218,6 +223,7 @@ out:
 
 void co_daemon_destroy_(co_daemon_t *daemon)
 {
+	co_queue_flush(&daemon->up_queue);
 	co_user_monitor_destroy(daemon->monitor);
 }
 
@@ -265,60 +271,301 @@ out:
 	return rc;
 }
 
-co_rc_t co_daemon_handle_message(co_daemon_t *daemon, co_message_t *message)
+co_rc_t co_daemon_handle_printk(void *data, co_message_t *message)
 {
-	switch (message->to) {
-		case CO_MODULE_PRINTK: {
-			if (message->type == CO_MESSAGE_TYPE_STRING) {
-				char *string_start = message->data;
+	if (message->type == CO_MESSAGE_TYPE_STRING) {
+		char *string_start = message->data;
+		
+		if (string_start[0] == '<'  &&  
+		    string_start[1] >= '0'  &&  string_start[1] <= '9'  &&
+		    string_start[2] == '>')
+		{
+			string_start += 3;
+		}
+		co_debug("%s", string_start);
+	}
 
-				if (string_start[0] == '<'  &&  
-				    string_start[1] >= '0'  &&  string_start[1] <= '9'  &&
-				    string_start[2] == '>')
-				{
-					string_start += 3;
-				}
-				co_debug("%s", string_start);
-				return CO_RC(OK);
+	co_os_free(message);
+	return CO_RC(OK);
+}
+
+co_rc_t co_daemon_handle_daemon(void *data, co_message_t *message)
+{
+	co_daemon_t *daemon = (typeof(daemon))(data);
+	struct {
+		co_message_t message;
+		co_daemon_message_t payload;
+	} *daemon_message;
+
+	daemon_message = (typeof(daemon_message))(message);
+	if (daemon_message->payload.type == CO_MONITOR_MESSAGE_TYPE_TERMINATED) {
+		co_debug("Monitor terminated, reason %d\n", daemon_message->payload.terminated.reason);
+		daemon->running = PFALSE;
+	}
+
+	co_os_free(message);
+	return CO_RC(OK);
+}
+
+co_rc_t co_daemon_handle_idle(void *data, co_message_t *message)
+{
+	co_daemon_t *daemon = (typeof(daemon))(data);
+
+	daemon->idle = PTRUE;
+
+	co_os_free(message);
+
+	return CO_RC(OK);
+}
+
+co_rc_t co_daemon_pipe_cb_connected(co_os_pipe_connection_t *conn,
+				    void *data, 
+				    void **data_client)
+{	
+	co_daemon_t *daemon = (typeof(daemon))data;
+	co_connected_module_t *module;
+
+	module = co_os_malloc(sizeof(co_connected_module_t));
+	if (module == NULL)
+		return CO_RC(ERROR);
+
+	module->daemon = daemon;
+	module->state = CO_CONNECTED_MODULE_STATE_NEW;
+	module->connection = conn;
+
+	co_list_add_head(&module->node, &daemon->connected_modules);
+	
+	*data_client = module;
+
+	return CO_RC(OK);
+}
+
+co_rc_t co_daemon_pipe_cb_packet_send(void *data, co_message_t *message)
+{
+	co_connected_module_t *module = (typeof(module))(data);
+	co_rc_t rc;
+
+	rc = co_os_pipe_server_send(module->connection, (char *)message, sizeof(*message) + message->size);
+
+	co_os_free(message);
+
+	return rc;
+}
+
+co_rc_t co_daemon_pipe_cb_packet(co_os_pipe_connection_t *conn, 
+				 void **client_data,
+				 char *packet_data,
+				 unsigned long packet_size)
+{
+	co_connected_module_t *module = (typeof(module))(*client_data);
+	co_rc_t rc = CO_RC(OK);
+
+	switch (module->state) {
+		case CO_CONNECTED_MODULE_STATE_NEW: {
+			co_module_t id;
+			if (packet_size != sizeof(co_module_t)) {
+				rc = CO_RC(ERROR);
+				break;
+			}
+
+			id = *((co_module_t *)packet_data);
+				
+			if (!((id == CO_MODULE_CONSOLE) ||
+			      (CO_MODULE_CONET0 >= id  &&  id < CO_MODULE_CONET_END)))
+			{
+				rc = CO_RC(ERROR);
+				break;
+			}
+				
+			module->id = id;
+			module->state = CO_CONNECTED_MODULE_STATE_IDENTIFIED;
+
+			if (id == CO_MODULE_CONSOLE)	
+				snprintf(module->name, sizeof(module->name), "console");
+			else
+				snprintf(module->name, sizeof(module->name), "conet%d", id - CO_MODULE_CONET0);
+
+			co_debug("daemon connected: %s\n", module->name);
+
+			rc = co_message_switch_set_rule(&module->daemon->message_switch, id, 
+							co_daemon_pipe_cb_packet_send, module);
+			if (CO_OK(rc)) {
+				struct {
+					co_message_t message;
+					co_switch_message_t switchm;
+				} message;
+						
+				message.message.from = CO_MODULE_DAEMON;
+				message.message.to = CO_MODULE_KERNEL_SWITCH;
+				message.message.priority = CO_PRIORITY_DISCARDABLE;
+				message.message.type = CO_MESSAGE_TYPE_OTHER;
+				message.message.size = sizeof(message.switchm);
+				message.switchm.type = CO_SWITCH_MESSAGE_SET_REROUTE_RULE;
+				message.switchm.destination = CO_MODULE_CONET0;
+				message.switchm.reroute_destination = CO_MODULE_USER_SWITCH;
+
+				co_message_switch_dup_message(&module->daemon->message_switch, &message.message);
 			}
 			break;
 		}
-		case CO_MODULE_DAEMON: {
-			struct {
-				co_message_t message;
-				co_daemon_message_t payload;
-			} *daemon_message;
+		case CO_CONNECTED_MODULE_STATE_IDENTIFIED: {
+			co_message_t *message = (co_message_t *)packet_data;
 
-			daemon_message = (typeof(daemon_message))(message);
-			if (daemon_message->payload.type == CO_MONITOR_MESSAGE_TYPE_TERMINATED) {
-				co_debug("Monitor terminated, reason %d\n", daemon_message->payload.terminated.reason);
-				daemon->running = PFALSE;
+			/* Validate mesasge size */
+			if (message->size + sizeof(*message) != packet_size) {
+				co_debug("invalid message: %d != %d\n", message->size + sizeof(*message), 
+					 packet_size);
+				break;
 			}
 
-			return CO_RC(OK);
+			/* Prevent module impersonation */
+			if (message->from != module->id) {
+				co_debug("invalid message id: %d != %d\n", 
+					 message->from, module->id);
+				break;
+			}
+
+			co_message_switch_dup_message(&module->daemon->message_switch, message);
+			break;
 		}
 	default:
+		rc = CO_RC(ERROR);
 		break;
 	}
 
-	co_debug("Unprocessed message: %d:%d [%d] <%d> (%d)\n", 
-		 message->from, message->to, message->priority,
-		 message->type, message->size);
+	return rc;
+}
 
-	return CO_RC(OK);
+void co_daemon_pipe_cb_disconnected(co_os_pipe_connection_t *conn,
+				    void **client_data)
+{
+	co_connected_module_t *module = (typeof(module))(*client_data);
+
+	if (module->state == CO_CONNECTED_MODULE_STATE_IDENTIFIED) {
+		struct {
+			co_message_t message;
+			co_switch_message_t switchm;
+		} message;
+
+		message.message.from = CO_MODULE_DAEMON;
+		message.message.to = CO_MODULE_KERNEL_SWITCH;
+		message.message.priority = CO_PRIORITY_DISCARDABLE;
+		message.message.type = CO_MESSAGE_TYPE_OTHER;
+		message.message.size = sizeof(message.switchm);
+		message.switchm.type = CO_SWITCH_MESSAGE_FREE_RULE;
+		message.switchm.destination = CO_MODULE_CONET0;
+		
+		co_message_switch_dup_message(&module->daemon->message_switch, &message.message);
+		co_message_switch_free_rule(&module->daemon->message_switch, module->id);
+
+		co_debug("daemon disconnected: %s %x\n", module->name, conn);
+	}
+	
+	co_list_del(&module->node);
+	co_os_free(module);
+}
+
+void co_daemon_timer_cb(void *data)
+{
+	co_daemon_t *daemon = (typeof(daemon))data;
+	struct {
+		co_message_t message;
+		co_linux_message_t linux;
+	} message;
+	double this_htime;
+	double reminder;
+
+	message.message.from = CO_MODULE_DAEMON;
+	message.message.to = CO_MODULE_LINUX;
+	message.message.priority = CO_PRIORITY_DISCARDABLE;
+	message.message.type = CO_MESSAGE_TYPE_OTHER;
+	message.message.size = sizeof(message.linux);
+	message.linux.device = CO_DEVICE_TIMER;
+	message.linux.unit = 0;
+	message.linux.size = 0;
+
+	this_htime = co_os_timer_highres();
+	reminder = this_htime - daemon->last_htime + daemon->reminder_htime;
+	while (reminder >= 0.010) {
+		reminder -= 0.010;
+		co_message_switch_dup_message(&daemon->message_switch, &message.message);
+	}
+
+	daemon->reminder_htime = reminder;
+	daemon->last_htime = this_htime;
 }
 
 co_rc_t co_daemon_run(co_daemon_t *daemon)
 {
 	co_rc_t rc;
+	co_os_pipe_server_t *ps;
+	co_os_timer_t timer;
 
 	rc = co_user_monitor_start(daemon->monitor);
 	if (!CO_OK(rc))
 		return rc;
 
+	rc = co_os_pipe_server_create(
+		co_daemon_pipe_cb_connected,
+		co_daemon_pipe_cb_packet,
+		co_daemon_pipe_cb_disconnected,
+		daemon, &ps);
+
+	if (!CO_OK(rc))
+		return rc;
+
+	daemon->last_htime = co_os_timer_highres();
+	daemon->reminder_htime = 0;
+
+	rc = co_os_timer_create(co_daemon_timer_cb, daemon, 10, &timer);
+	if (!CO_OK(rc)) {
+		co_os_pipe_server_destroy(ps);
+		return rc;
+	}
+
+	rc = co_os_timer_activate(timer);
+	if (!CO_OK(rc)) {
+		co_os_timer_destroy(timer);
+		co_os_pipe_server_destroy(ps);
+		return rc;
+	}
+
+	co_message_switch_init(&daemon->message_switch, CO_MODULE_USER_SWITCH);
+
+	rc = co_message_switch_set_rule(&daemon->message_switch, CO_MODULE_PRINTK, 
+					co_daemon_handle_printk, daemon);
+
+	if (!CO_OK(rc))
+		goto out;
+
+	rc = co_message_switch_set_rule(&daemon->message_switch, CO_MODULE_DAEMON, 
+					co_daemon_handle_daemon, daemon);
+
+	if (!CO_OK(rc))
+		goto out;
+
+	rc = co_message_switch_set_rule(&daemon->message_switch, CO_MODULE_IDLE, 
+					co_daemon_handle_idle, daemon);
+
+	if (!CO_OK(rc))
+		goto out;
+
+	rc = co_message_switch_set_rule_queue(&daemon->message_switch, CO_MODULE_LINUX, 
+					      &daemon->up_queue);
+	
+	if (!CO_OK(rc))
+		goto out;
+
+	rc = co_message_switch_set_rule_queue(&daemon->message_switch, CO_MODULE_KERNEL_SWITCH, 
+					      &daemon->up_queue);
+	
+	if (!CO_OK(rc))
+		goto out;
+
 	daemon->running = PTRUE;
 	while (daemon->running) {
 		co_monitor_ioctl_run_t *params;
+		unsigned long write_size = 0;
 		char buf[0x10000];
 		char *param_data;
 		int i;
@@ -326,18 +573,32 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 		params = (typeof(params))buf;
 		params->num_messages = 0;
 
-		rc = co_user_monitor_run(daemon->monitor, buf, sizeof(*params), sizeof(buf));
+		co_message_write_queue(&daemon->up_queue, params->data, 
+				       ((((char *)buf) + sizeof(buf)) - params->data), 
+				       &params->num_messages, &write_size);
+
+		rc = co_user_monitor_run(daemon->monitor, buf, sizeof(*params) + write_size, sizeof(buf));
 
 		param_data = params->data;
 
 		for (i=0; i < params->num_messages; i++) {
 			co_message_t *message = (typeof(message))param_data;
 			
-			co_daemon_handle_message(daemon, message);
+			rc = co_message_switch_dup_message(&daemon->message_switch, message);
 			
 			param_data += message->size + sizeof(*message);
 		}
+
+		rc = co_os_pipe_server_service(ps, daemon->idle ? PTRUE : PFALSE);
+
+		daemon->idle = PFALSE;
 	}
+
+out:
+	co_message_switch_free(&daemon->message_switch);
+	co_os_pipe_server_destroy(ps);
+	co_os_timer_deactivate(timer);
+	co_os_timer_destroy(timer);
 
 	return rc;
 }

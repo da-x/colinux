@@ -36,4 +36,11 @@ extern co_rc_t co_os_poll_create(co_id_t id,
 
 extern void co_os_poll_destroy(co_os_poll_t poll);
 
+#if (0)
+struct co_os_poll;
+typedef struct co_os_poll *co_os_poll_t; 
+
+extern co_rc_t co_os_create_pipe();
+#endif
+
 #endif

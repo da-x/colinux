@@ -12,6 +12,7 @@
 #define __COLINUX_USER_DAEMON_H__
 
 #include <colinux/common/config.h>
+#include <colinux/common/messages.h>
 
 #include "elf_load.h"
 #include "monitor.h"
@@ -27,9 +28,31 @@ typedef struct co_daemon {
 	co_config_t config;
 	co_elf_data_t elf_data;
 	co_user_monitor_t *monitor;
+	co_message_switch_t message_switch;
+	co_list_t connected_modules;
+	co_queue_t up_queue;
 	bool_t running;
+	bool_t idle;
 	char *buf;
+	double last_htime;
+	double reminder_htime;
 } co_daemon_t;
+
+typedef enum {
+	CO_CONNECTED_MODULE_STATE_NEW,
+	CO_CONNECTED_MODULE_STATE_IDENTIFIED,
+} co_connected_module_state_t;
+
+#define CO_CONNECTED_MODULE_NAME_SIZE 0x30
+
+typedef struct co_connected_module {
+	co_module_t id;
+	co_list_t node;
+	co_daemon_t *daemon;
+	co_connected_module_state_t state;
+	struct co_os_pipe_connection *connection;
+	char name[CO_CONNECTED_MODULE_NAME_SIZE];
+} co_connected_module_t;
 
 extern void co_daemon_syntax(void);
 extern co_rc_t co_daemon_parse_args(char **args, co_start_parameters_t *start_parameters);

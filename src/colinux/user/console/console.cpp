@@ -236,43 +236,14 @@ co_rc_t console_window_t::attach()
 {
 	co_console_t *console;
 	co_monitor_ioctl_status_t status;
-	co_rc_t rc; 
+	co_rc_t rc = CO_RC(OK);  
 
 	if (state != CO_CONSOLE_STATE_DETACHED) {
 		rc = CO_RC(ERROR);
 		goto out;
 	}
 
-	rc = co_user_monitor_open(attached_id, &monitor_handle);
-	if (!CO_OK(rc)) {
-		log("Error opening COLX driver\n");
-		rc = CO_RC(ERROR);
-		goto out;
-	}
-
-	rc = co_user_monitor_status(monitor_handle, &status);
-	if (!CO_OK(rc)) {
-		log("Error attaching to Monitor%d\n", attached_id);
-		return rc;
-	}
-
-	rc = co_user_monitor_get_console(monitor_handle, &console);
-	if (!CO_OK(rc)) {
-		log("Error getting console (%d)\n", rc);
-		goto out_close;
-	}
-
-	widget->set_console(console);
-
-	state = CO_CONSOLE_STATE_ATTACHED;
-
-	rc = co_os_poll_create(attached_id,
-			       CO_MONITOR_IOCTL_CONSOLE_POLL,
-			       CO_MONITOR_IOCTL_CONSOLE_CANCEL_POLL,
-			       console_poll_callback,
-			       this,
-			       poll_chain,
-			       &poll);
+	/* TODO */
 	
 	/* Todo: handle error... */
 
@@ -286,13 +257,8 @@ co_rc_t console_window_t::attach()
 	widget->redraw();
 
 	log("Monitor%d: Attached\n", attached_id);
-	
-	return rc;
 
-out_close:
-	co_user_monitor_close(monitor_handle);
-
-out:
+out:	
 	return rc;
 }
 
@@ -328,21 +294,6 @@ co_rc_t console_window_t::detach()
 
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return CO_RC(ERROR);
-
-	co_os_poll_destroy(poll);	
-
-	console = widget->get_console();
-	co_user_monitor_put_console(monitor_handle, console);
-
-	co_user_monitor_close(monitor_handle);	
-	monitor_handle = NULL;
-
-	menu_item_activate(console_select_cb);
-	menu_item_deactivate(console_pause_cb);
-	menu_item_deactivate(console_resume_cb);
-	menu_item_deactivate(console_terminate_cb);
-	menu_item_deactivate(console_detach_cb);
-	menu_item_activate(console_attach_cb);
 
 	state = CO_CONSOLE_STATE_DETACHED;
 
@@ -401,21 +352,8 @@ co_rc_t console_window_t::about()
 	return CO_RC(OK);
 }
 
-void console_window_t::handle_message(co_monitor_ioctl_console_message_t *message)
+void console_window_t::handle_message(co_console_message_t *message)
 {
-	switch (message->type) {
-	case CO_MONITOR_IOCTL_CONSOLE_MESSAGE_NORMAL: {
-		co_console_message_t *console_message;
-
-		console_message = (typeof(console_message))(message->extra_data); 
-		
-		widget->handle_console_event(console_message);
-
-		break;
-	}
-	case CO_MONITOR_IOCTL_CONSOLE_MESSAGE_TERMINATED:
-		break;
-	}
 }
 
 void console_window_t::handle_scancode(co_scan_code_t sc)
@@ -435,31 +373,6 @@ void console_window_t::handle_scancode(co_scan_code_t sc)
 
 void console_window_t::poll_callback(co_os_poll_t poll)
 {
-	if (state == CO_CONSOLE_STATE_ATTACHED) {
-		co_monitor_ioctl_console_messages_t *params;
-		co_rc_t rc;
-
-		params = (typeof(params))(&poll_buffer);
-
-		rc = co_user_monitor_console_messages(monitor_handle, 
-						      params, sizeof(poll_buffer));
-
-		if (!CO_OK(rc)) 
-			co_debug("poll failed\n");
-		else {
-			unsigned int i=0;
-			char *param_data = params->data;
-			co_monitor_ioctl_console_message_t *message;
-
-			for (i=0; i < params->num_messages; i++) {
-				message = (typeof(message))param_data;
-				
-				handle_message(message);
-
-				param_data += message->size;
-			}
-		}
-	}
 }
 
 Fl_Menu_Item *console_window_t::find_menu_item_by_callback(Fl_Callback *cb)

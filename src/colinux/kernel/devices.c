@@ -10,7 +10,6 @@
 #include "monitor.h"
 
 #include "keyboard.h"
-#include "network.h"
 
 #include <colinux/os/kernel/monitor.h>
 
@@ -47,7 +46,6 @@ co_rc_t co_monitor_setup_devices(co_monitor_t *cmon)
 	int i = 0;
 	co_monitor_service_func_t funcs[CO_DEVICES_TOTAL] = {
 		[CO_DEVICE_KEYBOARD] = co_monitor_service_keyboard,
-		[CO_DEVICE_NETWORK] = co_monitor_network_receive_near,
 		};
 	co_rc_t rc;
 

@@ -77,7 +77,7 @@ public:
 	void select_monitor();
 	void poll_callback(co_os_poll_t poll);
 
-	void handle_message(co_monitor_ioctl_console_message_t *message);
+	void handle_message(co_console_message_t *message);
 	void handle_scancode(co_scan_code_t sc);
 
 	void log(const char *format, ...);

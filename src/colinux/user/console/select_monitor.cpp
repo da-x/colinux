@@ -63,7 +63,7 @@ void select_monitor_widget_t::populate(console_window_t *console_window)
 
 void select_monitor_widget_t::load_monitors_list()
 {
-	int i;
+	int i = 0;
 
 	if (id_map)
 		delete []id_map;
@@ -73,27 +73,10 @@ void select_monitor_widget_t::load_monitors_list()
 
 	browser->clear();
 
-	for (i=0; i < CO_MAX_MONITORS; i++) {
-		co_user_monitor_t *monitor_check = 0;
-		co_monitor_ioctl_status_t status;
-		co_rc_t rc;
-
-		rc = co_user_monitor_open(i, &monitor_check);
-		if (!CO_OK(rc))
-			continue;
-		
-		rc = co_user_monitor_status(monitor_check, &status);
-		if (rc == CO_RC_OK) {
-			char buf[0x100];
-
-			snprintf(buf, sizeof(buf), "Monitor%d\t", i);
-
-			id_map[id_map_size] = i;
-			id_map_size++;
-
-			browser->add(buf);
-		}
-
-		co_user_monitor_close(monitor_check);
-	}
+	char buf[0x100];
+	
+	snprintf(buf, sizeof(buf), "Monitor%d\t", i);
+	
+	id_map[id_map_size] = 0;
+	id_map_size++;
 }

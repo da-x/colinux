@@ -191,3 +191,32 @@ void co_os_poll_chain_destroy(co_os_poll_chain_t chain)
 
 	free(chain);
 }
+
+#if (0)
+typedef struct {
+	HANDLE pipe;
+	OVERLAPPED overlap;
+} *co_os_pipe_server_t;
+
+co_rc_t co_os_create_server_pipe(int id, co_pipe_server_t *server)
+{
+	LPTSTR pipename = "\\\\.\\pipe\\coLinux0"; 
+	BOOL ret;
+
+	server->overlap.hEvent = CreateEvent(NULL,  TRUE, FALSE, NULL);
+
+	server->pipe = CreateNamedPipe(
+		pipename,
+		PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
+		PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+		PIPE_UNLIMITED_INSTANCES,
+		0x100000,
+		0x100000,
+		1000,
+		NULL);
+
+	ret = ConnectNamedPipe(server->pipe, &server->overlap);
+
+	return 0;
+}
+#endif

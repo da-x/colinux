@@ -12,11 +12,11 @@
 #include <windows.h>
 
 #include <colinux/user/daemon.h>
+#include <colinux/user/monitor.h>
 #include <colinux/os/user/manager.h>
 #include <colinux/os/user/misc.h>
+#include <colinux/os/user/pipe.h>
 #include <colinux/os/winnt/user/osdep.h>
-
-#include "network.h"
 
 int WINAPI WinMain(HINSTANCE hInstance, 
 		   HINSTANCE hPrevInstance,
@@ -25,7 +25,6 @@ int WINAPI WinMain(HINSTANCE hInstance,
 {
 	co_rc_t rc = CO_RC_OK;
 	co_daemon_t *daemon = NULL;
-	conet_daemon_t *net_daemon;
 	co_start_parameters_t start_parameters;
 	co_manager_handle_t handle;
 	char **args = NULL;
@@ -52,19 +51,6 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	}
 
 	co_debug("Cooperative Linux daemon\n");
-
-	/* 
-	 * The daemon is currently designed to use a single instance of the
-	 * TAP-Win32 driver. This needs to be changed. The configuration XML 
-	 * needs to define exactly which TAP devices to use and their names 
-	 * according to their appearance in the Control Panel.
-	 */
-
-	rc = conet_test_tap();
-	if (!CO_OK(rc)) {
-		co_terminal_print("Error opening TAP-Win32\n");
-		return -1;
-	}
 
 	rc = co_os_manager_is_installed(&installed);
 	if (!CO_OK(rc)) {

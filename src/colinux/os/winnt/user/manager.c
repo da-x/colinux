@@ -93,9 +93,9 @@ coui_install_driver(
 	schService = CreateService (SchSCManager,         
 				    DriverName,           
 				    DriverName,          
-				    SERVICE_ALL_ACCESS,  
+				    SERVICE_ALL_ACCESS,
 				    SERVICE_KERNEL_DRIVER, 
-				    SERVICE_AUTO_START,    
+				    SERVICE_DEMAND_START,    
 				    SERVICE_ERROR_NORMAL, 
 				    ServiceExe,           
 				    NULL,
@@ -266,15 +266,8 @@ co_rc_t coui_unload_driver_by_name(char *name)
 	co_debug("Stopping driver service\n");
 	rc = coui_stop_driver(schSCManager, name);  
 
-	if (CO_OK(rc)) {
-		co_debug("Removing driver service\n");
-		rc = coui_remove_driver(schSCManager, name);
-		if (!CO_OK(rc)) {
-			co_debug("Error removing driver service: %d\n", rc);
-		}
-	} else {
-		co_debug("Error stopping driver service: %d\n", rc);
-	}
+	co_debug("Removing driver service\n");
+	rc = coui_remove_driver(schSCManager, name);
 	
 	CloseServiceHandle(schSCManager); 
 

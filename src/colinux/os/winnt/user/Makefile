@@ -15,6 +15,7 @@ LOCAL_OBJS = \
 	osdep.o \
 	poll.o \
 	timer.o \
+	pipe.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 
@@ -28,6 +29,6 @@ CLEAN_FILES := $(CLEAN_FILES) \
 	$(LOCAL_OBJS) $(BUILD_PATH)/user.o
 
 #-----------------------------------------------------------------
-include $(call BUILD_SUBDIRS, daemon console)
+include $(call BUILD_SUBDIRS, daemon conet-daemon console)
 BUILD_PATH := $(shell dirname $(BUILD_PATH))
 endif

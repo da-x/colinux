@@ -8,10 +8,10 @@
  *
  */ 
 
-#ifndef __CO_WIN32_TAP_H__
-#define __CO_WIN32_TAP_H__
+#ifndef __CO_TAP_WIN32_H__
+#define __CO_TAP_WIN32_H__
 
-co_rc_t open_win32_tap(HANDLE *phandle);
-BOOL win32_tap_set_status(HANDLE handle, BOOL status);
+co_rc_t open_tap_win32(HANDLE *phandle);
+BOOL tap_win32_set_status(HANDLE handle, BOOL status);
 
 #endif

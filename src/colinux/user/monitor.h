@@ -35,21 +35,6 @@ extern co_rc_t co_user_monitor_run(co_user_monitor_t *umon, co_monitor_ioctl_run
 				   unsigned long in_size, unsigned long out_size);
 extern co_rc_t co_user_monitor_start(co_user_monitor_t *umon);
 
-extern co_rc_t co_user_monitor_get_console(co_user_monitor_t *umon, co_console_t **console);
-extern co_rc_t co_user_monitor_console_messages(co_user_monitor_t *umon, 
-						co_monitor_ioctl_console_messages_t *params,
-						unsigned long size);
-extern co_rc_t co_user_monitor_console_poll(co_user_monitor_t *umon);
-extern co_rc_t co_user_monitor_console_cancel_poll(co_user_monitor_t *umon);
-extern co_rc_t co_user_monitor_put_console(co_user_monitor_t *umon, co_console_t *console);
-
-extern co_rc_t co_user_monitor_network_send(co_user_monitor_t *umon, 
-					    char *data, unsigned long size);
-extern co_rc_t co_user_monitor_network_receive(co_user_monitor_t *umon, 
-					       char *data, unsigned long size);
-extern co_rc_t co_user_monitor_network_poll(co_user_monitor_t *umon);
-extern co_rc_t co_user_monitor_network_cancel_poll(co_user_monitor_t *umon);
-
 extern co_rc_t co_user_monitor_keyboard(co_user_monitor_t *umon, 
 					co_monitor_ioctl_keyboard_t *params);
 
