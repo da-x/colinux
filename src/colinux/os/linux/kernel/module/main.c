@@ -14,7 +14,7 @@
 
 #include "manager.h"
 
-static int __init test_module_init(void)
+static int __init colinux_module_init(void)
 {
 	co_rc_t rc;
 
@@ -39,7 +39,7 @@ static int __init test_module_init(void)
 	return 0;
 }
 
-static void __exit test_module_exit(void)
+static void __exit colinux_module_exit(void)
 {
 	if (co_global_manager != NULL) {		
 		co_manager_t *manager = co_global_manager;
@@ -52,5 +52,5 @@ static void __exit test_module_exit(void)
 }
 
 MODULE_LICENSE("GPL");
-module_init(test_module_init);
-module_exit(test_module_exit);
+module_init(colinux_module_init);
+module_exit(colinux_module_exit);

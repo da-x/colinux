@@ -20,7 +20,7 @@ $(BUILD_PATH)/daemon-base.o : $(LOCAL_OBJS)
 	$(TOOL_LD_RELOC)
 
 CLEAN_FILES := $(CLEAN_FILES) \
-	$(LOCAL_OBJS) $(BUILD_PATH)/user-console.o 
+	$(LOCAL_OBJS) $(BUILD_PATH)/user-console.o $(BUILD_PATH)/daemon-base.o
 
 #-----------------------------------------------------------------
 # include $(call BUILD_SUBDIRS, )

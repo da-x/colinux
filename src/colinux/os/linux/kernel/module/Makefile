@@ -1,8 +1,7 @@
 #
-# Makefile for the Linux filesystems.
+# Makefile for the coLinux Linux kernel module.
 #
-# 14 Sep 2000, Christoph Hellwig <hch@infradead.org>
-# Rewritten to use lists instead of if-statements.
+# Based on a makefile by Christoph Hellwig <hch@infradead.org>.
 # 
 
 ifneq ($(COLINUX_HOST_KERNEL_DIR),)
