@@ -116,7 +116,7 @@ co_rc_t co_os_file_open(char *pathname, PHANDLE FileHandle, unsigned long open_f
 
 co_rc_t co_os_file_close(PHANDLE FileHandle)
 {    
-	NTSTATUS status = 0;
+	NTSTATUS status;
 
 	status = ZwClose(FileHandle);
 
@@ -361,7 +361,6 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 		len--;
 
 	co_snprintf(filename, sizeof(filename), "%s", &dirname[len]);
-
 	dirname[len] = '\0';
 
 	rc = co_winnt_utf8_to_unicode(dirname, &dirname_unicode);
@@ -514,16 +513,13 @@ co_rc_t co_os_file_rmdir(char *filename)
 
 co_rc_t co_os_file_mkdir(char *dirname)
 {
-	NTSTATUS status;
 	HANDLE handle;
-	co_rc_t rc = CO_RC(OK);
+	co_rc_t rc;
 
-	status = co_os_file_create(dirname, &handle, FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES,
+	rc = co_os_file_create(dirname, &handle, FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES,
 				   FILE_ATTRIBUTE_DIRECTORY, FILE_CREATE, FILE_DIRECTORY_FILE);
 
-	if (status != STATUS_SUCCESS) {
-		rc = status_convert(status);
-	} else {
+	if (CO_OK(rc)) {
 		co_os_file_close(handle);
 	}	
 
@@ -535,7 +531,7 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	NTSTATUS status;
 	IO_STATUS_BLOCK io_status;
 	FILE_RENAME_INFORMATION *rename_info;
-	HANDLE handle;
+	HANDLE handle = 0;
 	int block_size;
 	int char_count;
 	co_rc_t rc;
@@ -566,7 +562,8 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 
 error:
 	co_os_free(rename_info);
-	co_os_file_close(handle);
+	if (handle)
+		co_os_file_close(handle);
 	return rc;
 }
 
@@ -685,7 +682,7 @@ error:
 co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *statfs)
 {
 	FILE_FS_FULL_SIZE_INFORMATION fsi;
-	HANDLE handle;
+	HANDLE handle = 0;
 	NTSTATUS status;
 	IO_STATUS_BLOCK io_status;
 	co_pathname_t pathname;
@@ -709,6 +706,9 @@ co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *
 		pathname[len] = '\0';
 	} while (len > 0);
 	
+	if (!CO_OK(rc))
+		return rc;
+
 	status = ZwQueryVolumeInformationFile(handle, &io_status, &fsi,
 					      sizeof(fsi), FileFsFullSizeInformation);
 
