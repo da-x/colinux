@@ -53,6 +53,7 @@
      2kb.
   * Bug fix: Consoles and/or other daemons fail to connect to 
     colinux-daemon on startup (this is Windows only).
+  * Bug fix: Stop reboots where different gcc compiler versions are used to compile linux.sys & vmlinux, with an error/warning.
 
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).

@@ -41,6 +41,7 @@ typedef enum {
     CO_RC_BROKEN_PIPE                = -22,
     CO_RC_TIMEOUT                    = -23,
     CO_RC_ACCESS_DENIED              = -24,
+    CO_RC_COMPILER_MISMATCHED        = -25,
 } co_rc_t;
 
 #include "debug.h"

@@ -341,6 +341,17 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 		goto out;
 	}
 
+	if ((create_params.info.compiler_major != __GNUC__) || 
+	    (create_params.info.compiler_minor != __GNUC_MINOR__)) {
+		co_terminal_print("colinux: error, expected gcc version %d.%d.x, got %d.%d.x\n", __GNUC__,
+		 __GNUC_MINOR__,
+		 create_params.info.compiler_major,
+		 create_params.info.compiler_minor);
+
+		rc = CO_RC(COMPILER_MISMATCHED);
+		goto out;
+	}
+
 	co_daemon_prepare_net_macs(daemon);
 
 	create_params.config = daemon->config;
