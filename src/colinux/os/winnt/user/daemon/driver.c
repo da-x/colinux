@@ -29,11 +29,11 @@
 #include "driver.h"
 #include "service.h"
 
-co_rc_t co_win32_manager_is_installed(bool_t installed)
+co_rc_t co_win32_manager_is_installed(bool_t *installed)
 {
 	co_rc_t rc;
 
-	rc = co_os_manager_is_installed(&installed);
+	rc = co_os_manager_is_installed(installed);
 	if (!CO_OK(rc)) {
 		if (CO_RC_GET_CODE(rc) == CO_RC_ACCESS_DENIED)
 			co_terminal_print("daemon: access defined, not enough privileges\n");
@@ -314,19 +314,19 @@ co_rc_t co_winnt_install_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LPCTSTR  
 { 
 	SC_HANDLE  schService; 
  
-	schService = CreateService (SchSCManager,         
-				    DriverName,           
-				    DriverName,          
-				    SERVICE_ALL_ACCESS,
-				    SERVICE_KERNEL_DRIVER, 
-				    SERVICE_DEMAND_START,    
-				    SERVICE_ERROR_NORMAL, 
-				    ServiceExe,           
-				    NULL,
-				    NULL,
-				    NULL,
-				    NULL,
-				    NULL); 
+	schService = CreateService(SchSCManager,         
+				   DriverName,           
+				   DriverName,          
+				   SERVICE_ALL_ACCESS,
+				   SERVICE_KERNEL_DRIVER, 
+				   SERVICE_AUTO_START,
+				   SERVICE_ERROR_NORMAL, 
+				   ServiceExe,           
+				   NULL,
+				   NULL,
+				   NULL,
+				   NULL,
+				   NULL); 
  
 	if (schService == NULL) {
 		co_terminal_print_last_error("daemon");

@@ -41,6 +41,7 @@ co_manager_handle_t co_os_manager_open(void)
 				    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (handle->handle == INVALID_HANDLE_VALUE) {
+		co_terminal_print_last_error("colinux: manager open");
 		co_os_free(handle);
 		return NULL;
 	}
@@ -83,33 +84,6 @@ co_rc_t co_os_manager_ioctl(
 	return CO_RC(OK);
 }
  
-static co_rc_t co_os_check_driver(IN LPCTSTR DriverName, bool_t *installed) 
-{ 
-	SC_HANDLE schService; 
-	SC_HANDLE schSCManager; 
-
-	*installed = PFALSE;
-
-	schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
-	if (schSCManager == NULL)
-		return CO_RC(ERROR_ACCESSING_DRIVER); 
-
-	schService = OpenService(schSCManager, DriverName, SERVICE_ALL_ACCESS); 
-	if (schService != NULL) {
-		/* 
-		 * Make sure that the driver is started.
-		 */
-		StartService(schService, 0, NULL);
-
-		CloseServiceHandle(schService); 
-
-		*installed = PTRUE;
-	}
-
-	CloseServiceHandle(schSCManager); 
-	return CO_RC(OK);
-} 
-
 co_rc_t co_winnt_check_driver(IN LPCTSTR DriverName, bool_t *installed) 
 { 
 	SC_HANDLE schService; 
@@ -129,13 +103,12 @@ co_rc_t co_winnt_check_driver(IN LPCTSTR DriverName, bool_t *installed)
 	schService = OpenService(schSCManager, DriverName, SERVICE_ALL_ACCESS); 
 	if (schService != NULL) {
 		CloseServiceHandle(schService); 
-
 		*installed = PTRUE;
 	}
 
-	CloseServiceHandle(schSCManager); 
+	CloseServiceHandle(schSCManager);
 	return CO_RC(OK);
-} 
+}
 
 co_rc_t co_os_manager_is_installed(bool_t *installed)
 {

@@ -27,7 +27,8 @@ void co_winnt_daemon_syntax(void)
 	co_terminal_print("                                   (default service name: Cooperative Linux)\n");
 	co_terminal_print("      --install-driver             Install the colinux-driver (linux.sys)\n");
 	co_terminal_print("      --remove-driver              Install the colinux-driver (linux.sys)\n");
-	co_terminal_print("      --status-driver              Show status about the installed/running driver\n");
+	co_terminal_print("      --status-driver              Show status about the installed/running\n");
+	co_terminal_print("                                   driver\n");
 }
 
 co_rc_t co_winnt_daemon_parse_args(char **args, co_winnt_parameters_t *winnt_parameters) 

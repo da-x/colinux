@@ -59,12 +59,12 @@ co_rc_t co_winnt_daemon_main(char *argv[])
 		return CO_RC(ERROR);
 	}
 
-	if (start_parameters.show_help) {
+	if (!start_parameters.config_specified  ||  start_parameters.show_help) {
 		co_daemon_syntax();
 		co_winnt_daemon_syntax();
-		return 0;
+		return CO_RC(OK);
 	}
-		
+
 	co_winnt_affinity_workaround();
 	
 	rc = co_daemon_create(&start_parameters, &g_daemon);
@@ -167,9 +167,20 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 		}
 		
 		return co_winnt_daemon_initialize_service(args, winnt_parameters.service_name);
-	} 
+	}
 
-	return co_winnt_daemon_main_with_driver(args);
+	if (!start_parameters.config_specified){
+		co_daemon_syntax();
+		co_winnt_daemon_syntax();
+		return CO_RC(ERROR);
+	}
+
+	rc = co_winnt_initialize_driver(PTRUE);
+	if (rc != CO_RC(OK)) {
+		return CO_RC(ERROR);
+	}
+
+	return co_winnt_daemon_main(args);
 }
 
 HINSTANCE co_current_win32_instance;

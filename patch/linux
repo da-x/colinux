@@ -576,6 +576,45 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/i8259.c linux/arch/i386/kernel/
 +	}
 +#endif
  }
+diff -X bin/dontdiff -urN linux/arch/i386/kernel/ioport.c linux/arch/i386/kernel/ioport.c
+--- linux/arch/i386/kernel/ioport.c	2003-06-13 17:51:29.000000000 +0300
++++ linux/arch/i386/kernel/ioport.c	2004-05-09 05:42:35.000000000 +0300
+@@ -54,6 +54,7 @@
+  */
+ asmlinkage int sys_ioperm(unsigned long from, unsigned long num, int turn_on)
+ {
++#ifndef CONFIG_COOPERATIVE
+ 	struct thread_struct * t = &current->thread;
+ 	struct tss_struct * tss = init_tss + smp_processor_id();
+ 
+@@ -86,6 +87,10 @@
+ 	}
+ 
+ 	return 0;
++#else
++	/* No ports for yer VM */
++	return -EPERM;
++#endif
+ }
+ 
+ /*
+@@ -101,6 +106,7 @@
+ 
+ asmlinkage int sys_iopl(unsigned long unused)
+ {
++#ifndef CONFIG_COOPERATIVE
+ 	struct pt_regs * regs = (struct pt_regs *) &unused;
+ 	unsigned int level = regs->ebx;
+ 	unsigned int old = (regs->eflags >> 12) & 3;
+@@ -114,4 +120,8 @@
+ 	}
+ 	regs->eflags = (regs->eflags & 0xffffcfff) | (level << 12);
+ 	return 0;
++#else
++	/* No IPL for yer VM */
++	return -EPERM;
++#endif
+ }
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/process.c linux/arch/i386/kernel/process.c
 --- linux/arch/i386/kernel/process.c	2004-04-20 08:04:01.000000000 +0300
 +++ linux/arch/i386/kernel/process.c	2004-04-14 16:42:13.000000000 +0300
@@ -1742,7 +1781,7 @@ diff -X bin/dontdiff -urN linux/drivers/block/ll_rw_blk.c linux/drivers/block/ll
  #endif
 diff -X bin/dontdiff -urN linux/drivers/char/Makefile linux/drivers/char/Makefile
 --- linux/drivers/char/Makefile	2004-04-20 08:04:01.000000000 +0300
-+++ linux/drivers/char/Makefile	2004-04-14 16:42:13.000000000 +0300
++++ linux/drivers/char/Makefile	2004-05-09 04:50:56.000000000 +0300
 @@ -169,6 +169,10 @@
    KEYBD = dummy_keyb.o
  endif
@@ -2979,6 +3018,51 @@ diff -X bin/dontdiff -urN linux/drivers/char/colx_keyb.c linux/drivers/char/colx
 +   switches. otherwise argument is ms of a blink period. */
 +__setup("panicblink=", panicblink_setup);
 +
+diff -X bin/dontdiff -urN linux/drivers/char/mem.c linux/drivers/char/mem.c
+--- linux/drivers/char/mem.c	2003-11-28 20:26:20.000000000 +0200
++++ linux/drivers/char/mem.c	2004-05-09 04:58:25.000000000 +0300
+@@ -667,20 +667,24 @@
+ static int memory_open(struct inode * inode, struct file * filp)
+ {
+ 	switch (MINOR(inode->i_rdev)) {
++#ifndef CONFIG_COOPERATIVE
+ 		case 1:
+ 			filp->f_op = &mem_fops;
+ 			break;
+ 		case 2:
+ 			filp->f_op = &kmem_fops;
+ 			break;
++#endif
+ 		case 3:
+ 			filp->f_op = &null_fops;
+ 			break;
++#ifndef CONFIG_COOPERATIVE
+ #if defined(CONFIG_ISA) || !defined(__mc68000__)
+ 		case 4:
+ 			filp->f_op = &port_fops;
+ 			break;
+ #endif
++#endif
+ 		case 5:
+ 			filp->f_op = &zero_fops;
+ 			break;
+@@ -710,12 +714,16 @@
+ 	umode_t mode;
+ 	struct file_operations *fops;
+     } list[] = { /* list of minor devices */
++#ifndef CONFIG_COOPERATIVE
+ 	{1, "mem",     S_IRUSR | S_IWUSR | S_IRGRP, &mem_fops},
+ 	{2, "kmem",    S_IRUSR | S_IWUSR | S_IRGRP, &kmem_fops},
++#endif
+ 	{3, "null",    S_IRUGO | S_IWUGO,           &null_fops},
++#ifndef CONFIG_COOPERATIVE
+ #if defined(CONFIG_ISA) || !defined(__mc68000__)
+ 	{4, "port",    S_IRUSR | S_IWUSR | S_IRGRP, &port_fops},
+ #endif
++#endif
+ 	{5, "zero",    S_IRUGO | S_IWUGO,           &zero_fops},
+ 	{7, "full",    S_IRUGO | S_IWUGO,           &full_fops},
+ 	{8, "random",  S_IRUGO | S_IWUSR,           &random_fops},
 diff -X bin/dontdiff -urN linux/drivers/char/vt.c linux/drivers/char/vt.c
 --- linux/drivers/char/vt.c	2004-04-20 08:04:01.000000000 +0300
 +++ linux/drivers/char/vt.c	2004-04-14 16:42:13.000000000 +0300
@@ -3920,8 +4004,8 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm
 +
 +#endif
 diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dma.h
---- linux/include/asm-i386/dma.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/dma.h	2004-05-08 10:53:45.000000000 +0300
+--- linux/include/asm-i386/dma.h	2004-05-08 14:27:05.000000000 +0300
++++ linux/include/asm-i386/dma.h	2004-05-09 16:54:22.000000000 +0300
 @@ -268,6 +268,8 @@
   *
   * Assumes DMA flip-flop is clear.
@@ -3941,8 +4025,8 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dm
  /* These are in kernel/dma.c: */
  extern int request_dma(unsigned int dmanr, const char * device_id);	/* reserve a DMA channel */
 diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.h
---- linux/include/asm-i386/io.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/io.h	2004-05-08 10:53:42.000000000 +0300
+--- linux/include/asm-i386/io.h	2004-05-08 14:27:05.000000000 +0300
++++ linux/include/asm-i386/io.h	2004-05-09 16:54:19.000000000 +0300
 @@ -2,6 +2,7 @@
  #define _ASM_IO_H
  
@@ -4011,8 +4095,8 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.
 +
  #endif
 diff -X bin/dontdiff -urN linux/include/asm-i386/irq.h linux/include/asm-i386/irq.h
---- linux/include/asm-i386/irq.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/irq.h	2004-05-08 10:53:31.000000000 +0300
+--- linux/include/asm-i386/irq.h	2004-05-08 12:59:30.000000000 +0300
++++ linux/include/asm-i386/irq.h	2004-05-09 16:54:09.000000000 +0300
 @@ -14,6 +14,10 @@
  
  #define TIMER_IRQ 0
@@ -4034,8 +4118,8 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/irq.h linux/include/asm-i386/ir
  #else
  #define NR_IRQS 16
 diff -X bin/dontdiff -urN linux/include/asm-i386/mc146818rtc.h linux/include/asm-i386/mc146818rtc.h
---- linux/include/asm-i386/mc146818rtc.h	2001-11-22 21:46:58.000000000 +0200
-+++ linux/include/asm-i386/mc146818rtc.h	2004-05-08 10:55:13.000000000 +0300
+--- linux/include/asm-i386/mc146818rtc.h	2004-05-08 14:27:20.000000000 +0300
++++ linux/include/asm-i386/mc146818rtc.h	2004-05-09 16:55:55.000000000 +0300
 @@ -4,6 +4,7 @@
  #ifndef _ASM_MC146818RTC_H
  #define _ASM_MC146818RTC_H
@@ -4065,8 +4149,8 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/mc146818rtc.h linux/include/asm
  
  #endif /* _ASM_MC146818RTC_H */
 diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/page.h
---- linux/include/asm-i386/page.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/page.h	2004-05-08 10:53:31.000000000 +0300
+--- linux/include/asm-i386/page.h	2004-05-08 14:27:04.000000000 +0300
++++ linux/include/asm-i386/page.h	2004-05-09 16:54:09.000000000 +0300
 @@ -1,6 +1,10 @@
  #ifndef _I386_PAGE_H
  #define _I386_PAGE_H
@@ -4140,8 +4224,8 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/p
  
  #define VM_DATA_DEFAULT_FLAGS	(VM_READ | VM_WRITE | VM_EXEC | \
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgalloc.h linux/include/asm-i386/pgalloc.h
---- linux/include/asm-i386/pgalloc.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/pgalloc.h	2004-05-08 10:53:31.000000000 +0300
+--- linux/include/asm-i386/pgalloc.h	2004-05-08 14:27:05.000000000 +0300
++++ linux/include/asm-i386/pgalloc.h	2004-05-09 16:54:09.000000000 +0300
 @@ -11,8 +11,13 @@
  #define pte_quicklist (current_cpu_data.pte_quick)
  #define pgtable_cache_size (current_cpu_data.pgtable_cache_sz)
@@ -4159,7 +4243,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgalloc.h linux/include/asm-i38
   * Allocate and free page tables.
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable-2level.h linux/include/asm-i386/pgtable-2level.h
 --- linux/include/asm-i386/pgtable-2level.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/pgtable-2level.h	2004-05-08 10:53:31.000000000 +0300
++++ linux/include/asm-i386/pgtable-2level.h	2004-05-09 16:54:09.000000000 +0300
 @@ -58,8 +58,14 @@
  }
  #define ptep_get_and_clear(xp)	__pte(xchg(&(xp)->pte_low, 0))
@@ -4177,8 +4261,8 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable-2level.h linux/include/
  
  #endif /* _I386_PGTABLE_2LEVEL_H */
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable.h linux/include/asm-i386/pgtable.h
---- linux/include/asm-i386/pgtable.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/pgtable.h	2004-05-08 10:53:31.000000000 +0300
+--- linux/include/asm-i386/pgtable.h	2004-05-08 14:27:05.000000000 +0300
++++ linux/include/asm-i386/pgtable.h	2004-05-09 16:54:09.000000000 +0300
 @@ -320,8 +320,13 @@
  
  #define page_pte(page) page_pte_prot(page, __pgprot(0))
@@ -4195,8 +4279,8 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable.h linux/include/asm-i38
  /* to find an entry in a page-table-directory. */
  #define pgd_index(address) ((address >> PGDIR_SHIFT) & (PTRS_PER_PGD-1))
 diff -X bin/dontdiff -urN linux/include/asm-i386/processor.h linux/include/asm-i386/processor.h
---- linux/include/asm-i386/processor.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/processor.h	2004-05-08 10:53:31.000000000 +0300
+--- linux/include/asm-i386/processor.h	2004-05-08 14:27:04.000000000 +0300
++++ linux/include/asm-i386/processor.h	2004-05-09 16:54:09.000000000 +0300
 @@ -181,8 +181,18 @@
  #define X86_CR4_OSFXSR		0x0200	/* enable fast FPU save and restore */
  #define X86_CR4_OSXMMEXCPT	0x0400	/* enable unmasked SSE exceptions */
@@ -4218,8 +4302,8 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/processor.h linux/include/asm-i
  /*
   * Save the cr4 feature set we're using (ie
 diff -X bin/dontdiff -urN linux/include/asm-i386/system.h linux/include/asm-i386/system.h
---- linux/include/asm-i386/system.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/system.h	2004-05-08 10:53:31.000000000 +0300
+--- linux/include/asm-i386/system.h	2004-05-08 14:27:04.000000000 +0300
++++ linux/include/asm-i386/system.h	2004-05-09 16:54:09.000000000 +0300
 @@ -12,7 +12,15 @@
  struct task_struct;	/* one of the stranger aspects of C forward declarations.. */
  extern void FASTCALL(__switch_to(struct task_struct *prev, struct task_struct *next));
@@ -4237,8 +4321,8 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/system.h linux/include/asm-i386
  	asm volatile("pushl %%esi\n\t"					\
  		     "pushl %%edi\n\t"					\
 diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/console.h
---- linux/include/linux/console.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/linux/console.h	2004-05-08 10:53:31.000000000 +0300
+--- linux/include/linux/console.h	2004-05-08 14:27:09.000000000 +0300
++++ linux/include/linux/console.h	2004-05-09 16:54:09.000000000 +0300
 @@ -55,6 +55,7 @@
  extern const struct consw dummy_con;	/* dummy console buffer */
  extern const struct consw fb_con;	/* frame buffer based console */

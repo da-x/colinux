@@ -1,3 +1,17 @@
+Sun May  9 04:54:57 2004  Dan Aloni  <da-x@colinux.org>
+
+	* patch/linux/arch/i386/kernel/ioport.c: 
+	* patch/linux/drivers/char/mem.c: 
+	Disabled /dev/kmem, /dev/mem, /dev/ports, sys_ioperm and sys_iopl. This should 
+	take care of lockups and weird phenomenons caused by running X and other
+	lowlevel stuff such as hwclock.
+
+Sun May  9 04:43:48 2004  Dan Aloni  <da-x@colinux.org>
+
+	* src/colinux/os/winnt/user/daemon/driver.c (co_winnt_install_driver_lowlevel): 
+	When installing the linux.sys service, SERVICE_AUTO_START instead of 
+	SERVICE_DEMAND_START should take care of some reported after-boot problems.
+	
 Sat May  8 12:36:42 2004  Dan Aloni  <da-x@colinux.org>
 
 	* src/colinux/os/winnt/user/daemon/driver.c (co_win32_manager_is_installed): 

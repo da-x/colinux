@@ -88,7 +88,6 @@ typedef struct co_monitor {
 	/*
 	 * Core stuff (Linux kernel image) 
 	 */
-	co_pfn_t *core_pfns;             /* Arrays of PFNs that hold the kernel core */ 
 	vm_ptr_t core_vaddr;             /* Where the core sits (the famous C0100000) */
 	vm_ptr_t core_end;               /* Where the core ends */
 	unsigned long core_pages;        /* number of pages our core takes */    

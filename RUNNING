@@ -10,6 +10,8 @@ which means that running it may crash your Windows system.
 PLEASE REPORT and read about problems on the colinux-devel@sourceforge.net 
 mailing list.
 
+
+
 NOTE: If upgrading, please backup or copy your current default.colinux.XML file
       before installing!
 

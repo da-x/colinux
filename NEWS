@@ -10,6 +10,8 @@
     we get the SMP stability issue fixed.
   * Time is not going backward for gettimeofday() users anymore.
   * Support for running more than one instance of coLinux is now functional.	 
+  * No port I/O allowed from userspace: the guest Linux can't change the host's 
+    clock, and it also fixed crashes that were caused by trying to run X.
   * Windows: 
     * Sizes of raw partition devices are now detected properly. This 
       means that the resierfs problems should be over, plus cat /dev/cobd* 

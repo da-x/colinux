@@ -100,9 +100,8 @@ co_rc_t co_daemon_parse_args(char **args, co_start_parameters_t *start_parameter
 	/* Default settings */
 	start_parameters->launch_console = PTRUE;
 	start_parameters->show_help = PFALSE;
+	start_parameters->config_specified = PFALSE;
 
-	co_snprintf(start_parameters->config_path, sizeof(start_parameters->config_path),
-		    "%s", "default.colinux.xml");
 	co_snprintf(start_parameters->console, sizeof(start_parameters->console), "fltk");
 
 	/* Parse command line */
@@ -122,6 +121,8 @@ co_rc_t co_daemon_parse_args(char **args, co_start_parameters_t *start_parameter
 			co_snprintf(start_parameters->config_path, 
 				    sizeof(start_parameters->config_path), 
 				    "%s", *param_scan);
+
+			start_parameters->config_specified = PTRUE;
 		}
 
 		option = "-t";
