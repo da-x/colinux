@@ -38,7 +38,7 @@ co_rc_t co_manager_io_monitor_unisize(co_manager_handle_t handle,
 	return co_manager_io_monitor(handle, op, ioctl, size, size);
 }
 
-co_rc_t co_manager_init(co_manager_handle_t handle)
+co_rc_t co_manager_init(co_manager_handle_t handle, bool_t lazy_unload)
 {
 	co_manager_ioctl_init_t params;
 	unsigned long returned = 0;
@@ -47,6 +47,7 @@ co_rc_t co_manager_init(co_manager_handle_t handle)
 	rc = co_os_get_physical_ram_size(&params.physical_memory_size);
 	if (!CO_OK(rc))
 		return rc;
+	params.lazy_unload = lazy_unload;
 
 	co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_INIT,
 			    &params, sizeof(params), &params, sizeof(params), &returned);

@@ -143,7 +143,7 @@ asm(""							\
 /* save return address */						\
     "    movl %ebx, "CO_ARCH_STATE_STACK_RETURN_EIP"(%ebp)"   "\n"	\
 									\
-/* save %cs */							        \  
+/* save %cs */							        \
     "    movl %cs, %ebx"                     "\n"			\
     "    movl %ebx, "CO_ARCH_STATE_STACK_CS"(%ebp)"      "\n"		\
 									\
@@ -169,7 +169,7 @@ asm(""							\
     "    movl 0x04(%ebp), %ebx"              "\n"			\
     "    movw %bx, -2(%eax)"                 "\n"			\
     "    movl %eax, -6(%eax)"                "\n"			\
-    "    jmp 3f"                            "\n"			\
+    "    jmp 3f"                             "\n"			\
     "3:  ljmp $0,$0"                         "\n"			\
     "2:  popfl"                              "\n"
 
@@ -487,8 +487,6 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	};
 	co_arch_passage_page_t *pp = cmon->passage_page;
 	pgd_t pgd;
-	bool_t has_cpuid;
-	co_rc_t rc;
 	unsigned long caps = 0;
 
 	caps = cmon->manager->archdep->caps;

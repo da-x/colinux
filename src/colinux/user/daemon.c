@@ -63,11 +63,21 @@ co_rc_t co_load_config_file(co_daemon_t *daemon)
 	return rc;
 }
 
-void co_daemon_syntax()
+void co_daemon_print_header(void)
 {
+	static int printed_already = 0;
+	if (printed_already)
+		return;
+
 	co_terminal_print("Cooperative Linux Daemon, %s\n", colinux_version);
 	co_terminal_print("Compiled on %s\n", colinux_compile_time);
 	co_terminal_print("\n");
+	printed_already = 1;
+}
+
+void co_daemon_syntax()
+{
+	co_daemon_print_header();
 	co_terminal_print("syntax: \n");
 	co_terminal_print("\n");
 	co_terminal_print("    colinux-daemon [-h] [-c config.xml] [-d]\n");
@@ -291,6 +301,8 @@ void co_daemon_monitor_destroy(co_daemon_t *daemon)
 {
 	co_queue_flush(&daemon->up_queue);
 	co_user_monitor_destroy(daemon->monitor);
+	co_user_monitor_close(daemon->monitor);
+	daemon->monitor = NULL;
 }
 
 co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)

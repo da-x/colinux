@@ -13,3 +13,13 @@ the host operating system. Its command line syntax is as follows:
 The daemon spits out the kernel's printk() messages along with its own prints. It
 also optionally launches the virtual VGA console, that can be used to interface
 with the virtual machine.
+
+The following options are specific to Windows NT/XP/2000:
+
+      --install-service [name]     Install colinux-daemon.exe as an NT service
+                                   (default service name: Cooperative Linux)
+      --remove-service [name]      Remove colinux service
+                                   (default service name: Cooperative Linux)
+      --install-driver             Install the colinux-driver (linux.sys)
+      --remove-driver              Install the colinux-driver (linux.sys)
+      --status-driver              Show status about the installed/running driver

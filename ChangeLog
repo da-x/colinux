@@ -6,7 +6,8 @@
   * Initmem is freed (no more 'missing implementation')
   * The number of maximum cobd block devices was increased to 32.
   * The daemon process is pinned to the first processor until
-    we get the SMP stability issue fixed.	 
+    we get the SMP stability issue fixed.
+  * Time not going background for gettimeofday() users anymore.
   * Windows: 
     * Sizes of raw partition devices are now detected properly. This 
       means that the resierfs problems should be over, plus cat /dev/cobd* 

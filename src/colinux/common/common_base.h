@@ -22,6 +22,7 @@ typedef int bool_t;
 typedef enum {
     CO_RC_OK                         = 0,
     CO_RC_ERROR                      = -1,
+    CO_RC_PAE_ENABLED                = -2,
     CO_RC_OUT_OF_MEMORY              = -4,
     CO_RC_OUT_OF_PAGES               = -5,
     CO_RC_CANT_OPEN_VMLINUX_FILE     = -12,

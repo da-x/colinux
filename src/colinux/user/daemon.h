@@ -61,6 +61,7 @@ typedef struct co_connected_module {
 } co_connected_module_t;
 
 extern void co_daemon_syntax(void);
+extern void co_daemon_print_header(void);
 extern co_rc_t co_daemon_parse_args(char **args, co_start_parameters_t *start_parameters);
 extern co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **co_daemon_out);
 extern co_rc_t co_daemon_start_monitor(co_daemon_t *daemon);

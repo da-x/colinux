@@ -34,6 +34,7 @@ typedef struct co_manager {
 	unsigned long reversed_map_pgds_count;
 
 	int monitors_count;
+	bool_t lazy_unload;
 	co_osdep_manager_t osdep;
 	co_archdep_manager_t archdep;
 } co_manager_t;

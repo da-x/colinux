@@ -11,6 +11,11 @@ USER_CFLAGS += $(CFLAGS)
 
 LOCAL_OBJS = \
 	main.o \
+	debug.o \
+	service.o \
+	driver.o \
+	cmdline.o \
+	misc.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

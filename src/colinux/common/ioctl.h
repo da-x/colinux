@@ -27,6 +27,7 @@ typedef enum {
 /* interface for CO_MANAGER_IOCTL_INIT: */
 typedef struct {
 	unsigned long physical_memory_size;
+	bool_t lazy_unload;
 } co_manager_ioctl_init_t;
 
 /* interface for CO_MANAGER_IOCTL_CREATE: */
@@ -62,6 +63,7 @@ typedef enum {
 /* interface for CO_MANAGER_IOCTL_STATUS: */
 typedef struct {
 	co_manager_state_t state;
+	bool_t lazy_unload;
 	int monitors_count;
 } co_manager_ioctl_status_t;
 

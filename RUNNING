@@ -1,0 +1,136 @@
+        Notes about running the Cooperative Linux binaries on Windows
+-------------------------------------------------------------------------------
+
+WARNING: 
+
+Although Cooperative Linux may be actually useful on
+some setups (e.g, stable setups), it is meant for testing purposes only, 
+which means that running it may crash your Windows system.
+
+PLEASE REPORT and read about problems on the colinux-devel@sourceforge.net 
+mailing list.
+
+NOTE: If upgrading, please backup or copy your current default.colinux.XML file
+      before installing!
+
+To run Cooperative Linux, please follow these instructions before trying to run 
+anything.
+
+1. Run the downloaded installer file to begin the installation. 
+   
+2. Choose an installation directory. It is better to choose c:\coLinux because
+   this way you don't need to edit the configuration XML since the pathnames
+   of block devices files are currently aboslute. However, note that any 
+   directory should be acceptable.
+
+3. Choose networking method(s) to install. Currently there are two choices:
+
+	a. TAP driver - This method installs a virtual network adapter that can 
+	then be either shared or bridged with a physical network connection. 
+	Note that this requires Internet Connection Sharing or Bridging 
+	(Windows XP or higher)or a 3rd party Internet connection sharing 
+	application. See the Wiki at www.colinux.org for more information/help.
+
+  	b. Bridging - This method allows the Cooperative Linux network 
+	interface to directly interoperate with one of your built in networking 
+	interfaces. You'll need to edit the configuration XML file to reflect 
+	that type="bridged" and the 'name' parameter needs to be set to a 
+	substring of the network adapter name that you will be bridging with. 
+	Go the the network properties of your machine, and get the properties 
+	of the adapter you will be bridging. Look at the text under the 
+	'Connect Using' label. If it says, for example "Intel Pro Adapter",
+	then you would set the 'name' in the XML file to: name="Intel Pro". 
+	See the Wiki at www.colinux.org for more information/help.
+
+4. Choose whether to download a root file system from the Cooperative Linux 
+   sourceforge page. The installer will try to download directly in 
+   the next step but if you experience any issues you can visit the
+   Sourceforge page directly at:
+
+   http://sourceforge.net/project/showfiles.php?group_id=98788&package_id=108058
+
+   NOTE ABOUT DISK SPACE: Each image extracts to over 1GB (or more), so make 
+   sure you   have enough  space there before you start downloading/extracting 
+   it. If you are manually downloading, put the extracted file in the 
+   installation directory. To unzip .bz2 files, you can use Winzip or 7-Zip 
+   (or the bzip utilities in Cygwin, etc). The image MUST be extracted from 
+   the .bz2 archive before use!   
+
+5. Edit the XML file to point to whatever root file system you downloaded. 
+   
+6. The installation directory should include vmlinux, default.config.xml, the 
+   supplied linux.sys driver, executables and dlls, and probably the root 
+   filesystem image. Be sure to review the XML file for any additional 
+   configuration that may be needed.
+
+7. Run coLinux-daemon.exe. The current directory should be the installation 
+   directory, because that is where it will look for default.colinux.xml.
+   
+   The console window opens and you would see a Linux machine booting in 
+   that window.
+
+Post Installation
+-----------------
+
+You may wish to set up some post installation parameters, including increasing
+the amount of memory allocated to Cooperative Linux, or adding a swap 
+partition. See the Wiki at www.colinux.org for additional help on these tasks.
+
+
+Command Line Parameters
+------------------------
+
+The following command line paramaters may be useful in operating Cooperative 
+Linux.
+
+	-c filename.XML
+		Allows you to choose a specific XML configuration file to use.
+
+	-t consoletype
+		Allows you to specify either the FLTK (default) or NT (-t nt) 
+		console to use on startup. 
+
+	-i servicename
+		Allows you to install Cooperative Linux as a service. Also 
+		use the -c parameter to specify your configuration file when 
+		doing this. <servicename> is whatever you want it to be called.
+
+	-r servicename
+		Allows you to remove the Cooperative Linux service. 
+
+
+
+Common Problems
+---------------
+
+	"Unable to mount root fs"
+		Generally this means that the root filesystem image is 
+		missing, or was specified incorrectly.
+
+
+Getting Help
+------------
+
+The following resources are available if you need help getting going, or find 
+bugs, etc.
+
+	IRC
+		The official IRC location is at server irc.oftc.net, 
+ 		channel #colinux.
+
+	WEB
+		The official website, containing downloads, documentation, 
+		FAQ, WIKI, etc., is at http://www.colinux.org.
+	
+	Mailing Lists
+		Visit the colinux.org website and choose from the available 
+		mailing lists (user and devel) to join, view archives, etc.
+
+
+
+-
+Dan Aloni
+da-x@gmx.net
+
+Richard Goodwin (readme portions)
+colinux@newdiversions.com

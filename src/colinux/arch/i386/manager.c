@@ -15,6 +15,7 @@ co_rc_t co_manager_arch_init(co_manager_t *manager, co_archdep_manager_t *out_ar
 {
 	co_rc_t rc;
 	co_archdep_manager_t archdep;
+	unsigned long cr4;
 
 	*out_archdep = NULL;
 
@@ -37,7 +38,13 @@ co_rc_t co_manager_arch_init(co_manager_t *manager, co_archdep_manager_t *out_ar
 		goto out_error;
 	}
 
-	co_debug("manager: CPU caps: %08x\n", archdep->caps);
+	asm("mov %%cr4, %0" : "=r"(cr4));
+
+	if (cr4 & X86_CR4_PAE) {
+		co_debug("manager: PAE is enabled, cannot continue\n");
+		rc = CO_RC(PAE_ENABLED);
+		goto out_error;
+	}
 
 	rc = co_manager_arch_init_apic(archdep);
 	if (!CO_OK(rc))

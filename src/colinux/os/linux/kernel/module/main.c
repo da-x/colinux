@@ -30,6 +30,10 @@ static int __init test_module_init(void)
 
 	rc = co_manager_load(global_manager);
 	if (!CO_OK(rc)) {
+		if (CO_RC_GET_CODE(rc) == CO_RC_PAE_ENABLED) {
+			printk("colinux: PAE is enabled, cannot continue\n", rc);
+			return -ENOSYS;
+		}
 		printk("colinux: manager load failure: %x\n", rc);
 		return -ENXIO;
 	}

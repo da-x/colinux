@@ -100,8 +100,23 @@ driver_unload(IN PDRIVER_OBJECT DriverObject)
 {
 	WCHAR               deviceLinkBuffer[]  = L"\\DosDevices\\"CO_DRIVER_NAME;
 	UNICODE_STRING      deviceLinkUnicodeString;
+	co_manager_t        *manager;
 
-	co_manager_unload((co_manager_t *)DriverObject->DeviceObject->DeviceExtension);
+	
+	manager = DriverObject->DeviceObject->DeviceExtension;
+
+        /* 
+	 *  TODO:
+	 *
+	 *  Make sure that there aren't any users of the driver
+	 *  before we continue and remove it.
+	 *
+	 *  while (manager->monitors_count != 0) {
+	 *
+	 *  }
+	 */
+
+	co_manager_unload(manager);
 
 	RtlInitUnicodeString(&deviceLinkUnicodeString, deviceLinkBuffer);
 

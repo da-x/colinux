@@ -28,8 +28,9 @@ co_rc_t co_manager_load(co_manager_t *manager)
 
 	co_debug("manager: loaded to host kernel\n");
 
-	manager->state = CO_MANAGER_STATE_NOT_INITIALIZED;
 	memset(manager, 0, sizeof(*manager));
+
+	manager->state = CO_MANAGER_STATE_NOT_INITIALIZED;
 
 	rc = co_manager_arch_init(manager, &manager->archdep);
 	if (!CO_OK(rc))
@@ -179,6 +180,7 @@ co_rc_t co_manager_init(co_manager_t *manager, void *io_buffer)
 
 	manager->host_memory_amount = params->physical_memory_size;
 	manager->host_memory_pages = manager->host_memory_amount >> PAGE_SHIFT;
+	manager->lazy_unload = params->lazy_unload;
 
 	co_debug("manager: initialized (%d MB physical RAM)\n", manager->host_memory_amount/(1024*1024));
 
@@ -222,6 +224,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, co_monitor_ioctl_op_t ioctl,
 		params = (typeof(params))(io_buffer);
 		params->state = manager->state;
 		params->monitors_count = manager->monitors_count;
+		params->lazy_unload = manager->lazy_unload;
 
 		*return_size = sizeof(*params);
 

@@ -8,13 +8,33 @@ Creator and chief maintainer:
     basic design. 
 
 Additional developers and contributors:
-    Jun Okajima (Digital Infra Inc.) - Developer and
-    maintainer of cofbdev (Cooperative Frame Buffer device, not yet merged)
-    Pat Erley (random patches)
-    Alejandro R. Sedeno <asedeno@mit.edu> (pcap support)
-    Ballard, Jonathan H. <californiakidd@users.sourceforge.net> (various patches, 
-	native nt console)
-
+    Jun Okajima (Digital Infra Inc.) - Developer and maintainer of cofbdev 
+    Cooperative Frame Buffer device, not yet merged
+    
+    Pat Erley 
+    random patches
+    
+    Alejandro R. Sedeno <asedeno@mit.edu> 
+    pcap support, bridged networking
+    
+    Ballard, Jonathan H. <californiakidd@users.sourceforge.net>
+    various patches, native nt console
+    
+    Thomas Fritzsche <tf@noto.de> 
+    scripting
+    
+    George <gboutwel@praize.com> 
+    scripting
+    
+    Jaroslaw Kowalski <jaak@zd.com.pl>
+    support for installing as a Windows service
+    
+    Daniel R. Slater <dan_slater@yahoo.com> 
+    patches for Windows service support
+    
+    Regis NEBOR <rnebor@hotmail.com>
+    NSIS installer script
+    
 Producer:
     Kuniyasu Suzaki, Senior Reseacher, AIST
 

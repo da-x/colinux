@@ -22,9 +22,13 @@
 #include <colinux/os/current/os.h>
 #include <colinux/os/current/ioctl.h>
 
+#include "misc.h"
+
 struct co_manager_handle {
 	HANDLE handle;
 };
+
+static int open_handles = 0;
 
 co_manager_handle_t co_os_manager_open(void)
 {
@@ -49,7 +53,6 @@ co_manager_handle_t co_os_manager_open(void)
 void co_os_manager_close(co_manager_handle_t handle)
 {
 	CloseHandle(handle->handle);
-
 	co_os_free(handle);
 }
 
@@ -131,7 +134,7 @@ coui_remove_driver(
 	if (schService == NULL)
 		return CO_RC(ERROR); 
  
-	if (DeleteService (schService))
+	if (DeleteService(schService))
 		rc = CO_RC(OK);
 	else
 		rc = CO_RC(ERROR_REMOVING_DRIVER);
@@ -191,11 +194,12 @@ co_rc_t coui_stop_driver(
  
 	if (schService == NULL)
 		return CO_RC(ERROR_ACCESSING_DRIVER); 
- 
+
 	if (ControlService(schService, SERVICE_CONTROL_STOP, &serviceStatus))
 		rc = CO_RC(OK);
-	else
+	else {
 		rc = CO_RC(ERROR_STOPPING_DRIVER);
+	}
 
 	CloseServiceHandle(schService); 
  
@@ -219,7 +223,7 @@ co_rc_t coui_check_driver(IN LPCTSTR DriverName, bool_t *installed)
 
 		*installed = PTRUE;
 	}
-
+	
 	CloseServiceHandle(schSCManager); 
 	return CO_RC(OK);
 } 
@@ -263,10 +267,10 @@ co_rc_t coui_unload_driver_by_name(char *name)
 				      SC_MANAGER_ALL_ACCESS // access required 
 		); 
  
-	co_debug("driver: stopping driver service\n");
+	co_debug("driver: stopping driver service:\n");
 	rc = coui_stop_driver(schSCManager, name);  
 
-	co_debug("driver: removing driver service\n");
+	co_debug("driver: removing driver service:\n");
 	rc = coui_remove_driver(schSCManager, name);
 	
 	CloseServiceHandle(schSCManager); 
