@@ -1,5 +1,28 @@
 #!/bin/sh
 
+#
+# This script builds the mingw32 cross compiler on Linux,
+# and patches the w32api package.
+#
+# It also downloads, compiles, and installs FLTK and mxml.
+# 
+# - Dan Aloni <da-x@colinux.org>
+#
+# This file will source from toplevel Makefile.
+# For backwards, can source from command line for sample:
+#  source build-common.sh --build-all
+#
+# Options MUST ones of (and only ones):
+#  --build-all		Build all, without checking old targed files.
+#			(Old file was build-all.sh)
+#  --rebuild-all	Rebuild all, without checking old targed files.
+#			Disable md5sum, untar and patch source.
+#			Overwrite all old source!
+#  --download-all	Download all source files, no compile
+#			(Old file was download-all.sh)
+
+
+#####################################################################
 # This is my script for building a complete cross-compiler toolchain.
 # It is based partly on Ray Kelm's script, which in turn was built on
 # Mo Dejong's script for doing the same, but with some added fixes.
@@ -7,6 +30,7 @@
 # of the current MinGW environment.
 #
 # Updated by Sam Lantinga <slouken@libsdl.org>
+#####################################################################
 
 # Use User config, if exist
 if [ -f user-build.cfg ] ; then
@@ -23,6 +47,73 @@ TARGET=i686-pc-mingw32
 # you probably don't need to change anything from here down
 TOPDIR=`pwd`
 SRCDIR="$SOURCE_DIR"
+
+# (from build-cross.sh) #
+
+# Updated by Sam Lantinga <slouken@libsdl.org>
+# These are the files from the current MingW release
+
+MINGW_VERSION="3.6"
+MINGW_URL=http://heanet.dl.sourceforge.net/sourceforge/mingw
+MINGW=mingw-runtime-$MINGW_VERSION
+MINGW_ARCHIVE=$MINGW.tar.gz
+
+BINUTILS_VERSION="2.15.91"
+BINUTILS_RELEASE="$BINUTILS_VERSION-20040904-1"
+BINUTILS=binutils-$BINUTILS_RELEASE
+BINUTILS_ARCHIVE=$BINUTILS-src.tar.gz
+BINUTILS_CHECKSUM=$SRCDIR/.build-cross.md5
+
+GCC_VERSION="3.3.1"
+GCC_RELEASE="$GCC_VERSION-20030804-1"
+GCC=gcc-$GCC_RELEASE
+GCC_ARCHIVE1=gcc-core-$GCC_RELEASE-src.tar.gz
+GCC_ARCHIVE2=gcc-g++-$GCC_RELEASE-src.tar.gz
+GCC_PATCH=""
+
+W32API_VERSION=3.2
+W32API=w32api-$W32API_VERSION
+W32API_SRC=$W32API
+W32API_SRC_ARCHIVE=$W32API-src.tar.gz
+W32API_ARCHIVE=$W32API.tar.gz
+# Patch can be empty or comment out, if not need
+W32API_PATCH=patch/$W32API_SRC.diff
+W32LIBS_CHECKSUM=$SRCDIR/.build-colinux-libs.md5
+
+
+# (from build-colinux-libs.sh) #
+FLTK_VERSION="1.1.4"
+FLTK_URL=http://heanet.dl.sourceforge.net/sourceforge/fltk 
+FLTK=fltk-$FLTK_VERSION
+FLTK_ARCHIVE=$FLTK-source.tar.bz2
+
+MXML_VERSION="1.3"
+MXML_URL=http://www.easysw.com/~mike/mxml/swfiles
+# a mirror http://gniarf.nerim.net/colinux
+MXML=mxml-$MXML_VERSION
+MXML_ARCHIVE=$MXML.tar.gz
+
+WINPCAP_SRC=wpdpack
+WINPCAP_URL=http://winpcap.polito.it/install/bin
+WINPCAP_SRC_ARCHIVE="$WINPCAP_SRC"_3_0.zip
+
+
+# (from sample.user-build.cfg) #
+
+# Kernel version we are targeting
+# Remember: Please update also conf/kernel-config, if changing kernel version!
+#
+KERNEL_DIR="v2.6"
+KERNEL_VERSION="2.6.10"
+
+
+# (from build-kernel.sh) #
+
+KERNEL=linux-$KERNEL_VERSION
+KERNEL_URL=http://www.kernel.org/pub/linux/kernel/$KERNEL_DIR
+KERNEL_ARCHIVE=$KERNEL.tar.bz2
+KERNEL_CHECKSUM=$SRCDIR/.build-kernel.md5
+
 
 # where does it go?
 if [ "$PREFIX" = "" ] ; then
@@ -100,7 +191,6 @@ download_file()
 # Arg1: Errorlevel
 # Arg2: Error message
 #
-
 error_exit()
 {
 	# Show errors in log file with tail or less
@@ -112,5 +202,32 @@ error_exit()
 	exit $1
 }
 
-W32API=w32api-3.2
-MINGW_URL=http://heanet.dl.sourceforge.net/sourceforge/mingw
+build_all()
+{
+	./build-cross.sh $1 && \
+	./build-colinux-libs.sh $1 && \
+	./build-kernel.sh $1 && \
+	./build-colinux.sh $1 && \
+	echo "Build-all $1 DONE"
+}
+
+case "$1" in
+    --build-all)
+	build_all
+	;;
+    --download-all)
+	build_all --download-only
+	;;
+    --rebuild-all)
+	build_all --rebuild
+	;;
+    --help)
+	echo "
+	file: bin/build-common.sh
+
+	Options: --build-all | --download-all | --rebuild-all | --help
+
+	Whithout arguments is used for common set of variables and functions.
+	For more information, read top of file."
+	;;
+esac

@@ -8959,7 +8959,7 @@ diff -urN a/localversion-cooperative b/localversion-cooperative
 --- a/localversion-cooperative
 +++ b/localversion-cooperative
 @@ -0,0 +1 @@
-+-co-0.6.2-pre7
++-co-
 diff -urN a/mm/bootmem.c b/mm/bootmem.c
 --- a/mm/bootmem.c
 +++ b/mm/bootmem.c

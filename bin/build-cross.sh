@@ -2,21 +2,6 @@
 
 source ./build-common.sh
 
-# Updated by Sam Lantinga <slouken@libsdl.org>
-# These are the files from the current MingW release
-
-GCC=gcc-3.3.1-20030804-1
-GCC_ARCHIVE1=gcc-core-3.3.1-20030804-1-src.tar.gz
-GCC_ARCHIVE2=gcc-g++-3.3.1-20030804-1-src.tar.gz
-GCC_PATCH=""
-BINUTILS=binutils-2.15.91-20040904-1
-BINUTILS_ARCHIVE=$BINUTILS-src.tar.gz
-MINGW=mingw-runtime-3.6
-MINGW_ARCHIVE=$MINGW.tar.gz
-W32API_ARCHIVE=$W32API.tar.gz
-
-CHECKSUM_FILE=$SRCDIR/.build-cross.md5
-
 download_files()
 {
 	mkdir -p "$SRCDIR"
@@ -31,8 +16,8 @@ download_files()
 check_md5sums()
 {
 	echo "Check md5sum"
-	if md5sum -c $CHECKSUM_FILE >>$COLINUX_BUILD_LOG 2>&1 ; then
-		echo "Skip $TARGET-windres,$TARGET-ar,$TARGET-gcc"
+	if md5sum -c $BINUTILS_CHECKSUM >>$COLINUX_BUILD_LOG 2>&1 ; then
+		echo "Skip $TARGET-gcc, $TARGET-ld, $TARGET-windres"
 		echo " - already installed on $PREFIX/bin"
 		exit 0
 	fi
@@ -44,14 +29,13 @@ create_md5sums()
 	md5sum -b \
 	    $GCC_PATCH \
 	    $PREFIX/bin/$TARGET-windres \
-	    $PREFIX/bin/$TARGET-ar \
+	    $PREFIX/bin/$TARGET-ld \
 	    $PREFIX/bin/$TARGET-gcc \
-	    $PREFIX/$TARGET/bin/gcc \
 	    $PREFIX/$TARGET/bin/strip \
-	    > $CHECKSUM_FILE
+	    > $BINUTILS_CHECKSUM
 	test $? -ne 0 && error_exit 1 "can not create md5sum"
 	if [ "$GCC_PATCH" != "" ]; then
-		md5sum -b $SRCDIR/$GCC_PATCH >> $CHECKSUM_FILE
+		md5sum -b $SRCDIR/$GCC_PATCH >> $BINUTILS_CHECKSUM
 	fi
 }
 
@@ -201,7 +185,7 @@ build_cross()
 	test "$1" = "--download-only" && exit 0
 
 	# do not check files, if rebuild forced
-	test "$1" = "--rebuild-all" || check_md5sums
+	test "$1" = "--rebuild" || check_md5sums
 
         install_libs
 

@@ -2,25 +2,7 @@
 
 source ./build-common.sh
 
-FLTK=fltk-1.1.4
-FLTK_URL=http://heanet.dl.sourceforge.net/sourceforge/fltk 
-FLTK_ARCHIVE=$FLTK-source.tar.bz2
-
-MXML=mxml-1.3
-MXML_URL=http://www.easysw.com/~mike/mxml/swfiles
-# a mirror http://gniarf.nerim.net/colinux
-MXML_ARCHIVE=$MXML.tar.gz
-
-W32API_SRC=$W32API
-W32API_SRC_ARCHIVE=$W32API-src.tar.gz
-
-WINPCAP_SRC=wpdpack
-WINPCAP_URL=http://winpcap.polito.it/install/bin
-WINPCAP_SRC_ARCHIVE="$WINPCAP_SRC"_3_0.zip
-
 PATH="$PREFIX/$TARGET/bin:$PATH"
-
-CHECKSUM_FILE=$SRCDIR/.build-colinux-libs.md5
 
 download_files()
 {
@@ -36,8 +18,8 @@ check_md5sums()
 {
 	echo "Check md5sum"
 	cd "$TOPDIR/.."
-	if md5sum -c $CHECKSUM_FILE >>$COLINUX_BUILD_LOG 2>&1 ; then
-		echo "Skip libfltk.a,libmxml.a,libwin32k.a"
+	if md5sum -c $W32LIBS_CHECKSUM >>$COLINUX_BUILD_LOG 2>&1 ; then
+		echo "Skip w32api.h, libfltk.a, libmxml.a, libwin32k.a"
 		echo " - already installed on $PREFIX/$TARGET/lib"
 		exit 0
 	fi
@@ -50,11 +32,15 @@ create_md5sums()
 	cd "$TOPDIR/.."
 	md5sum -b \
 	    patch/$FLTK-win32.diff \
-	    patch/$W32API_SRC.diff \
+	    $W32API_PATCH \
+	    $PREFIX/$TARGET/include/w32api.h \
 	    $PREFIX/$TARGET/lib/libfltk.a \
 	    $PREFIX/$TARGET/lib/libmxml.a \
 	    $PREFIX/$TARGET/lib/libwin32k.a \
-	    > $CHECKSUM_FILE
+	    $PREFIX/$TARGET/include/.fltk.version \
+	    $PREFIX/$TARGET/include/.mxml.version \
+	    $PREFIX/$TARGET/include/.w32api.version \
+	    > $W32LIBS_CHECKSUM
 	test $? -ne 0 && error_exit 1 "can not create md5sum"
 	cd "$TOPDIR"
 }
@@ -84,6 +70,12 @@ configure_fltk()
 {
 	cd "$SRCDIR/$FLTK"
 	echo "Configuring FLTK"
+
+	# X11 is installed for Target? Use, if exist. (Fake for X11-less compiling)
+	if [ -f $PREFIX/include/X11/X.h -a -f $PREFIX/lib/X11/libX11.a ]; then
+	    prefix_x11="--x-includes=$PREFIX/include --x-libraries=$PREFIX/lib"
+	fi
+
 	# Using of --host=$TARGET ist old!
 	# Plesae beleve host=i386, also your host is mostly i686!
 	# "i386..." is a pseudonym to enable "cross-compiling",
@@ -92,6 +84,7 @@ configure_fltk()
 	./configure \
 	 --prefix=$PREFIX \
 	 --build=$TARGET \
+	 $prefix_x11 \
 	 --host=i386-linux-linux-gnu
 	test $? -ne 0 && error_exit 1 "FLTK configure failed"
 	echo "Making FLTK"
@@ -106,6 +99,7 @@ install_fltk()
 	echo "Installing FLTK"
 	cp lib/*.a $PREFIX/$TARGET/lib
 	cp -a FL $PREFIX/$TARGET/include/
+	echo "$FLTK_VERSION" >$PREFIX/$TARGET/include/.fltk.version
 	cd "$TOPDIR"
 }
 
@@ -148,6 +142,7 @@ install_mxml()
 	echo "Installing MXML"
 	cp libmxml.a $PREFIX/$TARGET/lib
 	cp mxml.h $PREFIX/$TARGET/include
+	echo "$MXML_VERSION" >$PREFIX/$TARGET/include/.mxml.version
 	cd "$TOPDIR"
 }
 
@@ -173,11 +168,13 @@ extract_w32api_src()
 
 patch_w32api_src()
 {
-	echo "Patching w32api - $TOPDIR/../patch/$W32API_SRC.diff"
-	cd "$SRCDIR/$W32API_SRC"
-	patch -p1 < "$TOPDIR/../patch/$W32API_SRC.diff"
-	test $? -ne 0 && error_exit 1 "w32api source patch failed"
-	cd "$TOPDIR"
+	if [ -z "$W32API_PATCH" ]; then
+		echo "Patching w32api - $TOPDIR/../$W32API_PATCH"
+		cd "$SRCDIR/$W32API_SRC"
+		patch -p1 < "$TOPDIR/../$W32API_PATCH"
+		test $? -ne 0 && error_exit 1 "w32api source patch failed"
+		cd "$TOPDIR"
+	fi
 }
 
 configure_w32api_src()
@@ -199,6 +196,7 @@ install_w32api_src()
 	echo "Installing $W32API_SRC"
 	make install >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "w32api make install failed"
+	echo "$W32API_VERSION" >$PREFIX/$TARGET/include/.w32api.version
 	cd "$TOPDIR"
 }
 
@@ -256,7 +254,7 @@ build_colinux_libs()
 	test "$1" = "--download-only" && exit 0
 
 	# do not check files, if rebuild forced
-	test "$1" = "--rebuild-all" || check_md5sums
+	test "$1" = "--rebuild" || check_md5sums
 
 	build_fltk
 	build_mxml

@@ -10,8 +10,8 @@
 # More arguments and directory options:
 #	./configure --help
 
-# Some defaults from config file (Kernel version and dir)
-source bin/sample.user-build.cfg
+# Some defaults from config file (Kernel version and dir, binutil version)
+cd bin; source build-common.sh; cd ..
 
 # Some default values
 target=i686-pc-mingw32
@@ -26,9 +26,6 @@ configfile="bin/user-build.cfg"
 makefileout="Makefile"
 no_create=
 kernel_untar="yes"
-gnugcc_needed="3.3.x"
-GCCSOURCES="3.3.1-20030804-1"
-
 
 # Try the directory containing this script, then its working dir.
 prog=$0
@@ -205,6 +202,7 @@ if test "`cd $srcdir && pwd`" != "`pwd`" && test -f $srcdir/config.status; then
   { echo "configure: error: source directory already configured; run "make distclean" there first" 1>&2; exit 1; }
 fi
 
+
 #
 # Check for target system
 #
@@ -351,9 +349,11 @@ check_exec_tool()
   echo -n "Checking for $1 ... "
   if ($2) </dev/null >/dev/null 2>&1; then
     if [ ! -z "$3" ]; then
+      # get installed version
       eval `($2) 2>&1 | sed -n -r -e \
         's/.*([0-9]{1,2})\.([0-9]{1,2})\.([0-9]{1,2}).*/i1=\1 i2=\2 i3=\3/p'`
 
+      # get needed version
       eval `echo $3 | sed -r -e \
         's/([0-9]{1,2})\.([0-9x]{1,2})\.([0-9x]{1,2})/v1=\1 v2=\2 v3=\3/' -e 's/x/0/' -e 's/x/0/'`
 
@@ -373,10 +373,10 @@ check_exec_tool()
 	return 1
       fi
     fi
-      
+
     echo "found"
   else
-    echo "missing"
+    echo "missing (no exec)"
     missing=yes
     return 1
   fi
@@ -398,6 +398,30 @@ check_rpm_tool()
   fi
 }
 
+# Get version from installed library
+# $1 Name
+# $2 Version
+check_lib_vers()
+{
+  local installed=""
+
+  # The versionsfile was created at end of install the library
+  echo -n "Checking for target $1 ... "
+  installed=`cat $prefix/$target/include/.$1.version 2>/dev/null`
+
+  if [ "$installed" != "$2" ]; then
+    doit_cross="$doit_cross $1"
+    rm -f $downloaddir/$W32LIBS_CHECKSUM
+    if [ -z "$installed" ]; then
+	echo "missing"
+    else
+	echo "($installed) wrong version, need $2"
+    fi
+  else
+    echo "($installed) found"
+  fi
+}
+
 gcc_helper()
 {
 # TODO:
@@ -407,18 +431,19 @@ gcc_helper()
 	cat << EOF
 
 	Cross gcc and local gcc should be the same version.
-	Please download source for gcc $gnugcc_needed, configure and build for local system!
+	Please download source for gcc $GCC_NEEDED,
+	configure and build for local system!
 	
 	# cd $srcdir/bin
 	# ./build-cross.sh --download-only
 	# cd /tmp
-	# tar xfj $downloaddir/gcc-core-$GCCSOURCES-src.tar.gz
-	# tar xfj $downloaddir/gcc-g++-$GCCSOURCES-src.tar.gz
-	# cd gcc-$GCCSOURCES
+	# tar xfz $downloaddir/gcc-core-$GCC_RELEASE-src.tar.gz
+	# tar xfz $downloaddir/gcc-g++-$GCC_RELEASE-src.tar.gz
+	# cd gcc-$GCC_RELEASE
 	# ./configure --prefix=/home/\$USER/local-i686
 	# make
 	# make install
-	# cd / ; rm -rf /tmp/gcc-$GCCSOURCES
+	# cd / ; rm -rf /tmp/gcc-$GCC_RELEASE
 
 	Than run counfigure and make for colinux again
 	with binary path to this directory.
@@ -436,13 +461,22 @@ EOF
 #
 missing=no
 
+# Get version from script, replace the last digit
+GCC_NEEDED=`echo "$GCC_VERSION" | sed -e 's/\([0-9]\+\)\.\([0-9]\+\).*$/\1.\2/'`.x
+
+# Remove default path from md5 files
+BINUTILS_CHECKSUM=`basename $BINUTILS_CHECKSUM`
+W32LIBS_CHECKSUM=`basename $W32LIBS_CHECKSUM`
+KERNEL_CHECKSUM=`basename $KERNEL_CHECKSUM`
+
 # General tools for winnt and linux
 check_exec_tool "wget" "wget --version" ""
 check_exec_tool "Python interpreter" "python -V" ""
 check_exec_tool "patch" "patch --version" ""
 check_exec_tool "make" "make --version" ""
-check_exec_tool "gnu/gcc" "gcc -dumpversion" "$gnugcc_needed" || gcc_helper
+check_exec_tool "gcc host" "gcc -dumpversion" "$GCC_NEEDED" || gcc_helper
 
+# FIXME: How can get path for X11? Or how can disable X11 for configure FLTK?
 # for FLTK (winnt and linux)
 #check_exec_tool "xorg x11 lib" "xcursor-config --version" ""
 #check_exec_tool "xorg x11 devel" "xft-config --version" ""
@@ -461,7 +495,6 @@ case $colinux_os in
     check_exec_tool "texinfo" "texindex --version" ""
     check_exec_tool "flex" "flex --version" ""
     check_exec_tool "gettext" "gettext --version" ""
-
   ;;
 esac
 
@@ -469,6 +502,37 @@ esac
 # Stop, if some tools missing or wrong version
 #
 test "$missing" = yes && exit 1
+
+#
+# What must we do for CROSS platform?
+# If files must be compile, remove the MD5 control file.
+#
+
+if [ "$target_os" != "linux" ] ; then
+    save_path=$PATH
+    export PATH=$prefix/bin:$PATH
+    echo " prefix=$prefix"
+
+    # get version from binaries
+    check_exec_tool "$target-gcc" "$target-gcc -dumpversion" "$GCC_VERSION" || { doit_cross="$doit_cross gcc"; rm -f $downloaddir/$BINUTILS_CHECKSUM; }
+    check_exec_tool "$target-ld" "$target-ld --version" "$BINUTILS_VERSION" || { doit_cross="$doit_cross binutils"; rm -f $downloaddir/$BINUTILS_CHECKSUM; }
+
+    # Get version from installed libraries
+    check_lib_vers "fltk" "$FLTK_VERSION" || doit_cross="$doit_cross fltk"
+    check_lib_vers "mxml" "$MXML_VERSION" || doit_cross="$doit_cross mxml"
+    check_lib_vers "w32api" "$W32API_VERSION" || doit_cross="$doit_cross w32api"
+
+    # Inform about doing
+    if [ -z "$doit_cross" ]; then
+	echo "Cross tools are up to date. :-)"
+    else
+	echo "This will be build for cross platform:"
+	echo "$doit_cross"
+    fi
+
+    # Restore PATH
+    export PATH=$save_path
+fi
 
 #
 # do nothing, if trace option enabled
@@ -524,7 +588,7 @@ EOF
 # Need some variables and PATH of cross compiler in make. Export this all
 export PATH := \$(PREFIX)/bin:\${PATH}
 
-.PHONY: all cross cross libs winapi kernel download
+.PHONY: all cross cross libs kernel download
 all: cross libs kernel colinux
 
 #
@@ -532,22 +596,20 @@ all: cross libs kernel colinux
 #
 
 cross:
-	@md5sum --check \$(DOWNLOAD)/.build-cross.md5 >>/dev/null 2>&1 || \\
+	@md5sum -c \$(DOWNLOAD)/$BINUTILS_CHECKSUM >>/dev/null 2>&1 || \\
 	{ cd bin && ./build-cross.sh; }
 
-libs: winapi
-
-winapi:
-	@md5sum --check \$(DOWNLOAD)/.build-colinux-libs.md5 >>/dev/null 2>&1 || \\
+libs:
+	@md5sum -c \$(DOWNLOAD)/$W32LIBS_CHECKSUM >>/dev/null 2>&1 || \\
 	{ cd bin && ./build-colinux-libs.sh; }
 
 kernel:
-	@md5sum --check \$(DOWNLOAD)/.build-kernel.md5 >>/dev/null 2>&1 || \\
+	@md5sum -c \$(DOWNLOAD)/$KERNEL_CHECKSUM >>/dev/null 2>&1 || \\
 	{ cd bin && ./build-kernel.sh; }
 
-# Download all missing sources (for cross compile)
+# Download only all missing sources (for cross compile)
 download:
-	@cd bin && ./download-all.sh
+	@cd bin && source build-common.sh --download-all
 
 EOF
   ;;
@@ -603,13 +665,8 @@ test -f $configfile -a ! -f $configfile.old && mv $configfile $configfile.old
 echo "Create $configfile"
     cat > $configfile << EOF
 # $configfile
-# Configfile for coLinux $colinux_version
+# Configfile for coLinux $colinux_version, kernel $target_kernel_version
 # created by configure at `date`
-
-# Kernel version we are targeting
-#
-KERNEL_DIR="$target_kernel_dir"
-KERNEL_VERSION="$target_kernel_version"
 
 # Setup target OS
 COLINUX_HOST_OS="$colinux_os"
@@ -629,7 +686,7 @@ SOURCE_DIR="$downloaddir"
 PREFIX="$prefix"
 
 # Link to colinux kernel, need for colinux daemons build processing (Guest kernel)
-# default: ../../linux	(is \$USER_TOPDIR/linux)
+# default: \$USER_TOPDIR/linux
 COLINUX_TARGET_KERNEL_PATH="$targetkerneldir"
 
 # HOST-Kernel (only, if host system is linux)
@@ -646,7 +703,7 @@ COLINUX_BUILD_LOG="$logfile"
 
 # Overwrite kerneltree before rebuild? yes/no
 # yes: Build script will overwrite kerneltree and config (default)
-# no: Build script leave kernel source untouched. User can make some pachtes and config
+# no: Build script leave kernel source untouched. User can make some patches and config
 #
 COLINUX_KERNEL_UNTAR="$kernel_untar"
 

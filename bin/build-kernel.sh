@@ -6,23 +6,15 @@
 #  --no-download	Never download, extract or patch source. Mostly used,
 #			on kernel developers, to disable the automatic untar.
 #			md5sum will not check.
-#  --rebuild-all	Rebuild all, without checking old targed files.
+#  --rebuild		Rebuild, without checking old targed files.
 #			Disable md5sum. untar and patch source.
 #			Overwrite all old source!
 
 source ./build-common.sh
 
-# Remember: Please update also conf/kernel-config, if changing kernel version!
-
-KERNEL=linux-$KERNEL_VERSION
-KERNEL_URL=http://www.kernel.org/pub/linux/kernel/$KERNEL_DIR
-KERNEL_ARCHIVE=$KERNEL.tar.bz2
-
 # Developer private patchfile. Used after maintainer patch,
 # use also for manipulate .config. Sored in directory patch/.
 PRIVATE_PATCH=linux-private.patch
-
-CHECKSUM_FILE=$SRCDIR/.build-kernel.md5
 
 CO_VERSION=`cat ../src/colinux/VERSION`
 COMPLETE_KERNEL_NAME=$KERNEL_VERSION-co-$CO_VERSION
@@ -38,8 +30,8 @@ check_md5sums()
 {
 	echo "Check md5sum"
 	cd "$TOPDIR/.."
-	if md5sum -c $CHECKSUM_FILE >>$COLINUX_BUILD_LOG 2>&1 ; then
-		echo "Skip vmlinux,modules-$COMPLETE_KERNEL_NAME.tar.gz"
+	if md5sum -c $KERNEL_CHECKSUM >>$COLINUX_BUILD_LOG 2>&1 ; then
+		echo "Skip vmlinux, modules-$COMPLETE_KERNEL_NAME.tar.gz"
 		echo " - already installed on $COLINUX_INSTALL_DIR"
 		exit 0
 	fi
@@ -51,16 +43,17 @@ create_md5sums()
 	echo "Create md5sum"
 	cd "$TOPDIR/.."
 	md5sum -b \
+	    src/colinux/VERSION \
 	    patch/linux \
 	    conf/linux-config \
 	    $COLINUX_INSTALL_DIR/modules-$COMPLETE_KERNEL_NAME.tar.gz \
 	    $COLINUX_INSTALL_DIR/vmlinux \
 	    $COLINUX_TARGET_KERNEL_PATH/vmlinux \
 	    $COLINUX_TARGET_KERNEL_PATH/.config \
-	    > $CHECKSUM_FILE
+	    > $KERNEL_CHECKSUM
 	test $? -ne 0 && error_exit 1 "can not create md5sum"
 	if [ -f patch/$PRIVATE_PATCH ]; then
-		md5sum -b patch/$PRIVATE_PATCH >> $CHECKSUM_FILE
+		md5sum -b patch/$PRIVATE_PATCH >> $KERNEL_CHECKSUM
 	fi
 	cd "$TOPDIR"
 }
@@ -77,6 +70,7 @@ extract_kernel()
 	rm -rf "$KERNEL"
 	echo "Extracting Kernel $KERNEL_VERSION"
 	bzip2 -dc "$SRCDIR/$KERNEL_ARCHIVE" | tar x
+	test $? -ne 0 && error_exit 1 "$KERNEL_VERSION extract failed"
 	cd "$TOPDIR"
 }
 
@@ -88,6 +82,8 @@ patch_kernel()
 	cp "$TOPDIR/../patch/linux" "$TOPDIR/../patch/linux-$KERNEL_VERSION.diff"
 	patch -p1 < "$TOPDIR/../patch/linux-$KERNEL_VERSION.diff"
 	test $? -ne 0 && error_exit 1 "$KERNEL_VERSION patch failed"
+	# Copy coLinux Version into kernel localversion
+	echo "-co-$CO_VERSION" > localversion-cooperative
 	cd "$TOPDIR"
 }
 
@@ -177,7 +173,7 @@ build_kernel()
 	  test "$1" = "--download-only" && exit 0
 
 	  # do not check files, if rebuild forced
-	  test "$1" = "--rebuild-all" || check_md5sums
+	  test "$1" = "--rebuild" || check_md5sums
 
 	  # Extract, patch and configure Kernel
 	  extract_kernel
