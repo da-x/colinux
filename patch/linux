@@ -1,15 +1,15 @@
 # Old manifest: 999b177514109866d8d34382ff37f3e1e4ad6582
-# New manifest: 2acefa0fb4aa0593bbaf4b32219b5c7b45846263
+# New manifest: 7783ce5b2770551bcc22a8cc166251417dc8bfa5
 # Summary of changes:
 # 
 #   add arch/i386/kernel/cooperative.c
-#    as 04631ee5ff78eb1a42fc73ab29e7f51e59795973
+#    as 6d51141f4d243de31dea2e2dd242d16b6aed8870
 # 
 #   add drivers/block/cobd.c
 #    as af2d79b507ee175c9c5a791af29ad00742dc4a07
 # 
 #   add drivers/input/mouse/comouse.c
-#    as 6285b62f646dca96ee5bfce4322f6b2d4efea3b6
+#    as 92b321d6e8704e451b6d1a8b416dfcfbb3f2bcff
 # 
 #   add drivers/input/serio/cokbd.c
 #    as c1e3ce4f74a56fa093d4de78db0d28166997b417
@@ -24,10 +24,10 @@
 #    as 23c64ba82bea6248cc018d967ed0e426958ff351
 # 
 #   add include/linux/cooperative.h
-#    as 9000a987d8e940c853473ef1583ce97487afbcce
+#    as aed2105a2fad0415d12de7b6266a5bd1e0d3f72b
 # 
 #   add kernel/cooperative.c
-#    as 23852a05167a84fd9e64f69c050faf977d72fbf0
+#    as 8765450a96dd4abd146ed1e0ea72eddc4c46f03f
 # 
 #   patch CREDITS
 #    from d848c2c364dce0a45758830abfb4b643ddea12ae
@@ -79,7 +79,7 @@
 # 
 #   patch arch/i386/kernel/setup.c
 #    from d7984d0bf518eaae1f5ccd55028d601023b81835
-#      to 85dc024a590717f04f9e6e6a7d86cbd44d6cfd14
+#      to 4c620fe0f0b55ab17e0760aa9490198f8e49d9e3
 # 
 #   patch arch/i386/kernel/sysenter.c
 #    from 030f859ef57cd7fd14def28f9c978eab1a6d7679
@@ -99,19 +99,15 @@
 # 
 #   patch arch/i386/mm/fault.c
 #    from a2f8463ea1c453e1e78a63517c16e259b27558d0
-#      to f3a706c214bc25c91620a6757161fff106548368
+#      to 41011f0d03739e029b7cf1c8eda20273104bcca2
 # 
 #   patch arch/i386/mm/init.c
 #    from 8d466e7890a21c71d8a96d07e835e4313378e21e
-#      to 4d06fbed2e587493c85b54dd6cfa1b6b1d88e0d3
+#      to c006a63b594ad7e59829468dbb5d847311229d58
 # 
 #   patch arch/i386/mm/ioremap.c
 #    from 36cf45785c144745cd133e9344bec486fb44324b
 #      to a83cf5a7f52887d55bd7221d3adeb626db6e5e03
-# 
-#   patch arch/i386/mm/pgtable.c
-#    from 85d7f6298368515eecb659c1113bad9fab247040
-#      to c865e21cc4164fa96ca94bb31fae5fea66045033
 # 
 #   patch drivers/block/Kconfig
 #    from 3046b8060d3e917d6e657916e98a0a2265c2381b
@@ -195,11 +191,11 @@
 # 
 #   patch include/asm-i386/mmzone.h
 #    from ba5f72830001becf0d0c9578a7f120b40a7be513
-#      to 398001434dc41426d2ca0e66617635cba543a65d
+#      to 57ab8ec6092e6a91029ec8adb42b4a7e8a0c9484
 # 
 #   patch include/asm-i386/page.h
 #    from 2d01f24605c3645aa1414544fb60ab3b508c9150
-#      to d73f40866d49d62900e0dabb91f44edb48423965
+#      to f97bea61fe6ee81f0ad98928dba165b61fac13dc
 # 
 #   patch include/asm-i386/param.h
 #    from 5a7e5c11aede201b2266b27afa07b78d47564e2a
@@ -207,19 +203,19 @@
 # 
 #   patch include/asm-i386/pgalloc.h
 #    from c6c20cbc20c6e930f565e045bb61f71fd9683c64
-#      to b2948745b0a64b8028f30d7e39a7fa522f02add3
+#      to 02d6b9a085c4a26763c74e46a0b8ef535437691d
 # 
 #   patch include/asm-i386/pgtable-2level.h
 #    from eff80b0e5f738d323541ab35c00d3dcbfe4ecf31
-#      to a6b51b4a560c412798230f2d27627b13758fac6c
+#      to 18b0a329b74a218fd1b406dbda5f1803fab778d0
 # 
 #   patch include/asm-i386/pgtable.h
 #    from 09d20387bbe548b3089eb5b85e5c544435bc0ac7
-#      to 6b422bde8454f9bcad37268a1416477b5f2c33ff
+#      to 0dcb27bb5fb079340f2bdd4cda6f43960f00bd3d
 # 
 #   patch include/asm-i386/processor.h
 #    from 7a2d2aa52655f0383d57e37710476a7376f1a36b
-#      to 70720ed1bde73569731c879835bdef661c496789
+#      to e94f820bb6dbf02612182e0a5d5f5773f89b0c97
 # 
 #   patch include/linux/console.h
 #    from 867c5f041944317deca00cd19eddfd01cbab0fc2
@@ -247,7 +243,7 @@
 # 
 --- arch/i386/kernel/cooperative.c
 +++ arch/i386/kernel/cooperative.c
-@@ -0,0 +1,198 @@
+@@ -0,0 +1,196 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -271,13 +267,13 @@
 +asm(
 +	""
 +	".section .text\n"
-+	".globl colinux_start\n"
-+	"colinux_start:\n"
-+	"       call colinux_start_arch\n"
++	".globl co_start\n"
++	"co_start:\n"
++	"       call co_start_arch\n"
 +	".previous\n"
 +	"");
 +
-+static void colinux_early_cpu_init(void)
++static void co_early_cpu_init(void)
 +{
 +	/*
 +	 * On the first switch to Linux we must set up a valid TR because 
@@ -330,10 +326,10 @@
 +	__asm__ __volatile__("movl %%cr4, %0" : "=r" (mmu_cr4_features));
 +}
 +
-+void colinux_start_arch(void)
++void co_start_arch(void)
 +{
-+	colinux_early_cpu_init();
-+	colinux_start_c();
++	co_early_cpu_init();
++	co_start_kernel();
 +}
 +
 +extern void ctrl_alt_del(void);
@@ -442,8 +438,6 @@
 +	.kernel_cs = __KERNEL_CS,
 +	.kernel_ds = __KERNEL_DS,
 +};
-+
-+EXPORT_SYMBOL(co_arch_info);
 +
 +CO_TRACE_CONTINUE;
 --- drivers/block/cobd.c
@@ -737,42 +731,18 @@
 +
 --- drivers/input/mouse/comouse.c
 +++ drivers/input/mouse/comouse.c
-@@ -0,0 +1,314 @@
-+/*
-+ * comouse.c
-+ * 
-+ * Based on:
-+ *
-+ * $Id: sermouse.c,v 1.17 2002/03/13 10:03:43 vojtech Exp $
-+ *
-+ *  Copyright (c) 1999-2001 Vojtech Pavlik
-+ */
-+
+@@ -0,0 +1,71 @@
 +/*
 + * Virtual mouse driver for Linux
++ * 
++ * Skeleton based on:
++ *  $Id: sermouse.c,v 1.17 2002/03/13 10:03:43 vojtech Exp $
++ *
++ *  Copyright (c) 1999-2001 Vojtech Pavlik
++ *
++ * Copyright (c) 2004 Dan Aloni
 + */
 +
-+/*
-+ * This program is free software; you can redistribute it and/or modify
-+ * it under the terms of the GNU General Public License as published by
-+ * the Free Software Foundation; either version 2 of the License, or 
-+ * (at your option) any later version.
-+ * 
-+ * This program is distributed in the hope that it will be useful,
-+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
-+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-+ * GNU General Public License for more details.
-+ * 
-+ * You should have received a copy of the GNU General Public License
-+ * along with this program; if not, write to the Free Software
-+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-+ * 
-+ * Should you need to contact me, the author, you can do so either by
-+ * e-mail - mail your message to <vojtech@ucw.cz>, or by paper mail:
-+ * Vojtech Pavlik, Simunkova 1594, Prague 8, 182 00 Czech Republic
-+ */
-+
-+#include <linux/delay.h>
 +#include <linux/module.h>
 +#include <linux/slab.h>
 +#include <linux/interrupt.h>
@@ -781,277 +751,58 @@
 +#include <linux/serio.h>
 +#include <linux/init.h>
 +
-+MODULE_AUTHOR("Vojtech Pavlik <vojtech@ucw.cz>");
-+MODULE_DESCRIPTION("Serial mouse driver");
++MODULE_AUTHOR("Dan Aloni <da-x@colinux.org>");
++MODULE_DESCRIPTION("Virtual mouse driver");
 +MODULE_LICENSE("GPL");
 +
-+static char *sermouse_protocols[] = { "None", "Mouse Systems Mouse", "Sun Mouse", "Microsoft Mouse",
-+					"Logitech M+ Mouse", "Microsoft MZ Mouse", "Logitech MZ+ Mouse",
-+					"Logitech MZ++ Mouse"};
-+
-+struct sermouse {
-+	struct input_dev dev;
-+	signed char buf[8];
-+	unsigned char count;
-+	unsigned char type;
-+	unsigned long last;
-+	char phys[32];
-+};
-+
 +/*
-+ * sermouse_process_msc() analyzes the incoming MSC/Sun bytestream and
-+ * applies some prediction to the data, resulting in 96 updates per
-+ * second, which is as good as a PS/2 or USB mouse.
-+ */
-+
-+static void sermouse_process_msc(struct sermouse *sermouse, signed char data, struct pt_regs *regs)
-+{
-+	struct input_dev *dev = &sermouse->dev;
-+	signed char *buf = sermouse->buf;
-+
-+	input_regs(dev, regs);
-+
-+	switch (sermouse->count) {
-+
-+		case 0:
-+			if ((data & 0xf8) != 0x80) return;
-+			input_report_key(dev, BTN_LEFT,   !(data & 4)); 
-+			input_report_key(dev, BTN_RIGHT,  !(data & 1));
-+			input_report_key(dev, BTN_MIDDLE, !(data & 2));
-+			break;
-+
-+		case 1: 
-+		case 3: 
-+			input_report_rel(dev, REL_X, data / 2);
-+			input_report_rel(dev, REL_Y, -buf[1]);
-+			buf[0] = data - data / 2;
-+			break;
-+
-+		case 2: 
-+		case 4:
-+			input_report_rel(dev, REL_X, buf[0]);
-+			input_report_rel(dev, REL_Y, buf[1] - data);
-+			buf[1] = data / 2;
-+			break;
-+	}
-+
-+	input_sync(dev);
-+
-+	if (++sermouse->count == (5 - ((sermouse->type == SERIO_SUN) << 1)))
-+		sermouse->count = 0;
-+}
-+
-+/*
-+ * sermouse_process_ms() anlyzes the incoming MS(Z/+/++) bytestream and
-+ * generates events. With prediction it gets 80 updates/sec, assuming
-+ * standard 3-byte packets and 1200 bps.
-+ */
-+
-+static void sermouse_process_ms(struct sermouse *sermouse, signed char data, struct pt_regs *regs)
-+{
-+	struct input_dev *dev = &sermouse->dev;
-+	signed char *buf = sermouse->buf;
-+
-+	if (data & 0x40) sermouse->count = 0;
-+
-+	input_regs(dev, regs);
-+
-+	switch (sermouse->count) {
-+
-+		case 0:
-+			buf[1] = data;
-+			input_report_key(dev, BTN_LEFT,   (data >> 5) & 1);
-+			input_report_key(dev, BTN_RIGHT,  (data >> 4) & 1);
-+			break;
-+
-+		case 1:
-+			buf[2] = data;
-+			data = (signed char) (((buf[1] << 6) & 0xc0) | (data & 0x3f));
-+			input_report_rel(dev, REL_X, data / 2);
-+			input_report_rel(dev, REL_Y, buf[4]);
-+			buf[3] = data - data / 2;
-+			break;
-+
-+		case 2:
-+			/* Guessing the state of the middle button on 3-button MS-protocol mice - ugly. */
-+			if ((sermouse->type == SERIO_MS) && !data && !buf[2] && !((buf[0] & 0xf0) ^ buf[1]))
-+				input_report_key(dev, BTN_MIDDLE, !test_bit(BTN_MIDDLE, dev->key));
-+			buf[0] = buf[1];
-+
-+			data = (signed char) (((buf[1] << 4) & 0xc0) | (data & 0x3f));
-+			input_report_rel(dev, REL_X, buf[3]);
-+			input_report_rel(dev, REL_Y, data - buf[4]);
-+			buf[4] = data / 2;
-+			break;
-+
-+		case 3:
-+
-+			switch (sermouse->type) {
-+			
-+				case SERIO_MS:
-+					 sermouse->type = SERIO_MP;
-+
-+				case SERIO_MP:
-+					if ((data >> 2) & 3) break;	/* M++ Wireless Extension packet. */
-+					input_report_key(dev, BTN_MIDDLE, (data >> 5) & 1);
-+					input_report_key(dev, BTN_SIDE,   (data >> 4) & 1);
-+					break;
-+
-+				case SERIO_MZP:
-+				case SERIO_MZPP:
-+					input_report_key(dev, BTN_SIDE,   (data >> 5) & 1);
-+
-+				case SERIO_MZ:
-+					input_report_key(dev, BTN_MIDDLE, (data >> 4) & 1);
-+					input_report_rel(dev, REL_WHEEL,  (data & 8) - (data & 7));
-+					break;
-+			}
-+					
-+			break;
-+
-+		case 4:
-+		case 6:	/* MZ++ packet type. We can get these bytes for M++ too but we ignore them later. */
-+			buf[1] = (data >> 2) & 0x0f;
-+			break;
-+
-+		case 5:
-+		case 7: /* Ignore anything besides MZ++ */
-+			if (sermouse->type != SERIO_MZPP) break;
-+
-+			switch (buf[1]) {
-+
-+				case 1: /* Extra mouse info */
-+
-+					input_report_key(dev, BTN_SIDE, (data >> 4) & 1);
-+					input_report_key(dev, BTN_EXTRA, (data >> 5) & 1);
-+					input_report_rel(dev, data & 0x80 ? REL_HWHEEL : REL_WHEEL, (data & 7) - (data & 8));
-+
-+					break;
-+
-+				default: /* We don't decode anything else yet. */
-+
-+					printk(KERN_WARNING
-+						"sermouse.c: Received MZ++ packet %x, don't know how to handle.\n", buf[1]);
-+					break;
-+			}
-+
-+			break;
-+	}
-+
-+	input_sync(dev);
-+
-+	sermouse->count++;
-+}
-+
-+/*
-+ * sermouse_interrupt() handles incoming characters, either gathering them into
++ * comouse_interrupt() handles incoming characters, either gathering them into
 + * packets or passing them to the command routine as command output.
 + */
 +
-+static irqreturn_t sermouse_interrupt(struct serio *serio,
-+		unsigned char data, unsigned int flags, struct pt_regs *regs)
++static irqreturn_t comouse_interrupt(struct serio *serio,
++				     unsigned char data, unsigned int flags, struct pt_regs *regs)
 +{
-+	struct sermouse *sermouse = serio->private;
-+
-+	if (time_after(jiffies, sermouse->last + HZ/10)) sermouse->count = 0;
-+	sermouse->last = jiffies;
-+
-+	if (sermouse->type > SERIO_SUN)
-+		sermouse_process_ms(sermouse, data, regs);
-+	else
-+		sermouse_process_msc(sermouse, data, regs);
 +	return IRQ_HANDLED;
 +}
 +
 +/*
-+ * sermouse_disconnect() cleans up after we don't want talk
++ * comouse_disconnect() cleans up after we don't want talk
 + * to the mouse anymore.
 + */
 +
-+static void sermouse_disconnect(struct serio *serio)
++static void comouse_disconnect(struct serio *serio)
 +{
-+	struct sermouse *sermouse = serio->private;
-+	input_unregister_device(&sermouse->dev);
-+	serio_close(serio);
-+	kfree(sermouse);
 +}
 +
 +/*
-+ * sermouse_connect() is a callback form the serio module when
++ * comouse_connect() is a callback form the serio module when
 + * an unhandled serio port is found.
 + */
 +
-+static void sermouse_connect(struct serio *serio, struct serio_dev *dev)
++static void comouse_connect(struct serio *serio, struct serio_dev *dev)
 +{
-+	struct sermouse *sermouse;
-+	unsigned char c;
-+	
-+	if ((serio->type & SERIO_TYPE) != SERIO_RS232)
-+		return;
-+
-+	if (!(serio->type & SERIO_PROTO) || ((serio->type & SERIO_PROTO) > SERIO_MZPP))
-+		return;
-+
-+	if (!(sermouse = kmalloc(sizeof(struct sermouse), GFP_KERNEL)))
-+		return;
-+
-+	memset(sermouse, 0, sizeof(struct sermouse));
-+
-+	init_input_dev(&sermouse->dev);
-+	sermouse->dev.evbit[0] = BIT(EV_KEY) | BIT(EV_REL);
-+	sermouse->dev.keybit[LONG(BTN_MOUSE)] = BIT(BTN_LEFT) | BIT(BTN_RIGHT);
-+	sermouse->dev.relbit[0] = BIT(REL_X) | BIT(REL_Y);
-+	sermouse->dev.private = sermouse;
-+
-+	serio->private = sermouse;
-+
-+	sermouse->type = serio->type & SERIO_PROTO;
-+	c = (serio->type & SERIO_EXTRA) >> 16;
-+
-+	if (c & 0x01) set_bit(BTN_MIDDLE, sermouse->dev.keybit);
-+	if (c & 0x02) set_bit(BTN_SIDE, sermouse->dev.keybit);
-+	if (c & 0x04) set_bit(BTN_EXTRA, sermouse->dev.keybit);
-+	if (c & 0x10) set_bit(REL_WHEEL, sermouse->dev.relbit);
-+	if (c & 0x20) set_bit(REL_HWHEEL, sermouse->dev.relbit);
-+
-+	sprintf(sermouse->phys, "%s/input0", serio->phys);
-+
-+	sermouse->dev.name = sermouse_protocols[sermouse->type];
-+	sermouse->dev.phys = sermouse->phys;
-+	sermouse->dev.id.bustype = BUS_RS232;
-+	sermouse->dev.id.vendor = sermouse->type;
-+	sermouse->dev.id.product = c;
-+	sermouse->dev.id.version = 0x0100;
-+
-+	if (serio_open(serio, dev)) {
-+		kfree(sermouse);
-+		return;
-+	}
-+
-+	input_register_device(&sermouse->dev);
-+	
-+	printk(KERN_INFO "input: %s on %s\n", sermouse_protocols[sermouse->type], serio->phys);
 +}
 +
-+static struct serio_dev sermouse_dev = {
-+	.interrupt =	sermouse_interrupt,
-+	.connect =	sermouse_connect,
-+	.disconnect =	sermouse_disconnect
++static struct serio_dev comouse_dev = {
++	.interrupt =	comouse_interrupt,
++	.connect =	comouse_connect,
++	.disconnect =	comouse_disconnect
 +};
 +
-+int __init sermouse_init(void)
++int __init comouse_init(void)
 +{
-+/*	serio_register_device(&sermouse_dev); */
++	serio_register_device(&comouse_dev); 
 +	return 0;
 +}
 +
-+void __exit sermouse_exit(void)
++void __exit comouse_exit(void)
 +{
-+/*	serio_unregister_device(&sermouse_dev); */
++	serio_unregister_device(&comouse_dev); 
 +}
 +
-+module_init(sermouse_init);
-+module_exit(sermouse_exit);
++module_init(comouse_init);
++module_exit(comouse_exit);
 --- drivers/input/serio/cokbd.c
 +++ drivers/input/serio/cokbd.c
 @@ -0,0 +1,154 @@
@@ -2194,7 +1945,7 @@
 +#endif
 --- include/linux/cooperative.h
 +++ include/linux/cooperative.h
-@@ -0,0 +1,327 @@
+@@ -0,0 +1,328 @@
 +#ifndef __LINUX_COOPERATIVE_H__
 +#define __LINUX_COOPERATIVE_H__
 +
@@ -2437,6 +2188,7 @@
 +extern void co_switch_wrapper(void);
 +extern void co_idle_processor(void);
 +extern void co_terminate(co_termination_reason_t reason);
++extern void co_start_kernel(void);
 +
 +extern void co_send_message(co_module_t from, 
 +			    co_module_t to,
@@ -2524,7 +2276,7 @@
 +#endif
 --- kernel/cooperative.c
 +++ kernel/cooperative.c
-@@ -0,0 +1,348 @@
+@@ -0,0 +1,346 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2552,11 +2304,11 @@
 +unsigned long co_initrd_size = 0;
 +char co_boot_parameters[CO_BOOTPARAM_STRING_LENGTH];
 +
-+void colinux_start_c()
++void co_start_kernel(void)
 +{
 +        co_core_end = co_passage_page->params[0];
 +        co_memory_size = co_passage_page->params[1];
-+        co_initrd = co_passage_page->params[2];
++        co_initrd = (void *)co_passage_page->params[2];
 +        co_initrd_size = co_passage_page->params[3];
 +
 +        memcpy(co_boot_parameters, &co_passage_page->params[10], 
@@ -2836,8 +2588,6 @@
 +	return 0;
 +}
 +
-+__initcall(initcall_message_queues);
-+
 +int co_get_message(co_linux_message_t **message, co_device_t device)
 +{
 +	co_linux_message_queue_t *queue;
@@ -2870,7 +2620,7 @@
 +	.api_version = CO_LINUX_API_VERSION,
 +};
 +
-+EXPORT_SYMBOL(co_info);
++__initcall(initcall_message_queues);
 +
 +CO_TRACE_CONTINUE;
 --- CREDITS
@@ -3399,17 +3149,7 @@
  
  	for (;;) {
  		/*
-@@ -812,15 +821,23 @@
- {
- 	unsigned long bootmap_size, start_pfn, max_low_pfn;
- 
-+#ifdef CONFIG_COOPERATIVE
-+	unsigned long bootmem_size;
-+	unsigned long bootmem_start;
-+#endif
- 	/*
- 	 * partially used pages are not usable - thus
- 	 * we are rounding upwards:
+@@ -818,9 +827,13 @@
  	 */
  	start_pfn = PFN_UP(init_pg_tables_end);
  
@@ -3423,7 +3163,7 @@
  
  #ifdef CONFIG_HIGHMEM
  	highstart_pfn = highend_pfn = max_pfn;
-@@ -837,8 +845,17 @@
+@@ -837,8 +841,17 @@
  	 */
  	bootmap_size = init_bootmem(start_pfn, max_low_pfn);
  
@@ -3460,13 +3200,13 @@
  	}
 +#else
 +	if (co_initrd != NULL) {
-+		printk(KERN_INFO "initrd enabled: start: 0x%08lx  size: 0x%08lx)\n",
++		printk(KERN_INFO "initrd enabled: start: 0x%x  size: 0x%08lx)\n",
 +		       co_initrd, co_initrd_size);
 +               
-+		initrd_start = co_initrd;
-+		initrd_end = co_initrd + co_initrd_size;
++		initrd_start = (unsigned long)co_initrd;
++		initrd_end = (unsigned long)co_initrd + co_initrd_size;
 +		
-+		reserve_bootmem(virt_to_phys(initrd_start), co_initrd_size);
++		reserve_bootmem(virt_to_phys(co_initrd), co_initrd_size);
 +	}
  #endif
 +#endif
@@ -3641,35 +3381,12 @@
  	*(.text)
 --- arch/i386/mm/fault.c
 +++ arch/i386/mm/fault.c
-@@ -222,6 +222,19 @@
- 	/* get the address */
- 	__asm__("movl %%cr2,%0":"=r" (address));
- 
-+#ifdef CONFIG_COOPERATIVE_XXX
-+	{
-+		printk("fault: %x %x [eax %x] [esp %x] (%d) [%d]\n", address, regs->eip, regs->orig_eax, regs->esp, error_code, current->pid);
-+		if (0xfe7fe018 == address) {
-+			static i = 0;
-+			i++;
-+			if (i == 1) {
-+				show_regs(regs);
-+			}
-+		}
-+	}
-+#endif
-+
- 	/* It's safe to allow irq's after cr2 has been saved */
- 	if (regs->eflags & (X86_EFLAGS_IF|VM_MASK))
- 		local_irq_enable();
-@@ -486,7 +499,11 @@
+@@ -486,7 +486,7 @@
  		pte_t *pte_k;
  
  		asm("movl %%cr3,%0":"=r" (pgd));
-+#ifndef CONFIG_COOPERATIVE		
- 		pgd = index + (pgd_t *)__va(pgd);
-+#else
-+		pgd = index + (pgd_t *)CO_VA(((unsigned long)pgd));
-+#endif
+-		pgd = index + (pgd_t *)__va(pgd);
++		pgd = index + (pgd_t *)__va(CO_P_TO_PP((unsigned long)pgd));
  		pgd_k = init_mm.pgd + index;
  
  		if (!pgd_present(*pgd_k))
@@ -3688,7 +3405,7 @@
  	if (pmd_none(*pmd)) {
  		pte_t *page_table = (pte_t *) alloc_bootmem_low_pages(PAGE_SIZE);
 -		set_pmd(pmd, __pmd(__pa(page_table) | _PAGE_TABLE));
-+		set_pmd(pmd, __pmd(CO_PPA_TO_PA(__pa(page_table)) | _PAGE_TABLE));
++		set_pmd(pmd, __pmd(CO_PP_TO_P(__pa(page_table)) | _PAGE_TABLE));
  		if (page_table != pte_offset_kernel(pmd, 0))
  			BUG();	
  
@@ -3771,17 +3488,6 @@
  	unsigned long last_addr;
  	void *p = __ioremap(phys_addr, size, _PAGE_PCD);
  	if (!p) 
---- arch/i386/mm/pgtable.c
-+++ arch/i386/mm/pgtable.c
-@@ -123,6 +123,8 @@
- {
- 	unsigned long address = __fix_to_virt(idx);
- 
-+	printk("fixmap: %x %x %x %x\n", address, idx, phys, flags);
-+
- 	if (idx >= __end_of_fixed_addresses) {
- 		BUG();
- 		return;
 --- drivers/block/Kconfig
 +++ drivers/block/Kconfig
 @@ -339,6 +339,15 @@
@@ -4213,27 +3919,27 @@
  #endif /* _ASM_MC146818RTC_H */
 --- include/asm-i386/mmzone.h
 +++ include/asm-i386/mmzone.h
-@@ -6,6 +6,7 @@
+@@ -6,7 +6,9 @@
  #ifndef _ASM_MMZONE_H_
  #define _ASM_MMZONE_H_
  
 +#include <linux/config.h>
  #include <asm/smp.h>
++#include <asm/cooperative.h>
  
  #ifdef CONFIG_DISCONTIGMEM
-@@ -116,7 +117,12 @@
+ 
+@@ -116,8 +118,9 @@
  	(unsigned long)(__page - __zone->zone_mem_map)			\
  		+ __zone->zone_start_pfn;				\
  })
-+
-+#ifndef CONFIG_COOPERATIVE
- #define pmd_page(pmd)		(pfn_to_page(pmd_val(pmd) >> PAGE_SHIFT))
-+#else
-+#define pmd_page(pmd)		(CO_VA_PAGE(pmd_val(pmd))
-+#endif
+-#define pmd_page(pmd)		(pfn_to_page(pmd_val(pmd) >> PAGE_SHIFT))
  
++#define pmd_page(pmd)		(pfn_to_page(CO_P_TO_PP(pmd_val(pmd)) >> PAGE_SHIFT))
++
  #ifdef CONFIG_X86_NUMAQ            /* we have contiguous memory on NUMA-Q */
  #define pfn_valid(pfn)          ((pfn) < num_physpages)
+ #else
 --- include/asm-i386/page.h
 +++ include/asm-i386/page.h
 @@ -1,6 +1,10 @@
@@ -4255,39 +3961,26 @@
  
  #ifdef CONFIG_X86_USE_3DNOW
  
-@@ -120,7 +121,32 @@
+@@ -120,6 +121,19 @@
  #define __PAGE_OFFSET		(0xC0000000UL)
  #endif
  
 +#ifdef CONFIG_COOPERATIVE
- 
-+#define CO_PPTM_OFFSET		(CO_VPTR_PSEUDO_RAM_PAGE_TABLES)
-+#define CO_RPPTM_OFFSET		(CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP)
-+
-+#define CO_PFN(vaddr)		((((unsigned long)vaddr) - __PAGE_OFFSET) >> PAGE_SHIFT)
-+#define CO_PA(pfn)		(((unsigned long *)CO_PPTM_OFFSET)[pfn])
-+#define CO_PFN_PA(vaddr)	CO_PA(CO_PFN(vaddr))
-+#define CO_PPTM_SIZE		(max_low_pfn * sizeof(pte_t))
++#define CO_PA(pfn)		(((unsigned long *)CO_VPTR_PSEUDO_RAM_PAGE_TABLES)[pfn])
++#define CO_VA_PFN(pa)		(((unsigned long *)CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP)[((pa) >> PAGE_SHIFT)])
 +#define CO_PFN_PP_TO_P(pfn)	(CO_PA(pfn) >> PAGE_SHIFT)
-+
-+#define CO_VA_PFN(pa)		(((unsigned long *)CO_RPPTM_OFFSET)[((pa) >> PAGE_SHIFT)])
-+#define CO_VA_PAGE(pa)		(mem_map + CO_VA_PFN(pa))
-+#define CO_VA(pa)		((CO_VA_PFN(pa) << PAGE_SHIFT) + __PAGE_OFFSET)
 +#define CO_PFN_P_TO_PP(pfn)	(CO_VA_PFN(pfn << PAGE_SHIFT))
-+
-+#define CO_PPA_TO_PA(pa)	(CO_PFN_PP_TO_P(pa >> PAGE_SHIFT) << PAGE_SHIFT)
-+#define CO_PA_TO_PPA(pa)	(CO_PFN_P_TO_PP(pa >> PAGE_SHIFT) << PAGE_SHIFT)
-+
++#define CO_PP_TO_P(pa)	        ((CO_PFN_PP_TO_P(pa >> PAGE_SHIFT) << PAGE_SHIFT) | (pa & ~PAGE_MASK))
++#define CO_P_TO_PP(pa)	        ((CO_PFN_P_TO_PP(pa >> PAGE_SHIFT) << PAGE_SHIFT) | (pa & ~PAGE_MASK))
 +#else
 +#define CO_PFN_P_TO_PP(pfn)	pfn
 +#define CO_PFN_PP_TO_P(pfn)	pfn
-+#define CO_PPA_TO_PA(pa)	pa
-+#define CO_PA_TO_PPA(pa)	pa
++#define CO_PP_TO_P(pa)        	pa
++#define CO_P_TO_PP(pa)	        pa
 +#endif
-+
+ 
  #define PAGE_OFFSET		((unsigned long)__PAGE_OFFSET)
  #define VMALLOC_RESERVE		((unsigned long)__VMALLOC_RESERVE)
- #define MAXMEM			(-__PAGE_OFFSET-__VMALLOC_RESERVE)
 --- include/asm-i386/param.h
 +++ include/asm-i386/param.h
 @@ -1,9 +1,13 @@
@@ -4306,114 +3999,81 @@
  
 --- include/asm-i386/pgalloc.h
 +++ include/asm-i386/pgalloc.h
-@@ -7,14 +7,25 @@
+@@ -6,15 +6,16 @@
+ #include <asm/fixmap.h>
  #include <linux/threads.h>
  #include <linux/mm.h>		/* for struct page */
++#include <asm/cooperative.h>
  
-+#ifndef CONFIG_COOPERATIVE
  #define pmd_populate_kernel(mm, pmd, pte) \
- 		set_pmd(pmd, __pmd(_PAGE_TABLE + __pa(pte)))
-+#else
-+#define pmd_populate_kernel(mm, pmd, pte) \
-+		set_pmd(pmd, __pmd(_PAGE_TABLE + (CO_PFN_PA(pte) & PAGE_MASK)))
-+#endif
+-		set_pmd(pmd, __pmd(_PAGE_TABLE + __pa(pte)))
++		set_pmd(pmd, __pmd(_PAGE_TABLE + CO_PP_TO_P(__pa(pte))))
  
  static inline void pmd_populate(struct mm_struct *mm, pmd_t *pmd, struct page *pte)
  {
-+#ifndef CONFIG_COOPERATIVE
  	set_pmd(pmd, __pmd(_PAGE_TABLE +
- 		((unsigned long long)page_to_pfn(pte) <<
- 			(unsigned long long) PAGE_SHIFT)));
-+#else
-+	set_pmd(pmd, __pmd(_PAGE_TABLE +
+-		((unsigned long long)page_to_pfn(pte) <<
+-			(unsigned long long) PAGE_SHIFT)));
 +			   ((CO_PFN_PP_TO_P((unsigned long long)page_to_pfn(pte))) <<
 +			    (unsigned long long) PAGE_SHIFT)));
-+#endif
  }
  /*
   * Allocate and free page tables.
 --- include/asm-i386/pgtable-2level.h
 +++ include/asm-i386/pgtable-2level.h
-@@ -1,6 +1,8 @@
+@@ -1,6 +1,9 @@
  #ifndef _I386_PGTABLE_2LEVEL_H
  #define _I386_PGTABLE_2LEVEL_H
  
 +#include <linux/config.h>
++#include <asm/cooperative.h>
 +
  /*
   * traditional i386 two-level paging structure:
   */
-@@ -48,8 +50,13 @@
- #define set_pmd(pmdptr, pmdval) (*(pmdptr) = pmdval)
+@@ -49,19 +52,21 @@
  #define set_pgd(pgdptr, pgdval) (*(pgdptr) = pgdval)
  
-+#ifndef CONFIG_COOPERATIVE
  #define pgd_page(pgd) \
- ((unsigned long) __va(pgd_val(pgd) & PAGE_MASK))
-+#else
-+#define pgd_page(pgd) \
-+(CO_VA_PAGE(pgd_val(pgd) & PAGE_MASK))
-+#endif
+-((unsigned long) __va(pgd_val(pgd) & PAGE_MASK))
++	((unsigned long) __va(CO_P_TO_PP(pgd_val(pgd)) & PAGE_MASK))
  
  static inline pmd_t * pmd_offset(pgd_t * dir, unsigned long address)
  {
-@@ -57,12 +62,21 @@
+ 	return (pmd_t *) dir;
  }
++
  #define ptep_get_and_clear(xp)	__pte(xchg(&(xp)->pte_low, 0))
  #define pte_same(a, b)		((a).pte_low == (b).pte_low)
 +
-+#ifndef CONFIG_COOPERATIVE
  #define pte_page(x)		pfn_to_page(pte_pfn(x))
--#define pte_none(x)		(!(x).pte_low)
- #define pte_pfn(x)		((unsigned long)(((x).pte_low >> PAGE_SHIFT)))
- #define pfn_pte(pfn, prot)	__pte(((pfn) << PAGE_SHIFT) | pgprot_val(prot))
- #define pfn_pmd(pfn, prot)	__pmd(((pfn) << PAGE_SHIFT) | pgprot_val(prot))
-+#else
-+#define pte_page(x)		CO_VA_PAGE((x).pte_low)
-+#define pte_pfn(x)		CO_VA_PFN((x).pte_low)
++#define pte_pfn(x)		CO_PFN_P_TO_PP((unsigned long)(((x).pte_low >> PAGE_SHIFT)))
 +#define pfn_pte(pfn, prot)	__pte((CO_PFN_PP_TO_P(pfn) << PAGE_SHIFT) | pgprot_val(prot))
 +#define pfn_pmd(pfn, prot)	__pmd((CO_PFN_PP_TO_P(pfn) << PAGE_SHIFT) | pgprot_val(prot))
-+#endif
+ #define pte_none(x)		(!(x).pte_low)
+-#define pte_pfn(x)		((unsigned long)(((x).pte_low >> PAGE_SHIFT)))
+-#define pfn_pte(pfn, prot)	__pte(((pfn) << PAGE_SHIFT) | pgprot_val(prot))
+-#define pfn_pmd(pfn, prot)	__pmd(((pfn) << PAGE_SHIFT) | pgprot_val(prot))
  
-+#define pte_none(x)		(!(x).pte_low)
-+
  /*
   * Bits 0, 6 and 7 are taken, split up the 29 bits of offset
-  * into this range:
 --- include/asm-i386/pgtable.h
 +++ include/asm-i386/pgtable.h
 @@ -25,6 +25,8 @@
  #include <linux/list.h>
  #include <linux/spinlock.h>
  
-+#include <linux/cooperative.h>
++#include <asm/cooperative.h>
 +
  /*
   * ZERO_PAGE is a global shared page that is always zero: used
   * for zero-mapped memory areas etc..
-@@ -237,7 +239,11 @@
-  * and a page entry and page directory to the page they refer to.
-  */
- 
-+#ifndef CONFIG_COOPERATIVE
- #define mk_pte(page, pgprot)	pfn_pte(page_to_pfn(page), (pgprot))
-+#else
-+#define mk_pte(page, pgprot)	__pte((CO_PA(page_to_pfn(page)) & PAGE_MASK) | pgprot_val(pgprot))
-+#endif
- #define mk_pte_huge(entry) ((entry).pte_low |= _PAGE_PRESENT | _PAGE_PSE)
- 
- static inline pte_t pte_modify(pte_t pte, pgprot_t newprot)
-@@ -249,11 +253,16 @@
- 
+@@ -250,10 +252,10 @@
  #define page_pte(page) page_pte_prot(page, __pgprot(0))
  
-+#ifndef CONFIG_COOPERATIVE
  #define pmd_page_kernel(pmd) \
- ((unsigned long) __va(pmd_val(pmd) & PAGE_MASK))
-+#else
-+#define pmd_page_kernel(pmd) \
-+CO_VA(pmd_val(pmd))
-+#endif
+-((unsigned long) __va(pmd_val(pmd) & PAGE_MASK))
++((unsigned long) __va(CO_P_TO_PP(pmd_val(pmd)) & PAGE_MASK))
  
  #ifndef CONFIG_DISCONTIGMEM
 -#define pmd_page(pmd) (pfn_to_page(pmd_val(pmd) >> PAGE_SHIFT))
@@ -4423,25 +4083,17 @@
  #define pmd_large(pmd) \
 --- include/asm-i386/processor.h
 +++ include/asm-i386/processor.h
-@@ -179,8 +179,18 @@
- 	return edx;
+@@ -180,9 +180,8 @@
  }
  
-+#ifndef CONFIG_COOPERATIVE
  #define load_cr3(pgdir) \
- 	asm volatile("movl %0,%%cr3": :"r" (__pa(pgdir)))
-+#else
-+/*
-+ * In coLinux Mode we can't load CR3 with the pseudo physical
-+ * address, Instead, we need to translate the pseudo physical address
-+ * to the real physical address.
-+ */
-+#define load_cr3(pgdir) \
-+	asm volatile("movl %0,%%cr3": :"r" (CO_PFN_PA(pgdir)))
-+#endif
+-	asm volatile("movl %0,%%cr3": :"r" (__pa(pgdir)))
++	asm volatile("movl %0,%%cr3": :"r" (CO_PP_TO_P(__pa(pgdir))))
  
- 
+-
  /*
+  * Intel CPU features in CR4
+  */
 --- include/linux/console.h
 +++ include/linux/console.h
 @@ -57,6 +57,7 @@

@@ -309,7 +309,7 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 		goto out;
 	}
 
-	rc = co_daemon_load_symbol(daemon, "colinux_start", &import->kernel_colinux_start);
+	rc = co_daemon_load_symbol(daemon, "co_start", &import->kernel_colinux_start);
 	if (!CO_OK(rc)) 
 		goto out;
 
