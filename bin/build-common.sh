@@ -83,5 +83,5 @@ download_file()
   	cd "$TOPDIR"
 }
 
-W32API=w32api-2.5
+W32API=w32api-3.1
 MINGW_URL=http://heanet.dl.sourceforge.net/sourceforge/mingw

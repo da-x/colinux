@@ -408,6 +408,9 @@ error_1:
 
 co_rc_t co_os_file_get_attr(char *filename, struct fuse_attr *attr)
 {
+	return file_get_attr_alt(filename, attr);
+#if (0)
+	/* ZwQueryFullAttributesFile is not exported on Windows 2000, buggers this */
 	FILE_NETWORK_OPEN_INFORMATION fi;
 	NTSTATUS status;
 	OBJECT_ATTRIBUTES attributes;
@@ -467,6 +470,7 @@ error:
 	}
 
 	return rc;
+#endif
 }
 
 static void remove_read_only_func(void *data, VOID *buffer, ULONG len)

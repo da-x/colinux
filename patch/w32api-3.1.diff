@@ -1,0 +1,68 @@
+diff -urN -x '*.o' -x '*.a' -x Makefile -x 'config.*' w32api-3.1/include/ddk/ntapi.h w32api-3.1-mod/include/ddk/ntapi.h
+--- w32api-3.1/include/ddk/ntapi.h	2004-09-05 18:16:15.000000000 +0300
++++ w32api-3.1-mod/include/ddk/ntapi.h	2004-10-23 19:53:30.000000000 +0200
+@@ -671,6 +671,20 @@
+   OUT PULONG  ReturnLength  OPTIONAL);
+ 
+ NTOSAPI
++NTAPI
++NTSTATUS
++NtQueryFullAttributesFile(
++    IN POBJECT_ATTRIBUTES ObjectAttributes,
++    OUT PFILE_NETWORK_OPEN_INFORMATION FileInformation);
++
++NTOSAPI
++NTAPI
++NTSTATUS
++ZwQueryFullAttributesFile(
++    IN POBJECT_ATTRIBUTES ObjectAttributes,
++    OUT PFILE_NETWORK_OPEN_INFORMATION FileInformation);
++
++NTOSAPI
+ NTSTATUS
+ NTAPI
+ ZwSetSystemInformation(
+diff -urN -x '*.o' -x '*.a' -x Makefile -x 'config.*' w32api-3.1/include/ddk/winddk.h w32api-3.1-mod/include/ddk/winddk.h
+--- w32api-3.1/include/ddk/winddk.h	2004-09-05 18:16:15.000000000 +0300
++++ w32api-3.1-mod/include/ddk/winddk.h	2004-10-23 19:53:30.000000000 +0200
+@@ -4395,6 +4395,15 @@
+   IN PCWSTR  Path,
+   IN PCWSTR  ValueName);
+ 
++NTOSAPI
++BOOL
++DDKAPI
++RtlDosPathNameToNtPathName_U(
++  IN PCWSTR  DosPathName,
++  OUT PUNICODE_STRING  NtPathName,
++  OUT PCWSTR  *NtFileNamePart,
++  OUT VOID  *DirectoryInfo);
++
+ /*
+  * BOOLEAN
+  * RtlEqualLuid( 
+diff -urN -x '*.o' -x '*.a' -x Makefile -x 'config.*' w32api-3.1/lib/ddk/ntoskrnl.def w32api-3.1-mod/lib/ddk/ntoskrnl.def
+--- w32api-3.1/lib/ddk/ntoskrnl.def	2004-09-05 18:16:16.000000000 +0300
++++ w32api-3.1-mod/lib/ddk/ntoskrnl.def	2004-10-23 19:58:27.000000000 +0200
+@@ -1316,10 +1316,10 @@
+ ;ZwQueryBootOptions
+ ZwQueryDefaultLocale@8
+ ZwQueryDefaultUILanguage@4
+-;ZwQueryDirectoryFile
++ZwQueryDirectoryFile@44
+ ZwQueryDirectoryObject@28
+ ;ZwQueryEaFile
+-;ZwQueryFullAttributesFile
++ZwQueryFullAttributesFile@8
+ ZwQueryInformationFile@20
+ ZwQueryInformationJobObject@20
+ ZwQueryInformationProcess@20
+@@ -1333,7 +1333,7 @@
+ ZwQuerySymbolicLinkObject@12
+ ZwQuerySystemInformation@16
+ ZwQueryValueKey@24
+-;ZwQueryVolumeInformationFile
++ZwQueryVolumeInformationFile@20
+ ZwReadFile@36
+ ZwReplaceKey@12
+ ZwRequestWaitReplyPort@12

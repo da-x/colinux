@@ -161,7 +161,7 @@ function build_w32api()
   cd $CO_BUILD
   tar xfz $CO_ROOT/w32api-*src.tar.gz
   cd w32api*
-  patch -p1 < $CO_ROOT/w32api-2.5.diff >> $CO_LOG 2>&1  
+  patch -p1 < $CO_ROOT/w32api-3.1.diff >> $CO_LOG 2>&1  
   ./configure --prefix=$CO_PREFIX/$CO_TARGET --host=$CO_TARGET >> $CO_LOG 2>&1  
   make >> $CO_LOG 2>&1  
   make install >> $CO_LOG 2>&1  

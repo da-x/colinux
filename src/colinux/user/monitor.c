@@ -61,7 +61,7 @@ co_rc_t co_user_monitor_open(co_id_t id, co_user_monitor_t **out_mon)
 
 	mon = co_os_malloc(sizeof(*mon));
 	if (!mon)
-		return CO_RC(ERROR);
+		return CO_RC(OUT_OF_MEMORY);
 
 	handle = co_os_manager_open();
 	if (!handle) {
