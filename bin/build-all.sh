@@ -11,4 +11,5 @@
 
 ./build-cross.sh &&
 ./build-colinux-libs.sh &&
+./build-kernel.sh &&
 ./build-colinux.sh

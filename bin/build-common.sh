@@ -8,24 +8,33 @@
 #
 # Updated by Sam Lantinga <slouken@libsdl.org>
 
+# Users directories
+source ./user-build.cfg
+
 # what flavor are we building?
 TARGET=i686-pc-mingw32
 
+# you probably don't need to change anything from here down
+TOPDIR=`pwd`
+SRCDIR="$SOURCE_DIR"
+
 # where does it go?
 if [ "$PREFIX" = "" ] ; then
-    echo "Please specify the $""PREFIX directory (e.g, /usr/local/mingw32)"
+    echo "Please specify the $""PREFIX directory in user-build.cfg (e.g, /usr/local/mingw32)"
     exit -1
 fi
 
 # where does it go?
 if [ "$SOURCE_DIR" = "" ] ; then
-    echo "Please specify the $""SOURCE_DIR directory (e.g, /tmp/$USER/download)"
+    echo "Please specify the $""SOURCE_DIR directory in user-build.cfg (e.g, /tmp/$USER/download)"
     exit -1
 fi
 
-# you probably don't need to change anything from here down
-TOPDIR=`pwd`
-SRCDIR="$SOURCE_DIR"
+# coLinux enabled kernel source? use default, if empty
+if [ "$COLINUX_TARGET_KERNEL_PATH" = "" ] ; then
+    echo "Please specify the $""COLINUX_TARGET_KERNEL_PATH in user-build.cfg (e.g, /tmp/$USER/linux-co)"
+    exit -1
+fi
 
 # These are the files from the SDL website
 # need install directory first on the path so gcc can find binutils

@@ -72,9 +72,120 @@ The coLinux daemon depends on:
 The coLinux console depends on:
   * FLTK (major version 1)
 
+
 3.2. For Microsoft Windows as host
 
 [TBD...]
+
+3.2.1 Complete download and building for Win32 under Linux (mingw32)
+
+To compile source for windows targed, the compiler must self compiled
+for this target. You can not download a binary of this compiler!
+
+Creat a new directory, extract colinux source in this directory, make scripts
+executable and ran the download-script in "bin" directory.
+
+    mkdir /home/$USER/colinux-build
+    cd /home/$USER/colinux-build
+    tar xfz colinux-20040807.tar.gz
+    cd colinux-20040807/bin
+    chmod +x *.sh
+    ./download-all.sh
+    
+Files will be download into directory /home/$USER/colinux-build/download.
+
+    cd /home/$USER/colinux-build/colinux-20040807/bin
+    ./build-all.sh
+
+This is a completly build process for binutils, cross compiler, libraries,
+kernel and colinux daemons. (Half hour on 1.8MHz Pentium)
+
+Compiled executables for windows haost stored in directory mingw32/dist now.
+
+
+3.2.2 Configuration script compiling
+
+Edit bin/user-build.cfg and set some directories.
+It's unsave to use a relative path in this build script. Mostly the TOPDIR is
+the bin directory, but not in all cases!
+
+download-all.sh			Download all missing files
+build-all.sh			Extract (OVERWRITE!) and compile all files
+    build-cross.sh		Extract and compile the cross compiler
+    build-colinux-libs.sh	Extract and compile all libs
+    build-kernel.sh		Extract, patch and compile the kernel
+    build-colinux.sh		Recompile only the colinux daemons
+
+! Any starts of compile script will delete all source and extract it again!
+! If you have changed some sources, do not use these scripts!
+! Call "make" into directory manualy!
+
+After Download a new version of colinux daemons you should only extract source
+at same top level directory and run the last scripts build-kernel.sh and
+build-colinux.sh. In some cases you must also compile the libs. The cross compiler
+mostly you never need compile again.
+
+
+3.2.3 Source tree sample for a mingw build process
+
+Source tree before building the cross compiler:
+/colinux-build
+    +-- colinux-20040807/
+    |	+-- bin/
+    |	|   +-- download-all.sh	(Download all files only)
+    |	|   +-- build-all.sh	(Compile for Win32, download missing files)
+    |	|   ...
+    |	+-- src/
+    |	... ...
+    +-- download/
+        +-- binutils-2.15.90-20040222-1-src.tar.gz
+        +-- colinux-20040710.tar.gz
+        +-- fltk-1.1.4-source.tar.bz2
+        +-- gcc-core-3.3.1-20030804-1-src.tar.gz
+        +-- gcc-g++-3.3.1-20030804-1-src.tar.gz
+        +-- linux-2.6.7.tar.bz2
+        +-- mingw-runtime-3.3.tar.gz	(3.2 also runs)
+        +-- mxml-1.3.tar.gz
+        +-- w32api-2.5-src.tar.gz
+        +-- w32api-2.5.tar.gz
+        +-- wpdpack_3_0.zip
+
+
+Source tree after building cross compiler and colinux binaries:
+/colinux-build
+    +-- colinux-20040807/
+    |   ...
+    +-- download/		(cross working dirs)
+    |   +-- binutils-2.15.90-20040222-1/
+    |   +-- fltk-1.1.4/
+    |   +-- gcc-3.3.1-20030804-1/
+    |   +-- linux-2.6.7/
+    |   +-- mxml-1.3/
+    |   +-- w32api-2.5/
+    |   +-- wpdpack/
+    |   ... Source files ...
+    +-- linux/	(link to linux-2.6.7)
+    +-- mingw32/
+	+-- bin/
+	|   ... Cross compiler binaries (e.g. i686-pc-mingw32-gcc) ...
+	+-- dist/		(Binaries for target)
+        |   +-- colinux-console-fltk.exe
+        |   +-- colinux-console-nt.exe
+        |   +-- colinux-daemon.exe
+        |   +-- colinux-net-daemon.exe
+        |   +-- linux.sys
+        |   +-- vmlinux
+	+-- i686-pc-mingw32/
+	|   +-- bin/
+	|   |   ... Cross compiler binaries (e.g. gcc) ...
+	|   +-- bin/
+	|   |   ... Cross compiler static libraries (e.g. libfltk.a) ...
+	+-- include/
+	+-- info/
+	+-- lib/
+	+-- man/
+	+-- share/
+
 
 3.3. For Linux as host
 

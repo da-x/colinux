@@ -13,7 +13,7 @@ GCC_ARCHIVE2=gcc-g++-3.3.1-20030804-1-src.tar.gz
 GCC_PATCH=""
 BINUTILS=binutils-2.15.90-20040222-1
 BINUTILS_ARCHIVE=$BINUTILS-src.tar.gz
-MINGW=mingw-runtime-3.2
+MINGW=mingw-runtime-3.3
 MINGW_ARCHIVE=$MINGW.tar.gz
 W32API_ARCHIVE=$W32API.tar.gz
 
@@ -180,6 +180,8 @@ final_tweaks()
 build_cross()
 {
         download_files
+	# Only Download? Than ready.
+	test "$1" = "--download-only" && exit 0
         install_libs
 
         extract_binutils
@@ -196,4 +198,4 @@ build_cross()
         final_tweaks
 }
 
-build_cross
+build_cross $1

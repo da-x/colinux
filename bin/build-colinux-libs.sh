@@ -241,10 +241,12 @@ build_winpcap_src()
 build_colinux_libs()
 {
         download_files
+	# Only Download? Than ready.
+	test "$1" = "--download-only" && exit 0
 	build_fltk
 	build_mxml
 	build_w32api_src
 	build_winpcap_src
 }
 
-build_colinux_libs
+build_colinux_libs $1
