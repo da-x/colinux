@@ -63,7 +63,9 @@ co_rc_t co_winnt_daemon_main(char *argv[])
 		co_winnt_daemon_syntax();
 		return 0;
 	}
-
+		
+	co_winnt_affinity_workaround();
+	
 	rc = co_daemon_create(&start_parameters, &g_daemon);
 	if (!CO_OK(rc))
 		goto out;
@@ -71,8 +73,6 @@ co_rc_t co_winnt_daemon_main(char *argv[])
 	rc = co_daemon_start_monitor(g_daemon);
 	if (!CO_OK(rc))
 		goto out_destroy;
-
-	co_winnt_affinity_workaround();
 
 	rc = co_daemon_run(g_daemon);
 

@@ -17,19 +17,13 @@
  */
 void co_winnt_affinity_workaround(void)
 {
+	char *env = getenv("COLINUX_NO_SMP_WORKAROUND");
+
+	if (env != NULL) {
+		if (strcmp(env, "Y") == 0)
+			return;
+	}
+
 	SetProcessAffinityMask(GetCurrentProcess(), 1);
 }
 
-bool_t co_winnt_is_winxp_or_better(void)
-{
-	bool_t bRetVal = PFALSE;
-	OSVERSIONINFO info = { sizeof(OSVERSIONINFO) };
-	if (GetVersionEx(&info)) {
-		if (info.dwMajorVersion > 5)
-			bRetVal = PTRUE;
-		else if (info.dwMajorVersion == 5 && info.dwMinorVersion > 0)
-			bRetVal = PTRUE;
-	}
-
-	return bRetVal;
-}

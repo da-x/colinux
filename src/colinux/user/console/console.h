@@ -85,6 +85,7 @@ public:
 protected:
 	co_console_state_t state;
 	co_id_t attached_id;
+	bool_t resized_on_attach;
 	console_widget_t *widget;
 	console_main_window_t *window;
 	co_console_start_parameters_t start_parameters;
@@ -97,6 +98,7 @@ protected:
 	Fl_Menu_Item *find_menu_item_by_callback(Fl_Callback *cb);
 	void menu_item_activate(Fl_Callback *cb);
 	void menu_item_deactivate(Fl_Callback *cb);
+	void global_resize_constraint();
 };
 
 extern void console_idle(void *data);

@@ -205,11 +205,22 @@ co_rc_t get_device_guid(
 			        return CO_RC(ERROR);
 			}
 			else {
-				if (is_tap_win32_dev (enum_name)) {
+				if (is_tap_win32_dev(enum_name)) {
+					co_debug("conet-daemon: scanned device \"%s\"\n", name_data);
+
 					snprintf(name, name_size, "%s", enum_name);
-					if (actual_name)
-						snprintf(actual_name, actual_name_size, 
-							 "%s", name_data);
+					if (actual_name) {
+						if (strcmp(actual_name, "") != 0) {
+							if (strcmp(name_data, actual_name) != 0) {
+								RegCloseKey (connection_key);
+								++i;
+								continue;
+							}
+						}
+						else {
+							snprintf(actual_name, actual_name_size, "%s", name_data);
+						}
+					}
 					stop = 1;
 				}
 			}
@@ -227,47 +238,22 @@ co_rc_t get_device_guid(
 	return CO_RC(OK); 
 }
 
-#if (0)
-
-co_rc_t coui_set_network_device_name(struct co_handle *kernel_device)
-{
-	char device_path[256];
-	char device_guid[0x100];
-	co_rc_t rc;
-	cokc_sysdep_ioctl_t ioctl;
-
-	rc = get_device_guid(device_guid, sizeof(device_guid), NULL, 0);
-	if (!CO_OK(rc))
-		return rc;
-
-	snprintf(device_path, sizeof(device_path), "%s%s%s",
-		 USERMODEDEVICEDIR,
-		 device_guid,
-		 TAPSUFFIX);
-
-	ioctl.op = COKC_SYSDEP_SET_NETDEV;
-
-	snprintf(&ioctl.set_netdev.pathname, 
-		 sizeof(ioctl.set_netdev.pathname),
-		 "%s", device_path);
-
-	coui_sysdep(kernel_device, &ioctl, sizeof(ioctl));
-	
-	return rc;
-}
-
-#endif
-
-co_rc_t open_tap_win32(HANDLE *phandle)
+co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 {
 	char device_path[256];
 	char device_guid[0x100];
 	co_rc_t rc;
 	HANDLE handle;
+	char name_buffer[0x100] = {0, };
 
-	rc = get_device_guid(device_guid, sizeof(device_guid), NULL, 0);
+	if (prefered_name != NULL)
+		co_snprintf(name_buffer, sizeof(name_buffer), "%s", prefered_name);
+
+	rc = get_device_guid(device_guid, sizeof(device_guid), name_buffer, sizeof(name_buffer));
 	if (!CO_OK(rc))
 		return rc;
+
+	co_debug("conet-daemon: opening TAP: \"%s\"\n", name_buffer);
 
 	/*
 	 * Open Windows TAP-Win32 adapter

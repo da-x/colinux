@@ -2,6 +2,7 @@
  * This source code is a part of coLinux source package.
  *
  * Dan Aloni <da-x@colinux.org>, 2003 (c)
+ * Alejandro R. Sedeno <asedeno@mit.edu>, 2004 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -16,13 +17,10 @@
 #include "tap-win32.h"
 #include "../daemon.h"
 
-/*
- * IMPORTANT NOTE:
- *
- * This is work-in-progress. This daemon is currently hardcoded
- * to work against coLinux0 as conet0. Expect changes.
- *
+/*******************************************************************************
+ * Type Declarations
  */
+
 typedef struct co_win32_overlapped {
 	HANDLE handle;
 	HANDLE read_event;
@@ -32,6 +30,14 @@ typedef struct co_win32_overlapped {
 	char buffer[0x10000];
 	unsigned long size;
 } co_win32_overlapped_t;
+
+typedef struct start_parameters {
+	bool_t show_help;
+	int index;
+	co_id_t instance;
+	bool_t name_specified;
+	char interface_name[0x100];
+} start_parameters_t;
 
 co_win32_overlapped_t tap_overlapped, daemon_overlapped;
 
@@ -203,6 +209,113 @@ int wait_loop(HANDLE daemon_handle, HANDLE tap_handle)
 	return 0;
 }
 
+/********************************************************************************
+ * parameters
+ */
+
+void co_net_syntax()
+{
+	printf("Cooperative Linux Virtual Network Daemon\n");
+	printf("Dan Aloni, 2004 (c)\n");
+	printf("\n");
+	printf("syntax: \n");
+	printf("\n");
+	printf("  colinux-net-daemon -c 0 -i index [-h] [-n 'adapter name']\n");
+	printf("\n");
+	printf("    -h                      Show this help text\n");
+	printf("    -n 'adapter name'       The name of the network adapter to attach to\n");
+	printf("                            Without this option, the daemon tries to\n");
+	printf("                            guess which interface to use\n");
+	printf("    -i index                Network device index number (0 for eth0, 1 for\n");
+	printf("                            eth1, etc.)\n");
+	printf("    -c instance             coLinux instance ID to connect to\n");
+}
+
+static co_rc_t 
+handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
+{
+	char **param_scan = argv;
+	const char *option;
+
+	/* Default settings */
+	start_parameters->index = -1;
+	start_parameters->instance = -1;
+	start_parameters->show_help = PFALSE;
+	start_parameters->name_specified = PFALSE;
+
+	/* Parse command line */
+	while (*param_scan) {
+		option = "-i";
+		if (strcmp(*param_scan, option) == 0) {
+			param_scan++;
+			if (!(*param_scan)) {
+				printf("Parameter of command line option %s not specified\n", option);
+				return CO_RC(ERROR);
+			}
+
+			sscanf(*param_scan, "%d", &start_parameters->index);
+			param_scan++;
+			continue;
+		}
+
+		option = "-c";
+		if (strcmp(*param_scan, option) == 0) {
+			param_scan++;
+			if (!(*param_scan)) {
+				printf("Parameter of command line option %s not specified\n", option);
+				return CO_RC(ERROR);
+			}
+
+			sscanf(*param_scan, "%d", &start_parameters->instance);
+			param_scan++;
+			continue;
+		}
+
+		option = "-n";
+		if (strcmp(*param_scan, option) == 0) {
+			param_scan++;
+			if (!(*param_scan)) {
+				printf("Parameter of command line option %s not specified\n", option);
+				return CO_RC(ERROR);
+			}
+
+			co_snprintf(start_parameters->interface_name, 
+				    sizeof(start_parameters->interface_name), 
+				    "%s", *param_scan);
+
+			start_parameters->name_specified = PTRUE;
+			param_scan++;
+			continue;
+		}
+
+		option = "-h";
+		if (strcmp(*param_scan, option) == 0) {
+			start_parameters->show_help = PTRUE;
+		}
+
+		param_scan++;
+	}
+
+	if (start_parameters->index == -1) {
+		printf("Device index not specified\n");
+		return CO_RC(ERROR);
+	}
+
+	if ((start_parameters->index < 0) ||
+	    (start_parameters->index >= CO_MODULE_MAX_CONET)) 
+	{
+		printf("Invalid index: %d\n", start_parameters->index);
+		return CO_RC(ERROR);
+	}
+
+	if (start_parameters->instance == -1) {
+		printf("coLinux instance not specificed\n");
+		return CO_RC(ERROR);
+	}
+
+	return CO_RC(OK);	
+}
+
 int main(int argc, char *argv[])
 {	
 	co_rc_t rc;
@@ -211,8 +324,21 @@ int main(int argc, char *argv[])
 	HANDLE tap_handle;
 	int exit_code = 0;
 	co_daemon_handle_t daemon_handle_;
+	start_parameters_t start_parameters;
+	char *prefered_name = NULL;
 
-	rc = open_tap_win32(&tap_handle);
+	rc = handle_paramters(&start_parameters, argc, argv);
+	if (!CO_OK(rc)) 
+		return -1;
+
+	prefered_name = start_parameters.name_specified ? start_parameters.interface_name : NULL;
+	if (prefered_name == NULL) {
+		co_debug("conet-daemon: auto selecting TAP\n");
+ 	} else {
+		co_debug("conet-daemon: searching TAP \"%s\"\n", prefered_name);
+	}
+
+	rc = open_tap_win32(&tap_handle, prefered_name);
 	if (!CO_OK(rc)) {
 		co_debug("Error opening TAP Win32\n");
 		exit_code = -1;
@@ -229,7 +355,8 @@ int main(int argc, char *argv[])
 
 	}
 
-	rc = co_os_open_daemon_pipe(0, CO_MODULE_CONET0, &daemon_handle_);
+	rc = co_os_open_daemon_pipe(start_parameters.instance, 
+				    CO_MODULE_CONET0 + start_parameters.index, &daemon_handle_);
 	if (!CO_OK(rc)) {
 		co_debug("Error opening a pipe to the daemon\n");
 		goto out_close;

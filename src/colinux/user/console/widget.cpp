@@ -28,12 +28,14 @@ static int default_blu[] = {0x00,0x00,0x00,0x00,0xaa,0xaa,0xaa,0xaa,
 console_widget_t::console_widget_t(int x, int y, int w, int h, const char* label)
 	: Fl_Widget(x, y, w, h, label)
 {
-	font_size = 15;
+	font_size = 18;
 	letter_x = font_size;
 	letter_y = font_size;
 	cursor_blink_interval = 0.1;
 	cursor_blink_state = 1;
 	console = 0;
+	fit_x = 0;
+	fit_y = 0;
 
 	Fl::add_timeout(cursor_blink_interval, (Fl_Timeout_Handler)(console_widget_t::static_blink_handler), this);
 }
@@ -97,7 +99,10 @@ void console_widget_t::draw()
 
 	letter_x = (int)fl_width('A');
 	letter_y = (int)fl_height();
-
+	
+	fit_x = letter_x*console->x;
+	fit_y = letter_y*console->y;
+	
 	int x_, y_, w_, h_, cx, cy;	
 	fl_clip_box(x(),y(),w(),h(), x_, y_, w_, h_);
 

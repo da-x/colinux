@@ -11,7 +11,7 @@
 #ifndef __CO_TAP_WIN32_H__
 #define __CO_TAP_WIN32_H__
 
-co_rc_t open_tap_win32(HANDLE *phandle);
-BOOL tap_win32_set_status(HANDLE handle, BOOL status);
+extern co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name);
+extern BOOL tap_win32_set_status(HANDLE handle, BOOL status);
 
 #endif

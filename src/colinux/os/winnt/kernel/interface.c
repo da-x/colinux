@@ -15,21 +15,19 @@
 #include <colinux/os/current/monitor.h>
 #include <colinux/os/current/ioctl.h>
 
-NTSTATUS 
-NTAPI
-co_manager_dispatch(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
+NTSTATUS co_manager_dispatch(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 {
 	PIO_STACK_LOCATION  irpStack;
 	PVOID               ioBuffer;
 	ULONG               inputBufferLength;
 	ULONG               outputBufferLength;
 	ULONG               ioControlCode;
-	NTSTATUS            ntStatus;
-	co_manager_t             *co_manager;
+	NTSTATUS            ntStatus = STATUS_SUCCESS;
+	co_manager_t        *co_manager;
 	co_rc_t             rc;
-	co_manager_ioctl_t        ioctl;
+	co_manager_ioctl_t  ioctl;
 
-	Irp->IoStatus.Status      = STATUS_SUCCESS;
+	Irp->IoStatus.Status = ntStatus;
 	Irp->IoStatus.Information = 0;
 
 	irpStack = IoGetCurrentIrpStackLocation (Irp);
@@ -41,9 +39,10 @@ co_manager_dispatch(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 	outputBufferLength = irpStack->Parameters.DeviceIoControl.OutputBufferLength;
 
 	switch (irpStack->MajorFunction) {
-	case IRP_MJ_CREATE: 
+	case IRP_MJ_CREATE: {
 		irpStack->FileObject->FsContext = NULL;
 		break;
+	}
 
 	case IRP_MJ_CLOSE: 
 		break;
@@ -53,21 +52,21 @@ co_manager_dispatch(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 		break;
 	}
     
-	case IRP_MJ_DEVICE_CONTROL: 
+	case IRP_MJ_DEVICE_CONTROL: {
 		ioControlCode = irpStack->Parameters.DeviceIoControl.IoControlCode;
 
 		if (CO_GET_IOCTL_TYPE(ioControlCode) != CO_DRIVER_TYPE) {
-			Irp->IoStatus.Status = STATUS_INVALID_PARAMETER; 
+			ntStatus = STATUS_INVALID_PARAMETER; 
 			break;
 		}
 
 		if (CO_GET_IOCTL_MTYPE(ioControlCode) != METHOD_BUFFERED) {
-			Irp->IoStatus.Status = STATUS_INVALID_PARAMETER; 
+			ntStatus = STATUS_INVALID_PARAMETER; 
 			break;
 		}
 
 		if (CO_GET_IOCTL_ACCESS(ioControlCode) != FILE_ANY_ACCESS) {
-			Irp->IoStatus.Status = STATUS_INVALID_PARAMETER; 
+			ntStatus = STATUS_INVALID_PARAMETER; 
 			break;
 		}
 
@@ -80,17 +79,27 @@ co_manager_dispatch(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 				      (void **)&irpStack->FileObject->FsContext);
 
 		if (!CO_OK(rc))
-			Irp->IoStatus.Status = STATUS_INVALID_PARAMETER; 
+			ntStatus = STATUS_INVALID_PARAMETER; 
+		else
+			ntStatus = STATUS_SUCCESS;
 
 		break;
-
+	}
 	}
 
-	ntStatus = Irp->IoStatus.Status;
+	Irp->IoStatus.Status = ntStatus;
 
 	IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
 	return ntStatus;
+}
+
+static 
+NTSTATUS 
+NTAPI
+dispatch_wrapper(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
+{
+	return co_manager_dispatch(DeviceObject, Irp);
 }
 
 static
@@ -167,7 +176,7 @@ DriverEntry(
 	DriverObject->MajorFunction[IRP_MJ_CREATE]         =
 	DriverObject->MajorFunction[IRP_MJ_CLOSE]          =
 	DriverObject->MajorFunction[IRP_MJ_CLEANUP]        =
-	DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = co_manager_dispatch;
+	DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = dispatch_wrapper;
 	DriverObject->DriverUnload                         = driver_unload;
 
 	co_manager_load(co_manager);

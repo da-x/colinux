@@ -55,6 +55,7 @@ typedef struct start_parameters {
 	char mac_address[18];
 	bool_t name_specified;
 	char interface_name[0x100];
+	co_id_t instance;
 	int index;
 } start_parameters_t;
 
@@ -416,10 +417,10 @@ void co_net_syntax()
 	printf("    -h                      Show this help text\n");
 	printf("    -n 'adapter name'       The name of the network adapter to attach to\n");
 	printf("                            Without this option, the daemon tries to\n");
-	printf("                            guess which\n");
-	printf("                            interface to use\n");
+	printf("                            guess which interface to use\n");
 	printf("    -i index                Network device index number (0 for eth0, 1 for\n");
 	printf("                            eth1, etc.)\n");
+	printf("    -c instance             coLinux instance ID to connect to\n");
 	printf("    -mac xx:xx:xx:xx:xx:xx  MAC address for the bridged interface\n");
 }
 
@@ -431,6 +432,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 
 	/* Default settings */
 	start_parameters->index = -1;
+	start_parameters->instance = -1;
 	start_parameters->show_help = PFALSE;
 	start_parameters->mac_specified = PFALSE;
 	start_parameters->name_specified = PFALSE;
@@ -468,6 +470,19 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 			continue;
 		}
 
+		option = "-c";
+		if (strcmp(*param_scan, option) == 0) {
+			param_scan++;
+			if (!(*param_scan)) {
+				printf("Parameter of command line option %s not specified\n", option);
+				return CO_RC(ERROR);
+			}
+
+			sscanf(*param_scan, "%d", &start_parameters->instance);
+			param_scan++;
+			continue;
+		}
+
 		option = "-n";
 		if (strcmp(*param_scan, option) == 0) {
 			param_scan++;
@@ -490,6 +505,23 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 			start_parameters->show_help = PTRUE;
 		}
 		param_scan++;
+	}
+
+	if (start_parameters->index == -1) {
+		printf("Device index not specified\n");
+		return CO_RC(ERROR);
+	}
+
+	if ((start_parameters->index < 0) ||
+	    (start_parameters->index >= CO_MODULE_MAX_CONET)) 
+	{
+		printf("Invalid index: %d\n", start_parameters->index);
+		return CO_RC(ERROR);
+	}
+
+	if (start_parameters->instance == -1) {
+		printf("coLinux instance not specificed\n");
+		return CO_RC(ERROR);
 	}
 
 	return CO_RC(OK);	
@@ -535,7 +567,8 @@ main(int argc, char *argv[])
 		goto out;
 	}
 
-	rc = co_os_open_daemon_pipe(0, CO_MODULE_CONET0 + daemon_parameters->index, &daemon_handle_);
+	rc = co_os_open_daemon_pipe(start_parameters.instance, 
+				    CO_MODULE_CONET0 + daemon_parameters->index, &daemon_handle_);
 	if (!CO_OK(rc)) {
 		co_debug("Error opening a pipe to the daemon\n");
 		goto out;

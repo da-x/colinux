@@ -14,6 +14,5 @@
 #include <colinux/common/common.h>
 
 extern void co_winnt_affinity_workaround(void);
-extern bool_t co_winnt_is_winxp_or_better(void);
 
 #endif

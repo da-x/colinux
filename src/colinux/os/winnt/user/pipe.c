@@ -40,7 +40,7 @@ struct co_os_pipe_server {
 	HANDLE events[CO_OS_PIPE_SERVER_MAX_CLIENTS];
 };
 
-co_rc_t co_os_pipe_server_create_client(co_os_pipe_server_t *ps);
+co_rc_t co_os_pipe_server_create_client(co_os_pipe_server_t *ps, HANDLE handle);
 co_rc_t co_os_pipe_server_destroy_client(co_os_pipe_server_t *ps, co_os_pipe_connection_t *connection);
 
 co_rc_t co_os_pipe_server_handle_packet(co_os_pipe_server_t *ps, co_os_pipe_connection_t *connection, 
@@ -69,7 +69,7 @@ co_rc_t co_os_pipe_server_client_connected(co_os_pipe_server_t *ps, co_os_pipe_c
 {
 	connection->state = CO_OS_PIPE_SERVER_STATE_CONNECTED;
 
-	co_os_pipe_server_create_client(ps);
+	co_os_pipe_server_create_client(ps, NULL);
 
 	return ps->connected_func(connection, ps->user_data, &connection->user_data);
 }
@@ -173,13 +173,20 @@ co_rc_t co_os_pipe_server_destroy_client(co_os_pipe_server_t *ps, co_os_pipe_con
 	return CO_RC(OK);
 }
 
-co_rc_t co_os_pipe_server_create_client(co_os_pipe_server_t *ps)
+static void pipe_server_pathname(char *pipename, unsigned long pipename_size, co_id_t id)
 {
-	LPTSTR pipename = "\\\\.\\pipe\\coLinux0"; 
+	co_snprintf(pipename, pipename_size, "\\\\.\\pipe\\coLinux%d", id);
+}
+
+co_rc_t co_os_pipe_server_create_client(co_os_pipe_server_t *ps, HANDLE handle)
+{
+	char pipename[0x100];
 	co_os_pipe_connection_t *connection;
 	HANDLE event;
 	int index;
 	co_rc_t rc = CO_RC(OK);
+
+	pipe_server_pathname(pipename, sizeof(pipename), ps->id);
 
 	if (CO_OS_PIPE_SERVER_MAX_CLIENTS == ps->num_clients) {
 		rc = CO_RC(ERROR); 
@@ -208,15 +215,20 @@ co_rc_t co_os_pipe_server_create_client(co_os_pipe_server_t *ps)
 	}
 	ResetEvent(event);
 
-	connection->pipe = CreateNamedPipe(
-		pipename,
-		PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
-		PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
-		PIPE_UNLIMITED_INSTANCES,
-		0x100000,
-		0x100000,
-		10000,
-		NULL);
+	if (handle) {
+		connection->pipe = handle;
+	}
+	else {
+		connection->pipe = CreateNamedPipe(
+			pipename,
+			PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
+			PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+			PIPE_UNLIMITED_INSTANCES,
+			0x100000,
+			0x100000,
+			10000,
+			NULL);
+	}
 
 	if (connection->pipe == INVALID_HANDLE_VALUE) {
 		rc = CO_RC(ERROR);
@@ -259,7 +271,7 @@ co_rc_t co_os_pipe_server_service(co_os_pipe_server_t *ps, bool_t infinite)
 	co_rc_t rc;
 
 	if (ps->num_clients == 0) {
-		rc = co_os_pipe_server_create_client(ps);
+		rc = co_os_pipe_server_create_client(ps, NULL);
 		if (!CO_OK(rc))
 			return rc;
 	}
@@ -290,6 +302,39 @@ co_rc_t co_os_pipe_server_service(co_os_pipe_server_t *ps, bool_t infinite)
 	return CO_RC(OK);
 }
 
+static co_id_t pipe_server_alloc_id(HANDLE *handle_out)
+{
+	co_id_t id = 0;
+	char pipename[0x100];
+	HANDLE handle;
+
+	for (;;) {
+		pipe_server_pathname(pipename, sizeof(pipename), id);
+		
+		handle = CreateFile(pipename,
+				    GENERIC_READ | GENERIC_WRITE,
+				    0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
+
+		if (handle == INVALID_HANDLE_VALUE) {
+			handle = CreateNamedPipe(
+				pipename,
+				PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
+				PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+				PIPE_UNLIMITED_INSTANCES,
+				0x100000,
+				0x100000,
+				10000,
+				NULL);
+
+			*handle_out = handle;
+			return id;
+		}
+		CloseHandle(handle);
+		id += 1;
+	}
+	
+	return 0;
+}
 
 co_rc_t co_os_pipe_server_create(co_os_pipe_server_func_connected_t connected_func,
 				 co_os_pipe_server_func_packet_t packet_func,
@@ -299,6 +344,7 @@ co_rc_t co_os_pipe_server_create(co_os_pipe_server_func_connected_t connected_fu
 				 co_id_t *id_out)
 {
 	co_os_pipe_server_t *ps;
+	HANDLE handle = NULL;
 
 	ps = co_os_malloc(sizeof(*ps));
 	if (!ps)
@@ -312,11 +358,11 @@ co_rc_t co_os_pipe_server_create(co_os_pipe_server_func_connected_t connected_fu
 	ps->connected_func = connected_func;
 	ps->disconnected_func = disconnected_func;
 	ps->user_data = data;
-	ps->id = 0;
+	ps->id = pipe_server_alloc_id(&handle);
 
 	*id_out = ps->id;
 
-	co_os_pipe_server_create_client(ps);
+	co_os_pipe_server_create_client(ps, handle);
 
 	return CO_RC(OK);
 }

@@ -10,6 +10,9 @@
 
 #include "ddk.h"
 
+
+#include <ddk/ntdddisk.h>
+
 #include <colinux/os/alloc.h>
 #include <colinux/kernel/transfer.h>
 #include <colinux/kernel/fileblock.h>
@@ -174,7 +177,7 @@ static bool_t probe_area(HANDLE handle, LARGE_INTEGER offset, char *test_buffer,
 	return PTRUE;
 }
 
-static co_rc_t co_os_file_block_detect_size(HANDLE handle, unsigned long long *out_size)
+static co_rc_t co_os_file_block_detect_size_binary_search(HANDLE handle, unsigned long long *out_size)
 {
 	/* 
 	 * Binary search the size of the device.
@@ -246,6 +249,46 @@ static co_rc_t co_os_file_block_detect_size(HANDLE handle, unsigned long long *o
 	return CO_RC(OK);
 }
 
+static co_rc_t co_os_file_block_detect_size_harddisk(HANDLE handle, unsigned long long *out_size)
+{
+	GET_LENGTH_INFORMATION length;
+	IO_STATUS_BLOCK block;
+	NTSTATUS status;
+
+	length.Length.QuadPart = 0;
+
+	status = ZwDeviceIoControlFile(handle, NULL, NULL, NULL, &block,
+				       IOCTL_DISK_GET_LENGTH_INFO,
+				       NULL, 0, &length, sizeof(length));
+
+	if (status == STATUS_SUCCESS) {
+		co_debug("IOCTL_DISK_GET_LENGTH_INFO returned success\n");
+		*out_size = length.Length.QuadPart;
+		return CO_RC(OK);
+	}
+
+	return CO_RC(ERROR);
+}
+
+static co_rc_t co_os_file_block_detect_size(HANDLE handle, unsigned long long *out_size)
+{
+	co_rc_t rc;
+
+	rc = co_os_file_block_detect_size_harddisk(handle, out_size);
+	if (CO_OK(rc))
+		return rc;
+
+	/*
+	 * Fall back to binary search.
+	 */ 
+	rc = co_os_file_block_detect_size_binary_search(handle, out_size);
+	if (CO_OK(rc))
+		return rc;
+
+	*out_size = 0;
+	return CO_RC(ERROR);
+}
+
 co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned long long *size)
 {
 	NTSTATUS status;
@@ -276,13 +319,13 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 
 	if (status == STATUS_SUCCESS) {
 		*size = fsi.EndOfFile.QuadPart;
-		co_debug("%s: reported size: %llu bytes\n", __FUNCTION__, *size);
+		co_debug("%s: reported size: %llu KBs\n", __FUNCTION__, (*size >> 10));
 		rc = CO_RC(OK);
 	}
 	else {
 		rc = co_os_file_block_detect_size(FileHandle, size);
 		if (CO_OK(rc)) {
-			co_debug("%s: detected size: %llu bytes\n", __FUNCTION__, *size);
+			co_debug("%s: detected size: %llu KBs\n", __FUNCTION__, (*size >> 10));
 		}
 	}
 	

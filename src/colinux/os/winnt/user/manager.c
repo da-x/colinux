@@ -77,9 +77,10 @@ co_rc_t co_os_manager_ioctl(
 			     input_buffer, input_buffer_size, 
 			     output_buffer, output_buffer_size, 
 			     output_returned, NULL);
-  
-	if (rc == FALSE)
+
+	if (rc == FALSE) {
 		return CO_RC(ERROR);
+	}
 
 	return CO_RC(OK);
 }
@@ -202,7 +203,7 @@ co_rc_t coui_stop_driver(
 	}
 
 	CloseServiceHandle(schService); 
- 
+
 	return rc; 
 } 
  
@@ -219,11 +220,16 @@ co_rc_t coui_check_driver(IN LPCTSTR DriverName, bool_t *installed)
 
 	schService = OpenService(schSCManager, DriverName, SERVICE_ALL_ACCESS); 
 	if (schService != NULL) {
+		/* 
+		 * Make sure that the driver is started.
+		 */
+		StartService(schService, 0, NULL);
+
 		CloseServiceHandle(schService); 
 
 		*installed = PTRUE;
 	}
-	
+
 	CloseServiceHandle(schSCManager); 
 	return CO_RC(OK);
 } 

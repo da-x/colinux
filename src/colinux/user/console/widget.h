@@ -29,6 +29,9 @@ public:
 	void damage_console(int x, int y, int w, int h);
 	co_rc_t handle_console_event(co_console_message_t *message);
 
+	int fit_x;
+	int fit_y;
+
 protected:
 	int font_size;
 	co_console_t *console;
@@ -36,7 +39,7 @@ protected:
 	int letter_y;
 	double cursor_blink_interval;
 	int cursor_blink_state;
-	
+
 	virtual void draw();
 	static void static_blink_handler(class console_widget_t *widget);
 	void blink_handler();

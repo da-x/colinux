@@ -112,12 +112,13 @@ int console_main_window_t::handle(int event)
 console_window_t::console_window_t()
 {
 	/* Default settings */
-	start_parameters.attach_id = 1; 
+	start_parameters.attach_id = 0; 
 	attached_id = CO_INVALID_ID;
 	state =	CO_CONSOLE_STATE_DETACHED;
 	window = 0;
 	widget = 0;
 	daemon_handle = 0;
+	resized_on_attach = PTRUE;
 }
 
 console_window_t::~console_window_t()
@@ -189,29 +190,32 @@ co_rc_t console_window_t::start()
 	for (i=0; i < sizeof(console_menuitems)/sizeof(console_menuitems[0]); i++)
 		console_menuitems[i].user_data((void *)this);
 
-	menu = new Fl_Menu_Bar(0, 0, 640, 30);
+	int swidth = 640;
+	int sheight = 480;
+
+	menu = new Fl_Menu_Bar(0, 0, swidth, 30);
 	menu->box(FL_UP_BOX);
 	menu->align(FL_ALIGN_CENTER);
 	menu->when(FL_WHEN_RELEASE_ALWAYS);
 	menu->copy(console_menuitems, window);
 
-	Fl_Group *tile = new Fl_Group(0, 30, 640, 480-30);
-	widget = new console_widget_t(0, 30, 640, 480-120);
-	text_widget = new Fl_Text_Display(0, 480-120+30, 640, 70);
+	Fl_Group *tile = new Fl_Group(0, 30, swidth, sheight-30);
+	widget = new console_widget_t(0, 30, swidth, sheight-120);
+	text_widget = new Fl_Text_Display(0, sheight-120+30, swidth, 70);
 
-	Fl_Group *tile2 = new Fl_Group(0, 480-120+30, 640, 90);
+	Fl_Group *tile2 = new Fl_Group(0, sheight-120+30, swidth, 90);
 	text_widget->buffer(new Fl_Text_Buffer());
 	text_widget->insert_position(0);
 
-	Fl_Box *box = new Fl_Box(0, 480-20, 640, 20);
+	Fl_Box *box = new Fl_Box(0, sheight-20, swidth, 20);
 	box->label("");
 	box->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE); 
 	tile2->end();
 
 	tile->resizable(widget);
 	tile->end();
-
-	window->resizable(tile); 
+	
+	window->resizable(tile);
 	window->end();
 	window->show();
 
@@ -227,7 +231,7 @@ co_rc_t console_window_t::start()
 	if (start_parameters.attach_id != CO_INVALID_ID)
 		attached_id = start_parameters.attach_id;
 
-	if (attached_id != CO_INVALID_ID) 
+	if (attached_id != CO_INVALID_ID)
 		return attach();
 	
 	return CO_RC(OK);
@@ -242,11 +246,13 @@ co_rc_t console_window_t::attach()
 		goto out;
 	}
 
-	rc = co_os_open_daemon_pipe(0, CO_MODULE_CONSOLE, &daemon_handle);
+	rc = co_os_open_daemon_pipe(attached_id, CO_MODULE_CONSOLE, &daemon_handle);
 	if (!CO_OK(rc))
 		goto out;
 
 	Fl::add_idle(console_idle, this);
+
+	resized_on_attach = PFALSE;
 
 	state = CO_CONSOLE_STATE_ATTACHED;
 
@@ -256,7 +262,7 @@ co_rc_t console_window_t::attach()
 	menu_item_activate(console_terminate_cb);
 	menu_item_activate(console_detach_cb);
 	menu_item_deactivate(console_attach_cb);
-	
+
 	widget->redraw();
 
 	log("Monitor%d: Attached\n", attached_id);
@@ -407,8 +413,28 @@ void console_window_t::finish()
 	exit(0);
 }
 
+void console_window_t::global_resize_constraint()
+{
+	if (window  &&  widget) {
+		if (widget->fit_x  &&  widget->fit_y) {
+			int w_diff = (int)(widget->w() - widget->fit_x);
+			int h_diff = (int)(widget->h() - widget->fit_y);
+			
+			if (h_diff != 0   ||  w_diff != 0) {
+				if (resized_on_attach == PFALSE) {
+					/* co_debug("%d, %d\n", window->w() - w_diff, window->h() - h_diff); */
+					window->size(window->w() - w_diff, window->h() - h_diff);
+					resized_on_attach = PTRUE;
+				}
+			}
+		}
+	}
+}
+
 void console_window_t::idle()
 {
+	global_resize_constraint();
+	
 	if (daemon_handle != NULL) {
 		co_rc_t rc = CO_RC(OK);
 		co_message_t *message = NULL;

@@ -65,6 +65,8 @@ typedef struct {
 	co_manager_state_t state;
 	bool_t lazy_unload;
 	int monitors_count;
+	int periphery_api_version;
+	int linux_api_version;
 } co_manager_ioctl_status_t;
 
 /*

@@ -730,6 +730,7 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 
 	for (i=0; i < CO_MODULE_MAX_CONET; i++) { 
 		co_netdev_desc_t *net_dev;
+		char interface_name[CO_NETDEV_DESC_STR_SIZE + 0x10] = {0, };
 
 		net_dev = &daemon->config.net_devs[i];
 		if (net_dev->enabled == PFALSE)
@@ -737,25 +738,25 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 			
 		debug(daemon, "launching daemon for conet%d\n", i);
 
+		if (strlen(net_dev->desc) != 0) {
+			co_snprintf(interface_name, sizeof(interface_name), "-n \"%s\"", net_dev->desc);
+		}
+
 		switch (net_dev->type) 
 		{
 		case CO_NETDEV_TYPE_BRIDGED_PCAP: {
-			char interface_name[CO_NETDEV_DESC_STR_SIZE + 0x10] = {0, };
 			char mac_address[18];
-
-			if (strlen(net_dev->desc) != 0) {
-				co_snprintf(interface_name, sizeof(interface_name), "-n %s", net_dev->desc);
-			}
 			
 			co_build_mac_address(mac_address, sizeof(mac_address), net_dev->mac_address);
 
-			rc = co_launch_process("colinux-bridged-net-daemon -i %d %s -mac %s", i, interface_name, mac_address);
+			rc = co_launch_process("colinux-bridged-net-daemon -c %d -i %d %s -mac %s", daemon->id, i, interface_name, mac_address);
 			break;
 		}
 
-		case CO_NETDEV_TYPE_TAP:
-			rc = co_launch_process("colinux-net-daemon 0 0");
+		case CO_NETDEV_TYPE_TAP: {
+			rc = co_launch_process("colinux-net-daemon -c %d %s -i %d", daemon->id, interface_name, i);
 			break;
+		}
 
 		default:
 			rc = CO_RC(ERROR);
@@ -790,6 +791,9 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	if (!CO_OK(rc))
 		return rc;
 
+	co_debug("colinux: allocated id %d\n", id);
+	
+	daemon->id = id;
 	daemon->last_htime = co_os_timer_highres();
 	daemon->reminder_htime = 0;
 
@@ -841,7 +845,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 
 	if (daemon->start_parameters->launch_console) {
 		debug(daemon, "launching console\n");
-		rc = co_launch_process("colinux-console-%s -a 0", daemon->start_parameters->console);
+		rc = co_launch_process("colinux-console-%s -a %d", daemon->start_parameters->console, id);
 		if (!CO_OK(rc)) {
 			co_terminal_print("colinux: error launching console\n");
 			goto out;

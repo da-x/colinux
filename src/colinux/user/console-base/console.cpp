@@ -25,7 +25,7 @@ extern "C" {
 
 console_window_t::console_window_t()
 {
-	start_parameters.attach_id = 1;
+	start_parameters.attach_id = 0;
 	attached_id = CO_INVALID_ID;
 	state = CO_CONSOLE_STATE_OFFLINE;
 	widget = 0;
@@ -96,7 +96,7 @@ co_rc_t console_window_t::attach()
 	if (state == CO_CONSOLE_STATE_ATTACHED)
 		return CO_RC(ERROR);
 
-	rc = co_os_open_daemon_pipe(0, CO_MODULE_CONSOLE, &daemon_handle);
+	rc = co_os_open_daemon_pipe(attached_id, CO_MODULE_CONSOLE, &daemon_handle);
 	if (!CO_OK(rc))
 		return rc;
 

@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 			goto out;
 		}
 		
-		rc = co_manager_init(handle);
+		rc = co_manager_init(handle, PTRUE);
 		if (!CO_OK(rc)) {
 			co_terminal_print("daemon: error initializing kernel driver\n");
 			co_os_manager_close(handle);

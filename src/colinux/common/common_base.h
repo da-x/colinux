@@ -17,12 +17,15 @@ typedef int bool_t;
 
 #define PACKED_STRUCT __attribute__((packed))
 
-#define CO_MAX_MONITORS        16
+#define CO_MAX_MONITORS 16
+
+#define CO_LINUX_PERIPHERY_ABI_VERSION    1
 
 typedef enum {
     CO_RC_OK                         = 0,
     CO_RC_ERROR                      = -1,
     CO_RC_PAE_ENABLED                = -2,
+    CO_RC_VERSION_MISMATCHED         = -3,
     CO_RC_OUT_OF_MEMORY              = -4,
     CO_RC_OUT_OF_PAGES               = -5,
     CO_RC_CANT_OPEN_VMLINUX_FILE     = -12,

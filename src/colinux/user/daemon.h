@@ -27,6 +27,7 @@ typedef struct co_daemon_start_parameters {
 } co_start_parameters_t;
 
 typedef struct co_daemon {
+	co_id_t id;
 	co_start_parameters_t *start_parameters;
 	co_config_t config;
 	co_elf_data_t elf_data;

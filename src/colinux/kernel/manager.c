@@ -225,6 +225,8 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, co_monitor_ioctl_op_t ioctl,
 		params->state = manager->state;
 		params->monitors_count = manager->monitors_count;
 		params->lazy_unload = manager->lazy_unload;
+		params->periphery_api_version =  CO_LINUX_PERIPHERY_ABI_VERSION;
+		params->linux_api_version = CO_LINUX_ABI_VERSION;
 
 		*return_size = sizeof(*params);
 
