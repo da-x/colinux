@@ -215,7 +215,7 @@ co_rc_t console_window_t::start()
 	menu_item_deactivate(console_detach_cb);
 	menu_item_deactivate(console_attach_cb);
 
-	log("Coopeartive Linux console started\n");
+	log("Cooperative Linux console started\n");
 	
 	if (start_parameters.attach_id != CO_INVALID_ID)
 		attached_id = start_parameters.attach_id;

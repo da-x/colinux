@@ -1,7 +1,10 @@
 /*
- * coLinux
+ * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@colinux.org, 2003 (c)
+ * Dan Aloni <da-x@colinux.org>, 2003-2004 (c)
+ *
+ * The code is licensed under the GPL. See the COPYING file at
+ * the root directory.
  */
 
 #include <linux/kernel.h>
@@ -75,6 +78,14 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned long index,
 		}
 		co_debug("cobd%d: close (count=%d)\n", index, dev->use_count);
 		break;
+	}
+	case CO_BLOCK_GET_ALIAS: {
+		if (dev->conf->alias == PFALSE) {
+			return CO_RC(ERROR);
+		}
+
+		memcpy(request->alias, dev->conf->alias, sizeof(dev->conf->alias));
+		return rc;
 	}
 	default:
 		break;

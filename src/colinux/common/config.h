@@ -28,6 +28,13 @@ typedef struct co_block_dev_desc {
 	 * configration file.
 	 */
 	co_pathname_t pathname;
+
+	/*
+	 * The alias is a synonym device name for the block device on 
+	 * the Linux side, for example: hda4, sda2, hdb2.
+	 */
+	bool_t alias_used;
+	char alias[20];
 } co_block_dev_desc_t;
 
 typedef enum {

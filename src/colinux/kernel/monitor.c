@@ -512,6 +512,7 @@ co_rc_t co_monitor_load_configuration(co_monitor_t *cmon)
 		if (!CO_OK(rc))
 			goto out;
 
+		dev->dev.conf = conf_dev;
 		rc = co_monitor_file_block_init(dev, &conf_dev->pathname);
 		if (CO_OK(rc)) {
 			co_debug("cobd%d: enabled", i);
@@ -877,10 +878,7 @@ co_rc_t co_monitor_run(co_monitor_t *cmon,
 	}
 
 	if (cmon->state == CO_MONITOR_STATE_RUNNING) {
-		if (co_os_current_processor() == 0) { /* TODO: REMOVE THIS HACK */
-			/* Switch back and forth from Linux */
-			while (co_monitor_iteration(cmon) == PTRUE);
-		}
+		  while (co_monitor_iteration(cmon) == PTRUE);
 	}
 
 	/* Flush messages to userspace */

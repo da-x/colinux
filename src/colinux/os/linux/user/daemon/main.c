@@ -32,11 +32,13 @@ void sighup_handler(int sig)
 
 void set_affinity() 
 {
+#if (0)
 	unsigned long set = 0;
 	int ret;
 
 	set = 1; /* Bind to the first CPU */
 	sched_setaffinity(getpid(), &set, sizeof(set));
+#endif
 }
 
 int main(int argc, char *argv[]) 

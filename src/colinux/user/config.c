@@ -18,6 +18,7 @@ co_rc_t co_load_config_blockdev(co_config_t *out_config, mxml_element_t *element
 	int i;
 	long index = -1;
 	char *path = "";
+	char *alias = NULL;
 	char *enabled = NULL;
 	co_block_dev_desc_t *blockdev;
 
@@ -32,6 +33,9 @@ co_rc_t co_load_config_blockdev(co_config_t *out_config, mxml_element_t *element
 
 		if (strcmp(attr->name, "enabled") == 0)
 			enabled = attr->value;
+
+		if (strcmp(attr->name, "alias") == 0)
+			alias = attr->value;
 	}
 	
 	if (index < 0) {
@@ -53,6 +57,9 @@ co_rc_t co_load_config_blockdev(co_config_t *out_config, mxml_element_t *element
 	
 	snprintf(blockdev->pathname, sizeof(blockdev->pathname), "%s", path);
 	blockdev->enabled = enabled ? (strcmp(enabled, "true") == 0) : 0;
+
+	snprintf(blockdev->alias, sizeof(blockdev->alias), "%s", alias);
+	blockdev->alias_used = alias != NULL;
 
 	return CO_RC(OK);
 }

@@ -165,7 +165,7 @@ asm(""							\
                                                         \
 /*
  * The trick below creates an interrupt call stack frame, in order
- * to restore the other state's CS. The other's FR is already on the
+ * to restore the other state's CS. The other's FLAGS is already on the
  * stack at that point. The two 'pushl's add the CS and EIP, so that
  * stack layout is as required from a same-level interrupt return:
  * FLAGS-CS-EIP.
@@ -495,11 +495,6 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	bool_t has_cpuid;
 	co_rc_t rc;
 	unsigned long caps = 0;
-
-	if (co_os_current_processor() == 1) { /* TODO: REMOVE THIS HACK */
-		co_debug("Not main CPU\n");
-		return CO_RC(ERROR);
-	}
 
 	caps = cmon->manager->archdep->caps;
 

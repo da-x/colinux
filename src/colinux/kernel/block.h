@@ -17,6 +17,7 @@ typedef struct co_block_dev co_block_dev_t;
 
 struct co_block_dev {
 	unsigned long long size;
+	co_block_dev_desc_t *conf;
 	co_rc_t (*service)(co_monitor_t *cmon, co_block_dev_t *dev, 
 			   co_block_request_t *request);
 	void (*free)(co_monitor_t *cmon, co_block_dev_t *dev);
