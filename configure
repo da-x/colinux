@@ -19,7 +19,10 @@ nonopt=NONE
 prefix=NONE
 distdir=NONE
 downloaddir=NONE
+builddir=NONE
 logfile=NONE
+targetkerneldir=NONE
+targetmoduledir=NONE
 hostkerneldir=NONE
 colinux_os=NONE
 configfile="bin/user-build.cfg"
@@ -76,14 +79,18 @@ Directories:
                           [$srcdir]
   --topdir=TOPDIR         base directory for all other dirs
                           [$topdir]
-  --downloaddir=DIR       source download, extract and compile tools
+  --downloaddir=DIR       source download
                           [\$TOPDIR/download]
+  --builddir=DIR          extract and compile tools
+                          [\$TOPDIR/build]
   --prefix=PREFIX         install architecture-independent files in PREFIX
                           [\$TOPDIR/mingw32]
   --distdir=DIR           distribution of all winnt files
                           [\$PREFIX/dist]
   --targetkerneldir=DIR   path to your patched colinux kernel tree (Guest)
-                          [\$TOPDIR/download/linux-$KERNEL_VERSION]
+                          [\$TOPDIR/build/linux-$KERNEL_VERSION]
+  --targetmoduledir=DIR   Modules output for target kernel (Guest)
+                          [\$TOPDIR/build/linux-$KERNEL_VERSION/_install]
   --hostkerneldir=DIR     path to your host kernel (only for linux as host)
                           [\usr\src\linux]
 
@@ -104,7 +111,7 @@ Sample for WinNT as host (default):
 Sample for Linux as host:
   ./configure --target=i686-pc-linux \\
 	--downloaddir=$SOURCE_DIR \\
-	--targetkerneldir=$SOURCE_DIR/linux-$KERNEL_VERSION
+	--targetkerneldir=$BUILD_DIR/linux-$KERNEL_VERSION \\
 	--hostkerneldir=/usr/src/`uname -r`
 
 EOF
@@ -142,6 +149,11 @@ EOF
   --downloaddir=*)
     downloaddir="$optarg" ;;
 
+  --builddir)
+    prev=builddir ;;
+  --builddir=*)
+    builddir="$optarg" ;;
+
   --distdir)
     prev=distdir ;;
   --distdir=*)
@@ -151,6 +163,11 @@ EOF
     prev=targetkerneldir ;;
   --targetkerneldir=*)
     targetkerneldir="$optarg" ;;
+
+  --targetmoduledir)
+    prev=targetmoduledir ;;
+  --targetmoduledir=*)
+    targetmoduledir="$optarg" ;;
 
   --hostkerneldir)
     prev=hostkerneldir ;;
@@ -235,6 +252,10 @@ if [ "$verbose" = "yes" ]; then
   echo " target_cpu=$target_cpu"
   echo " target_vendor=$target_vendor"
   echo " target_os=$target_os"
+
+  echo " colinux version=$CO_VERSION"
+  echo " target kernel_dir=$KERNEL_DIR"
+  echo " target kernel_version=$KERNEL_VERSION"
 fi
 
 #
@@ -278,20 +299,29 @@ NONE)
   ;;
 esac
 
-# Colinux extra version
-colinux_version=$CO_VERSION
+# Default builddir directory
+case $builddir in
+NONE)
+  builddir="$topdir/build"
+  echo "Setting builddir=$builddir"
+  ;;
+esac
 
-# Extract supported kernel version from default config file (sourced at top)
-target_kernel_dir="$KERNEL_DIR"
-target_kernel_version="$KERNEL_VERSION"
-targetkerneldir="$downloaddir/linux-$target_kernel_version"
+# Default target kernel directory
+case $targetkerneldir in
+NONE)
+  targetkerneldir="$builddir/linux-$KERNEL_VERSION"
+  echo "Setting targetkerneldir=$targetkerneldir"
+  ;;
+esac
 
-if [ "$verbose" = "yes" ]; then
-  echo " colinux_version=$colinux_version"
-  echo " target_kernel_dir=$target_kernel_dir"
-  echo " target_kernel_version=$target_kernel_version"
-fi
-echo "Setting targetkerneldir=$targetkerneldir"
+# Default target module directory
+case $targetmoduledir in
+NONE)
+  targetmoduledir="$builddir/linux-$KERNEL_VERSION/_install"
+  echo "Setting targetmoduledir=$targetmoduledir"
+  ;;
+esac
 
 #
 # Check host system
@@ -333,15 +363,17 @@ if [ "$target_os" = "linux" ] ; then
   echo " HOST_PATCHLEVEL=$HOST_PATCHLEVEL"
   HOST_SUBLEVEL=`grep "^SUBLEVEL = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
   echo " HOST_SUBLEVEL=$HOST_SUBLEVEL"
-  HOST_EXTRAVERSION=`grep "^EXTRAVERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
-  test -z "$HOST_EXTRAVERSION" || echo " HOST_EXTRAVERSION=$HOST_EXTRAVERSION"
+  HOST_EXTRAVERSION=`grep "^EXTRAVERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/.\2/'`
+  if [ -n "$HOST_EXTRAVERSION" ] ; then
+    echo " HOST_EXTRAVERSION=$HOST_EXTRAVERSION"
+  fi
 
   # Hostkernel must be >= 2.6 (compile external module)
   if [ "$HOST_VERSION.$HOST_PATCHLEVEL" != "2.6" ] ; then
     { echo "configure: error: host kernel $HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL is to old! Need 2.6.x" 1>&2; exit 1; }
   fi
 
-  if [ "$HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL" != "$target_kernel_version" ] ; then
+  if [ "$HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL$HOST_EXTRAVERSION" != "`uname -r`" ] ; then
     echo -e "\n WARNING! Running kernel is not same as host kernel - You can not run colinux on this machine!\n"
   fi
 
@@ -355,6 +387,13 @@ NONE)
   ;;
 esac
 
+# Remove path from md5 files
+W32LIBS_CHECKSUM=`basename $W32LIBS_CHECKSUM`
+KERNEL_CHECKSUM=`basename $KERNEL_CHECKSUM`
+
+# MD5sum files stored here
+md5dir="$builddir"
+
 # $1 Name of comomponent
 # $2 Call for check
 # $3 Version need, or empty string
@@ -366,13 +405,20 @@ check_exec_tool()
   echo -n "Checking for $1 ... "
   if ($2) </dev/null >/dev/null 2>&1; then
     if [ ! -z "$3" ]; then
+      # get needed version, transform the 'x' into 0
+      eval `echo $3 | sed -r -e \
+        's/([0-9]{1,2})\.([0-9x]{1,2})\.([0-9x]{1,2})/v1=\1 v2=\2 v3=\3/' -e 'y/x/0/'`
+
       # get installed version
       eval `($2) 2>&1 | sed -n -r -e \
         's/.*([0-9]{1,2})\.([0-9]{1,2})\.([0-9]{1,2}).*/i1=\1 i2=\2 i3=\3/p'`
 
-      # get needed version
-      eval `echo $3 | sed -r -e \
-        's/([0-9]{1,2})\.([0-9x]{1,2})\.([0-9x]{1,2})/v1=\1 v2=\2 v3=\3/' -e 's/x/0/' -e 's/x/0/'`
+      if [ "$v3" = "0" -a -z "$i1" ]; then
+        # get installed version with two numbers
+        eval `($2) 2>&1 | sed -n -r -e \
+          's/.*([0-9]{1,2})\.([0-9]{1,2}).*/i1=\1 i2=\2/p'`
+	i3="0"
+      fi
 
       if [ -z "$i1" -o -z "$v1" -o -z "$i2" -o -z "$v2" -o -z "$i3" -o -z "$v3" ]; then
         echo "Version not dectect"
@@ -398,30 +444,6 @@ check_exec_tool()
     return 1
   fi
   return 0
-}
-
-# Get version from installed library
-# $1 Name
-# $2 Version
-check_lib_vers()
-{
-  local installed=""
-
-  # The versionsfile was created at end of install the library
-  echo -n "Checking for target $1 ... "
-  installed=`cat $prefix/$target/include/.$1.version 2>/dev/null`
-
-  if [ "$installed" != "$2" ]; then
-    doit_cross="$doit_cross $1"
-    rm -f $downloaddir/$W32LIBS_CHECKSUM
-    if [ -z "$installed" ]; then
-	echo "missing"
-    else
-	echo "($installed) wrong version, need $2"
-    fi
-  else
-    echo "($installed) found"
-  fi
 }
 
 gcc_helper()
@@ -497,33 +519,24 @@ missing=no
 # Get version from script, replace the last digit
 GCC_NEEDED=`echo "$GCC_VERSION" | sed -e 's/\([0-9]\+\)\.\([0-9]\+\).*$/\1.\2/'`.x
 
-# Remove default path from md5 files
-BINUTILS_CHECKSUM=`basename $BINUTILS_CHECKSUM`
-W32LIBS_CHECKSUM=`basename $W32LIBS_CHECKSUM`
-KERNEL_CHECKSUM=`basename $KERNEL_CHECKSUM`
-
 # General tools for winnt and linux
 check_exec_tool "wget" "wget --version" ""
-check_exec_tool "Python interpreter" "python -V" ""
+check_exec_tool "Python interpreter 2.3" "python2.3 -V" "2.3.x"
 check_exec_tool "patch" "patch --version" ""
 check_exec_tool "make" "make --version" ""
 check_exec_tool "gcc host" "gcc -dumpversion" "$GCC_NEEDED" || gcc_helper
 
-# FIXME: How can get path for X11? Or how can disable X11 for configure FLTK?
-# for FLTK (winnt and linux)
-#check_exec_tool "xorg x11 lib" "xcursor-config --version" ""
-#check_exec_tool "xorg x11 devel" "xft-config --version" ""
-
 case $colinux_os in
   linux) # for Linux as host
-    check_exec_tool "gcc g++" "g++ --version" "3.x.x"
-    check_exec_tool "FLTK devel (patched)" "fltk-config --version" "1.1.4"
+    check_exec_tool "gcc g++" "g++ --version" "$GCC_NEEDED"
+    check_exec_tool "FLTK devel (patched)" "fltk-config --version" "$FLTK_VERSION"
     check_exec_tool "mxml devel" "mxmldoc --version" ""
   ;;
   *) # for Winnt as host
     # Locate users depmod and check for module-init-tools
     check_depmod
     check_exec_tool "unzip" "unzip -h" ""
+    check_exec_tool "zip" "zip -h" ""
     # bison-1.75-109   need by binutils (yacc 91.7.30 have a error YYEMPTY)
     check_exec_tool "bison" "bison --version" ""
     # need by binutils ...
@@ -539,47 +552,13 @@ esac
 test "$missing" = yes && exit 1
 
 #
-# What must we do for CROSS platform?
-# If files must be compile, remove the MD5 control file.
-#
-
-if [ "$target_os" != "linux" ] ; then
-    save_path=$PATH
-    export PATH=$prefix/bin:$PATH
-    test "$verbose" = "yes" && echo " prefix=$prefix"
-
-    # get version from binaries
-    check_exec_tool "$target-gcc" "$target-gcc -dumpversion" "$GCC_VERSION" || { doit_cross="$doit_cross gcc"; rm -f $downloaddir/$BINUTILS_CHECKSUM; }
-    check_exec_tool "$target-ld" "$target-ld --version" "$BINUTILS_VERSION" || { doit_cross="$doit_cross binutils"; rm -f $downloaddir/$BINUTILS_CHECKSUM; }
-
-    # Get version from installed libraries
-    check_lib_vers "fltk" "$FLTK_VERSION" || doit_cross="$doit_cross fltk"
-    check_lib_vers "mxml" "$MXML_VERSION" || doit_cross="$doit_cross mxml"
-    check_lib_vers "w32api" "$W32API_VERSION" || doit_cross="$doit_cross w32api"
-
-    # Inform about doing
-    if [ -z "$doit_cross" ]; then
-	echo "Cross tools are up to date. :-)"
-    else
-	echo "This will be build for cross platform:"
-	echo "$doit_cross"
-    fi
-
-    # Restore PATH
-    export PATH=$save_path
-fi
-
-#
 # do nothing, if trace option enabled
 #
 test "$no_create" = yes && { echo "nothing created!" 1>&2; exit 1; }
 
 # Create log-Directory
 logfile_dir=`dirname $logfile`
-test -d $logfile_dir || mkdir -p $logfile_dir
-
-# Create Distdir
-test -d $distdir || mkdir -p $distdir
+mkdir -p $logfile_dir
 
 # Backup old makefile
 test -f $makefileout -a ! -f $makefileout.old && mv $makefileout $makefileout.old
@@ -590,15 +569,17 @@ test -f $makefileout -a ! -f $makefileout.old && mv $makefileout $makefileout.ol
 
 echo "Create toplevel $makefileout"
     cat > $makefileout << EOF
-# $makefileout for coLinux $colinux_version ($target_os)
+# $makefileout for coLinux $CO_VERSION ($target_os)
 # created by configure at `date`
 
 TARGET=$target
-SRCDIR=$srcdir
 USER_TOPDIR=$topdir
-PREFIX=$prefix
+SRCDIR=$srcdir
 DOWNLOAD=$downloaddir
+BUILDDIR=$builddir
+PREFIX=$prefix
 DISTDIR=$distdir
+MD5CACHE=$md5dir
 
 # Target directories
 export COLINUX_TARGET_KERNEL_PATH=$targetkerneldir
@@ -613,7 +594,7 @@ case $colinux_os in
 export COLINUX_HOST_KERNEL_DIR=$hostkerneldir
 export COLINUX_HOST_OS=linux
 
-.PHONY: all colinux install
+.PHONY: all colinux
 all: colinux
 
 EOF
@@ -623,7 +604,7 @@ EOF
 # Need some variables and PATH of cross compiler in make. Export this all
 export PATH := \$(PREFIX)/bin:\${PATH}
 
-.PHONY: all cross cross libs kernel download
+.PHONY: all cross cross libs kernel download package installer
 all: cross libs kernel colinux
 
 #
@@ -631,34 +612,35 @@ all: cross libs kernel colinux
 #
 
 cross:
-	@md5sum -c \$(DOWNLOAD)/$BINUTILS_CHECKSUM >>/dev/null 2>&1 || \\
-	{ cd bin && ./build-cross.sh; }
+	@cd bin && ./build-cross.sh
 
 libs:
-	@md5sum -c \$(DOWNLOAD)/$W32LIBS_CHECKSUM >>/dev/null 2>&1 || \\
-	{ cd bin && ./build-colinux-libs.sh; }
+	@cd bin && ./build-colinux-libs.sh
 
 kernel:
-	@md5sum -c \$(DOWNLOAD)/$KERNEL_CHECKSUM >>/dev/null 2>&1 || \\
-	{ cd bin && ./build-kernel.sh; }
+	@cd bin && ./build-kernel.sh
 
 # Download only all missing sources (for cross compile)
 download:
 	@cd bin && source build-common.sh --download-all
+
+# Create a pre-distributabel package as ZIP
+package:
+	@cd bin && source build-common.sh --package-all
+
+# Create installer (need wine)
+installer:
+	@cd src && make installer
 
 EOF
   ;;
 esac
 
     cat >> $makefileout << EOF
-.PHONY: colinux install clean help distclean
+.PHONY: colinux clean help distclean
 # Compile daemons
 colinux:
 	@cd src && make colinux
-
-# Install daemons
-install:
-	@cd src && make install
 
 clean:
 	@cd src && make clean
@@ -666,16 +648,17 @@ clean:
 help:
 	@echo  ''
 	@echo  'Execute "make" or "make all" to build all targets'
-	@echo  'Execute "make install" to install all targets on \$(DISTDIR)'
+	@echo  'Execute "make package" to ZIP targets into \$(DISTDIR)'
 	@echo  ''
 	@echo  'Other generic targets:'
 	@echo  '  all		- Build crosstools, all targets marked with [*]'
 	@echo  '* download	- Download all sources (for cross tools and libs)'
 	@echo  '* cross		- Build and install cross compiler and binutils'
 	@echo  '* libs		- Build and install libs: fltk,win32api'
-	@echo  '* kernel	- Build and install colinux kernel vmlinux and modules'
+	@echo  '* kernel	- Build colinux kernel vmlinux and modules'
 	@echo  '* colinux	- Build colinux daemons'
-	@echo  '  install	- Install colinux daemons'
+	@echo  '  package	- Create ZIP file packages for pre releases'
+	@echo  '  installer	- Create Installer (need wine)'
 	@echo  ''
 	@echo  'Cleaning colinux build (daemons only, no cross compiler, no libs):'
 	@echo  '  clean		- remove most generated files but keep the config and distry files'
@@ -685,8 +668,11 @@ help:
 distclean: clean
 	rm -f $makefileout $makefileout.old \\
 	 $configfile $configfile.old \\
-	 \$(DOWNLOAD)/.build-*.md5
+	 \$(MD5CACHE)/.build-*.md5
 
+######################################
+# CONFIGURE was call with follow args:
+# $@
 EOF
 
 # Backup old config file
@@ -700,7 +686,7 @@ test -f $configfile -a ! -f $configfile.old && mv $configfile $configfile.old
 echo "Create $configfile"
     cat > $configfile << EOF
 # $configfile
-# Configfile for coLinux $colinux_version, kernel $target_kernel_version
+# Configfile for coLinux $CO_VERSION, kernel $KERNEL_VERSION
 # created by configure at `date`
 
 # Setup target OS
@@ -711,9 +697,12 @@ COLINUX_HOST_OS="$colinux_os"
 USER_TOPDIR="$topdir"
 
 # Directory where we store download sources or where we find source already stored
-# In this directoy the cross-tools will be extract and compile (GCC and Co.)
 # default: \$USER_TOPDIR/download
 SOURCE_DIR="$downloaddir"
+
+# In this directoy the cross-tools will be extract and compile (GCC and Co.)
+# default: \$USER_TOPDIR/build
+BUILD_DIR="$builddir"
 
 # Directory for compiler binary (build by cross)
 # default: \$USER_TOPDIR/mingw32
@@ -721,14 +710,18 @@ SOURCE_DIR="$downloaddir"
 PREFIX="$prefix"
 
 # Link to colinux kernel, need for colinux daemons build processing (Guest kernel)
-# default: \$USER_TOPDIR/linux
+# default: \$BUILD_DIR/linux-\$KERNEL_VERSION
 COLINUX_TARGET_KERNEL_PATH="$targetkerneldir"
+
+# Output directory for target modules. Used for INSTALL_MOD_PATH in kernel build
+# default: \$COLINUX_TARGET_KERNEL_PATH/_install
+COLINUX_TARGET_MODULE_PATH="$targetmoduledir"
 
 # HOST-Kernel (only, if host system is linux)
 #  export COLINUX_HOST_KERNEL_DIR=/path/to/your/host/kernel
 COLINUX_HOST_KERNEL_DIR="$hostkerneldir"
 
-# Install directory for binaries
+# Install directory for target binaries (daemons, kernel and modules)
 # default: \$PREFIX/dist
 COLINUX_INSTALL_DIR="$distdir"
 
@@ -738,7 +731,7 @@ COLINUX_BUILD_LOG="$logfile"
 
 # Overwrite kerneltree before rebuild? yes/no
 # yes: Build script will overwrite kerneltree and config (default)
-# no: Build script leave kernel source untouched. User can make some patches and config
+# no:  Build script leave kernel source untouched. User can make patches and config
 #
 COLINUX_KERNEL_UNTAR="$kernel_untar"
 
@@ -751,6 +744,6 @@ EOF
     cat << EOF
 Configure DONE
 
-Ready for "make download && make && make install"
+Ready for "make download && make && make package && make installer"
 
 EOF

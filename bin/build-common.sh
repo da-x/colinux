@@ -54,8 +54,6 @@ TOPDIR=`dirname $BINDIR`
 # Downloads store here
 SRCDIR="$SOURCE_DIR"
 
-# (from build-cross.sh) #
-
 # Updated by Sam Lantinga <slouken@libsdl.org>
 # These are the files from the current MingW release
 
@@ -68,7 +66,6 @@ BINUTILS_VERSION="2.15.91"
 BINUTILS_RELEASE="$BINUTILS_VERSION-20040904-1"
 BINUTILS=binutils-$BINUTILS_RELEASE
 BINUTILS_ARCHIVE=$BINUTILS-src.tar.gz
-BINUTILS_CHECKSUM=$SRCDIR/.build-cross.md5
 
 GCC_VERSION="3.3.1"
 GCC_RELEASE="$GCC_VERSION-20030804-1"
@@ -84,7 +81,6 @@ W32API_SRC_ARCHIVE=$W32API-src.tar.gz
 W32API_ARCHIVE=$W32API.tar.gz
 # Patch can be empty or comment out, if not need
 W32API_PATCH=patch/$W32API_SRC.diff
-W32LIBS_CHECKSUM=$SRCDIR/.build-colinux-libs.md5
 
 
 # (from build-colinux-libs.sh) #
@@ -99,17 +95,15 @@ MXML_URL=http://www.easysw.com/~mike/mxml/swfiles
 MXML=mxml-$MXML_VERSION
 MXML_ARCHIVE=$MXML.tar.gz
 
-WINPCAP_SRC=wpdpack
+WINPCAP_VERSION="3_0"
 WINPCAP_URL=http://winpcap.polito.it/install/bin
-WINPCAP_SRC_ARCHIVE="$WINPCAP_SRC"_3_0.zip
+WINPCAP_SRC=wpdpack
+WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_$WINPCAP_VERSION.zip
 
-
-# (from sample.user-build.cfg) #
 
 # Kernel version we are targeting
 # Remember: Please update also conf/kernel-config, if changing kernel version!
-# Read version from filename of patchfile,
-# as patch/linux-2.6.11 or (better) patch/linux-2.6.11.diff
+# Read version from filename of patchfile patch/linux-2.6.11.diff
 # KERNEL_VERSION: full kernel version (e.g. 2.6.11)
 # KERNEL_DIR: sub-dir in www.kernel.org for the download (e.g. v2.6)
 #
@@ -119,23 +113,25 @@ KERNEL_DIR=`echo $KERNEL_VERSION | sed -r -e 's/^([0-9]+)\.([0-9]+)\..+$/v\1.\2/
 CO_VERSION=`cat $TOPDIR/src/colinux/VERSION`
 COMPLETE_KERNEL_NAME=$KERNEL_VERSION-co-$CO_VERSION
 
-# (from build-kernel.sh) #
-
 KERNEL=linux-$KERNEL_VERSION
 KERNEL_URL=http://www.kernel.org/pub/linux/kernel/$KERNEL_DIR
 KERNEL_ARCHIVE=$KERNEL.tar.bz2
-KERNEL_CHECKSUM=$SRCDIR/.build-kernel.md5
 KERNEL_PATCH=patch/linux-$KERNEL_VERSION.diff
 
 # Developer private patchfile. Used after maintainer patch,
 # use also for manipulate ".config". Sourced in kernel build directory.
 PRIVATE_PATCH=patch/linux-private.patch
 
+# MD5sum files stored here
+MD5DIR="$BUILD_DIR"
+W32LIBS_CHECKSUM="$MD5DIR/.build-colinux-libs.md5"
+KERNEL_CHECKSUM="$MD5DIR/.build-kernel.md5"
+
 # coLinux kernel we are targeting
 if [ -z "$KERNEL_VERSION" -o -z "$KERNEL_DIR" ] ; then
     # What's wrong here?
-    echo "Can't find the kernel patch, probably wrong script, or"
-    echo "file patch/linux-*.diff don't exist?"
+    echo "Can't find the kernel patch, probably wrong script,"
+    echo "or file patch/linux-*.diff don't exist?"
     exit -1
 fi
 
@@ -145,30 +141,41 @@ if [ "$1" = "--get-vars" ]; then
 fi
 
 # where does it go?
-if [ "$PREFIX" = "" ] ; then
-    echo "Please specify the $""PREFIX directory in user-build.cfg (e.g, /usr/local/mingw32)"
+if [ -z "$PREFIX" ] ; then
+    echo "Please specify the $""PREFIX directory in user-build.cfg (e.g, /home/$USER/mingw32)"
     exit -1
 fi
 
 # where does it go?
-if [ "$SOURCE_DIR" = "" ] ; then
+if [ -z "$SOURCE_DIR" ] ; then
     echo "Please specify the $""SOURCE_DIR directory in user-build.cfg (e.g, /tmp/$USER/download)"
     exit -1
 fi
 
+# where does it go?
+if [ -z "$BUILD_DIR" ] ; then
+    echo "Please specify the $""BUILD_DIR directory in user-build.cfg (e.g, /tmp/$USER/build)"
+    exit -1
+fi
+
 # coLinux enabled kernel source?
-if [ "$COLINUX_TARGET_KERNEL_PATH" = "" ] ; then
+if [ -z "$COLINUX_TARGET_KERNEL_PATH" ] ; then
     echo "Please specify the $""COLINUX_TARGET_KERNEL_PATH in user-build.cfg (e.g, /tmp/$USER/linux-co)"
     exit -1
 fi
 
+# Default path to modules
+if [ -z "$COLINUX_TARGET_MODULE_PATH" ] ; then
+    COLINUX_TARGET_MODULE_PATH="$COLINUX_TARGET_KERNEL_PATH/_install"
+fi
+
 # Default logfile of building (Append), can overwrite in user-build.cfg
-if [ "$COLINUX_BUILD_LOG" = "" ] ; then
+if [ -z "$COLINUX_BUILD_LOG" ] ; then
     COLINUX_BUILD_LOG="$TOPDIR/build-colinux-$$.log"
 fi
 
-# Default install directory
-if [ "$COLINUX_INSTALL_DIR" = "" ] ; then
+# Install directory set?
+if [ -z "$COLINUX_INSTALL_DIR" ] ; then
     echo "Please specify the $""COLINUX_INSTALL_DIR in user-build.cfg (e.g, /home/$USER/colinux/dist)"
     exit -1
 fi
@@ -210,13 +217,77 @@ download_file()
 #
 error_exit()
 {
-	# Show errors in log file with tail or less
-	tail -n 20 $COLINUX_BUILD_LOG
-	# less $COLINUX_BUILD_LOG
+	# Show errors in log file with tail or less, only if errorlevel < 10
+	if [ $1 -lt 10 ]; then
+		echo -e "\n  --- ERROR LOG:"
+		tail -n 20 $COLINUX_BUILD_LOG
+		# less $COLINUX_BUILD_LOG
+	fi
 
 	echo "$2"
-	echo "  - log available: $COLINUX_BUILD_LOG"
+	echo "  --- log available: $COLINUX_BUILD_LOG"
 	exit $1
+}
+
+# Create ZIP packages (for "autobuild")
+package_all()
+{
+	local name bname oname
+	local PATH="$PREFIX/bin:$PATH"
+	local STRIP="$TARGET-strip --strip-all"
+	local SYMBOLS_ZIP=$COLINUX_INSTALL_DIR/symbols-$CO_VERSION.zip
+	local DAEMONS_ZIP=$COLINUX_INSTALL_DIR/daemons-$CO_VERSION.zip
+	local VMLINUX_ZIP=$COLINUX_INSTALL_DIR/vmlinux-$CO_VERSION.zip
+	local MODULES_TGZ=$COLINUX_INSTALL_DIR/modules-$COMPLETE_KERNEL_NAME.tgz
+	local EXE_DIR="$TOPDIR/src/colinux/os/winnt/build"
+	
+	echo "Create ZIP packages into $COLINUX_INSTALL_DIR"
+	mkdir -p $COLINUX_INSTALL_DIR
+
+	# remove old zip files
+	rm -f $SYMBOLS_ZIP $DAEMONS_ZIP
+
+	# Strip executables and put into ZIP file
+	for i in $EXE_DIR/*.exe $EXE_DIR/*.sys
+	do
+		name=`basename $i`
+		bname=`basename $i .exe`
+		bname=`basename $bname .sys`
+		oname=$COLINUX_INSTALL_DIR/$name
+		
+		# Create map file with symbols, add to zip
+		map=$COLINUX_INSTALL_DIR/$bname.map
+		$TARGET-nm $i | sort | uniq > $map
+		zip -j $SYMBOLS_ZIP $map || exit $?
+		rm $map
+
+		# strip symbols and add exe file to zip
+		$STRIP -o $oname $i || exit $?
+		zip -j $DAEMONS_ZIP $oname || exit $?
+		rm $oname
+	done
+
+	# Exist Kernel and is newer?
+	if [ $COLINUX_TARGET_KERNEL_PATH/vmlinux -nt $VMLINUX_ZIP ]
+	then
+		echo "Installing Kernel $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
+
+		# remove old zip file
+		rm -f $VMLINUX_ZIP
+
+		# Add kernel to ZIP
+		zip -j $VMLINUX_ZIP $COLINUX_TARGET_KERNEL_PATH/vmlinux || exit $?
+	fi
+
+	# Exist target modules.dep and is newer?
+	if [ $COLINUX_TARGET_MODULE_PATH/lib/modules/$COMPLETE_KERNEL_NAME/modules.dep -nt $MODULES_TGZ ]
+	then
+		# Create compressed tar archive with path for extracting direct on the
+		# root of fs, lib/modules with full version of kernel and colinux.
+		echo "Installing Modules $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
+		cd "$COLINUX_TARGET_MODULE_PATH"
+		tar cfz $MODULES_TGZ lib/modules/$COMPLETE_KERNEL_NAME || exit $?
+	fi
 }
 
 build_all()
@@ -237,6 +308,9 @@ case "$1" in
 	;;
     --rebuild-all)
 	build_all --rebuild
+	;;
+    --package-all)
+	package_all
 	;;
     --help)
 	echo "

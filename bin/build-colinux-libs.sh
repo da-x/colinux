@@ -1,8 +1,11 @@
 #!/bin/sh
 
-source ./build-common.sh
+source build-common.sh
 
 PATH="$PREFIX/$TARGET/bin:$PATH"
+
+# Store version of installed libs here
+VERSION_CACHE="$PREFIX/$TARGET/include"
 
 download_files()
 {
@@ -16,19 +19,38 @@ download_files()
 
 check_md5sums()
 {
-	echo "Check md5sum"
+	echo -n "Check libs: "
 	cd "$TOPDIR"
-	if md5sum -c $W32LIBS_CHECKSUM >>$COLINUX_BUILD_LOG 2>&1 ; then
+	if md5sum -c $W32LIBS_CHECKSUM >/dev/null 2>&1
+	then
+	    # Check versions
+	    if [ "`cat $VERSION_CACHE/.fltk.version 2>/dev/null`" = "$FLTK_VERSION" -a \
+		 "`cat $VERSION_CACHE/.mxml.version 2>/dev/null`" = "$MXML_VERSION" -a \
+		 "`cat $VERSION_CACHE/.w32api.version 2>/dev/null`" = "$W32API_VERSION" -a \
+		 "`cat $VERSION_CACHE/.winpcap.version 2>/dev/null`" = "$WINPCAP_VERSION" ]
+	    then
 		echo "Skip w32api.h, libfltk.a, libmxml.a, libwin32k.a"
 		echo " - already installed on $PREFIX/$TARGET/lib"
 		exit 0
+	    else
+		echo "Version don't match"
+	    fi
+	else
+	    echo "MD5sum don't match, rebuilding"
 	fi
-	cd "$BINDIR"
 }
 
 create_md5sums()
 {
 	echo "Create md5sum"
+
+	# Save version number into files
+	echo "$FLTK_VERSION" >$VERSION_CACHE/.fltk.version
+	echo "$MXML_VERSION" >$VERSION_CACHE/.mxml.version
+	echo "$W32API_VERSION" >$VERSION_CACHE/.w32api.version
+	echo "$WINPCAP_VERSION" >$VERSION_CACHE/.winpcap.version
+
+	mkdir -p $MD5DIR
 	cd "$TOPDIR"
 	md5sum -b \
 	    patch/$FLTK-win32.diff \
@@ -37,11 +59,12 @@ create_md5sums()
 	    $PREFIX/$TARGET/lib/libfltk.a \
 	    $PREFIX/$TARGET/lib/libmxml.a \
 	    $PREFIX/$TARGET/lib/libwin32k.a \
-	    $PREFIX/$TARGET/include/.fltk.version \
-	    $PREFIX/$TARGET/include/.mxml.version \
-	    $PREFIX/$TARGET/include/.w32api.version \
+	    $VERSION_CACHE/.fltk.version \
+	    $VERSION_CACHE/.mxml.version \
+	    $VERSION_CACHE/.w32api.version \
+	    $VERSION_CACHE/.winpcap.version \
 	    > $W32LIBS_CHECKSUM
-	test $? -ne 0 && error_exit 1 "can not create md5sum"
+	test $? -ne 0 && error_exit 10 "can not create md5sum"
 	cd "$BINDIR"
 }
 
@@ -51,56 +74,50 @@ create_md5sums()
 
 extract_fltk()
 {
-	cd "$SRCDIR"
-	rm -rf "$FLTK"
 	echo "Extracting FLTK"
+	mkdir -p "$BUILD_DIR"
+	cd "$BUILD_DIR"
+	rm -rf "$FLTK"
 	bzip2 -dc "$SRCDIR/$FLTK_ARCHIVE" | tar x
-	cd "$BINDIR"
+	test $? -ne 0 && error_exit 10 "FLTK extract failed"
 }
 
 patch_fltk()
 {
-	cd "$SRCDIR/$FLTK"
+	cd "$BUILD_DIR/$FLTK"
 	patch -p1 < "$TOPDIR/patch/$FLTK-win32.diff"
-	test $? -ne 0 && error_exit 1 "FLTK patch failed"
-	cd "$BINDIR"
+	test $? -ne 0 && error_exit 10 "FLTK patch failed"
 }
 
 configure_fltk()
 {
-	cd "$SRCDIR/$FLTK"
 	echo "Configuring FLTK"
-
-	# X11 is installed for Target? Use, if exist. (Fake for X11-less compiling)
-	if [ -f $PREFIX/include/X11/X.h -a -f $PREFIX/lib/X11/libX11.a ]; then
-	    prefix_x11="--x-includes=$PREFIX/include --x-libraries=$PREFIX/lib"
-	fi
+	cd "$BUILD_DIR/$FLTK"
 
 	# Using of --host=$TARGET ist old!
-	# Plesae beleve host=i386, also your host is mostly i686!
+	# Please beleve host=i386, also your host is mostly i686!
 	# "i386..." is a pseudonym to enable "cross-compiling",
 	# because target is diffent with "i686..."
-	# Configure for cross compiling. Host Linux
+
+	# Configure for cross compiling without X11.
 	./configure \
 	 --prefix=$PREFIX \
 	 --build=$TARGET \
-	 $prefix_x11 \
-	 --host=i386-linux-linux-gnu
+	 --host=i386-linux-linux-gnu \
+	 --without-x >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "FLTK configure failed"
+
 	echo "Making FLTK"
 	make -C src >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "FLTK make failed"
-	cd "$BINDIR"
 }
 
 install_fltk()
 {
-	cd "$SRCDIR/$FLTK"
 	echo "Installing FLTK"
+	cd "$BUILD_DIR/$FLTK"
 	cp lib/*.a $PREFIX/$TARGET/lib
 	cp -a FL $PREFIX/$TARGET/include/
-	echo "$FLTK_VERSION" >$PREFIX/$TARGET/include/.fltk.version
-	cd "$BINDIR"
 }
 
 build_fltk()
@@ -117,33 +134,31 @@ build_fltk()
 
 extract_mxml()
 {
-	cd "$SRCDIR"
-	rm -rf "$MXML"
 	echo "Extracting MXML"
+	cd "$BUILD_DIR"
+	rm -rf "$MXML"
 	gzip -dc "$SRCDIR/$MXML_ARCHIVE" | tar x
-	cd "$BINDIR"
+	test $? -ne 0 && error_exit 10 "MXML extract failed"
 }
 
 configure_mxml()
 {
-	cd "$SRCDIR/$MXML"
 	echo "Configuring MXML"
+	cd "$BUILD_DIR/$MXML"
 	./configure --host=$TARGET >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "MXML configure failed"
+
 	echo "Making MXML"
 	make libmxml.a >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "MXML make failed"
-	cd "$BINDIR"
 }
 
 install_mxml()
 {
-	cd "$SRCDIR/$MXML"
 	echo "Installing MXML"
+	cd "$BUILD_DIR/$MXML"
 	cp libmxml.a $PREFIX/$TARGET/lib
 	cp mxml.h $PREFIX/$TARGET/include
-	echo "$MXML_VERSION" >$PREFIX/$TARGET/include/.mxml.version
-	cd "$BINDIR"
 }
 
 build_mxml()
@@ -160,44 +175,43 @@ build_mxml()
 extract_w32api_src()
 {
 	echo "Extracting w32api source"
-	cd "$SRCDIR"
+	cd "$BUILD_DIR"
 	rm -rf "$W32API_SRC"
 	gzip -dc "$SRCDIR/$W32API_SRC_ARCHIVE" | tar x
-	cd "$BINDIR"
+	test $? -ne 0 && error_exit 10 "w32api extract failed"
 }
 
 patch_w32api_src()
 {
-	if [ -z "$W32API_PATCH" ]; then
+	if [ "$W32API_PATCH" != "" ]; then
 		echo "Patching w32api - $TOPDIR/$W32API_PATCH"
-		cd "$SRCDIR/$W32API_SRC"
+		cd "$BUILD_DIR/$W32API_SRC"
 		patch -p1 < "$TOPDIR/$W32API_PATCH"
-		test $? -ne 0 && error_exit 1 "w32api source patch failed"
-		cd "$BINDIR"
+		test $? -ne 0 && error_exit 10 "w32api source patch failed"
 	fi
 }
 
 configure_w32api_src()
 {
-	cd "$SRCDIR/$W32API_SRC"
 	echo "Configuring w32api source"
-	./configure --host=$TARGET --prefix=$PREFIX/$TARGET \
-		CC=$TARGET-gcc >>$COLINUX_BUILD_LOG 2>&1
+	cd "$BUILD_DIR/$W32API_SRC"
+	./configure \
+	 --host=$TARGET \
+	 --prefix=$PREFIX/$TARGET \
+	 CC=$TARGET-gcc >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "w32api source configure failed"
+
 	echo "Making w32api source"
 	make >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "w32api source make failed"
-	cd "$BINDIR"
 }
 
 install_w32api_src()
 {
-	cd "$SRCDIR/$W32API_SRC"
 	echo "Installing $W32API_SRC"
+	cd "$BUILD_DIR/$W32API_SRC"
 	make install >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "w32api make install failed"
-	echo "$W32API_VERSION" >$PREFIX/$TARGET/include/.w32api.version
-	cd "$BINDIR"
 }
 
 build_w32api_src()
@@ -212,31 +226,25 @@ build_w32api_src()
 
 extract_winpcap_src()
 {
-	cd "$SRCDIR"
-	rm -rf "$WINPCAP_SRC"
 	echo "Extracting winpcap source"
-	unzip "$WINPCAP_SRC_ARCHIVE" >>$COLINUX_BUILD_LOG 2>&1
-	cd "$BINDIR"
+	cd "$BUILD_DIR"
+	rm -rf "$WINPCAP_SRC"
+	unzip "$SRCDIR/$WINPCAP_SRC_ARCHIVE"
+	test $? -ne 0 && error_exit 10 "winpcap extracting failed"
 }
 
 install_winpcap_src()
 {
-	cd "$SRCDIR/$WINPCAP_SRC"
 	echo "Installing $WINPCAP_SRC"
+	cd "$BUILD_DIR/$WINPCAP_SRC"
 	cp Include/PCAP.H "$PREFIX/$TARGET/include/pcap.h"
 	cp Include/pcap-stdinc.h "$PREFIX/$TARGET/include"
 	cp Include/bittypes.h "$PREFIX/$TARGET/include"
 	cp Include/ip6_misc.h "$PREFIX/$TARGET/include"
-	if ! test -d "$PREFIX/$TARGET/include/net"; then
-		mkdir "$PREFIX/$TARGET/include/net"
-	fi
+	mkdir -p "$PREFIX/$TARGET/include/net"
 	cp Include/NET/*.h "$PREFIX/$TARGET/include/net/"
 	cp Lib/libwpcap.a "$PREFIX/$TARGET/lib"
-	if test $? -ne 0; then
-	        echo "winpcap install failed"
-	        exit 1
-	fi
-	cd "$BINDIR"
+	test $? -ne 0 && error_exit 10 "winpcap install failed"
 }
 
 build_winpcap_src()
@@ -247,20 +255,31 @@ build_winpcap_src()
 
 # ALL
 
+clean_up()
+{
+	echo "Cleanup building"
+
+	# Installation should have been successful, so clean-up
+	#  after ourselves an little bit.
+	cd $BUILD_DIR
+	rm -rf "$FLTK" "$MXML" "$W32API_SRC" "$WINPCAP_SRC"
+}
+
 build_colinux_libs()
 {
-        download_files
-	# Only Download? Than ready.
-	test "$1" = "--download-only" && exit 0
-
 	# do not check files, if rebuild forced
 	test "$1" = "--rebuild" || check_md5sums
+
+	download_files
+	# Only Download? Than ready.
+	test "$1" = "--download-only" && exit 0
 
 	build_fltk
 	build_mxml
 	build_w32api_src
 	build_winpcap_src
 
+	clean_up
 	create_md5sums
 }
 

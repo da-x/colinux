@@ -1,9 +1,6 @@
 #!/bin/sh
 
-source ./build-common.sh
-
-# See ./commom.sh (using cross tools for target, such strip
-PATH="$PREFIX/$TARGET/bin:$PATH"
+source build-common.sh
 
 # Need Variable in make
 export COLINUX_TARGET_KERNEL_PATH
@@ -18,11 +15,11 @@ compile_colinux_daemons()
 	cd "$BINDIR"
 }
 
-install_colinux_daemons()
+installer_colinux_daemons()
 {
 	echo "Installing colinux (daemons) to $COLINUX_INSTALL_DIR/"
 	cd "$TOPDIR/src"
-	make install
+	make installer >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "colinux install failed"
 	cd $BINDIR
 }
@@ -32,7 +29,7 @@ build_colinux_daemons()
 	# nothing to do for download
 	test "$1" = "--download-only" && exit 0
 	compile_colinux_daemons
-	install_colinux_daemons
+	installer_colinux_daemons
 }
 
 # ALL

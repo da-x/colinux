@@ -7,7 +7,7 @@ Table of Contents
   2. Cooperative Linux kernel (the vmlinux file)
   3. Host Operating system support code, i.e, the daemon, console, 
      and kernel driver
-  4. configure - make - make install
+  4. configure - make - make installer
   5. Private kernel config or patches
 
 =================================================================
@@ -44,7 +44,7 @@ possible that there is a mismatch between the version of the kernel
 and the version that the patch is designed to apply to.
 
 For example: 
-    ~/linux-2.6.7# patch -p1 < ../colinux/patch/linux
+    ~/linux-2.6.7# patch -p1 < ../colinux/patch/linux-2.x.y.diff
 
 The coLinux package is supplied with a premaid Linux kernel 
 configuration file. Copy it to your Linux tree:
@@ -81,38 +81,46 @@ The coLinux console depends on:
 
 3.2.1 Complete download and building for Win32 under Linux (mingw32)
 
+See also step "4. configure lite" build processing.
+
 To compile source for a Windows target, the compiler must be self compiled
 for this target. You can not download a binary of this compiler!
 
 This need a Compiler devel-libs and a lot of tools:
+(Versions from my installation. Others works also, see into configure script.)
+    bison-1.75		need by binutils (yacc 91.7.30 have a error YYEMPTY)
+    flex-2.5.4		need by binutils (arlex.l: Permission denied)
     gnu/gcc 3.3.1
+    make-3.80
+    module-init-tools-0.9.14
     patch-2.5.9
-    texinfo-4.5      need by binutils
-    bison-1.75       need by binutils (yacc 91.7.30 have a error YYEMPTY)
-    flex-2.5.4       need by binutils (arlex.l: Permission denied)
-    wget-1.8.2       to download source files
+    python2.3		for colinux build system, need exact version 2.3.x!
+    texinfo-4.5		need by binutils
+    unzip-5.50.0	extracing winapi source
+    wget-1.8.2		download source files
+    zip-2.3		packing pre releases
     ... and many more ...
 
 Create a new directory, extract colinux source in this directory, make scripts
 executable and ran the download-script in "bin" directory.
 
-    mkdir /home/$USER/colinux-build
-    cd /home/$USER/colinux-build
+    mkdir /home/$USER/colinux-devel
+    cd /home/$USER/colinux-devel
     tar xfz colinux-20040807.tar.gz
     cd colinux-20040807/bin
     chmod +x *.sh
     ./download-all.sh
     
-Files will be downloaded into directory /home/$USER/colinux-build/download.
+Files will be downloaded into directory /home/$USER/colinux-devel/download.
 
-    cd /home/$USER/colinux-build/colinux-20040807/bin
+    cd /home/$USER/colinux-devel/colinux-20040807/bin
     ./build-all.sh
 
 This is a complete build process for binutils, cross compiler, libraries,
 kernel and colinux daemons. (30 Minutes on 1.8MHz Pentium)
 
 The build process based on script build-all.sh works completly at top-level
-directory colinux-build. The cross-compiler was also installed in users 
+directory colinux-devel. The cross-compiler was also installed in users 
 directory (not system wide). We never need root rights for installing 
 headers, libs or programs.
 
@@ -122,7 +130,7 @@ Compiled executables for Windows host stored in directory mingw32/dist now.
 3.2.2 Configuration script compiling
 
 Edit bin/user-build.cfg and set some directories.
-It's unsafe to use a relative path in this build script. Mostly the TOPDIR is
+It's unsafe to use a relative path in this build script. Mostly the BINDIR is
 the bin directory, but not in all cases!
 
 download-all.sh			Download all missing files
@@ -155,57 +163,71 @@ the win32k-api and fltk library by calling 'cd bin ; ./build-colinux-libs.sh'
 3.2.3 Source tree sample for a mingw build process
 
 Source tree before building the cross compiler:
-/colinux-build
-    +-- colinux-20040807/
+/colinux-devel
+    +-- colinux-20050322/
     |	+-- bin/
-    |	|   +-- download-all.sh	(Download all files only)
-    |	|   +-- build-all.sh	(Compile for Win32, download missing files)
-    |	|   ...
+    |	|   +-- download-all.sh			(Download all files only)
+    |	|   +-- build-all.sh			(Compile for Win32,
+    |	|   ...					 download missing files)
     |	+-- src/
     |	... ...
     +-- download/
         +-- binutils-2.15.90-20040222-1-src.tar.gz
-        +-- colinux-20040710.tar.gz
+        +-- colinux-20050322.tar.gz
         +-- fltk-1.1.4-source.tar.bz2
         +-- gcc-core-3.3.1-20030804-1-src.tar.gz
         +-- gcc-g++-3.3.1-20030804-1-src.tar.gz
-        +-- linux-2.6.7.tar.bz2
-        +-- mingw-runtime-3.3.tar.gz	(3.2 also runs)
+        +-- linux-2.6.11.tar.bz2
+        +-- mingw-runtime-3.6.tar.gz
         +-- mxml-1.3.tar.gz
-        +-- w32api-2.5-src.tar.gz
-        +-- w32api-2.5.tar.gz
+        +-- w32api-3.2-src.tar.gz
+        +-- w32api-3.2.tar.gz
         +-- wpdpack_3_0.zip
 
 
 Source tree after building cross compiler and colinux binaries:
-/colinux-build
-    +-- colinux-20040807/
-    |   ...
-    +-- download/		(cross working dirs)
-    |   +-- binutils-2.15.90-20040222-1/
-    |   +-- fltk-1.1.4/
+/colinux-devel					$USER_TOPDIR
+    +-- colinux-20050322/				
+    |   ... Colinux sources
+    +-- build/					$BUILD_DIR
+    |   +-- binutils-2.15.90-20040222-1/	(cross working dirs,
+    |   +-- fltk-1.1.4/				 deleted after build)
     |   +-- gcc-3.3.1-20030804-1/
     |   +-- linux-2.6.7/
     |   +-- mxml-1.3/
     |   +-- w32api-2.5/
     |   +-- wpdpack/
-    |   ... Source files ...
-    +-- linux/	(link to linux-2.6.7)
-    +-- mingw32/
+    |   +-- linux-2.6.11/			$COLINUX_TARGET_KERNEL_PATH
+    |       ... kernel sources and building dir
+    |       +--_install/                        $COLINUX_TARGET_MODULE_PATH
+    |          +-- lib
+    |              +-- modules
+    |                  +-- 2.6.11-co-0.7.1/
+    |                      +-- kernel/
+    |                      +-- modules.dep
+    +-- download/				$SOURCE_DIR
+    |   ... Source files ...			(source store here)
+    +-- log/					$COLINUX_BUILD_LOG
+    |   +-- build-colinux-$$.log		(Logfiles of build process)
+    +-- mingw32/				$PREFIX
 	+-- bin/
 	|   ... Cross compiler binaries (e.g. i686-pc-mingw32-gcc) ...
-	+-- dist/		(Binaries for target)
-        |   +-- colinux-console-fltk.exe
-        |   +-- colinux-console-nt.exe
-        |   +-- colinux-daemon.exe
-        |   +-- colinux-net-daemon.exe
-        |   +-- linux.sys
-        |   +-- vmlinux
+	+-- dist/				$COLINUX_INSTALL_DIR
+	|   +-- daemons-0.7.1.zip		(Binaries for target)
+        |   |   +-- colinux-console-fltk.exe
+        |   |   +-- colinux-console-nt.exe
+        |   |   +-- colinux-daemon.exe
+        |   |   +-- colinux-net-daemon.exe
+	|   |   +-- colinux-*.exe		(Some more colinux daemons)
+        |   |   +-- linux.sys			(Windows colinux driver)
+	|   +-- vmlinux-0.7.1.zip
+        |   |   +-- vmlinux			(kernel)
+	|   +-- modules-2.6.11-co-0.7.1.tgz	(Modules for target kernel)
 	+-- i686-pc-mingw32/
 	|   +-- bin/
 	|   |   ... Cross compiler binaries (e.g. gcc) ...
-	|   +-- bin/
-	|   |   ... Cross compiler static libraries (e.g. libfltk.a) ...
+	|   +-- lib/
+	|       ... Cross compiler static libraries (e.g. libfltk.a) ...
 	+-- include/
 	+-- info/
 	+-- lib/
@@ -263,16 +285,16 @@ Please call './configure --help' for list of actual options.
 
 Sample for WinNT as host (default):
   ./configure --target=i686-pc-mingw32 \
-        --downloaddir=/home/$USER/src/colinux-devel/download \
-        --prefix=/home/$USER/src/colinux-devel/mingw32
+        --downloaddir=/home/$USER/colinux-devel/download \
+        --prefix=/home/$USER/colinux-devel/mingw32
 
 For Linux as Host must use the option '--target=i686-pc-linux'. Host kernel
 directories will automatic detect. You can overwrite with --hostkerneldir.
 
 Sample for Linux as host:
   ./configure --target=i686-pc-linux \
-        --downloaddir=/home/$USER/src/colinux-devel/download \
-        --targetkerneldir=/home/$USER/src/colinux-devel/download/linux-2.6.10
+        --downloaddir=/home/$USER/colinux-devel/download \
+        --targetkerneldir=/home/$USER/colinux-devel/download/linux-2.6.11
         --hostkerneldir=/usr/src/linux
 
 
@@ -295,26 +317,31 @@ or download can not handle timestamp. So we use md5sum to check new sources,
 patches or configuration. Every compile step update the md5sum file at the end.
 
 
-4.4 make install
+4.4 make package
 
-'make install' will install executables on dist directory.
+'make package' will copy executables as ZIP file on dist directory.
 
 
-4.5 make clean
+4.5 make installer
+
+'make installer' build complete colinux installer. This need wine, "makensis"
+and more win32 installer tools.
+
+
+4.6 make clean
 
 This cleans only the source tree of colinux daemons. The cross tools and
-libraries are untouched. Please call this, if you switch between targets winnt
-and linux.
+libraries are untouched.
 
 
-4.6 make disclean
+4.7 make disclean
 
 This remove also control files for md5sum, toplevel Makefile and user-build.cfg.
 After this step you must './configure' again. Next 'make' will also rebuild the
 cross tools and libraries.
 
 
-4.7 Comments about configure system
+4.8 Comments about configure system
 
 This script is not the same as in some other software projects. This script do
 not detect of all needed tools and host environment. It do only create a simple

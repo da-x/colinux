@@ -1,6 +1,6 @@
 #!/bin/sh
 
-source ./build-common.sh
+source build-common.sh
 
 download_files()
 {
@@ -13,30 +13,33 @@ download_files()
 	download_file "$W32API_ARCHIVE" "$MINGW_URL"
 }
 
-check_md5sums()
+check_installed()
 {
-	echo "Check md5sum"
-	if md5sum -c $BINUTILS_CHECKSUM >>$COLINUX_BUILD_LOG 2>&1 ; then
-		echo "Skip $TARGET-gcc, $TARGET-ld, $TARGET-windres"
+	echo -n "Check cross compiler: "
+	cd "$TOPDIR"
+	if [ -x $PREFIX/bin/$TARGET-gcc -a \
+	     -x $PREFIX/bin/$TARGET-ld -a \
+	     -x $PREFIX/bin/$TARGET-windres -a \
+	     -x $PREFIX/bin/$TARGET-strip ]
+	then
+		# Verify version of installed GCC and LD
+		if [ ! `$TARGET-gcc -dumpversion` = $GCC_VERSION ]
+		then
+			echo "$TARGET-gcc $GCC_VERSION not installed"
+			return 1
+		fi
+
+		if ! $TARGET-ld --version | grep -q -e "$BINUTILS_VERSION"
+		then
+			echo "$TARGET-ld $BINUTILS_VERSION not installed"
+			return 1
+		fi
+
+		echo "Skip $TARGET-gcc, $TARGET-ld"
 		echo " - already installed on $PREFIX/bin"
 		exit 0
 	fi
-}
-
-create_md5sums()
-{
-	echo "Create md5sum"
-	md5sum -b \
-	    $GCC_PATCH \
-	    $PREFIX/bin/$TARGET-windres \
-	    $PREFIX/bin/$TARGET-ld \
-	    $PREFIX/bin/$TARGET-gcc \
-	    $PREFIX/$TARGET/bin/strip \
-	    > $BINUTILS_CHECKSUM
-	test $? -ne 0 && error_exit 1 "can not create md5sum"
-	if [ "$GCC_PATCH" != "" ]; then
-		md5sum -b $SRCDIR/$GCC_PATCH >> $BINUTILS_CHECKSUM
-	fi
+	echo "No executable, rebuilding"
 }
 
 
@@ -47,99 +50,92 @@ install_libs()
 	cd "$PREFIX/$TARGET"
 	gzip -dc "$SRCDIR/$MINGW_ARCHIVE" | tar x
 	gzip -dc "$SRCDIR/$W32API_ARCHIVE" | tar x
-	cd "$BINDIR"
 }
 
 extract_binutils()
 {
-	cd "$SRCDIR"
-	rm -rf "$BINUTILS"
 	echo "Extracting binutils"
+	mkdir -p "$BUILD_DIR"
+	cd "$BUILD_DIR"
+	rm -rf "$BINUTILS"
 	gzip -dc "$SRCDIR/$BINUTILS_ARCHIVE" | tar x
-	cd "$BINDIR"
 }
 
 configure_binutils()
 {
-	cd "$BINDIR"
+	echo "Configuring binutils"
+	cd "$BUILD_DIR"
 	rm -rf "binutils-$TARGET"
 	mkdir "binutils-$TARGET"
 	cd "binutils-$TARGET"
-	echo "Configuring binutils"
-	"$SRCDIR/$BINUTILS/configure" --prefix="$PREFIX" --target=$TARGET &> configure.log
-	cd "$BINDIR"
+	"$BUILD_DIR/$BINUTILS/configure" \
+	 --prefix="$PREFIX" --target=$TARGET >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "configure binutils failed"
 }
 
 build_binutils()
 {
-	cd "$BINDIR/binutils-$TARGET"
 	echo "Building binutils"
+	cd "$BUILD_DIR/binutils-$TARGET"
 	make >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "make binutils failed"
-	cd "$BINDIR"
 }
 
 install_binutils()
 {
-	cd "$BINDIR/binutils-$TARGET"
 	echo "Installing binutils"
+	cd "$BUILD_DIR/binutils-$TARGET"
 	make install >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "install binutils failed"
-	cd "$BINDIR"
 }
 
 extract_gcc()
 {
-	cd "$SRCDIR"
-	rm -rf "$GCC"
 	echo "Extracting gcc"
+	cd "$BUILD_DIR"
+	rm -rf "$GCC"
 	gzip -dc "$SRCDIR/$GCC_ARCHIVE1" | tar x
 	gzip -dc "$SRCDIR/$GCC_ARCHIVE2" | tar x
-	cd "$BINDIR"
 }
 
 patch_gcc()
 {
 	if [ "$GCC_PATCH" != "" ]; then
 		echo "Patching gcc"
-		cd "$SRCDIR/$GCC"
+		cd "$BUILD_DIR/$GCC"
 		patch -p1 < "$SRCDIR/$GCC_PATCH"
-		cd "$BINDIR"
 	fi
 }
 
 configure_gcc()
 {
-	cd "$BINDIR"
+	echo "Configuring gcc"
+	cd "$BUILD_DIR"
 	rm -rf "gcc-$TARGET"
 	mkdir "gcc-$TARGET"
 	cd "gcc-$TARGET"
-	echo "Configuring gcc"
-	"$SRCDIR/$GCC/configure" -v \
+	"$BUILD_DIR/$GCC/configure" -v \
 		--prefix="$PREFIX" --target=$TARGET \
 		--with-headers="$PREFIX/$TARGET/include" \
 		--with-gnu-as --with-gnu-ld \
 		--without-newlib --disable-multilib >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "configure gcc failed"
-	cd "$BINDIR"
 }
 
 build_gcc()
 {
-	cd "$BINDIR/gcc-$TARGET"
 	echo "Building gcc"
+	cd "$BUILD_DIR/gcc-$TARGET"
 	make LANGUAGES="c c++" >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "make gcc failed"
-	cd "$BINDIR"
 }
 
 install_gcc()
 {
-	cd "$BINDIR/gcc-$TARGET"
 	echo "Installing gcc"
+	cd "$BUILD_DIR/gcc-$TARGET"
 	make LANGUAGES="c c++" install >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "install gcc failed"
-	cd "$BINDIR"
 }
 
 final_tweaks()
@@ -173,19 +169,20 @@ final_tweaks()
 	
 	# Installation should have been successful, so clean-up
 	#  after ourselves an little bit.
-	rm -rf *i686-pc-mingw32
+	cd $BUILD_DIR
+	rm -rf *i686-pc-mingw32 "$BINUTILS" "$GCC"
 
 	echo "Installation complete!"
 }
 
 build_cross()
 {
-        download_files
+	# do not check files, if rebuild forced
+	test "$1" = "--rebuild" || check_installed
+
+	download_files
 	# Only Download? Than ready.
 	test "$1" = "--download-only" && exit 0
-
-	# do not check files, if rebuild forced
-	test "$1" = "--rebuild" || check_md5sums
 
         install_libs
 
@@ -201,7 +198,6 @@ build_cross()
         install_gcc
 
         final_tweaks
-	create_md5sums
 }
 
 build_cross $1
