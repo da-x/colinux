@@ -28,7 +28,6 @@
 
 #include "../daemon.h"
 #include "../unix.h"
-#include "../fifo.h"
 
 static co_rc_t poll_init_socket(struct pollfd *pfd, int fd)
 {
@@ -115,8 +114,6 @@ static co_rc_t wait_loop(co_daemon_handle_t daemon_handle, int unit, int read_fd
 	if (!CO_OK(rc))
 		return rc;
 
-	co_terminal_print("coserial: loop running\n");
-
 	while (1) {
 		int ret;
 		
@@ -143,8 +140,6 @@ static co_rc_t wait_loop(co_daemon_handle_t daemon_handle, int unit, int read_fd
 		}
 	}
 
-	co_terminal_print("coserial: loop stopped\n");
-
 	return rc;
 }
 
@@ -152,245 +147,34 @@ static void syntax(void)
 {
 	co_terminal_print("coserial daemon\n");
 	co_terminal_print("Syntax:\n");
-	co_terminal_print("       colinux-serial-daemon ([-i colinux instance number] [-u unit] -c [cmdline])|(-m terminal)\n");
+	co_terminal_print("       colinux-serial-daemon [-i colinux instance number] [-u unit]\n");
 }
 
-static co_rc_t create_child(const char *command_line, pid_t *out_pid, int *read_fd, int *write_fd)
+co_rc_t daemon_mode(int unit, int instance)
 {
-        int to_pipefd[2], from_pipefd[2];
-        int sysrc;
-        pid_t pid;
-
-        sysrc = pipe(to_pipefd);
-        if (sysrc == -1)
-                return CO_RC(ERROR);
-
-        sysrc = pipe(from_pipefd);
-        if (sysrc == -1) {
-                close(to_pipefd[0]);
-                close(to_pipefd[1]);
-                return CO_RC(ERROR);
-        }
-
-        pid = fork();
-        if (pid == 0) {
-                int i, fd; 
-
-                setpgrp();
-
-                dup2(to_pipefd[0], 3);
-                dup2(from_pipefd[1], 4);
-
-                for (i=0; i <= 255; i++)
-                        if (i != 3  &&  i != 4)
-                                close(i);
-
-                dup2(3, 0);
-                dup2(4, 1);
-
-                fd = open("/dev/null", O_RDWR);
-                if (fd != 2) {
-                        dup2(fd, 2);
-                        close(fd);
-                }
-
-                sysrc = system(command_line);
-                if (sysrc == -1)
-                        exit(-1);
-
-                if (WIFEXITED(sysrc))
-                        exit(WEXITSTATUS(sysrc));
-
-                exit(-1);
-        }
-
-        if (pid == -1) {
-                close(to_pipefd[0]);
-                close(to_pipefd[1]);
-                close(from_pipefd[0]);
-                close(from_pipefd[1]);
-                return CO_RC(ERROR);
-        }
-
-        *read_fd = from_pipefd[0];
-        *write_fd = to_pipefd[1];
-        *out_pid = pid;
-
-        close(from_pipefd[1]);
-        close(to_pipefd[0]);
-
-        return CO_RC(OK);
-}
-
-static co_rc_t create_terminal(pid_t *out_pid, int *read_fd, int *write_fd)
-{
-	int sysrc;
-	pid_t pid;
-	char pipe_id[0x100];
-	char command_line[0x100];
-	co_rc_t rc;
-
-	rc = co_os_fifo_alloc(pipe_id, sizeof(pipe_id));
-	if (!CO_OK(rc))
-		return rc;
-
-	snprintf(command_line, sizeof(command_line), 
-		 "rxvt -e ./colinux-serial-daemon -m terminal_proxy --pipe-id %s",
-		 pipe_id);
-
-	co_terminal_print("running '%s'\n", command_line);
-
-	pid = fork();
-	if (pid == 0) {
-		setpgrp();
-		sysrc = system(command_line);
-		if (sysrc == -1)
-			exit(-1);
-
-		if (WIFEXITED(sysrc))
-			exit(WEXITSTATUS(sysrc));
-
-		exit(-1);
-	}
-
-	if (pid == -1) {
-		co_os_fifo_unlink(pipe_id);
-		return CO_RC(ERROR);
-	}
-
-	co_os_fifo_connect_side_a(pipe_id, read_fd, write_fd);
-
-	*out_pid = pid;
-
-	return CO_RC(OK);
-}
-
-
-co_rc_t daemon_mode(const char *mode, 
-		    bool_t sub_command_line_specified, char *sub_command_line, 
-		    int unit, int instance)
-{
-	int read_fd, write_fd;
 	co_daemon_handle_t daemon_handle_;
-	pid_t pid;
 	co_rc_t rc = CO_RC(ERROR);
-
-	if (!sub_command_line_specified) {
-		co_terminal_print("coserial: command line arguemnt -c not specified\n");
-		goto out;
-	}
-
-	if (strcmp(mode, "terminal_server") == 0) {
-		rc = create_terminal(&pid, &read_fd, &write_fd);
-	} else {
-		rc = create_child(sub_command_line, &pid, &read_fd, &write_fd);
-	}
-
-	if (!CO_OK(rc)) {
-		co_terminal_print("coserial: error creating child process\n");
-		goto out;
-	}
-		
-	rc = co_os_open_daemon_pipe(instance, CO_MODULE_SERIAL0 + unit, &daemon_handle_);
-	if (!CO_OK(rc)) {
-		co_terminal_print("coserial: error opening a pipe to the daemon\n");
-		goto out_close;
-	}
-
-	rc = wait_loop(daemon_handle_, unit, read_fd, write_fd);
-
-	co_os_daemon_close(daemon_handle_);
-
-out_close:
-	close(read_fd);
-	close(write_fd);
-
-	kill(-pid, SIGINT);
-	waitpid(pid, NULL, 0);
-
-out:
-	return rc;
-}
-
-co_rc_t terminal_mode(int unit, int instance)
-{
-	int read_fd, write_fd;
-	co_daemon_handle_t daemon_handle_;
-	pid_t pid;
-	co_rc_t rc = CO_RC(ERROR);
-
-	rc = create_terminal(&pid, &read_fd, &write_fd);
-	if (!CO_OK(rc)) {
-		co_terminal_print("coserial: error creating child process\n");
-		goto out;
-	}
-		
-	rc = co_os_open_daemon_pipe(instance, CO_MODULE_SERIAL0 + unit, &daemon_handle_);
-	if (!CO_OK(rc)) {
-		co_terminal_print("coserial: error opening a pipe to the daemon\n");
-		goto out_close;
-	}
-
-	rc = wait_loop(daemon_handle_, unit, read_fd, write_fd);
-	co_os_daemon_close(daemon_handle_);
-
-out_close:
-	close(read_fd);
-	close(write_fd);
-
-	kill(-pid, SIGINT);
-	waitpid(pid, NULL, 0);
-
-out:
-	return rc;
-}
-
-co_rc_t terminal_proxy(const char *pipe_id)
-{
-	struct pollfd pollarray[2];
-	int pipes[2][2] = {{0,1},{-1,-1,}};
-	char buffer[0x1000];
-	co_rc_t rc;
 	struct termios term;
 
-	rc = co_os_fifo_connect_side_b(pipe_id, &pipes[1][0], &pipes[1][1]);
-	if (!CO_OK(rc))
-		return rc;
-
-	rc = poll_init_socket(&pollarray[0], pipes[0][0]);
-	if (!CO_OK(rc))
-		return rc;
-
-	rc = poll_init_socket(&pollarray[1], pipes[1][0]);
-	if (!CO_OK(rc))
-		return rc;
-
-	tcgetattr(pipes[0][0], &term);
-	cfmakeraw(&term);
-	tcsetattr(pipes[0][0], 0, &term);
-	 
-	while (1) {
-		int ret, i;
-		
-		pollarray[0].revents = 0;
-		pollarray[1].revents = 0;
-
-		ret = poll(pollarray, 2, -1);
-		if (ret < 0)
-			break;
- 
-		for (i=0; i < 2; i++) {
-			if (pollarray[i].revents & POLLIN) {
-				int nread;
-				nread = read(pipes[i][0], buffer, sizeof(buffer));
-				if (nread) {
-					co_os_sendn(pipes[!i][1], buffer, nread);
-				}
-			}
-		}
+	rc = co_os_open_daemon_pipe(instance, CO_MODULE_SERIAL0 + unit, &daemon_handle_);
+	if (!CO_OK(rc)) {
+		co_terminal_print("coserial: error opening a pipe to the daemon\n");
+		goto out;
 	}
 
-	return CO_RC(OK);
+	tcgetattr(0, &term);
+	cfmakeraw(&term);
+	tcsetattr(0, 0, &term);
+
+	tcgetattr(1, &term);
+	cfmakeraw(&term);
+	tcsetattr(1, 0, &term);
+
+	rc = wait_loop(daemon_handle_, unit, 0, 1);
+
+	co_os_daemon_close(daemon_handle_);
+out:
+	return rc;
 }
 
 static co_rc_t coserial_main(int argc, char *argv[])
@@ -401,12 +185,6 @@ static co_rc_t coserial_main(int argc, char *argv[])
 	bool_t unit_specified = PFALSE;
 	int instance = 0;
 	bool_t instance_specified = PFALSE;
-	char sub_command_line[0x100];
-	bool_t sub_command_line_specified = PFALSE;
-	char mode[0x100];
-	bool_t mode_specified = PFALSE;
-	char pipe_id[0x100];
-	bool_t pipe_id_specified = PFALSE;
 	
 	rc = co_cmdline_params_alloc(&argv[1], argc-1, &cmdline);
 	if (!CO_OK(rc)) {
@@ -430,42 +208,12 @@ static co_rc_t coserial_main(int argc, char *argv[])
 		goto out;
 	}
 
-	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-c", 
-						      &sub_command_line_specified, 
-						      sub_command_line, sizeof(sub_command_line));
-
-	if (!CO_OK(rc))
-		goto out;
-
-	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-m", 
-						      &mode_specified, 
-						      mode, sizeof(mode));
-
-	if (!CO_OK(rc))
-		goto out;
-
-	rc = co_cmdline_params_one_arugment_parameter(cmdline, "--pipe-id", 
-						      &pipe_id_specified, 
-						      pipe_id, sizeof(pipe_id));
-
-	if (!CO_OK(rc))
-		goto out;
-
-
 	rc = co_cmdline_params_check_for_no_unparsed_parameters(cmdline, PTRUE);
 	if (!CO_OK(rc))
 		goto out;
 
-	if (mode_specified) {
-		if (strcmp(mode, "terminal_proxy") == 0) {
-			rc = terminal_proxy(pipe_id);
-		} else if (strcmp(mode, "terminal_master") == 0) {
-			rc = terminal_mode(unit, instance);
-		}
-	}
-	else {
-		rc = daemon_mode(NULL, sub_command_line_specified, sub_command_line, unit, instance);
-	}
+
+	rc = daemon_mode(unit, instance);
 
 out:
 	co_cmdline_params_free(cmdline);
