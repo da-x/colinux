@@ -12,6 +12,7 @@
 #define __CO_OS_USER_WINNT_DAEMON_CMDLINE_H__
 
 #include <colinux/common/common.h>
+#include <colinux/user/cmdline.h>
 
 typedef struct co_winnt_parameters {
 	bool_t install_service;
@@ -25,6 +26,6 @@ typedef struct co_winnt_parameters {
 } co_winnt_parameters_t;
 
 extern void co_winnt_daemon_syntax(void);
-extern co_rc_t co_winnt_daemon_parse_args(char **args, co_winnt_parameters_t *winnt_parameters);
+extern co_rc_t co_winnt_daemon_parse_args(co_command_line_params_t cmdline, co_winnt_parameters_t *winnt_parameters);
 
 #endif

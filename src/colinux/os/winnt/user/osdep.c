@@ -6,7 +6,7 @@
  * Windows parameters are one long whitespace separated strings.
  * This function splits them to normal NULL-terminated strings.
  */
-co_rc_t co_os_parse_args(LPSTR szCmdLine, char ***args)
+co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 {
 	char *param_scan;
 	long param_count = 0, i;
@@ -96,6 +96,7 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, char ***args)
 	}
 
 	if (i == param_count) {
+		*count = param_count;
 		param_array[param_count] = NULL;
 		*args = param_array;
 		return CO_RC(OK);

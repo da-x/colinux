@@ -25,6 +25,7 @@ static LRESULT CALLBACK keyboard_hook(
     LPARAM lParam
 )
 {
+	int AltDown = (lParam & (1 << 29)) ? 1 : 0;
 	co_scan_code_t sc;
 	sc.code = (lParam >> 16) & 0xff;
 	sc.down = (lParam & (1 << 31)) ? 0 : 1;
@@ -32,6 +33,12 @@ static LRESULT CALLBACK keyboard_hook(
 	scancode_state[sc.code] = sc.down;
 
 	co_user_console_handle_scancode(sc);
+
+	if ((AltDown == 1) &&
+            (wParam == 0x73)) {
+		// Swallow the ALT-F4 keystroke.
+		return 1;
+	}
 
 	return CallNextHookEx(current_hook, nCode, wParam, lParam);
 }

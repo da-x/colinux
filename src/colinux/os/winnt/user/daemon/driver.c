@@ -21,6 +21,7 @@
 #include <colinux/user/manager.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/winnt/kernel/driver.h>
+#include <colinux/os/winnt/user/misc.h>
 #include <colinux/os/current/os.h>
 
 #include "main.h"
@@ -285,7 +286,7 @@ void co_winnt_status_driver(void)
 
 	rc = co_win32_manager_is_installed(&installed);
 	if (!CO_OK(rc))
-		return rc;
+		return;
 
 	if (!installed) {
 		co_terminal_print("daemon: driver not installed\n");

@@ -17,6 +17,7 @@
 
 #include "elf_load.h"
 #include "monitor.h"
+#include "cmdline.h"
 #include "console/daemon.h"
 
 typedef struct co_daemon_start_parameters {
@@ -64,12 +65,12 @@ typedef struct co_connected_module {
 
 extern void co_daemon_syntax(void);
 extern void co_daemon_print_header(void);
-extern co_rc_t co_daemon_parse_args(char **args, co_start_parameters_t *start_parameters);
 extern co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **co_daemon_out);
 extern co_rc_t co_daemon_start_monitor(co_daemon_t *daemon);
 extern co_rc_t co_daemon_run(co_daemon_t *daemon);
 extern void co_daemon_end_monitor(co_daemon_t *daemon);
 extern void co_daemon_destroy(co_daemon_t *daemon);
 extern void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon);
+extern co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_parameters_t *start_parameters);
 
 #endif

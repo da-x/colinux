@@ -13,6 +13,7 @@
 #include <stdio.h>
 
 #include <colinux/common/common.h>
+#include <colinux/os/user/misc.h>
 
 #include "tap-win32.h"
 #include "../daemon.h"

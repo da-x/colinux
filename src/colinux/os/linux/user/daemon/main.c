@@ -69,79 +69,35 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	
-	if (installed) {
-		co_manager_handle_t handle;
-		bool_t remove = PTRUE;
+	if (!installed) {
+		co_terminal_print("daemon: error, kernel module is not loaded\n");
+		return -1;
+	}
 
-		handle = co_os_manager_open();
-		if (handle) {
-			co_manager_ioctl_status_t status = {0, };
+	handle = co_os_manager_open();
+	if (handle) {
+		co_manager_ioctl_status_t status = {0, };
 
-			rc = co_manager_status(handle, &status);
-			if (CO_OK(rc)) {
-				co_terminal_print("daemon: manager is already running\n");
-
-				if (status.state == CO_MANAGER_STATE_INITIALIZED) {
-					co_terminal_print("daemon: monitors running: %d\n", status.monitors_count);
-
-					if (status.monitors_count != 0) {
-						remove = PFALSE;
-					}
-				}
-				else
-					co_terminal_print("daemon: manager not initialized (%d)\n", status.state);
-
-			} else {
-				co_terminal_print("daemon: status undetermined\n");
-			}
-
-			co_os_manager_close(handle);
-		}
-		else {
-			co_terminal_print("daemon: manager not opened\n");
-		}
-		
-		if (remove) {
-			/*
-			 * Remove older version of the driver.
-			 *
-			 * NOTE: In the future we would like to run several instances of
-			 * coLinux, so intalling and removing the driver needs to be done
-			 * some place else, problably by the setup/uninstall scripts. 
-			 */
-	
-			co_terminal_print("daemon: removing driver leftover\n");
-
-			co_os_manager_remove();
+		rc = co_manager_status(handle, &status);
+		if (CO_OK(rc)) {
+			co_terminal_print("daemon: manager is loaded\n");
+			if (status.state == CO_MANAGER_STATE_NOT_INITIALIZED) {
+    				co_terminal_print("daemon: initializing manager\n");
+				rc = co_manager_init(handle, PTRUE);
+				if (!CO_OK(rc)) {
+					co_terminal_print("daemon: error initializing driver\n", rc);
+					return -1;
+				}	
+    			}
 		} else {
-			co_terminal_print("daemon: driver cannot be removed, aborting\n");
+			co_terminal_print("daemon: can't get manager status\n");
 			return -1;
 		}
-	}
-
-	co_terminal_print("daemon: installing kernel driver\n");
-	rc = co_os_manager_install();
-	if (!CO_OK(rc)) {
-		co_terminal_print("daemon: error installing kernel driver: %d\n", rc);
-		return rc;
 	} else {
-		handle = co_os_manager_open();
-		if (handle == NULL) {
-			co_terminal_print("daemon: error opening kernel driver\n");
-			rc = CO_RC(ERROR);
-			goto out;
-		}
-		
-		rc = co_manager_init(handle, PTRUE);
-		if (!CO_OK(rc)) {
-			co_terminal_print("daemon: error initializing kernel driver\n");
-			co_os_manager_close(handle);
-			rc = CO_RC(ERROR);
-			goto out;
-		}
-
-		co_os_manager_close(handle);
+		co_terminal_print("daemon: cannot open driver\n");
+		return -1;
 	}
+	co_os_manager_close(handle);
 
 	set_affinity();
 
@@ -164,10 +120,6 @@ out_destroy:
 	colinux_daemon = NULL;
 
 out:
-	
-	co_terminal_print("daemon: removing kernel driver\n");
-	co_os_manager_remove();
-
 	if (!CO_OK(rc)) {
                 if (CO_RC_GET_CODE(rc) == CO_RC_OUT_OF_PAGES) {
 			co_terminal_print("daemon: not enough physical memory available (try with a lower setting)\n", rc);

@@ -1,3 +1,21 @@
+Mon May 17 06:53:16 2004  Dan Aloni  <da-x@colinux.org>
+
+	* src/colinux/os/winnt/user/install/WinpcapRedir.ini: 
+	* src/colinux/os/winnt/user/install/colinux.nsi: 
+	Made some fixes for the WinPCap redirection page.
+
+Mon May 17 05:51:42 2004  NEBOR Regis
+	* src/colinux/os/winnt/user/install/colinux.nsi: 
+	Added a page that redirects the user to install WinPcap. 
+
+Thu May 13 07:24:13 2004  George Boutwell  <gboutwel@praize.com>
+
+	* src/colinux/os/winnt/user/daemon/main.c (co_winnt_main): 
+	As of 0509 snapshot, the daemon falls back to a help display, 
+	rather than selecting default config, when -c option is not 
+	specified. IMHO, the behaviour should be in unison when -c is 
+	absent, regardless of the existence of --install-service option.
+
 Sun May  9 04:54:57 2004  Dan Aloni  <da-x@colinux.org>
 
 	* patch/linux/arch/i386/kernel/ioport.c: 

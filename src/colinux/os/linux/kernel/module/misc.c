@@ -21,3 +21,11 @@ unsigned long co_os_current_processor(void)
 {
 	return smp_processor_id();
 }
+
+void co_snprintf(char *buf, int size, const char *format, ...)
+{
+	va_list ap;
+	va_start(ap, format);
+	vsnprintf(buf, size, format, ap);
+	va_end(ap);
+}

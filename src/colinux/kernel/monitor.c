@@ -70,6 +70,7 @@ static co_rc_t colinux_get_pfn(co_monitor_t *cmon, vm_ptr_t address, co_pfn_t *p
 	return CO_RC(OK);;
 }
 
+#if (0)
 static void colinux_dump_page(unsigned long *page)
 {
 	int i = 0;
@@ -104,6 +105,7 @@ static co_rc_t colinux_dump_page_at_address(co_monitor_t *cmon, vm_ptr_t address
 
 	return colinux_dump_page_at_pfn(cmon, pfn);
 }
+#endif
 
 static co_rc_t colinux_init(co_monitor_t *cmon)
 {

@@ -18,6 +18,7 @@
 #include <colinux/user/manager.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/winnt/kernel/driver.h>
+#include <colinux/os/winnt/user/misc.h>
 
 #include "main.h"
 #include "cmdline.h"

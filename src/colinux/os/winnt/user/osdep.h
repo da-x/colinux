@@ -4,7 +4,7 @@
 #include <colinux/common/common.h>
 #include <windows.h>
 
-co_rc_t co_os_parse_args(LPSTR szCmdLine, char ***args);
-void co_os_free_parsed_args(char **args);
+extern co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args);
+extern void co_os_free_parsed_args(char **args);
 
 #endif

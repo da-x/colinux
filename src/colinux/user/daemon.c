@@ -92,71 +92,42 @@ void co_daemon_syntax()
 
 }
 
-co_rc_t co_daemon_parse_args(char **args, co_start_parameters_t *start_parameters)
+co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_parameters_t *start_parameters)
 {
-	char **param_scan = args;
-	const char *option;
+	co_rc_t rc;
+	bool_t dont_launch_console = PFALSE;
 
-	/* Default settings */
-	start_parameters->launch_console = PTRUE;
 	start_parameters->show_help = PFALSE;
 	start_parameters->config_specified = PFALSE;
 
 	co_snprintf(start_parameters->console, sizeof(start_parameters->console), "fltk");
 
-	/* Parse command line */
-	while (*param_scan) {
-		option = "-c";
+	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-c", 
+						      &start_parameters->config_specified,
+						      start_parameters->config_path,
+						      sizeof(start_parameters->config_path));
+	if (!CO_OK(rc)) 
+		return rc;
 
-		if (strcmp(*param_scan, option) == 0) {
-			param_scan++;
+	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-t", 
+						      NULL,
+						      start_parameters->console,
+						      sizeof(start_parameters->console));
+	if (!CO_OK(rc)) 
+		return rc;
 
-			if (!(*param_scan)) {
-				co_terminal_print(
-					"Parameter of command line option %s not specified\n",
-					option);
-				return CO_RC(ERROR);
-			}
+	rc = co_cmdline_params_argumentless_parameter(cmdline, "-d", &dont_launch_console);
 
-			co_snprintf(start_parameters->config_path, 
-				    sizeof(start_parameters->config_path), 
-				    "%s", *param_scan);
+	if (!CO_OK(rc)) 
+		return rc;
 
-			start_parameters->config_specified = PTRUE;
-		}
+	rc = co_cmdline_params_argumentless_parameter(cmdline, "-h", &start_parameters->show_help);
 
-		option = "-t";
+	if (!CO_OK(rc)) 
+		return rc;
 
-		if (strcmp(*param_scan, option) == 0) {
-			param_scan++;
-
-			if (!(*param_scan)) {
-				co_terminal_print(
-					"Parameter of command line option %s not specified\n",
-					option);
-				return CO_RC(ERROR);
-			}
-
-			co_snprintf(start_parameters->console, 
-				    sizeof(start_parameters->console), 
-					   "%s", *param_scan);
-		}
-
-		option = "-d";
-
-		if (strcmp(*param_scan, option) == 0) {
-			start_parameters->launch_console = PFALSE;
-		}
-
-		option = "-h";
-
-		if (strcmp(*param_scan, option) == 0) {
-			start_parameters->show_help = PTRUE;
-		}
-
-		param_scan++;
-	}
-
+	start_parameters->launch_console = !dont_launch_console;
+	
 	return CO_RC(OK);
 }
 

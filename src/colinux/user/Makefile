@@ -15,6 +15,7 @@ LOCAL_OBJS = \
 	elf_load.o \
 	macaddress.o \
 	daemon.o \
+	cmdline.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

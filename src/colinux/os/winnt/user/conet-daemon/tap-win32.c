@@ -18,6 +18,7 @@
 #include <ddk/ntddk.h>
 
 #include <colinux/common/common.h>
+#include <colinux/os/user/misc.h>
 
 #include "../../kernel/tap-win32/constants.h"
 

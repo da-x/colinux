@@ -11,6 +11,7 @@
 #include <windows.h>
 
 #include <colinux/common/common.h>
+#include <colinux/user/daemon.h>
 #include <colinux/os/user/misc.h>
 
 #include "cmdline.h"
@@ -31,13 +32,13 @@ void co_winnt_daemon_syntax(void)
 	co_terminal_print("                                   driver\n");
 }
 
-co_rc_t co_winnt_daemon_parse_args(char **args, co_winnt_parameters_t *winnt_parameters) 
+co_rc_t co_winnt_daemon_parse_args(co_command_line_params_t cmdline, co_winnt_parameters_t *winnt_parameters)
 {
-	char **param_scan = args;
-	const char *option;
+	co_rc_t rc;
 
 	/* Default settings */
 	co_snprintf(winnt_parameters->service_name, sizeof(winnt_parameters->service_name), "Cooperative Linux");
+
 	winnt_parameters->install_service = PFALSE;
 	winnt_parameters->run_service = PFALSE;
 	winnt_parameters->remove_service = PFALSE;
@@ -45,96 +46,56 @@ co_rc_t co_winnt_daemon_parse_args(char **args, co_winnt_parameters_t *winnt_par
 	winnt_parameters->remove_driver = PFALSE;
 	winnt_parameters->status_driver = PFALSE;
 
-	/* Parse command line */
-	while (*param_scan) {
-		option = "--install-service";
+	rc = co_cmdline_params_one_optional_arugment_parameter(
+		cmdline, "--install-service", 
+		&winnt_parameters->install_service,
+		winnt_parameters->service_name,
+		sizeof(winnt_parameters->service_name));
 
-		if (strcmp(*param_scan, option) == 0) {
-			param_scan++;
+	if (!CO_OK(rc)) 
+		return rc;
 
-			winnt_parameters->install_service = PTRUE;
+	rc = co_cmdline_params_one_optional_arugment_parameter(
+		cmdline, "--remove-service", 
+		&winnt_parameters->remove_service,
+		winnt_parameters->service_name,
+		sizeof(winnt_parameters->service_name));
 
-			if (!*param_scan)
-				break;
-			
-			if (**param_scan == '-')
-				continue;
+	if (!CO_OK(rc)) 
+		return rc;
 
-			co_snprintf(winnt_parameters->service_name, 
-				sizeof(winnt_parameters->service_name), 
-				"%s", *param_scan);
+	rc = co_cmdline_params_one_optional_arugment_parameter(
+		cmdline, "--run-service", 
+		&winnt_parameters->run_service,
+		winnt_parameters->service_name,
+		sizeof(winnt_parameters->service_name));
 
-			param_scan++;
-			continue;
-		}
+	if (!CO_OK(rc)) 
+		return rc;
 
-		option = "--remove-service";
+	rc = co_cmdline_params_argumentless_parameter(
+		cmdline,
+		"--install-driver", 
+		&winnt_parameters->install_driver);
 
-		if (strcmp(*param_scan, option) == 0) {
-			param_scan++;
+	if (!CO_OK(rc)) 
+		return rc;
 
-			winnt_parameters->remove_service = PTRUE;
+	rc = co_cmdline_params_argumentless_parameter(
+		cmdline,
+		"--remove-driver", 
+		&winnt_parameters->remove_driver);
 
-			if (!*param_scan)
-				break;
-			
-			if (**param_scan == '-')
-				continue;
+	if (!CO_OK(rc)) 
+		return rc;
 
-			co_snprintf(winnt_parameters->service_name, 
-				sizeof(winnt_parameters->service_name), 
-				"%s", *param_scan);
-			param_scan++;
-			continue;
-		}
+	rc = co_cmdline_params_argumentless_parameter(
+		cmdline,
+		"--status-driver", 
+		&winnt_parameters->status_driver);
 
-		option = "--run-service";
-
-		if (strcmp(*param_scan, option) == 0) {
-			param_scan++;
-
-			winnt_parameters->run_service = PTRUE;
-
-			if (!*param_scan)
-				break;
-			
-			if (**param_scan == '-')
-				continue;
-
-			co_snprintf(winnt_parameters->service_name, 
-				sizeof(winnt_parameters->service_name), 
-				"%s", *param_scan);
-
-			param_scan++;
-			continue;
-		}
-		
-		option = "--install-driver";
-
-		if (strcmp(*param_scan, option) == 0) {
-			winnt_parameters->install_driver = PTRUE;
-			param_scan++;
-			continue;
-		}
-		
-		option = "--remove-driver";
-
-		if (strcmp(*param_scan, option) == 0) {
-			winnt_parameters->remove_driver = PTRUE;
-			param_scan++;
-			continue;
-		}
-		
-		option = "--status-driver";
-
-		if (strcmp(*param_scan, option) == 0) {
-			winnt_parameters->status_driver = PTRUE;
-			param_scan++;
-			continue;
-		}
-
-		param_scan++;
-	}
+	if (!CO_OK(rc)) 
+		return rc;
 
 	return CO_RC(OK);
 }

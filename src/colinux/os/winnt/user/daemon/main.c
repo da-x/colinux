@@ -19,14 +19,17 @@
 #include <colinux/user/daemon.h>
 #include <colinux/user/monitor.h>
 #include <colinux/user/manager.h>
+#include <colinux/user/cmdline.h>
 #include <colinux/os/user/manager.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/pipe.h>
 
+#include "../osdep.h"
 #include "cmdline.h"
 #include "misc.h"
 #include "service.h"
 #include "driver.h"
+
 
 static co_daemon_t *g_daemon = NULL;
 bool_t co_running_as_service = PFALSE;
@@ -45,21 +48,12 @@ void co_winnt_daemon_stop(void)
 	}
 }
 
-co_rc_t co_winnt_daemon_main(char *argv[]) 
+co_rc_t co_winnt_daemon_main(co_start_parameters_t *start_parameters) 
 {
 	co_rc_t rc = CO_RC_OK;
-	co_start_parameters_t start_parameters;
 	int ret;
 
-	rc = co_daemon_parse_args((char **)argv, &start_parameters);
-	if (!CO_OK(rc)) {
-		co_terminal_print("daemon: error parsing parameters\n");
-		co_daemon_syntax();
-		co_winnt_daemon_syntax();
-		return CO_RC(ERROR);
-	}
-
-	if (!start_parameters.config_specified  ||  start_parameters.show_help) {
+	if (!start_parameters->config_specified  ||  start_parameters->show_help) {
 		co_daemon_syntax();
 		co_winnt_daemon_syntax();
 		return CO_RC(OK);
@@ -67,7 +61,7 @@ co_rc_t co_winnt_daemon_main(char *argv[])
 
 	co_winnt_affinity_workaround();
 	
-	rc = co_daemon_create(&start_parameters, &g_daemon);
+	rc = co_daemon_create(start_parameters, &g_daemon);
 	if (!CO_OK(rc))
 		goto out;
 
@@ -102,18 +96,27 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 	co_rc_t rc = CO_RC_OK;
 	co_winnt_parameters_t winnt_parameters;
 	co_start_parameters_t start_parameters;
-	char **args;
+	co_command_line_params_t cmdline;
+	int argc = 0;
+	char **args = NULL;
 
 	co_daemon_print_header();
 
-	rc = co_os_parse_args(szCmdLine, &args);
+	rc = co_os_parse_args(szCmdLine, &argc, &args);
 	if (!CO_OK(rc)) {
 		co_terminal_print("daemon: error parsing arguments\n");
 		co_daemon_syntax();
 		return CO_RC(ERROR);
 	}
 
-	rc = co_daemon_parse_args(args, &start_parameters);
+	rc = co_cmdline_params_alloc(args, argc, &cmdline);
+	if (!CO_OK(rc)) {
+		co_terminal_print("daemon: error parsing arguments\n");
+		co_os_free_parsed_args(args);
+		return CO_RC(ERROR);
+	}
+
+	rc = co_daemon_parse_args(cmdline, &start_parameters);
 	if (!CO_OK(rc) || start_parameters.show_help){
 		if (!CO_OK(rc)) {
 			co_terminal_print("daemon: error parsing parameters\n");
@@ -123,11 +126,20 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 		return CO_RC(ERROR);
 	}
 
-	rc = co_winnt_daemon_parse_args(args, &winnt_parameters);
+	rc = co_winnt_daemon_parse_args(cmdline, &winnt_parameters);
 	if (!CO_OK(rc)) {
 		co_terminal_print("daemon: error parsing parameters\n");
 		co_daemon_syntax();
 		co_winnt_daemon_syntax();
+		return CO_RC(ERROR);
+	}
+	
+	rc = co_cmdline_params_check_for_no_unparsed_parameters(cmdline, PFALSE);
+	if (!CO_OK(rc)) {
+		co_daemon_syntax();
+		co_winnt_daemon_syntax();
+		co_terminal_print("\n");
+		co_cmdline_params_check_for_no_unparsed_parameters(cmdline, PTRUE);
 		return CO_RC(ERROR);
 	}
 
@@ -145,6 +157,10 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 	}
 
 	if (winnt_parameters.install_service) {
+		if (!start_parameters.config_specified) {
+			co_terminal_print("daemon: config not specified\n");
+			return CO_RC(ERROR);
+		}
 		return co_winnt_daemon_install_as_service(winnt_parameters.service_name, &start_parameters);
 	}
 
@@ -180,7 +196,7 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 		return CO_RC(ERROR);
 	}
 
-	return co_winnt_daemon_main(args);
+	return co_winnt_daemon_main(&start_parameters);
 }
 
 HINSTANCE co_current_win32_instance;

@@ -36,6 +36,7 @@
 
 ; For priority Unpack
   ReserveFile "iDl.ini"
+  ReserveFile "WinpcapRedir.ini"
   !insertmacro MUI_RESERVEFILE_INSTALLOPTIONS
  
 ;--------------------------------
@@ -60,6 +61,7 @@
   !insertmacro MUI_PAGE_LICENSE "..\..\..\..\..\..\COPYING"
   !insertmacro MUI_PAGE_COMPONENTS
   !insertmacro MUI_PAGE_DIRECTORY
+  Page custom WinpcapRedir WinpcapRedirLeave
   Page custom StartDlImageFunc EndDlImageFunc
   !insertmacro MUI_PAGE_INSTFILES
 
@@ -102,9 +104,14 @@ Function EndDlImageFunc
 
 FunctionEnd
 
+Function WinpcapRedirLeave
+	
+FunctionEnd
+
 Function .onInit
 
   !insertmacro MUI_INSTALLOPTIONS_EXTRACT "iDl.ini"
+  !insertmacro MUI_INSTALLOPTIONS_EXTRACT "WinpcapRedir.ini"
 
 FunctionEnd
 
@@ -135,10 +142,11 @@ Section "coLinux" SeccoLinux
   File "premaid\README"
 
   ;Backup config file if present
-  IfFileExists "$INSTDIR\default.coLinux.xml" 0 +1
-  CopyFiles /SILENT "$INSTDIR\default.coLinux.xml" "$INSTDIR\default.colinux.xml.old"
-  File "..\..\..\..\..\..\conf\default.coLinux.xml"
+  IfFileExists "$INSTDIR\default.colinux.xml" 0 +1
+  CopyFiles /SILENT "$INSTDIR\default.colinux.xml" "$INSTDIR\default.colinux.xml.old"
+  File "..\..\..\..\..\..\conf\default.colinux.xml"
 
+  ; Remove kludge from older installations	
   Delete "$INSTDIR\packet.dll"
   Delete "$INSTDIR\wpcap.dll"
 
@@ -275,13 +283,24 @@ Function StartDlImageFunc
   IntOp $R0 $R0 & ${SF_SELECTED}
   IntCmp $R0 ${SF_SELECTED} "" ImageEnd ImageEnd
 
-  !insertmacro MUI_HEADER_TEXT "Obtain a Colinux Image" "Choose a location"
+  !insertmacro MUI_HEADER_TEXT "Obtain a coLinux root file system image" "Choose a location"
   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "iDl.ini"
 
   ImageEnd:
 
 FunctionEnd
 
+Function WinpcapRedir
+  !insertmacro MUI_HEADER_TEXT "Get WinPCAP" "Install Bridged Ethernet WinPCAP dependency"
+  !insertmacro MUI_INSTALLOPTIONS_DISPLAY "WinpcapRedir.ini"
+
+  ;SectionGetFlags ${SeccoLinuxBridgedNet} $R0
+  ;IntOp $R0 $R0 & ${SF_SELECTED}
+  ;IntCmp $R0 ${SF_SELECTED} "" WinpcapEnd WinpcapEnd
+  ;!insertmacro MUI_HEADER_TEXT "Get WinPCAP" "Install Bridged Ethernet WinPCAP dependency"
+  ;!insertmacro MUI_INSTALLOPTIONS_DISPLAY "WinpcapRedir.ini"
+  ;WinpcapEnd:
+FunctionEnd
 
 ;--------------------
 ;Post-install section
