@@ -1,4 +1,6 @@
 * Version 0.6.2
+  * Linux patch ported to Linux 2.6.7. Linux 2.4.x will not be
+    officially supported anymore. (Dan Aloni and George Boutwell)
   * initrd support was added (teesoft2004 at yahoo.com.cn).
     To activate it you can specify e.g. <initrd path="..." /> in the
     configuration
@@ -7,7 +9,7 @@
     TAP and multiple devices of the same/make/model should be able 
     to be connected to. (George Boutwell)
   * Support AltGr for both FLTK & NT consoles. (Sascha Kettler)
-
+  
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).
   * Some small bugfixes.	 

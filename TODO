@@ -29,7 +29,6 @@
    * Add nice wizards for the newbies.
 
  * Linux patch:
-   * Port to 2.6.x (work in progress by me and George).
    * Make it impossible to compile in stuff like PCI with CONFIG_COOPERATIVE 
      enabled.   
 
@@ -49,9 +48,8 @@
      add support for it in the driver itself - but that requires more 
      changes. The behaviour of the daemon with regard the VM's termination
      could also be specified in the XML.
-   * Add initrd support to avoid problems with packaging / installation of
-     kernel modules (i.e modules.tar.gz should probably go away and return
-     in a different form).
+   * Use initrd as a method to provide kernel modules (instead of 
+     modules.tar.gz)
    * Support to shutdown/suspend/resume (just!) coLinux so it becomes
      transportable between hosts.
    * Hostfs support
