@@ -3921,7 +3921,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm
 +#endif
 diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dma.h
 --- linux/include/asm-i386/dma.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/dma.h	2004-04-24 21:30:28.000000000 +0300
++++ linux/include/asm-i386/dma.h	2004-04-24 22:27:59.000000000 +0300
 @@ -268,6 +268,8 @@
   *
   * Assumes DMA flip-flop is clear.
@@ -3942,7 +3942,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dm
  extern int request_dma(unsigned int dmanr, const char * device_id);	/* reserve a DMA channel */
 diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.h
 --- linux/include/asm-i386/io.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/io.h	2004-04-24 21:30:28.000000000 +0300
++++ linux/include/asm-i386/io.h	2004-04-24 22:27:57.000000000 +0300
 @@ -2,6 +2,7 @@
  #define _ASM_IO_H
  
@@ -4012,7 +4012,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.
  #endif
 diff -X bin/dontdiff -urN linux/include/asm-i386/irq.h linux/include/asm-i386/irq.h
 --- linux/include/asm-i386/irq.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/irq.h	2004-04-24 09:55:11.000000000 +0300
++++ linux/include/asm-i386/irq.h	2004-04-24 22:27:45.000000000 +0300
 @@ -14,6 +14,10 @@
  
  #define TIMER_IRQ 0
@@ -4035,7 +4035,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/irq.h linux/include/asm-i386/ir
  #define NR_IRQS 16
 diff -X bin/dontdiff -urN linux/include/asm-i386/mc146818rtc.h linux/include/asm-i386/mc146818rtc.h
 --- linux/include/asm-i386/mc146818rtc.h	2001-11-22 21:46:58.000000000 +0200
-+++ linux/include/asm-i386/mc146818rtc.h	2004-04-24 21:33:30.000000000 +0300
++++ linux/include/asm-i386/mc146818rtc.h	2004-04-24 22:29:39.000000000 +0300
 @@ -4,6 +4,7 @@
  #ifndef _ASM_MC146818RTC_H
  #define _ASM_MC146818RTC_H
@@ -4066,7 +4066,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/mc146818rtc.h linux/include/asm
  #endif /* _ASM_MC146818RTC_H */
 diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/page.h
 --- linux/include/asm-i386/page.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/page.h	2004-04-24 21:30:27.000000000 +0300
++++ linux/include/asm-i386/page.h	2004-04-24 22:27:45.000000000 +0300
 @@ -1,6 +1,10 @@
  #ifndef _I386_PAGE_H
  #define _I386_PAGE_H
@@ -4141,7 +4141,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/p
  #define VM_DATA_DEFAULT_FLAGS	(VM_READ | VM_WRITE | VM_EXEC | \
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgalloc.h linux/include/asm-i386/pgalloc.h
 --- linux/include/asm-i386/pgalloc.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/pgalloc.h	2004-04-24 21:30:28.000000000 +0300
++++ linux/include/asm-i386/pgalloc.h	2004-04-24 22:27:45.000000000 +0300
 @@ -11,8 +11,13 @@
  #define pte_quicklist (current_cpu_data.pte_quick)
  #define pgtable_cache_size (current_cpu_data.pgtable_cache_sz)
@@ -4159,7 +4159,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgalloc.h linux/include/asm-i38
   * Allocate and free page tables.
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable-2level.h linux/include/asm-i386/pgtable-2level.h
 --- linux/include/asm-i386/pgtable-2level.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/pgtable-2level.h	2004-04-24 09:55:11.000000000 +0300
++++ linux/include/asm-i386/pgtable-2level.h	2004-04-24 22:27:45.000000000 +0300
 @@ -58,8 +58,14 @@
  }
  #define ptep_get_and_clear(xp)	__pte(xchg(&(xp)->pte_low, 0))
@@ -4178,7 +4178,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable-2level.h linux/include/
  #endif /* _I386_PGTABLE_2LEVEL_H */
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable.h linux/include/asm-i386/pgtable.h
 --- linux/include/asm-i386/pgtable.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/pgtable.h	2004-04-24 21:30:28.000000000 +0300
++++ linux/include/asm-i386/pgtable.h	2004-04-24 22:27:45.000000000 +0300
 @@ -320,8 +320,13 @@
  
  #define page_pte(page) page_pte_prot(page, __pgprot(0))
@@ -4196,7 +4196,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable.h linux/include/asm-i38
  #define pgd_index(address) ((address >> PGDIR_SHIFT) & (PTRS_PER_PGD-1))
 diff -X bin/dontdiff -urN linux/include/asm-i386/processor.h linux/include/asm-i386/processor.h
 --- linux/include/asm-i386/processor.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/processor.h	2004-04-24 21:30:27.000000000 +0300
++++ linux/include/asm-i386/processor.h	2004-04-24 22:27:45.000000000 +0300
 @@ -181,8 +181,18 @@
  #define X86_CR4_OSFXSR		0x0200	/* enable fast FPU save and restore */
  #define X86_CR4_OSXMMEXCPT	0x0400	/* enable unmasked SSE exceptions */
@@ -4219,7 +4219,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/processor.h linux/include/asm-i
   * Save the cr4 feature set we're using (ie
 diff -X bin/dontdiff -urN linux/include/asm-i386/system.h linux/include/asm-i386/system.h
 --- linux/include/asm-i386/system.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/system.h	2004-04-24 21:30:27.000000000 +0300
++++ linux/include/asm-i386/system.h	2004-04-24 22:27:45.000000000 +0300
 @@ -12,7 +12,15 @@
  struct task_struct;	/* one of the stranger aspects of C forward declarations.. */
  extern void FASTCALL(__switch_to(struct task_struct *prev, struct task_struct *next));
@@ -4238,7 +4238,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/system.h linux/include/asm-i386
  		     "pushl %%edi\n\t"					\
 diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/console.h
 --- linux/include/linux/console.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/linux/console.h	2004-04-24 21:30:34.000000000 +0300
++++ linux/include/linux/console.h	2004-04-24 22:27:45.000000000 +0300
 @@ -55,6 +55,7 @@
  extern const struct consw dummy_con;	/* dummy console buffer */
  extern const struct consw fb_con;	/* frame buffer based console */

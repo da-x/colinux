@@ -334,10 +334,18 @@ Section -post
 
  notap:
 
-
-
-
 SectionEnd
+
+;--------------------
+;Post-install section
+
+Section -post
+    nsExec::ExecToStack '"$INSTDIR\colinux-daemon.exe" --remove-service'
+    Pop $R0 # return value/error/timeout
+    nsExec::ExecToStack '"$INSTDIR\colinux-daemon.exe" --remove-driver'
+    Pop $R0 # return value/error/timeout
+SectionEnd
+
 
 ;--------------------------------
 ;Descriptions
@@ -360,7 +368,6 @@ SectionEnd
 
 
 Section "Uninstall"
-
   DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayName"
   DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "UninstallString"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux"
@@ -370,11 +377,12 @@ Section "Uninstall"
   Pop $R0 # return value/error/timeout
   DetailPrint "devcon remove returned: $R0"
 
+  nsExec::ExecToStack '"$INSTDIR\colinux-daemon.exe" --remove-driver'
+  Pop $R0 # return value/error/timeout
 
   ;---------------------------------------------------------------FILES--
   ;----------------------------------------------------------------------
   ;
-
   Delete "$INSTDIR\coLinux-console-fltk.exe"
   Delete "$INSTDIR\coLinux-console-nt.exe"
   Delete "$INSTDIR\coLinux-daemon.exe"

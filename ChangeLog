@@ -1,3 +1,18 @@
+Sun Apr 25 07:44:10 2004  Dan Aloni  <da-x@colinux.org>
+
+	* src/colinux/os/winnt/user/daemon/cmdline.c (co_winnt_daemon_parse_args): 
+	Fixed arugment parsing.
+
+Sat Apr 24 22:40:41 2004  Dan Aloni  <da-x@colinux.org>
+
+	* src/colinux/user/console/console.cpp (global_resize_constraint): 
+	Auto fit console size on startup.
+
+Sat Apr 24 22:40:16 2004  Dan Aloni  <da-x@colinux.org>
+
+	* src/colinux/user/console/widget.cpp (console_widget_t): 
+	increased font size.
+
 Sat Apr 24 22:10:53 2004  Dan Aloni  <da-x@colinux.org>
 
 	* src/colinux/os/winnt/user/manager.c (coui_check_driver): 
