@@ -68,7 +68,6 @@
 
  * cobd:
    * Reimplement as asynchronous.
-   * Support device aliasing, e.g alias="hda2"
 
  * Root file system images: 
    * Fix and improve the Debian image.

@@ -81,11 +81,11 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned long index,
 		break;
 	}
 	case CO_BLOCK_GET_ALIAS: {
-		if (dev->conf->alias == PFALSE) {
+		co_debug("cobd%d: %x, %d\n", index, dev, dev->conf);
+		if (!dev->conf || !dev->conf->enabled || !dev->conf->alias_used)
 			return CO_RC(ERROR);
-		}
-
-		co_memcpy(request->alias, dev->conf->alias, sizeof(dev->conf->alias));
+		dev->conf->alias[sizeof(dev->conf->alias)-1] = '\0';
+		co_snprintf(request->alias, sizeof(request->alias), "%s", dev->conf->alias);
 		return rc;
 	}
 	default:

@@ -511,10 +511,10 @@ co_rc_t co_monitor_load_configuration(co_monitor_t *cmon)
 		if (!CO_OK(rc))
 			goto out;
 
-		dev->dev.conf = conf_dev;
 		rc = co_monitor_file_block_init(dev, &conf_dev->pathname);
 		if (CO_OK(rc)) {
-			co_debug("cobd%d: enabled\n", i);
+			dev->dev.conf = conf_dev;
+			co_debug("cobd%d: enabled (%x)\n", i, dev);
 			co_monitor_block_register_device(cmon, i, (co_block_dev_t *)dev);
 			dev->dev.free = co_monitor_free_file_blockdevice;
 		} else {

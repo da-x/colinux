@@ -1307,8 +1307,8 @@ diff -urN a/drivers/block/Makefile b/drivers/block/Makefile
  obj-$(CONFIG_BLK_DEV_XD)	+= xd.o
 diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 --- a/drivers/block/cobd.c	1970-01-01 02:00:00.000000000 +0200
-+++ b/drivers/block/cobd.c	2004-06-22 09:20:07.000000000 +0300
-@@ -0,0 +1,286 @@
++++ b/drivers/block/cobd.c	2004-06-28 00:21:15.000000000 +0300
+@@ -0,0 +1,494 @@
 +/*
 + *  Copyright (C) 2003 Dan Aloni <da-x@colinux.org>
 + *
@@ -1329,6 +1329,7 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +#include <linux/cooperative_internal.h>
 +#include <linux/file.h>
 +#include <linux/ioctl.h>
++#include <linux/ctype.h>
 +
 +#include <asm/uaccess.h>
 +#include <asm/types.h>
@@ -1341,15 +1342,14 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +static int hardsect_size_shift = 9;
 +static spinlock_t cobd_lock = SPIN_LOCK_UNLOCKED;
 +static int cobd_max;
-+static struct gendisk **disks;
-+static struct cobd_device *cobd_devs;
 +
 +struct cobd_device {
 +	int unit;
++	int refcount;
 +	struct block_device *device;
 +};
 +
-+static int cobd_stat(struct cobd_device *cobd, co_block_request_t *out_request)
++static int cobd_request(struct cobd_device *cobd, co_block_request_type_t type, co_block_request_t *out_request)
 +{
 +	co_block_request_t *request;
 +	unsigned long flags;
@@ -1360,7 +1360,8 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +	co_passage_page->params[0] = CO_DEVICE_BLOCK;
 +	co_passage_page->params[1] = cobd->unit;
 +	request = (co_block_request_t *)&co_passage_page->params[2];
-+	request->type = CO_BLOCK_STAT;
++	request->type = type;
++	request->rc = -1;
 +	co_switch_wrapper();
 +	rc = request->rc;
 +	*out_request = *request;
@@ -1369,8 +1370,18 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +	return rc;
 +}
 +
++static int cobd_stat(struct cobd_device *cobd, co_block_request_t *out_request)
++{
++	return cobd_request(cobd, CO_BLOCK_STAT, out_request);
++}
++
++static int cobd_get_alias(struct cobd_device *cobd, co_block_request_t *out_request)
++{
++	return cobd_request(cobd, CO_BLOCK_GET_ALIAS, out_request);
++}
++
 +static int cobd_ioctl(struct inode * inode, struct file * file,
-+		     unsigned int cmd, unsigned long arg)
++		      unsigned int cmd, unsigned long arg)
 +{
 +	return -ENOTTY; /* unknown command */
 +}
@@ -1384,7 +1395,7 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +	int result;
 +
 +	if (cobd->device  &&  cobd->device != inode->i_bdev)
-+		return -EIO;
++		return -EBUSY;
 +
 +	if (cobd_stat(cobd, &stat_request))
 +		return -ENODEV;
@@ -1399,13 +1410,18 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +	co_switch_wrapper();
 +	if (co_request->rc)
 +		result = -EIO;
++	else
++		cobd->refcount++;
++
 +	local_irq_restore(flags);
 +
 +	if (result)
 +		return result;
 +
-+	set_capacity(disks[cobd->unit], stat_request.disk_size >> 9);
-+	cobd->device = inode->i_bdev;
++	if (cobd->refcount == 1) {
++		set_capacity(inode->i_bdev->bd_disk, stat_request.disk_size >> 9);
++		cobd->device = inode->i_bdev;
++	}
 +
 +	return 0;
 +}
@@ -1426,9 +1442,11 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +	co_switch_wrapper();
 +	if (co_request->rc)
 +		ret = -EIO;
++	cobd->refcount--;
 +	local_irq_restore(flags);    
 +
-+	cobd->device = NULL;
++	if (cobd->refcount == 0)
++		cobd->device = NULL;
 +
 +	return ret;
 +}
@@ -1494,7 +1512,11 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +	.ioctl   = cobd_ioctl,
 +};
 +
-+static int __init cobd_init(void)
++static struct gendisk **cobd_disks;
++
++static struct cobd_device cobd_devs[CO_MODULE_MAX_COBD];
++
++static int __init cobd_drives_init(void)
 +{
 +	int result, i;
 +
@@ -1507,25 +1529,19 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +
 +	result = -ENOMEM; /* for the possible errors */
 +
-+	disks = kmalloc(cobd_max * sizeof(struct gendisk *), GFP_KERNEL);
-+	if (!disks)
++	cobd_disks = kmalloc(cobd_max * sizeof(struct gendisk *), GFP_KERNEL);
++	if (!cobd_disks)
 +		goto fail_malloc;
 +
-+	cobd_devs = kmalloc(cobd_max * sizeof(struct cobd_device), GFP_KERNEL);
-+	if (!cobd_devs)
-+		goto fail_malloc2;
-+
 +	for (i=0; i < cobd_max; i++) {
-+		disks[i] = alloc_disk(1);
-+		if (!disks[i])
++		cobd_disks[i] = alloc_disk(1);
++		if (!cobd_disks[i])
 +			goto fail_malloc3;
 +	}
 +
-+	memset(cobd_devs, 0, cobd_max * sizeof(struct cobd_device));
-+
 +	for (i=0; i < cobd_max; i++) {
 +		struct cobd_device *cobd = &cobd_devs[i];
-+		struct gendisk *disk = disks[i];
++		struct gendisk *disk = cobd_disks[i];
 +
 +		disk->queue = blk_init_queue(do_cobd_request, &cobd_lock);
 +		if (!disk->queue)
@@ -1545,7 +1561,7 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +	devfs_mk_dir("cobd");
 +
 +	for (i=0; i < cobd_max; i++)
-+		add_disk(disks[i]);
++		add_disk(cobd_disks[i]);
 +
 +	printk(KERN_INFO "cobd: loaded (max %d devices)\n", cobd_max);
 +	return 0;
@@ -1553,42 +1569,234 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +/* error path */
 +fail_malloc4:
 +	while (i--)
-+		blk_cleanup_queue(disks[i]->queue);
++		blk_cleanup_queue(cobd_disks[i]->queue);
 +	devfs_remove("cobd");
 +	i = cobd_max;
 +
 +fail_malloc3:
-+	while (i--)
-+		put_disk(disks[i]);
++	while (i--) 
++		if (cobd_disks[i] != NULL)
++			put_disk(cobd_disks[i]);
 +
-+	kfree(cobd_devs);
-+
-+fail_malloc2:
-+	kfree(disks);
++	kfree(cobd_disks);
 +
 +fail_malloc:
 +	if (unregister_blkdev(COLINUX_MAJOR, "cobd"))
 +		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
 +
-+	return result;		
++	return result;
 +}
 +
-+static void cobd_exit(void) 
++struct cobd_alias {
++	const char *name;
++	int major;
++	int minor_start;
++	int minor_count;
++	struct gendisk **gendisk;
++};
++
++struct cobd_alias cobd_aliases[] = {
++	{"hda", IDE0_MAJOR, 0x01, 20, },
++	{"hdb", IDE0_MAJOR, 0x41, 20, },
++	{"hdc", IDE1_MAJOR, 0x01, 20, },
++	{"hdd", IDE1_MAJOR, 0x41, 20, },
++	{"hde", IDE2_MAJOR, 0x01, 20, },
++	{"hdf", IDE2_MAJOR, 0x41, 20, },
++	{"hdg", IDE3_MAJOR, 0x01, 20, },
++	{"hdh", IDE3_MAJOR, 0x41, 20, },
++	{"sda", SCSI_DISK0_MAJOR, 0x01, 0x0f, },
++	{"sdb", SCSI_DISK0_MAJOR, 0x11, 0x0f, },
++	{"sdc", SCSI_DISK0_MAJOR, 0x21, 0x0f, },
++	{"sdd", SCSI_DISK0_MAJOR, 0x31, 0x0f, },
++	{"sde", SCSI_DISK0_MAJOR, 0x41, 0x0f, },
++	{"sdf", SCSI_DISK0_MAJOR, 0x51, 0x0f, },
++	{"sdg", SCSI_DISK0_MAJOR, 0x61, 0x0f, },
++	{"sdh", SCSI_DISK0_MAJOR, 0x71, 0x0f, },
++	{"sdi", SCSI_DISK0_MAJOR, 0x81, 0x0f, },
++	{"sdj", SCSI_DISK0_MAJOR, 0x91, 0x0f, },
++	{"sdk", SCSI_DISK0_MAJOR, 0xa1, 0x0f, },
++	{"sdl", SCSI_DISK0_MAJOR, 0xb1, 0x0f, },
++	{"sdm", SCSI_DISK0_MAJOR, 0xc1, 0x0f, },
++	{"sdn", SCSI_DISK0_MAJOR, 0xd1, 0x0f, },
++	{"sdp", SCSI_DISK0_MAJOR, 0xe1, 0x0f, },
++	{"sdq", SCSI_DISK0_MAJOR, 0xf1, 0x0f, },
++	{NULL, },
++};
++
++static int __init skip_atoi(const char **s)
++{
++	/* lib/spprintf.h */
++
++        int i=0;
++
++        while (isdigit(**s))
++                i = i*10 + *((*s)++) - '0';
++        return i;	
++}
++
++static int __init cobd_spawn_alias(struct cobd_alias *alias, 
++				   const char *alias_name_requested,
++				   int cobd_unit)
++{
++	const char *index_str_start = &alias_name_requested[strlen(alias->name)];
++	const char *index_str_end = index_str_start;
++
++	int index = skip_atoi(&index_str_end);
++	if (index_str_start == index_str_end) {
++		printk(KERN_WARNING "index not specified for %s\n", alias_name_requested);
++		return -1;
++	}
++
++	index -= 1;
++
++	if (!((index >= 0) && (index < alias->minor_count))) {
++		printk(KERN_WARNING "index out of bounds for alias %s (1 - %d)\n", 
++		       alias_name_requested, alias->minor_count);
++		return -1;
++	}
++	
++	if (alias->gendisk == NULL) {
++		static struct gendisk **gendisks;
++		gendisks = kmalloc(alias->minor_count * sizeof(struct gendisk *), GFP_KERNEL);
++		if (!gendisks) {
++			printk(KERN_WARNING "cannot allocate gendisk array for %s\n", alias->name);
++			return -ENOMEM;
++		}
++
++		if (register_blkdev(alias->major, alias->name)) {
++			printk(KERN_WARNING "unable to get major number %d for cobd alias device %s\n", 
++			       alias->major, alias_name_requested);
++			kfree(gendisks);
++			return -EIO;
++		}
++
++		alias->gendisk = gendisks;
++		devfs_mk_dir(alias->name);
++	}
++
++	if (alias->gendisk[index] != NULL) {
++		printk(KERN_WARNING "alias %s already used\n", alias_name_requested);
++		return -1;
++	}
++	
++	struct gendisk *disk = alloc_disk(1);
++	if (!disk) {
++		printk(KERN_WARNING "cannot allocate disk for alias %s\n", alias_name_requested);
++		return -1;
++	}
++
++	disk->queue = blk_init_queue(do_cobd_request, &cobd_lock);
++	if (!disk->queue) {
++		printk(KERN_WARNING "cannot allocate init queue for alias %s\n", alias_name_requested);
++		put_disk(disk);
++		return -1;
++	}
++
++	struct cobd_device *cobd = &cobd_devs[cobd_unit];
++	blk_queue_hardsect_size(disk->queue, hardsect_size);
++	disk->major = alias->major;
++	disk->first_minor = alias->minor_start + index;
++	disk->fops = &cobd_fops;
++	sprintf(disk->disk_name, "%s%d", alias->name, index + 1);
++	sprintf(disk->devfs_name, "%s/%d", alias->name, index + 1);
++	disk->private_data = cobd;
++	add_disk(disk);
++	alias->gendisk[index] = disk;
++
++	printk("cobd alias cobd%d -> %s created\n", cobd_unit, alias_name_requested);
++
++	return 0;
++}
++
++static int __init cobd_aliases_init(void)
++{
++	int unit;
++	co_block_request_t request;
++
++	for (unit=0; unit < cobd_max; unit++) {
++		int result = cobd_get_alias(&cobd_devs[unit], &request);
++		if (result)
++			continue;
++
++		printk("alias for cobd%d is %s\n", unit, request.alias);
++		
++		struct cobd_alias *alias = &cobd_aliases[0];
++		while (alias->name) {
++			const char *match = (strstr(request.alias, alias->name));
++			if (match == request.alias) {
++				cobd_spawn_alias(alias, request.alias, unit);
++				break;
++			}
++			alias++;
++		}
++
++		if (alias->name == NULL)
++			printk("alias %s is unknown (see cobd_aliases in cobd.c)\n", request.alias);
++	}
++
++	return 0;
++}
++
++static void cobd_drives_exit(void) 
 +{
 +	int i;
 +
 +	for (i = 0; i < cobd_max; i++) {
-+		blk_cleanup_queue(disks[i]->queue);
-+		del_gendisk(disks[i]);
-+		put_disk(disks[i]);
++		blk_cleanup_queue(cobd_disks[i]->queue);
++		del_gendisk(cobd_disks[i]);
++		put_disk(cobd_disks[i]);
 +	}
 +
 +	devfs_remove("cobd");
 +	if (unregister_blkdev(COLINUX_MAJOR, "cobd"))
 +		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
 +
-+	kfree(disks);
-+	kfree(cobd_devs);
++	kfree(cobd_disks);
++}
++
++static void cobd_aliases_exit(void) 
++{
++	struct cobd_alias *alias = &cobd_aliases[0];
++	while (alias->name != NULL) {
++		if (alias->gendisk == NULL) {
++			alias++;
++			continue;
++		}
++
++		int index;
++		for (index=0; index < alias->minor_count; index++) {
++			struct gendisk *disk = alias->gendisk[index];
++			if (!disk)
++				return;
++			
++			blk_cleanup_queue(disk->queue);
++			del_gendisk(disk);
++			put_disk(disk);
++		}
++
++		devfs_remove(alias->name);
++		unregister_blkdev(alias->major, alias->name);
++		kfree(alias->gendisk);
++
++		alias++;
++	}
++}
++
++static int __init cobd_init(void)
++{
++	int result = cobd_drives_init();
++	if (result)
++		return result;
++
++	cobd_aliases_init();
++	
++	return result;		
++}
++
++static void cobd_exit(void) 
++{
++	cobd_aliases_exit();
++	cobd_drives_exit();
 +}
 +
 +module_init(cobd_init);
@@ -4096,6 +4304,17 @@ diff -urN a/include/linux/major.h b/include/linux/major.h
  
  #define SCSI_DISK8_MAJOR	128
  #define SCSI_DISK9_MAJOR	129
+diff -urN a/init/do_mounts.c b/init/do_mounts.c
+--- a/init/do_mounts.c	2004-06-16 08:19:13.000000000 +0300
++++ b/init/do_mounts.c	2004-06-28 00:16:36.000000000 +0300
+@@ -175,6 +175,7 @@
+ 	for (p = s; *p; p++)
+ 		if (*p == '/')
+ 			*p = '!';
++
+ 	res = try_name(s, 0);
+ 	if (res)
+ 		goto done;
 diff -urN a/init/main.c b/init/main.c
 --- a/init/main.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/init/main.c	2004-06-22 09:20:07.000000000 +0300

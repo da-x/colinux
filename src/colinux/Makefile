@@ -10,6 +10,11 @@ CFLAGS = \
 	-mpush-args -mno-accumulate-outgoing-args \
         -Wno-trigraphs -O2 -fno-strict-aliasing -Wall \
 
+#CFLAGS = \
+#	-Wstrict-prototypes -fno-common  \
+#       -mpreferred-stack-boundary=2 -fomit-frame-pointer \
+#       -Wno-trigraphs -O2 -fno-strict-aliasing -Wall \
+
 ifneq ($(COLINUX_NDEBUG),Y)
 CFLAGS += -DCOLINUX_DEBUG 
 endif

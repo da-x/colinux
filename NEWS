@@ -25,6 +25,11 @@
     port.
   * Bug fix: The network driver (conet) now verifies checksums (as
     network packets that are received by PCAP can indeed be bad).
+  * Added block device aliasing, e.g alias="hda2". You can specify
+    such an alias in the <block_device> element in the configuration 
+    XML and expect coLinux to mount it, even when passed with root=.
+    NOTE: The cobdX device and its alias are mutual exclusive, which
+    means that you can't mount both of them at the same time. 
   
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).
