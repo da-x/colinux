@@ -4,10 +4,12 @@
   	 For example change "root_fs" to the name of the Debian image.
          Inside coLinux it will be /dev/cobd0 
 	 
-	 Note you can now added alias="devname", 
-	   i.e. alias="hda" or alias="hda1" including scsi 
-	 Note 2 If you use alias on block device 0, you'll, also, want
-	   to change your  bootparams root  -->
+	 Block Device Aliasing: You can now handle most dual-boot issues
+	 by adding an alias="devname" to block_device. i.e. alias="hda",
+	 alias="hda1" You can do this for SCSI as well as IDE.  You need
+	 to be aware that if you add an alias, you need to change your
+	 bootparams root="devname" appropriately (you may need to use
+	 devfs naming in some situations).  -->
     <block_device index="0" path="\DosDevices\c:\coLinux\root_fs" 
     enabled="true" />
     
@@ -22,7 +24,7 @@
     <bootparams>root=/dev/cobd0</bootparams>
 
     <!-- Initial RamDISK (initrd) support -->
-    <initrd path="initrd.gz" />
+    <initrd path="intrd.gz" />
     
     <!-- image allows you to specify the kernel to boot -->
     <image path="vmlinux" />
