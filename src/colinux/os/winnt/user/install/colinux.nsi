@@ -151,11 +151,6 @@ Section "coLinux" SeccoLinux
   ; initrd replaces vmlinux-modules.tar.gz as preferred way to ship modules.
   File "premaid\initrd.gz"
 
-  ;Backup config file if present
-  IfFileExists "$INSTDIR\default.colinux.xml" 0 +1
-  CopyFiles /SILENT "$INSTDIR\default.colinux.xml" "$INSTDIR\default.colinux.xml.old"
-  File "..\..\..\..\..\..\conf\default.colinux.xml"
-
   ; Remove kludge from older installations	
   Delete "$INSTDIR\packet.dll"
   Delete "$INSTDIR\wpcap.dll"
@@ -424,7 +419,6 @@ Section "Uninstall"
   Delete "$INSTDIR\vmlinux"
   Delete "$INSTDIR\initrd.gz"
   Delete "$INSTDIR\vmlinux-modules.tar.gz"
-  Delete "$INSTDIR\default.coLinux.xml"
   Delete "$INSTDIR\README.txt"
   Delete "$INSTDIR\news.txt"
   Delete "$INSTDIR\cofs.txt"
