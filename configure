@@ -109,7 +109,7 @@ EOF
 
 # TODO:
 #  --gcc-build-local=DIR   Build gnu C compiler from same source as gnu cross
-#                          compiiler. This compiler is used for kernel.
+#                          compiler. This compiler is used for kernel.
 #			  Need only, if local compiler is not version 3.3.x
 #			  [\$TOPDIR/i686-pc-linux-local]
 
@@ -383,21 +383,6 @@ check_exec_tool()
   return 0
 }
 
-# Ask package mamager for installed tools
-# $1 View name
-# $2 check command line
-# $3 min version
-check_rpm_tool()
-{
-  echo -n "Checking rpm for $1 ... "
-  if (rpm -qa | grep "$2") </dev/null >/dev/null 2>&1; then
-    echo "found"
-  else
-    echo "missing"
-    missing=yes
-  fi
-}
-
 # Get version from installed library
 # $1 Name
 # $2 Version
@@ -456,6 +441,37 @@ EOF
 	exit 1
 }
 
+check_depmod()
+{
+  echo -n "Checking for depmod ... "
+
+  # Locate depmod in user dirs and check for module-init-tools version
+  if depmod_cfg=`PATH="$prefix/$target/bin:/sbin:/usr/sbin:/usr/local/sbin:$PATH" which depmod 2>/dev/null`; then
+
+    # Depmod 2.4.x is bugy with "-V" only, "--help" does nothing real.
+    installed=`$depmod_cfg -V --help 2>/dev/null | grep module-init-tools`
+    if [ -z "$installed" ]; then
+      cat << EOF
+($depmod_cfg) wrong version.
+
+	Warning: you may need to install module-init-tools"
+	See http://www.codemonkey.org.uk/docs/post-halloween-2.6.txt
+
+	Install the file 'depmod', in directory
+	$prefix/$target/bin,
+	to use only for cross buildings.
+
+EOF
+      missing=yes
+    else
+      echo "($installed) found"
+    fi
+  else
+    echo "missing (no exec)"
+    missing=yes
+  fi
+}
+
 #
 # Check for tools
 #
@@ -488,6 +504,8 @@ case $colinux_os in
     check_exec_tool "mxml devel" "mxmldoc --version" ""
   ;;
   *) # for Winnt as host
+    # Locate users depmod and check for module-init-tools
+    check_depmod
     check_exec_tool "unzip" "unzip -h" ""
     # bison-1.75-109   need by binutils (yacc 91.7.30 have a error YYEMPTY)
     check_exec_tool "bison" "bison --version" ""
@@ -706,6 +724,10 @@ COLINUX_BUILD_LOG="$logfile"
 # no: Build script leave kernel source untouched. User can make some patches and config
 #
 COLINUX_KERNEL_UNTAR="$kernel_untar"
+
+# Path to depmod, installed from module-init-tools
+# default: /sbin/depmod
+COLINUX_DEPMOD=$depmod_cfg
 
 EOF
 

@@ -139,7 +139,12 @@ compile_modules()
 	cd "$TOPDIR"
 	cd "$COLINUX_TARGET_KERNEL_PATH"
 	echo "Making Modules $KERNEL_VERSION"
+
+	#Fall back for older config
+	test -z "$COLINUX_DEPMOD" && COLINUX_DEPMOD=/sbin/depmod
+
 	make INSTALL_MOD_PATH=$COLINUX_TARGET_KERNEL_PATH/_install \
+	    DEPMOD=$COLINUX_DEPMOD \
 	    modules modules_install >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "Kernel $KERNEL_VERSION make modules failed"
 	cd "$TOPDIR"
