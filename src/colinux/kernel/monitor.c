@@ -498,7 +498,30 @@ bool_t co_monitor_device_request(co_monitor_t *cmon, co_device_t device, unsigne
 		
 		return PTRUE;
 	}
+	case CO_DEVICE_NETWORK: {
+		co_network_request_t *network = NULL;
 
+		network = (co_network_request_t *)(params);
+		if (network->unit < 0  ||  network->unit >= CO_MODULE_MAX_CONET)
+			break;
+
+		memset(network->mac_address, 0, sizeof(network->mac_address));
+
+		switch (network->type) {
+		case CO_NETWORK_GET_MAC: {
+			co_netdev_desc_t *dev = &cmon->config.net_devs[network->unit];
+			if (dev->enabled == PFALSE)
+				break;
+
+			memcpy(network->mac_address, dev->mac_address, sizeof(network->mac_address));
+			break;
+		}
+		default:
+			break;
+		}
+
+		return PTRUE;
+	}
 	default:
 		break;
 	}	

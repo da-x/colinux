@@ -11,6 +11,7 @@
 #include <mxml.h>
 
 #include <colinux/common/config.h>
+#include "macaddress.h"
 
 co_rc_t co_load_config_blockdev(co_config_t *out_config, mxml_element_t *element)
 {
@@ -175,10 +176,82 @@ co_rc_t co_load_config_memory(co_config_t *out_config, mxml_element_t *element)
 	return rc;
 }
 
+co_rc_t co_load_config_network(co_config_t *out_config, mxml_element_t *element)
+{
+	int i;
+	char *element_text = NULL;
+	co_rc_t rc = CO_RC(ERROR);
+	co_netdev_desc_t desc = {0, };
+	unsigned long index = -1;
+
+	desc.enabled = PFALSE;
+	desc.type = CO_NETDEV_TYPE_BRIDGED_PCAP;
+	desc.manual_mac_address = PFALSE;
+
+	for (i=0; i < element->num_attrs; i++) {
+		mxml_attr_t *attr = &element->attrs[i];
+
+		if (strcmp(attr->name, "mac") == 0) {
+			element_text = attr->value;
+
+			rc = co_parse_mac_address(element_text, desc.mac_address);
+			if (!CO_OK(rc)) { 
+				printf("Invalid network element: invalid mac address specified (use the xx:xx:xx:xx:xx:xx format)\n");
+				return rc;
+			}
+
+			desc.manual_mac_address = PTRUE;
+		} else
+		if (strcmp(attr->name, "index") == 0) {
+			element_text = attr->value;
+
+			rc = co_str_to_unsigned_long(element_text, &index);
+			if (!CO_OK(rc)) {
+				printf("Invalid network element: invalid index format\n");
+				return CO_RC(ERROR);
+			}
+			
+			if (index < 0  ||  index >= CO_MODULE_MAX_CONET) {
+				printf("Invalid network element: invalid index %d\n", (int)index);
+				return CO_RC(ERROR);
+			}
+
+			desc.enabled = PTRUE;
+		} else
+		if (strcmp(attr->name, "name") == 0) {
+			element_text = attr->value;
+
+			snprintf(desc.desc, sizeof(desc.desc), "%s", element_text);
+		} else
+		if (strcmp(attr->name, "type") == 0) {
+			element_text = attr->value;
+
+			if (strcmp(element_text, "bridged") == 0) {
+				desc.type = CO_NETDEV_TYPE_BRIDGED_PCAP;
+			} else if (strcmp(element_text, "tap") == 0) {
+				desc.type = CO_NETDEV_TYPE_TAP;
+			} else {
+				printf("Invalid network element: invalid type %s\n", element_text);
+				return CO_RC(ERROR);
+			}
+		}
+	}
+
+	if (index == -1) {
+		printf("Invalid network element: index not specified\n");
+		return CO_RC(ERROR);
+	}
+
+	out_config->net_devs[index] = desc;
+	
+	return rc;
+}
+
 co_rc_t co_load_config(char *text, co_config_t *out_config)
 {
 	mxml_node_t *node, *tree, *walk;
 	char *name;
+	co_rc_t rc = CO_RC(OK);
 
 	tree = mxmlLoadString(NULL, text, NULL);
 
@@ -188,15 +261,22 @@ co_rc_t co_load_config(char *text, co_config_t *out_config)
 	for (walk = node->child; walk; walk = walk->next) {
 		if (walk->type == MXML_ELEMENT) {
 			name = walk->value.element.name;
+			rc = CO_RC(OK);
+
 			if (strcmp(name, "block_device") == 0) {
-				co_load_config_blockdev(out_config, &walk->value.element);
+				rc = co_load_config_blockdev(out_config, &walk->value.element);
 			} else if (strcmp(name, "bootparams") == 0) {
-				co_load_config_boot_params(out_config, walk->child);
+				rc = co_load_config_boot_params(out_config, walk->child);
 			} else if (strcmp(name, "image") == 0) {
-				co_load_config_image(out_config, &walk->value.element);
+				rc = co_load_config_image(out_config, &walk->value.element);
 			} else if (strcmp(name, "memory") == 0) {
-				co_load_config_memory(out_config, &walk->value.element);
+				rc = co_load_config_memory(out_config, &walk->value.element);
+			} else if (strcmp(name, "network") == 0) {
+				rc = co_load_config_network(out_config, &walk->value.element);
 			}
+
+			if (!CO_OK(rc))
+				break;
 		}
 	}
 
@@ -205,5 +285,5 @@ co_rc_t co_load_config(char *text, co_config_t *out_config)
 	if (strcmp(out_config->vmlinux_path, "") == 0)
 		snprintf(out_config->vmlinux_path, sizeof(out_config->vmlinux_path), "vmlinux");
 
-	return CO_RC(OK);
+	return rc;
 }

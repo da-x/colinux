@@ -8,13 +8,12 @@
  *
  */ 
 
-#ifndef __COLINUX_CORE_CONFIG_H__
-#define __COLINUX_CORE_CONFIG_H__
+#ifndef __COLINUX_USER_MACADDRESS_H__
+#define __COLINUX_USER_MACADDRESS_H__
 
 #include <colinux/common/common.h>
-#include <colinux/common/config.h>
 
-co_rc_t co_load_config(char *text, co_config_t *out_config);
-co_rc_t co_parse_mac_address(const char *text, char *binary);
+extern co_rc_t co_parse_mac_address(const char *text, char *binary);
+extern void co_build_mac_address(char *text, int ntext, const char *mac);
 
 #endif

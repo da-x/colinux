@@ -15,7 +15,22 @@
     This fix also appears to solve the problem where processes were stuck
     on nanosleep() calls.
   * conet-pcap: pcap-based daemon (contributed by Alejandro R. Sedeno). 
-  * linux: avoid I/O in time.c
+  * Network configuration is now handled in the coLinux configuration XML.
+    For backward compatibility, add:
+    <network index="0" name="TAP" type="tap"></network>
+	
+    If you want to use pcap (i.e, bridged Ethernet), add:
+    <network index="0" name="XXXX" type="bridged"></network>
+    (Where XXXX is a subscript of your network adapter's name)
+      
+    Optional attributes: mac="XX:XX:XX:XX:XX:XX" - specifies the MAC
+    address of the interface in the Linux side. Recommended on bridged
+    networking setups, where more than one Windows machine will be 
+    running coLinux on the same subnet.
+
+    I also prepared the ground for supporting more than one network device
+    (i.e, eth1, eth2, etc.), but it is not yet completed.
+  * linux: avoid more I/O in time.c.
 
 * Version 0.5.3 AKA "Valentine release"
   * Virtual CMOS system time is now passed to Linux, you no longer

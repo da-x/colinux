@@ -90,6 +90,8 @@ TOOL_AR=$(AR) cr $@ $^
 
 TOOL_LD_RELOC=$(LD) -r -o $@ $^
 
+.phony: colinux
+
 BUILD_PATH=$(BUILD_ROOT)
 include $(BUILD_PATH)/colinux/Makefile
 

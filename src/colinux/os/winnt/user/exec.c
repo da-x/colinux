@@ -28,8 +28,10 @@ co_rc_t co_launch_process(char *command_line, ...)
 	vsnprintf(buf, sizeof(buf), command_line, ap);
 	va_end(ap);
 
+	co_debug("executing: %s\n", buf);
+
 	ret = CreateProcess(NULL,
-			    command_line,     // Command line. 
+			    buf,              // Command line. 
 			    NULL,             // Process handle not inheritable. 
 			    NULL,             // Thread handle not inheritable. 
 			    FALSE,            // Set handle inheritance to FALSE. 
@@ -39,8 +41,10 @@ co_rc_t co_launch_process(char *command_line, ...)
 			    &si,              // Pointer to STARTUPINFO structure.
 			    &pi);             // Pointer to PROCESS_INFORMATION structure.
 
-	if (!ret)
+	if (!ret) {
+		co_debug("error in execution (%d)\n", GetLastError());
 		return CO_RC(ERROR);
+	}
 
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);

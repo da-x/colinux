@@ -30,6 +30,42 @@ typedef struct co_block_dev_desc {
 	co_pathname_t pathname;
 } co_block_dev_desc_t;
 
+typedef enum {
+	CO_NETDEV_TYPE_BRIDGED_PCAP,
+	CO_NETDEV_TYPE_TAP,
+} co_netdev_type_t;
+
+#define CO_NETDEV_DESC_STR_SIZE 0x40
+
+/*
+ * Per network device configuration
+ */
+typedef struct co_netdev_desc {
+	/*
+	 * Determines whether we use this device slot or not.
+	 */
+	bool_t enabled;
+
+	/* Used for indentifing the interface on the host side */
+	char desc[CO_NETDEV_DESC_STR_SIZE];
+
+	/* 
+	 * Type of device:
+	 * 
+	 * Bridged pcap - 'desc' is the name of the network interface to 
+         *                 bridge into
+	 * TAP - 'desc' is the name of the TAP network interface (Win32 TAP 
+	 *       on Windows).
+	 */
+	co_netdev_type_t type;
+
+	/*
+	 * MAC address for the Linux side. 
+	 */
+	bool_t manual_mac_address;
+	unsigned char mac_address[6];
+} co_netdev_desc_t;
+
 /*
  * Per-machine coLinux configuration
  */
@@ -48,11 +84,16 @@ typedef struct co_config {
 	co_pathname_t vmlinux_path;
 
 	/*
-	 * Information about block devices that we import tok
+	 * Information about block devices that we import to
 	 * Linux and the index of the block device to boot from.
 	 */
 	co_block_dev_desc_t block_devs[CO_MAX_BLOCK_DEVICES];
 	long block_root_device_index;
+
+	/*
+	 * Network devices
+	 */
+	co_netdev_desc_t net_devs[CO_MODULE_MAX_CONET];
 
 	/*
 	 * Parameters passed to the kernel at boot.

@@ -14,6 +14,7 @@
 #include <colinux/os/user/exec.h>
 #include <colinux/os/alloc.h>
 #include <colinux/os/timer.h>
+#include <colinux/user/macaddress.h>
 
 #include <memory.h>
 #include <stdarg.h>
@@ -188,6 +189,33 @@ co_rc_t co_daemon_load_symbol(co_daemon_t *daemon,
 	return rc;
 }
 
+void co_daemon_prepare_net_macs(co_daemon_t *daemon)
+{
+	int i;
+
+	for (i=0; i < CO_MODULE_MAX_CONET; i++) { 
+		co_netdev_desc_t *net_dev;
+
+		net_dev = &daemon->config.net_devs[i];
+		if (net_dev->enabled == PFALSE)
+			continue;
+			
+		if (net_dev->manual_mac_address == PFALSE) {
+
+			/*
+			 * Pick a MAC address based on device index.
+			 */
+
+			net_dev->mac_address[0] = 0;
+			net_dev->mac_address[1] = 'C';
+			net_dev->mac_address[2] = 'O';
+			net_dev->mac_address[3] = 'N';
+			net_dev->mac_address[4] = 'E';
+			net_dev->mac_address[5] = '0' + i;
+		}
+	}
+}
+
 co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 {
 	co_manager_ioctl_create_t create_params = {0, };
@@ -223,6 +251,8 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 	rc = co_daemon_load_symbol(daemon, "gdt_table", &import->kernel_gdt_table);
 	if (!CO_OK(rc)) 
 		goto out;
+
+	co_daemon_prepare_net_macs(daemon);
 
 	create_params.config = daemon->config;
 
@@ -623,6 +653,54 @@ void co_daemon_idle(void *data)
 	daemon->last_htime = this_htime;
 }
 
+co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
+{
+	int i;
+	co_rc_t rc = CO_RC(OK);
+
+	for (i=0; i < CO_MODULE_MAX_CONET; i++) { 
+		co_netdev_desc_t *net_dev;
+
+		net_dev = &daemon->config.net_devs[i];
+		if (net_dev->enabled == PFALSE)
+			continue;
+			
+		debug(daemon, "launching daemon for conet%d\n", i);
+
+		switch (net_dev->type) 
+		{
+		case CO_NETDEV_TYPE_BRIDGED_PCAP: {
+			char interface_name[CO_NETDEV_DESC_STR_SIZE + 0x10] = {0, };
+			char mac_address[18];
+
+			if (strlen(net_dev->desc) != 0) {
+				co_snprintf(interface_name, sizeof(interface_name), "-n %s", net_dev->desc);
+			}
+			
+			co_build_mac_address(mac_address, sizeof(mac_address), net_dev->mac_address);
+
+			rc = co_launch_process("colinux-bridged-net-daemon -i %d %s -mac %s", i, interface_name, mac_address);
+			break;
+		}
+
+		case CO_NETDEV_TYPE_TAP:
+			rc = co_launch_process("colinux-net-daemon");
+			break;
+
+		default:
+			rc = CO_RC(ERROR);
+			break;
+		}
+
+		if (!CO_OK(rc)) {
+			debug(daemon, "error launching net daemon\n");
+			break;
+		}
+	}
+
+	return rc;
+}
+
 co_rc_t co_daemon_run(co_daemon_t *daemon)
 {
 	co_rc_t rc;
@@ -685,16 +763,14 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	if (!CO_OK(rc))
 		goto out;
 
+	co_terminal_print("colinux: launching net daemons\n");
 
-	co_terminal_print("colinux: launching net daemon\n");
-	rc = co_launch_process("colinux-net-daemon");
-	if (!CO_OK(rc)) {
-		debug(daemon, "error launching net daemon\n");
+	rc = co_daemon_launch_net_daemons(daemon);
+	if (!CO_OK(rc))
 		goto out;
-	}
 
 	if (daemon->start_parameters->launch_console) {
-		co_terminal_print("colinux: launching console\n");
+		debug(daemon, "launching console\n");
 		rc = co_launch_process("colinux-console -a 0");
 		if (!CO_OK(rc)) {
 			debug(daemon, "error launching console\n");

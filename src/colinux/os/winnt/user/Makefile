@@ -31,6 +31,6 @@ CLEAN_FILES := $(CLEAN_FILES) \
 	$(LOCAL_OBJS) $(BUILD_PATH)/user.o
 
 #-----------------------------------------------------------------
-include $(call BUILD_SUBDIRS, daemon conet-daemon console conet-pcap-daemon)
+include $(call BUILD_SUBDIRS, daemon conet-daemon console conet-bridged-daemon)
 BUILD_PATH := $(shell dirname $(BUILD_PATH))
 endif

@@ -16,13 +16,14 @@
 #include <stdio.h>
 
 #include <colinux/common/common.h>
+#include <colinux/user/macaddress.h>
 #include "../daemon.h"
 
 /*
  * IMPORTANT NOTE:
  *
  * This is work-in-progress. This daemon is currently hardcoded
- * to work against coLinux0 as conet0. Expect changes.
+ * to work against coLinux0. Expect changes.
  *
  */
 
@@ -46,11 +47,23 @@ typedef struct co_win32_pcap {
 	u_char *buffer;
 } co_win32_pcap_t;
 
+/* Runtime paramters */
+
+typedef struct start_parameters {
+	bool_t show_help;
+	bool_t mac_specified;
+	char mac_address[18];
+	bool_t name_specified;
+	char interface_name[0x100];
+	int index;
+} start_parameters_t;
+
 /*******************************************************************************
  * Globals 
  */
 co_win32_pcap_t pcap_packet;
 co_win32_overlapped_t daemon_overlapped;
+start_parameters_t *daemon_parameters;
 
 /*******************************************************************************
  * Write a packet to coLinux
@@ -112,13 +125,13 @@ co_win32_pcap_read_received(co_win32_pcap_t * pcap_pkt)
 		char data[pcap_pkt->pkt_header->len];
 	} message;
 
-	message.message.from = CO_MODULE_CONET0;
+	message.message.from = CO_MODULE_CONET0 + daemon_parameters->index;
 	message.message.to = CO_MODULE_LINUX;
 	message.message.priority = CO_PRIORITY_DISCARDABLE;
 	message.message.type = CO_MESSAGE_TYPE_OTHER;
 	message.message.size = sizeof (message) - sizeof (message.message);
 	message.linux.device = CO_DEVICE_NETWORK;
-	message.linux.unit = 0;
+	message.linux.unit = daemon_parameters->index;
 	message.linux.size = pcap_pkt->pkt_header->len;
 	memcpy(message.data, pcap_pkt->buffer, pcap_pkt->pkt_header->len);
 
@@ -286,19 +299,18 @@ pcap2Daemon(LPVOID lpParam)
 int
 pcap_init()
 {
-	pcap_if_t *alldevs;
+	pcap_if_t *alldevs = NULL;
 	pcap_if_t *d;
 	int exit_code = 0;
 	pcap_t *adhandle;
 	char errbuf[PCAP_ERRBUF_SIZE];
-	char TAPDevice[] =
-	    "\\Device\\NPF_{21DB0FAC-2EB2-4F70-A0E0-83FB1D29EB9C}";
 	u_int netmask;
-
-	/* TODO: Read MAC from config file. For now it's "\0CONE0" */
-	char packet_filter[] =
-	    "(ether dst 00:43:4F:4E:45:30) or (ether broadcast or multicast) or (ip broadcast or multicast)";
+	char packet_filter[0x100];
 	struct bpf_program fcode;
+
+	co_snprintf(packet_filter, sizeof(packet_filter), 
+		    "(ether dst %s) or (ether broadcast or multicast) or (ip broadcast or multicast)",
+		    daemon_parameters->mac_address);
 
 	/* Retrieve the device list */
 	if (pcap_findalldevs(&alldevs, errbuf) == -1) {
@@ -308,18 +320,24 @@ pcap_init()
 	}
 
 	d = alldevs;
-	while (1) {
-		if (!(strcmp(d->name, TAPDevice) == 0  || 
-		      strstr(d->description, "VMware") != NULL))
-		{
+	while (d) {
+		co_debug("bridged-net-daemon: Checking adapter: %s\n", d->description);
+
+		if (daemon_parameters->name_specified == PFALSE)
 			break;
-		}
+		
+		if (strstr(d->description, daemon_parameters->interface_name) != NULL)
+			break;
+
 		d = d->next;
 	}
 
+	if (d == NULL) {
+		co_debug("bridged-net-daemon: No matching adapter\n");
+		goto pcap_out;
+	}
+
 	/* Open the first adapter. */
-	/* TODO: Add clever network interface auto-selector. */
-	/* TODO: Add network interface selection in config file. */
 	if ((adhandle = pcap_open_live(d->name,	// name of the device
 				       65536,	// captures entire packet.
 				       1,	// promiscuous mode
@@ -367,8 +385,8 @@ pcap_init()
 		goto pcap_out_close;
 	}
 
-	co_debug("pcap-daemon: Listening on: %s...\n", d->description);
-	co_debug("pcap-daemon: Listening for: %s\n", packet_filter);
+	co_debug("bridged-net-daemon: Listening on: %s...\n", d->description);
+	co_debug("bridged-net-daemon: Listening for: %s\n", packet_filter);
 
 	pcap_packet.adhandle = adhandle;
 
@@ -381,6 +399,102 @@ pcap_init()
 }
 
 /********************************************************************************
+ * parameters
+ */
+
+void co_net_syntax()
+{
+	printf("Cooperative Linux Bridged Network Daemon\n");
+	printf("Alejandro R. Sedeno, 2004 (c)\n");
+	printf("Dan Aloni, 2003-2004 (c)\n");
+	printf("\n");
+	printf("syntax: \n");
+	printf("\n");
+	printf("  colinux-bridged-net-daemon -i index [-h] [-n 'adapter name'] [-mac xx:xx:xx:xx:xx:xx]\n");
+	printf("\n");
+	printf("    -h                      Show this help text\n");
+	printf("    -n 'adapter name'       The name of the network adapter to attach to\n");
+	printf("                            Without this option, the daemon tries to\n");
+	printf("                            guess which\n");
+	printf("                            interface to use\n");
+	printf("    -i index                Network device index number (0 for eth0, 1 for\n");
+	printf("                            eth1, etc.)\n");
+	printf("    -mac xx:xx:xx:xx:xx:xx  MAC address for the bridged interface\n");
+}
+
+static co_rc_t 
+handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
+{
+	char **param_scan = argv;
+	const char *option;
+
+	/* Default settings */
+	start_parameters->index = -1;
+	start_parameters->show_help = PFALSE;
+	start_parameters->mac_specified = PFALSE;
+	start_parameters->name_specified = PFALSE;
+
+	/* Parse command line */
+	while (*param_scan) {
+		option = "-mac";
+
+		if (strcmp(*param_scan, option) == 0) {
+			param_scan++;
+			if (!(*param_scan)) {
+				printf("Parameter of command line option %s not specified\n", option);
+				return CO_RC(ERROR);
+			}
+
+			co_snprintf(start_parameters->mac_address, 
+				    sizeof(start_parameters->mac_address), 
+				    "%s", *param_scan);
+
+			start_parameters->mac_specified = PTRUE;
+			param_scan++;
+			continue;
+		}
+
+		option = "-i";
+		if (strcmp(*param_scan, option) == 0) {
+			param_scan++;
+			if (!(*param_scan)) {
+				printf("Parameter of command line option %s not specified\n", option);
+				return CO_RC(ERROR);
+			}
+
+			sscanf(*param_scan, "%d", &start_parameters->index);
+			param_scan++;
+			continue;
+		}
+
+		option = "-n";
+		if (strcmp(*param_scan, option) == 0) {
+			param_scan++;
+			if (!(*param_scan)) {
+				printf("Parameter of command line option %s not specified\n", option);
+				return CO_RC(ERROR);
+			}
+
+			co_snprintf(start_parameters->interface_name, 
+				    sizeof(start_parameters->interface_name), 
+				    "%s", *param_scan);
+
+			start_parameters->name_specified = PTRUE;
+			param_scan++;
+			continue;
+		}
+
+		option = "-h";
+		if (strcmp(*param_scan, option) == 0) {
+			start_parameters->show_help = PTRUE;
+		}
+		param_scan++;
+	}
+
+	return CO_RC(OK);	
+}
+
+/********************************************************************************
  * main...
  */
 int
@@ -389,16 +503,38 @@ main(int argc, char *argv[])
 	co_rc_t rc;
 	HANDLE daemon_handle = 0;
 	HANDLE pcap_thread;
+	start_parameters_t start_parameters;
 	int exit_code = 0;
 	co_daemon_handle_t daemon_handle_;
 
+	rc = handle_paramters(&start_parameters, argc, argv);
+	if (!CO_OK(rc)) 
+		return -1;
+
+	if (start_parameters.show_help) {
+		co_net_syntax();
+		return 0;
+	}
+
+	if (!start_parameters.mac_specified) {
+		printf("Error, MAC address not specified\n");
+		return CO_RC(ERROR);
+	}
+
+	if (start_parameters.index == -1) {
+		printf("Error, index not specified\n");
+		return CO_RC(ERROR);
+	}
+
+	daemon_parameters = &start_parameters;
+
 	exit_code = pcap_init();
 	if (exit_code) {
-		co_debug("Error Initializing winPCap\n");
+		co_debug("Error initializing winPCap\n");
 		goto out;
 	}
 
-	rc = co_os_open_daemon_pipe(0, CO_MODULE_CONET0, &daemon_handle_);
+	rc = co_os_open_daemon_pipe(0, CO_MODULE_CONET0 + daemon_parameters->index, &daemon_handle_);
 	if (!CO_OK(rc)) {
 		co_debug("Error opening a pipe to the daemon\n");
 		goto out;
@@ -407,7 +543,7 @@ main(int argc, char *argv[])
 	pcap_thread = CreateThread(NULL, 0, pcap2Daemon, NULL, 0, NULL);
 
 	if (pcap_thread == NULL) {
-		co_debug("Failed to spawn pcap_thread");
+		co_debug("Failed to spawn pcap_thread\n");
 		goto out;
 	}
 
