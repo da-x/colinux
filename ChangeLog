@@ -13,6 +13,7 @@
     running coLinux on old AMD processors will hopefully not cause a reboot 
     anymore.
   * Linux patch upgraded to 2.4.25.
+  * This time, hopefully fixed the %fs/%gs issue for good.
   
 * Version 0.5.4 AKA "Focal Segmental Glomerulosclerosis" (%gs/%fs) release
   * Fixed an issue with i686-optimized pthread and the preservation of 
