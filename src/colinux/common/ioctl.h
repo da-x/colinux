@@ -25,6 +25,7 @@ typedef enum {
 	CO_MANAGER_IOCTL_DEBUG,
 	CO_MANAGER_IOCTL_DEBUG_READER,
 	CO_MANAGER_IOCTL_DEBUG_LEVELS,
+	CO_MANAGER_IOCTL_INFO,
 } co_manager_ioctl_t;
 
 /*
@@ -41,6 +42,7 @@ typedef struct {
 	co_config_t config;
 	co_info_t info;
 	co_arch_info_t arch_info;
+	unsigned long actual_memsize_used;
 	void *shared_user_address;
 } co_manager_ioctl_create_t;
 
@@ -71,6 +73,12 @@ typedef struct {
 	int periphery_api_version;
 	int linux_api_version;
 } co_manager_ioctl_status_t;
+
+/* interface for CO_MANAGER_IOCTL_INFO: */
+typedef struct {
+	unsigned long hostmem_usage_limit;
+	unsigned long hostmem_used;
+} co_manager_ioctl_info_t;
 
 /* interface for CO_MANAGER_IOCTL_DEBUG_READER: */
 typedef struct {

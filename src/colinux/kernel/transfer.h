@@ -64,24 +64,5 @@ extern co_rc_t co_monitor_host_to_linuxvm(struct co_monitor *cmon, void *from,
 extern co_rc_t co_monitor_linuxvm_to_host(struct co_monitor *cmon, vm_ptr_t from, 
 					  void *to, unsigned long size); 
 
-extern co_rc_t co_monitor_copy_and_create_pfns(
-	struct co_monitor *monitor, 
-	vm_ptr_t address,
-	unsigned long size,
-	char *source
-	);
-
-extern co_rc_t co_monitor_scan_and_create_pfns(
-	struct co_monitor *monitor, 
-	vm_ptr_t address,
-	unsigned long size
-	);
-
-extern co_rc_t co_monitor_create_ptes(
-	struct co_monitor *monitor, 
-	vm_ptr_t address,
-	unsigned long size,
-	co_pfn_t *source
-	);
 
 #endif

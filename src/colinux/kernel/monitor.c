@@ -822,9 +822,9 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 		 * RAM.
 		 */
 
-		if (cmon->manager->host_memory_amount >= 128*1024*1024) {
+		if (cmon->manager->hostmem_amount >= 128*1024*1024) {
 			/* Use quarter */
-			cmon->memory_size = cmon->manager->host_memory_amount/(1024*1024*4);
+			cmon->memory_size = cmon->manager->hostmem_amount/(1024*1024*4);
 		} else {
 			cmon->memory_size = 16;
 		}
@@ -842,6 +842,14 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	co_debug("after adjustments: %d MB\n", cmon->memory_size);
 
 	cmon->memory_size <<= 20; /* Megify */
+	
+	if (cmon->manager->hostmem_used + cmon->memory_size > cmon->manager->hostmem_usage_limit) {
+		rc = CO_RC(HOSTMEM_USE_LIMIT_REACHED);
+		params->actual_memsize_used = cmon->memory_size;
+		goto out_free_os_dep;
+	}
+
+	cmon->manager->hostmem_used += cmon->memory_size;
 
 	cmon->physical_frames = cmon->memory_size >> CO_ARCH_PAGE_SHIFT;
 	cmon->end_physical = CO_ARCH_KERNEL_OFFSET + cmon->memory_size;
@@ -849,7 +857,7 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 
 	rc = alloc_pp_ram_mapping(cmon);
         if (!CO_OK(rc)) {
-		goto out_free_os_dep;
+		goto out_revert_used_mem;
 	}
 
         rc = co_os_timer_create(&timer_callback, cmon, 10, &cmon->timer);
@@ -876,6 +884,9 @@ out_destroy_timer:
 
 out_free_pp:
 	free_pseudo_physical_memory(cmon);
+
+out_revert_used_mem:
+	cmon->manager->hostmem_used -= cmon->memory_size;
 
 out_free_os_dep:
 	co_monitor_os_exit(cmon);
@@ -971,6 +982,7 @@ co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
 
 	co_monitor_unregister_and_free_block_devices(cmon);
 	free_pseudo_physical_memory(cmon);
+	manager->hostmem_used -= cmon->memory_size;
 	co_os_free(cmon->io_buffer);
 	free_shared_page(cmon);
 	co_monitor_os_exit(cmon);

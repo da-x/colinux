@@ -29,7 +29,7 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 	int i, j;
 
 	co_debug("allocating reversed physical mapping\n");
-	manager->reversed_page_count = manager->host_memory_pages / PTRS_PER_PTE;
+	manager->reversed_page_count = manager->hostmem_pages / PTRS_PER_PTE;
 	map_size = sizeof(co_pfn_t) * manager->reversed_page_count;
 
 	co_debug("allocating top level pages map (%d bytes)\n", map_size);
@@ -67,7 +67,7 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 		co_pfn_t pfn;
 		linux_pte_t *pte;
 	
-		if (covered_physical >= manager->host_memory_pages) {
+		if (covered_physical >= manager->hostmem_pages) {
 			manager->reversed_map_pgds[i] = 0; 
 			continue;
 		}
@@ -98,6 +98,21 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 	return CO_RC(OK);
 }
 
+static void set_hostmem_usage_limit(co_manager_t *manager)
+{
+	if (manager->hostmem_amount >= 256 * 0x100000) {
+		/* more than 256MB */
+		/* use_limit = host - 64mb */
+		manager->hostmem_usage_limit = manager->hostmem_amount - 64 * 0x100000;
+	} else {
+		/* less then 256MB */
+		/* use_limit = host * (3/4) */
+		manager->hostmem_usage_limit = ((manager->hostmem_amount/0x100000)*3/4) * 0x100000;
+	}
+
+	co_debug("machine RAM use limit: %d MB\n" , manager->hostmem_amount/0x100000);
+}
+
 co_rc_t co_manager_load(co_manager_t *manager)
 {
 	co_rc_t rc;
@@ -106,18 +121,20 @@ co_rc_t co_manager_load(co_manager_t *manager)
 
 	co_debug("loaded to host kernel\n");
 
-	rc = co_os_physical_memory_pages(&manager->host_memory_pages);
+	rc = co_os_physical_memory_pages(&manager->hostmem_pages);
 	if (!CO_OK(rc))
 		return rc;
 
-	if (manager->host_memory_pages > 0x100000) {
+	if (manager->hostmem_pages > 0x100000) {
 		co_debug("error, machines with more than 4GB are not currently supported\n");
 		return CO_RC(ERROR);
 	}
 
-	co_debug("machine has %d MB of RAM\n", (manager->host_memory_pages >> 8));
+	co_debug("machine has %d MB of RAM\n", (manager->hostmem_pages >> 8));
 
-	manager->host_memory_amount = manager->host_memory_pages << CO_ARCH_PAGE_SHIFT;
+	manager->hostmem_amount = manager->hostmem_pages << CO_ARCH_PAGE_SHIFT;
+
+	set_hostmem_usage_limit(manager);
 
 	rc = co_debug_init(&manager->debug);
 	if (!CO_OK(rc))
@@ -293,6 +310,18 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 		*return_size = sizeof(*params);
 		return rc;
 	}
+
+	case CO_MANAGER_IOCTL_INFO: {
+		co_manager_ioctl_info_t *params;
+
+		params = (typeof(params))(io_buffer);
+		params->hostmem_usage_limit = manager->hostmem_usage_limit;
+		params->hostmem_used = manager->hostmem_used;
+
+		*return_size = sizeof(*params);
+		return rc;
+	}
+
 	case CO_MANAGER_IOCTL_DEBUG: {
 		co_manager_per_fd_state_t *fd_state = NULL;
 

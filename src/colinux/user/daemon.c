@@ -307,6 +307,38 @@ co_rc_t co_load_initrd(co_daemon_t *daemon)
 	return rc;
 }
 
+static void 
+memory_usage_limit_resached(co_manager_ioctl_create_t *create_params)
+{
+	co_manager_ioctl_info_t info = {0, };
+	co_manager_handle_t handle;
+	co_rc_t rc;
+
+	co_terminal_print("colinux: memory size configuration for this VM: %d MB\n", 
+			  create_params->actual_memsize_used / 0x100000);
+	co_terminal_print("colinux: memory usage limit reached\n");
+	co_terminal_print("colinux: try to decrease memory size configuration\n");
+
+	handle = co_os_manager_open();
+	if (!handle) {
+		co_terminal_print("colinux: error opening manager\n");
+		return;
+	}
+
+	rc = co_manager_info(handle, &info);
+	if (!CO_OK(rc)) {
+		co_terminal_print("colinux: erroneous manager info\n");
+		co_os_manager_close(handle);
+		return;
+	}
+	co_os_manager_close(handle);
+
+	co_terminal_print("colinux: memory usage limit: %d MB\n", 
+			  info.hostmem_usage_limit / 0x100000);
+	co_terminal_print("colinux: current memory used by running VMs: %d MB\n", 
+			  info.hostmem_used / 0x100000);
+}
+
 co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 {
 	co_manager_ioctl_create_t create_params = {0, };
@@ -380,8 +412,12 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 	create_params.config = daemon->config;
 
 	rc = co_user_monitor_create(&daemon->monitor, &create_params);
-	if (!CO_OK(rc))
+	if (!CO_OK(rc)) {
+		if (CO_RC_GET_CODE(rc) == CO_RC_HOSTMEM_USE_LIMIT_REACHED) { 
+			memory_usage_limit_resached(&create_params);
+		}
 		goto out;
+	}
 
 	daemon->shared = (co_monitor_user_kernel_shared_t *)create_params.shared_user_address;
 	if (!daemon->shared)

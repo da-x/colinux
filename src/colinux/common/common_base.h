@@ -18,7 +18,7 @@ typedef int bool_t;
 #define PACKED_STRUCT __attribute__((packed))
 
 #define CO_MAX_MONITORS                   16
-#define CO_LINUX_PERIPHERY_API_VERSION    14
+#define CO_LINUX_PERIPHERY_API_VERSION    15
 
 #define CO_ERRORS_X_MACRO			\
 	X(ERROR)				\
@@ -42,6 +42,7 @@ typedef int bool_t;
 	X(ACCESS_DENIED)			\
 	X(COMPILER_MISMATCHED)			\
 	X(INVALID_PARAMETER)			\
+	X(HOSTMEM_USE_LIMIT_REACHED)		\
 
 #define X(name) CO_RC_ERROR_##name,
 typedef enum {

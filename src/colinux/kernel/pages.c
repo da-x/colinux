@@ -27,11 +27,11 @@ co_rc_t co_manager_get_page(struct co_manager *manager, co_pfn_t *pfn)
 	if (!CO_OK(rc))
 		return rc;
 
-	if (*pfn >= manager->host_memory_pages) {
+	if (*pfn >= manager->hostmem_pages) {
 		/* Surprise! We have a bug! */
 
 		co_debug("PFN too high! %d >= %d",
-			 *pfn, manager->host_memory_pages);
+			 *pfn, manager->hostmem_pages);
 
 		return CO_RC(ERROR);
 	}

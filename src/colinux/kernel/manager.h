@@ -33,8 +33,10 @@ typedef struct co_manager {
 
 	struct co_monitor *monitors[CO_MAX_MONITORS];
 
-	unsigned long host_memory_amount;
-	unsigned long host_memory_pages;
+	unsigned long hostmem_amount;
+	unsigned long hostmem_used;
+	unsigned long hostmem_usage_limit;
+	unsigned long hostmem_pages;
 
 	co_pfn_t *reversed_map_pfns;
 	unsigned long reversed_page_count;

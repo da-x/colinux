@@ -28,6 +28,9 @@ extern co_rc_t co_manager_io_monitor_unisize(co_manager_handle_t handle,
 extern co_rc_t co_manager_status(co_manager_handle_t handle, 
 				 co_manager_ioctl_status_t *status);
 
+extern co_rc_t co_manager_info(co_manager_handle_t handle, 
+				 co_manager_ioctl_info_t *status);
+
 extern void co_manager_debug(co_manager_handle_t handle, 
 			     const char *buf, long size);
 
