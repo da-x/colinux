@@ -136,11 +136,18 @@ typedef struct {
 	unsigned long x, y;
 } co_monitor_ioctl_get_console_t;
 
+typedef struct {
+	unsigned long line;
+	unsigned long code;
+	char file[60];
+} co_monitor_linux_bug_invocation_t;
+
 /* interface for CO_MONITOR_IOCTL_GET_STATE: */
 typedef struct {
 	co_manager_ioctl_monitor_t pc;
 	unsigned long monitor_state;
 	co_termination_reason_t termination_reason;
+	co_monitor_linux_bug_invocation_t bug_info;
 } co_monitor_ioctl_get_state_t;
 
 /* interface for CO_MONITOR_IOCTL_RUN: */

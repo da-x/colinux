@@ -164,19 +164,20 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 	long io_buffer_num_pages = CO_VPTR_IO_AREA_SIZE >> CO_ARCH_PAGE_SHIFT;
 	long io_buffer_offset = ((CO_VPTR_IO_AREA_START & ((1 << PGDIR_SHIFT) - 1)) >> CO_ARCH_PAGE_SHIFT) 
 		* sizeof(linux_pte_t);
+	unsigned long io_buffer_host_address = (unsigned long)(cmon->io_buffer);
 
 	for (io_buffer_page=0; io_buffer_page < io_buffer_num_pages; io_buffer_page++) {
-		unsigned long io_buffer_pfn = 
-			co_os_virt_to_phys(&cmon->io_buffer[CO_ARCH_PAGE_SIZE*io_buffer_page]) >> CO_ARCH_PAGE_SHIFT;
-
-		rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP + io_buffer_offset, 
+		unsigned long io_buffer_pfn = co_os_virt_to_phys(io_buffer_host_address) >> CO_ARCH_PAGE_SHIFT;
+		
+		rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP + io_buffer_offset,
 					    sizeof(linux_pte_t), &io_buffer_pfn);
 		if (!CO_OK(rc)) {
 			co_debug("error initializing io buffer (%x, %d)\n", rc, io_buffer_page);
 			goto out_error;
-		}	
+		}
 		
 		io_buffer_offset += sizeof(linux_pte_t);
+		io_buffer_host_address += CO_ARCH_PAGE_SIZE;
 	}
 
 	co_debug("initialization finished\n");
@@ -258,11 +259,12 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 	unsigned char *io_buffer, *io_buffer_end;
 	co_queue_t *queue;
 
+	co_passage_page->params[0] = 0;
+
 	if (!cmon->io_buffer)
 		return CO_RC(ERROR);
 
-	if (cmon->io_buffer->messages_waiting)
-		return CO_RC(OK);
+	cmon->io_buffer->messages_waiting = 0;
 
 	io_buffer = cmon->io_buffer->buffer;
 	io_buffer_end = io_buffer + CO_VPTR_IO_AREA_SIZE - sizeof(co_io_buffer_t);
@@ -283,7 +285,7 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 		unsigned long size = message->size + sizeof(*message);
 
 		if (message->from == CO_MODULE_CONET0)
-			co_debug_lvl(network, 14, "message sent to linux): %x", message);
+			co_debug_lvl(network, 14, "message sent to linux: %x", message);
 		
 		if (io_buffer + size > io_buffer_end) {
 			break;
@@ -292,6 +294,29 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 		rc = co_queue_pop_tail(queue, (void **)&message_item);
 		if (!CO_OK(rc))
 			return rc;
+
+		if ((unsigned long)message->from >= (unsigned long)CO_MODULES_MAX) {
+			co_debug_system("BUG! %s:%d\n", __FILE__, __LINE__);
+			co_queue_free(queue, message_item);
+			co_os_free(message);
+			break;
+		}
+
+		if ((unsigned long)message->to >= (unsigned long)CO_MODULES_MAX){
+			co_debug_system("BUG! %s:%d\n", __FILE__, __LINE__);
+			co_queue_free(queue, message_item);
+			co_os_free(message);
+			break;
+		}
+
+		co_linux_message_t *linux_message = (co_linux_message_t *)message->data;
+		if ((unsigned long)linux_message->device >= (unsigned long)CO_DEVICES_TOTAL){
+			co_debug_system("BUG! %s:%d %d %d\n", __FILE__, __LINE__,
+					message->to, message->from);
+			co_queue_free(queue, message_item);
+			co_os_free(message);
+			break;
+		}
 
 		cmon->io_buffer->messages_waiting += 1;
 		co_queue_free(queue, message_item);
@@ -344,6 +369,18 @@ static bool_t co_terminate(co_monitor_t *cmon)
 	co_os_timer_deactivate(cmon->timer);
 
 	cmon->termination_reason = co_passage_page->params[0];
+
+	if (cmon->termination_reason == CO_TERMINATE_BUG) {
+		char *str = (char *)&co_passage_page->params[4];
+		cmon->bug_info.code = co_passage_page->params[1];
+		cmon->bug_info.line = co_passage_page->params[2];
+
+		co_snprintf(cmon->bug_info.file, sizeof(cmon->bug_info.file), "%s", str);
+
+		co_debug_system("BUG%d at %s:%d\n", cmon->bug_info.code,
+				cmon->bug_info.file, cmon->bug_info.line);
+	}
+
 	cmon->state = CO_MONITOR_STATE_TERMINATED;
 
 	return PFALSE;
@@ -351,8 +388,18 @@ static bool_t co_terminate(co_monitor_t *cmon)
 
 static bool_t co_idle(co_monitor_t *cmon)
 {
+	bool_t next_iter = PTRUE;
+	co_queue_t *queue;
+
 	co_os_wait_sleep(cmon->idle_wait);
-	return PTRUE;
+
+	co_os_mutex_acquire(cmon->linux_message_queue_mutex);
+	queue = &cmon->linux_message_queue;
+	if (co_queue_size(queue) == 0)
+		next_iter = PFALSE;
+	co_os_mutex_release(cmon->linux_message_queue_mutex);
+
+	return next_iter;
 }
 
 static void co_free_pages(co_monitor_t *cmon, vm_ptr_t address, int num_pages)
@@ -378,7 +425,17 @@ static co_rc_t co_alloc_pages(co_monitor_t *cmon, vm_ptr_t address, int num_page
 		rc = co_monitor_alloc_and_map_page(cmon, scan_address);
 		if (!CO_OK(rc))
 			break;
+		
 		scan_address += CO_ARCH_PAGE_SIZE;
+	}
+
+	if (!CO_OK(rc)) {
+		num_pages = i;
+		scan_address = address;
+		for (i=0; i < num_pages; i++) {
+			co_monitor_free_and_unmap_page(cmon, scan_address);
+			scan_address += CO_ARCH_PAGE_SIZE;
+		}
 	}
 
 	return rc;
@@ -458,7 +515,7 @@ static bool_t iteration(co_monitor_t *cmon)
 		co_monitor_arch_real_hardware_interrupt(cmon);
 	else
 		co_monitor_arch_enable_interrupts();
-	
+
 	switch (co_passage_page->operation) {
 	case CO_OPERATION_FREE_PAGES: {
 		co_free_pages(cmon, co_passage_page->params[0], co_passage_page->params[1]);
@@ -503,6 +560,29 @@ static bool_t iteration(co_monitor_t *cmon)
 
 		return PTRUE;
 	}
+
+	case CO_OPERATION_PRINTK: {
+		unsigned long size = co_passage_page->params[0];
+		if (size <= 120) {/* sanity */
+			char *ptr = (char *)&co_passage_page->params[1];
+			co_message_t *co_message = NULL;
+
+			co_message = co_os_malloc(1 + size + sizeof(*co_message));
+			if (co_message) {
+				co_message->from = CO_MODULE_LINUX;
+				co_message->to = CO_MODULE_PRINTK;
+				co_message->priority = CO_PRIORITY_DISCARDABLE;
+				co_message->type = CO_MESSAGE_TYPE_STRING;
+				co_message->size = size + 1; 
+				co_memcpy(co_message->data, ptr, size + 1);
+				incoming_message(cmon, co_message);
+				co_os_free(co_message);
+			}
+		}
+
+		return PTRUE;
+	}
+
 	case CO_OPERATION_DEVICE: {
 		unsigned long device = co_passage_page->params[0];
 		co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_DEVICE)\n");
@@ -1098,6 +1178,7 @@ static co_rc_t co_monitor_user_reset(co_monitor_t *monitor)
 	co_os_mutex_release(monitor->manager->lock);
 
 	co_memset(monitor->io_buffer, 0, CO_VPTR_IO_AREA_SIZE);
+
 	monitor->state = CO_MONITOR_STATE_INITIALIZED;
 	monitor->termination_reason = CO_TERMINATE_END;
 
@@ -1109,6 +1190,8 @@ static co_rc_t co_monitor_user_get_state(co_monitor_t *monitor, co_monitor_ioctl
 {
 	params->monitor_state = monitor->state;
 	params->termination_reason = monitor->termination_reason;
+	params->bug_info = monitor->bug_info;
+
 	return CO_RC(OK);
 }
 

@@ -49,6 +49,7 @@ typedef enum {
 /*
  * We use the following struct for each coLinux system. 
  */
+
 typedef struct co_monitor {
 	/*
 	 * Pointer back to the manager.
@@ -69,6 +70,7 @@ typedef struct co_monitor {
 	 */ 
 	co_monitor_state_t state;
 	co_termination_reason_t termination_reason;
+	co_monitor_linux_bug_invocation_t bug_info;
 
 	/*
 	 * Configuration data.

@@ -495,7 +495,7 @@ void console_window_t::handle_scancode(co_scan_code_t sc)
 		co_linux_message_t	msg_linux;
 		co_scan_code_t		code;
 	} message;
-		
+
 	message.message.from = CO_MODULE_CONSOLE;
 	message.message.to = CO_MODULE_LINUX;
 	message.message.priority = CO_PRIORITY_DISCARDABLE;

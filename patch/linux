@@ -85,7 +85,7 @@ diff -urN a/arch/i386/kernel/Makefile b/arch/i386/kernel/Makefile
 diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 --- a/arch/i386/kernel/cooperative.c
 +++ b/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,340 @@
+@@ -0,0 +1,352 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -225,6 +225,8 @@ diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 +
 +	message = (co_linux_message_t *)&node_message->msg.data;
 +
++	BUG_ON((unsigned long)message->device >= (unsigned long)CO_DEVICES_TOTAL);
++
 +	switch (message->device) {
 +	case CO_DEVICE_POWER: {
 +		co_linux_message_power_t *type = (co_linux_message_power_t *)message->data;
@@ -325,6 +327,16 @@ diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 +void co_passage_page_acquire(unsigned long *flags)
 +{
 +	local_irq_save(*flags);
++	co_passage_page_holding_count++;
++}
++
++void co_passage_page_ref_down(void)
++{
++	co_passage_page_holding_count--;
++}
++
++void co_passage_page_ref_up(void)
++{
 +	co_passage_page_holding_count++;
 +}
 +
@@ -3109,7 +3121,7 @@ diff -urN a/drivers/net/Makefile b/drivers/net/Makefile
 diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 --- a/drivers/net/conet.c
 +++ b/drivers/net/conet.c
-@@ -0,0 +1,305 @@
+@@ -0,0 +1,311 @@
 +/*
 + *  Copyright (C) 2003-2004 Dan Aloni <da-x@gmx.net>
 + *  Copyright (C) 2004 Pat Erley
@@ -3227,6 +3239,12 @@ diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 +	unsigned char *buf;
 +	
 +	len = message->size;
++	if (len > 0x10000) {
++		printk("conet rx: buggy network reception\n");
++		priv->stats.rx_dropped++;
++		return;
++	}
++
 +	buf = message->data;
 +
 +	/*
@@ -3265,7 +3283,7 @@ diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 +
 +		message = (co_linux_message_t *)&node_message->msg.data;
 +		if (message->unit < 0  ||  message->unit >= CO_MODULE_MAX_CONET) {
-+			printk("conet intrrupt: buggy network reception\n");
++			printk("conet interrupt: buggy network reception: %x\n", message->unit);
 +			return IRQ_HANDLED;
 +		}
 +
@@ -7364,14 +7382,13 @@ diff -urN a/fs/namespace.c b/fs/namespace.c
 diff -urN a/include/asm-i386/bug.h b/include/asm-i386/bug.h
 --- a/include/asm-i386/bug.h
 +++ b/include/asm-i386/bug.h
-@@ -10,11 +10,17 @@
+@@ -10,11 +10,16 @@
   */
  
  #if 1	/* Set to zero for a slightly smaller kernel */
-+#ifdef CONFIG_COOPERATIVE
-+#include <linux/cooperative.h>
-+extern void co_terminate(co_termination_reason_t reason);
-+#define BUG() do { co_terminate(CO_TERMINATE_BUG); } while(0)
++#if CONFIG_COOPERATIVE
++extern void co_terminate_bug(int code, int line, const char *file);
++#define BUG() do { co_terminate_bug(0, __LINE__, __FILE__); } while(0)
 +#else
  #define BUG()				\
   __asm__ __volatile__(	"ud2\n"		\
@@ -7932,7 +7949,7 @@ diff -urN a/include/linux/console.h b/include/linux/console.h
 diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 --- a/include/linux/cooperative.h
 +++ b/include/linux/cooperative.h
-@@ -0,0 +1,329 @@
+@@ -0,0 +1,330 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -7955,7 +7972,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +
 +#include <asm/cooperative.h>
 +
-+#define CO_LINUX_API_VERSION    9
++#define CO_LINUX_API_VERSION    10
 +
 +#pragma pack(0)
 +
@@ -7976,6 +7993,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +	CO_OPERATION_TRACE_POINT,
 +	CO_OPERATION_FREE_PAGES,
 +	CO_OPERATION_ALLOC_PAGES,
++	CO_OPERATION_PRINTK,
 +} co_operation_t;
 +
 +#define CO_MODULE_MAX_CONET    16
@@ -8536,7 +8554,7 @@ diff -urN a/include/linux/cooperative_fs.h b/include/linux/cooperative_fs.h
 diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_internal.h
 --- a/include/linux/cooperative_internal.h
 +++ b/include/linux/cooperative_internal.h
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,84 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -8566,6 +8584,7 @@ diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_int
 +extern void co_switch_wrapper(void);
 +extern void co_idle_processor(void);
 +extern void co_terminate(co_termination_reason_t reason);
++extern void co_terminate_bug(int code, int line, const char *file);
 +extern void co_free_pages(unsigned long vaddr, int order);
 +extern int co_alloc_pages(unsigned long vaddr, int order);
 +extern void co_start_kernel(void);
@@ -8594,6 +8613,8 @@ diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_int
 +extern int co_passage_page_held(void);
 +extern void co_passage_page_acquire(unsigned long *flags);
 +extern void co_passage_page_release(unsigned long flags);
++extern void co_passage_page_ref_down(void);
++extern void co_passage_page_ref_up(void);
 +
 +#define co_passage_page_assert_valid() do {	\
 +	if (co_passage_page_held())		\
@@ -8665,7 +8686,7 @@ diff -urN a/kernel/Makefile b/kernel/Makefile
 diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 --- a/kernel/cooperative.c
 +++ b/kernel/cooperative.c
-@@ -0,0 +1,369 @@
+@@ -0,0 +1,421 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -8799,32 +8820,50 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +	list_add_tail(&message_copy->node, &co_incoming_messages.list);
 +}
 +
++static unsigned long temp_storage_size = 0;
++static unsigned char temp_storage[CO_VPTR_IO_AREA_SIZE];
++
 +void co_callback(unsigned long flags)
 +{
++	long io_size;
++	unsigned long new_jiffies;
++
 +	if (co_passage_page->operation != CO_OPERATION_MESSAGE_FROM_MONITOR) {
 +		co_passage_page_release(flags);
 +		return;
 +	}
++	
++	io_size = co_passage_page->params[0];
++	new_jiffies = co_passage_page->params[1];
 +
-+	long io_size = co_passage_page->params[0];
-+	unsigned long new_jiffies = co_passage_page->params[1];
-+
-+	if (co_messages_active  &&  io_size > 0) {
-+		unsigned char *io_buffer = co_io_buffer->buffer;
-+		unsigned char *io_buffer_end = io_buffer + io_size;
-+
-+		if (!(io_size > CO_VPTR_IO_AREA_SIZE)) {
-+			while (io_buffer < io_buffer_end) {
-+				co_message_t *message = (co_message_t *)io_buffer;
-+				unsigned long size = message->size + sizeof(*message);
-+				
-+				co_message_add_to_incoming(message, size);
-+				io_buffer += size;
-+			}
-+		}
++	if (co_messages_active  &&  io_size > 0  &&  io_size <= CO_VPTR_IO_AREA_SIZE) {
++		temp_storage_size = io_size;
++		memcpy(temp_storage, co_io_buffer->buffer, io_size);
 +	}
 +
 +	co_io_buffer->messages_waiting = 0;
++
++	if (temp_storage_size) {
++		unsigned char *io_buffer = temp_storage;
++		unsigned char *io_buffer_end = &temp_storage[temp_storage_size];
++		co_passage_page_ref_down();
++	
++		while (io_buffer < io_buffer_end) {
++			co_message_t *message = (co_message_t *)io_buffer;
++			co_linux_message_t *linux_message = (co_linux_message_t *)message->data;
++			unsigned long size = message->size + sizeof(*message);
++
++			BUG_ON((unsigned long)message->from >= (unsigned long)CO_MODULES_MAX);
++			BUG_ON((unsigned long)message->to >= (unsigned long)CO_MODULES_MAX);
++			BUG_ON((unsigned long)linux_message->device >= (unsigned long)CO_DEVICES_TOTAL);
++
++			co_message_add_to_incoming(message, size);
++			io_buffer += size;
++		}
++		co_passage_page_ref_up();
++		temp_storage_size = 0;
++	}
++
 +	co_passage_page_release(flags);
 +
 +	co_handle_jiffies(new_jiffies);
@@ -8833,26 +8872,31 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +
 +void co_handle_incoming_messages(void)
 +{
++	unsigned long flags;
++
 +	if (!co_messages_active)
 +		return;
 +
-+	if (list_empty(&co_incoming_messages.list))
++	local_irq_save(flags);
++
++	if (list_empty(&co_incoming_messages.list)) {
++		local_irq_restore(flags);
 +		return;
++	}
 +
 +	for (;;) {
-+		unsigned long flags;
 +		co_message_node_t *message = NULL;
 +
 +		/*
 +		 * Pop a message from the incoming queue.
 +		 */
-+		local_irq_save(flags);
 +		if (!list_empty(&co_incoming_messages.list)) {
 +			message = list_entry(co_incoming_messages.list.next, 
 +					     co_message_node_t, node);
++			BUG_ON((unsigned long)message->msg.from >= (unsigned long)CO_MODULES_MAX);
++			BUG_ON((unsigned long)message->msg.to >= (unsigned long)CO_MODULES_MAX);
 +			list_del(&message->node);
 +		}
-+		local_irq_restore(flags);
 +
 +		if (!message)
 +			break;
@@ -8863,6 +8907,8 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +		 */
 +		co_handle_incoming_message(message);
 +	}
++
++	local_irq_restore(flags);
 +}
 +
 +void co_idle_processor(void)
@@ -8879,16 +8925,43 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +
 +void co_printk(const char *line)
 +{
-+	co_send_message(CO_MODULE_LINUX, 
-+			CO_MODULE_PRINTK,
-+			CO_PRIORITY_DISCARDABLE,
-+			CO_MESSAGE_TYPE_STRING,
-+			strlen(line)+1,
-+			line);
++	unsigned long flags;
++	int size;
++	char *dest;
++
++	co_passage_page_assert_valid();	
++
++	co_passage_page_acquire(&flags);
++	size = strlen(line);
++	co_passage_page->operation = CO_OPERATION_PRINTK;
++	co_passage_page->params[0] = size;
++	if (size > 120) 
++		size = 120;
++	dest = (char *)(&co_passage_page->params[1]);
++	memcpy(dest, line, size);
++	dest[size] = '\0';
++	co_switch_wrapper();
++	co_passage_page_release(flags);
 +}
 +
 +void co_debug_line(char *line)
 +{
++}
++
++void co_terminate_bug(int code, int line, const char *file)
++{
++	unsigned long flags;
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_TERMINATE;
++	co_passage_page->params[0] = CO_TERMINATE_BUG;
++	co_passage_page->params[1] = code;
++	co_passage_page->params[2] = line;
++	co_passage_page->params[3] = strlen(file);
++	strcpy((char *)&co_passage_page->params[4], file);
++	co_switch_wrapper();
++	/* This doesn't really return. This code shouldn't be running. */
++	co_passage_page_release(flags);
 +}
 +
 +void co_terminate(co_termination_reason_t reason)

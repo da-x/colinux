@@ -116,7 +116,7 @@ co_rc_t co_os_file_open(char *pathname, PHANDLE FileHandle, unsigned long open_f
 
 co_rc_t co_os_file_close(PHANDLE FileHandle)
 {    
-	NTSTATUS status = 0;
+	NTSTATUS status;
 
 	status = ZwClose(FileHandle);
 
@@ -361,7 +361,6 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 		len--;
 
 	co_snprintf(filename, sizeof(filename), "%s", &dirname[len]);
-
 	dirname[len] = '\0';
 
 	rc = co_winnt_utf8_to_unicode(dirname, &dirname_unicode);
@@ -514,18 +513,14 @@ co_rc_t co_os_file_rmdir(char *filename)
 
 co_rc_t co_os_file_mkdir(char *dirname)
 {
-	NTSTATUS status;
 	HANDLE handle;
-	co_rc_t rc = CO_RC(OK);
+	co_rc_t rc;
 
-	status = co_os_file_create(dirname, &handle, FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES,
-				   FILE_ATTRIBUTE_DIRECTORY, FILE_CREATE, FILE_DIRECTORY_FILE);
-
-	if (status != STATUS_SUCCESS) {
-		rc = status_convert(status);
-	} else {
-		co_os_file_close(handle);
-	}	
+	rc = co_os_file_create(dirname, &handle, FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES,
+			       FILE_ATTRIBUTE_DIRECTORY, FILE_CREATE, FILE_DIRECTORY_FILE);
+	if (CO_OK(rc)) {
+                co_os_file_close(handle);
+        }
 
 	return rc;
 }
@@ -556,7 +551,7 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 
 	rc = co_utf8_mbstowcs(rename_info->FileName, dest_filename, char_count + 1);
 	if (!CO_OK(rc))
-		goto error;
+		goto error2;
 	
 	co_debug_lvl(filesystem, 10, "rename of '%s' to '%s'\n", filename, dest_filename);
 
@@ -564,9 +559,11 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 				      FileRenameInformation);
 	rc = status_convert(status);
 
+error2:
+	co_os_file_close(handle);
+
 error:
 	co_os_free(rename_info);
-	co_os_file_close(handle);
 	return rc;
 }
 
@@ -708,6 +705,9 @@ co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *
 
 		pathname[len] = '\0';
 	} while (len > 0);
+
+	if (!CO_OK(rc))
+		return rc;
 	
 	status = ZwQueryVolumeInformationFile(handle, &io_status, &fsi,
 					      sizeof(fsi), FileFsFullSizeInformation);
@@ -724,5 +724,6 @@ co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *
 	rc = status_convert(status);
 
 	co_os_file_close(handle);
+
 	return rc;
 }

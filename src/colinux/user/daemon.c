@@ -660,12 +660,11 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 		daemon->running = PTRUE;
 		while (daemon->running) {
 			co_monitor_ioctl_run_t params;
-			
 			rc = co_user_monitor_run(daemon->monitor, &params);
+			co_reactor_select(reactor, 0);
+
 			if (!CO_OK(rc))
 				break;
-
-			co_reactor_select(reactor, 0);
 		}
 
 		if (CO_RC_GET_CODE(rc) == CO_RC_INSTANCE_TERMINATED) {
@@ -697,6 +696,10 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 
 			case CO_TERMINATE_HALT:
 				co_terminal_print("colinux: halted, exiting.\n");
+				break;
+
+			case CO_TERMINATE_BUG:
+				co_terminal_print("colinux: BUG at %s:%d\n", params.bug_info.file, params.bug_info.line);
 				break;
 
 			default:
