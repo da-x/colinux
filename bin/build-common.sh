@@ -104,7 +104,7 @@ WINPCAP_SRC_ARCHIVE="$WINPCAP_SRC"_3_0.zip
 # Remember: Please update also conf/kernel-config, if changing kernel version!
 #
 KERNEL_DIR="v2.6"
-KERNEL_VERSION="2.6.10"
+KERNEL_VERSION="2.6.11"
 
 
 # (from build-kernel.sh) #
