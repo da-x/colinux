@@ -34,14 +34,14 @@ not guaranteed to be ABI-compatible.
 -----------------------------------------
 
 Unpack the source tarball of coLinux and the Linux kernel tarball 
-(version 2.4.24, can be obtained from www.kernel.org) in the same 
-directory. Make sure that the directory of the Linux kernel is 
-named 'linux'. 
+(version 2.6.8.1 for instance, can be obtained from www.kernel.org)
+in the same  directory. Make sure that the directory of the Linux 
+kernel is named 'linux'. 
 
 Apply the patch found in the ./patch directory of the Cooperative 
 Linux tarball, to the Linux kernel. If conflicts arrise, then it is
 possible that there is a mismatch between the version of the kernel 
-a the version that patch if designed to apply to.
+and the version that the patch is designed to apply to.
 
 For example: 
     ~/linux-2.6.7# patch -p1 < ../colinux/patch/linux
@@ -81,7 +81,7 @@ The coLinux console depends on:
 
 3.2.1 Complete download and building for Win32 under Linux (mingw32)
 
-To compile source for windows targed, the compiler must self compiled
+To compile source for a Windows target, the compiler must be self compiled
 for this target. You can not download a binary of this compiler!
 
 This need a Compiler devel-libs and a lot of tools:
@@ -92,7 +92,7 @@ This need a Compiler devel-libs and a lot of tools:
     wget-1.8.2       to download source files
     ... and many more ...
 
-Creat a new directory, extract colinux source in this directory, make scripts
+Create a new directory, extract colinux source in this directory, make scripts
 executable and ran the download-script in "bin" directory.
 
     mkdir /home/$USER/colinux-build
@@ -102,26 +102,26 @@ executable and ran the download-script in "bin" directory.
     chmod +x *.sh
     ./download-all.sh
     
-Files will be download into directory /home/$USER/colinux-build/download.
+Files will be downloaded into directory /home/$USER/colinux-build/download.
 
     cd /home/$USER/colinux-build/colinux-20040807/bin
     ./build-all.sh
 
-This is a completly build process for binutils, cross compiler, libraries,
+This is a complete build process for binutils, cross compiler, libraries,
 kernel and colinux daemons. (30 Minutes on 1.8MHz Pentium)
 
 The build process based on script build-all.sh works completly at top-level
-directory colinux-build. The cross-Compiler was also installed in users directory
-(no system wide). We never need root rights for installing headers, libs or
-programs.
+directory colinux-build. The cross-compiler was also installed in users 
+directory (not system wide). We never need root rights for installing 
+headers, libs or programs.
 
-Compiled executables for windows host stored in directory mingw32/dist now.
+Compiled executables for Windows host stored in directory mingw32/dist now.
 
 
 3.2.2 Configuration script compiling
 
 Edit bin/user-build.cfg and set some directories.
-It's unsave to use a relative path in this build script. Mostly the TOPDIR is
+It's unsafe to use a relative path in this build script. Mostly the TOPDIR is
 the bin directory, but not in all cases!
 
 download-all.sh			Download all missing files
@@ -133,22 +133,22 @@ build-all.sh			Extract (OVERWRITE!) and compile all files
 
 ! Any starts of compile script will delete all source and extract it again!
 ! If you have changed some sources, do not use these scripts!
-! Call "make" into directory manualy!
+! Call "make" into directory manually!
 
-After Download a new version of colinux source, should only extract source
+After Downloading a new version of colinux source, should only extract source
 at same top level directory and run the last scripts build-kernel.sh and
-build-colinux.sh. In some cases must also compile the libs.
+build-colinux.sh. In some cases you might also need to compile the libs.
 The cross compiler mostly you never need compile again.
 
-The duing of build-all.sh is controlled by md5sum of some sources and some
+The work of build-all.sh is controlled by md5sum of some sources and some
 target files. Md5sum is updated after complety build step and put as file
 .build-*.md5 in 'downlod' directory.
 
 Call as 'build-all.sh --rebuild-all' will ignore md5sum and builds all
 cross tools, cross compiler, libraries and target files again.
 
-Single script can also use to recompile one step. Such you can rebuild
-the win32k-api and fltk library. Call 'cd bin ; ./build-colinux-libs.sh'
+Single script can also use to recompile one step. For instance you can rebuild
+the win32k-api and fltk library by calling 'cd bin ; ./build-colinux-libs.sh'
 
 
 3.2.3 Source tree sample for a mingw build process
@@ -277,7 +277,7 @@ Sample for Linux as host:
 
 4.2 make download
 
-'make download' is optional. I's download all missing source files.
+'make download' is optional. It downloads all missing source files.
 
 
 4.3 make
