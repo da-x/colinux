@@ -49,7 +49,9 @@
     driver will remain until it is uninstalled.
   * If the MAC address is unspecified, a random MAC is choosed 
     using the familiar TAP prefix (00:FF:XX:XX:XX:XX).
-  
+  * Bug fix: Reception and delivery of network packets bigger than 
+    2kb.
+
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).
   * Some small bugfixes.	 

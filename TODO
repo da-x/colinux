@@ -56,7 +56,6 @@
    * Import features from UML
 
  * conet: 
-   * Allow to send/receive big packets (> 2900).
    * To fix: If the host connection is lost and returned, colinux-daemon will not 
      automatically return conet.
    * Possibly WinPCAP related, but a fix for support of wireless networks
@@ -92,3 +91,6 @@
    * Clear out some function naming brain damager and make more use
      of the 'static' keyword :).
    * The usual tidbits: comments, refactoring, etc.
+
+ * Serial:
+   * Fix the Windows version of the serial daemon.
