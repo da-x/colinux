@@ -317,7 +317,7 @@ Section -post
     ; If devcon error occurred, $5 will
     ; be nonzero.
     IntOp $5 0 & 0
-    nsExec::ExecToStack '"$INSTDIR\netdriver\devcon.exe" hwids TAP'
+    nsExec::ExecToStack '"$INSTDIR\netdriver\devcon.exe" hwids TAPdev'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
     DetailPrint "devcon hwids returned: $R0"
@@ -334,7 +334,7 @@ Section -post
 
  ;tapupdate:
     DetailPrint "TAP-Win32 UPDATE"
-    nsExec::ExecToLog '"$INSTDIR\netdriver\devcon.exe" update "$INSTDIR\netdriver\OemWin2k.inf" TAP'
+    nsExec::ExecToLog '"$INSTDIR\netdriver\devcon.exe" update "$INSTDIR\netdriver\OemWin2k.inf" TAPdev'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
     DetailPrint "devcon update returned: $R0"
@@ -342,7 +342,7 @@ Section -post
 
  tapinstall:
     DetailPrint "TAP-Win32 INSTALL"
-    nsExec::ExecToLog '"$INSTDIR\netdriver\devcon.exe" install "$INSTDIR\netdriver\OemWin2k.inf" TAP'
+    nsExec::ExecToLog '"$INSTDIR\netdriver\devcon.exe" install "$INSTDIR\netdriver\OemWin2k.inf" TAPdev'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
     DetailPrint "devcon install returned: $R0"

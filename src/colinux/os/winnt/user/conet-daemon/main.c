@@ -40,7 +40,34 @@ typedef struct start_parameters {
 	char interface_name[0x100];
 } start_parameters_t;
 
+/*******************************************************************************
+ * Globals
+ */
+start_parameters_t *daemon_parameters;
+
 co_win32_overlapped_t tap_overlapped, daemon_overlapped;
+
+#ifdef profile_me
+#undef profile_me
+void profile_me(char *location)
+{      
+	LARGE_INTEGER Frequency;
+	LARGE_INTEGER Counter;
+	double current;
+	static double last;
+
+	QueryPerformanceCounter(&Counter);
+	QueryPerformanceFrequency(&Frequency);
+
+	current = ((double)Counter.QuadPart) / ((double)Frequency.QuadPart);
+
+        printf("%s: %5.8f\n", location, current - last);
+
+	last = current;
+}
+#else
+#define profile_me(param) do {} while(0);
+#endif
 
 co_rc_t co_win32_overlapped_write_async(co_win32_overlapped_t *overlapped,
 					void *buffer, unsigned long size)
@@ -74,6 +101,8 @@ co_rc_t co_win32_overlapped_read_received(co_win32_overlapped_t *overlapped)
 
 		message = (co_message_t *)overlapped->buffer;
 
+		profile_me("to tap");
+
 		co_win32_overlapped_write_async(&tap_overlapped, message->data, message->size);
 
 	} else {
@@ -84,15 +113,17 @@ co_rc_t co_win32_overlapped_read_received(co_win32_overlapped_t *overlapped)
 			char data[overlapped->size];
 		} message;
 		
-		message.message.from = CO_MODULE_CONET0;
+		message.message.from = CO_MODULE_CONET0 + daemon_parameters->index;
 		message.message.to = CO_MODULE_LINUX;
 		message.message.priority = CO_PRIORITY_DISCARDABLE;
 		message.message.type = CO_MESSAGE_TYPE_OTHER;
 		message.message.size = sizeof(message) - sizeof(message.message);
 		message.linux.device = CO_DEVICE_NETWORK;
-		message.linux.unit = 0;
+		message.linux.unit = daemon_parameters->index;
 		message.linux.size = overlapped->size;
 		memcpy(message.data, overlapped->buffer, overlapped->size);
+
+		profile_me("to linux");
 
 		co_win32_overlapped_write_async(&daemon_overlapped, &message, sizeof(message));
 	}
@@ -190,12 +221,14 @@ int wait_loop(HANDLE daemon_handle, HANDLE tap_handle)
 			
 		switch (status) {
 		case WAIT_OBJECT_0: {/* tap */
+			profile_me("from tap");
 			rc = co_win32_overlapped_read_completed(&tap_overlapped);
 			if (!CO_OK(rc))
 				return 0;
 			break;
 		}
 		case WAIT_OBJECT_0+1: {/* daemon */
+			profile_me("from linux");
 			rc = co_win32_overlapped_read_completed(&daemon_overlapped);
 			if (!CO_OK(rc))
 				return 0;
@@ -325,7 +358,7 @@ static void terminal_print_hook_func(char *str)
 		char data[strlen(str)+1];
 	} message;
 	
-	message.message.from = CO_MODULE_CONET0;
+	message.message.from = CO_MODULE_CONET0 + daemon_parameters->index;
 	message.message.to = CO_MODULE_CONSOLE;
 	message.message.priority = CO_PRIORITY_DISCARDABLE;
 	message.message.type = CO_MESSAGE_TYPE_STRING;
@@ -354,7 +387,9 @@ int main(int argc, char *argv[])
 	if (!CO_OK(rc)) 
 		return -1;
 
-	prefered_name = start_parameters.name_specified ? start_parameters.interface_name : NULL;
+	daemon_parameters = &start_parameters;
+
+	prefered_name = daemon_parameters->name_specified ? daemon_parameters->interface_name : NULL;
 	if (prefered_name == NULL) {
 		co_terminal_print("conet-daemon: auto selecting TAP\n");
  	} else {
@@ -382,8 +417,8 @@ int main(int argc, char *argv[])
 
 	}
 
-	rc = co_os_open_daemon_pipe(start_parameters.instance, 
-				    CO_MODULE_CONET0 + start_parameters.index, &daemon_handle_);
+	rc = co_os_open_daemon_pipe(daemon_parameters->instance, 
+				    CO_MODULE_CONET0 + daemon_parameters->index, &daemon_handle_);
 	if (!CO_OK(rc)) {
 		co_terminal_print("conet-daemon: Error opening a pipe to the daemon\n");
 		goto out_close;

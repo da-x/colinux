@@ -1,4 +1,5 @@
 * Version 0.6.1 
+  * Multiple virtual NICs are supported (eth1, eth2, etc...).
   * Some small bugfixes.	 
   * Added the ability to send Ctrl-Alt-Del to the Linux machine.
   * Linux patch updated to 2.4.26	

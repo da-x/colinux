@@ -8,7 +8,7 @@
  *  Copyright (C) Damion K. Wilson, 2003, and is released under the
  *  GPL version 2 (see below).
  *
- *  All other source code is Copyright (C) James Yonan, 2003,
+ *  All other source code is Copyright (C) James Yonan, 2003-2004,
  *  and is released under the GPL version 2 (see below).
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -43,25 +43,52 @@ typedef struct _TapAdapter;
 typedef struct _TapPacket;
 
 typedef union _TapAdapterQuery
-   {
-    NDIS_HARDWARE_STATUS m_HardwareStatus;
-    NDIS_MEDIUM m_Medium;
-    UCHAR m_MacAddress [6];
-    UCHAR m_Buffer [256];
-    ULONG m_Long;
-    USHORT m_Short;
-    UCHAR m_Byte;
-   }
+{
+  NDIS_HARDWARE_STATUS m_HardwareStatus;
+  NDIS_MEDIUM m_Medium;
+  NDIS_PHYSICAL_MEDIUM m_PhysicalMedium;
+  UCHAR m_MacAddress [6];
+  UCHAR m_Buffer [256];
+  ULONG m_Long;
+  USHORT m_Short;
+  UCHAR m_Byte;
+}
 TapAdapterQuery, *TapAdapterQueryPointer;
 
 typedef struct _TapExtension
-   {
-     struct _TapAdapter *m_Adapter;
-     Queue *m_PacketQueue, *m_IrpQueue;
-     BOOLEAN m_halt;
-   }
-TapExtension, *TapExtensionPointer;
+{
+  // TAP device object and packet queues
+  Queue *m_PacketQueue, *m_IrpQueue;
+  PDEVICE_OBJECT m_TapDevice;
+  NDIS_HANDLE m_TapDeviceHandle;
+  ULONG m_TapOpens;
 
+  // Used to lock packet queues
+  NDIS_SPIN_LOCK m_QueueLock;
+  BOOLEAN m_AllocatedSpinlocks;
+
+  // Used to bracket open/close
+  // state changes.
+  MUTEX m_OpenCloseMutex;
+
+  // True if device has been permanently halted
+  BOOLEAN m_Halt;
+
+  // TAP device name
+  unsigned char *m_TapName;
+  UNICODE_STRING m_UnicodeLinkName;
+  BOOLEAN m_CreatedUnicodeLinkName;
+
+  // Used for device status ioctl only
+  const char *m_LastErrorFilename;
+  int m_LastErrorLineNumber;
+  LONG m_NumTapOpens;
+
+  // Flags
+  BOOLEAN m_TapIsRunning;
+  BOOLEAN m_CalledTapDeviceFreeResources;
+}
+TapExtension, *TapExtensionPointer;
 
 typedef struct _TapPacket
    {
@@ -75,27 +102,26 @@ TapPacket, *TapPacketPointer;
 
 typedef struct _TapAdapter
 {
+# define NAME(a) ((a)->m_NameAnsi.Buffer)
+  ANSI_STRING m_NameAnsi;
   MACADDR m_MAC;
-  BOOLEAN m_TapIsRunning, m_InterfaceIsRunning;
-  unsigned char *m_Name, *m_TapName;
+  BOOLEAN m_InterfaceIsRunning;
   NDIS_HANDLE m_MiniportAdapterHandle;
   LONG m_Rx, m_Tx, m_RxErr, m_TxErr;
-  UNICODE_STRING m_UnicodeLinkName;
-  PDEVICE_OBJECT m_TapDevice;
-  NDIS_SPIN_LOCK m_Lock;
-  NDIS_SPIN_LOCK m_QueueLock;
   NDIS_MEDIUM m_Medium;
   ULONG m_Lookahead;
-  ULONG m_TapOpens;
   ULONG m_MTU;
 
-  // TRUE if device should always be
+  // TRUE if adapter should always be
   // "connected" even when device node
   // is not open by a userspace process.
   BOOLEAN m_MediaStateAlwaysConnected;
 
   // TRUE if device is "connected"
   BOOLEAN m_MediaState;
+
+  // Adapter power state
+  char m_DeviceState;
 
   // Info for point-to-point mode
   BOOLEAN m_PointToPoint;
@@ -105,23 +131,33 @@ typedef struct _TapAdapter
   ETH_HEADER m_UserToTap;
   MACADDR m_MAC_Broadcast;
 
-  // Used for device status ioctl only
-  const char *m_LastErrorFilename;
-  int m_LastErrorLineNumber;
-  LONG m_NumTapOpens;
-  char m_DeviceState;
+  // Used for DHCP server masquerade
+  BOOLEAN m_dhcp_enabled;
+  IPADDR m_dhcp_addr;
+  ULONG m_dhcp_netmask;
+  IPADDR m_dhcp_server_ip;
+  BOOLEAN m_dhcp_server_arp;
+  MACADDR m_dhcp_server_mac;
+  ULONG m_dhcp_lease_time;
+  UCHAR m_dhcp_user_supplied_options_buffer[DHCP_USER_SUPPLIED_OPTIONS_BUFFER_SIZE];
+  ULONG m_dhcp_user_supplied_options_buffer_len;
+  BOOLEAN m_dhcp_received_discover;
+  ULONG m_dhcp_bad_requests;
 
   // Help to tear down the adapter by keeping
   // some state information on allocated
   // resources.
   BOOLEAN m_CalledAdapterFreeResources;
-  BOOLEAN m_CalledTapDeviceFreeResources;
   BOOLEAN m_RegisteredAdapterShutdownHandler;
-  BOOLEAN m_AllocatedSpinlocks;
-  BOOLEAN m_DeviceExtensionIsAccessible;
-  BOOLEAN m_CreatedSymbolLink;
-  BOOLEAN m_CreatedUnicodeLinkName;
 
+  // Multicast list info
+  NDIS_SPIN_LOCK m_MCLock;
+  BOOLEAN m_MCLockAllocated;
+  ULONG m_MCListSize;
+  MC_LIST m_MCList;
+
+  // Information on the TAP device
+  TapExtension m_Extension;
 } TapAdapter, *TapAdapterPointer;
 
 #endif

@@ -133,7 +133,7 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 		co_winnt_daemon_syntax();
 		return CO_RC(ERROR);
 	}
-	
+
 	rc = co_cmdline_params_check_for_no_unparsed_parameters(cmdline, PFALSE);
 	if (!CO_OK(rc)) {
 		co_daemon_syntax();
@@ -182,7 +182,9 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 			return CO_RC(ERROR);
 		}
 		
-		return co_winnt_daemon_initialize_service(args, winnt_parameters.service_name);
+		co_terminal_print("colinux: running as service '%s'\n", winnt_parameters.service_name);
+
+		return co_winnt_daemon_initialize_service(&start_parameters, winnt_parameters.service_name);
 	}
 
 	if (!start_parameters.config_specified){

@@ -1,3 +1,16 @@
+Fri May 28 20:04:22 2004  Dan Aloni  <da-x@colinux.org>
+
+	* src/colinux/os/winnt/user/install/colinux.nsi: 
+	Fixed installation of the upgraded TAP driver. 
+
+Mon May 18 16:31:25 2004  Geroge Boutwell  <gboutwel@praize.com>
+
+	* src/colinux/user/daemon.c: 
+	* src/colinux/os/winnt/user/conet-bridged-daemon/main.c: 
+	* src/colinux/os/winnt/user/conet-daemon/main.c: 
+	Made some fixes to ensure right information is handed off for
+	multiple nics to work correcly.
+
 Mon May 17 06:53:16 2004  Dan Aloni  <da-x@colinux.org>
 
 	* src/colinux/os/winnt/user/install/WinpcapRedir.ini: 
@@ -16,6 +29,13 @@ Thu May 13 07:24:13 2004  George Boutwell  <gboutwel@praize.com>
 	specified. IMHO, the behaviour should be in unison when -c is 
 	absent, regardless of the existence of --install-service option.
 
+Sun May  9 17:05:21 2004  George Boutwell  <gboutwel@praize.com>
+
+	* patch/linux/arch/i386/kernel/cooperative.c: 
+	* patch/linux/drivers/net/conet.c: 
+	Enhanced conet to support multiple nics and cooperative to tell conet
+	which nic is recieving a packet message.
+	
 Sun May  9 04:54:57 2004  Dan Aloni  <da-x@colinux.org>
 
 	* patch/linux/arch/i386/kernel/ioport.c: 

@@ -1,5 +1,5 @@
 ; ****************************************************************************
-; * COPYRIGHT (C) 2003 James Yonan                                           *
+; * COPYRIGHT (C) 2003-2004 James Yonan                                      *
 ; *  This program is free software; you can redistribute it and/or modify    *
 ; *  it under the terms of the GNU General Public License as published by    *
 ; *  the Free Software Foundation; either version 2 of the License, or       *
@@ -7,9 +7,9 @@
 ; ****************************************************************************
 
 ; SYNTAX CHECKER
-; cd \WINDDK\2600.1106\tools\chkinf
+; cd \WINDDK\3790\tools\chkinf
 ; chkinf c:\src\openvpn\tap-win32\i386\oemwin2k.inf
-; OUTPUT -> file:///c:/WINDDK/2600.1106/tools/chkinf/htm/c++src+openvpn+tap-win32+i386__OemWin2k.htm
+; OUTPUT -> file:///c:/WINDDK/3790/tools/chkinf/htm/c%23+src+openvpn+tap-win32+i386+__OemWin2k.htm
 
 [Version]
    Signature = "$Windows NT$"
@@ -17,7 +17,7 @@
    ClassGUID = {4d36e972-e325-11ce-bfc1-08002be10318}
    Provider = %l_Provider%
    Class = Net
-   DriverVer=10/01/2003,3.00.00.0010
+   DriverVer=05/13/2004,7.00.00.0001
 
 [Strings]
    l_DeviceDescription = "TAP-Win32 Adapter"
@@ -30,7 +30,7 @@
    %l_Provider% = TapWin32Project
 
 [TapWin32Project]
-   %l_DeviceDescription% = TAP.ndi, TAP
+   %l_DeviceDescription% = TAP.ndi, TAPDEV
 
 ;---------------------------------------------------------------
 ;                             Driver Section (Done)
@@ -75,6 +75,9 @@
    HKR, Ndi\params\MediaStatus,        Optional,  0, "0"
    HKR, Ndi\params\MediaStatus\enum,   "0",       0, "Application Controlled"
    HKR, Ndi\params\MediaStatus\enum,   "1",       0, "Always Connected"
+   HKR, Ndi\params\MAC,                ParamDesc, 0, "MAC Address"
+   HKR, Ndi\params\MAC,                Type,      0, "edit"
+   HKR, Ndi\params\MAC,                Optional,  0, "1"
 
 ;----------------------------------------------------------------
 ;                             Service Section

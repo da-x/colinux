@@ -8,7 +8,7 @@
  *  Copyright (C) Damion K. Wilson, 2003, and is released under the
  *  GPL version 2 (see below).
  *
- *  All other source code is Copyright (C) James Yonan, 2003,
+ *  All other source code is Copyright (C) James Yonan, 2003-2004,
  *  and is released under the GPL version 2 (see below).
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -49,9 +49,9 @@ extern "C" {
 #      define DEBUGP(fmt) { DbgMessage fmt; }
 #   endif
 
-    extern void (*DbgMessage)(char *p_Format, ...);
+    extern VOID (*DbgMessage)(char *p_Format, ...);
 
-    void DisplayDebugString (char *p_Format, ...);
+    VOID DisplayDebugString (char *p_Format, ...);
 #endif
 
 //===================================================================================
@@ -59,7 +59,7 @@ extern "C" {
 //===================================================================================
 #define IfPrint(c) (c >= 32 && c < 127 ? c : '.')
 
-void HexDump (unsigned char *p_Buffer, unsigned long p_Size);
+VOID HexDump (unsigned char *p_Buffer, unsigned long p_Size);
 
 #ifdef __cplusplus
 }

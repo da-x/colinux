@@ -8,7 +8,7 @@
  *  Copyright (C) Damion K. Wilson, 2003, and is released under the
  *  GPL version 2 (see below).
  *
- *  All other source code is Copyright (C) James Yonan, 2003,
+ *  All other source code is Copyright (C) James Yonan, 2003-2004,
  *  and is released under the GPL version 2 (see below).
  *
  *  This program is free software; you can redistribute it and/or modify

@@ -559,7 +559,7 @@ co_rc_t co_daemon_pipe_cb_packet(co_os_pipe_connection_t *conn,
 			id = *((co_module_t *)packet_data);
 				
 			if (!((id == CO_MODULE_CONSOLE) ||
-			      (CO_MODULE_CONET0 >= id  &&  id < CO_MODULE_CONET_END)))
+			      (CO_MODULE_CONET0 <= id  &&  id < CO_MODULE_CONET_END)))
 			{
 				rc = CO_RC(ERROR);
 				break;

@@ -8,7 +8,7 @@
  *  Copyright (C) Damion K. Wilson, 2003, and is released under the
  *  GPL version 2 (see below).
  *
- *  All other source code is Copyright (C) James Yonan, 2003,
+ *  All other source code is Copyright (C) James Yonan, 2003-2004,
  *  and is released under the GPL version 2 (see below).
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -27,50 +27,72 @@
  *  59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "macinfo.h"
 
-unsigned char HexStringToDecimalInt (unsigned char p_Character)
-   {
-    unsigned char l_Value = 0;
+int
+HexStringToDecimalInt (const int p_Character)
+{
+  int l_Value = 0;
 
-    if (p_Character >= 'A' && p_Character <= 'F')
-       l_Value = (p_Character - 'A') + 10;
-    else if (p_Character >= 'a' && p_Character <= 'f')
-       l_Value = (p_Character - 'a') + 10;
-    else if (p_Character >= '0' && p_Character <= '9')
-       l_Value = p_Character - '0';
+  if (p_Character >= 'A' && p_Character <= 'F')
+    l_Value = (p_Character - 'A') + 10;
+  else if (p_Character >= 'a' && p_Character <= 'f')
+    l_Value = (p_Character - 'a') + 10;
+  else if (p_Character >= '0' && p_Character <= '9')
+    l_Value = p_Character - '0';
 
-    return l_Value;
-   }
+  return l_Value;
+}
 
-void ConvertMacInfo (MACADDR p_Destination, unsigned char *p_Source, unsigned long p_Length)
-   {
-    unsigned long l_Index, l_HexIdx, l_Ind = 0, l_Init = 1;
+BOOLEAN
+ParseMAC (MACADDR dest, const char *src)
+{
+  int c;
+  int mac_index = 0;
+  BOOLEAN high_digit = FALSE;
+  int delim_action = 1;
 
-    MYASSERT (p_Destination);
-    MYASSERT (p_Source);
-    MYASSERT (p_Length);
+  MYASSERT (src);
+  MYASSERT (dest);
 
-    for (l_Index = l_HexIdx = l_Ind = 0;
-	 l_Index < p_Length && l_HexIdx < sizeof (MACADDR) && p_Source [l_Index];
-	 ++l_Index)
-       {
-        if (IsMacDelimiter (p_Source [l_Index]))
-           l_Ind = 0, ++l_HexIdx, l_Init = 1;
-        else if (++l_Ind == 3)
-           (++l_HexIdx < sizeof (MACADDR)
-	    ? (p_Destination [l_HexIdx]
-	       = HexStringToDecimalInt (p_Source [l_Index]), l_Ind = 0) : 0);
-        else
-           p_Destination [l_HexIdx]
-	     = (l_Init ? 0 : p_Destination [l_HexIdx] * 16)
-	     + HexStringToDecimalInt (p_Source [l_Index]), l_Init = 0;
-       }
-   }
+  CLEAR_MAC (dest);
+
+  while (c = *src++)
+    {
+      if (IsMacDelimiter (c))
+	{
+	  mac_index += delim_action;
+	  high_digit = FALSE;
+	  delim_action = 1;
+	}
+      else if (IsHexDigit (c))
+	{
+	  const int digit = HexStringToDecimalInt (c);
+	  if (mac_index < sizeof (MACADDR))
+	    {
+	      if (!high_digit)
+		{
+		  dest[mac_index] = (char)(digit);
+		  high_digit = TRUE;
+		  delim_action = 1;
+		}
+	      else
+		{
+		  dest[mac_index] = (char)(dest[mac_index] * 16 + digit);
+		  ++mac_index;
+		  high_digit = FALSE;
+		  delim_action = 0;
+		}
+	    }
+	  else
+	    return FALSE;
+	}
+      else
+	return FALSE;
+    }
+
+  return (mac_index + delim_action) >= sizeof (MACADDR);
+}
 
 /*
  * Generate a MAC using the GUID in the adapter name.
@@ -91,7 +113,7 @@ void ConvertMacInfo (MACADDR p_Destination, unsigned char *p_Source, unsigned lo
  * of collision would be 0.01157288998621678766.
  */
 
-void GenerateRandomMac (MACADDR mac, unsigned char *adapter_name)
+VOID GenerateRandomMac (MACADDR mac, const unsigned char *adapter_name)
 {
   unsigned const char *cp = adapter_name;
   unsigned char c;
@@ -100,7 +122,7 @@ void GenerateRandomMac (MACADDR mac, unsigned char *adapter_name)
   int brace = 0;
   int state = 0;
 
-  NdisZeroMemory (mac, sizeof (MACADDR));
+  CLEAR_MAC (mac);
 
   mac[0] = 0x00;
   mac[1] = 0xFF;
@@ -130,12 +152,8 @@ void GenerateRandomMac (MACADDR mac, unsigned char *adapter_name)
     }
 }
 
-void GenerateRelatedMAC (MACADDR dest, const MACADDR src)
+VOID GenerateRelatedMAC (MACADDR dest, const MACADDR src, const int delta)
 {
   COPY_MAC (dest, src);
-  (*((ULONG *) ((unsigned char *) dest + 2)))++;
+  dest[2] += (UCHAR) delta;
 }
-
-#ifdef __cplusplus
-}
-#endif

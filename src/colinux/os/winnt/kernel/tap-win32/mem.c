@@ -8,7 +8,7 @@
  *  Copyright (C) Damion K. Wilson, 2003, and is released under the
  *  GPL version 2 (see below).
  *
- *  All other source code is Copyright (C) James Yonan, 2003,
+ *  All other source code is Copyright (C) James Yonan, 2003-2004,
  *  and is released under the GPL version 2 (see below).
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -32,7 +32,7 @@
 //------------------
 
 PVOID
-MemAlloc (ULONG p_Size)
+MemAlloc (ULONG p_Size, BOOLEAN zero)
 {
   PVOID l_Return = NULL;
 
@@ -40,8 +40,13 @@ MemAlloc (ULONG p_Size)
     {
       __try
       {
-	if (NdisAllocateMemoryWithTag (&l_Return, p_Size, '6PAT')
-	    != NDIS_STATUS_SUCCESS)
+	if (NdisAllocateMemoryWithTag (&l_Return, p_Size, 'APAT')
+	    == NDIS_STATUS_SUCCESS)
+	  {
+	    if (zero)
+	      NdisZeroMemory (l_Return, p_Size);
+	  }
+	else
 	  l_Return = NULL;
       }
       __except (EXCEPTION_EXECUTE_HANDLER)
@@ -60,7 +65,9 @@ MemFree (PVOID p_Addr, ULONG p_Size)
     {
       __try
       {
+#if DBG
 	NdisZeroMemory (p_Addr, p_Size);
+#endif
 	NdisFreeMemory (p_Addr, p_Size, 0);
       }
       __except (EXCEPTION_EXECUTE_HANDLER)
@@ -101,7 +108,7 @@ QueueInit (ULONG capacity)
   Queue *q;
 
   MYASSERT (capacity > 0);
-  q = (Queue *) MemAlloc (QUEUE_BYTE_ALLOCATION (capacity));
+  q = (Queue *) MemAlloc (QUEUE_BYTE_ALLOCATION (capacity), TRUE);
   if (!q)
     return NULL;
 

@@ -8,7 +8,7 @@
  *  Copyright (C) Damion K. Wilson, 2003, and is released under the
  *  GPL version 2 (see below).
  *
- *  All other source code is Copyright (C) James Yonan, 2003,
+ *  All other source code is Copyright (C) James Yonan, 2004,
  *  and is released under the GPL version 2 (see below).
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -30,40 +30,14 @@
 #ifndef MacInfoDefined
 #define MacInfoDefined
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-//=====================================================================================
-//                                  NDIS + Win32 Settings
-//=====================================================================================
-#ifdef NDIS_MINIPORT_DRIVER
-#   include <ndis.h>
-#endif
-
 //===================================================================================
 //                                      Macros
 //===================================================================================
 #define IsMacDelimiter(a) (a == ':' || a == '-' || a == '.')
 #define IsHexDigit(c) ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f'))
 
-#ifdef ASSERT
-#   undef ASSERT
-#endif
-
-#define ASSERT(a) if (! (a)) return
-
-//===================================================================================
-//                          MAC Address Manipulation Routines
-//===================================================================================
-unsigned char HexStringToDecimalInt (unsigned char p_Character);
-void ConvertMacInfo (MACADDR p_Destination, unsigned char *p_Source, unsigned long p_Length);
-void GenerateRandomMac (MACADDR mac, unsigned char *adapter_name);
-
-#define COPY_MAC(dest, src) memcpy(dest, src, sizeof (MACADDR));
-
-#ifdef __cplusplus
-}
-#endif
+#define COPY_MAC(dest, src) NdisMoveMemory ((dest), (src), sizeof (MACADDR))
+#define CLEAR_MAC(dest)     NdisZeroMemory ((dest), sizeof (MACADDR))
+#define MAC_EQUAL(a,b)      (memcmp ((a), (b), sizeof (MACADDR)) == 0)
 
 #endif

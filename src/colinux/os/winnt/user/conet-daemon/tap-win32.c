@@ -21,6 +21,7 @@
 #include <colinux/os/user/misc.h>
 
 #include "../../kernel/tap-win32/constants.h"
+#include "../../kernel/tap-win32/common.h"
 
 bool_t
 is_tap_win32_dev(const char *guid)
@@ -32,13 +33,13 @@ is_tap_win32_dev(const char *guid)
 
 	status = RegOpenKeyEx(
 		HKEY_LOCAL_MACHINE,
-		NETCARD_REG_KEY_2000,
+		ADAPTER_KEY,
 		0,
 		KEY_READ,
 		&netcard_key);
 
 	if (status != ERROR_SUCCESS) {
-		printf("Error opening registry key: %s\n", NETCARD_REG_KEY_2000);
+		printf("Error opening registry key: %s\n", ADAPTER_KEY);
 		return PFALSE;
 	}
 
@@ -63,16 +64,17 @@ is_tap_win32_dev(const char *guid)
 			NULL,
 			NULL,
 			NULL);
+
 		if (status == ERROR_NO_MORE_ITEMS)
 			break;
 		else if (status != ERROR_SUCCESS) {
 			printf("Error enumerating registry subkeys of key: %s\n",
-				NETCARD_REG_KEY_2000);
+				ADAPTER_KEY);
 			return PFALSE;
 		}
 	
 		snprintf (unit_string, sizeof(unit_string), "%s\\%s",
-			  NETCARD_REG_KEY_2000, enum_name);
+			  ADAPTER_KEY, enum_name);
 
 		status = RegOpenKeyEx(
 			HKEY_LOCAL_MACHINE,
@@ -108,7 +110,7 @@ is_tap_win32_dev(const char *guid)
 
 				if (status == ERROR_SUCCESS && data_type == REG_SZ)
 				{
-					if (!strcmp (component_id, "tap")
+					if (!strcmp (component_id, "tapdev")
 					    && !strcmp (net_cfg_instance_id, guid))
 					{
 						RegCloseKey (unit_key);
@@ -140,13 +142,13 @@ co_rc_t get_device_guid(
 
 	status = RegOpenKeyEx(
 		HKEY_LOCAL_MACHINE,
-		REG_CONTROL_NET,
+		NETWORK_CONNECTIONS_KEY,
 		0,
 		KEY_READ,
 		&control_net_key);
 
 	if (status != ERROR_SUCCESS) {
-		printf("Error opening registry key: %s", REG_CONTROL_NET);
+		printf("Error opening registry key: %s", NETWORK_CONNECTIONS_KEY);
 		return CO_RC(ERROR);
 	}
 
@@ -174,14 +176,14 @@ co_rc_t get_device_guid(
 			break;
 		else if (status != ERROR_SUCCESS) {
 			printf("Error enumerating registry subkeys of key: %s",
-			       REG_CONTROL_NET);
+			       NETWORK_CONNECTIONS_KEY);
 			return CO_RC(ERROR);
 		}
 
 		snprintf(connection_string, 
 			 sizeof(connection_string),
 			 "%s\\%s\\Connection",
-			 REG_CONTROL_NET, enum_name);
+			 NETWORK_CONNECTIONS_KEY, enum_name);
 
 		status = RegOpenKeyEx(
 			HKEY_LOCAL_MACHINE,
@@ -202,7 +204,7 @@ co_rc_t get_device_guid(
 
 			if (status != ERROR_SUCCESS || name_type != REG_SZ) {
 				printf("Error opening registry key: %s\\%s\\%s",
-				       REG_CONTROL_NET, connection_string, name_string);
+				       NETWORK_CONNECTIONS_KEY, connection_string, name_string);
 			        return CO_RC(ERROR);
 			}
 			else {
@@ -245,7 +247,14 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 	char device_guid[0x100];
 	co_rc_t rc;
 	HANDLE handle;
+	BOOL bret;
 	char name_buffer[0x100] = {0, };
+	struct {
+		unsigned long major;
+		unsigned long minor;
+		unsigned long debug;		
+	} version;
+	int version_len;
 
 	if (prefered_name != NULL)
 		co_snprintf(name_buffer, sizeof(name_buffer), "%s", prefered_name);
@@ -276,6 +285,18 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 
 	if (handle == 0)
 		return CO_RC(ERROR);
+
+	bret = DeviceIoControl(handle, TAP_IOCTL_GET_VERSION,
+			       &version, sizeof (version),
+			       &version, sizeof (version), &version_len, NULL);
+
+	if (bret == FALSE) {
+		CloseHandle(handle);
+		co_debug("conet-daemon: error getting driver version\n");
+		return CO_RC(ERROR);
+	}
+
+	co_debug("conet-daemon: driver version %d.%d\n", version.major, version.minor);
 	
 	*phandle = handle;
 

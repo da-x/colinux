@@ -1,0 +1,99 @@
+ * Consoles:
+   * If the console crashes, we need to recover somehow.
+   * Make the consoles scrollable/resizable.
+   * Address the font size portability issues with FLTK. On Windows XP
+     and Windows 2000 seem to choose different font sizes.
+   * Add select, copy and paste to and from console and to and from
+     host-environment (not so much mouse but using keys). Is now
+     overcome by using SSH + putty, but that makes the console less
+     usefull.
+   * (optional) Support kermit or other 'telnet upload' protocol, to 
+     upload files from the console.
+   * Support alt-gr.
+   * Fix F10 in FLTK.
+
+ * Installer:
+   * Point the user to somewhere to download WinPCAP from.
+   * Instruct the user to install Python for Windows, wxPython, and Python 
+     Win32 extensions.
+   * The installer should add have an option to launch the configurator 
+     when the installation finishes. 
+
+ * Configurator:
+   * Finish implementation of editing configuration files.
+   * On the place block devices are configured, add the ability to 
+     download the images from sourceforge on the.
+   * On the place where network devices are configured, the configurator
+     will enumerate either currently installed network adapter and TAP
+     devices. More user friendliness could be added there to support the
+     installation of one or more TAP devices.
+   * Add nice wizards for the newbies.
+
+ * Linux patch:
+   * Port to 2.6.x (work in progress by me and George).
+   * Make it impossible to compile in stuff like PCI with CONFIG_COOPERATIVE 
+     enabled.   
+
+ * Miscellaneous enhancements and fixes:
+   * Lack of entropy - empty /dev/random
+   * Make it work on PAE setups.
+   * Make UML work on coLinux (SKAS included).
+   * Make coLinux work on Windows NT 4 SP*.
+   * Address all reported SMP issues.
+   * The first search path for files specified in the XML, such as in 
+     <image path="vmlinux" /> or block devices, should be in the directory 
+     that contains the XML file.
+   * Revise the argument parsing of the executables other than daemon, i.e,
+     use the framework that the daemon uses.
+   * When coLinux terminates with the reason of a restart (rather than 
+     shutdown or kernel panic), let the daemon to restart itself (or maybe
+     add support for it in the driver itself - but that requires more 
+     changes. The behaviour of the daemon with regard the VM's termination
+     could also be specified in the XML.
+   * Add initrd support to avoid problems with packaging / installation of
+     kernel modules (i.e modules.tar.gz should probably go away and return
+     in a different form).
+   * Support to shutdown/suspend/resume (just!) coLinux so it becomes
+     transportable between hosts.
+   * Hostfs support
+   * Import features from UML
+
+ * conet: 
+   * Allow to send/receive big packets (> 2900).
+   * Support multiple virtual NICs.
+   * To fix: If the host connection is lost and returned, colinux-daemon will not 
+     automatically return conet.
+   * Possibly WinPCAP related, but a fix for support of wireless networks
+     would be great
+   * Possibly WinPCAP related, compatibility with IPv6: IPv6 can be
+     obtained but setting the IPv6 host address based on routeradvertisements
+     is not working fine (I can see IPv6 traffic though in coLinux).
+   * Tune performance (i.e reduce round trip time and increase bandwidth).
+
+ * cobd:
+   * Reimplement as asynchronous.
+   * Support device aliasing, e.g alias="hda2"
+
+ * Root file system images: 
+   * Fix and improbe the Debian image.
+     * Add ssh to it. the fact that we will end with the same sshd private keys
+       all around the world is not a big issue :)
+     * Fix the minor bits of editing needed as described on the Wiki.
+     * Edit /etc/fstab to use extfs3
+     * Etc-update and etc-upgrade up to today (a few packages but several Mo)
+     * Remove some orphan package, like lilo? 
+     * Add some 'obvious' packages that seems to be missing like ftp, strace. 
+       the kind of software that we might need BEFORE being able to use apt-get.
+     * And call it with a n+1 release name.
+   * Post more images on SourceForge. Send me URLs of ready images. I will
+     not accept images that are tied to specific coLinux releases.
+
+ * Odd things to investigate:
+   * Some iptables functionality not working? (see ML)
+   * Spurious 'Floating Point Exception' with an athlon optimised vmlinux.
+
+ * Cleanups:
+   * Merge console into console-base.
+   * Clear out some function naming brain damager and make more use
+     of the 'static' keyword :).
+   * The usual tidbits: comments, refactoring, etc.

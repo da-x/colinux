@@ -162,7 +162,7 @@ int co_winnt_daemon_remove_service(const char *service_name)
 }
 
 static const char *running_service_name;
-static char **daemon_args;
+static co_start_parameters_t *daemon_start_parameters;
 static SERVICE_STATUS ssStatus;
 static SERVICE_STATUS_HANDLE   sshStatusHandle;
 
@@ -230,25 +230,23 @@ void WINAPI service_main(int _argc, char **_argv)
 		ssStatus.dwServiceSpecificExitCode = 0;
 
 		co_winnt_sc_report_status(SERVICE_RUNNING, NO_ERROR, 3000);
-		co_winnt_daemon_main(daemon_args);
+		co_winnt_daemon_main(daemon_start_parameters);
 		co_winnt_sc_report_status(SERVICE_STOPPED, 0, 0);
 	}
 }
 
-bool_t co_winnt_daemon_initialize_service(char **args,  const char *service_name) 
+bool_t co_winnt_daemon_initialize_service(co_start_parameters_t *start_parameters,  const char *service_name) 
 {
-	char error_message[1024];
-
 	SERVICE_TABLE_ENTRY dispatch_table[] = {
 		{ (char *)service_name, (LPSERVICE_MAIN_FUNCTION)service_main },
 		{ 0, 0 },
 	};
 
-	daemon_args = args;
+	daemon_start_parameters = start_parameters;
 	running_service_name = service_name;
 
 	if (!StartServiceCtrlDispatcher(dispatch_table)) {
-		co_ntevent_print("service: Failed to initialize: %s\n", error_message);
+		co_terminal_print_last_error("service: Failed to initialize");
 		return PFALSE;
 	} else {
 		return PTRUE;

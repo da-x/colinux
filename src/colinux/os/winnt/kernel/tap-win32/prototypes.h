@@ -8,7 +8,7 @@
  *  Copyright (C) Damion K. Wilson, 2003, and is released under the
  *  GPL version 2 (see below).
  *
- *  All other source code is Copyright (C) James Yonan, 2003,
+ *  All other source code is Copyright (C) James Yonan, 2003-2004,
  *  and is released under the GPL version 2 (see below).
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -34,6 +34,11 @@ NTSTATUS DriverEntry
    (
     IN PDRIVER_OBJECT p_DriverObject,
     IN PUNICODE_STRING p_RegistryPath
+   );
+
+VOID TapDriverUnload
+   (
+    IN PDRIVER_OBJECT p_DriverObject
    );
 
 NDIS_STATUS AdapterCreate
@@ -107,22 +112,22 @@ NTSTATUS TapDeviceHook
 
 NDIS_STATUS CreateTapDevice
    (
-    TapAdapterPointer p_Adapter
+    TapExtensionPointer p_Extension,
+    const char *p_Name
    );
 
 VOID DestroyTapDevice
    (
-    TapAdapterPointer p_Adapter
+    TapExtensionPointer p_Extension
    );
 
 VOID TapDeviceFreeResources
    (
-    TapAdapterPointer p_Adapter
+    TapExtensionPointer p_Extension
     );
 
 NTSTATUS CompleteIRP
    (
-    TapAdapterPointer p_Adapter,
     IN PIRP p_IRP,
     IN TapPacketPointer p_PacketBuffer,
     IN CCHAR PriorityBoost
@@ -136,31 +141,46 @@ VOID CancelIRPCallback
 
 VOID CancelIRP
    (
-    IN PDEVICE_OBJECT p_DeviceObject,
+    TapExtensionPointer p_Extension,
     IN PIRP p_IRP,
     BOOLEAN callback
    );
 
 VOID FlushQueues
    (
-    TapAdapterPointer p_Adapter
+    TapExtensionPointer p_Extension
    );
 
-void ResetPointToPointMode
+VOID ResetTapAdapterState
    (
     TapAdapterPointer p_Adapter
    );
 
-void ProcessARP
+BOOLEAN ProcessARP
    (
     TapAdapterPointer p_Adapter,
-    const PARP_PACKET src
+    const PARP_PACKET src,
+    const IPADDR adapter_ip,
+    const IPADDR ip,
+    const MACADDR mac
    );
 
 VOID SetMediaStatus
    (
     TapAdapterPointer p_Adapter,
     BOOLEAN state
+   );
+
+VOID InjectPacket
+   (
+    TapAdapterPointer p_Adapter,
+    UCHAR *packet,
+    const unsigned int len
+   );
+
+VOID CheckIfDhcpAndPointToPointMode
+   (
+    TapAdapterPointer p_Adapter
    );
 
 VOID HookDispatchFunctions();

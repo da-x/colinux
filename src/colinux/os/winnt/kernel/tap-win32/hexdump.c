@@ -8,7 +8,7 @@
  *  Copyright (C) Damion K. Wilson, 2003, and is released under the
  *  GPL version 2 (see below).
  *
- *  All other source code is Copyright (C) James Yonan, 2003,
+ *  All other source code is Copyright (C) James Yonan, 2003-2004,
  *  and is released under the GPL version 2 (see below).
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -35,9 +35,9 @@ extern "C" {
 
 #ifndef NDIS_MINIPORT_DRIVER
 
-void (*DbgMessage)(char *p_Format, ...) = DisplayDebugString;
+VOID (*DbgMessage)(char *p_Format, ...) = DisplayDebugString;
 
-void DisplayDebugString (char *p_Format, ...)
+VOID DisplayDebugString (char *p_Format, ...)
    {
     static char l_Buffer [4096];
 
@@ -51,7 +51,7 @@ void DisplayDebugString (char *p_Format, ...)
 
 #endif
 
-void HexDump (unsigned char *p_Buffer, unsigned long p_Size)
+VOID HexDump (unsigned char *p_Buffer, unsigned long p_Size)
    {
     unsigned long l_Index, l_Idx;
     unsigned char l_Row [17];

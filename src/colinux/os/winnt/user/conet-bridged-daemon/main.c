@@ -567,7 +567,7 @@ main(int argc, char *argv[])
 		goto out;
 	}
 
-	rc = co_os_open_daemon_pipe(start_parameters.instance, 
+	rc = co_os_open_daemon_pipe(daemon_parameters->instance, 
 				    CO_MODULE_CONET0 + daemon_parameters->index, &daemon_handle_);
 	if (!CO_OK(rc)) {
 		co_debug("Error opening a pipe to the daemon\n");
