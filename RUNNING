@@ -10,7 +10,12 @@ WARNING:
 (e.g, stable setups), it is still meant for testing purposes only. 
 This means that running it may crash the host (Windows or Linux system).
 
-PLEASE REPORT and read about problems on the colinux-devel@sourceforge.net 
+KNOWN ISSUES:
+
+  Any known issues for an release can be found on the Wiki 
+(http://wiki.colinux.org)
+
+  PLEASE REPORT and read about problems on the colinux-devel@sourceforge.net 
 mailing list or file an Bug report at 
 http://www.sourceforge.net/projects/colinux
 
@@ -28,7 +33,6 @@ See other 2.6 upgrade resources for information about other changes.
 upgrading to 0.6.2 and so block device names change from cobdX to cobd/X 
 and render the image unbootable.  For more details and solutions see the
 2.6 related information on the Wiki (http://wiki.colinux.org)
-
 
 RUNNING:
 
@@ -202,6 +206,12 @@ Common Problems
 	"Unable to mount root fs"
 		Generally this means that the root filesystem image is 
 		missing, or was specified incorrectly.
+
+  Additional problems not know at time of release are typically 
+documented on the Wiki (http://wiki.colinux.org), look there for known 
+problems.  If your problem isn't listed, report on the 
+colinux-devel@sourceforge.net mailing list or file an Bug report at 
+http://www.sourceforge.net/projects/colinux
 
 Developing, Helping out the Project
 -----------------------------------

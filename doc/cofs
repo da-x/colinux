@@ -39,6 +39,11 @@ host OS directories inside Linux.
 
   XX is a number between 0 and 31.
 
+or in the XML config file:
+
+   <cofs_device index ="0" type=<flat | meta> path="\DosDevices\<path>" enabled="true" />
+
+
 * mount syntax:
 
     mount -t cofs (cofs)XX(:path) (-o options) /mnt/point
