@@ -49,7 +49,7 @@ co_manager_dispatch(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 		break;
 
 	case IRP_MJ_CLEANUP: {
-		co_manager_cleanup(&irpStack->FileObject->FsContext);
+		co_manager_cleanup(co_manager, &irpStack->FileObject->FsContext);
 		break;
 	}
     
@@ -93,19 +93,20 @@ co_manager_dispatch(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 	return ntStatus;
 }
 
+static
 VOID 
 NTAPI
-co_manager_unload(IN PDRIVER_OBJECT DriverObject)
+driver_unload(IN PDRIVER_OBJECT DriverObject)
 {
 	WCHAR               deviceLinkBuffer[]  = L"\\DosDevices\\"CO_DRIVER_NAME;
 	UNICODE_STRING      deviceLinkUnicodeString;
 
+	co_manager_unload((co_manager_t *)DriverObject->DeviceObject->DeviceExtension);
+
 	RtlInitUnicodeString(&deviceLinkUnicodeString, deviceLinkBuffer);
 
 	IoDeleteSymbolicLink(&deviceLinkUnicodeString);
-	IoDeleteDevice (DriverObject->DeviceObject);
-
-	co_debug("Driver Unloaded");
+	IoDeleteDevice(DriverObject->DeviceObject);
 }
 
 NTSTATUS 
@@ -152,9 +153,9 @@ DriverEntry(
 	DriverObject->MajorFunction[IRP_MJ_CLOSE]          =
 	DriverObject->MajorFunction[IRP_MJ_CLEANUP]        =
 	DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = co_manager_dispatch;
-	DriverObject->DriverUnload                         = co_manager_unload;
+	DriverObject->DriverUnload                         = driver_unload;
 
-	co_debug("Driver Loaded");
+	co_manager_load(co_manager);
 
 	return STATUS_SUCCESS;
 }

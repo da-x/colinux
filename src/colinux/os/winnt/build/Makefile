@@ -27,7 +27,7 @@ $(BUILD_PATH)/driver.base.tmp: $(BUILD_PATH)/driver.o
 	i686-pc-cygwin-gcc -Wl,--base-file,$@ \
 	-Wl,--entry,_DriverEntry@8 \
 	-nostartfiles -nostdlib \
-        -o junk.tmp $^ -lntoskrnl -lhal 
+        -o junk.tmp $^ -lntoskrnl -lhal -lgcc
 	rm -f junk.tmp
 
 CLEAN_FILES += $(BUILD_PATH)/driver.base.exp
@@ -45,7 +45,7 @@ $(DRIVER_TARGET): $(BUILD_PATH)/driver.o $(BUILD_PATH)/driver.base.exp
         -Wl,--entry,_DriverEntry@8 \
         -Wl,$(word 2,$^) \
         -mdll -nostartfiles -nostdlib \
-        -o $@ $(word 1,$^) -lntoskrnl -lhal
+        -o $@ $(word 1,$^) -lntoskrnl -lhal -lgcc
 
 LOCAL_TARGET += $(DRIVER_TARGET)
 LOCAL_FILES = \

@@ -39,8 +39,12 @@
 
 #endif
 
+#include <stdarg.h>
+
 extern void co_debug(const char *fmt, ...);
+extern void co_vdebug(const char *format, va_list ap);
 extern void co_debug_line(char *line);
+extern void co_snprintf(char *buf, int size, const char *format, ...);
 
 #ifndef COLINUX_TRACE
 #undef CO_TRACE_STOP

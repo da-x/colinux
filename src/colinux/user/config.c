@@ -34,17 +34,17 @@ co_rc_t co_load_config_blockdev(co_config_t *out_config, mxml_element_t *element
 	}
 	
 	if (index < 0) {
-		printf("Invalid block_dev element: bad index\n");
+		co_debug("Invalid block_dev element: bad index\n");
 		return CO_RC(ERROR);
 	}
 
 	if (index >= CO_MAX_BLOCK_DEVICES) {
-		printf("Invalid block_dev element: bad index\n");
+		co_debug("Invalid block_dev element: bad index\n");
 		return CO_RC(ERROR);
 	}
 
 	if (path == NULL) {
-		printf("Invalid block_dev element: bad path\n");
+		co_debug("Invalid block_dev element: bad path\n");
 		return CO_RC(ERROR);
 	}
 
@@ -69,12 +69,71 @@ co_rc_t co_load_config_image(co_config_t *out_config, mxml_element_t *element)
 	}
 	
 	if (path == NULL) {
-		printf("Invalid image element: bad path\n");
+		co_debug("Invalid image element: bad path\n");
 		return CO_RC(ERROR);
 	}
 
 	snprintf(out_config->vmlinux_path, sizeof(out_config->vmlinux_path), 
 		 "%s", path);
+
+	return CO_RC(OK);
+}
+
+co_rc_t co_load_config_boot_params(co_config_t *out_config, mxml_node_t *node)
+{
+	char *param_line;
+	unsigned long param_line_size_left;
+	unsigned long index;
+	mxml_node_t *text_node;
+
+	if (node == NULL)
+		return CO_RC(ERROR);
+
+	param_line = out_config->boot_parameters_line;
+	param_line_size_left = sizeof(out_config->boot_parameters_line);
+
+	bzero(param_line, param_line_size_left);
+
+	text_node = node;
+	index = 0;
+
+	while (text_node  &&  text_node->type == MXML_TEXT) {
+		if (index != 0) {
+			int param_size = strlen(param_line);
+			param_line += param_size;
+			param_line_size_left -= param_size;
+		}
+						
+		snprintf(param_line, 
+			 param_line_size_left, 
+			 index == 0 ? "%s" : " %s", 
+			 text_node->value.text.string);
+
+		index++;
+		text_node = text_node->next;
+	}
+
+	return CO_RC(OK);
+}
+
+co_rc_t co_load_config_memory(co_config_t *out_config, mxml_element_t *element)
+{
+	int i;
+	char *size = "";
+
+	for (i=0; i < element->num_attrs; i++) {
+		mxml_attr_t *attr = &element->attrs[i];
+
+		if (strcmp(attr->name, "size") == 0)
+			size = attr->value;
+	}
+	
+	if (size == NULL) {
+		co_debug("Invalid memory element: bad size\n");
+		return CO_RC(ERROR);
+	}
+
+	out_config->ram_size = atoi(size);
 
 	return CO_RC(OK);
 }
@@ -95,18 +154,11 @@ co_rc_t co_load_config(char *text, co_config_t *out_config)
 			if (strcmp(name, "block_device") == 0) {
 				co_load_config_blockdev(out_config, &walk->value.element);
 			} else if (strcmp(name, "bootparams") == 0) {
-				if (walk->child == NULL)
-					continue;
-
-				walk = walk->child;
-				if (walk->type != MXML_TEXT) 
-					continue;
-
-				snprintf(out_config->boot_parameters_line, 
-					 sizeof(out_config->boot_parameters_line), 
-					 "%s", walk->value.text.string);
+				co_load_config_boot_params(out_config, walk->child);
 			} else if (strcmp(name, "image") == 0) {
 				co_load_config_image(out_config, &walk->value.element);
+			} else if (strcmp(name, "memory") == 0) {
+				co_load_config_memory(out_config, &walk->value.element);
 			}
 		}
 	}

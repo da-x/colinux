@@ -33,8 +33,6 @@ int co_user_console_main(int argc, char **argv)
 		return -1;
 	}
 
-	Fl::add_idle(console_idle, &window);
-	
 	rc = window.start(); 
 	if (!CO_OK(rc)) {
 		co_debug("Error starting console (%d)\n", rc);

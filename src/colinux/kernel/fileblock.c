@@ -21,11 +21,11 @@ co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 	switch (request->type) { 
 	case CO_BLOCK_OPEN: {
 		if (fdev->state != CO_MONITOR_FILE_BLOCK_CLOSED) {
-			co_debug("cobd not closed!\n");
+			co_debug("monitor: cobd not closed!\n");
 			break;
 		}
 
-		co_debug("cobd opened (%s)\n", fdev->pathname);
+		co_debug("monitor: cobd opened (%s)\n", fdev->pathname);
 			
 		rc = fdev->op->open(cmon, fdev);
 		if (CO_OK(rc))
@@ -36,7 +36,7 @@ co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 
 	case CO_BLOCK_READ: {
 		if (fdev->state != CO_MONITOR_FILE_BLOCK_OPENED) {
-			co_debug("read: cobd not open!\n");
+			co_debug("monitor: read: cobd not open!\n");
 			break;
 		}
 
@@ -46,7 +46,7 @@ co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 
 	case CO_BLOCK_WRITE: {
 		if (fdev->state != CO_MONITOR_FILE_BLOCK_OPENED) {
-			co_debug("write: cobd not open!\n");
+			co_debug("monitor: write: cobd not open!\n");
 			break;
 		}
 
@@ -56,11 +56,11 @@ co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 
 	case CO_BLOCK_CLOSE: {
 		if (fdev->state != CO_MONITOR_FILE_BLOCK_OPENED) {
-			co_debug("close: cobd not open!\n");
+			co_debug("monitor: close: cobd not open!\n");
 			break;
 		}
 	
-		co_debug("cobd closed (%s)\n", fdev->pathname);
+		co_debug("monitor: cobd closed (%s)\n", fdev->pathname);
 
 		fdev->op->close(fdev);
 		fdev->state = CO_MONITOR_FILE_BLOCK_CLOSED;

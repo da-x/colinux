@@ -13,6 +13,7 @@
 #include <memory.h>
 
 #include <colinux/kernel/transfer.h>
+#include <colinux/kernel/manager.h>
 
 /*
  * This code allows direct copying from and to the Linux kernel address space.
@@ -37,25 +38,25 @@ co_rc_t co_monitor_host_colx_transfer(
 	co_rc_t rc;
 
 	if ((colx < __PAGE_OFFSET) || (colx >= cmon->end_physical)) {
-		co_debug("Error, transfer off bounds: %x\n", colx);
+		co_debug("monitor: transfer: off bounds: %x\n", colx);
 		return CO_RC(TRANSFER_OFF_BOUNDS);
 	}
 
 	if ((colx + size < __PAGE_OFFSET) || (colx + size > cmon->end_physical)) {
-		co_debug("Error, transfer end off bounds: %x\n", colx + size);
+		co_debug("monitor: transfer: end off bounds: %x\n", colx + size);
 		return CO_RC(TRANSFER_OFF_BOUNDS);
 	}	
 
 	while (size > 0) {
 		pfn = pte_val(cmon->page_tables[CO_PFN(colx)]) >> PAGE_SHIFT;
 		if (pfn == 0) {
-			co_debug("Error, transfer from invalid page at vm addr: %x\n", colx);
+			co_debug("monitor: transfer: invalid page at vm addr: %x\n", colx);
 			return CO_RC(TRANSFER_OFF_BOUNDS);
 		}
 
-		page = cmon->pa_to_host_va[pfn];
+		page = cmon->manager->pa_to_host_va[pfn];
 		if (page == NULL) {
-			co_debug("Error, transfer from invalid page at vm addr: %x\n", colx);
+			co_debug("monitor: transfer: invalid page at vm addr: %x\n", colx);
 			return CO_RC(TRANSFER_OFF_BOUNDS);
 		}
 		

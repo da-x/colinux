@@ -128,17 +128,12 @@ typedef struct co_monitor {
 						there */
 
 	/*
-	 * Reversed mapping between physical memory and virtual adderss.
+	 * Reversed mapping between physical memory and virtual addresses.
 	 */
 
-	void **pa_to_host_va;        /* A map between a real physical PFN and an 
-				        address of mapping in the host's kernel. 
-				        co_monitor_host_memory_amount entries. */
 	vm_ptr_t *pa_to_colx_va;     /* A map between a real physical PFN and an 
 				        address of mapping in Linux's pseudo 
 				        physical RAM */
-	unsigned long pa_maps_size;  /* Size of these maps */
-	unsigned long pa_maps_pages; /* Size of these maps in pages */
 
 	/* 
 	 * The bootmem

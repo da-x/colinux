@@ -234,6 +234,8 @@ co_rc_t console_window_t::attach()
 	if (!CO_OK(rc))
 		goto out;
 
+	Fl::add_idle(console_idle, this);
+
 	state = CO_CONSOLE_STATE_ATTACHED;
 
 	menu_item_deactivate(console_select_cb);
@@ -320,6 +322,9 @@ co_rc_t console_window_t::detach()
         menu_item_activate(console_attach_cb);	
 
 	co_os_daemon_close(daemon_handle);
+
+	Fl::remove_idle(console_idle, this);
+
 	daemon_handle = 0;
 
 	state = CO_CONSOLE_STATE_DETACHED;
@@ -356,6 +361,9 @@ co_rc_t console_window_t::terminate()
 
 void console_window_t::finish()
 {
+	if (Fl::event_key() == FL_Escape) 
+		return;
+
 	if (state == CO_CONSOLE_STATE_ATTACHED)
 		detach();
 
@@ -365,22 +373,19 @@ void console_window_t::finish()
 void console_window_t::idle()
 {
 	if (daemon_handle != NULL) {
-		bool_t available = PFALSE;
 		co_rc_t rc = CO_RC(OK);
 		co_message_t *message = NULL;
 
-		while (1) {
-			rc = co_os_daemon_peek_messages(daemon_handle, &available);
-			if (!CO_OK(rc)) 
-				break;
+		rc = co_os_daemon_get_message(daemon_handle, &message, 10);
+		if (!CO_OK(rc)) {
+			if (rc == CO_RC_BROKEN_PIPE) {
+				log("Monitor%d: Broken pipe\n", attached_id);
+				detach(); 
+			}
+			return;
+		}
 
-			if (!available)
-				break;
-
-			rc = co_os_daemon_get_message(daemon_handle, &message);
-			if (!CO_OK(rc))
-				break;
-
+		if (message) {
 			handle_message(message);
 			co_os_free(message);
 		}
@@ -411,9 +416,7 @@ void console_window_t::handle_message(co_message_t *message)
 		co_console_message_t *console_message;
 
 		console_message = (typeof(console_message))(message->data);
-
 		widget->handle_console_event(console_message);
-
 		break;
 	}
 

@@ -212,6 +212,10 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
 {
 	co_rc_t rc;
 	co_cursor_pos_t saved_cursor_pos = {0, };
+	
+	if (!console) {
+		return CO_RC(ERROR);
+	}
 
 	switch (message->type) 
 	{

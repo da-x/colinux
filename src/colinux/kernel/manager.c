@@ -18,6 +18,24 @@
 #include "manager.h"
 #include "monitor.h"
 
+co_rc_t co_manager_load(co_manager_t *manager)
+{
+	co_debug("manager: loaded to host kernel\n");
+
+	manager->state = CO_MANAGER_STATE_NOT_INITIALIZED;
+	memset(manager, 0, sizeof(*manager));
+
+	return CO_RC(OK);
+}
+
+void co_manager_unload(co_manager_t *manager)
+{
+	co_debug("manager: unloaded from host kernel\n");
+
+	if (manager->pa_maps_size)
+		co_os_free(manager->pa_to_host_va);
+}
+
 co_rc_t co_manager_init(co_manager_t *manager, void *io_buffer)
 {
 	co_manager_ioctl_init_t *params;
@@ -26,19 +44,31 @@ co_rc_t co_manager_init(co_manager_t *manager, void *io_buffer)
 
 	manager->host_memory_amount = params->physical_memory_size;
 	manager->host_memory_pages = manager->host_memory_amount >> PAGE_SHIFT;
+	manager->pa_maps_size = manager->host_memory_pages * sizeof(unsigned long);
+	manager->pa_maps_pages = (manager->pa_maps_size + PAGE_SIZE-1) >> PAGE_SHIFT;
+
+	manager->pa_to_host_va = (void **)co_os_malloc(manager->pa_maps_size);
+	if (manager->pa_to_host_va == NULL) {
+		co_debug("manager: error allocating pa_to_host_va map\n");
+		return CO_RC(ERROR);
+	}
+
+	memset(manager->pa_to_host_va, 0, manager->pa_maps_size);
+
+	co_debug("manager: initialized\n");
 
 	manager->state = CO_MANAGER_STATE_INITIALIZED;
 
 	return CO_RC(OK);
 }
 
-co_rc_t co_manager_cleanup(void **private_data)
+co_rc_t co_manager_cleanup(co_manager_t *manager, void **private_data)
 {
 	co_monitor_t *cmon = NULL;
 
 	cmon = (typeof(cmon))(*private_data);
 	if (cmon != NULL) {
-		co_debug("Process exited abnormally, cleaning up Monitor\n");
+		co_debug("manager: process exited abnormally, destroying attached monitor\n");
 
 		co_monitor_destroy(cmon);
 
@@ -78,7 +108,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, co_monitor_ioctl_op_t ioctl,
 		if (ioctl == CO_MANAGER_IOCTL_INIT) {
 			return co_manager_init(manager, io_buffer);
 		} else {
-			co_debug("invalid ioctl when not initialized\n");
+			co_debug("manager: invalid ioctl when not initialized\n");
 			return CO_RC_ERROR;
 		}
 
@@ -103,14 +133,14 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, co_monitor_ioctl_op_t ioctl,
 		*return_size = sizeof(*params);
 
 		if (in_size < sizeof(*params)) {
-			co_debug("monitor ioctl too small! (%d < %d)\n", in_size, sizeof(*params));
+			co_debug("manager: monitor ioctl too small! (%d < %d)\n", in_size, sizeof(*params));
 			params->rc = CO_RC(CMON_NOT_LOADED);
 			break;
 		}
 		
 		cmon = (typeof(cmon))(*private_data);
 		if (!cmon) {
-			co_debug("No Monitor is attached\n");
+			co_debug("manager: no monitor is attached\n");
 			params->rc = CO_RC(CMON_NOT_LOADED);
 			break;
 		}

@@ -16,11 +16,23 @@
 #include <colinux/os/timer.h>
 
 #include <memory.h>
+#include <stdarg.h>
 
 #include "daemon.h"
 #include "manager.h"
 #include "monitor.h"
 #include "config.h"
+
+static void debug(co_daemon_t *daemon, const char *format, ...)
+{
+	char buf[0x100];
+	va_list ap;
+
+	co_snprintf(buf, sizeof(buf), "daemon: %s", format);
+	va_start(ap, format);
+	co_vdebug(buf, ap);
+	va_end(ap);
+}
 
 co_rc_t co_load_config_file(co_daemon_t *daemon)
 {
@@ -30,13 +42,13 @@ co_rc_t co_load_config_file(co_daemon_t *daemon)
 
 	rc = co_os_file_load(&daemon->config.config_path, &buf, &size);
 	if (!CO_OK(rc)) {
-		co_debug("Error loading configuration file\n");
+		debug(daemon, "error loading configuration file\n");
 		return rc;
 	}
 	
 	if (size == 0) {
 		rc = CO_RC_ERROR;
-		co_debug("Error, configuration file size is 0\n");
+		debug(daemon, "error, configuration file size is 0\n");
 	} else {
 		buf[size-1] = '\0';
 		rc = co_load_config(buf, &daemon->config);
@@ -69,7 +81,8 @@ co_rc_t co_daemon_parse_args(char **args, co_start_parameters_t *start_parameter
 	start_parameters->launch_console = PTRUE;
 	start_parameters->show_help = PFALSE;
 
-	snprintf(start_parameters->config_path, sizeof(start_parameters->config_path), "%s", "default.colinux.xml");
+	co_snprintf(start_parameters->config_path, sizeof(start_parameters->config_path),
+		 "%s", "default.colinux.xml");
 
 	/* Parse command line */
 	while (*param_scan) {
@@ -85,9 +98,9 @@ co_rc_t co_daemon_parse_args(char **args, co_start_parameters_t *start_parameter
 				return CO_RC(ERROR);
 			}
 
-			snprintf(start_parameters->config_path, 
-				 sizeof(start_parameters->config_path), 
-				 "%s", *param_scan);
+			co_snprintf(start_parameters->config_path, 
+				    sizeof(start_parameters->config_path), 
+				    "%s", *param_scan);
 		}
 
 		option = "-d";
@@ -134,7 +147,7 @@ co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **
 
 	rc = co_load_config_file(daemon);
 	if (!CO_OK(rc)) {
-		co_debug("Error loading configuration\n");
+		debug(daemon, "error loading configuration\n");
 		goto out_free_console;
 	}
 
@@ -153,8 +166,9 @@ out:
 
 void co_daemon_destroy(co_daemon_t *daemon)
 {
-	co_debug("Closing monitor\n");
-	co_user_monitor_close(daemon->monitor);
+	debug(daemon, "daemon cleanup\n");
+	if (daemon->console != NULL)
+		co_console_destroy(daemon->console);
 	co_os_free(daemon);
 }
 
@@ -168,12 +182,12 @@ co_rc_t co_daemon_load_symbol(co_daemon_t *daemon,
 	if (sym)
 		*address_out = sym->st_value;
 	else 
-		co_debug("symbol %s not found\n", pathname);
+		debug(daemon, "symbol %s not found\n", pathname);
 
 	return rc;
 }
 
-co_rc_t co_daemon_create_(co_daemon_t *daemon)
+co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 {
 	co_manager_ioctl_create_t create_params = {0, };
 	co_symbols_import_t *import;
@@ -224,12 +238,11 @@ co_rc_t co_daemon_create_(co_daemon_t *daemon)
 	create_params.config = daemon->config;
 
 	rc = co_user_monitor_create(&daemon->monitor, &create_params);
-
 out:
 	return rc;
 }
 
-void co_daemon_destroy_(co_daemon_t *daemon)
+void co_daemon_monitor_destroy(co_daemon_t *daemon)
 {
 	co_queue_flush(&daemon->up_queue);
 	co_user_monitor_destroy(daemon->monitor);
@@ -242,35 +255,35 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 
 	rc = co_os_file_load(&daemon->config.vmlinux_path, &daemon->buf, &size);
 	if (!CO_OK(rc)) {
-		co_debug("Error loading vmlinux file (%s)\n", 
-			    &daemon->config.vmlinux_path);
+		debug(daemon, "error loading vmlinux file (%s)\n", 
+		      &daemon->config.vmlinux_path);
 		goto out;
 	}
 
 	rc = co_elf_image_read(&daemon->elf_data, daemon->buf, size);
 	if (!CO_OK(rc)) {
-		co_debug("Error reading image (%d bytes)\n", size);
+		debug(daemon, "error reading image (%d bytes)\n", size);
 		goto out_free_vmlinux; 
 	}
 
-	co_debug("Creating monitor\n");
+	debug(daemon, "creating monitor\n");
 
-	rc = co_daemon_create_(daemon);
+	rc = co_daemon_monitor_create(daemon);
 	if (!CO_OK(rc)) {
-		co_debug("Error initializing\n");
+		debug(daemon, "error initializing\n");
 		goto out_free_vmlinux;
 	}
 
 	rc = co_elf_image_load(daemon);
 	if (!CO_OK(rc)) {
-		co_debug("Error loading image\n");
+		debug(daemon, "error loading image\n");
 		goto out_destroy;
 	}
 
 	return rc;
 
 out_destroy:
-	co_daemon_destroy_(daemon);
+	co_daemon_monitor_destroy(daemon);
 
 out_free_vmlinux:
 	co_os_file_free(daemon->buf);
@@ -375,7 +388,7 @@ co_rc_t co_daemon_handle_daemon(void *data, co_message_t *message)
 		daemon_message = (typeof(daemon_message))(message);
 
 		if (daemon_message->payload.type == CO_MONITOR_MESSAGE_TYPE_TERMINATED) {
-			co_debug("Monitor terminated, reason %d\n", daemon_message->payload.terminated.reason);
+			debug(daemon, "monitor terminated, reason %d\n", daemon_message->payload.terminated.reason);
 			daemon->running = PFALSE;
 		}
 	} else if (message->from == CO_MODULE_CONSOLE) {
@@ -398,7 +411,7 @@ co_rc_t co_daemon_handle_daemon(void *data, co_message_t *message)
 				daemon->console = console;
 			}
 		} else if (console_message->console.type == CO_DAEMON_CONSOLE_MESSAGE_TERMINATE) {
-			co_debug("Termination requested by console\n");
+			debug(daemon, "termination requested by console\n");
 			daemon->running = PFALSE;			
 		}
 	}
@@ -481,11 +494,11 @@ co_rc_t co_daemon_pipe_cb_packet(co_os_pipe_connection_t *conn,
 			module->state = CO_CONNECTED_MODULE_STATE_IDENTIFIED;
 
 			if (id == CO_MODULE_CONSOLE)
-				snprintf(module->name, sizeof(module->name), "console");
+				co_snprintf(module->name, sizeof(module->name), "console");
 			else
-				snprintf(module->name, sizeof(module->name), "conet%d", id - CO_MODULE_CONET0);
+				co_snprintf(module->name, sizeof(module->name), "conet%d", id - CO_MODULE_CONET0);
 
-			co_debug("Module connected: %s\n", module->name);
+			debug(module->daemon, "module connected: %s\n", module->name);
 
 			if (module->id == CO_MODULE_CONSOLE)
 				co_daemon_handle_console_connection(module);
@@ -516,15 +529,15 @@ co_rc_t co_daemon_pipe_cb_packet(co_os_pipe_connection_t *conn,
 
 			/* Validate mesasge size */
 			if (message->size + sizeof(*message) != packet_size) {
-				co_debug("Invalid message: %d != %d\n", message->size + sizeof(*message), 
-					 packet_size);
+				debug(module->daemon, "invalid message: %d != %d\n", message->size + sizeof(*message), 
+				      packet_size);
 				break;
 			}
 
 			/* Prevent module impersonation */
 			if (message->from != module->id) {
-				co_debug("Invalid message id: %d != %d\n", 
-					 message->from, module->id);
+				debug(module->daemon, "invalid message id: %d != %d\n", 
+				      message->from, module->id);
 				break;
 			}
 
@@ -561,7 +574,7 @@ void co_daemon_pipe_cb_disconnected(co_os_pipe_connection_t *conn,
 		co_message_switch_dup_message(&module->daemon->message_switch, &message.message);
 		co_message_switch_free_rule(&module->daemon->message_switch, module->id);
 
-		co_debug("Module disconnected: %s\n", module->name);
+		debug(module->daemon, "module disconnected: %s\n", module->name);
 
 		if (module->id == CO_MODULE_CONSOLE)
 			co_daemon_handle_console_disconnection(module);
@@ -605,7 +618,6 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 {
 	co_rc_t rc;
 	co_os_pipe_server_t *ps;
-	co_os_timer_t timer;
 
 	rc = co_user_monitor_start(daemon->monitor);
 	if (!CO_OK(rc))
@@ -623,20 +635,6 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	daemon->last_htime = co_os_timer_highres();
 	daemon->reminder_htime = 0;
 
-#if (0)
-	rc = co_os_timer_create(co_daemon_timer_cb, daemon, 10, &timer);
-	if (!CO_OK(rc)) {
-		co_os_pipe_server_destroy(ps);
-		return rc;
-	}
-
-	rc = co_os_timer_activate(timer);
-	if (!CO_OK(rc)) {
-		co_os_timer_destroy(timer);
-		co_os_pipe_server_destroy(ps);
-		return rc;
-	}
-#endif
 	co_message_switch_init(&daemon->message_switch, CO_MODULE_USER_SWITCH);
 
 	rc = co_message_switch_set_rule(&daemon->message_switch, CO_MODULE_PRINTK, 
@@ -679,18 +677,18 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 		goto out;
 
 
-	co_debug("Launching net daemon\n");
+	debug(daemon, "launching net daemon\n");
 	rc = co_launch_process("colinux-net-daemon");
 	if (!CO_OK(rc)) {
-		co_debug("Error launching net daemon\n");
+		debug(daemon, "error launching net daemon\n");
 		goto out;
 	}
 
 	if (daemon->start_parameters->launch_console) {
-		co_debug("Launching console\n");
+		debug(daemon, "launching console\n");
 		rc = co_launch_process("colinux-console -a 0");
 		if (!CO_OK(rc)) {
-			co_debug("Error launching console\n");
+			debug(daemon, "error launching console\n");
 			goto out;
 		}
 	}
@@ -732,19 +730,15 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 out:
 	co_message_switch_free(&daemon->message_switch);
 	co_os_pipe_server_destroy(ps);
-#if (0)
-	co_os_timer_deactivate(timer);
-	co_os_timer_destroy(timer);
-#endif
 
 	return rc;
 }
 
 void co_daemon_end_monitor(co_daemon_t *daemon)
 {
-	co_debug("Monitor shutting down\n");
+	debug(daemon, "monitor shutting down\n");
 
-	co_daemon_destroy_(daemon);
+	co_daemon_monitor_destroy(daemon);
 	co_os_file_free(daemon->buf);
 }
 

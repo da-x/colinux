@@ -39,13 +39,6 @@ typedef struct co_config {
 	 * will be looked upon according to this path).
 	 */
 	co_pathname_t config_path;
-
-	/*
-	 * Size of the pseudo physical RAM which would be allocated
-	 * for Linux. This will be dynamically limited to a porition of
-	 * the amount of RAM that is available on the host.
-	 */
-	unsigned long ram_size;
 	
 	/*
 	 * The pathname of the vmlinux file. If this is empty then we 
@@ -65,6 +58,15 @@ typedef struct co_config {
 	 * Parameters passed to the kernel at boot.
 	 */
 	char boot_parameters_line[CO_BOOTPARAM_STRING_LENGTH];
+
+	/*
+	 * Size of pseudo physical RAM for this machine (MB).
+	 * 
+	 * The default size is 32MB for systems with more than
+	 * 128MB of physical ram and 16MB for systems with less
+	 * ram.
+	 */ 
+	unsigned long ram_size;
 } co_config_t;
 
 #endif

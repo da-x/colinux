@@ -14,7 +14,10 @@ Defaults
 
 Windows port COLINUX_ARCH=i386 COLINUX_HOST_OS=winnt
  
-    Run make in the colinux/os/winnt/build directory.
+    Basically, it's:
+      
+        make colinux
 
+    See the Makefile in the colinux/os/winnt/build directory.
 "
 

@@ -23,6 +23,7 @@
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/os/kernel/misc.h>
 #include <colinux/os/kernel/monitor.h>
+#include <colinux/os/kernel/time.h>
 #include <colinux/arch/passage.h>
 #include <colinux/arch/interrupt.h>
 
@@ -97,30 +98,22 @@ co_rc_t co_monitor_colinux_context_alloc_maps(co_monitor_t *cmon)
 
 	cmon->page_tables_size = cmon->physical_frames * sizeof(unsigned long *);
 	cmon->page_tables_pages = (cmon->page_tables_size + PAGE_SIZE-1) >> PAGE_SHIFT;
-	cmon->pa_maps_size = cmon->manager->host_memory_pages * sizeof(unsigned long);
-	cmon->pa_maps_pages = (cmon->pa_maps_size + PAGE_SIZE-1) >> PAGE_SHIFT;
 
 	rc = co_monitor_alloc_pages(cmon, cmon->page_tables_pages, (void **)&cmon->page_tables);
 	if (!CO_OK(rc)) {
-		co_debug("Error allocating page tables\n");
+		co_debug("monitor: error allocating page tables\n");
 		goto out_after_free_page_tables;
 	}
 
 	rc = co_monitor_alloc_pages(cmon, cmon->page_tables_pages, (void **)&cmon->pages_allocated);
 	if (!CO_OK(rc)) {
-		co_debug("Error allocating page tables allocation counters\n");
+		co_debug("monitor: error allocating page tables allocation counters\n");
 		goto out_after_free_pages_allocated;
 	}
 
-	rc = co_monitor_alloc_pages(cmon, cmon->pa_maps_pages, (void **)&cmon->pa_to_host_va);
+	rc = co_monitor_alloc_pages(cmon, cmon->manager->pa_maps_pages, (void **)&cmon->pa_to_colx_va);
 	if (!CO_OK(rc)) {
-		co_debug("Error allocating pa_to_host_va map\n");
-		goto out_after_free_pa_to_host_va;
-	}
-
-	rc = co_monitor_alloc_pages(cmon, cmon->pa_maps_pages, (void **)&cmon->pa_to_colx_va);
-	if (!CO_OK(rc)) {
-		co_debug("Error allocating pa_to_colx_va map\n");
+		co_debug("monitor: error allocating pa_to_colx_va map\n");
 		goto out_error;
 	}
 
@@ -130,17 +123,13 @@ co_rc_t co_monitor_colinux_context_alloc_maps(co_monitor_t *cmon)
 	}
 
 	for (index=0; index < cmon->manager->host_memory_pages; index++) {
-		cmon->pa_to_host_va[index] = 0; 
 		cmon->pa_to_colx_va[index] = 0; 
 	}
 
 	return rc;
 
 out_error:
-	co_monitor_free_pages(cmon, cmon->pa_maps_pages, (void *)cmon->pa_to_colx_va);
-
-out_after_free_pa_to_host_va:
-	co_monitor_free_pages(cmon, cmon->pa_maps_pages, (void *)cmon->pa_to_host_va);
+	co_monitor_free_pages(cmon, cmon->manager->pa_maps_pages, (void *)cmon->pa_to_colx_va);
 
 out_after_free_pages_allocated:
 	co_monitor_free_pages(cmon, cmon->page_tables_pages, (void *)cmon->pages_allocated);
@@ -153,8 +142,7 @@ void co_monitor_colinux_context_free_maps(co_monitor_t *cmon)
 {
 	co_monitor_free_pages(cmon, cmon->page_tables_pages, (void *)cmon->page_tables);
 	co_monitor_free_pages(cmon, cmon->page_tables_pages, (void *)cmon->pages_allocated);
-	co_monitor_free_pages(cmon, cmon->pa_maps_pages, (void *)cmon->pa_to_host_va);
-	co_monitor_free_pages(cmon, cmon->pa_maps_pages, (void *)cmon->pa_to_colx_va);
+	co_monitor_free_pages(cmon, cmon->manager->pa_maps_pages, (void *)cmon->pa_to_colx_va);
 }
 
 void co_monitor_map_pptm_address(co_monitor_t *cmon, vm_ptr_t address, void *ptr)
@@ -162,7 +150,7 @@ void co_monitor_map_pptm_address(co_monitor_t *cmon, vm_ptr_t address, void *ptr
 	unsigned long pa = co_os_virt_to_phys(ptr);
 	
 	cmon->page_tables[CO_PFN(address)] = pte_modify(__pte(pa), __pgprot(__PAGE_KERNEL));
-	cmon->pa_to_host_va[pa >> PAGE_SHIFT] = ptr;
+	cmon->manager->pa_to_host_va[pa >> PAGE_SHIFT] = ptr;
 	cmon->pa_to_colx_va[pa >> PAGE_SHIFT] = address;
 }
 
@@ -170,9 +158,9 @@ bool_t co_monitor_unmap_pptm_address(co_monitor_t *cmon, vm_ptr_t address, void 
 {
 	unsigned long host, pa = co_os_virt_to_phys(ptr);
 
-	host = (unsigned long)cmon->pa_to_host_va[pa >> PAGE_SHIFT];
+	host = (unsigned long)cmon->manager->pa_to_host_va[pa >> PAGE_SHIFT];
 	cmon->page_tables[CO_PFN(address)] = __pte(0);
-	cmon->pa_to_host_va[pa >> PAGE_SHIFT] = 0;
+	cmon->manager->pa_to_host_va[pa >> PAGE_SHIFT] = 0;
 	cmon->pa_to_colx_va[pa >> PAGE_SHIFT] = 0;
 
 	return host != 0;
@@ -278,7 +266,7 @@ void co_monitor_colinux_context_map_maps(co_monitor_t *cmon)
 
 	pptm_scan = (unsigned char *)cmon->pa_to_colx_va;
 
-	for (pte_index=0; pte_index < cmon->pa_maps_pages; pte_index++) {
+	for (pte_index=0; pte_index < cmon->manager->pa_maps_pages; pte_index++) {
 		co_monitor_map_pptm_address(cmon, CO_RPPTM_OFFSET + (pte_index << PAGE_SHIFT),
 				       pptm_scan);
 		pptm_scan += PAGE_SIZE;
@@ -301,7 +289,7 @@ void co_monitor_colinux_context_unmap_maps(co_monitor_t *cmon)
 
 	pptm_scan = (unsigned char *)cmon->pa_to_colx_va;
 
-	for (pte_index=0; pte_index < cmon->pa_maps_pages; pte_index++) {
+	for (pte_index=0; pte_index < cmon->manager->pa_maps_pages; pte_index++) {
 		co_monitor_unmap_pptm_address(cmon, CO_RPPTM_OFFSET + (pte_index << PAGE_SHIFT),
 					 pptm_scan);
 		pptm_scan += PAGE_SIZE;
@@ -328,13 +316,13 @@ co_rc_t co_monitor_alloc_and_map(co_monitor_t *cmon, unsigned long colx_vaddr, l
 	}
 		
 	if (index != pfn) {
-		co_debug("Insane allocation\n");
+		co_debug("monitor: isane allocation\n");
 		return CO_RC(ERROR);
 	}
 
 	rc = co_monitor_alloc_pages(cmon, num, (void **)&host_vaddr);
 	if (!CO_OK(rc)) {
-		co_debug("No more host OS memory!\n");
+		co_debug("monitor: no more host OS memory!\n");
 		return CO_RC(ERROR);
 	}
 
@@ -344,7 +332,7 @@ co_rc_t co_monitor_alloc_and_map(co_monitor_t *cmon, unsigned long colx_vaddr, l
 		unsigned long pa = co_os_virt_to_phys(host_vaddr);
 	
 		cmon->page_tables[pfn] = pte_modify(__pte(pa), __pgprot(__PAGE_KERNEL));
-		cmon->pa_to_host_va[pa >> PAGE_SHIFT] = host_vaddr;
+		cmon->manager->pa_to_host_va[pa >> PAGE_SHIFT] = host_vaddr;
 		cmon->pa_to_colx_va[pa >> PAGE_SHIFT] = colx_vaddr;
 
 		pfn++;
@@ -372,10 +360,10 @@ co_rc_t co_monitor_unmap_and_free(co_monitor_t *cmon, unsigned long colx_vaddr)
 
 	cmon->pages_allocated[pfn] = 0;
 
-	host_vaddr = cmon->pa_to_host_va[pa_pfn];
+	host_vaddr = cmon->manager->pa_to_host_va[pa_pfn];
 	for (index=0; index < num; index++) {
 		pa_pfn = pte_val(cmon->page_tables[pfn]) >> PAGE_SHIFT;
-		cmon->pa_to_host_va[pa_pfn] = 0;
+		cmon->manager->pa_to_host_va[pa_pfn] = 0;
 		cmon->pa_to_colx_va[pa_pfn] = 0;
 		cmon->page_tables[pfn] = __pte(0);
 		pfn++;
@@ -410,7 +398,7 @@ co_rc_t co_monitor_colinux_context_alloc_and_map_all(co_monitor_t *cmon)
 		if (!(pte_val(cmon->page_tables[pte_index]) >> PAGE_SHIFT)) {
 			rc = co_monitor_alloc_and_map(cmon, vaddr, 1);
 			if (!CO_OK(rc)) {
-				co_debug("Error allocating PP RAM (%d) at %d out of %d\n",
+				co_debug("monitor: allocating PP RAM (%d) at %d out of %d\n",
 					 rc, pte_index, cmon->physical_frames);
 				break;
 			}
@@ -431,13 +419,13 @@ co_rc_t co_monitor_colinux_context_init(co_monitor_t *cmon)
 
 	rc = co_monitor_arch_passage_page_alloc(cmon);
 	if (!CO_OK(rc)) {
-		co_debug("Error allocating passage page (%d)\n", rc);
+		co_debug("monitor: error allocating passage page (%d)\n", rc);
 		goto out_after_free_passage_page;
 	}
 
 	rc = co_monitor_colinux_context_alloc_maps(cmon);
 	if (!CO_OK(rc)) {
-		co_debug("Error allocating maps (%d)\n", rc);
+		co_debug("monitor: error allocating maps (%d)\n", rc);
 		goto out_after_free_maps;
 	}
 
@@ -446,7 +434,7 @@ co_rc_t co_monitor_colinux_context_init(co_monitor_t *cmon)
 
 	rc = co_monitor_colinux_context_alloc_and_map_bootmem(cmon);
 	if (!CO_OK(rc)) {
-		co_debug("Error allocating and mapping bootmem (%d)\n", rc);
+		co_debug("monitor: error allocating and mapping bootmem (%d)\n", rc);
 		goto out_after_free_bootmem;
 	}
 
@@ -455,13 +443,13 @@ co_rc_t co_monitor_colinux_context_init(co_monitor_t *cmon)
 
 	rc = co_monitor_arch_passage_page_init(cmon);
 	if (!CO_OK(rc)) {
-		co_debug("Error initializing passage page (%d)\n", rc);
+		co_debug("monitor: error initializing passage page (%d)\n", rc);
 		goto out_error;
 	}
 
 	rc = co_monitor_colinux_context_alloc_and_map_all(cmon);
 	if (!CO_OK(rc)) {
-		co_debug("Error initializing passage page (%d)\n", rc);
+		co_debug("monitor: error initializing passage page (%d)\n", rc);
 		goto out_error;
 	}
 
@@ -575,7 +563,7 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 			co_daemon_message_t payload;
 		} message;
 		
-		co_debug("Linux terminated (%d)\n", co_passage_page->params[0]);
+		co_debug("monitor: linux terminated (%d)\n", co_passage_page->params[0]);
 		message.message.from = CO_MODULE_MONITOR;
 		message.message.to = CO_MODULE_DAEMON;
 		message.message.priority = CO_PRIORITY_IMPORTANT;
@@ -614,7 +602,7 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 
 #if (0)
 		if (message->to != 3)
-			co_debug("Message: %d:%d [%d] <%d> (%d) '%c%c%c'\n", 
+			co_debug("monitor: message: %d:%d [%d] <%d> (%d) '%c%c%c'\n", 
 				 message->from, message->to, message->priority,
 				 message->type, message->size, 
 				 message->size >= 1 ? message->data[0] : ' ',
@@ -631,6 +619,12 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 
 		return co_monitor_device_request(cmon, device, &co_passage_page->params[1]);
 	}
+	case CO_OPERATION_GET_TIME: {
+		co_passage_page->params[0] = co_os_get_time();
+
+		return PTRUE;
+	}
+
 	default:
 		co_debug("operation %d not handled\n", co_passage_page->operation);
 		return PFALSE;
@@ -668,7 +662,7 @@ co_rc_t co_monitor_load_configuration(co_monitor_t *cmon)
 			dev->dev.free = co_monitor_free_file_blockdevice;
 		} else {
 			co_monitor_free(cmon, dev);
-			co_debug("Error opening block device\n");
+			co_debug("monitor: opening block device\n");
 			goto out;
 		}
 	}
@@ -741,28 +735,42 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	cmon->import = params->import;
 	cmon->config = params->config;
 
+	if (cmon->config.ram_size == 0) {
+		/* Use default RAM sizes */
+	
+		/*
+		 * FIXME: Be careful with that. We don't want to exhaust the host OS's memory
+		 * pools because it can destablized it. 
+		 *
+		 * We need to find the minimum requirement for size of the coLinux RAM 
+		 * for achieving the best performance assuming that the host OS is 
+		 * caching away the coLinux swap device into the host system's other
+		 * RAM.
+		 */
+
+		if (cmon->manager->host_memory_amount >= 128*1024*1024) {
+			cmon->memory_size = 32;
+		} else {
+			cmon->memory_size = 16;
+		}
+	} else {
+		cmon->memory_size = cmon->config.ram_size;
+	}
+
+	if (cmon->memory_size < 8)
+		cmon->memory_size = 8;
+	else if (cmon->memory_size > 192)
+		cmon->memory_size = 192;
+
 	/*
 	 * FIXME: Currently the number of bootmem pages is hardcored, but we can easily
 	 * modify this to depend on the amount of pseudo physical RAM, which
 	 * is approximately sizeof(struct page)*(pseudo physical pages) plus
 	 * more smaller structures. 
 	 */
-	cmon->bootmem_pages = 0x140;
+	cmon->bootmem_pages = 0x800;
 
-	/*
-	 * FIXME: Be careful with that. We don't want to exhaust the host OS's memory
-	 * pools because it can destablized it. 
-	 *
-	 * We need to find the minimum requirement for size of the coLinux RAM 
-	 * for achieving the best performance assuming that the host OS is 
-	 * caching away the coLinux swap device into the host system's other
-	 * RAM.
-	 */
-	if (cmon->manager->host_memory_amount >= 128*1024*1024) {
-		cmon->memory_size = 32*1024*1024; /* 32MB */
-	} else {
-		cmon->memory_size = 16*1024*1024; /* 16MB */
-	}
+	cmon->memory_size <<= 20; /* Megify */
 
 	cmon->physical_frames = cmon->memory_size >> PAGE_SHIFT;
 	cmon->end_physical = __PAGE_OFFSET + cmon->memory_size;
@@ -770,13 +778,13 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 
         rc = co_os_timer_create(&co_monitor_timer_cb, cmon, 10, &cmon->timer);
         if (!CO_OK(rc)) {
-                co_debug("Error creating host OS timer (%d)\n", rc);
+                co_debug("monitor: creating host OS timer (%d)\n", rc);
                 goto out_free_image;
         }
 
 	rc = co_monitor_load_configuration(cmon);
 	if (!CO_OK(rc)) {
-		co_debug("Error loading monitor configuration (%d)\n", rc);
+		co_debug("monitor: loading monitor configuration (%d)\n", rc);
 		goto out_destroy_timer;
 	}
 
@@ -835,9 +843,9 @@ co_rc_t co_monitor_destroy(co_monitor_t *cmon)
 	unsigned long pages;
 	co_manager_t *manager;
 
-	co_debug("Monitor destroy\n");
+	co_debug("monitor: cleaning up\n");
 
-	co_debug("cmon before free: %d kb, %d blocks\n", 
+	co_debug("monitor: before free: %d kb, %d blocks\n", 
 		 (cmon->allocated_pages_num << PAGE_SHIFT) >> 10,
 		 cmon->blocks_allocated);
 
@@ -856,7 +864,7 @@ co_rc_t co_monitor_destroy(co_monitor_t *cmon)
 	co_queue_flush(&cmon->linux_message_queue);
 	co_queue_flush(&cmon->user_message_queue);
 
-	co_debug("cmon after free: %d kb, %d blocks\n", 
+	co_debug("monitor: after free: %d kb, %d blocks\n", 
 		 (cmon->allocated_pages_num << PAGE_SHIFT) >> 10,
 		 cmon->blocks_allocated);
 
@@ -872,13 +880,13 @@ co_rc_t co_monitor_start(co_monitor_t *cmon)
 	co_rc_t rc;
 
 	if (cmon->state != CO_MONITOR_STATE_INITIALIZED) {
-		co_debug("Invalid state\n");
+		co_debug("monitor: invalid state\n");
 		return CO_RC(ERROR);
 	}
 		
 	rc = co_monitor_colinux_context_init(cmon);
 	if (!CO_OK(rc)) {
-		co_debug("Error initializing coLinux context (%d)\n", rc);
+		co_debug("monitor: error initializing coLinux context (%d)\n", rc);
 		return rc;
 	}
 
@@ -888,7 +896,7 @@ co_rc_t co_monitor_start(co_monitor_t *cmon)
 	co_passage_page->params[0] = cmon->core_end;
 	co_passage_page->params[1] = cmon->bootmem_pages;
 	co_passage_page->params[2] = cmon->memory_size;
-	co_passage_page->params[3] = cmon->pa_maps_size;
+	co_passage_page->params[3] = cmon->manager->pa_maps_size;
 
 	memcpy(&co_passage_page->params[4], cmon->config.boot_parameters_line, 
 	       sizeof(cmon->config.boot_parameters_line));

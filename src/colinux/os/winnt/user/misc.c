@@ -49,3 +49,4 @@ void co_terminal_print(const char *format, ...)
 
 	printf("%s", buf);
 }
+

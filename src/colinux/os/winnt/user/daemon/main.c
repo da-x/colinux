@@ -141,16 +141,10 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	rc = co_daemon_start_monitor(daemon);
 	if (!CO_OK(rc))
 		goto out_destroy;
-#if (0)
-	rc = conet_daemon_start(0, &net_daemon);
-#endif
+
 	rc = co_daemon_run(daemon);
 
 	co_daemon_end_monitor(daemon);
-
-#if (0)
-	conet_daemon_stop(net_daemon);
-#endif
 
 out_destroy:
 	co_daemon_destroy(daemon);

@@ -24,15 +24,25 @@ typedef struct co_manager {
 	unsigned long host_memory_amount;
 	unsigned long host_memory_pages;
 
+	/*
+	 * The next is a map between a real physical PFN and an 
+	 * address of mapping in the host's kernel virtual memory.
+	 */
+	void **pa_to_host_va; 
+
+	unsigned long pa_maps_size;  /* Size of these maps */
+	unsigned long pa_maps_pages; /* Size of these maps in pages */
+
 	int monitors_count;
 } co_manager_t;
 
 
+extern co_rc_t co_manager_load(co_manager_t *manager);
 extern co_rc_t co_manager_ioctl(co_manager_t *manager, co_monitor_ioctl_op_t ioctl, 
 				void *io_buffer, unsigned long in_size,
 				unsigned long out_size, unsigned long *return_size,
 				void **private_data);
-
-extern co_rc_t co_manager_cleanup(void **private_data);
+extern co_rc_t co_manager_cleanup(co_manager_t *manager, void **private_data);
+extern void co_manager_unload(co_manager_t *manager);
 
 #endif

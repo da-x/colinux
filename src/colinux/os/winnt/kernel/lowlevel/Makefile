@@ -8,6 +8,7 @@ BUILD_PATH := $(BUILD_PATH)/lowlevel
 
 LOCAL_OBJS = \
 	timer.o \
+	time.o \
 	mutex.o \
 	misc.o \
 	debug.o \

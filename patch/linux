@@ -768,21 +768,49 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/
  /*
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/time.c
 --- linux/arch/i386/kernel/time.c	2004-02-02 22:53:38.000000000 +0200
-+++ linux/arch/i386/kernel/time.c	2003-12-13 17:17:01.000000000 +0200
-@@ -720,6 +720,9 @@
++++ linux/arch/i386/kernel/time.c	2004-02-14 10:54:12.000000000 +0200
+@@ -121,6 +121,8 @@
+ 
+ extern spinlock_t i8259A_lock;
+ 
++#ifndef CONFIG_COOPERATIVE
++
+ #ifndef CONFIG_X86_TSC
+ 
+ /* This function must be called with interrupts disabled 
+@@ -254,6 +256,18 @@
+ 	return count;
+ }
+ 
++#else
++
++static unsigned long do_slow_gettimeoffset(void)
++{
++	/* 
++	 * coLinux TODO for 0.5.3: Request the time from the host OS.
++	 */
++	return 0;
++}
++
++#endif
++
+ static unsigned long (*do_gettimeoffset)(void) = do_slow_gettimeoffset;
+ 
+ 
+@@ -717,6 +731,7 @@
+ /* not static: needed by APM */
+ unsigned long get_cmos_time(void)
+ {
++#ifndef CONFIG_COOPERATIVE
  	unsigned int year, mon, day, hour, min, sec;
  	int i;
  
-+#ifdef CONFIG_COOPERATIVE
-+	return 0;
-+#else
- 	spin_lock(&rtc_lock);
- 	/* The Linux interpretation of the CMOS clock register contents:
- 	 * When the Update-In-Progress (UIP) flag goes from 1 to 0, the
-@@ -754,6 +757,7 @@
+@@ -754,6 +769,9 @@
  	if ((year += 1900) < 1970)
  		year += 100;
  	return mktime(year, mon, day, hour, min, sec);
++#else
++	return co_get_host_time();
 +#endif
  }
  
@@ -1177,8 +1205,8 @@ diff -X bin/dontdiff -urN linux/drivers/block/Makefile linux/drivers/block/Makef
  
 diff -X bin/dontdiff -urN linux/drivers/block/cobd.c linux/drivers/block/cobd.c
 --- linux/drivers/block/cobd.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/drivers/block/cobd.c	2004-02-06 17:11:19.000000000 +0200
-@@ -0,0 +1,262 @@
++++ linux/drivers/block/cobd.c	2004-02-14 01:54:01.000000000 +0200
+@@ -0,0 +1,273 @@
 +/*
 + *  Copyright (C) 2003 Dan Aloni <da-x@gmx.net>
 + *
@@ -1191,6 +1219,8 @@ diff -X bin/dontdiff -urN linux/drivers/block/cobd.c linux/drivers/block/cobd.c
 +#include <linux/errno.h>
 +#include <linux/major.h>
 +#include <linux/slab.h>
++#include <linux/devfs_fs_kernel.h>
++
 +
 +#define MAJOR_NR COLINUX_MAJOR
 +#define DEVICE_NR(device) MINOR(device)  /* has no partition bits */
@@ -1200,6 +1230,7 @@ diff -X bin/dontdiff -urN linux/drivers/block/cobd.c linux/drivers/block/cobd.c
 +#define DEVICE_OFF(d) /* do-nothing */
 +
 +#include <linux/blk.h>
++#include <linux/blkpg.h>
 +#include <linux/hdreg.h>
 +#include <linux/cooperative.h>
 +
@@ -1412,16 +1443,23 @@ diff -X bin/dontdiff -urN linux/drivers/block/cobd.c linux/drivers/block/cobd.c
 +	for (i=0; i < cobd_devs; i++)
 +		register_disk(NULL, MKDEV(MAJOR_NR, i), 1, &cobd_fops,  cobd_sizes[i]);
 +
-+	printk("cobd driver initialized\n");
++	devfs_register_series(NULL, "cobd%u", cobd_devs, DEVFS_FL_DEFAULT,
++			      MAJOR_NR, 0,
++			      S_IFBLK | S_IRUSR | S_IWUSR | S_IRGRP,
++			      &cobd_fops, NULL);
++	
++	printk("cobd: loaded (max %d devices)\n", cobd_devs);
 +
-+	result = 0;
-+	return result;
++	return 0;
 +
 +fail_malloc_2:
 +	kfree(cobd_blksizes);
 +fail_malloc_1:
 +	kfree(cobd_sizes);
 +fail_malloc:
++
++	if (devfs_unregister_blkdev(MAJOR_NR, "cobd"))
++		printk(KERN_WARNING "loop: cannot unregister blkdev\n");
 +
 +	return result;
 +}
@@ -1440,6 +1478,7 @@ diff -X bin/dontdiff -urN linux/drivers/block/cobd.c linux/drivers/block/cobd.c
 +
 +module_init(cobd_init);
 +module_exit(cobd_exit);
++
 +
 diff -X bin/dontdiff -urN linux/drivers/block/ll_rw_blk.c linux/drivers/block/ll_rw_blk.c
 --- linux/drivers/block/ll_rw_blk.c	2004-02-02 22:53:38.000000000 +0200
@@ -3397,7 +3436,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/desc.h linux/include/asm-i386/d
  #define __TSS(n) (((n)<<2) + __FIRST_TSS_ENTRY)
 diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dma.h
 --- linux/include/asm-i386/dma.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/dma.h	2004-02-08 00:43:12.000000000 +0200
++++ linux/include/asm-i386/dma.h	2004-02-14 11:10:16.000000000 +0200
 @@ -268,6 +268,8 @@
   *
   * Assumes DMA flip-flop is clear.
@@ -3418,7 +3457,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dm
  extern int request_dma(unsigned int dmanr, const char * device_id);	/* reserve a DMA channel */
 diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.h
 --- linux/include/asm-i386/io.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/io.h	2004-02-08 00:43:12.000000000 +0200
++++ linux/include/asm-i386/io.h	2004-02-14 11:10:16.000000000 +0200
 @@ -2,6 +2,7 @@
  #define _ASM_IO_H
  
@@ -3435,29 +3474,27 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.
  
  /*
   * Temporary debugging check to catch old code using
-@@ -121,6 +123,10 @@
+@@ -121,6 +123,9 @@
   
  static inline void * ioremap (unsigned long offset, unsigned long size)
  {
 +#ifdef CONFIG_COOPERATIVE
-+ 	co_debug("ioremap %x:%d\n", offset, size); 
-+	co_terminate(CO_TERMINATE_INVALID_OPERATION); 
++	panic("ioremap %ld:%ld\n", offset, size); 
 +#endif
  	return __ioremap(offset, size, 0);
  }
  
-@@ -146,6 +152,10 @@
+@@ -146,6 +151,9 @@
   
  static inline void * ioremap_nocache (unsigned long offset, unsigned long size)
  {
 +#ifdef CONFIG_COOPERATIVE
-+ 	co_debug("ioremap %x:%d\n", offset, size); 
-+	co_terminate(CO_TERMINATE_INVALID_OPERATION); 
++	panic("ioremap_nocache %ld:%ld\n", offset, size); 
 +#endif
          return __ioremap(offset, size, _PAGE_PCD);
  }
  
-@@ -308,6 +318,8 @@
+@@ -308,6 +316,8 @@
  
  #endif /* __KERNEL__ */
  
@@ -3466,7 +3503,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.
  #ifdef SLOW_IO_BY_JUMPING
  #define __SLOW_DOWN_IO "\njmp 1f\n1:\tjmp 1f\n1:"
  #else
-@@ -427,4 +439,19 @@
+@@ -427,4 +437,21 @@
  __OUTS(w)
  __OUTS(l)
  
@@ -3474,7 +3511,9 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.
 +
 +static inline unsigned long badio(const char *file, int line)
 +{
-+	co_terminate(CO_TERMINATE_INVALID_OPERATION); 
++#ifdef CONFIG_COOPERATIVE
++	panic("badio %s:%d\n", file, line); 
++#endif
 +	return 0;
 +}
 +
@@ -3704,8 +3743,8 @@ diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/cons
  
 diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/cooperative.h
 --- linux/include/linux/cooperative.h	1970-01-01 02:00:00.000000000 +0200
-+++ linux/include/linux/cooperative.h	2004-02-08 00:42:41.000000000 +0200
-@@ -0,0 +1,240 @@
++++ linux/include/linux/cooperative.h	2004-02-14 11:10:10.000000000 +0200
+@@ -0,0 +1,242 @@
 +#ifndef __LINUX_COOPERATIVE_H__
 +#define __LINUX_COOPERATIVE_H__
 +
@@ -3735,6 +3774,7 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +	CO_OPERATION_MESSAGE_FROM_MONITOR,
 +	CO_OPERATION_FORWARD_INTERRUPT,
 +	CO_OPERATION_DEVICE,
++	CO_OPERATION_GET_TIME,
 +} co_operation_t;
 +
 +#define CO_MODULE_MAX_CONET  128
@@ -3902,6 +3942,7 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +extern unsigned long co_memory_size;
 +extern unsigned long co_rpptm_size;
 +
++extern unsigned long co_get_host_time(void);
 +extern void handle_keyboard_event(unsigned char scancode);
 +
 +typedef enum {
@@ -4021,8 +4062,8 @@ diff -X bin/dontdiff -urN linux/kernel/Makefile linux/kernel/Makefile
  obj-$(CONFIG_MODULES) += ksyms.o
 diff -X bin/dontdiff -urN linux/kernel/cooperative.c linux/kernel/cooperative.c
 --- linux/kernel/cooperative.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/kernel/cooperative.c	2004-02-08 00:43:09.000000000 +0200
-@@ -0,0 +1,213 @@
++++ linux/kernel/cooperative.c	2004-02-14 11:10:16.000000000 +0200
+@@ -0,0 +1,226 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -4236,6 +4277,19 @@ diff -X bin/dontdiff -urN linux/kernel/cooperative.c linux/kernel/cooperative.c
 +	local_irq_restore(flags);
 +}
 +
++unsigned long co_get_host_time(void)
++{
++	unsigned long flags;
++	unsigned long time;
++
++	local_irq_save(flags);
++	co_passage_page->operation = CO_OPERATION_GET_TIME;
++	co_switch();
++	time = co_passage_page->params[0];
++	local_irq_restore(flags);
++
++	return time;
++}
 diff -X bin/dontdiff -urN linux/kernel/debug.c linux/kernel/debug.c
 --- linux/kernel/debug.c	1970-01-01 02:00:00.000000000 +0200
 +++ linux/kernel/debug.c	2003-10-20 20:08:02.000000000 +0200
