@@ -381,6 +381,8 @@ pcap_init()
 		goto pcap_out;
 	}
 
+	co_debug("bridged-net-daemon: Looking for interface \"%s\"\n", daemon_parameters->interface_name);
+
 	device = alldevs;
 	char name_data[256];
 	char connection_name_data[256];
@@ -395,6 +397,7 @@ pcap_init()
 
 		get_device_name(name_data, sizeof(name_data),
 		                connection_name_data, sizeof(connection_name_data));
+
 		if (strcmp(connection_name_data, "") != 0) {
 			co_debug("bridged-net-daemon: Checking connection: %s\n", connection_name_data);
 			
@@ -402,7 +405,7 @@ pcap_init()
 				break;
 		}
 		else {
-				co_debug("briged-net-daemon: Adapter %s doesn't have a connection\n", device->description);
+			co_debug("briged-net-daemon: Adapter %s doesn't have a connection\n", device->description);
 		}
 
 		device = device->next;
