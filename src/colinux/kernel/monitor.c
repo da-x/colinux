@@ -542,6 +542,12 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 
 		return PTRUE;
 	}
+	case CO_OPERATION_GET_HIGH_PREC_TIME: {
+		co_os_get_timestamp(&co_passage_page->params[0]);
+		co_os_get_timestamp_freq(&co_passage_page->params[2]);
+		return PTRUE;
+	}
+
 	default:
 		co_debug_lvl(context_switch, 5, "unknown operation %d not handled\n", co_passage_page->operation);
 		return PFALSE;

@@ -1080,25 +1080,129 @@ diff -urN a/arch/i386/kernel/time.c b/arch/i386/kernel/time.c
  	spin_lock(&rtc_lock);
  
  	if (efi_enabled)
+diff -urN a/arch/i386/kernel/timers/Makefile b/arch/i386/kernel/timers/Makefile
+--- a/arch/i386/kernel/timers/Makefile	2004-06-16 08:18:37.000000000 +0300
++++ b/arch/i386/kernel/timers/Makefile	2004-07-09 20:09:59.000000000 +0300
+@@ -7,3 +7,4 @@
+ obj-$(CONFIG_X86_CYCLONE_TIMER)	+= timer_cyclone.o
+ obj-$(CONFIG_HPET_TIMER)	+= timer_hpet.o
+ obj-$(CONFIG_X86_PM_TIMER)	+= timer_pm.o
++obj-$(CONFIG_COOPERATIVE)	+= timer_cooperative.o
 diff -urN a/arch/i386/kernel/timers/timer.c b/arch/i386/kernel/timers/timer.c
 --- a/arch/i386/kernel/timers/timer.c	2004-06-22 09:23:56.000000000 +0300
-+++ b/arch/i386/kernel/timers/timer.c	2004-06-22 09:20:07.000000000 +0300
-@@ -13,6 +13,7 @@
++++ b/arch/i386/kernel/timers/timer.c	2004-07-09 20:54:57.000000000 +0300
+@@ -13,6 +13,9 @@
  #endif
  /* list of timers, ordered by preference, NULL terminated */
  static struct timer_opts* timers[] = {
-+#ifndef CONFIG_COOPERATIVE
++#ifdef CONFIG_COOPERATIVE
++	&timer_cooperative,
++#endif
  #ifdef CONFIG_X86_CYCLONE_TIMER
  	&timer_cyclone,
  #endif
-@@ -23,6 +24,7 @@
- 	&timer_pmtmr,
- #endif
- 	&timer_tsc,
-+#endif
- 	&timer_pit,
- 	NULL,
- };
+diff -urN a/arch/i386/kernel/timers/timer_cooperative.c b/arch/i386/kernel/timers/timer_cooperative.c
+--- a/arch/i386/kernel/timers/timer_cooperative.c	1970-01-01 02:00:00.000000000 +0200
++++ b/arch/i386/kernel/timers/timer_cooperative.c	2004-07-09 21:30:39.000000000 +0300
+@@ -0,0 +1,98 @@
++/*
++ *  Cooperative mode timer.
++ *
++ *  Dan Aloni <da-x@colinux.org>, 2003-2004 (C).
++ */
++
++#include <linux/init.h>
++#include <linux/errno.h>
++
++#include <asm/timer.h>
++#include <asm/cooperative.h>
++#include <asm/div64.h>
++
++#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
++
++static unsigned long long first_time;
++static unsigned long long this_time;
++static unsigned long long frequencey;
++static unsigned long long last_mark;
++
++static void query_host(void)
++{
++	unsigned long flags;
++	
++	co_passage_page_assert_valid();	
++	
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_GET_HIGH_PREC_TIME;
++	co_switch_wrapper();
++	this_time = *(unsigned long long *)(&co_passage_page->params[0]);
++	frequencey = *(unsigned long long *)(&co_passage_page->params[2]);
++	co_passage_page_release(flags);
++}
++
++static unsigned long long monotonic_clock(void)
++{
++	query_host();
++	
++	unsigned long long diff, result, sub_secs;
++	unsigned long reminder = 0;
++	
++	diff = this_time - first_time;
++	
++	result = div_ll_X_l_rem(diff, frequencey, &reminder);
++	result *= 1000000000;
++	
++	sub_secs = reminder;
++	sub_secs *= 1000000000;
++
++	result += div_ll_X_l_rem(sub_secs, frequencey, &reminder);
++	
++	return result;
++}
++
++static unsigned long get_offset(void)
++{
++	query_host();
++
++	unsigned long long diff = (this_time - last_mark)*1000000;
++	unsigned long reminder = 0;
++	unsigned long result = div_ll_X_l_rem(diff, frequencey, &reminder);
++
++	return result;
++}
++
++static void mark_offset(void)
++{
++	query_host();
++
++	last_mark = this_time;
++}
++
++static void delay(unsigned long loops)
++{
++}
++
++static int __init init_cooperative_timer(char* override)
++{
++	query_host();
++	
++	first_time = this_time;
++
++	/* Always pick this timer */
++	return 0;
++}
++
++/************************************************************/
++
++/* tsc timer_opts struct */
++struct timer_opts timer_cooperative = {
++	.name = 		"cooperative",
++	.init =			init_cooperative_timer,
++	.mark_offset =		mark_offset,
++	.get_offset =		get_offset,
++	.monotonic_clock =	monotonic_clock,
++	.delay = 		delay,
++};
 diff -urN a/arch/i386/kernel/traps.c b/arch/i386/kernel/traps.c
 --- a/arch/i386/kernel/traps.c	2004-06-16 08:19:01.000000000 +0300
 +++ b/arch/i386/kernel/traps.c	2004-06-26 15:57:56.000000000 +0300
@@ -3948,6 +4052,19 @@ diff -urN a/include/asm-i386/processor.h b/include/asm-i386/processor.h
  
  /*
   * Intel CPU features in CR4
+diff -urN a/include/asm-i386/timer.h b/include/asm-i386/timer.h
+--- a/include/asm-i386/timer.h	2004-06-16 08:19:02.000000000 +0300
++++ b/include/asm-i386/timer.h	2004-07-09 20:09:10.000000000 +0300
+@@ -43,6 +43,9 @@
+ #ifdef CONFIG_X86_CYCLONE_TIMER
+ extern struct timer_opts timer_cyclone;
+ #endif
++#ifdef CONFIG_COOPERATIVE
++extern struct timer_opts timer_cooperative;
++#endif
+ 
+ extern unsigned long calibrate_tsc(void);
+ extern void init_cpu_khz(void);
 diff -urN a/include/linux/console.h b/include/linux/console.h
 --- a/include/linux/console.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/linux/console.h	2004-06-22 09:20:07.000000000 +0300
@@ -3961,7 +4078,7 @@ diff -urN a/include/linux/console.h b/include/linux/console.h
  
 diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 --- a/include/linux/cooperative.h	1970-01-01 02:00:00.000000000 +0200
-+++ b/include/linux/cooperative.h	2004-07-09 18:56:03.000000000 +0300
++++ b/include/linux/cooperative.h	2004-07-09 20:16:36.000000000 +0300
 @@ -0,0 +1,311 @@
 +/*
 + *  linux/include/linux/cooperative.h
@@ -4002,7 +4119,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +	CO_OPERATION_DEVICE,
 +	CO_OPERATION_GET_TIME,
 +	CO_OPERATION_DEBUG_LINE,
-+	CO_OPERATION_GET_HIGH_PREC_QUOTIENT,
++	CO_OPERATION_GET_HIGH_PREC_TIME,
 +	CO_OPERATION_TRACE_POINT,
 +} co_operation_t;
 +
