@@ -11,13 +11,14 @@
 
 #include <colinux/common/common.h>
 
+#include "defs.h"
 #include "apic.h"
 
 co_rc_t co_manager_arch_init_apic(co_archdep_manager_t manager)
 {	
 	co_debug("arch APIC initialization\n");
 
-	if (!(manager->caps & X86_FEATURE_APIC)) {
+	if (!(manager->caps[0] & CO_ARCH_X86_FEATURE_APIC)) {
 		co_debug("no APIC support\n");
 		return CO_RC(ERROR);
 	}

@@ -11,8 +11,6 @@
 #define __COLINUX_ARCH_I386_CPUID_H__
 
 #include <colinux/common/common.h>
-#include <asm/processor.h>
-#include <asm/cpufeature.h>
 
 typedef union {
 	struct {

@@ -27,6 +27,7 @@ typedef unsigned long co_pfn_t;
 #define _PAGE_ACCESSED  0x020
 #define _PAGE_DIRTY     0x040
 #define _PAGE_PSE       0x080   /* 4 MB (or 2MB) page, Pentium+, if present.. */
+#define CO_ARCH_PAGE_NX        0x8000000000000000ULL
 
 #define PTRS_PER_PTE    1024
 #define PGDIR_SHIFT     22

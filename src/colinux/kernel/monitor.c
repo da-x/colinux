@@ -462,8 +462,11 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 
 	co_debug_lvl(context_switch, 14, "switching to linux (%d)\n", co_passage_page->operation);
 	co_host_switch_wrapper(cmon);
+
 	if (co_passage_page->operation == CO_OPERATION_FORWARD_INTERRUPT)
 		co_monitor_arch_real_hardware_interrupt(cmon);
+	else
+		co_monitor_arch_enable_interrupts();
 	
 	switch (co_passage_page->operation) {
 	case CO_OPERATION_FORWARD_INTERRUPT: {

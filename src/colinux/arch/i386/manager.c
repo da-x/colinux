@@ -23,7 +23,10 @@ co_rc_t co_manager_arch_init(co_manager_t *manager, co_archdep_manager_t *out_ar
 	co_debug("arch init\n");
  
 	archdep = (co_archdep_manager_t)co_os_malloc(sizeof(*archdep));
-	co_memset(archdep, 0, sizeof(*archdep));	
+	if (archdep == NULL)
+		return CO_RC(OUT_OF_MEMORY);
+
+	co_memset(archdep, 0, sizeof(*archdep));
 
 	archdep->has_cpuid = co_i386_has_cpuid();
 	if (archdep->has_cpuid == PFALSE) {
@@ -32,7 +35,7 @@ co_rc_t co_manager_arch_init(co_manager_t *manager, co_archdep_manager_t *out_ar
 		goto out_error;
 	}
 
-	rc = co_i386_get_cpuid_capabilities(&archdep->caps);
+	rc = co_i386_get_cpuid_capabilities(archdep->caps);
 	if (!CO_OK(rc)) {
 		co_debug("error, couldn't get CPU capabilities\n");
 		rc = CO_RC(ERROR);

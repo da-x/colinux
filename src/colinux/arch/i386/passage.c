@@ -23,6 +23,9 @@
 
 #include "cpuid.h"
 #include "manager.h"
+#include "utils.h"
+#include "antinx.h"
+#include "defs.h"
 
 #ifdef __MINGW32__
 #define SYMBOL_PREFIX "_"
@@ -401,22 +404,43 @@ PASSAGE_CODE_WRAP_IBCS(
 co_rc_t co_monitor_arch_passage_page_alloc(co_monitor_t *cmon)
 {
 	co_rc_t rc;
+	co_archdep_monitor_t archdep;
 
-	cmon->passage_page = co_os_alloc_pages(sizeof(co_arch_passage_page_t)/PAGE_SIZE);
-	if (cmon->passage_page != NULL) {
-		co_memset(cmon->passage_page, 0, sizeof(co_arch_passage_page_t));
+	archdep = (co_archdep_monitor_t)co_os_malloc(sizeof(*archdep));
+	if (archdep == NULL)
+		return CO_RC(OUT_OF_MEMORY);
 
-		rc = CO_RC(OK);
-	}
-	else 
+	co_memset(archdep, 0, sizeof(*archdep));
+	cmon->archdep = archdep;
+
+	cmon->passage_page = co_os_alloc_pages(sizeof(co_arch_passage_page_t)/CO_ARCH_PAGE_SIZE);
+	if (cmon->passage_page == NULL){
 		rc = CO_RC(OUT_OF_MEMORY);
+		goto error;
+	}
+		
+	co_memset(cmon->passage_page, 0, sizeof(co_arch_passage_page_t));
 
+	rc = co_arch_anti_nx_init(cmon);
+	if (!CO_OK(rc)) 
+		goto error_free_passage;
+
+	return rc;
+
+/* error path */
+error_free_passage:
+	co_os_free_pages(cmon->passage_page, sizeof(co_arch_passage_page_t)/CO_ARCH_PAGE_SIZE);
+
+error:
+	co_os_free(archdep);
 	return rc;
 }
 
 void co_monitor_arch_passage_page_free(co_monitor_t *cmon)
 {
-	co_os_free_pages(cmon->passage_page, sizeof(co_arch_passage_page_t)/PAGE_SIZE);
+	co_arch_anti_nx_free(cmon);
+	co_os_free(cmon->archdep);
+	co_os_free_pages(cmon->passage_page, sizeof(co_arch_passage_page_t)/CO_ARCH_PAGE_SIZE);
 }
 
 static inline void co_passage_page_dump_state(co_arch_state_stack_t *state)
@@ -510,12 +534,13 @@ static void pae_temp_address_space_init(co_arch_passage_page_pae_address_space_t
 	}
 }
 
-static int pae_enabled(void)
+
+void co_host_normal_switch_wrapper(co_monitor_t *cmon)
 {
-	unsigned long cr4 = 0;
-	asm("mov %%cr4, %0" : "=r"(cr4));
-	return cr4 & 0x20;
+	co_switch();
 }
+
+void (*co_host_switch_wrapper_func)(co_monitor_t *) = co_host_normal_switch_wrapper;
 
 co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 {
@@ -523,12 +548,12 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	linux_pgd_t pgd;
 	unsigned long caps = 0;
 
-	caps = cmon->manager->archdep->caps;
+	caps = cmon->manager->archdep->caps[0];
 
 	/*
 	 * TODO: Add sysenter / sysexit restoration support 
 	 */
-	if (caps & (1 << X86_FEATURE_FXSR)) {
+	if (caps & (1 << CO_ARCH_X86_FEATURE_FXSR)) {
 		co_debug("CPU supports fxsave/fxrstor\n");
 		memcpy_co_monitor_passage_func_fxsave(&pp->code[0]);
 	} else {
@@ -539,9 +564,9 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	pp->self_physical_address = co_os_virt_to_phys(&pp->first_page);
 
 	/*
-	 * Init temporary address space page tables for host side;
+	 * Init temporary address space page tables for host side:
 	 */
-	if (!pae_enabled()) {
+	if (!co_is_pae_enabled()) {
 		normal_temp_address_space_init(&pp->host_normal, pp->self_physical_address, 
 					       (unsigned long)(&pp->first_page));
 		pp->host_state.temp_cr3 = co_os_virt_to_phys(&pp->host_normal);
@@ -577,7 +602,8 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	pp->linuxvm_state.va = (unsigned long)(cmon->passage_page_vaddr);
 	pp->linuxvm_state.tr = 0;
 	pp->linuxvm_state.ldt = 0;
-	pp->linuxvm_state.cr4 &= ~(X86_CR4_PAE | X86_CR4_MCE | X86_CR4_PGE | X86_CR4_OSXMMEXCPT);
+	pp->linuxvm_state.cr4 &= ~(CO_ARCH_X86_CR4_PAE | CO_ARCH_X86_CR4_MCE | 
+				   CO_ARCH_X86_CR4_PGE | CO_ARCH_X86_CR4_OSXMMEXCPT);
 	pgd = cmon->pgd;
 	pp->linuxvm_state.cr3 = pgd;
 	pp->linuxvm_state.gdt.base = (struct x86_dt_entry *)cmon->import.kernel_gdt_table;
@@ -614,5 +640,5 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 
 void co_host_switch_wrapper(co_monitor_t *cmon)
 {
-	co_switch();
+	co_host_switch_wrapper_func(cmon);
 }

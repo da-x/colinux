@@ -15,6 +15,9 @@
 typedef struct co_archdep_manager *co_archdep_manager_t;
 struct co_manager;
 
+typedef struct co_archdep_monitor *co_archdep_monitor_t;
+struct co_monitor;
+
 extern co_rc_t co_manager_arch_init(struct co_manager *manager, co_archdep_manager_t *out_archdep);
 extern void co_manager_arch_free(co_archdep_manager_t out_archdep);
 

@@ -12,6 +12,8 @@ LOCAL_OBJS = \
 	interrupt.o \
 	manager.o \
 	apic.o \
+	antinx.o \
+	utils.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

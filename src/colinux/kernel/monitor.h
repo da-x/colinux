@@ -86,6 +86,7 @@ typedef struct co_monitor {
 						       PP in the host */
 	vm_ptr_t passage_page_vaddr;                /* The virtual address of the 
 						       PP in Linux */
+	struct co_archdep_monitor *archdep;         /* Architecture dependent data */
 
 	/*
 	 * Core stuff (Linux kernel image) 
