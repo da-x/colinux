@@ -1,0 +1,21 @@
+diff -urN w32api-2.5/lib/ddk/ntoskrnl.def w32api-2.5-build/lib/ddk/ntoskrnl.def
+--- w32api-2.5/lib/ddk/ntoskrnl.def	2004-02-15 09:32:37.000000000 +0200
++++ w32api-2.5/lib/ddk/ntoskrnl.def	2004-04-11 11:32:41.000000000 +0300
+@@ -644,7 +644,7 @@
+ MmAllocateContiguousMemorySpecifyCache@20
+ MmAllocateMappingAddress@8
+ MmAllocateNonCachedMemory@4
+-MmAllocatePagesForMdl@16
++MmAllocatePagesForMdl@28
+ MmBuildMdlForNonPagedPool@4
+ ;MmCanFileBeTruncated
+ MmCreateMdl@12
+@@ -672,7 +672,7 @@
+ MmLockPagableDataSection@4
+ MmLockPagableImageSection@4
+ MmLockPagableSectionByHandle@4
+-MmMapIoSpace@12
++MmMapIoSpace@16
+ MmMapLockedPages@8
+ MmMapLockedPagesSpecifyCache@24
+ MmMapLockedPagesWithReservedMapping@16

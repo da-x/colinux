@@ -20,7 +20,7 @@ $(BUILD_PATH)/driver.o : \
 
 	$(TOOL_LD_RELOC)
 
-DRIVER_TARGET := $(BUILD_PATH)/linux.sys 
+DRIVER_TARGET := $(BUILD_PATH)/linux.sys
 
 CLEAN_FILES += $(BUILD_PATH)/driver.base.tmp
 $(BUILD_PATH)/driver.base.tmp: $(BUILD_PATH)/driver.o

@@ -11,7 +11,6 @@ LOCAL_OBJS = \
 	main.o \
 	tap-win32.o \
 
-
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 
 $(LOCAL_OBJS) : %.o : %.c 

@@ -2,6 +2,9 @@
 # Thomas Fritzsche <tf@noto.de>, 2004 (c)
 # 
 
+echo "This script doesn't work with this version of coLinux,"
+echo "see build-all.sh."
+exit 1
 
 function download()
 {

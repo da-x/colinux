@@ -13,13 +13,16 @@
     * The daemon can install itself as a service (Jaroslaw Kowalski). 
       Stopping the service sends Ctrl-Alt-Del so that the Linux machine
       shuts down cleanly.
+    * coLinux now builds using MingW32 and no longer depends on cygwin1.dll.
+    * Added scripts for building the MingW32 cross compiler on Linux,
+      plus scripts that download, compile, and install the libraries
+      coLinux depends on.
   * Consoles: 
     * Fixed a bug in the clear operation: let it clear with the right video 
       erase character so that ncurses apps would appear properly.
     * Fixed virtual console switching (alt-f1, alt-f2, etc.) so it will
       save/redraw the screen like it should.
     * FLTK: The cursor is visible again.
-  * Updated the cobuild.sh script (gboutwel).
 	
 * Version 0.6.0 AKA "Getting even"
   * Ballard, Jonathan H.:  

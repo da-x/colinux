@@ -19,7 +19,14 @@ $(LOCAL_OBJS) : %.o : %.c
 
 LOCAL_TARGETS = $(LOCAL_OBJS) $(LOCAL_EXE)
 
+$(BUILD_PATH)/res/daemon.res: $(BUILD_PATH)/res $(BUILD_PATH)/res/daemon.rc
+	$(CROSS_TARGET)windres -O coff -I $(word 1, $^) $(word 2, $^) -o $@
+
+CLEAN_FILES := $(CLEAN_FILES) \
+	$(BUILD_PATH)/res/daemon.res
+
 $(LOCAL_EXE) : \
+	$(BUILD_PATH)/res/daemon.res \
 	$(BUILD_ROOT)/colinux/os/current/user/user.o \
 	$(LOCAL_OBJS) \
 	$(BUILD_ROOT)/colinux/user/user.a \

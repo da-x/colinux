@@ -1,0 +1,10 @@
+--- fltk-1.1.4/src/Fl_win32.cxx	2003-06-15 07:27:35.000000000 +0300
++++ fltk-1.1.4/src/Fl_win32.cxx	2004-04-10 22:06:11.000000000 +0300
+@@ -47,7 +47,6 @@
+ // The following include files require GCC 3.x or a non-GNU compiler...
+ #if !defined(__GNUC__) || __GNUC__ >= 3
+ #  include <ole2.h>
+-#  include <ShellApi.h>
+ #endif // !__GNUC__ || __GNUC__ >= 3
+ 
+ 
