@@ -82,7 +82,7 @@ co_rc_t co_os_pipe_server_client_disconnected(co_os_pipe_server_t *ps, co_os_pip
 
 co_rc_t co_os_pipe_server_read_sync(co_os_pipe_server_t *ps, co_os_pipe_connection_t *connection)
 {
-	unsigned long read_size;
+	unsigned long read_size = 0;
 	BOOL result;
 
 	while (1) {
@@ -191,6 +191,7 @@ co_rc_t co_os_pipe_server_create_client(co_os_pipe_server_t *ps)
 		goto out;
 	}
 
+	memset(connection, 0, sizeof(*connection));
 	connection->in_buffer = (char *)co_os_malloc(CO_OS_PIPE_SERVER_BUFFER_SIZE);
 	if (connection->in_buffer == NULL) {
 		rc = CO_RC(ERROR);
@@ -213,7 +214,7 @@ co_rc_t co_os_pipe_server_create_client(co_os_pipe_server_t *ps)
 		PIPE_UNLIMITED_INSTANCES,
 		0x100000,
 		0x100000,
-		1000,
+		10000,
 		NULL);
 
 	if (connection->pipe == INVALID_HANDLE_VALUE) {
@@ -265,7 +266,7 @@ co_rc_t co_os_pipe_server_service(co_os_pipe_server_t *ps, bool_t infinite)
 	result = MsgWaitForMultipleObjects(ps->num_clients,
 					   ps->events,
 					   FALSE,
-					   infinite ? 10 : 0,
+					   infinite ? 5 : 0,
 					   QS_ALLEVENTS);
 
 	if ((result >= WAIT_OBJECT_0)  && 
@@ -309,6 +310,8 @@ co_rc_t co_os_pipe_server_create(co_os_pipe_server_func_connected_t connected_fu
 	ps->connected_func = connected_func;
 	ps->disconnected_func = disconnected_func;
 	ps->user_data = data;
+
+	co_os_pipe_server_create_client(ps);
 
 	return CO_RC(OK);
 }

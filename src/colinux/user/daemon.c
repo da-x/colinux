@@ -556,7 +556,7 @@ void co_daemon_pipe_cb_disconnected(co_os_pipe_connection_t *conn,
 		message.message.type = CO_MESSAGE_TYPE_OTHER;
 		message.message.size = sizeof(message.switchm);
 		message.switchm.type = CO_SWITCH_MESSAGE_FREE_RULE;
-		message.switchm.destination = CO_MODULE_CONET0;
+		message.switchm.destination = module->id;
 		
 		co_message_switch_dup_message(&module->daemon->message_switch, &message.message);
 		co_message_switch_free_rule(&module->daemon->message_switch, module->id);
@@ -623,6 +623,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	daemon->last_htime = co_os_timer_highres();
 	daemon->reminder_htime = 0;
 
+#if (0)
 	rc = co_os_timer_create(co_daemon_timer_cb, daemon, 10, &timer);
 	if (!CO_OK(rc)) {
 		co_os_pipe_server_destroy(ps);
@@ -635,7 +636,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 		co_os_pipe_server_destroy(ps);
 		return rc;
 	}
-
+#endif
 	co_message_switch_init(&daemon->message_switch, CO_MODULE_USER_SWITCH);
 
 	rc = co_message_switch_set_rule(&daemon->message_switch, CO_MODULE_PRINTK, 
@@ -676,6 +677,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	
 	if (!CO_OK(rc))
 		goto out;
+
 
 	co_debug("Launching net daemon\n");
 	rc = co_launch_process("colinux-net-daemon");
@@ -722,14 +724,18 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 
 		rc = co_os_pipe_server_service(ps, daemon->idle ? PTRUE : PFALSE);
 
+		co_daemon_timer_cb(daemon);
+
 		daemon->idle = PFALSE;
 	}
 
 out:
 	co_message_switch_free(&daemon->message_switch);
 	co_os_pipe_server_destroy(ps);
+#if (0)
 	co_os_timer_deactivate(timer);
 	co_os_timer_destroy(timer);
+#endif
 
 	return rc;
 }

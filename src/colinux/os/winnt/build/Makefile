@@ -2,7 +2,7 @@
 ifeq ($(BUILD_ROOT),)
 BUILD_ROOT=../../../..
 
-all: parts
+all: colinux
 
 include $(BUILD_ROOT)/Makefile
 else

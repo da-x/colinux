@@ -1,3 +1,7 @@
+* Version 0.5.3-pre2
+  * Fixed the reported (and unreported) network bugs. 
+  * Worked out some scheduling issue.
+
 * Version 0.5.3-pre1 AKA "flamed chicken"
   * Fixed a BSOD bug (thanks Richard Goodwin for the memory dump stacks)
   * No longer depending on the Microsoft DDK for the build (review doc/building),

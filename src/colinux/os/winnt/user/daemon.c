@@ -26,14 +26,23 @@ co_rc_t co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id, co_daemo
 	char pathname[0x100];
 	BOOL ret;
 	co_daemon_handle_t daemon_handle;
+	int timeout = 10;
+
+	snprintf(pathname, sizeof(pathname), "\\\\.\\pipe\\coLinux%d", (int)linux_id);
+
+	co_debug("pipe client %d/%d: Connecting to daemon...\n", linux_id, module_id);
+	
+	ret = WaitNamedPipe(pathname, NMPWAIT_USE_DEFAULT_WAIT);
+	if (!ret) { 
+		co_debug("Connection timed out (%x)\n", GetLastError());
+		return CO_RC(ERROR);
+	}
+
+	co_debug("pipe client %d/%d: Connection established\n", linux_id, module_id);
 
 	daemon_handle = co_os_malloc(sizeof(*daemon_handle));
 	if (!daemon_handle)
 		return CO_RC(ERROR);
-
-	snprintf(pathname, sizeof(pathname), "\\\\.\\pipe\\coLinux%d", (int)linux_id);
-
-	co_debug("Connecting to daemon\n");
 
 	handle = CreateFile (
 		pathname,
@@ -48,7 +57,7 @@ co_rc_t co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id, co_daemo
 	/* Identify to the daemon */
 	ret = WriteFile(handle, &module_id, sizeof(module_id), &written, NULL); 
 	if (!ret) {
-		co_debug("Sending identification failed (%d)\n", GetLastError());
+		co_debug("pipe client %d/%d: Attachment failed\n", linux_id, module_id);
 		CloseHandle(handle);
 		co_os_free(daemon_handle);
 		return CO_RC(ERROR);

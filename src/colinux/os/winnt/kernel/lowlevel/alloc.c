@@ -8,6 +8,8 @@
  *
  */
 
+#include <asm/page.h>
+
 #include "../ddk.h"
 
 #include <colinux/os/alloc.h>

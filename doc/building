@@ -1,14 +1,31 @@
-Building Cooperative Linux
+Building Cooperative Linux                Dan Aloni, da-x@gmx.net
 =================================================================
 
-Building Cooperative Linux comes in two parts.
+Table of Contents
 
-1. Cooperative Linux kernel, i.e, the vmlinux file
-2. Host Operating system support code, i.e, the daemon, console, 
-   and kernel driver.
+  1. Prerequisites
+  2. Cooperative Linux kernel (the vmlinux file)
+  3. Host Operating system support code, i.e, the daemon, console, 
+     and kernel driver
+
+=================================================================
+
+1. Prerequisites
+----------------
+
+The components that compose coLinux need to be compiled using 2 
+differently targeted versions of GCC (http://www.gcc.org). One
+gcc is required for the native Linux architecture that coLinux
+designed to run on (e.g, i686-pc-linux), and the other version 
+is used to compiled binary executables and drivers for the host 
+OS (e.g, i686-pc-cygwin).
+
+The versions of the two compilers need to match as closely as 
+possible. Versions 2.95.x, 3.1.x, 3.2.x and 3.3.x of gcc are 
+not guaranteed to be compatible. 
 
 
-1. Compiling the Cooperative Linux kernel
+2. Compiling the Cooperative Linux kernel
 -----------------------------------------
 
 Unpack the source tarball of coLinux and the Linux kernel tarball 
@@ -35,7 +52,7 @@ And then, to build vmlinux:
     ~/colinux-0.5.3/linux# make vmlinux
 
 
-2. Compiling the OS support code 
+3. Compiling the OS support code 
 --------------------------------
 
 Compiling the operating system dependent support code is a little more
@@ -45,7 +62,7 @@ installed for that purpose.
 Please read the cygwin-cross-build for 
 instructions concerning the creation of such toolchain.
 
-2.1. Build Dependencies
+3.1. Build Dependencies
 
 The coLinux daemon depends on:
   * mxml
@@ -53,7 +70,7 @@ The coLinux daemon depends on:
 The coLinux console depends on:
   * FLTK (major version 1)
 
-2.2. For Microsoft Windows
+3.2. For Microsoft Windows
 
 Currently, we use the cygwin toolchain for building. Please read the 
 cygwin-cross-build for instructions concerning the creation of this 
