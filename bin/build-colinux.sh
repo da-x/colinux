@@ -30,15 +30,19 @@ configure_colinux_daemons()
 install_colinux_daemons()
 {
 	cd "$TOPDIR/../src"
-	echo "Installing colinux (daemons) to $PREFIX/dist"
-	cp -a colinux/os/winnt/user/conet-daemon/colinux-net-daemon.exe "$PREFIX/dist"
-	cp -a colinux/os/winnt/user/console/colinux-console-fltk.exe "$PREFIX/dist"
-	cp -a colinux/os/winnt/user/console-nt/colinux-console-nt.exe "$PREFIX/dist"
-	cp -a colinux/os/winnt/user/daemon/colinux-daemon.exe "$PREFIX/dist"
-	cp -a colinux/os/winnt/build/linux.sys "$PREFIX/dist"
+	echo "Installing colinux (daemons) to $INSTALL_DIR/"
+	BASE="colinux/os/winnt/user"
+	cp -a $BASE/conet-bridged-daemon/colinux-bridged-net-daemon.exe $INSTALL_DIR/
+	cp -a $BASE/conet-daemon/colinux-net-daemon.exe $INSTALL_DIR/
+	cp -a $BASE/console/colinux-console-fltk.exe $INSTALL_DIR/
+	cp -a $BASE/console-nt/colinux-console-nt.exe $INSTALL_DIR/
+	cp -a $BASE/daemon/colinux-daemon.exe $INSTALL_DIR/
+	cp -a $BASE/coserial-daemon/colinux-serial-daemon.exe $INSTALL_DIR/
+	cp -a $BASE/debug/colinux-debug-daemon.exe $INSTALL_DIR/
+	cp -a colinux/os/winnt/build/linux.sys $INSTALL_DIR/
 	# Strip debug information form distribution executable
-	strip $PREFIX/dist/*.exe
-	cd "$TOPDIR"
+	strip $INSTALL_DIR/*.exe
+	cd $TOPDIR
 }
 
 build_colinux_daemons()

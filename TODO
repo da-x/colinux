@@ -10,7 +10,6 @@
      usefull.
    * (optional) Support kermit or other 'telnet upload' protocol, to 
      upload files from the console.
-   * Fix F10 in FLTK.
 
  * Installer:
    * Instruct the user to install Python for Windows, wxPython, and Python 

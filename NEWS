@@ -56,6 +56,8 @@
   * Bug fix: Stop reboots where different gcc compiler versions are 
     used to compile linux.sys & vmlinux, with an error/warning 
     (George Boutwell).
+  * Enhanced coLinux keyboard handling support (sends raw scan codes
+    from Windows to linux) (Nuno Lucas).
 
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).

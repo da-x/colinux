@@ -30,9 +30,21 @@ if [ "$SOURCE_DIR" = "" ] ; then
     exit -1
 fi
 
-# coLinux enabled kernel source? use default, if empty
+# coLinux enabled kernel source?
 if [ "$COLINUX_TARGET_KERNEL_PATH" = "" ] ; then
     echo "Please specify the $""COLINUX_TARGET_KERNEL_PATH in user-build.cfg (e.g, /tmp/$USER/linux-co)"
+    exit -1
+fi
+
+# coLinux kernel we are targeting
+# KERNEL_DIR: sub-dir in www.kernel.org for the download (e.g. v2.6)
+if [ "$KERNEL_DIR" = "" ] ; then
+    echo "Please specify the $""KERNEL_DIR in user-build.cfg (e.g. KERNEL_DIR=v2.6"
+    exit -1
+fi
+# KERNEL_VERSION: the full kernel version (e.g. 2.6.8.1)
+if [ "$KERNEL_VERSION" = "" ] ; then
+    echo "Please specify the $""KERNEL_VERSION in user-build.cfg (e.g. KERNEL_VERSION=2.6.8.1"
     exit -1
 fi
 
