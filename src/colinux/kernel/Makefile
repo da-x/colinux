@@ -14,6 +14,7 @@ LOCAL_OBJS = \
 	fileblock.o \
 	transfer.o \
 	manager.o \
+	pages.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

@@ -460,6 +460,8 @@ co_rc_t co_monitor_load_configuration(co_monitor_t *cmon)
 	co_rc_t rc = CO_RC_OK; 
 	long i;
 
+	co_debug("cobd: maximum: %d\n", CO_MAX_BLOCK_DEVICES);
+
 	for (i=0; i < CO_MAX_BLOCK_DEVICES; i++) {
 		co_monitor_file_block_dev_t *dev;
 		co_block_dev_desc_t *conf_dev = &cmon->config.block_devs[i];
@@ -472,10 +474,12 @@ co_rc_t co_monitor_load_configuration(co_monitor_t *cmon)
 
 		rc = co_monitor_file_block_init(dev, &conf_dev->pathname);
 		if (CO_OK(rc)) {
+			co_debug("cobd%d: enabled", i);
 			co_monitor_block_register_device(cmon, i, (co_block_dev_t *)dev);
 			dev->dev.free = co_monitor_free_file_blockdevice;
 		} else {
 			co_monitor_free(cmon, dev);
+			co_debug("cobd%d: cannot enable (%x)\n", i, rc);
 			goto out;
 		}
 	}

@@ -46,7 +46,7 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned long index,
 	co_block_dev_t *dev;
 	co_rc_t rc;
 
-	rc = CO_RC_ERROR;
+	rc = CO_RC(ERROR);
 
 	dev = co_monitor_block_dev_from_index(cmon, index);
 	if (!dev)
@@ -56,6 +56,7 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned long index,
 
 	switch (request->type) { 
 	case CO_BLOCK_OPEN: {
+		co_debug("cobd%d: open (count=%d)\n", index, dev->use_count);
 		if (dev->use_count >= 1) { 
 			dev->use_count++;
 			return rc;
@@ -64,12 +65,15 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned long index,
 	}
 	case CO_BLOCK_CLOSE: {
 		if (dev->use_count == 0) {
+			co_debug("cobd%d: close with no open\n", index);
 			rc = CO_RC_ERROR;
 			return rc;
 		} else if (dev->use_count > 1) {
 			dev->use_count--;
+			co_debug("cobd%d: close (count=%d)\n", index, dev->use_count);
 			return rc;
 		}
+		co_debug("cobd%d: close (count=%d)\n", index, dev->use_count);
 		break;
 	}
 	default:
@@ -80,13 +84,22 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned long index,
 
 	switch (request->type) { 
 	case CO_BLOCK_OPEN: {
-		if (CO_OK(rc))
+		if (CO_OK(rc)) {
+			co_debug("cobd%d: open success (count=%d)\n", index, dev->use_count);
 			dev->use_count++;
+		} else {
+			co_debug("cobd%d: open failed (count=%d, rc=%x)\n", index, dev->use_count, rc);
+		}
+
 		break;
 	}
 	case CO_BLOCK_CLOSE: {
-		if (CO_OK(rc))
+		if (CO_OK(rc)) {
 			dev->use_count--;
+			co_debug("cobd%d: close success (count=%d)\n", index, dev->use_count);
+		} else {
+			co_debug("cobd%d: close failed (count=%d, rc=%x)\n", index, dev->use_count, rc);
+		}
 		break;
 	default:
 		break;

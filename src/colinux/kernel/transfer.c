@@ -29,7 +29,7 @@ co_rc_t co_monitor_get_pfn(co_monitor_t *cmon, vm_ptr_t address, co_pfn_t *pfn)
 
 	*pfn = cmon->pp_pfns[pfn_group][pfn_index];
 
-	return CO_RC(OK);;
+	return CO_RC(OK);
 }
 
 /*
@@ -198,7 +198,7 @@ co_rc_t co_manager_create_pfns_and_callback_callback(
 		
 	real_pfn = pp_pfns[pfn_group][current_pfn];
 	if (real_pfn == 0) {
-		rc = co_os_get_page(cbdata->monitor->manager, &real_pfn);
+		rc = co_manager_get_page(cbdata->monitor->manager, &real_pfn);
 		if (!CO_OK(rc))
 			return rc;
 

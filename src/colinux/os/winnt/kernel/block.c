@@ -10,6 +10,7 @@
 
 #include "ddk.h"
 
+#include <colinux/os/alloc.h>
 #include <colinux/kernel/transfer.h>
 #include <colinux/kernel/fileblock.h>
 
@@ -44,7 +45,7 @@ NTSTATUS co_os_open_file(char *pathname, PHANDLE FileHandle)
 			      FILE_SYNCHRONOUS_IO_NONALERT,
 			      NULL,
 			      0);
-    
+
 	if (status != STATUS_SUCCESS)
 		co_debug("ZwOpenFile() returned error: %x\n", status);
 
@@ -158,14 +159,13 @@ co_rc_t co_os_file_block_write(co_monitor_t *linuxvm,
 	return rc;
 }
 
-static bool_t probe_byte(HANDLE handle, LARGE_INTEGER offset)
+static bool_t probe_area(HANDLE handle, LARGE_INTEGER offset, char *test_buffer, unsigned long size)
 {
 	IO_STATUS_BLOCK isb;
-	char one_byte[1];
 	NTSTATUS status;
 
 	status = ZwReadFile(handle, NULL, NULL,
-			    NULL, &isb, one_byte, 1,
+			    NULL, &isb, test_buffer, size,
 			    &offset, NULL);
 
 	if (status != STATUS_SUCCESS)
@@ -191,11 +191,27 @@ static co_rc_t co_os_file_block_detect_size(HANDLE handle, unsigned long long *o
 
 	LARGE_INTEGER scan_bit;
 	LARGE_INTEGER build_size;
+	unsigned long test_buffer_size_max = 0x1000;
+	unsigned long test_buffer_size = 0x100;
+	char *test_buffer;
+
+	test_buffer = (char *)co_os_malloc(test_buffer_size_max);
+	if (!test_buffer)
+		return CO_RC(ERROR);
 
 	build_size.QuadPart = 0;
 
-	if (!probe_byte(handle, build_size)) {
+	while (test_buffer_size <= test_buffer_size_max) {
+		if (probe_area(handle, build_size, test_buffer, test_buffer_size))
+			break;
+
+		test_buffer_size <<= 1;
+	}
+
+	if (test_buffer_size >= test_buffer_size_max) {
+		co_debug("%s: size is zero\n", __FUNCTION__);
 		*out_size = 0;
+		co_os_free(test_buffer);
 		return CO_RC(ERROR);
 	}
 
@@ -205,7 +221,7 @@ static co_rc_t co_os_file_block_detect_size(HANDLE handle, unsigned long long *o
 	 * Find the smallest invalid power of 2.
 	 */
 	while (scan_bit.QuadPart != 0) {
-		if (!probe_byte(handle, scan_bit))
+		if (!probe_area(handle, scan_bit, test_buffer, test_buffer_size))
 			break;
 		scan_bit.QuadPart <<= 1;
 	}
@@ -218,14 +234,15 @@ static co_rc_t co_os_file_block_detect_size(HANDLE handle, unsigned long long *o
 
 		scan_bit.QuadPart >>= 1;
 		with_bit.QuadPart = build_size.QuadPart | scan_bit.QuadPart;
-		if (probe_byte(handle, with_bit))
+		if (probe_area(handle, with_bit, test_buffer, test_buffer_size))
 			build_size = with_bit;
 	}
 
-	build_size.QuadPart += 1;
+	build_size.QuadPart += test_buffer_size;
 
 	*out_size = build_size.QuadPart;
 
+	co_os_free(test_buffer);
 	return CO_RC(OK);
 }
 

@@ -1,7 +1,7 @@
 /*
  * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@colinux.org>, 2003 (c)
+ * Dan Aloni <da-x@colinux.org>, 2003-2004 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -57,7 +57,7 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 	for (i=0; i < manager->reversed_page_count; i++) {
 		co_pfn_t pfn;
 
-		rc = co_os_get_page(manager, &pfn);
+		rc = co_manager_get_page(manager, &pfn);
 		if (!CO_OK(rc))
 			return rc;
 
@@ -86,7 +86,7 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 			continue;
 		}
 		
-		rc = co_os_get_page(manager, &pfn);
+		rc = co_manager_get_page(manager, &pfn);
 		if (!CO_OK(rc))
 			return rc;
 

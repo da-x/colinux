@@ -1,15 +1,13 @@
 * Version 0.6.1 
   * Linux port (for systems running kernel 2.6.x)
-  * Added the ability to send Ctrl-Alt-Del.
+  * Linux patch updated to 2.4.26	
+  * Added the ability to send Ctrl-Alt-Del to the Linux machine.
   * Windows: 
     * Sizes of raw partition devices are now detected properly. This 
       means that the resierfs problems should be over, plus cat /dev/cobd* 
       would work for you.
     * Suspension of the host machine won't cause colinux-daemon problems like 
       memory leaks.
-    * NSIS installer: Install cygwin1.dll only if it is not already in
-      the user's search path. This will help to avoid multiply cygwin1.dll
-      versions on the system (NEBOR Regis)
     * The daemon can install itself as a service (Jaroslaw Kowalski). 
       Stopping the service sends Ctrl-Alt-Del so that the Linux machine
       shuts down cleanly.
