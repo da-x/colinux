@@ -9159,6 +9159,26 @@ diff -urN a/kernel/printk.c b/kernel/printk.c
  	/*
  	 * Copy the output into log_buf.  If the caller didn't provide
  	 * appropriate log level tags, we insert them here
+diff -urN a/kernel/sched.c b/kernel/sched.c
+--- a/kernel/sched.c
++++ b/kernel/sched.c
+@@ -2309,6 +2309,16 @@
+ 
+ 	total = cputime_add(p->utime, p->stime);
+ 	secs = cputime_to_secs(total);
++
++#ifdef CONFIG_COOPERATIVE
++	/* FIXME: figure out why account_user_time() is called when it shouldn't */
++	if (!p->signal) {
++		printk(KERN_ERR "%s:%d: check_rlimit: p->signal=NULL p=%p pid=%d exit_code=%X exit_signal=%X\n",
++		       __FILE__, __LINE__, p, p->pid, p->exit_code, p->exit_signal);
++		return;
++	}
++#endif
++
+ 	if (unlikely(secs >= p->signal->rlim[RLIMIT_CPU].rlim_cur)) {
+ 		/* Send SIGXCPU every second. */
+ 		tmp = cputime_sub(total, cputime);
 diff -urN a/localversion-cooperative b/localversion-cooperative
 --- a/localversion-cooperative
 +++ b/localversion-cooperative
