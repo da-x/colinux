@@ -10,14 +10,14 @@ def _build_root():
 build_root = _build_root()
  
 def main(args):
-    filename = args[0]
     os.chdir(build_root)
 
-    if '--help' in args:
+    if '--help' in args or len(args) == 0:
         print "make.py [target_name] (--help) (--dump)"
         return
 
-    if args[0] == 'clean':
+    filename = args[0]
+    if filename == 'clean':
         from comake.target import clean
         clean()
     else:
@@ -41,4 +41,3 @@ def main(args):
             print "Total number of targets: %d" % (statistics.targets, )
             if statistics.made_targets != 0:
                 print "Targets rebuilt: %d" % (statistics.made_targets, )
-        

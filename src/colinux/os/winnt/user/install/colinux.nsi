@@ -120,32 +120,27 @@ FunctionEnd
 ;------------------------------------------------------------------------
 ;Installer Sections
 
+SectionGroup "coLinux" SecGrpcoLinux
 
-Section "coLinux" SeccoLinux
+Section
 
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayName" "coLinux"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "UninstallString" '"$INSTDIR\Uninstall.exe"'
 
-
+  SetOutPath "$INSTDIR"
+  
+  
   ;---------------------------------------------------------------FILES--
   ;----------------------------------------------------------------------
   ; Our Files . If you adds something here, Remember to delete it in 
   ; the uninstall section
 
-  SetOutPath "$INSTDIR"
-  File "..\..\build\coLinux-console-fltk.exe"
-  File "..\..\build\coLinux-console-nt.exe"
-  File "..\..\build\coLinux-net-daemon.exe"
-  File "..\..\build\coLinux-slirp-net-daemon.exe"
   File "..\..\build\coLinux-daemon.exe"
+  File "..\..\build\linux.sys"
   File /oname=README.txt "..\..\..\..\..\..\RUNNING"
   File /oname=news.txt "..\..\..\..\..\..\NEWS" 
   File /oname=cofs.txt  "..\..\..\..\..\..\doc\cofs"
   File /oname=colinux-daemon.txt "..\..\..\..\..\..\doc\colinux-daemon"
-  
-  ;Enable when working correctly
-  ;File "..\debug\coLinux-serial-daemon.exe"
-  File "..\..\build\linux.sys"
   File "premaid\vmlinux"
   File "premaid\vmlinux-modules.tar.gz"
   ; initrd replaces vmlinux-modules.tar.gz as preferred way to ship modules.
@@ -166,6 +161,36 @@ Section "coLinux" SeccoLinux
 
 SectionEnd
 
+Section "Native Windows Linux Console" SecNTConsole
+
+  ;---------------------------------------------------------------FILES--
+  ;----------------------------------------------------------------------
+  ; Our Files . If you adds something here, Remember to delete it in 
+  ; the uninstall section
+
+  SetOutPath "$INSTDIR"
+  File "..\..\build\coLinux-console-nt.exe"
+
+  ;--------------------------------------------------------------/FILES--
+  ;----------------------------------------------------------------------
+
+SectionEnd
+
+Section "Cross-platform Linux Console" SecFLTKConsole
+
+  ;---------------------------------------------------------------FILES--
+  ;----------------------------------------------------------------------
+  ; Our Files . If you adds something here, Remember to delete it in 
+  ; the uninstall section
+
+  SetOutPath "$INSTDIR"
+  File "..\..\build\coLinux-console-fltk.exe"
+
+  ;--------------------------------------------------------------/FILES--
+  ;----------------------------------------------------------------------
+
+SectionEnd
+
 Section "coLinux Virtual Ethernet Driver (TAP-Win32)" SeccoLinuxNet
 
   ;---------------------------------------------------------------FILES--
@@ -177,6 +202,24 @@ Section "coLinux Virtual Ethernet Driver (TAP-Win32)" SeccoLinuxNet
   File "premaid\netdriver\OemWin2k.inf"
   File "premaid\netdriver\tap0801co.sys"
   File "premaid\netdriver\tapcontrol.exe"
+
+  File "..\..\build\coLinux-net-daemon.exe"
+
+  ;--------------------------------------------------------------/FILES--
+  ;----------------------------------------------------------------------
+
+
+SectionEnd
+
+Section "coLinux Virtual Network Daemon (SLiRP)" SeccoLinuxNetSLiRP
+
+  ;---------------------------------------------------------------FILES--
+  ;----------------------------------------------------------------------
+  ; Our Files . If you adds something here, Remember to delete it in 
+  ; the uninstall section
+
+  SetOutPath "$INSTDIR"
+  File "..\..\build\coLinux-slirp-net-daemon.exe"
 
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
@@ -198,6 +241,41 @@ Section "coLinux Bridged Ethernet (WinPcap)" SeccoLinuxBridgedNet
   ;----------------------------------------------------------------------
 
 SectionEnd
+
+Section "coLinux Virtual Serial Device" SeccoLinuxSerial
+
+  ;---------------------------------------------------------------FILES--
+  ;----------------------------------------------------------------------
+  ; Our Files . If you adds something here, Remember to delete it in 
+  ; the uninstall section
+
+  SetOutPath "$INSTDIR"
+  File "..\..\build\coLinux-serial-daemon.exe"
+  
+  ;--------------------------------------------------------------/FILES--
+  ;----------------------------------------------------------------------
+
+
+SectionEnd
+
+Section "coLinux Debugging" SeccoLinuxDebug
+
+  ;---------------------------------------------------------------FILES--
+  ;----------------------------------------------------------------------
+  ; Our Files . If you adds something here, Remember to delete it in 
+  ; the uninstall section
+
+  SetOutPath "$INSTDIR"
+  File "..\..\build\coLinux-debug-daemon.exe"
+  ;File /oname=debugging.txt  "..\..\..\..\..\..\doc\debugging"
+  
+  ;--------------------------------------------------------------/FILES--
+  ;----------------------------------------------------------------------
+
+
+SectionEnd
+
+SectionGroupEnd
 
 Section "Root Filesystem image Download" SeccoLinuxImage
 
@@ -374,15 +452,25 @@ SectionEnd
 ;--------------------------------
 ;Descriptions
 
-  LangString DESC_SeccoLinux ${LANG_ENGLISH} "Install coLinux"
+  LangString DESC_SecGrpcoLinux ${LANG_ENGLISH} "Install coLinux"
+  LangString DESC_SecNTConsole ${LANG_ENGLISH} "Install native Windows (NT) coLinux console, which allows to view Linux console in an NT DOS Command-line console"
+  LangString DESC_SecFLTKConsole ${LANG_ENGLISH} "Install cross-platform coLinux console, which allows to view Linux console and manage coLinux from a cross-platform GUI program"
   LangString DESC_SeccoLinuxNet ${LANG_ENGLISH} "Install coLinux Virtual Ethernet Driver, which allows to create a network link between Linux and Windows"
+  LangString DESC_SeccoLinuxNetSLiRP ${LANG_ENGLISH} "Install coLinux Virtual Ethernet Driver, which allows to create a network link between Linux and Windows"
   LangString DESC_SeccoLinuxBridgedNet ${LANG_ENGLISH} "Install coLinux Bridge Ethernet support, which allows to join the coLinux machine to an existing network"
+  LangString DESC_SeccoLinuxSerial ${LANG_ENGLISH} "Install coLinux Virtual Serail Driver, which allows to use serial Devices between Linux and Windows"
+  LangString DESC_SeccoLinuxDebug ${LANG_ENGLISH} "Install coLinux Debugging, which allows to create extensive debug log for troubleshooting problems"
   LangString DESC_SecImage ${LANG_ENGLISH} "Download an image from sourceforge. Also provide useful links on how to use it"
 
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-    !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinux} $(DESC_SeccoLinux)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecGrpcoLinux} $(DESC_SecGrpcoLinux)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecNTConsole} $(DESC_SecNTConsole)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecFLTKConsole} $(DESC_SecFLTKConsole)
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxNet} $(DESC_SeccoLinuxNet)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxNetSLiRP} $(DESC_SeccoLinuxNetSLiRP)
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxBridgedNet} $(DESC_SeccoLinuxBridgedNet)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxSerial} $(DESC_SeccoLinuxSerial)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxDebug} $(DESC_SeccoLinuxDebug)
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxImage} $(DESC_SecImage)  
   !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
