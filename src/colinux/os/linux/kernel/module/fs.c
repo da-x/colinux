@@ -76,3 +76,20 @@ co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *
 	return CO_RC(ERROR);
 }
 
+co_rc_t co_os_file_rmdir(char *filename)
+{
+	/* TODO */
+	return CO_RC(ERROR);
+}
+
+co_rc_t co_os_fs_dir_join_unix_path(co_pathname_t *dirname, const char *addition)
+{
+	/* TODO */
+	return CO_RC(ERROR);
+}
+
+co_rc_t co_os_fs_get_attr(co_filesystem_t *fs, char *filename, struct fuse_attr *attr)
+{
+	/* TODO */
+	return CO_RC(ERROR);
+}
