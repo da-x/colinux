@@ -28,6 +28,14 @@ download_files()
 	download_file "$W32API_ARCHIVE" "$MINGW_URL"
 }
 
+check_isinstalled()
+{
+	if [ -f $PREFIX/bin/$TARGET-gcc ] ; then
+		echo "Skip $TARGET-gcc, already installed on $PREFIX/bin"
+		exit 0
+	fi
+}
+
 install_libs()
 {
 	echo "Installing cross libs and includes"
@@ -182,6 +190,8 @@ build_cross()
         download_files
 	# Only Download? Than ready.
 	test "$1" = "--download-only" && exit 0
+
+	check_isinstalled
         install_libs
 
         extract_binutils

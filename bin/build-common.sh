@@ -8,6 +8,11 @@
 #
 # Updated by Sam Lantinga <slouken@libsdl.org>
 
+# Create User-Config, if missing it. But do not overwrite it.
+if [ ! -f user-build.cfg -a -f sample.user-build.cfg ] ; then
+	cp -a sample.user-build.cfg user-build.cfg
+fi
+
 # Users directories
 source ./user-build.cfg
 

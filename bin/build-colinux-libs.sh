@@ -9,7 +9,8 @@ FLTK_URL=http://heanet.dl.sourceforge.net/sourceforge/fltk
 FLTK_ARCHIVE=$FLTK-source.tar.bz2
 
 MXML=mxml-1.3
-MXML_URL=http://www.easysw.com/~mike/mxml
+MXML_URL=http://www.easysw.com/~mike/mxml/swfiles
+# a mirror http://gniarf.nerim.net/colinux
 MXML_ARCHIVE=$MXML.tar.gz
 
 W32API_SRC=$W32API
@@ -29,6 +30,14 @@ download_files()
 	download_file "$MXML_ARCHIVE" "$MXML_URL"
 	download_file "$W32API_SRC_ARCHIVE" "$MINGW_URL"
 	download_file "$WINPCAP_SRC_ARCHIVE" "$WINPCAP_URL"
+}
+
+check_isinstalled()
+{
+	if [ -f $PREFIX/$TARGET/lib/libfltk.a -a -f $PREFIX/$TARGET/lib/libmxml.a ] ; then
+		echo "Skip libfltk.a,libmxml.a, already installed on $PREFIX/$TARGET/lib"
+		exit 0
+	fi
 }
 
 #
@@ -243,6 +252,7 @@ build_colinux_libs()
         download_files
 	# Only Download? Than ready.
 	test "$1" = "--download-only" && exit 0
+	check_isinstalled
 	build_fltk
 	build_mxml
 	build_w32api_src
