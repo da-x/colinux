@@ -444,8 +444,8 @@ check_exec_tool "make" "make --version" ""
 check_exec_tool "gnu/gcc" "gcc -dumpversion" "$gnugcc_needed" || gcc_helper
 
 # for FLTK (winnt and linux)
-check_exec_tool "xorg x11 lib" "xcursor-config --version" ""
-check_exec_tool "xorg x11 devel" "xft-config --version" ""
+#check_exec_tool "xorg x11 lib" "xcursor-config --version" ""
+#check_exec_tool "xorg x11 devel" "xft-config --version" ""
 
 case $colinux_os in
   linux) # for Linux as host

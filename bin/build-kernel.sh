@@ -38,7 +38,7 @@ check_md5sums()
 {
 	echo "Check md5sum"
 	cd "$TOPDIR/.."
-	if md5sum --check $CHECKSUM_FILE >>$COLINUX_BUILD_LOG 2>&1 ; then
+	if md5sum -c $CHECKSUM_FILE >>$COLINUX_BUILD_LOG 2>&1 ; then
 		echo "Skip vmlinux,modules-$COMPLETE_KERNEL_NAME.tar.gz"
 		echo " - already installed on $COLINUX_INSTALL_DIR"
 		exit 0
@@ -50,7 +50,7 @@ create_md5sums()
 {
 	echo "Create md5sum"
 	cd "$TOPDIR/.."
-	md5sum --binary \
+	md5sum -b \
 	    patch/linux \
 	    conf/linux-config \
 	    $COLINUX_INSTALL_DIR/modules-$COMPLETE_KERNEL_NAME.tar.gz \
@@ -60,7 +60,7 @@ create_md5sums()
 	    > $CHECKSUM_FILE
 	test $? -ne 0 && error_exit 1 "can not create md5sum"
 	if [ -f patch/$PRIVATE_PATCH ]; then
-		md5sum --binary patch/$PRIVATE_PATCH >> $CHECKSUM_FILE
+		md5sum -b patch/$PRIVATE_PATCH >> $CHECKSUM_FILE
 	fi
 	cd "$TOPDIR"
 }
@@ -82,8 +82,6 @@ extract_kernel()
 
 patch_kernel()
 {
-	cd "$TOPDIR"
-        ln -s "$SRCDIR/$KERNEL" "$COLINUX_TARGET_KERNEL_PATH"
 	cd "$COLINUX_TARGET_KERNEL_PATH"
 	# A minor hack for now.  allowing linux patch to be 'version specific' 
 	#  in the future, but keeping backwards compatability.
@@ -113,9 +111,6 @@ configure_kernel()
 	make silentoldconfig >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "Kernel $KERNEL_VERSION config failed (check 'make oldconfig' on kerneltree)"
 
-	echo "Dep Kernel $KERNEL_VERSION"
-	make dep >>$COLINUX_BUILD_LOG 2>&1
-	test $? -ne 0 && error_exit 1 "Kernel $KERNEL_VERSION dep failed"
 	cd "$TOPDIR"
 }
 

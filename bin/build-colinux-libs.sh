@@ -36,7 +36,7 @@ check_md5sums()
 {
 	echo "Check md5sum"
 	cd "$TOPDIR/.."
-	if md5sum --check $CHECKSUM_FILE >>$COLINUX_BUILD_LOG 2>&1 ; then
+	if md5sum -c $CHECKSUM_FILE >>$COLINUX_BUILD_LOG 2>&1 ; then
 		echo "Skip libfltk.a,libmxml.a,libwin32k.a"
 		echo " - already installed on $PREFIX/$TARGET/lib"
 		exit 0
@@ -48,7 +48,7 @@ create_md5sums()
 {
 	echo "Create md5sum"
 	cd "$TOPDIR/.."
-	md5sum --binary \
+	md5sum -b \
 	    patch/$FLTK-win32.diff \
 	    patch/$W32API_SRC.diff \
 	    $PREFIX/$TARGET/lib/libfltk.a \

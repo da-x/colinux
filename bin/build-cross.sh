@@ -9,9 +9,9 @@ GCC=gcc-3.3.1-20030804-1
 GCC_ARCHIVE1=gcc-core-3.3.1-20030804-1-src.tar.gz
 GCC_ARCHIVE2=gcc-g++-3.3.1-20030804-1-src.tar.gz
 GCC_PATCH=""
-BINUTILS=binutils-2.15.90-20040222-1
+BINUTILS=binutils-2.15.91-20040904-1
 BINUTILS_ARCHIVE=$BINUTILS-src.tar.gz
-MINGW=mingw-runtime-3.3
+MINGW=mingw-runtime-3.6
 MINGW_ARCHIVE=$MINGW.tar.gz
 W32API_ARCHIVE=$W32API.tar.gz
 
@@ -31,7 +31,7 @@ download_files()
 check_md5sums()
 {
 	echo "Check md5sum"
-	if md5sum --check $CHECKSUM_FILE >>$COLINUX_BUILD_LOG 2>&1 ; then
+	if md5sum -c $CHECKSUM_FILE >>$COLINUX_BUILD_LOG 2>&1 ; then
 		echo "Skip $TARGET-windres,$TARGET-ar,$TARGET-gcc"
 		echo " - already installed on $PREFIX/bin"
 		exit 0
@@ -41,7 +41,7 @@ check_md5sums()
 create_md5sums()
 {
 	echo "Create md5sum"
-	md5sum --binary \
+	md5sum -b \
 	    $GCC_PATCH \
 	    $PREFIX/bin/$TARGET-windres \
 	    $PREFIX/bin/$TARGET-ar \
@@ -51,7 +51,7 @@ create_md5sums()
 	    > $CHECKSUM_FILE
 	test $? -ne 0 && error_exit 1 "can not create md5sum"
 	if [ "$GCC_PATCH" != "" ]; then
-		md5sum --binary $SRCDIR/$GCC_PATCH >> $CHECKSUM_FILE
+		md5sum -b $SRCDIR/$GCC_PATCH >> $CHECKSUM_FILE
 	fi
 }
 

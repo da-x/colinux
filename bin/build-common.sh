@@ -112,5 +112,5 @@ error_exit()
 	exit $1
 }
 
-W32API=w32api-3.1
+W32API=w32api-3.2
 MINGW_URL=http://heanet.dl.sourceforge.net/sourceforge/mingw

@@ -21,10 +21,12 @@ unsigned long co_os_virt_to_phys(void *addr)
 	return pa.QuadPart;
 }
 
+#if 0
 unsigned long co_os_current_processor(void)
 {
 	return KeGetCurrentProcessorNumber();
 }
+#endif
 
 co_rc_t co_os_physical_memory_pages(unsigned long *pages)
 {
