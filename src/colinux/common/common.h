@@ -106,8 +106,6 @@ typedef pgd_t linux_pgd_t;
 
 #include <linux/cooperative.h>
 
-#include <colinux/common/context.h>
-
 #include "debug.h"
 
 #ifndef NULL

@@ -11,7 +11,6 @@
 #define __COLINUX_COMMON_IOCTL_H__
 
 #include "common.h"
-#include "keyboard.h"
 
 #include <colinux/common/import.h>
 #include <colinux/common/config.h>
@@ -45,11 +44,6 @@ typedef enum {
 	CO_MONITOR_IOCTL_LOAD_SECTION, 
 	CO_MONITOR_IOCTL_START,
 	CO_MONITOR_IOCTL_RUN,
-
-	CO_MONITOR_IOCTL_KEYBOARD, 
-	CO_MONITOR_IOCTL_TERMINATE, 
-	CO_MONITOR_IOCTL_SYSDEP, 
-
 	CO_MONITOR_IOCTL_STATUS,
 } co_monitor_ioctl_op_t;
 
@@ -104,18 +98,6 @@ typedef struct {
 		} terminated;
 	};
 } co_daemon_message_t;
-
-/* interface for CO_MONITOR_IOCTL_KEYBOARD: */
-typedef enum {
-	CO_OPERATION_KEYBOARD_ACTION,
-} co_operation_keyboard_t;
-
-typedef struct co_monitor_ioctl_keyboard {
-	co_manager_ioctl_monitor_t pc;
-	co_operation_keyboard_t op;
-	co_scan_code_t sc;
-	int down;
-} co_monitor_ioctl_keyboard_t;
 
 /* interface for CO_MONITOR_IOCTL_STATUS */
 typedef struct co_monitor_ioctl_status {

@@ -25,8 +25,8 @@ extern "C" {
 #include <colinux/user/monitor.h>
 #include <colinux/user/manager.h>
 #include <colinux/common/console.h>
-#include <colinux/common/keyboard.h>
-#include <colinux/os/user/poll.h>
+#include <colinux/os/user/daemon.h>
+#include "daemon.h"
 }
 
 #include "widget.h"
@@ -75,9 +75,8 @@ public:
 	co_rc_t terminate();
 	void idle();
 	void select_monitor();
-	void poll_callback(co_os_poll_t poll);
 
-	void handle_message(co_console_message_t *message);
+	void handle_message(co_message_t *message);
 	void handle_scancode(co_scan_code_t sc);
 
 	void log(const char *format, ...);
@@ -88,10 +87,8 @@ protected:
 	console_widget_t *widget;
 	console_main_window_t *window;
 	co_console_start_parameters_t start_parameters;
-	co_os_poll_t poll;
-	co_os_poll_chain_t poll_chain;
-	co_user_monitor_t *monitor_handle;
 	unsigned char poll_buffer[0x1000];
+	co_daemon_handle_t daemon_handle;
 
 	Fl_Menu_Bar *menu;
 	Fl_Text_Display *text_widget;

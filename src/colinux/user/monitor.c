@@ -130,25 +130,12 @@ co_rc_t co_user_monitor_any(co_user_monitor_t *umon, co_monitor_ioctl_op_t op)
 	return co_manager_io_monitor_simple(umon->handle, op); 
 }
 
-co_rc_t co_user_monitor_keyboard(co_user_monitor_t *umon, 
-				 co_monitor_ioctl_keyboard_t *params)
-{
-	return co_manager_io_monitor_unisize(umon->handle, CO_MONITOR_IOCTL_KEYBOARD, 
-					     &params->pc, sizeof(*params));
-}
-
 co_rc_t co_user_monitor_status(co_user_monitor_t *umon, 
 			       co_monitor_ioctl_status_t *params)
 {
 	return co_manager_io_monitor_unisize(umon->handle, 
 					     CO_MONITOR_IOCTL_STATUS, 
 					     &params->pc, sizeof(*params));
-}
-
-co_rc_t co_user_monitor_terminate(co_user_monitor_t *umon)
-{
-	return co_manager_io_monitor_simple(umon->handle, 
-					    CO_MONITOR_IOCTL_TERMINATE);
 }
 
 co_rc_t co_user_monitor_destroy(co_user_monitor_t *umon)

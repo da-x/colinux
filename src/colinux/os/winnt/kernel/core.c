@@ -23,92 +23,10 @@ co_rc_t co_monitor_os_init(co_monitor_t *cmon)
 		return CO_RC(OUT_OF_MEMORY);
 	}
 
-	KeInitializeEvent(&cmon->osdep->console_event, SynchronizationEvent, FALSE);
-	KeInitializeEvent(&cmon->osdep->network_event, SynchronizationEvent, FALSE);
-	KeInitializeEvent(&cmon->osdep->interrupt_event, SynchronizationEvent, FALSE);
-
-	KeInitializeEvent(&cmon->osdep->exclusiveness, NotificationEvent, FALSE);
-	KeInitializeEvent(&cmon->osdep->debugstop, SynchronizationEvent, FALSE);
-	KeInitializeEvent(&cmon->osdep->console_detach, SynchronizationEvent, FALSE);
-
 	return rc;
 }
 
 void co_monitor_os_exit(co_monitor_t *cmon)
 {
 	co_os_free(cmon->osdep);
-}
-
-void co_monitor_os_cancel_userspace(co_monitor_t *cmon)
-{
-}
-
-void co_monitor_os_network_poll(co_monitor_t *cmon)
-{
-	KeWaitForSingleObject(&cmon->osdep->network_event, UserRequest, 
-			      KernelMode, FALSE, NULL);
-}
-
-void co_monitor_os_network_event(co_monitor_t *cmon)
-{
-	KeSetEvent(&cmon->osdep->network_event, 1, FALSE);
-}
-
-void co_monitor_os_console_poll(co_monitor_t *cmon)
-{
-	KeWaitForSingleObject(&cmon->osdep->console_event, UserRequest, 
-			      KernelMode, FALSE, NULL);
-}
-
-void co_monitor_os_console_event(co_monitor_t *cmon)
-{
-	KeSetEvent(&cmon->osdep->console_event, 1, FALSE);
-}
-
-void co_monitor_os_idle(co_monitor_t *cmon)
-{
-	KeWaitForSingleObject(&cmon->osdep->interrupt_event, UserRequest, 
-			      KernelMode, FALSE, NULL);
-}
-
-void co_monitor_os_wakeup(co_monitor_t *cmon)
-{
-	KeSetEvent(&cmon->osdep->interrupt_event, 1, FALSE);
-}
-
-#if (0)
-unsigned long co_monitor_os_sysdep_ioctl(co_monitor_t *cmon, co_sysdep_ioctl_t *params)
-{
-	switch (params->op) {
-	case CO_OS_SYSDEP_SET_NETDEV: {
-		DbgPrint("Network device used: %s\n", params->set_netdev.pathname);
-		break;
-	}
-	}
-
-	return 0;
-}
-
-#endif
-
-void co_monitor_os_exclusive(co_monitor_t *cmon)
-{
-	KeSetEvent(&cmon->osdep->exclusiveness, 1, FALSE);
-}
-
-void co_monitor_os_clear_console_detach_event(co_monitor_t *cmon)
-{
-	KeClearEvent(&cmon->osdep->console_detach);
-}
-
-void co_monitor_os_set_console_detach_event(co_monitor_t *cmon)
-{
-	KeSetEvent(&cmon->osdep->console_detach, 1, FALSE);
-}
-
-void co_monitor_os_wait_console_detach(co_monitor_t *cmon)
-{
-	KeWaitForSingleObject(&cmon->osdep->console_detach,
-			      UserRequest, KernelMode,
-			      FALSE, NULL);
 }

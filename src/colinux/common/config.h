@@ -64,7 +64,7 @@ typedef struct co_config {
 	/*
 	 * Parameters passed to the kernel at boot.
 	 */
-	unsigned char boot_parameters_line[0x100];
+	char boot_parameters_line[CO_BOOTPARAM_STRING_LENGTH];
 } co_config_t;
 
 #endif

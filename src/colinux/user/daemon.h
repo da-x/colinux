@@ -13,9 +13,11 @@
 
 #include <colinux/common/config.h>
 #include <colinux/common/messages.h>
+#include <colinux/common/console.h>
 
 #include "elf_load.h"
 #include "monitor.h"
+#include "console/daemon.h"
 
 typedef struct co_daemon_start_parameters {
 	co_pathname_t config_path;
@@ -28,6 +30,8 @@ typedef struct co_daemon {
 	co_config_t config;
 	co_elf_data_t elf_data;
 	co_user_monitor_t *monitor;
+	co_console_t *console;
+	struct co_connected_module *console_module;
 	co_message_switch_t message_switch;
 	co_list_t connected_modules;
 	co_queue_t up_queue;

@@ -29,22 +29,22 @@ static inline int co_list_empty(co_list_t *list)
 	return (list->next == list);
 }
 
-static inline void co_list_add(co_list_t *new, co_list_t *prev, co_list_t *next)
+static inline void co_list_add(co_list_t *new_, co_list_t *prev, co_list_t *next)
 {
-	next->prev = new;
-	new->next = next;
-	new->prev = prev;
-	prev->next = new;
+	next->prev = new_;
+	new_->next = next;
+	new_->prev = prev;
+	prev->next = new_;
 }
 
-static inline void co_list_add_head(co_list_t *new, co_list_t *head)
+static inline void co_list_add_head(co_list_t *new_, co_list_t *head)
 {
-	co_list_add(new, head, head->next);
+	co_list_add(new_, head, head->next);
 }
 
-static inline void co_list_add_tail(co_list_t *new, co_list_t *head)
+static inline void co_list_add_tail(co_list_t *new_, co_list_t *head)
 {
-	co_list_add(new, head->prev, head);
+	co_list_add(new_, head->prev, head);
 }
 
 static inline void co_list_unlink(co_list_t *prev, co_list_t *next)

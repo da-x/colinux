@@ -35,12 +35,8 @@ extern co_rc_t co_user_monitor_run(co_user_monitor_t *umon, co_monitor_ioctl_run
 				   unsigned long in_size, unsigned long out_size);
 extern co_rc_t co_user_monitor_start(co_user_monitor_t *umon);
 
-extern co_rc_t co_user_monitor_keyboard(co_user_monitor_t *umon, 
-					co_monitor_ioctl_keyboard_t *params);
-
 extern co_rc_t co_user_monitor_status(co_user_monitor_t *umon, 
 				      co_monitor_ioctl_status_t *status);
-extern co_rc_t co_user_monitor_terminate(co_user_monitor_t *umon);
 
 extern co_rc_t co_user_monitor_destroy(co_user_monitor_t *umon);
 

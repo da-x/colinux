@@ -10,9 +10,11 @@
 
 #include <stdio.h>
 #include <windows.h>
+#include <stdarg.h>
 
 #include <colinux/user/daemon.h>
 #include <colinux/user/monitor.h>
+#include <colinux/user/manager.h>
 #include <colinux/os/user/manager.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/pipe.h>

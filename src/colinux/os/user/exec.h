@@ -5,12 +5,14 @@
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
+ *
  */
 
-#include <linux/kernel.h>
-#include <colinux/os/kernel/monitor.h>
+#ifndef __COLINUX_OS_USER_EXEC_H__
+#define __COLINUX_OS_USER_EXEC_H__
 
-#include <memory.h>
+#include <colinux/common/common.h>
 
-#include "console.h"
+extern co_rc_t co_launch_process(char *command_line, ...);
 
+#endif

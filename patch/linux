@@ -147,7 +147,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/Makefile linux/arch/i386/kernel
  ifdef CONFIG_PCI
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/kernel/cooperative.c
 --- linux/arch/i386/kernel/cooperative.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/arch/i386/kernel/cooperative.c	2004-02-07 19:42:27.000000000 +0200
++++ linux/arch/i386/kernel/cooperative.c	2004-02-07 23:41:53.000000000 +0200
 @@ -0,0 +1,93 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
@@ -191,13 +191,12 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/k
 +
 +		break;
 +	}
-+#if (0)
 +	case CO_DEVICE_KEYBOARD: {
-+		unsigned long scancode = params[0];
++		co_scan_code_t *sc = (co_scan_code_t *)message->data;
++		unsigned long scancode = sc->code;
 +		struct pt_regs regs;
-+		int down = params[1];
 + 
-+		if (!down)
++		if (!sc->down)
 +			scancode |= 0x80;
 +
 +		kbd_scancode = scancode;
@@ -207,6 +206,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/k
 +
 +		break;
 +	}
++#if (0)
 +	case CO_DEVICE_POWER: {
 +		/* 
 +		 * Emergency shutdown here.
@@ -574,7 +574,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/process.c linux/arch/i386/kerne
  }
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/setup.c
 --- linux/arch/i386/kernel/setup.c	2004-02-02 22:53:38.000000000 +0200
-+++ linux/arch/i386/kernel/setup.c	2003-12-26 18:35:17.000000000 +0200
++++ linux/arch/i386/kernel/setup.c	2004-02-08 00:49:28.000000000 +0200
 @@ -108,6 +108,7 @@
  #include <asm/processor.h>
  #include <linux/console.h>
@@ -583,15 +583,17 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/
  #include <asm/mtrr.h>
  #include <asm/uaccess.h>
  #include <asm/system.h>
-@@ -778,9 +779,16 @@
+@@ -778,9 +779,18 @@
  	int len = 0;
  	int userdef = 0;
  
 +#ifdef CONFIG_COOPERATIVE
-+	/* This should be changed some time in the future, so it
-+	   would be passed from the user interface */
-+	from = "root=/dev/cobd0";
-+	snprintf(saved_command_line, COMMAND_LINE_SIZE, "%s", from);
++	/*
++	 * Better to have 'root=/dev/cobd0' here.
++	 */
++	from = co_boot_parameters;
++	snprintf(saved_command_line, COMMAND_LINE_SIZE, "%s", 
++		 co_boot_parameters);
 +#else
  	/* Save unparsed command line copy for /proc/cmdline */
  	memcpy(saved_command_line, COMMAND_LINE, COMMAND_LINE_SIZE);
@@ -600,7 +602,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/
  
  	for (;;) {
  		if (c != ' ')
-@@ -1014,16 +1022,23 @@
+@@ -1014,16 +1024,23 @@
  static unsigned long __init setup_memory(void)
  {
  	unsigned long bootmap_size, start_pfn, max_low_pfn;
@@ -625,7 +627,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/
  
  #ifdef CONFIG_HIGHMEM
  	highstart_pfn = highend_pfn = max_pfn;
-@@ -1035,12 +1050,19 @@
+@@ -1035,12 +1052,19 @@
  #endif
  	printk(KERN_NOTICE "%ldMB LOWMEM available.\n",
  			pages_to_mb(max_low_pfn));
@@ -646,7 +648,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/
  
  	/*
  	 * Reserve the bootmem bitmap itself as well. We do this in two
-@@ -1094,7 +1116,7 @@
+@@ -1094,7 +1118,7 @@
  		}
  	}
  #endif
@@ -655,7 +657,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/
  	return max_low_pfn;
  }
   
-@@ -1146,7 +1168,9 @@
+@@ -1146,7 +1170,9 @@
  
  void __init setup_arch(char **cmdline_p)
  {
@@ -665,7 +667,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/
  
  #ifdef CONFIG_VISWS
  	visws_get_board_type_and_rev();
-@@ -1156,6 +1180,7 @@
+@@ -1156,6 +1182,7 @@
  	blk_nohighio = 1;
  #endif
  
@@ -673,7 +675,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/
   	ROOT_DEV = to_kdev_t(ORIG_ROOT_DEV);
   	drive_info = DRIVE_INFO;
   	screen_info = SCREEN_INFO;
-@@ -1173,7 +1198,10 @@
+@@ -1173,7 +1200,10 @@
  	rd_prompt = ((RAMDISK_FLAGS & RAMDISK_PROMPT_FLAG) != 0);
  	rd_doload = ((RAMDISK_FLAGS & RAMDISK_LOAD_FLAG) != 0);
  #endif
@@ -684,7 +686,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/
  	copy_edd();
  
  	if (!MOUNT_ROOT_RDONLY)
-@@ -1200,8 +1228,10 @@
+@@ -1200,8 +1230,10 @@
  #ifdef CONFIG_SMP
  	smp_alloc_memory(); /* AP processor realmode stacks in low memory*/
  #endif
@@ -695,7 +697,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/
  	dmi_scan_machine();
  
  	/*
-@@ -1218,14 +1248,19 @@
+@@ -1218,14 +1250,19 @@
  #endif
  
  	register_memory(max_low_pfn);
@@ -715,7 +717,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/
  }
  
  static int cachesize_override __initdata = -1;
-@@ -3183,29 +3218,41 @@
+@@ -3183,29 +3220,41 @@
  	if(current->mm)
  		BUG();
  	enter_lazy_tlb(&init_mm, current, nr);
@@ -2934,7 +2936,7 @@ diff -X bin/dontdiff -urN linux/drivers/video/Makefile linux/drivers/video/Makef
  obj-$(CONFIG_FONT_SUN8x16)        += font_sun8x16.o
 diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.c
 --- linux/drivers/video/cocon.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/drivers/video/cocon.c	2004-02-07 21:36:55.000000000 +0200
++++ linux/drivers/video/cocon.c	2004-02-07 23:52:16.000000000 +0200
 @@ -0,0 +1,351 @@
 +/*
 + *  linux/drivers/video/vgacon.c -- Low level VGA based console driver
@@ -3134,7 +3136,7 @@ diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.
 +	switch (mode) {
 +	case CM_ERASE:
 +		message->cursor.start = 0;
-+		message->cursor.end = CO_CURSOR_POS_SIZE;
++		message->cursor.end = 0;
 +		break;
 +	case CM_MOVE:
 +	case CM_DRAW:
@@ -3386,7 +3388,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/desc.h linux/include/asm-i386/d
  #define __TSS(n) (((n)<<2) + __FIRST_TSS_ENTRY)
 diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dma.h
 --- linux/include/asm-i386/dma.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/dma.h	2004-02-07 21:18:05.000000000 +0200
++++ linux/include/asm-i386/dma.h	2004-02-08 00:43:12.000000000 +0200
 @@ -268,6 +268,8 @@
   *
   * Assumes DMA flip-flop is clear.
@@ -3407,7 +3409,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dm
  extern int request_dma(unsigned int dmanr, const char * device_id);	/* reserve a DMA channel */
 diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.h
 --- linux/include/asm-i386/io.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/io.h	2004-02-07 21:18:05.000000000 +0200
++++ linux/include/asm-i386/io.h	2004-02-08 00:43:12.000000000 +0200
 @@ -2,6 +2,7 @@
  #define _ASM_IO_H
  
@@ -3693,8 +3695,8 @@ diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/cons
  
 diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/cooperative.h
 --- linux/include/linux/cooperative.h	1970-01-01 02:00:00.000000000 +0200
-+++ linux/include/linux/cooperative.h	2004-02-07 21:12:22.000000000 +0200
-@@ -0,0 +1,231 @@
++++ linux/include/linux/cooperative.h	2004-02-08 00:42:41.000000000 +0200
+@@ -0,0 +1,240 @@
 +#ifndef __LINUX_COOPERATIVE_H__
 +#define __LINUX_COOPERATIVE_H__
 +
@@ -3710,6 +3712,10 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +#ifdef CONFIG_COOPERATIVE
 +
 +#include <asm/cooperative.h>
++
++#define CO_BOOTPARAM_STRING_LENGTH 0x100
++
++extern char co_boot_parameters[CO_BOOTPARAM_STRING_LENGTH];
 +
 +typedef enum {
 +	CO_OPERATION_EMPTY=0,
@@ -3771,6 +3777,11 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +
 +	CO_DEVICES_TOTAL,
 +} co_device_t;
++
++typedef struct {
++	unsigned char code;
++	int down;
++} co_scan_code_t;
 +
 +typedef struct {
 +	co_device_t device;
@@ -4001,8 +4012,8 @@ diff -X bin/dontdiff -urN linux/kernel/Makefile linux/kernel/Makefile
  obj-$(CONFIG_MODULES) += ksyms.o
 diff -X bin/dontdiff -urN linux/kernel/cooperative.c linux/kernel/cooperative.c
 --- linux/kernel/cooperative.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/kernel/cooperative.c	2004-02-07 21:09:21.000000000 +0200
-@@ -0,0 +1,211 @@
++++ linux/kernel/cooperative.c	2004-02-08 00:43:09.000000000 +0200
+@@ -0,0 +1,213 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -4029,6 +4040,7 @@ diff -X bin/dontdiff -urN linux/kernel/cooperative.c linux/kernel/cooperative.c
 +unsigned long co_bootmem_pages = 0;
 +unsigned long co_memory_size = 0;
 +unsigned long co_rpptm_size = 0;
++char co_boot_parameters[CO_BOOTPARAM_STRING_LENGTH];
 +
 +void colinux_start_c(co_arch_passage_page_t *passage_page)
 +{
@@ -4039,7 +4051,8 @@ diff -X bin/dontdiff -urN linux/kernel/cooperative.c linux/kernel/cooperative.c
 +	co_bootmem_pages = co_passage_page->params[1];
 +	co_memory_size = co_passage_page->params[2];
 +	co_rpptm_size = co_passage_page->params[3];
-+
++	memcpy(co_boot_parameters, &co_passage_page->params[4], 
++	       sizeof(co_boot_parameters));
 +	/* 
 +	 * Now that we know the address of the passage page, 
 +	 * we can switch back.

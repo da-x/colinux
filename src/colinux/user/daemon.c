@@ -11,6 +11,7 @@
 #include <colinux/os/user/file.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/pipe.h>
+#include <colinux/os/user/exec.h>
 #include <colinux/os/alloc.h>
 #include <colinux/os/timer.h>
 
@@ -127,15 +128,22 @@ co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **
 	memcpy(daemon->config.config_path, start_parameters->config_path, 
 	       sizeof(start_parameters->config_path));
 
+        rc = co_console_create(80, 25, 25, &daemon->console);
+        if (!CO_OK(rc))
+                goto out_free;
+
 	rc = co_load_config_file(daemon);
 	if (!CO_OK(rc)) {
 		co_debug("Error loading configuration\n");
-		goto out_free;
+		goto out_free_console;
 	}
 
 	*co_daemon_out = daemon;
 	return rc;
 
+out_free_console:
+	co_console_destroy(daemon->console);
+	
 out_free:
 	co_os_free(daemon);
 
@@ -271,6 +279,71 @@ out:
 	return rc;
 }
 
+co_rc_t co_daemon_handle_console(void *data, co_message_t *message)
+{
+	co_daemon_t *daemon = (typeof(daemon))(data);
+	co_rc_t rc = CO_RC(OK);
+
+	if (daemon->console != NULL) {
+		rc = co_console_op(daemon->console, ((co_console_message_t *)message->data));
+		co_os_free(message);
+	}
+
+	return rc;
+}
+
+co_rc_t co_daemon_handle_console_connection(co_connected_module_t *module)
+{
+	co_console_t *console;
+	co_rc_t rc = CO_RC(OK);
+
+	console = module->daemon->console;
+
+	if (console != NULL) {
+		struct {
+			co_message_t message;
+			co_daemon_console_message_t console;
+			char data[0];
+		} *message;
+
+		module->daemon->console_module = module;
+		module->daemon->console = NULL;
+
+		co_console_pickle(console);
+
+		message = (typeof(message))(co_os_malloc(sizeof(*message)+console->size));
+
+		if (message) {
+			message->message.to = CO_MODULE_CONSOLE;
+			message->message.from = CO_MODULE_DAEMON;
+			message->message.size = sizeof(message->console) + console->size;
+			message->message.type = CO_MESSAGE_TYPE_STRING;
+			message->message.priority = CO_PRIORITY_IMPORTANT;
+			message->console.type = CO_DAEMON_CONSOLE_MESSAGE_ATTACH;
+			message->console.size = console->size;
+
+			memcpy(message->data, console, console->size);
+
+			rc = co_os_pipe_server_send(module->connection, (char *)message, 
+						    sizeof(*message) + console->size);
+
+			co_os_free(message);
+		}
+
+		co_console_unpickle(console);
+		co_console_destroy(console);
+	}
+
+	return rc;
+}
+
+co_rc_t co_daemon_handle_console_disconnection(co_connected_module_t *connection)
+{
+	connection->daemon->console_module = NULL;
+
+	return CO_RC(OK);
+}
+
 co_rc_t co_daemon_handle_printk(void *data, co_message_t *message)
 {
 	if (message->type == CO_MESSAGE_TYPE_STRING) {
@@ -292,15 +365,42 @@ co_rc_t co_daemon_handle_printk(void *data, co_message_t *message)
 co_rc_t co_daemon_handle_daemon(void *data, co_message_t *message)
 {
 	co_daemon_t *daemon = (typeof(daemon))(data);
-	struct {
-		co_message_t message;
-		co_daemon_message_t payload;
-	} *daemon_message;
 
-	daemon_message = (typeof(daemon_message))(message);
-	if (daemon_message->payload.type == CO_MONITOR_MESSAGE_TYPE_TERMINATED) {
-		co_debug("Monitor terminated, reason %d\n", daemon_message->payload.terminated.reason);
-		daemon->running = PFALSE;
+	if (message->from == CO_MODULE_MONITOR) {
+		struct {
+			co_message_t message;
+			co_daemon_message_t payload;
+		} *daemon_message;
+		
+		daemon_message = (typeof(daemon_message))(message);
+
+		if (daemon_message->payload.type == CO_MONITOR_MESSAGE_TYPE_TERMINATED) {
+			co_debug("Monitor terminated, reason %d\n", daemon_message->payload.terminated.reason);
+			daemon->running = PFALSE;
+		}
+	} else if (message->from == CO_MODULE_CONSOLE) {
+		struct {
+			co_message_t message;
+			co_daemon_console_message_t console;
+			char data[0];
+		} *console_message;
+
+		console_message = (typeof(console_message))message;
+
+		if (console_message->console.type == CO_DAEMON_CONSOLE_MESSAGE_DETACH) {
+			co_console_t *console;
+
+			console = (co_console_t *)co_os_malloc(console_message->console.size);
+			if (console) {
+				memcpy(console, console_message->data, console_message->console.size);
+				co_console_unpickle(console);
+				
+				daemon->console = console;
+			}
+		} else if (console_message->console.type == CO_DAEMON_CONSOLE_MESSAGE_TERMINATE) {
+			co_debug("Termination requested by console\n");
+			daemon->running = PFALSE;			
+		}
 	}
 
 	co_os_free(message);
@@ -380,12 +480,15 @@ co_rc_t co_daemon_pipe_cb_packet(co_os_pipe_connection_t *conn,
 			module->id = id;
 			module->state = CO_CONNECTED_MODULE_STATE_IDENTIFIED;
 
-			if (id == CO_MODULE_CONSOLE)	
+			if (id == CO_MODULE_CONSOLE)
 				snprintf(module->name, sizeof(module->name), "console");
 			else
 				snprintf(module->name, sizeof(module->name), "conet%d", id - CO_MODULE_CONET0);
 
-			co_debug("daemon connected: %s\n", module->name);
+			co_debug("Module connected: %s\n", module->name);
+
+			if (module->id == CO_MODULE_CONSOLE)
+				co_daemon_handle_console_connection(module);
 
 			rc = co_message_switch_set_rule(&module->daemon->message_switch, id, 
 							co_daemon_pipe_cb_packet_send, module);
@@ -401,7 +504,7 @@ co_rc_t co_daemon_pipe_cb_packet(co_os_pipe_connection_t *conn,
 				message.message.type = CO_MESSAGE_TYPE_OTHER;
 				message.message.size = sizeof(message.switchm);
 				message.switchm.type = CO_SWITCH_MESSAGE_SET_REROUTE_RULE;
-				message.switchm.destination = CO_MODULE_CONET0;
+				message.switchm.destination = module->id;
 				message.switchm.reroute_destination = CO_MODULE_USER_SWITCH;
 
 				co_message_switch_dup_message(&module->daemon->message_switch, &message.message);
@@ -413,14 +516,14 @@ co_rc_t co_daemon_pipe_cb_packet(co_os_pipe_connection_t *conn,
 
 			/* Validate mesasge size */
 			if (message->size + sizeof(*message) != packet_size) {
-				co_debug("invalid message: %d != %d\n", message->size + sizeof(*message), 
+				co_debug("Invalid message: %d != %d\n", message->size + sizeof(*message), 
 					 packet_size);
 				break;
 			}
 
 			/* Prevent module impersonation */
 			if (message->from != module->id) {
-				co_debug("invalid message id: %d != %d\n", 
+				co_debug("Invalid message id: %d != %d\n", 
 					 message->from, module->id);
 				break;
 			}
@@ -458,7 +561,10 @@ void co_daemon_pipe_cb_disconnected(co_os_pipe_connection_t *conn,
 		co_message_switch_dup_message(&module->daemon->message_switch, &message.message);
 		co_message_switch_free_rule(&module->daemon->message_switch, module->id);
 
-		co_debug("daemon disconnected: %s %x\n", module->name, conn);
+		co_debug("Module disconnected: %s\n", module->name);
+
+		if (module->id == CO_MODULE_CONSOLE)
+			co_daemon_handle_console_disconnection(module);
 	}
 	
 	co_list_del(&module->node);
@@ -541,11 +647,20 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	rc = co_message_switch_set_rule(&daemon->message_switch, CO_MODULE_DAEMON, 
 					co_daemon_handle_daemon, daemon);
 
+
 	if (!CO_OK(rc))
 		goto out;
 
+	rc = co_message_switch_set_rule(&daemon->message_switch, CO_MODULE_CONSOLE,
+					co_daemon_handle_console, daemon);
+
+	if (!CO_OK(rc))
+		goto out;
+
+
 	rc = co_message_switch_set_rule(&daemon->message_switch, CO_MODULE_IDLE, 
 					co_daemon_handle_idle, daemon);
+
 
 	if (!CO_OK(rc))
 		goto out;
@@ -562,6 +677,22 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	if (!CO_OK(rc))
 		goto out;
 
+	co_debug("Launching net daemon\n");
+	rc = co_launch_process("colinux-net-daemon");
+	if (!CO_OK(rc)) {
+		co_debug("Error launching net daemon\n");
+		goto out;
+	}
+
+	if (daemon->start_parameters->launch_console) {
+		co_debug("Launching console\n");
+		rc = co_launch_process("colinux-console -a 0");
+		if (!CO_OK(rc)) {
+			co_debug("Error launching console\n");
+			goto out;
+		}
+	}
+
 	daemon->running = PTRUE;
 	while (daemon->running) {
 		co_monitor_ioctl_run_t *params;
@@ -577,7 +708,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 				       ((((char *)buf) + sizeof(buf)) - params->data), 
 				       &params->num_messages, &write_size);
 
-		rc = co_user_monitor_run(daemon->monitor, buf, sizeof(*params) + write_size, sizeof(buf));
+		rc = co_user_monitor_run(daemon->monitor, params, sizeof(*params) + write_size, sizeof(buf));
 
 		param_data = params->data;
 

@@ -26,7 +26,7 @@ $(LOCAL_EXE) : \
 	$(LOCAL_OBJS)
 
 	$(GPP) $^ -o $@ -luser32 -lgdi32 -lkernel32 -lfltk \
-        -lole32 -luuid -lgdi32 -lmxml -Wl,--subsystem,windows
+        -lole32 -luuid -lgdi32 -lmxml # -Wl,--subsystem,windows
 
 CLEAN_FILES := $(CLEAN_FILES) \
 	$(LOCAL_OBJS) $(LOCAL_EXE)

@@ -5,15 +5,18 @@
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
- */
+ */ 
 
-#ifndef __COLINUX_COMMON_CONTEXT_H__
-#define __COLINUX_COMMON_CONTEXT_H__
+#ifndef __COLINUX_USER_WINNT_DAEMON_H__
+#define __COLINUX_USER_WINNT_DAEMON_H__
 
-#ifdef CO_KERNEL
-#include <colinux/user/context.h>
-#else
-#include <colinux/kernel/context.h>
-#endif
+#include <windows.h>
+
+#include <colinux/os/user/daemon.h>
+
+struct co_daemon_handle {
+	HANDLE handle;
+};
+
 
 #endif

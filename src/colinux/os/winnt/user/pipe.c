@@ -145,7 +145,9 @@ co_rc_t co_os_pipe_server_destroy_client(co_os_pipe_server_t *ps, co_os_pipe_con
 {
 	unsigned long index;
 
-	co_os_pipe_server_client_disconnected(ps, connection);
+	if (connection->state == CO_OS_PIPE_SERVER_STATE_CONNECTED) {
+		co_os_pipe_server_client_disconnected(ps, connection);
+	}
 
 	index = connection->index;
 
@@ -155,8 +157,8 @@ co_rc_t co_os_pipe_server_destroy_client(co_os_pipe_server_t *ps, co_os_pipe_con
 	co_os_free(connection);
 
 	/* 
-	 * If we are not deleting the last use entry, put the last 
-	 * used entry in our place.
+	 * If we are not deleting the last used entry, put the last 
+	 * used entry in our place, so the list has no holes.
 	 */
 
 	if (index < ps->num_clients - 1) {
@@ -321,6 +323,3 @@ void co_os_pipe_server_destroy(co_os_pipe_server_t *ps)
 
 	co_os_free(ps);
 }
-
-
-

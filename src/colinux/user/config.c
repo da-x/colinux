@@ -95,6 +95,16 @@ co_rc_t co_load_config(char *text, co_config_t *out_config)
 			if (strcmp(name, "block_device") == 0) {
 				co_load_config_blockdev(out_config, &walk->value.element);
 			} else if (strcmp(name, "bootparams") == 0) {
+				if (walk->child == NULL)
+					continue;
+
+				walk = walk->child;
+				if (walk->type != MXML_TEXT) 
+					continue;
+
+				snprintf(out_config->boot_parameters_line, 
+					 sizeof(out_config->boot_parameters_line), 
+					 "%s", walk->value.text.string);
 			} else if (strcmp(name, "image") == 0) {
 				co_load_config_image(out_config, &walk->value.element);
 			}

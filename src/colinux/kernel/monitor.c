@@ -29,7 +29,6 @@
 #include "monitor.h"
 #include "manager.h"
 #include "block.h"
-#include "devices.h"
 #include "fileblock.h"
 
 co_rc_t co_monitor_alloc_pages(co_monitor_t *cmon, unsigned long pages, void **address)
@@ -781,11 +780,6 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 		goto out_destroy_timer;
 	}
 
-	rc = co_monitor_setup_devices(cmon);
-	if (!CO_OK(rc)) {
-		goto out_unregister_block_devs;
-	}
-
 	cmon->state = CO_MONITOR_STATE_INITIALIZED;
 
 	*cmon_out = cmon;
@@ -793,9 +787,6 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	return CO_RC(OK);
 
 /* error path */
-out_unregister_block_devs:
-	co_monitor_unregister_and_free_block_devices(cmon);
-
 out_destroy_timer:
         co_os_timer_destroy(cmon->timer);
 
@@ -860,7 +851,6 @@ co_rc_t co_monitor_destroy(co_monitor_t *cmon)
 	}
 
 	co_monitor_unregister_and_free_block_devices(cmon);
-	co_monitor_cleanup_devices(cmon);
 	co_monitor_free_kernel_image(cmon);
 	co_monitor_os_exit(cmon);
 	co_queue_flush(&cmon->linux_message_queue);
@@ -899,6 +889,9 @@ co_rc_t co_monitor_start(co_monitor_t *cmon)
 	co_passage_page->params[1] = cmon->bootmem_pages;
 	co_passage_page->params[2] = cmon->memory_size;
 	co_passage_page->params[3] = cmon->pa_maps_size;
+
+	memcpy(&co_passage_page->params[4], cmon->config.boot_parameters_line, 
+	       sizeof(cmon->config.boot_parameters_line));
 
 	cmon->state = CO_MONITOR_STATE_RUNNING;
 

@@ -1,6 +1,22 @@
-* Version 0.5.3
-  * Fixed a BSOD bug. 
-  * No longer depending on the Microsoft DDK for the build (review doc/building).
+* Version 0.5.3-pre1 AKA "flamed chicken"
+  * Fixed a BSOD bug (thanks Richard Goodwin for the memory dump stacks)
+  * No longer depending on the Microsoft DDK for the build (review doc/building),
+    (thanks Nir Perry for the encourgement)
+  * The daemon launches the console by default when it is launched (can be turned
+    off with '-d', see '-h').
+  * The daemon is killable just like a normal Windows process. Doing so stops the
+    Linux machines cleanly (from Windows' standpoint), so feel free to close the
+    window, end the task, CTRL-C, etc.
+  * It no longer depends on the Microsoft DDK for the build.
+  * An almost complete rewrite - we now use message passing instead of hardwired 
+    ioctls(). Only the daemon communicates with the driver. The console and the
+    network daemon communicate with the daemon using a named pipe.
+  * Fixed the block device bug that fsck triggered (thanks Daniel Glockner)
+  * Hopefully addressed the network corruption issue (thanks Daniel Glockner again)
+  * Boot parameters are now passed to the kernel. Make sure you update your 
+    XMLs with 'root=/dev/cobd0' if you still want to boot from the first 
+    block device. 
+  * The conet daemon is a separate process (shouldn't affect you).
 	
 * Version 0.5.2
   * Added some missing files to the build tree

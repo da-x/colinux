@@ -23,6 +23,8 @@
 extern "C" {
 #include <colinux/user/monitor.h>
 #include <colinux/os/user/misc.h>
+#include <colinux/os/alloc.h>
+#include <colinux/os/user/daemon.h>
 }
 
 static void console_window_cb(Fl_Widget *widget, void* v) 
@@ -65,11 +67,6 @@ static void console_terminate_cb(Fl_Widget *widget, void* v)
 	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->terminate();
 }
 
-static void console_poll_callback(co_os_poll_t poll, void *data)
-{
-	((console_window_t *)data)->poll_callback(poll);
-}
-
 static void console_about_cb(Fl_Widget *widget, void* v) 
 {
 	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->about();
@@ -104,14 +101,12 @@ int console_main_window_t::handle(int event)
 console_window_t::console_window_t()
 {
 	/* Default settings */
-	start_parameters.attach_id = CO_INVALID_ID;	
+	start_parameters.attach_id = 1; 
 	attached_id = CO_INVALID_ID;
 	state =	CO_CONSOLE_STATE_DETACHED;
-	poll_chain = 0;
-	poll = 0;
 	window = 0;
 	widget = 0;
-	monitor_handle = 0;
+	daemon_handle = 0;
 }
 
 console_window_t::~console_window_t()
@@ -151,12 +146,6 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 
 co_rc_t console_window_t::start()
 {
-	co_rc_t rc;
-
-	rc = co_os_poll_chain_create(&poll_chain);
-	if (!CO_OK(rc))
-		return rc;
-
 	window = new console_main_window_t(this);
 	window->callback(console_window_cb, this);
 
@@ -234,8 +223,6 @@ co_rc_t console_window_t::start()
 
 co_rc_t console_window_t::attach()
 {
-	co_console_t *console;
-	co_monitor_ioctl_status_t status;
 	co_rc_t rc = CO_RC(OK);  
 
 	if (state != CO_CONSOLE_STATE_DETACHED) {
@@ -243,9 +230,11 @@ co_rc_t console_window_t::attach()
 		goto out;
 	}
 
-	/* TODO */
-	
-	/* Todo: handle error... */
+	rc = co_os_open_daemon_pipe(0, CO_MODULE_CONSOLE, &daemon_handle);
+	if (!CO_OK(rc))
+		goto out;
+
+	state = CO_CONSOLE_STATE_ATTACHED;
 
 	menu_item_deactivate(console_select_cb);
 	menu_item_activate(console_pause_cb);
@@ -295,6 +284,44 @@ co_rc_t console_window_t::detach()
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return CO_RC(ERROR);
 
+	console = widget->get_console();
+
+	struct {
+		co_message_t message;
+		co_daemon_console_message_t console;
+		char data[0];
+	} *message;
+
+	co_console_pickle(console);
+
+	message = (typeof(message))(co_os_malloc(sizeof(*message)+console->size));
+	if (message) {
+		message->message.to = CO_MODULE_DAEMON;
+		message->message.from = CO_MODULE_CONSOLE;
+		message->message.size = sizeof(message->console) + console->size;
+		message->message.type = CO_MESSAGE_TYPE_STRING;
+		message->message.priority = CO_PRIORITY_IMPORTANT;
+		message->console.type = CO_DAEMON_CONSOLE_MESSAGE_DETACH;
+		message->console.size = console->size;
+		memcpy(message->data, console, console->size);
+		
+		co_os_daemon_send_message(daemon_handle, &message->message);
+		co_os_free(message);
+	}
+
+	co_console_unpickle(console);
+	co_console_destroy(console);
+
+        menu_item_activate(console_select_cb);
+        menu_item_deactivate(console_pause_cb);
+        menu_item_deactivate(console_resume_cb);
+        menu_item_deactivate(console_terminate_cb);
+        menu_item_deactivate(console_detach_cb);
+        menu_item_activate(console_attach_cb);	
+
+	co_os_daemon_close(daemon_handle);
+	daemon_handle = 0;
+
 	state = CO_CONSOLE_STATE_DETACHED;
 
 	widget->redraw();
@@ -306,15 +333,23 @@ co_rc_t console_window_t::detach()
 
 co_rc_t console_window_t::terminate()
 {
-	co_rc_t rc;
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return CO_RC(ERROR);
-	
-	rc = co_user_monitor_terminate(monitor_handle);
-	if (!CO_OK(rc)) {
-		co_debug("Error terminating: %d\n", rc);
-		return rc;
-	}
+
+	struct {
+		co_message_t message;
+		co_daemon_console_message_t console;
+	} message;
+		
+	message.message.from = CO_MODULE_CONSOLE;
+	message.message.to = CO_MODULE_DAEMON;
+	message.message.priority = CO_PRIORITY_DISCARDABLE;
+	message.message.type = CO_MESSAGE_TYPE_OTHER;
+	message.message.size = sizeof(message) - sizeof(message.message);
+	message.console.type = CO_DAEMON_CONSOLE_MESSAGE_TERMINATE;
+	message.console.size = 0;
+
+	co_os_daemon_send_message(daemon_handle, &message.message);
 	
 	return detach();
 }
@@ -324,15 +359,32 @@ void console_window_t::finish()
 	if (state == CO_CONSOLE_STATE_ATTACHED)
 		detach();
 
-	if (poll_chain)
-		co_os_poll_chain_destroy(poll_chain);
-
 	exit(0);
 }
 
 void console_window_t::idle()
 {
-	co_os_poll_chain_wait(poll_chain);
+	if (daemon_handle != NULL) {
+		bool_t available = PFALSE;
+		co_rc_t rc = CO_RC(OK);
+		co_message_t *message = NULL;
+
+		while (1) {
+			rc = co_os_daemon_peek_messages(daemon_handle, &available);
+			if (!CO_OK(rc)) 
+				break;
+
+			if (!available)
+				break;
+
+			rc = co_os_daemon_get_message(daemon_handle, &message);
+			if (!CO_OK(rc))
+				break;
+
+			handle_message(message);
+			co_os_free(message);
+		}
+	}
 }
 
 void console_window_t::select_monitor()
@@ -352,8 +404,47 @@ co_rc_t console_window_t::about()
 	return CO_RC(OK);
 }
 
-void console_window_t::handle_message(co_console_message_t *message)
+void console_window_t::handle_message(co_message_t *message)
 {
+	switch (message->from) {
+	case CO_MODULE_LINUX: {
+		co_console_message_t *console_message;
+
+		console_message = (typeof(console_message))(message->data);
+
+		widget->handle_console_event(console_message);
+
+		break;
+	}
+
+	case CO_MODULE_DAEMON: {
+		struct {
+			co_message_t message;
+			co_daemon_console_message_t console;
+			char data[0];
+		} *console_message;
+
+		console_message = (typeof(console_message))message;
+
+		if (console_message->console.type == CO_DAEMON_CONSOLE_MESSAGE_ATTACH) {
+			co_console_t *console;
+
+			console = (co_console_t *)co_os_malloc(console_message->console.size);
+			if (!console)
+				break;
+
+			memcpy(console, console_message->data, console_message->console.size);
+			co_console_unpickle(console);
+
+			widget->set_console(console);
+			widget->redraw();
+		}
+		
+		break;
+	}
+	default:
+		break;
+	}
 }
 
 void console_window_t::handle_scancode(co_scan_code_t sc)
@@ -364,15 +455,23 @@ void console_window_t::handle_scancode(co_scan_code_t sc)
 	if (!window || !window->keyboard_focus)
 		return;
 
-	co_monitor_ioctl_keyboard_t params;
-	params.op = CO_OPERATION_KEYBOARD_ACTION;
-	params.sc = sc;
+	struct {
+		co_message_t message;
+		co_linux_message_t linux;
+		co_scan_code_t code;
+	} message;
+		
+	message.message.from = CO_MODULE_CONSOLE;
+	message.message.to = CO_MODULE_LINUX;
+	message.message.priority = CO_PRIORITY_DISCARDABLE;
+	message.message.type = CO_MESSAGE_TYPE_OTHER;
+	message.message.size = sizeof(message) - sizeof(message.message);
+	message.linux.device = CO_DEVICE_KEYBOARD;
+	message.linux.unit = 0;
+	message.linux.size = sizeof(message.code);
+	message.code = sc;
 
-	co_user_monitor_keyboard(monitor_handle, &params);
-}
-
-void console_window_t::poll_callback(co_os_poll_t poll)
-{
+	co_os_daemon_send_message(daemon_handle, &message.message);
 }
 
 Fl_Menu_Item *console_window_t::find_menu_item_by_callback(Fl_Callback *cb)

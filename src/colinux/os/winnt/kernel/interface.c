@@ -15,22 +15,6 @@
 #include <colinux/os/current/monitor.h>
 #include <colinux/os/current/ioctl.h>
 
-void co_monitor_os_wait_exclusiveness(co_monitor_t *cmon)
-{
-	KeWaitForSingleObject(&cmon->osdep->exclusiveness, 
-			      UserRequest, KernelMode, FALSE, NULL);
-}
-
-void co_debug_stop_hook1(co_monitor_t *cmon)
-{
-	KeWaitForSingleObject(&cmon->osdep->debugstop, UserRequest, KernelMode, FALSE, NULL);
-}
-
-void co_debug_continue_hook1(co_monitor_t *cmon)
-{
-	KeSetEvent(&cmon->osdep->debugstop, 1, FALSE);
-}
-
 NTSTATUS 
 NTAPI
 co_manager_dispatch(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)

@@ -11,9 +11,7 @@ KERNEL_CFLAGS = $(CFLAGS) -D__KERNEL__ -DCO_KERNEL -DCO_HOST_KERNEL
 LOCAL_OBJS = \
 	monitor.o \
 	block.o \
-	devices.o \
 	fileblock.o \
-	keyboard.o \
 	transfer.o \
 	manager.o \
 

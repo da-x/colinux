@@ -12,9 +12,9 @@
 #include <stdio.h>
 
 #include <colinux/common/common.h>
-#include <colinux/os/user/poll.h>
 
 #include "tap-win32.h"
+#include "../daemon.h"
 
 /*
  * IMPORTANT NOTE:
@@ -163,63 +163,6 @@ void co_win32_overlapped_init(co_win32_overlapped_t *overlapped, HANDLE handle)
 	overlapped->write_overlapped.hEvent = overlapped->write_event; 
 }
 
-void test(HANDLE handle)
-{
-	unsigned long written = 0;
-	BOOL ret;
-	struct {
-		co_message_t message;
-		char buf[0x100];
-	} message;
-	
-	message.message.from = CO_MODULE_CONET0;
-	message.message.to = CO_MODULE_PRINTK;
-	message.message.priority = CO_PRIORITY_DISCARDABLE;
-	message.message.type = CO_MESSAGE_TYPE_STRING;
-	snprintf(message.buf, sizeof(message.buf), "%s\n", "TEST");
-	message.message.size = strlen(message.buf)+1;
-
-	ret = WriteFile(handle, &message, sizeof(message.message) + message.message.size, 
-			&written, NULL); 	
-}
-
-co_rc_t co_open_daemon_pipe(co_id_t linux_id, co_module_t module_id, HANDLE *handle_out)
-{
-	HANDLE handle;
-	long written = 0;
-	char pathname[0x100];
-	BOOL ret;
-
-	snprintf(pathname, sizeof(pathname), "\\\\.\\pipe\\coLinux%d", (int)linux_id);
-
-	co_debug("Connecting to daemon\n");
-
-	handle = CreateFile (
-		pathname,
-		GENERIC_READ | GENERIC_WRITE,
-		0,
-		0,
-		OPEN_EXISTING,
-		FILE_FLAG_OVERLAPPED,
-		0
-		);
-
-	/* Identify to the daemon */
-	ret = WriteFile(handle, &module_id, sizeof(module_id), &written, NULL); 
-
-	if (!ret) {
-		co_debug("Sending identification failed (%d)\n", GetLastError());
-		CloseHandle(handle);
-		return CO_RC(ERROR);
-	}
-
-	co_debug("Sending module ID to daemon\n");
-
-	*handle_out = handle;
-
-	return CO_RC(OK);
-}
-
 int wait_loop(HANDLE daemon_handle, HANDLE tap_handle)
 {
 	HANDLE wait_list[2];
@@ -264,9 +207,10 @@ int main(int argc, char *argv[])
 {	
 	co_rc_t rc;
 	bool_t ret;
-	HANDLE daemon_handle;
+	HANDLE daemon_handle = 0;
 	HANDLE tap_handle;
 	int exit_code = 0;
+	co_daemon_handle_t daemon_handle_;
 
 	rc = open_tap_win32(&tap_handle);
 	if (!CO_OK(rc)) {
@@ -285,14 +229,15 @@ int main(int argc, char *argv[])
 
 	}
 
-	rc = co_open_daemon_pipe(0, CO_MODULE_CONET0, &daemon_handle);
+	rc = co_os_open_daemon_pipe(0, CO_MODULE_CONET0, &daemon_handle_);
 	if (!CO_OK(rc)) {
 		co_debug("Error opening a pipe to the daemon\n");
 		goto out_close;
 	}
 
+	daemon_handle = daemon_handle_->handle;
 	exit_code = wait_loop(daemon_handle, tap_handle);
-	CloseHandle(daemon_handle);
+	co_os_daemon_close(daemon_handle_);
 
 out_close:
 	CloseHandle(tap_handle);
