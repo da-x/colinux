@@ -22,7 +22,7 @@ $(BUILD_PATH)/lowlevel.o : $(LOCAL_OBJS)
 	$(TOOL_LD_RELOC)
 
 CLEAN_FILES := $(CLEAN_FILES) \
-	$(LOCAL_OBJS) $(BUILD_PATH)/kernel.o
+	$(LOCAL_OBJS) $(BUILD_PATH)/lowlevel.o
 
 #-----------------------------------------------------------------
 # include $(call BUILD_SUBDIRS, )

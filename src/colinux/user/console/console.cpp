@@ -393,7 +393,12 @@ void console_window_t::select_monitor()
 co_rc_t console_window_t::about()
 {
 	Fl_Double_Window *win = new Fl_Double_Window(400, 300);
+
+	/* TODO: Add some text here :) */
+
 	win->end();
+
+	return CO_RC(OK);
 }
 
 void console_window_t::handle_message(co_monitor_ioctl_console_message_t *message)
@@ -442,7 +447,7 @@ void console_window_t::poll_callback(co_os_poll_t poll)
 		if (!CO_OK(rc)) 
 			co_debug("poll failed\n");
 		else {
-			int i=0;
+			unsigned int i=0;
 			char *param_data = params->data;
 			co_monitor_ioctl_console_message_t *message;
 

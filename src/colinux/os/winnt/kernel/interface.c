@@ -49,6 +49,7 @@ co_manager_dispatch(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 	Irp->IoStatus.Information = 0;
 
 	irpStack = IoGetCurrentIrpStackLocation (Irp);
+
 	co_manager = (co_manager_t *)DeviceObject->DeviceExtension;
 
 	ioBuffer           = Irp->AssociatedIrp.SystemBuffer;

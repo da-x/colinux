@@ -49,5 +49,6 @@ typedef struct {
 
 co_rc_t conet_daemon_start(co_rc_t id, conet_daemon_t **daemon_out);
 void conet_daemon_stop(conet_daemon_t *daemon);
+co_rc_t conet_test_tap();
 
 #endif

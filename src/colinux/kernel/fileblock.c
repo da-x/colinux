@@ -9,6 +9,8 @@
 
 #include "fileblock.h"
 
+#include <memory.h>
+
 co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 				      co_block_dev_t *dev, 
 				      co_block_request_t *request)
@@ -67,7 +69,7 @@ co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 		break;
 	}
 	case CO_BLOCK_STAT: {
-		rc = fdev->op->get_size(dev, &fdev->dev.size);
+		rc = fdev->op->get_size((co_monitor_file_block_dev_t *)dev, &fdev->dev.size);
 		if (CO_RC(OK))
 			request->disk_size = fdev->dev.size;
 		

@@ -179,6 +179,7 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 
 	if (status == STATUS_SUCCESS) {
 		*size = fsi.EndOfFile.QuadPart;
+		co_debug("Reported block device size: %d bytes\n", *size);
 		rc = CO_RC(OK);
 	}
 	else

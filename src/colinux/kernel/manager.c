@@ -9,6 +9,8 @@
 
 #include <linux/kernel.h>
 
+#include <memory.h>
+
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/os/kernel/monitor.h>
 #include <colinux/os/kernel/mutex.h>
@@ -30,6 +32,8 @@ co_rc_t co_manager_create_monitor(co_manager_t *manager, co_monitor_t **cmon_out
 		co_debug("Warning: Out of coLinux'es\n");
 		return CO_RC(ERROR);
 	}
+
+	manager->monitors_count++;
 
 	co_debug("Allocated cmon%d\n", id);
 
@@ -81,6 +85,7 @@ out_free_console:
 out_free:
 	co_os_free_pages(cmon, pages);
 
+	manager->monitors_count--;
 out:
 	return rc;
 }
@@ -105,6 +110,8 @@ void co_manager_destroy_monitor(co_monitor_t *cmon)
 	co_os_free_pages(cmon, pages);
 
 	co_debug("Freed cmon%d\n", id);
+
+	manager->monitors_count--;
 }
 
 co_rc_t co_manager_get_monitor(co_manager_t *manager, co_id_t id, co_monitor_t **cmon)

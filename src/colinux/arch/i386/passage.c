@@ -18,6 +18,8 @@
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/os/kernel/misc.h>
 
+#include <memory.h>
+
 #include <linux/kernel.h>
 #include <linux/cooperative.h>
 #include <asm/segment.h>

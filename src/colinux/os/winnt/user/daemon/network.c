@@ -189,7 +189,7 @@ DWORD WINAPI conet_tap_thread(DWORD param)
 	events[2] = daemon->tap_cancel_event;
 
 	while (TRUE) {
-		DWORD result = WaitForMultipleObjects(3,  &events, FALSE, INFINITE);
+		DWORD result = WaitForMultipleObjects(3, events, FALSE, INFINITE);
 
 		if (result == (WAIT_OBJECT_0)) {
 			conet_linux_to_host(daemon);
@@ -212,6 +212,21 @@ out_close_tap:
 
 out:
 	return 0;
+}
+
+co_rc_t conet_test_tap()
+{
+	HANDLE tap;
+	co_rc_t rc;
+
+	rc = open_win32_tap(&tap);
+
+	if (CO_OK(rc)) {
+		CloseHandle(tap);
+		return CO_RC(OK);
+	}
+
+	return CO_RC(ERROR);
 }
 
 co_rc_t conet_daemon_init(conet_daemon_t *daemon)

@@ -23,18 +23,27 @@
 # current directory.
 #
 
+COLINUX_ARCH_DEFAULT=i386
+COLINUX_HOST_OS_DEFAULT=winnt
+
 ifeq ($(BUILD_ROOT),)
+export COLINUX_HOST_OS_DEFAULT
+export COLINUX_ARCH_DEFAULT
+
+all:
+	@./intro
+
 BUILD_ROOT=.
 endif
 
 # Default architecture
 ifeq ($(COLINUX_ARCH),)
-COLINUX_ARCH=i386
+COLINUX_ARCH=$(COLINUX_ARCH_DEFAULT)
 endif
 
 # Default host operating system
 ifeq ($(COLINUX_HOST_OS),)
-COLINUX_HOST_OS=winnt
+COLINUX_HOST_OS=$(COLINUX_HOST_OS_DEFAULT)
 endif
 
 #

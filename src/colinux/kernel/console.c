@@ -10,6 +10,8 @@
 #include <linux/kernel.h>
 #include <colinux/os/kernel/monitor.h>
 
+#include <memory.h>
+
 #include "console.h"
 
 co_rc_t co_monitor_console_send_near(co_monitor_t *cmon, unsigned long *params)

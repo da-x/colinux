@@ -90,7 +90,6 @@ coui_install_driver(
 	) 
 { 
 	SC_HANDLE  schService; 
-	DWORD      err; 
  
 	schService = CreateService (SchSCManager,         
 				    DriverName,           
@@ -179,7 +178,6 @@ co_rc_t coui_start_driver(
 	return ret; 
 } 
  
- 
 co_rc_t coui_stop_driver( 
 	IN SC_HANDLE  SchSCManager, 
 	IN LPCTSTR    DriverName 
@@ -204,6 +202,28 @@ co_rc_t coui_stop_driver(
 	return rc; 
 } 
  
+co_rc_t coui_check_driver(IN LPCTSTR DriverName, bool_t *installed) 
+{ 
+	SC_HANDLE schService; 
+	SC_HANDLE schSCManager; 
+
+	*installed = PFALSE;
+
+	schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+	if (schSCManager == NULL)
+		return CO_RC(ERROR_ACCESSING_DRIVER); 
+
+	schService = OpenService(schSCManager, DriverName, SERVICE_ALL_ACCESS); 
+	if (schService != NULL) {
+		CloseServiceHandle(schSCManager); 
+
+		*installed = PTRUE;
+	}
+
+	CloseServiceHandle(schSCManager); 
+	return CO_RC(OK);
+} 
+
 co_rc_t coui_check_device(IN LPCTSTR DriverName) 
 { 
 	char     completeDeviceName[64] = ""; 
@@ -236,18 +256,29 @@ co_rc_t coui_check_device(IN LPCTSTR DriverName)
 co_rc_t coui_unload_driver_by_name(char *name) 
 { 
 	SC_HANDLE   schSCManager; 
- 
+	co_rc_t rc;
+
 	schSCManager = OpenSCManager (NULL,                 // machine (NULL == local) 
 				      NULL,                 // database (NULL == default) 
 				      SC_MANAGER_ALL_ACCESS // access required 
 		); 
  
-	coui_stop_driver(schSCManager, name);  
-	coui_remove_driver(schSCManager, name);
+	co_debug("Stopping driver service\n");
+	rc = coui_stop_driver(schSCManager, name);  
+
+	if (CO_OK(rc)) {
+		co_debug("Removing driver service\n");
+		rc = coui_remove_driver(schSCManager, name);
+		if (!CO_OK(rc)) {
+			co_debug("Error removing driver service: %d\n", rc);
+		}
+	} else {
+		co_debug("Error stopping driver service: %d\n", rc);
+	}
 	
 	CloseServiceHandle(schSCManager); 
     
-	return CO_RC(OK);
+	return rc;
 } 
 
 co_rc_t coui_load_driver_by_name(char *name, char *path) 
@@ -283,6 +314,11 @@ co_rc_t coui_load_driver_by_name(char *name, char *path)
 
 	return CO_RC(OK);
 } 
+
+co_rc_t co_os_manager_is_installed(bool_t *installed)
+{
+	return coui_check_driver(CO_DRIVER_NAME, installed);
+}
 
 co_rc_t co_os_manager_remove(void)
 {

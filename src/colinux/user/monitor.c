@@ -10,6 +10,8 @@
 
 #include <linux/kernel.h>
 
+#include <memory.h>
+
 #include <colinux/common/ioctl.h>
 #include <colinux/os/alloc.h>
 #include <colinux/os/user/manager.h>
@@ -214,7 +216,7 @@ co_rc_t co_user_monitor_network_send(co_user_monitor_t *umon,
 				     char *data, unsigned long size)
 {
 	return co_manager_io_monitor(umon->handle, umon->monitor_id, 
-				     CO_MONITOR_IOCTL_NETWORK_PACKET_SEND, data,
+				     CO_MONITOR_IOCTL_NETWORK_PACKET_SEND, (co_manager_ioctl_monitor_t *)data,
 				     size, sizeof(co_manager_ioctl_monitor_t));
 }
 
@@ -223,7 +225,7 @@ co_rc_t co_user_monitor_network_receive(co_user_monitor_t *umon,
 					char *data, unsigned long size)
 {
 	return co_manager_io_monitor(umon->handle, umon->monitor_id, 
-				     CO_MONITOR_IOCTL_NETWORK_PACKET_RECEIVE, data,
+				     CO_MONITOR_IOCTL_NETWORK_PACKET_RECEIVE, (co_manager_ioctl_monitor_t *)data,
 				     sizeof(co_manager_ioctl_monitor_t), size);
 }
 

@@ -16,11 +16,6 @@
 /*
  * The manager module manages the running coLinux's systems.
  */ 
-typedef enum {
-	CO_MANAGER_STATE_NOT_INITIALIZED,
-	CO_MANAGER_STATE_INITIALIZED,
-} co_manager_state_t;
-
 typedef struct co_manager {
 	co_manager_state_t state;
 
@@ -28,6 +23,8 @@ typedef struct co_manager {
 
 	unsigned long host_memory_amount;
 	unsigned long host_memory_pages;
+
+	int monitors_count;
 } co_manager_t;
 
 extern co_rc_t co_manager_create_monitor(co_manager_t *manager, struct co_monitor **cmon);

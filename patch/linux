@@ -2925,8 +2925,8 @@ diff -X bin/dontdiff -urN linux/drivers/video/Makefile linux/drivers/video/Makef
  obj-$(CONFIG_FONT_SUN8x16)        += font_sun8x16.o
 diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.c
 --- linux/drivers/video/cocon.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/drivers/video/cocon.c	2003-12-27 11:43:25.000000000 +0200
-@@ -0,0 +1,300 @@
++++ linux/drivers/video/cocon.c	2004-01-31 22:46:36.000000000 +0200
+@@ -0,0 +1,343 @@
 +/*
 + *  linux/drivers/video/vgacon.c -- Low level VGA based console driver
 + *
@@ -3101,13 +3101,56 @@ diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.
 +	}
 +}
 +
-+static void cocon_set_cursor_size(int xpos, int from, int to)
-+{
-+	co_debug("cocon: %s\n", __FUNCTION__);
-+}
-+
 +static void cocon_cursor(struct vc_data *c, int mode)
 +{
++	unsigned long flags;
++	co_console_message_t *message;
++
++	local_irq_save(flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_CONSOLE;
++	message = (typeof(message))(&co_passage_page->params[1]);
++	message->type = CO_OPERATION_CONSOLE_CURSOR;
++	message->size = ((char *)(&message->cursor + 1)) - ((char *)message);
++	message->cursor.x = c->vc_x;
++	message->cursor.y = c->vc_y;
++
++	switch (mode) {
++	case CM_ERASE:
++		message->cursor.start = 0;
++		message->cursor.end = CO_CURSOR_POS_SIZE;
++		break;
++	case CM_MOVE:
++	case CM_DRAW:
++		switch (c->vc_cursor_type & 0x0f) {
++		case CUR_UNDERLINE:
++			message->cursor.start = 0;
++			message->cursor.end = CO_CURSOR_POS_SIZE/10;
++			break;
++		case CUR_TWO_THIRDS:
++			message->cursor.start = 0;
++			message->cursor.end = CO_CURSOR_POS_SIZE*2/3;
++			break;
++		case CUR_LOWER_THIRD:
++			message->cursor.start = 0;
++			message->cursor.end = CO_CURSOR_POS_SIZE/3;
++			break;
++		case CUR_LOWER_HALF:
++			message->cursor.start = 0;
++			message->cursor.end = CO_CURSOR_POS_SIZE/2;
++			break;
++		case CUR_NONE:
++			message->cursor.start = 0;
++			message->cursor.end = 0;
++			break;
++          	default:
++			break;
++		}
++		break;
++	}
++
++	co_switch();
++	local_irq_restore(flags);
 +}
 +
 +static int cocon_switch(struct vc_data *c)
@@ -3326,7 +3369,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/desc.h linux/include/asm-i386/d
  #define __TSS(n) (((n)<<2) + __FIRST_TSS_ENTRY)
 diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dma.h
 --- linux/include/asm-i386/dma.h	2004-01-05 05:39:23.000000000 +0200
-+++ linux/include/asm-i386/dma.h	2004-01-26 23:39:36.000000000 +0200
++++ linux/include/asm-i386/dma.h	2004-01-31 23:18:43.000000000 +0200
 @@ -268,6 +268,8 @@
   *
   * Assumes DMA flip-flop is clear.
@@ -3347,7 +3390,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dm
  extern int request_dma(unsigned int dmanr, const char * device_id);	/* reserve a DMA channel */
 diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.h
 --- linux/include/asm-i386/io.h	2004-01-05 05:39:23.000000000 +0200
-+++ linux/include/asm-i386/io.h	2004-01-27 00:00:07.000000000 +0200
++++ linux/include/asm-i386/io.h	2004-01-31 23:18:43.000000000 +0200
 @@ -2,6 +2,7 @@
  #define _ASM_IO_H
  
@@ -3633,8 +3676,8 @@ diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/cons
  
 diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/cooperative.h
 --- linux/include/linux/cooperative.h	1970-01-01 02:00:00.000000000 +0200
-+++ linux/include/linux/cooperative.h	2004-01-24 10:19:19.000000000 +0200
-@@ -0,0 +1,173 @@
++++ linux/include/linux/cooperative.h	2004-01-31 22:47:44.000000000 +0200
+@@ -0,0 +1,183 @@
 +#ifndef __LINUX_COOPERATIVE_H__
 +#define __LINUX_COOPERATIVE_H__
 +
@@ -3712,7 +3755,16 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +	CO_OPERATION_CONSOLE_PUTC=1,
 +	CO_OPERATION_CONSOLE_PUTCS,
 +	CO_OPERATION_CONSOLE_SCROLL,
++	CO_OPERATION_CONSOLE_CURSOR,
 +} co_operation_console_t;
++
++#define CO_CURSOR_POS_SIZE   30
++
++typedef struct {
++	long x, y;
++	short start; /* 0 <= start < CO_CURSOR_POS_SIZE */
++	short end; /* 0 <= end < CO_CURSOR_POS_SIZE */
++} co_cursor_pos_t;
 +
 +typedef struct {
 +	unsigned long size;
@@ -3735,6 +3787,7 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +			long y;
 +			unsigned short charattr;
 +		} putc;
++		co_cursor_pos_t cursor;
 +	};
 +} co_console_message_t;
 +

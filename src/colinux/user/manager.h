@@ -26,5 +26,6 @@ extern co_rc_t co_manager_io_monitor_unisize(co_manager_handle_t handle, co_id_t
 					     unsigned long size);
 
 extern co_rc_t co_manager_init(co_manager_handle_t handle);
+extern co_rc_t co_manager_status(co_manager_handle_t handle, co_manager_ioctl_status_t *status);
 
 #endif

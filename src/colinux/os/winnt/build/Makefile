@@ -1,6 +1,9 @@
 # Standard Makefile header
 ifeq ($(BUILD_ROOT),)
 BUILD_ROOT=../../../..
+
+all: parts
+
 include $(BUILD_ROOT)/Makefile
 else
 BUILD_PATH := $(BUILD_PATH)/build
@@ -62,12 +65,16 @@ $(DRIVER_TARGET): $(BUILD_PATH)/driver.o
 
 LOCAL_TARGET += $(DRIVER_TARGET)
 LOCAL_FILES = \
-	$(DRIVER_TARGET) \
 	$(BUILD_ROOT)/../../linux/vmlinux \
 	$(BUILD_ROOT)/colinux/os/current/user/daemon/colinux-daemon.exe \
 	$(BUILD_ROOT)/colinux/os/current/user/console/colinux-console.exe \
+	$(DRIVER_TARGET) \
 
-colinux: $(LOCAL_FILES)
+LOCAL_TARGETS := $(LOCAL_TARGET) $(BUILD_PATH)/driver.o
+
+colinux: $(LOCAL_FILES) 
+
+parts: $(LOCAL_FILES)
 
 upload: $(LOCAL_FILES)
 	$(WINBOX_SCP) $^ $(WINDIR)
@@ -75,10 +82,11 @@ upload: $(LOCAL_FILES)
 upload_console: $(BUILD_ROOT)/colinux/os/current/user/console/colinux-console.exe
 	$(WINBOX_SCP) $^ $(WINDIR)
 
-driver : $(BUILD_PATH)/driver.o
+driver: $(BUILD_PATH)/driver.o
+	
 
 CLEAN_FILES := $(CLEAN_FILES) \
-	$(LOCAL_TARGETS) $(BUILD_PATH)/kernel.o
+	$(LOCAL_TARGETS)
 
 #-----------------------------------------------------------------
 BUILD_PATH := $(shell dirname $(BUILD_PATH))

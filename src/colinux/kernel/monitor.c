@@ -10,6 +10,7 @@
 #include <asm/page.h>
 #include <asm/pgtable.h>
 
+#include <memory.h>
 /*
  * The main monitor code.
  *
@@ -576,8 +577,6 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 		return PFALSE;
 
 	case CO_OPERATION_DEBUG_LINE: {
-		static int cc = 0;
-
 		char *p = (char *)&co_passage_page->params[0];
 		p[0x200] = '\0';
 		co_debug_line(p);

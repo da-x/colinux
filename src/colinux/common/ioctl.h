@@ -22,6 +22,7 @@ typedef enum {
 	CO_MANAGER_IOCTL_INIT,
 	CO_MANAGER_IOCTL_CREATE,
 	CO_MANAGER_IOCTL_MONITOR,
+	CO_MANAGER_IOCTL_STATUS,
 } co_manager_ioctl_t;
 
 /* interface for CO_MANAGER_IOCTL_INIT: */
@@ -72,6 +73,17 @@ typedef struct {
 	co_monitor_ioctl_op_t op;
 	char extra_data[];
 } co_manager_ioctl_monitor_t;
+
+typedef enum {
+	CO_MANAGER_STATE_NOT_INITIALIZED,
+	CO_MANAGER_STATE_INITIALIZED,
+} co_manager_state_t;
+
+/* interface for CO_MANAGER_IOCTL_STATUS: */
+typedef struct {
+	co_manager_state_t state;
+	int monitors_count;
+} co_manager_ioctl_status_t;
 
 /*
  * Monitor ioctl()s

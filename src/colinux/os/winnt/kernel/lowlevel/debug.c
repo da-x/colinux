@@ -19,8 +19,9 @@ void co_debug_line(char *line)
 
 void co_debug(const char *format, ...)
 {
-	/* Yuck! */
-	DbgPrint(format, 
+	/* Yuck! This needs to replaced with a private snprintf implementation. */
+
+	DbgPrint((char *)format, 
 		 (unsigned long)((&format)[1]),
 		 (unsigned long)((&format)[2]),
 		 (unsigned long)((&format)[3]),

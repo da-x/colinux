@@ -31,7 +31,6 @@ co_os_timer_routine(
 	)
 {
 	co_os_timer_t timer = (co_os_timer_t)DeferredContext;
-	static int i=0; 
 
 	timer->func(timer->data);
 }

@@ -29,6 +29,33 @@ console_widget_t::console_widget_t(int x, int y, int w, int h, const char* label
 	font_size = 15;
 	letter_x = font_size;
 	letter_y = font_size;
+	cursor_blink_interval = 0.1;
+	cursor_blink_state = 1;
+
+	Fl::add_timeout(cursor_blink_interval, (Fl_Timeout_Handler)(console_widget_t::static_blink_handler), this);
+}
+
+void console_widget_t::static_blink_handler(console_widget_t *widget)
+{
+	widget->blink_handler();
+}
+
+void console_widget_t::blink_handler()
+{
+	if (console) {
+		damage_console(console->cursor.x, console->cursor.y, 1, 1);
+
+		/* 
+
+		For the cursor to blink we would do: cursor_blink_state = !cursor_blink_state
+
+		However, we need to fix a problem with console_idle() which causes timers not
+		to execute unless there are input events.
+		
+		*/
+	}
+
+	Fl::add_timeout(cursor_blink_interval, (Fl_Timeout_Handler)(console_widget_t::static_blink_handler), this);
 }
 
 void console_widget_t::set_font_size(int size)
@@ -149,6 +176,20 @@ void console_widget_t::draw()
 
 			start = cell;
 		}
+
+		if (!cursor_blink_state)
+			continue;
+
+		if (console->cursor.y == yi) {
+			if (console->cursor.x >= x1 && 	console->cursor.x <= x2) {
+				fl_color(0xff, 0xff, 0xff);
+				fl_rectf(cx + letter_x * console->cursor.x, 
+					 cy + letter_y * console->cursor.y + 
+					 (letter_y * (CO_CURSOR_POS_SIZE - console->cursor.end)) / CO_CURSOR_POS_SIZE,
+					 letter_x, (letter_y * (console->cursor.end - 
+						     console->cursor.start)) / CO_CURSOR_POS_SIZE);
+			}
+		}
 	}
 	
 	fl_pop_clip();
@@ -170,10 +211,22 @@ co_console_t *console_widget_t::get_console()
 co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
 {
 	co_rc_t rc;
+	co_cursor_pos_t saved_cursor_pos = {0, };
+
+	switch (message->type) 
+	{
+	case CO_OPERATION_CONSOLE_CURSOR: {
+		saved_cursor_pos = console->cursor;
+		break;
+	}
+	default:
+		break;
+	}
+
 	rc = co_console_op(console, message);
 	if (!CO_OK(rc))
 		return rc;
-		
+
 	switch (message->type) 
 	{
 	case CO_OPERATION_CONSOLE_SCROLL: {
@@ -200,6 +253,11 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
 		int x = message->putc.x, y = message->putc.y;
 		
 		damage_console(x, y, 1, 1);
+		break;
+	}
+	case CO_OPERATION_CONSOLE_CURSOR: {
+		damage_console(saved_cursor_pos.x, saved_cursor_pos.y, 1, 1);
+		damage_console(console->cursor.x, console->cursor.y, 1, 1);
 		break;
 	}
 	}

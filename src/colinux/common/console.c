@@ -9,6 +9,8 @@
 
 #include "console.h"
 
+#include <memory.h>
+
 #include <colinux/os/alloc.h>
 
 /*
@@ -122,6 +124,10 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 		
 		console->screen[y*console->x + x] = 
 			*(co_console_cell_t *)(&message->putc.charattr);
+		break;
+	}
+	case CO_OPERATION_CONSOLE_CURSOR: {
+		console->cursor = message->cursor;
 		break;
 	}
 	}

@@ -9,6 +9,8 @@
 
 #include <linux/kernel.h>
 
+#include <memory.h>
+
 #include "manager.h"
 
 #include <colinux/common/ioctl.h>
@@ -198,10 +200,7 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 		params = (typeof(params))(io_buffer);
 		
 		if (cmon->state == CO_MONITOR_STATE_RUNNING) { 
-			if (params->sc.code != 69) /* Pause key */ 
-				co_monitor_keyboard_input(cmon, params);
-			else if (params->sc.down == 1)
-				co_debug_continue_hook1(cmon);
+			co_monitor_keyboard_input(cmon, params);
 			return CO_RC(OK);
 		}
 		return CO_RC(OK);
@@ -285,6 +284,22 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, co_monitor_ioctl_op_t ioctl,
 	co_rc_t rc = CO_RC_OK;
 
 	*return_size = 0;
+
+	switch (ioctl) {
+	case CO_MANAGER_IOCTL_STATUS: {
+		co_manager_ioctl_status_t *params;
+
+		params = (typeof(params))(io_buffer);
+		params->state = manager->state;
+		params->monitors_count = manager->monitors_count;
+
+		*return_size = sizeof(*params);
+
+		return rc;
+	}
+	default:
+		break;
+	}
 
 	if (manager->state == CO_MANAGER_STATE_NOT_INITIALIZED) {
 		if (ioctl == CO_MANAGER_IOCTL_INIT) {

@@ -30,5 +30,6 @@ extern co_rc_t co_os_manager_ioctl(
 
 extern co_rc_t co_os_manager_remove(void);
 extern co_rc_t co_os_manager_install(void);
+extern co_rc_t co_os_manager_is_installed(bool_t *installed);
 
 #endif

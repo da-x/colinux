@@ -228,6 +228,7 @@ co_rc_t get_device_guid(
 }
 
 #if (0)
+
 co_rc_t coui_set_network_device_name(struct co_handle *kernel_device)
 {
 	char device_path[256];

@@ -29,10 +29,6 @@ typedef struct co_console_cell {
 	unsigned char attr;
 } co_console_cell_t;
 
-typedef struct {
-	long x, y;
-} co_console_pos_t;
-
 typedef struct co_console {
 	/* size of this struct */
 	unsigned long size;
@@ -52,7 +48,7 @@ typedef struct co_console {
 	/* </not yet implemented> */
 
 	/* Cursor pos */
-	co_console_pos_t cursor;
+	co_cursor_pos_t cursor;
 
 	/* Size of the cursor (0-empty, 255-full) */
 	unsigned char cursor_size;

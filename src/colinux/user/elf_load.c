@@ -10,6 +10,8 @@
 
 #include "daemon.h"
 
+#include <string.h>
+
 CO_TRACE_STOP;
 
 /*

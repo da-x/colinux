@@ -43,11 +43,10 @@ for that purpose.
 2.1. Build Dependencies
 
 The coLinux daemon depends on:
-  * MiniXML
+  * mxml
 
 The coLinux console depends on:
   * FLTK (major version 1)
-
 
 2.2. For Microsoft Windows
 

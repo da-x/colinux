@@ -9,6 +9,8 @@
 
 #include <linux/kernel.h>
 
+#include <memory.h>
+
 #include "monitor.h"
 #include "devices.h"
 

@@ -34,8 +34,12 @@ protected:
 	co_console_t *console;
 	int letter_x;
 	int letter_y;
+	double cursor_blink_interval;
+	int cursor_blink_state;
 	
 	virtual void draw();
+	static void static_blink_handler(class console_widget_t *widget);
+	void blink_handler();
 };
 
 #endif

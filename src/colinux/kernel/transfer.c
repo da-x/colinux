@@ -10,6 +10,8 @@
 #include <asm/page.h>
 #include <asm/pgtable.h>
 
+#include <memory.h>
+
 #include <colinux/kernel/transfer.h>
 
 /*

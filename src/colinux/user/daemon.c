@@ -12,6 +12,8 @@
 #include <colinux/os/user/misc.h>
 #include <colinux/os/alloc.h>
 
+#include <memory.h>
+
 #include "daemon.h"
 #include "manager.h"
 #include "monitor.h"
@@ -63,6 +65,7 @@ co_rc_t co_daemon_parse_args(char **args, co_start_parameters_t *start_parameter
 	/* Default settings */
 	start_parameters->launch_console = PTRUE;
 	start_parameters->show_help = PFALSE;
+
 	snprintf(start_parameters->config_path, 
 		 sizeof(start_parameters->config_path), "%s", "default.colinux.xml");
 
@@ -107,25 +110,6 @@ co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **
 {
 	co_rc_t rc;
 	co_daemon_t *daemon;
-	co_manager_handle_t handle;
-
-	co_debug("Loading driver\n");
-
-	rc = co_os_manager_install();
-	if (!CO_OK(rc)) {
-		co_debug("Error loading driver: %d\n", rc);
-		return rc;
-	}
-	
-	handle = co_os_manager_open();
-	if (handle == NULL) {
-		co_debug("Error opening device\n");
-		rc = CO_RC(ERROR);
-		goto out;
-	}
-
-	rc = co_manager_init(handle);
-	co_os_manager_close(handle);
 
 	daemon = (co_daemon_t *)co_os_malloc(sizeof(co_daemon_t));
 	if (daemon == NULL) {
@@ -149,9 +133,8 @@ co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **
 
 out_free:
 	co_os_free(daemon);
+
 out:
-	co_debug("Removing driver\n");
-	co_os_manager_remove();
 	return rc;
 }
 
@@ -160,9 +143,6 @@ void co_daemon_destroy(co_daemon_t *daemon)
 	co_debug("Closing monitor\n");
 	co_user_monitor_close(daemon->monitor);
 	co_os_free(daemon);
-
-	co_debug("Removing driver\n");
-	co_os_manager_remove();
 }
 
 co_rc_t co_daemon_load_symbol(co_daemon_t *daemon, 
@@ -287,14 +267,14 @@ out:
 
 co_rc_t co_daemon_run(co_daemon_t *daemon)
 {
-	co_debug("Running monitor\n");
+	co_debug("Monitor is running\n");
 
 	return co_user_monitor_run(daemon->monitor);
 }
 
 void co_daemon_end_monitor(co_daemon_t *daemon)
 {
-	co_debug("Destroying monitor\n");
+	co_debug("Monitor shutting down\n");
 
 	co_daemon_destroy_(daemon);
 	co_os_file_free(daemon->buf);

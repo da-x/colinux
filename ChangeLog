@@ -1,4 +1,7 @@
-Version 0.5.2
- * Added some missing files to the build tree
- * doc/cygwin-cross-build - How to build a cygwin cross compilation tools
-   on Linux.
+* Version 0.5.2
+  * Added some missing files to the build tree
+  * doc/cygwin-cross-build - How to build a cygwin cross compilation tools
+    on Linux.
+  * Made the daemon more proofed to mistakes. It's logic about loading/
+    unloading the driver is much more sane now.
+  * Added a cursor support to the console.

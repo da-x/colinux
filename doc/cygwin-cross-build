@@ -14,38 +14,29 @@ Extract that tarball to the installation directory in this manner:
 
 Now you have a ready $PREFIX/i686-pc-cygwin directory.
 
-
-Download binutils from GNU's website. Configure, build and install with:
+Download the source of the latest Debian binutils
+(http://packages.debian.org/unstable/devel/binutils, or apt-get binutils),
+with the Debian diff applied:
 
    ./configure --target=i686-pc-cygwin --prefix=$PREFIX
    make 
    make install
-  
+
+WARNING: binutils 2.14, when used to build coLinux, would cause bad 
+code generation.
+
+Download the w32api package from www.mingw.org, and install it under $PREFIX
+in this manner:
+
+   mkdir w32api
+   tar -C w32api -zxf w32api-2.3.tar.gz
+   mv w32api/include i686-pc-cygwin/include/w32api
+   mv w32api/lib i686-pc-cygwin/lib/w32api
+   rmdir w32api
 
 Download the latest gcc sources, both the gcc-core and gcc-g++ parts. Extract
 those in a separate directory, and build gcc using this procedure:
 
-   ./configure --prefix=$PREFIX -host=i686-pc-linux-gnu --target=i686-pc-cygwin --enable-languages=c,c++
-
-Run make, but it would fail at some point:
-   
+   ./configure --prefix=$PREFIX --target=i686-pc-cygwin --enable-languages=c,c++
    make
-
-It's a chicken and egg problem. It fails because the i686-pc-cygwin-* compiler 
-is not installed yet in $PREFIX (and accessable from $PATH). Run (with the 
-proper privlieges):
-   
    make install
-
-Make sure that i686-pc-cygwin-gcc is accessable from $PATH. In gcc's build 
-directory, run again:
-
-   make 
-
-It should now properly build the standard libs with the start object files.
-And then again run (with the proper privlieges):
- 
-   make install
-
-To test it, try to produce a .exe file from a 'void main(){}' C program, 
-using i686-pc-cygwin-gcc.
