@@ -1,8 +1,11 @@
 * Version 0.6.1 
   * Linux port (for systems running kernel 2.6.x)
-  * Windows: Sizes of raw partition devices are now detected properly. This 
-    means that the resierfs problems should be over, plus cat /dev/cobd* would
-    work for you.
+  * Windows: 
+    * Sizes of raw partition devices are now detected properly. This 
+      means that the resierfs problems should be over, plus cat /dev/cobd* 
+      would work for you.
+    * Suspension of the host machine won't cause colinux-daemon problems like 
+      a memory leak.
   * The console can now send Ctrl-Alt-Del.
   * Updated the cobuild.sh script (gboutwel).
 	

@@ -667,32 +667,37 @@ void co_daemon_idle(void *data)
 	struct {
 		co_message_t message;
 		co_linux_message_t linux_msg;
+		co_linux_message_idle_t data;
 	} message;
 	double this_htime;
 	double reminder;
+	int count;
 
 	message.message.from = CO_MODULE_DAEMON;
 	message.message.to = CO_MODULE_LINUX;
 	message.message.priority = CO_PRIORITY_DISCARDABLE;
 	message.message.type = CO_MESSAGE_TYPE_OTHER;
-	message.message.size = sizeof(message.linux_msg);
+	message.message.size = sizeof(message.linux_msg) + sizeof(message.data);
 	message.linux_msg.device = CO_DEVICE_TIMER;
 	message.linux_msg.unit = 0;
-	message.linux_msg.size = 0;
+	message.linux_msg.size = sizeof(message.data);
+	message.data.tick_count = 0;
 
 	this_htime = co_os_timer_highres();
 	reminder = this_htime - daemon->last_htime + daemon->reminder_htime;
 
 	if (reminder < 0) {
-		co_debug("co_daemon_idle: Time going backwards? (%.7f)\n", 
-			 reminder);
+		co_debug("co_daemon_idle: Time going backwards? (%.7f)\n", reminder);
 		reminder = 0;
 	}
 
 	while (reminder >= 0.010) {
 		reminder -= 0.010;
-		co_message_switch_dup_message(&daemon->message_switch, &message.message);
+		message.data.tick_count++;
 	}
+
+	if (message.data.tick_count > 0) 
+		co_message_switch_dup_message(&daemon->message_switch, &message.message);
 
 	daemon->reminder_htime = reminder;
 	daemon->last_htime = this_htime;
