@@ -179,19 +179,19 @@ co_rc_t co_daemon_load_symbol_and_data(co_daemon_t *daemon,
 				       unsigned long buffer_size)
 {
 	co_rc_t rc = CO_RC_OK;
-	Elf32_Sym *sym;
+	co_elf_symbol_t *sym;
 	void *data;
 
-	sym = co_get_symbol_by_name(&daemon->elf_data, symbol_name);
+	sym = co_get_symbol_by_name(daemon->elf_data, symbol_name);
 	if (sym) 
-		*address_out = sym->st_value;
+		*address_out = co_elf_get_symbol_value(sym);
 	else {
 		co_debug("symbol %s not found\n", symbol_name);
 		return CO_RC(ERROR);
 		
 	}
 	
-	data = co_elf_get_symbol_data(&daemon->elf_data, sym);
+	data = co_elf_get_symbol_data(daemon->elf_data, sym);
 	if (data == NULL) {
 		co_debug("data of symbol %s not found\n");
 		return CO_RC(ERROR);
@@ -207,11 +207,11 @@ co_rc_t co_daemon_load_symbol(co_daemon_t *daemon,
 			      unsigned long *address_out)
 {
 	co_rc_t rc = CO_RC_OK;
-	Elf32_Sym *sym;
+	co_elf_symbol_t *sym;
 
-	sym = co_get_symbol_by_name(&daemon->elf_data, symbol_name);
+	sym = co_get_symbol_by_name(daemon->elf_data, symbol_name);
 	if (sym) 
-		*address_out = sym->st_value;
+		*address_out = co_elf_get_symbol_value(sym);
 	else {
 		co_debug("symbol %s not found\n", symbol_name);
 		rc = CO_RC(ERROR);

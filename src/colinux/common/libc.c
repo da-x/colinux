@@ -25,6 +25,7 @@ void *co_memcpy(void *dest, const void *src, long n)
 
 void co_bzero(void *s, long n)
 {
+	/* bzero is nowhere define in any of ming32's headers, urgh */
 	bzero(s, n);
 }
 

@@ -8,11 +8,36 @@
  *
  */ 
 
-#include "daemon.h"
+#include <linux/compiler.h>
 
+/* 
+ * Prevent some warning from an header inline function that 
+ * is not under __KERNEL__.
+ */
+#define unlikely 
+
+#include <linux/elf.h>
+
+#include "daemon.h"
 #include <string.h>
 
-CO_TRACE_STOP;
+#include <colinux/os/alloc.h>
+
+struct co_elf_data {
+	/* ELF binary buffer */
+	unsigned char *buffer;
+	unsigned long size;
+		
+	/* Elf header and seconds */
+	Elf32_Ehdr *header;
+	Elf32_Shdr *section_string_table_section;
+	Elf32_Shdr *string_table_section;
+	Elf32_Shdr *symbol_table_section;
+};
+
+struct co_elf_symbol {
+	Elf32_Sym sym;
+};
 
 /*
  * This code in this file basically allows to enumerate loadable
@@ -91,7 +116,7 @@ char *co_get_string(co_elf_data_t *pl, unsigned long index)
 	return co_get_at_offset(pl, pl->string_table_section, index);
 }
 
-Elf32_Sym *co_get_symbol_by_name(co_elf_data_t *pl, const char *name)
+co_elf_symbol_t *co_get_symbol_by_name(co_elf_data_t *pl, const char *name)
 {
 	long index =0 ; 
 	unsigned long symbols;
@@ -102,7 +127,7 @@ Elf32_Sym *co_get_symbol_by_name(co_elf_data_t *pl, const char *name)
 		Elf32_Sym *symbol = co_get_symbol(pl, index);
 	    
 		if (strcmp(name, co_get_string(pl, symbol->st_name)) == 0)
-			return symbol;
+			return (co_elf_symbol_t *)symbol;
 	}
 
 	return NULL;
@@ -119,17 +144,30 @@ unsigned long co_get_symbol_offset(co_elf_data_t *pl, Elf32_Sym *symbol)
 	return symbol->st_value - section->sh_addr;
 }
 
-void *co_elf_get_symbol_data(co_elf_data_t *pl, Elf32_Sym *symbol)
+void *co_elf_get_symbol_data(co_elf_data_t *pl, co_elf_symbol_t *symbol)
 {
 	Elf32_Shdr *section;
 
-	section = co_get_section_header(pl, symbol->st_shndx);
+	section = co_get_section_header(pl, symbol->sym.st_shndx);
 
-	return pl->buffer + symbol->st_value - section->sh_addr + section->sh_offset;
+	return pl->buffer + symbol->sym.st_value - section->sh_addr + section->sh_offset;
 }
 
-co_rc_t co_elf_image_read(co_elf_data_t *pl, void *elf_buf, unsigned long size)
+unsigned long co_elf_get_symbol_value(co_elf_symbol_t *symbol)
 {
+ 	return symbol->sym.st_value;
+}
+
+co_rc_t co_elf_image_read(co_elf_data_t **pl_out, void *elf_buf, unsigned long size)
+{
+	co_elf_data_t *pl;
+
+	pl = co_os_malloc(sizeof(co_elf_data_t));
+	if (!pl)
+		return CO_RC(OUT_OF_MEMORY);
+
+	*pl_out = pl;
+
 	pl->header = (Elf32_Ehdr *)elf_buf;
 	pl->buffer = elf_buf;
 	pl->size = size;
@@ -157,12 +195,12 @@ co_rc_t co_section_load(co_daemon_t *daemon, unsigned long index)
 	co_monitor_ioctl_load_section_t params;
 	co_rc_t rc;
 
-	section = co_get_section_header(&daemon->elf_data, index);
+	section = co_get_section_header(daemon->elf_data, index);
 	if (section->sh_flags & SHF_ALLOC) {
 		if (section->sh_type == SHT_NOBITS)
 			params.user_ptr = NULL;
 		else
-			params.user_ptr = co_get_at_offset(&daemon->elf_data, section, 0);
+			params.user_ptr = co_get_at_offset(daemon->elf_data, section, 0);
 	
 		params.address = section->sh_addr;
 		params.size = section->sh_size;
@@ -188,7 +226,7 @@ co_rc_t co_elf_image_load(co_daemon_t *daemon)
 	unsigned long sections;
 	co_rc_t rc;
 
-	sections = co_get_section_count(&daemon->elf_data);
+	sections = co_get_section_count(daemon->elf_data);
 
 	for (index=1; index < sections; index++) {
 		rc = co_section_load(daemon, index);
@@ -199,5 +237,3 @@ co_rc_t co_elf_image_load(co_daemon_t *daemon)
 
 	return CO_RC(OK);
 }
-
-CO_TRACE_CONTINUE;

@@ -13,31 +13,15 @@
 
 #include <colinux/common/common.h>
 
-#ifndef CO_HOST_API
-#include <linux/elf.h>
-#else
-typedef struct Elf32_Ehdr Elf32_Ehdr;
-typedef struct Elf32_Shdr Elf32_Shdr;
-typedef struct Elf32_Sym Elf32_Sym;
-#endif
-
-typedef	struct co_elf_data {
-	/* ELF binary buffer */
-	unsigned char *buffer;
-	unsigned long size;
-		
-	/* Elf header and seconds */
-	Elf32_Ehdr *header;
-	Elf32_Shdr *section_string_table_section;
-	Elf32_Shdr *string_table_section;
-	Elf32_Shdr *symbol_table_section;
-} co_elf_data_t;
+typedef	struct co_elf_data co_elf_data_t;
+typedef	struct co_elf_symbol co_elf_symbol_t;
 
 struct co_daemon;
 
-extern co_rc_t co_elf_image_read(co_elf_data_t *pl, void *elf_buf, unsigned long size);
+extern co_rc_t co_elf_image_read(co_elf_data_t **pl, void *elf_buf, unsigned long size);
 extern co_rc_t co_elf_image_load(struct co_daemon *daemon);
-extern Elf32_Sym *co_get_symbol_by_name(co_elf_data_t *pl, const char *name);
-extern void *co_elf_get_symbol_data(co_elf_data_t *pl, Elf32_Sym *symbol);
+extern co_elf_symbol_t *co_get_symbol_by_name(co_elf_data_t *pl, const char *name);
+extern void *co_elf_get_symbol_data(co_elf_data_t *pl, co_elf_symbol_t *symbol);
+extern unsigned long co_elf_get_symbol_value(co_elf_symbol_t *symbol);
 
 #endif

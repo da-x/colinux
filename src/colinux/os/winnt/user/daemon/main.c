@@ -175,8 +175,6 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 	}
 
 	if (winnt_parameters.run_service) {
-		co_rc_t rc;
-
 		co_running_as_service = PTRUE;
 
 		co_terminal_print("colinux: running as service '%s'\n", winnt_parameters.service_name);

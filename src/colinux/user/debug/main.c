@@ -23,8 +23,8 @@
 typedef struct co_debug_parameters {
 	bool_t download_mode;
 	bool_t parse_mode;
-	bool_t filename_specified;
-	char filename[0x100];
+	bool_t output_filename_specified;
+	char output_filename[0x100];
 } co_debug_parameters_t;
 
 static co_debug_parameters_t parameters;
@@ -84,7 +84,8 @@ static void parse_tlv(const co_debug_tlv_t *tlv, const char *block)
 		switch (ptlv->type) {
 		case CO_DEBUG_TYPE_TIMESTAMP: {
 			co_debug_timestamp_t *ts = (typeof(ts))(ptlv->value);
-			fprintf(output_file, "    <timestamp>%08u.%-10u</timestamp>\n", ts->high, ts->low);
+			fprintf(output_file, "    <timestamp>%08u.%-10u</timestamp>\n", 
+				(unsigned int)ts->high, (unsigned int)ts->low);
 			break;
 		}
 		case CO_DEBUG_TYPE_MODULE: {
@@ -104,7 +105,7 @@ static void parse_tlv(const co_debug_tlv_t *tlv, const char *block)
 			break;
 		}
 		case CO_DEBUG_TYPE_LINE: {
-			fprintf(output_file, "    <line>%d</line>\n", *(unsigned long *)ptlv->value);
+			fprintf(output_file, "    <line>%d</line>\n", *(int *)ptlv->value);
 			break;
 		}
 		case CO_DEBUG_TYPE_LEVEL: {
@@ -112,7 +113,7 @@ static void parse_tlv(const co_debug_tlv_t *tlv, const char *block)
 			break;
 		}
 		case CO_DEBUG_TYPE_LOCAL_INDEX: {
-			fprintf(output_file, "    <local_index>%d</local_index>\n", *(unsigned long *)ptlv->value);
+			fprintf(output_file, "    <local_index>%d</local_index>\n", *(int *)ptlv->value);
 			break;
 		}
 		case CO_DEBUG_TYPE_STRING: {
@@ -219,7 +220,7 @@ static co_rc_t co_debug_parse_args(co_command_line_params_t cmdline, co_debug_pa
 
 	parameters->download_mode = PFALSE;
 	parameters->parse_mode = PFALSE;
-	parameters->filename_specified = PFALSE;
+	parameters->output_filename_specified = PFALSE;
 
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-d", &parameters->download_mode);
 	if (!CO_OK(rc)) 
@@ -229,8 +230,8 @@ static co_rc_t co_debug_parse_args(co_command_line_params_t cmdline, co_debug_pa
 	if (!CO_OK(rc)) 
 		return rc;
 
-	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-f", &parameters->filename_specified,
-						      parameters->filename, sizeof(parameters->filename));
+	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-f", &parameters->output_filename_specified,
+						      parameters->output_filename, sizeof(parameters->output_filename));
 	if (!CO_OK(rc)) 
 		return rc;
 
@@ -256,8 +257,8 @@ int co_debug_main(int argc, char *argv[])
 		return CO_RC(ERROR);
 	}
 
-	if (parameters.filename_specified) {
-		output_file = fopen(parameters.filename, "a");
+	if (parameters.output_filename_specified) {
+		output_file = fopen(parameters.output_filename, "a");
 		if (!output_file)
 			return CO_RC(ERROR);
 	}

@@ -18,10 +18,6 @@
 
 extern void co_debug_system(const char *fmt, ...);
 
-#define _colinux_attr_used __attribute__((__used__))
-
-static char _colinux_attr_used colinux_file_id[] = __FILE__;
-static char _colinux_attr_used *colinux_file_id_ptr = (char *)&colinux_file_id;
 extern char _colinux_module[0x30];
 
 #define COLINUX_DEFINE_MODULE(str) \
@@ -33,7 +29,7 @@ char _colinux_module[] = str;
 	X(messages,       15, 10) \
 	X(prints,         15, 10) \
 	X(blockdev,       15, 10) \
-	X(allocations,    15, 11) \
+	X(allocations,    15, 10) \
 
 typedef struct {
 #define X(facility, static_level, default_dynamic_level) int facility##_level;
@@ -65,7 +61,7 @@ CO_DEBUG_LIST;
 
 #define co_debug_lvl(facility, __level__, fmt, ...) do { \
         if (co_debug_log_##facility##_level(__level__))  \
-		co_debug_(_colinux_module, CO_DEBUG_FACILITY_##facility, __level__, colinux_file_id_ptr, \
+		co_debug_(_colinux_module, CO_DEBUG_FACILITY_##facility, __level__, __FILE__, \
                           __LINE__, __FUNCTION__, fmt, ## __VA_ARGS__);	\
 } while (0);
 

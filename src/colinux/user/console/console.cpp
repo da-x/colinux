@@ -92,7 +92,7 @@ console_main_window_t::console_main_window_t(console_window_t *console)
 
 int console_main_window_t::handle(int event)
 {
-	unsigned long last_focus = keyboard_focus;
+	long last_focus = keyboard_focus;
 
 	switch (event) {
 	case FL_FOCUS:
