@@ -22,7 +22,7 @@ diff -urN a/Makefile b/Makefile
  PATCHLEVEL = 6
  SUBLEVEL = 8
 -EXTRAVERSION = .1
-+EXTRAVERSION = .1-co-0.6.2-pre6
++EXTRAVERSION = .1-co-0.6.2-pre7
  NAME=Zonked Quokka
  
  # *DOCUMENTATION*
@@ -40,7 +40,7 @@ diff -urN a/Makefile b/Makefile
  NM		= $(CROSS_COMPILE)nm
 diff -urN a/arch/i386/Kconfig b/arch/i386/Kconfig
 --- a/arch/i386/Kconfig
-+++ b/arch/i386/Kconfig
++++ b/arch/i386/Kconfig	
 @@ -201,6 +201,7 @@
  
  config M586TSC
@@ -2145,15 +2145,20 @@ diff -urN a/drivers/char/Makefile b/drivers/char/Makefile
 diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 --- a/drivers/char/cocd.c
 +++ b/drivers/char/cocd.c
-@@ -0,0 +1,296 @@
+@@ -0,0 +1,373 @@
 +/*
-+ *  Copyright (C) 2004 Dan Aloni <da-x@colinux.org>
++ *  Copyright (C) 2004 Dan Aloni <da-x <at> colinux.org>
 + *
 + *  Cooperative Linux Serial Line implementation
 + * 
 + *  Compatible with UML, also based on some code from there.
-+ *  Also based on The tiny_tty.c example driver by Greg Kroah-Hartman (greg@kroah.com).
++ *  Also based on The tiny_tty.c example driver by Greg Kroah-Hartman (greg <at> kroah.com).
 + */
++
++/*
++ * 20040908: Ballard, Jonathan H. <jhballard <at> hotmail.com>
++ * 	   : Implemented cocd_task() & throttle
++*/
 +
 +#include <linux/major.h>
 +#include <linux/config.h>
@@ -2168,6 +2173,7 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +#include <linux/device.h>
 +#include <linux/console.h>
 +
++#include <linux/workqueue.h>
 +#include <linux/devfs_fs_kernel.h>
 +#include <linux/tty.h>
 +#include <linux/tty_flip.h>
@@ -2180,10 +2186,14 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +	struct tty_struct	*tty;		/* pointer to the tty for this device */
 +	struct semaphore	sem;		/* locks this structure */
 +	int			open_count;	/* number of times this port has been opened */
++	int			throttled;
 +};
 +
 +static struct tty_driver *cocd_driver = NULL;
++static struct work_struct cocd_work;
 +DECLARE_MUTEX(cocd_sem);
++
++	
 +
 +int cocd_open(struct tty_struct *tty, struct file * filp)
 +{
@@ -2206,7 +2216,9 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +		init_MUTEX_LOCKED(&cocd->sem);
 +		cocd->open_count = 0;
 +		cocd->tty = tty;
++		cocd->throttled = 0;
 +		tty->driver_data = cocd;
++		tty->low_latency = 1;
 +	} else {
 +		down (&cocd->sem);
 +	}
@@ -2247,48 +2259,91 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +	up(&cocd_sem);
 +}
 +
-+void cocd_interrupt(void)
++static unsigned cocd_task_count;
++
++static void cocd_task(void *data)
 +{
-+	co_message_node_t *node_message;
++	static co_message_node_t *input;
++	static unsigned input_index;
++	struct cocd_tty *cocd;
++	struct tty_struct *tty;
++	co_linux_message_t *message;
++	char *p, *e, *m;
 +
-+	if (!cocd_driver)
-+		return;
++	down(&cocd_sem);
++	if(cocd_task_count++)
++		printk("cocd_task collision\n");
++	up(&cocd_sem);
 +
-+	while (co_get_message(&node_message, CO_DEVICE_SERIAL)) {
-+		struct tty_struct *tty = NULL;
-+		struct cocd_tty *cocd = NULL;
-+		unsigned long i;
-+		co_linux_message_t *message;
-+
-+		message = (co_linux_message_t *)&node_message->msg.data;
-+
++	if(!input) {
++		if(!co_get_message(&input, CO_DEVICE_SERIAL)) {
++			input = 0;
++			goto cocd_task_exit;
++		}
++		if(!input)
++			goto cocd_task_exit;
++	}
++	do {
++		message = (co_linux_message_t *)&input->msg.data;
 +		if (message->unit >= CO_MODULE_MAX_SERIAL)
-+			goto next;
-+		
++			goto next_message;
 +		tty = cocd_driver->ttys[message->unit];
 +		if (!tty)
-+			goto next;
-+
++			goto next_message;
 +		cocd = (struct cocd_tty *)tty->driver_data;
 +		if (!cocd)
-+			goto next;
-+		
-+		down(&cocd->sem);
-+
-+		for (i=0; i < message->size; i++) {
-+			if (tty->flip.count >= TTY_FLIPBUF_SIZE)
++			goto next_message;
++		p = message->data + input_index;
++		e = message->data + message->size;
++		m = p;
++		do {
++			down(&cocd_sem);
++			if(!tty->driver_data) {   // detects a close
++				cocd_task_count=0;
++				up(&cocd_sem);
++				return;
++			}
++			down(&cocd->sem);
++			if(cocd->throttled) {
++				up(&cocd->sem);
++				input_index = (unsigned)(p - message->data);
++				schedule_delayed_work(&cocd_work, 1);
++				goto cocd_task_exit;
++				}
++			up(&cocd->sem);
++			if(e < (m += (TTY_FLIPBUF_SIZE - tty->flip.count)))
++				m = e;
++			while(p < m)
++				tty_insert_flip_char(tty, *(p++), 0);
++			if(tty->flip.count >= TTY_FLIPBUF_SIZE) {
 +				tty_flip_buffer_push(tty);
-+
-+			tty_insert_flip_char(tty, message->data[i], 0);
++			}
++		} while(p < e);
++		if(tty->flip.count) {
++			down(&cocd->sem);
++			if(!cocd->throttled)
++				tty_flip_buffer_push(tty);
++			up(&cocd->sem);
 +		}
++	    next_message:
++		co_free_message(input);
++		input_index = 0;
++	} while(co_get_message(&input, CO_DEVICE_SERIAL));
++	input = 0;
++    cocd_task_exit:
++	down(&cocd_sem);
++	cocd_task_count=0;
++	up(&cocd_sem);
++}
 +
-+		tty_flip_buffer_push(tty);
-+
-+		up(&cocd->sem);
-+
-+	next:
-+		co_free_message(node_message);
-+	}
++void cocd_interrupt(void)
++{
++	if (!cocd_driver)
++		return;
++	//down(&cocd_sem);
++	//if(!cocd_task_count)
++		schedule_work(&cocd_work);
++	//up(&cocd_sem);
 +}
 +
 +int cocd_write(struct tty_struct * tty, int from_user,
@@ -2321,7 +2376,7 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +		co_send_message(CO_MODULE_LINUX,
 +				CO_MODULE_SERIAL0 + tty->index,
 +				CO_PRIORITY_DISCARDABLE,
-+				CO_MESSAGE_TYPE_OTHER,
++				CO_MESSAGE_TYPE_STRING,
 +				count_partial,
 +				kbuf_scan);
 +		
@@ -2358,8 +2413,27 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +{
 +}
 +
++void cocd_throttle(struct tty_struct * tty)
++{
++	struct cocd_tty *cocd;
++	cocd = (struct cocd_tty *)tty->driver_data;
++	if (!cocd)
++		return;
++	down(&cocd->sem);
++	cocd->throttled = 1;
++	up(&cocd->sem);
++}
++
 +void cocd_unthrottle(struct tty_struct * tty)
 +{
++	struct cocd_tty *cocd;
++	cocd = (struct cocd_tty *)tty->driver_data;
++	if (!cocd)
++		return;
++	down(&cocd->sem);
++	cocd->throttled = 0;
++	up(&cocd->sem);
++	schedule_work(&cocd_work);
 +}
 +
 +void cocd_flush_buffer(struct tty_struct *tty)
@@ -2381,6 +2455,7 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +	.write = cocd_write,
 +	.write_room = cocd_write_room,
 +	.flush_buffer = cocd_flush_buffer,
++	.throttle = cocd_throttle,
 +	.unthrottle = cocd_unthrottle,
 +	.hangup = cocd_hangup, 
 +	.chars_in_buffer = cocd_chars_in_buffer, 
@@ -2429,7 +2504,7 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +	cocd_driver->type = TTY_DRIVER_TYPE_SERIAL;
 +	cocd_driver->subtype = 0;
 +	cocd_driver->init_termios = tty_std_termios;
-+	cocd_driver->flags = TTY_DRIVER_REAL_RAW;
++	cocd_driver->flags = 0;
 +
 +	tty_set_operations(cocd_driver, &cocd_ops);
 +	
@@ -2437,6 +2512,8 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +		panic("Couldn't register cocd driver");
 +	
 +	register_console(&cocd_cons);
++
++	INIT_WORK(&cocd_work, cocd_task, 0);
 +
 +	return 0;
 +}
