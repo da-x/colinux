@@ -89,6 +89,29 @@ co_rc_t console_window_t::start()
 	return online(true);
 }
 
+co_rc_t console_window_t::send_ctrl_alt_del()
+{
+	if (state != CO_CONSOLE_STATE_ATTACHED)
+		return CO_RC(ERROR);
+
+	struct {
+		co_message_t message;
+		co_daemon_console_message_t console;
+	} message;
+
+	message.message.from = CO_MODULE_CONSOLE;
+	message.message.to = CO_MODULE_DAEMON;
+	message.message.priority = CO_PRIORITY_IMPORTANT;
+	message.message.type = CO_MESSAGE_TYPE_OTHER;
+	message.message.size = sizeof(message) - sizeof(message.message);
+	message.console.type = CO_DAEMON_CONSOLE_MESSAGE_CTRL_ALT_DEL;
+	message.console.size = 0;
+
+	co_os_daemon_message_send(daemon_handle, &message.message);
+
+	return CO_RC(OK);
+}
+
 co_rc_t console_window_t::attach()
 {
 	co_rc_t rc;

@@ -40,6 +40,7 @@ class console_window_t {
 
 	co_rc_t parse_args(int argc, char **argv);
 	co_rc_t start();
+	co_rc_t send_ctrl_alt_del();
 
 	co_rc_t attach();
 	co_rc_t attach_anyhow(const co_id_t id);
