@@ -44,6 +44,7 @@ class MainEditor(wx.SplitterWindow):
         
         self.SplitVertically(tree, self.panel, 300)
         self.tree = tree
+        self.mainframe = mainframe
 
 class ConfigurationItem(object):
     def __init__(self, xml_item):
@@ -52,33 +53,13 @@ class ConfigurationItem(object):
     def title(self):
         raise NotImplemented()
 
-class NetworkDevicesOptionArray(OptionArrayPanel):
-    CLASS_DESC = 'Virtual Network Adapters'
-    SHORT_TREE_DESC = 'Networking'
-
-    def get_item_list(self):
-        return self.mainframe.network_devices
-
-    class Item(ConfigurationItem):
-        def title(self, long=False):
-            device = self._xml_item
-            index = int(device.attr.index)
-            if long:
-                name = 'conet%d' % (index, )
-            else:
-                name = '[%d]' % (index, )
-            return '%s: %s' % (name, device.attr.type)
-
-    class ItemPanel(OptionArrayPanel.ItemPanel):
-        pass
-
 class ConfigurationItemList(object):
     def __init__(self, optionpanel, xmlelements, maineditor, index_range):  
         self.root = maineditor.item_devices
         self.itemtree = maineditor.tree.AppendItem(self.root, optionpanel.SHORT_TREE_DESC)
         self.list = []
         self.optionpanel = optionpanel
-        self.maineditor = maineditor        
+        self.maineditor = maineditor
         self.elements = xmlelements
         for item in xmlelements:
             self.add_item(item, xml_update=False)
@@ -155,7 +136,6 @@ class MainFrame(wx.Frame):
         wx.Frame.__init__(self, parent, id, title, size=wx.Size(720, 400))
 
         self._main_editor = None
-        self._modified = False
 
         class filedropclass(wx.FileDropTarget):
             def OnDropFiles(fdself, x, y, filenames):
@@ -195,11 +175,12 @@ class MainFrame(wx.Frame):
         
         wx.EVT_MENU(self, wx.ID_EXIT, self.on_close_window)
 
-    def on_close_window(self, event):        
+    def on_close_window(self, event):
+        self.ask_save()
         self.Destroy()
         
-    def AskSave(self):
-        #if not (self._modified): return True
+    def ask_save(self):
+        if not self.is_modified(): return True
         
         flags = wx.ICON_EXCLAMATION | wx.YES_NO | wx.CANCEL | wx.CENTRE
         dlg = wx.MessageDialog(self, 'File is modified. Save before exit?',
@@ -207,8 +188,9 @@ class MainFrame(wx.Frame):
         say = dlg.ShowModal()
         dlg.Destroy()
         if say == wx.ID_YES:
-            self.OnSaveOrSaveAs(wxCommandEvent(wxID_SAVE))
-            if not self.modified: return True
+            self.on_save(None)
+            if not self.is_modified():
+                return True
         elif say == wx.ID_NO:
             return True
         return False
@@ -217,11 +199,11 @@ class MainFrame(wx.Frame):
         self.gui_open()
 
     def on_new(self, event):
-        if not self.AskSave(): return
+        if not self.ask_save(): return
         self.new()
 
     def on_close(self, event):
-        if not self.AskSave(): return
+        if not self.ask_save(): return
         self.close()
 
     def on_save(self, event):
@@ -241,7 +223,7 @@ class MainFrame(wx.Frame):
         self.save(pathname)
 
     def gui_open(self, path=None):
-        if not self.AskSave(): return
+        if not self.ask_save(): return
         
         if path is None:
             dlg = wx.FileDialog(self, 'Open', '',
@@ -287,10 +269,11 @@ class MainFrame(wx.Frame):
         self._current_path = path
 
     def save(self, path):
-        open(path, 'w').write(self.xml.build_string())
+        xml_to_save = self.xml.build_string()
+        open(path, 'w').write(xml_to_save)
+        self.xml_before_edit = xml_to_save
         self.SetStatusText('Saved: %s' % (path, ))
         self._current_path = path
-        self._modified = False
 
     def open_xml(self, xml):
         self.xml = xml
@@ -311,8 +294,13 @@ class MainFrame(wx.Frame):
             self.xml_colinux.sub.network,
             self._main_editor,
             range(32))
-        
-        self._modified = False        
+
+        self.xml_before_edit = self.xml.build_string()
+
+    def is_modified(self):
+        if not self._opened:
+            return False
+        return self.xml.build_string() != self.xml_before_edit
 
 class App(wx.App):
     def __init__(self, configurator, *arg, **kw):
