@@ -9,7 +9,7 @@
  */ 
 
 #include "linux_inc.h"
-
+#include "manager.h"
 #include <colinux/kernel/debug.h>
 
 void co_debug_line(char *str)
