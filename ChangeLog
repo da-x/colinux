@@ -1,7 +1,16 @@
+Sat May 29 16:15:04 2004  Dan Aloni  <da-x@colinux.org>
+
+	* src/colinux/os/winnt/user/daemon/service.c (co_winnt_daemon_install_as_service): 
+	Disabled service installation as 'NT AUTHORITY\\NetworkService' on XP until
+	it gets fixed.
+
 Fri May 28 20:04:22 2004  Dan Aloni  <da-x@colinux.org>
 
 	* src/colinux/os/winnt/user/install/colinux.nsi: 
-	Fixed installation of the upgraded TAP driver. 
+	Fixed installation of the upgraded TAP driver.
+
+	It also looks like a reboot is necessary for the TAP 
+	driver upgrade to actually work.
 
 Mon May 18 16:31:25 2004  Geroge Boutwell  <gboutwel@praize.com>
 

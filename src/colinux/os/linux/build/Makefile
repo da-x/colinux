@@ -11,7 +11,6 @@ BUILD_PATH := $(BUILD_PATH)/build
 #-----------------------------------------------------------------
 
 LOCAL_FILES = \
-	$(BUILD_ROOT)/../../linux/vmlinux \
 	$(BUILD_ROOT)/colinux/os/current/user/console/colinux-console-fltk \
 	$(BUILD_ROOT)/colinux/os/current/user/daemon/colinux-daemon \
 	$(BUILD_ROOT)/colinux/os/current/user/conet-daemon/colinux-net-daemon \

@@ -90,7 +90,7 @@ def run_wizard(mainframe):
 
             sizer.Add(text, 0, wx.EXPAND | wx.ALL, 1)
             sizer.Add(radio, 0, wx.EXPAND | wx.ALL, 1)
-            sizer_center = wx.BoxSizer(wx.VERTICAL | wx.CENTER)
+            sizer_center = wx.BoxSizer(wx.VERTICAL)
             sizer_center.Add(sizer, 0, wx.CENTER, 1)
             sizer = sizer_center
             self.SetSizer(sizer)

@@ -1,3 +1,6 @@
+* Version 0.6.2
+  * No changes yet ;)
+
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).
   * Some small bugfixes.	 

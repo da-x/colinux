@@ -52,6 +52,16 @@ void co_terminal_print(const char *format, ...)
 
 	printf("%s", buf);
 
+#ifdef COLINUX_DEBUG
+	{
+		FILE *logfile = fopen("c:\\colinux.log", "a");
+		if (logfile) {
+			fprintf(logfile, "%s", buf);
+			fclose(logfile);
+		}
+	}
+#endif
+
 	if (terminal_print_hook != NULL)
 		terminal_print_hook(buf);
 }
@@ -75,7 +85,7 @@ bool_t co_winnt_get_last_error(char *error_message, int buf_size)
 		    buf_size,
 		    NULL))
 	{
-		co_snprintf(error_message, buf_size, "GetLastError() = %d", dwLastError);
+		co_snprintf(error_message, buf_size, "GetLastError() = %d\n", dwLastError);
 	}
 
 	return dwLastError != 0;
@@ -86,7 +96,7 @@ void co_terminal_print_last_error(const char *message)
 	char last_error[0x100];
 
 	if (co_winnt_get_last_error(last_error, sizeof(last_error))) {
-		co_terminal_print("%s: last error: %s\n", message, last_error);
+		co_terminal_print("%s: last error: %s", message, last_error);
 	} else {
 		co_terminal_print("%s: success\n", message);
 	}

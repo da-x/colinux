@@ -1,8 +1,9 @@
  * Consoles:
    * If the console crashes, we need to recover somehow.
    * Make the consoles scrollable/resizable.
-   * Address the font size portability issues with FLTK. On Windows XP
-     and Windows 2000 seem to choose different font sizes.
+   * Address the font size portability issues with FLTK. Windows XP
+     and Windows 2000 seem to choose different font sizes for the
+     same font size in FLTK.
    * Add select, copy and paste to and from console and to and from
      host-environment (not so much mouse but using keys). Is now
      overcome by using SSH + putty, but that makes the console less
@@ -13,9 +14,8 @@
    * Fix F10 in FLTK.
 
  * Installer:
-   * Point the user to somewhere to download WinPCAP from.
    * Instruct the user to install Python for Windows, wxPython, and Python 
-     Win32 extensions.
+     Win32 extensions (or use py2exe).
    * The installer should add have an option to launch the configurator 
      when the installation finishes. 
 
@@ -75,7 +75,7 @@
    * Support device aliasing, e.g alias="hda2"
 
  * Root file system images: 
-   * Fix and improbe the Debian image.
+   * Fix and improve the Debian image.
      * Add ssh to it. the fact that we will end with the same sshd private keys
        all around the world is not a big issue :)
      * Fix the minor bits of editing needed as described on the Wiki.

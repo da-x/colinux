@@ -19,6 +19,7 @@
 
 #include <colinux/common/common.h>
 #include <colinux/os/user/misc.h>
+#include <colinux/os/winnt/user/misc.h>
 
 #include "../../kernel/tap-win32/constants.h"
 #include "../../kernel/tap-win32/common.h"
@@ -254,7 +255,7 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 		unsigned long minor;
 		unsigned long debug;		
 	} version;
-	int version_len;
+	LONG version_len;
 
 	if (prefered_name != NULL)
 		co_snprintf(name_buffer, sizeof(name_buffer), "%s", prefered_name);
@@ -263,7 +264,7 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 	if (!CO_OK(rc))
 		return CO_RC(NOT_FOUND);
 
-	co_debug("conet-daemon: opening TAP: \"%s\"\n", name_buffer);
+	co_terminal_print("conet-daemon: opening TAP: \"%s\"\n", name_buffer);
 
 	/*
 	 * Open Windows TAP-Win32 adapter
@@ -283,20 +284,22 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 		0
 		);
 
-	if (handle == 0)
+	if (handle == INVALID_HANDLE_VALUE) {
+		co_terminal_print_last_error("conet-daemon: tap device open");
 		return CO_RC(ERROR);
+	}
 
 	bret = DeviceIoControl(handle, TAP_IOCTL_GET_VERSION,
 			       &version, sizeof (version),
 			       &version, sizeof (version), &version_len, NULL);
 
 	if (bret == FALSE) {
+		co_terminal_print_last_error("conet-daemon: error getting driver version");
 		CloseHandle(handle);
-		co_debug("conet-daemon: error getting driver version\n");
 		return CO_RC(ERROR);
 	}
 
-	co_debug("conet-daemon: driver version %d.%d\n", version.major, version.minor);
+	co_terminal_print("conet-daemon: driver version %d.%d\n", version.major, version.minor);
 	
 	*phandle = handle;
 

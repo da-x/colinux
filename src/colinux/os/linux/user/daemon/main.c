@@ -30,28 +30,24 @@ void sighup_handler(int sig)
 	colinux_daemon->send_ctrl_alt_del = PTRUE;
 }
 
-void set_affinity() 
-{
-#if (0)
-	unsigned long set = 0;
-	int ret;
-
-	set = 1; /* Bind to the first CPU */
-	sched_setaffinity(getpid(), &set, sizeof(set));
-#endif
-}
-
 int main(int argc, char *argv[]) 
 {
 	co_rc_t rc = CO_RC_OK;
 	co_start_parameters_t start_parameters;
+	co_command_line_params_t cmdline;
 	co_manager_handle_t handle;
 	bool_t installed = PFALSE;
 	int ret;
 
-	co_terminal_print("Cooperative Linux daemon\n");
+	co_daemon_print_header();
 
-	rc = co_daemon_parse_args(argv, &start_parameters);
+	rc = co_cmdline_params_alloc(argv, argc, &cmdline);
+	if (!CO_OK(rc)) {
+		co_terminal_print("daemon: error parsing arguments\n");
+		return CO_RC(ERROR);
+	}
+
+	rc = co_daemon_parse_args(cmdline, &start_parameters);
 	if (!CO_OK(rc)) {
 		co_terminal_print("daemon: error parsing parameters\n");
 		co_daemon_syntax();
@@ -98,8 +94,6 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	co_os_manager_close(handle);
-
-	set_affinity();
 
 	rc = co_daemon_create(&start_parameters, &colinux_daemon);
 	if (!CO_OK(rc))

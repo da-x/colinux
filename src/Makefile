@@ -72,7 +72,11 @@ BUILD_SUBDIRS = $(shell echo $(addprefix $(BUILD_PATH)/,$(addsuffix /Makefile,$(
 # Common tools definitions
 #
 
-CO_INCLUDES=-I$(BUILD_ROOT) -I$(BUILD_ROOT)/../../linux/include
+ifeq ($(COLINUX_TARGET_KERNEL_PATH),)
+$(error COLINUX_TARGET_KERNEL_PATH not set. Please set this environment variable to the pathname of a coLinux-enabled kernel source tree)
+endif
+
+CO_INCLUDES=-I$(BUILD_ROOT) -I$(COLINUX_TARGET_KERNEL_PATH)/include
 
 #
 # This define is used to resolve some conflicts between two

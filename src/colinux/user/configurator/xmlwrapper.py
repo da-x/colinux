@@ -24,3 +24,8 @@ class XMLWrapper(object):
         return XMLWrapper(minidom.parse(file))
 
     parse = staticmethod(parse)
+
+    def parse_string(string):
+        return XMLWrapper(minidom.parseString(string))
+
+    parse_string = staticmethod(parse_string)

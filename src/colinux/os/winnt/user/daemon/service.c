@@ -94,8 +94,11 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, co_start_pa
 	co_snprintf(command, sizeof(command), "\"%s\" --run-service \"%s\" -d -c \"%s\"", exe_name, service_name, start_parameters->config_path);
 	co_ntevent_print("daemon: service command line: %s\n", command);
 
+#if (0)
+	/* broken somwhow for recent TAP driver */
 	if (co_winnt_is_winxp_or_better())
 		service_user_name = "NT AUTHORITY\\NetworkService";
+#endif
 
 	schService = CreateService(schSCManager, service_name, service_name, 
 				   SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START, 

@@ -34,6 +34,7 @@ class MainEditor(wx.SplitterWindow):
                 clss = OptionPanel
             instance = clss(self, mainframe)
             self.ReplaceWindow(self.panel, instance.panel)
+            self.panel.Destroy()
             self.panel = instance.panel
             
         wx.EVT_TREE_SEL_CHANGED(tree, tree.GetId(), sel_changed)
@@ -246,7 +247,6 @@ class MainFrame(wx.Frame):
                                   '', '*.colinux.xml', wx.OPEN | wx.CHANGE_DIR)
             if dlg.ShowModal() == wx.ID_OK:
                 path = dlg.GetPath()
-                
             dlg.Destroy()
 
         if path is not None:
@@ -257,20 +257,28 @@ class MainFrame(wx.Frame):
             self._main_editor.Destroy()
             self._main_editor = None
 
-    def new(self):
+    def new_layout(self):
         self.close()
         splitter = self.splitter = MainEditor(self, 2)
         sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(splitter, 1, wx.EXPAND)        
+        sizer.Add(splitter, 1, wx.EXPAND)
         self.SetSizer(sizer)
-        self.SetAutoLayout(wx.true)
+        self.SetAutoLayout(True)
         self._main_editor = splitter
         self.SendSizeEvent()
 
+    def new(self):
+        self.new_layout()
+        self.open_xml(XMLWrapper.parse_string('<colinux></colinux>'))
+
     def open(self, path):
-        self.new()
-        self.xml = XMLWrapper.parse(open(path))
-        self.xml_colinux,  = self.xml.sub.colinux
+        self.new_layout()
+        self.open_xml(XMLWrapper.parse(open(path)))
+        self.SetStatusText('Loaded: %s' % (path, ))
+
+    def open_xml(self, xml):
+        self.xml = xml
+        self.xml_colinux, = self.xml.sub.colinux
 
         self.block_devices = ConfigurationItemList(
             BlockDevicesOptionArray,
@@ -282,8 +290,7 @@ class MainFrame(wx.Frame):
             self.xml_colinux.sub.network,
             self._main_editor)
         
-        self._modified = False
-        self.SetStatusText('Loaded: %s' % (path, ))
+        self._modified = False        
 
 class App(wx.App):
     def __init__(self, configurator, *arg, **kw):
@@ -291,11 +298,11 @@ class App(wx.App):
         wx.App.__init__(self, *arg, **kw)
         
     def OnInit(self):
-        frame = MainFrame(self._configurator, wx.NULL, -1, 'Cooperative Linux Virtual Machine Configuration')
-        frame.Show(wx.true)
+        frame = MainFrame(self._configurator, None, -1, 'Cooperative Linux Virtual Machine Configuration')
+        frame.Show(True)
         self.SetTopWindow(frame)
         self.mainframe = frame
-        return wx.true
+        return True
 
 class Configurator(object):
     def __init__(self, args):
