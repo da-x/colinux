@@ -26,6 +26,7 @@ struct co_daemon_handle {
 	HANDLE readable;
 	HANDLE shifted;
 	HANDLE heap;
+	co_message_t *message;
 	void *qOut;
 	void *qIn;
 	void *packets;

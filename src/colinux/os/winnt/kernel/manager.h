@@ -62,13 +62,6 @@ struct co_osdep_manager {
 	unsigned long pages_mapped;
 };
 
-struct co_common_memory {
-	PMDL mdl;
-	void *virtual_address;
-	unsigned pages;
-	co_pfn_t pfn[0];
-};
-
 extern void co_winnt_free_all_pages(co_osdep_manager_t osdep);
 
 #endif

@@ -31,13 +31,4 @@ extern void co_os_free_pages(void *ptr, unsigned long pages);
 extern co_rc_t co_os_userspace_map(void *address, unsigned long pages, void **user_address, void **handle);
 extern void co_os_userspace_unmap(void *user_address, void *handle, unsigned long pages);
 
-/*
- * Interfaces for common memory between host and guest space
- */
-
-extern co_rc_t co_os_common_index(struct co_manager *manager, void *common, co_pfn_t pfn, unsigned index);
-extern co_rc_t co_os_common_allocate(struct co_manager *manager, unsigned pages, void **common);
-extern co_rc_t co_os_common_map(struct co_manager *manager, void *common, void **address);
-extern co_rc_t co_os_common_unmap(struct co_manager *manager, void *common);
-
 #endif
