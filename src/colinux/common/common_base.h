@@ -20,35 +20,75 @@ typedef int bool_t;
 #define CO_MAX_MONITORS                   16
 #define CO_LINUX_PERIPHERY_API_VERSION    12
 
+#define CO_ERRORS_X_MACRO			\
+	X(ERROR)				\
+	X(PAE_ENABLED)				\
+	X(VERSION_MISMATCHED)			\
+	X(OUT_OF_MEMORY)			\
+	X(OUT_OF_PAGES)				\
+	X(NOT_FOUND)				\
+	X(CANT_OPEN_VMLINUX_FILE)		\
+	X(CANT_STAT_VMLINUX_FILE)		\
+	X(ERROR_READING_VMLINUX_FILE)		\
+	X(ERROR_INSTALLING_DRIVER)		\
+	X(ERROR_REMOVING_DRIVER)		\
+	X(ERROR_STARTING_DRIVER)		\
+	X(ERROR_STOPPING_DRIVER)		\
+	X(ERROR_ACCESSING_DRIVER)		\
+	X(TRANSFER_OFF_BOUNDS)			\
+	X(MONITOR_NOT_LOADED)			\
+	X(BROKEN_PIPE)				\
+	X(TIMEOUT)				\
+	X(ACCESS_DENIED)			\
+	X(COMPILER_MISMATCHED)			\
+
+#define X(name) CO_RC_ERROR_##name,
+typedef enum {
+    CO_RC_NO_ERROR=0,
+    CO_ERRORS_X_MACRO
+} co_error_value_t;
+#undef X
+ 
+#define X(name) CO_RC_##name = -CO_RC_ERROR_##name,
 typedef enum {
     CO_RC_OK                         = 0,
-    CO_RC_ERROR                      = -1,
-    CO_RC_PAE_ENABLED                = -2,
-    CO_RC_VERSION_MISMATCHED         = -3,
-    CO_RC_OUT_OF_MEMORY              = -4,
-    CO_RC_OUT_OF_PAGES               = -5,
-    CO_RC_NOT_FOUND                  = -6,
-    CO_RC_CANT_OPEN_VMLINUX_FILE     = -12,
-    CO_RC_CANT_STAT_VMLINUX_FILE     = -13,
-    CO_RC_ERROR_READING_VMLINUX_FILE = -14,
-    CO_RC_ERROR_INSTALLING_DRIVER    = -15,
-    CO_RC_ERROR_REMOVING_DRIVER      = -16,
-    CO_RC_ERROR_STARTING_DRIVER      = -17,
-    CO_RC_ERROR_STOPPING_DRIVER      = -18,
-    CO_RC_ERROR_ACCESSING_DRIVER     = -19,
-    CO_RC_TRANSFER_OFF_BOUNDS        = -20,
-    CO_RC_MONITOR_NOT_LOADED         = -21,
-    CO_RC_BROKEN_PIPE                = -22,
-    CO_RC_TIMEOUT                    = -23,
-    CO_RC_ACCESS_DENIED              = -24,
-    CO_RC_COMPILER_MISMATCHED        = -25,
-} co_rc_t;
+    CO_ERRORS_X_MACRO
+} co_rc_value_t;
+#undef X
+
+typedef long co_rc_t;
 
 #include "debug.h"
 
-#define CO_RC_NEG_WRAPPER(name)   ((co_rc_t)((name < 0) ? (1 << 31 | -name | (__LINE__ << 12)) : name))
-#define CO_RC_GET_CODE(name)      (-(name & 0xfff))
-#define CO_RC_GET_LINE(name)      ((name >> 12) & 0x7ffff)
+#ifndef COLINUX_FILE_ID           
+#define COLINUX_FILE_ID           0
+#endif
+
+#define CO_BITS_OFFSET_ERROR_CODE   0
+#define CO_BITS_COUNT_ERROR_CODE    10
+#define CO_BITS_OFFSET_LINE_NUM     (CO_BITS_OFFSET_ERROR_CODE + CO_BITS_COUNT_ERROR_CODE)
+#define CO_BITS_COUNT_LINE_NUM      11
+#define CO_BITS_OFFSET_FILE_ID      (CO_BITS_OFFSET_LINE_NUM + CO_BITS_COUNT_LINE_NUM)
+#define CO_BITS_COUNT_FILE_ID       10
+#define CO_BITS_OFFSET_NEG          (CO_BITS_OFFSET_FILE_ID + CO_BITS_COUNT_FILE_ID)
+#define CO_BITS_COUNT_NEG           1
+
+#define CO_BITS_BUILD(type, value) \
+	((value & ((1 << CO_BITS_COUNT_##type) - 1)) << CO_BITS_OFFSET_##type)
+
+#define CO_BITS_GET(type, value) \
+	((value >> CO_BITS_OFFSET_##type) & ((1 << CO_BITS_COUNT_##type) - 1))
+
+#define CO_RC_NEG_WRAPPER(name)						\
+	(CO_BITS_BUILD(NEG, name < 0 ? 1 : 0) |				\
+	 CO_BITS_BUILD(ERROR_CODE, name < 0 ? -name : name) |		\
+	 CO_BITS_BUILD(LINE_NUM, __LINE__) |				\
+	 CO_BITS_BUILD(FILE_ID, COLINUX_FILE_ID) |			\
+	 0)
+
+#define CO_RC_GET_CODE(value)     ((value < 0) ? (-CO_BITS_GET(ERROR_CODE, value)) : (CO_BITS_GET(ERROR_CODE, value)))
+#define CO_RC_GET_LINE(value)     CO_BITS_GET(LINE_NUM, value)
+#define CO_RC_GET_FILE_ID(value)  CO_BITS_GET(FILE_ID, value)
 
 #ifndef DEBUG_CO_RC
 #define CO_RC(name)      CO_RC_NEG_WRAPPER(CO_RC_##name)
@@ -87,5 +127,6 @@ typedef char co_pathname_t[0x100];
 
 extern int co_snprintf(char *str, long n, const char *format, ...);
 extern int co_vsnprintf(char *str, long nmax, const char *format, va_list ap);
+extern void co_rc_format_error(co_rc_t rc, char *buf, int size);
 
 #endif

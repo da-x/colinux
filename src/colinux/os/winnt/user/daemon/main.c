@@ -82,8 +82,13 @@ out:
 	if (!CO_OK(rc)) {
 		if (CO_RC_GET_CODE(rc) == CO_RC_OUT_OF_PAGES) {
 			co_terminal_print("daemon: not enough physical memory available (try with a lower setting)\n", rc);
-		} else 
-			co_terminal_print("daemon: exit code: %x\n", rc);
+		} else {
+			char buf[0x100];
+			co_rc_format_error(rc, buf, sizeof(buf));
+
+			co_terminal_print("daemon: exit code %x\n", rc);
+			co_terminal_print("daemon: %s\n", buf);
+		}
 
 		ret = CO_RC(ERROR);
 	} else {

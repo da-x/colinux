@@ -10,6 +10,7 @@ LOCAL_OBJS = \
 	queue.o \
 	console.o \
 	debug.o \
+	errors.o \
 	messages.o \
 	version.o \
 	libc.o \
