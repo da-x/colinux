@@ -46,6 +46,8 @@ co_rc_t co_os_pipe_server_destroy_client(co_os_pipe_server_t *ps, co_os_pipe_con
 co_rc_t co_os_pipe_server_handle_packet(co_os_pipe_server_t *ps, co_os_pipe_connection_t *connection, 
 					unsigned long size)
 {
+	co_debug_lvl(pipe, 13, "enter (ps=%x,connection=%x,size=%x)\n", ps, connection, size);
+
 	return ps->packet_func(connection, &connection->user_data, connection->in_buffer, size);
 }
 
@@ -54,19 +56,27 @@ co_rc_t co_os_pipe_server_send(co_os_pipe_connection_t *conn, char *data, unsign
 	unsigned long written = 0;
 	BOOL ret;
 
+	co_debug_lvl(pipe, 13, "enter (conn=%x,data=%x,size=%x)\n", conn, data, size);
+
 	/* Current we don't queue packets here. Let WriteFile block... */
 	ret = WriteFile(conn->pipe, data, size, &written, NULL); 
-	if (!ret)
+	if (!ret) {
+		co_debug_lvl(pipe, 11, "error writing\n");
 		return CO_RC(ERROR);
+	}
 	
-	if (written != size)
+	if (written != size) {
+		co_debug_lvl(pipe, 11, "not all written (%d of %d)", written, size);
 		return CO_RC(ERROR);
+	}
 
 	return CO_RC(OK);
 }
 
 co_rc_t co_os_pipe_server_client_connected(co_os_pipe_server_t *ps, co_os_pipe_connection_t *connection)
 {
+	co_debug_lvl(pipe, 13, "enter (ps=%x,connection=%x)\n", ps, connection);
+
 	connection->state = CO_OS_PIPE_SERVER_STATE_CONNECTED;
 
 	co_os_pipe_server_create_client(ps, NULL);
@@ -76,6 +86,8 @@ co_rc_t co_os_pipe_server_client_connected(co_os_pipe_server_t *ps, co_os_pipe_c
 
 co_rc_t co_os_pipe_server_client_disconnected(co_os_pipe_server_t *ps, co_os_pipe_connection_t *connection)
 {
+	co_debug_lvl(pipe, 13, "enter (ps=%x,connection=%x)\n", ps, connection);
+
 	ps->disconnected_func(connection, &connection->user_data);
 
 	return CO_RC(OK);
@@ -85,6 +97,8 @@ co_rc_t co_os_pipe_server_read_sync(co_os_pipe_server_t *ps, co_os_pipe_connecti
 {
 	unsigned long read_size = 0;
 	BOOL result;
+
+	co_debug_lvl(pipe, 13, "enter (ps=%x, connection=%x)\n", ps, connection);
 
 	while (1) {
 		result = ReadFile(connection->pipe,
@@ -99,10 +113,13 @@ co_rc_t co_os_pipe_server_read_sync(co_os_pipe_server_t *ps, co_os_pipe_connecti
 			switch (error)
 			{ 
 			case ERROR_IO_PENDING: 
+				co_debug_lvl(pipe, 13, "pending\n");
 				return CO_RC(OK);
 			case ERROR_BROKEN_PIPE:
+				co_debug_lvl(pipe, 13, "broken\n");
 				return co_os_pipe_server_destroy_client(ps, connection);
 			default:
+				co_debug_lvl(pipe, 13, "other error: %d\n", error);
 				return CO_RC(ERROR);
 			} 
 		}
@@ -118,6 +135,8 @@ co_rc_t co_os_pipe_server_read_async(co_os_pipe_server_t *ps, co_os_pipe_connect
 	BOOL result;
 	unsigned long read_size;
 
+	co_debug_lvl(pipe, 13, "enter\n");
+
 	if (connection->state == CO_OS_PIPE_SERVER_STATE_NOT_CONNECTED) {
 		co_os_pipe_server_client_connected(ps, connection);
 		return co_os_pipe_server_read_sync(ps, connection);
@@ -130,11 +149,13 @@ co_rc_t co_os_pipe_server_read_async(co_os_pipe_server_t *ps, co_os_pipe_connect
 		FALSE);
 	
 	if (result) {
+		co_debug_lvl(pipe, 13, "reading next\n");
 		co_os_pipe_server_handle_packet(ps, connection, read_size);
 		co_os_pipe_server_read_sync(ps, connection);
 	} else {
 		switch (GetLastError()) {
 			case ERROR_BROKEN_PIPE:
+				co_debug_lvl(pipe, 13, "broken\n");
 				return co_os_pipe_server_destroy_client(ps, connection);
 		}
 	}
@@ -145,6 +166,8 @@ co_rc_t co_os_pipe_server_read_async(co_os_pipe_server_t *ps, co_os_pipe_connect
 co_rc_t co_os_pipe_server_destroy_client(co_os_pipe_server_t *ps, co_os_pipe_connection_t *connection)
 {
 	unsigned long index;
+
+	co_debug_lvl(pipe, 13, "enter\n");
 
 	if (connection->state == CO_OS_PIPE_SERVER_STATE_CONNECTED) {
 		co_os_pipe_server_client_disconnected(ps, connection);
@@ -170,6 +193,8 @@ co_rc_t co_os_pipe_server_destroy_client(co_os_pipe_server_t *ps, co_os_pipe_con
 
 	ps->num_clients--;
 
+	co_debug_lvl(pipe, 13, "number of clients down to %d\n", ps->num_clients);
+
 	return CO_RC(OK);
 }
 
@@ -186,16 +211,20 @@ co_rc_t co_os_pipe_server_create_client(co_os_pipe_server_t *ps, HANDLE handle)
 	int index;
 	co_rc_t rc = CO_RC(OK);
 
+	co_debug_lvl(pipe, 13, "enter\n");
+
 	pipe_server_pathname(pipename, sizeof(pipename), ps->id);
 
 	if (CO_OS_PIPE_SERVER_MAX_CLIENTS == ps->num_clients) {
 		rc = CO_RC(ERROR); 
+		co_debug_lvl(pipe, 10, "too many clients\n");
 		goto out;
 	}
 
 	connection = co_os_malloc(sizeof(*connection));
 	if (connection == NULL) {
 		rc = CO_RC(ERROR); 
+		co_debug_lvl(pipe, 10, "allocation error\n");
 		goto out;
 	}
 
@@ -203,6 +232,7 @@ co_rc_t co_os_pipe_server_create_client(co_os_pipe_server_t *ps, HANDLE handle)
 	connection->in_buffer = (char *)co_os_malloc(CO_OS_PIPE_SERVER_BUFFER_SIZE);
 	if (connection->in_buffer == NULL) {
 		rc = CO_RC(ERROR);
+		co_debug_lvl(pipe, 10, "allocation error\n");
 		goto out_free_connection;
 	}
 
@@ -211,12 +241,14 @@ co_rc_t co_os_pipe_server_create_client(co_os_pipe_server_t *ps, HANDLE handle)
 	event = CreateEvent(NULL,  TRUE, FALSE, NULL);
 	if (event == INVALID_HANDLE_VALUE) {
 		rc = CO_RC(ERROR);
+		co_debug_lvl(pipe, 10, "allocation error\n");
 		goto out_free_buffer;
 	}
 	ResetEvent(event);
 
 	if (handle) {
 		connection->pipe = handle;
+		co_debug_lvl(pipe, 11, "pipe passed: %x\n", connection->pipe);
 	}
 	else {
 		connection->pipe = CreateNamedPipe(
@@ -228,6 +260,7 @@ co_rc_t co_os_pipe_server_create_client(co_os_pipe_server_t *ps, HANDLE handle)
 			0x100000,
 			10000,
 			NULL);
+		co_debug_lvl(pipe, 11, "pipe created: %x\n", connection->pipe);
 	}
 
 	if (connection->pipe == INVALID_HANDLE_VALUE) {
@@ -242,11 +275,14 @@ co_rc_t co_os_pipe_server_create_client(co_os_pipe_server_t *ps, HANDLE handle)
 	ps->clients[index] = connection;
 	ps->events[index] = event;
 
+	co_debug_lvl(pipe, 11, "connecting (%d clients, index %d)\n", ps->num_clients, index);
+
 	if (ConnectNamedPipe(connection->pipe, &connection->overlap) != 0) {
 		co_os_pipe_server_client_connected(ps, connection);
 		rc = co_os_pipe_server_read_sync(ps, connection);
 	} else {
 		connection->state = CO_OS_PIPE_SERVER_STATE_NOT_CONNECTED;
+		co_debug_lvl(pipe, 11, "not connected\n");
 	}
 
 	return rc;
@@ -270,6 +306,8 @@ co_rc_t co_os_pipe_server_service(co_os_pipe_server_t *ps, bool_t infinite)
 	DWORD result;
 	co_rc_t rc;
 
+	co_debug_lvl(pipe, 13, "enter\n");
+
 	if (ps->num_clients == 0) {
 		rc = co_os_pipe_server_create_client(ps, NULL);
 		if (!CO_OK(rc))
@@ -281,6 +319,8 @@ co_rc_t co_os_pipe_server_service(co_os_pipe_server_t *ps, bool_t infinite)
 					   FALSE,
 					   infinite ? 5 : 0,
 					   QS_ALLEVENTS);
+
+	co_debug_lvl(pipe, 13, "waiting ended: %d\n", result);
 
 	if ((result >= WAIT_OBJECT_0)  && 
 	    (result < WAIT_OBJECT_0 + ps->num_clients)) 
@@ -308,7 +348,10 @@ static co_id_t pipe_server_alloc_id(HANDLE *handle_out)
 	char pipename[0x100];
 	HANDLE handle;
 
+	co_debug_lvl(pipe, 13, "enter\n");
+
 	for (;;) {
+		co_debug_lvl(pipe, 12, "trying with id %d\n", id);
 		pipe_server_pathname(pipename, sizeof(pipename), id);
 		
 		handle = CreateFile(pipename,
@@ -316,6 +359,7 @@ static co_id_t pipe_server_alloc_id(HANDLE *handle_out)
 				    0, 0, OPEN_EXISTING, FILE_FLAG_OVERLAPPED, 0);
 
 		if (handle == INVALID_HANDLE_VALUE) {
+			co_debug_lvl(pipe, 12, "creating named pipe (%s)\n", pipename);
 			handle = CreateNamedPipe(
 				pipename,
 				PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
@@ -329,6 +373,8 @@ static co_id_t pipe_server_alloc_id(HANDLE *handle_out)
 			*handle_out = handle;
 			return id;
 		}
+
+		co_debug_lvl(pipe, 12, "trying next id\n");
 		CloseHandle(handle);
 		id += 1;
 	}
@@ -345,6 +391,9 @@ co_rc_t co_os_pipe_server_create(co_os_pipe_server_func_connected_t connected_fu
 {
 	co_os_pipe_server_t *ps;
 	HANDLE handle = NULL;
+	int i;
+
+	co_debug_lvl(pipe, 13, "enter\n");
 
 	ps = co_os_malloc(sizeof(*ps));
 	if (!ps)
@@ -364,13 +413,22 @@ co_rc_t co_os_pipe_server_create(co_os_pipe_server_func_connected_t connected_fu
 
 	co_os_pipe_server_create_client(ps, handle);
 
+	/*
+	 * Make sure that there are at least 30 more clients waiting to be 
+	 * connected, so we don't encounter a situation where no clients
+	 * are actually waiting.
+	 */
+	for (i=0; i < 30; i++)
+		co_os_pipe_server_create_client(ps, NULL);
+
 	return CO_RC(OK);
 }
 
 void co_os_pipe_server_destroy(co_os_pipe_server_t *ps)
 {
-	/* While there are clients, delete the first one */
+	co_debug_lvl(pipe, 13, "enter\n");
 
+	/* While there are clients, delete the first one */
 	while (ps->num_clients) {
 		co_os_pipe_server_destroy_client(ps, ps->clients[0]);
 	}

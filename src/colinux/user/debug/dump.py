@@ -52,7 +52,7 @@ def print_logs(logs_list):
         f = "%s:" % (data['function'], )
         f = ''
         print (str(driver_index) + '|' + data['timestamp'] + '|' +
-               data['module'] + '|' + data['file'] + ':' +
+               data['module'] + '|' + data['file'] + ':' + data['function'] + ':' +
                data['line'] + '|' + data['string'])
 
     for data in logs_list:

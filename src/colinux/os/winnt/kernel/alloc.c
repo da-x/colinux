@@ -56,7 +56,7 @@ static co_rc_t co_winnt_new_mdl_bucket(struct co_manager *manager)
 	int pages_allocated = mdl_ptr->mdl->ByteCount >> CO_ARCH_PAGE_SHIFT;
 	if (pages_allocated != PFN_ALLOCATION_COUNT) {
 		rc =  CO_RC(OUT_OF_MEMORY);
-		goto error_free_ptrs;
+		goto error_free_mdl;
 	}
 
 	manager->osdep->mdls_allocated++;

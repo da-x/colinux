@@ -18,23 +18,6 @@ extern "C" {
 
 COLINUX_DEFINE_MODULE("colinux-console-nt");
 
-#if 0
-static HHOOK current_hook;
-static LRESULT CALLBACK
-keyboard_hook(int nCode, WPARAM wParam, LPARAM lParam)
-{
-	co_scan_code_t sc;
-	sc.code = (lParam >> 16) & 0xff;
-	sc.down = (lParam & (1 << 31)) ? 0 : 1;
-
-	co_user_console_handle_scancode(sc);
-
-	co_debug(" scancode...\n");
-
-	return CallNextHookEx(current_hook, nCode, wParam, lParam);
-}
-#endif
-
 int
 main(int argc, char **argv)
 {
@@ -51,6 +34,7 @@ main(int argc, char **argv)
 		allocatedConsole = true;
 		hwnd = GetConsoleWindow();
 	}
+
 	input = GetStdHandle(STD_INPUT_HANDLE);
 	output = GetStdHandle(STD_OUTPUT_HANDLE);
 	GetConsoleCursorInfo(output, &cursor);
@@ -63,7 +47,7 @@ main(int argc, char **argv)
 		status = -1;
 	}
 
-	if(allocatedConsole) {
+	if (allocatedConsole) {
 		FreeConsole();
 		return status;
 	}

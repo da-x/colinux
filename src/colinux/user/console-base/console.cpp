@@ -331,8 +331,7 @@ void
 	}
 }
 
-void
- console_window_t::handle_scancode(co_scan_code_t sc)
+void console_window_t::handle_scancode(co_scan_code_t sc)
 {
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return;
@@ -362,8 +361,7 @@ void
 	co_os_daemon_send_message(daemon_handle, &message.message);
 }
 
-void
- console_window_t::log(const char *format, ...)
+void console_window_t::log(const char *format, ...)
 {
 	char
 	    buf[0x100];

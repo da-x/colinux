@@ -31,6 +31,7 @@ char _colinux_module[] = str;
 	X(blockdev,       15, 0) \
 	X(allocations,    15, 0) \
 	X(context_switch, 15, 0) \
+	X(pipe,           15, 0) \
 
 typedef struct {
 #define X(facility, static_level, default_dynamic_level) int facility##_level;

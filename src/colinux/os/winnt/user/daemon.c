@@ -42,7 +42,7 @@ co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
 	co_debug("connecting to instance %d as %s\n", linux_id, module_name);
 
 	if (!WaitNamedPipe(pathname, NMPWAIT_USE_DEFAULT_WAIT)) {
-		co_debug("Connection timed out (%x)\n", GetLastError());
+		co_debug("connection timed out (%x)\n", GetLastError());
 		goto co_os_open_daemon_pipe_error;
 	}
 
