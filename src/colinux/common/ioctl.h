@@ -15,6 +15,7 @@
 #include <colinux/common/import.h>
 #include <colinux/common/config.h>
 
+
 typedef enum {
 	CO_MANAGER_IOCTL_BASE=0x10,
 
@@ -35,6 +36,8 @@ typedef struct {
 	co_rc_t rc;
 	co_symbols_import_t import;
 	co_config_t config;
+	co_info_t info;
+	co_arch_info_t arch_info;
 } co_manager_ioctl_create_t;
 
 /* 
@@ -56,14 +59,9 @@ typedef struct {
 	char extra_data[];
 } co_manager_ioctl_monitor_t;
 
-typedef enum {
-	CO_MANAGER_STATE_NOT_INITIALIZED,
-	CO_MANAGER_STATE_INITIALIZED,
-} co_manager_state_t;
-
 /* interface for CO_MANAGER_IOCTL_STATUS: */
 typedef struct {
-	co_manager_state_t state;
+	unsigned long state; /* co_manager_state_t */
 	bool_t lazy_unload;
 	int monitors_count;
 	int periphery_api_version;

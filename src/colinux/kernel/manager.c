@@ -7,14 +7,11 @@
  * the root directory.
  */
 
-#include <linux/kernel.h>
-#include <asm/page.h>
-#include <asm/pgtable.h>
-
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/os/kernel/monitor.h>
 #include <colinux/os/kernel/manager.h>
 #include <colinux/os/kernel/mutex.h>
+#include <colinux/arch/mmu.h>
 
 #include "manager.h"
 #include "monitor.h"
@@ -100,13 +97,12 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 		for (j=0; j < PTRS_PER_PTE; j++) {
 			co_pfn_t rpfn;
 			if (reversed_page_count >= manager->reversed_page_count) {
-				pte[j] = __pte(0);
+				pte[j] = 0;
 				continue;
 			}
 
 			rpfn = manager->reversed_map_pfns[reversed_page_count];
-			pte[j] = pte_modify(__pte(rpfn << PAGE_SHIFT), __pgprot(
-			    _PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED));
+			pte[j] = (rpfn << PAGE_SHIFT) | (_PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED);
 			reversed_page_count++;
 		}
 		co_os_unmap(manager, pte, pfn);
@@ -206,7 +202,7 @@ co_rc_t co_manager_cleanup(co_manager_t *manager, void **private_data)
 	return CO_RC(OK);
 }
 
-co_rc_t co_manager_ioctl(co_manager_t *manager, co_monitor_ioctl_op_t ioctl, 
+co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl, 
 			 void *io_buffer, unsigned long in_size,
 			 unsigned long out_size, unsigned long *return_size,
 			 void **private_data)
@@ -224,8 +220,8 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, co_monitor_ioctl_op_t ioctl,
 		params->state = manager->state;
 		params->monitors_count = manager->monitors_count;
 		params->lazy_unload = manager->lazy_unload;
-		params->periphery_api_version =  CO_LINUX_PERIPHERY_ABI_VERSION;
-		params->linux_api_version = CO_LINUX_ABI_VERSION;
+		params->periphery_api_version = CO_LINUX_PERIPHERY_API_VERSION;
+		params->linux_api_version = CO_LINUX_API_VERSION;
 
 		*return_size = sizeof(*params);
 

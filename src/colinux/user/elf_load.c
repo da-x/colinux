@@ -119,6 +119,15 @@ unsigned long co_get_symbol_offset(co_elf_data_t *pl, Elf32_Sym *symbol)
 	return symbol->st_value - section->sh_addr;
 }
 
+void *co_elf_get_symbol_data(co_elf_data_t *pl, Elf32_Sym *symbol)
+{
+	Elf32_Shdr *section;
+
+	section = co_get_section_header(pl, symbol->st_shndx);
+
+	return pl->buffer + symbol->st_value - section->sh_addr + section->sh_offset;
+}
+
 co_rc_t co_elf_image_read(co_elf_data_t *pl, void *elf_buf, unsigned long size)
 {
 	pl->header = (Elf32_Ehdr *)elf_buf;

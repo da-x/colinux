@@ -7,9 +7,10 @@
  * the root directory.
  */
 
-#include <asm/page.h>
-#include <asm/pgtable.h>
+#include <colinux/arch/mmu.h>
 #include <colinux/os/kernel/alloc.h>
+
+#include "monitor.h"
 
 co_rc_t co_manager_get_page(struct co_manager *manager, co_pfn_t *pfn)
 {

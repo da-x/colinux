@@ -142,6 +142,14 @@ typedef struct co_monitor {
 	 */
 	unsigned long initrd_address;
 	unsigned long initrd_size;
+
+	/*
+	 * Structures copied directly from the vmlinux file before it
+	 * is loaded in order to get kernel-specific info (such as 
+	 * segment registers) and API version.
+	 */
+	co_info_t info;
+	co_arch_info_t arch_info;
 } co_monitor_t;
 
 extern co_rc_t co_monitor_create(struct co_manager *manager, co_manager_ioctl_create_t *params, 

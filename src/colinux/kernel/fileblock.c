@@ -8,6 +8,7 @@
  */
 
 #include "fileblock.h"
+#include "monitor.h"
 
 #include <memory.h>
 

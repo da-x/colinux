@@ -10,9 +10,10 @@
 #ifndef __COLINUX_ARCH_MANAGER_H__
 #define __COLINUX_ARCH_MANAGER_H__
 
-#include <colinux/kernel/monitor.h>
+#include <colinux/common/common.h>
 
 typedef struct co_archdep_manager *co_archdep_manager_t;
+struct co_manager;
 
 extern co_rc_t co_manager_arch_init(struct co_manager *manager, co_archdep_manager_t *out_archdep);
 extern void co_manager_arch_free(co_archdep_manager_t out_archdep);

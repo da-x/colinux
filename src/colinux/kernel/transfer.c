@@ -7,13 +7,15 @@
  * the root directory.
  */
 
-#include <asm/page.h>
-#include <asm/pgtable.h>
+
+#include "monitor.h"
+#include "pages.h"
 
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/kernel/transfer.h>
 #include <colinux/kernel/manager.h>
 #include <colinux/kernel/pages.h>
+#include <colinux/arch/mmu.h>
 
 /*
  * This code allows direct copying from and to the Linux kernel address space.
@@ -37,12 +39,12 @@ co_rc_t co_monitor_host_linuxvm_transfer(
 	unsigned long one_copy;
 	co_rc_t rc;
 
-	if ((vaddr < __PAGE_OFFSET) || (vaddr >= cmon->end_physical)) {
+	if ((vaddr < CO_ARCH_KERNEL_OFFSET) || (vaddr >= cmon->end_physical)) {
 		co_debug("monitor: transfer: off bounds: %x\n", vaddr);
 		return CO_RC(TRANSFER_OFF_BOUNDS);
 	}
 
-	if ((vaddr + size < __PAGE_OFFSET) || (vaddr + size > cmon->end_physical)) {
+	if ((vaddr + size < CO_ARCH_KERNEL_OFFSET) || (vaddr + size > cmon->end_physical)) {
 		co_debug("monitor: transfer: end off bounds: %x\n", vaddr + size);
 		return CO_RC(TRANSFER_OFF_BOUNDS);
 	}	
@@ -52,12 +54,12 @@ co_rc_t co_monitor_host_linuxvm_transfer(
 		if (!CO_OK(rc))
 			return rc;		
 		
-		one_copy = ((vaddr + PAGE_SIZE) & PAGE_MASK) - vaddr;
+		one_copy = ((vaddr + CO_ARCH_PAGE_SIZE) & CO_ARCH_PAGE_MASK) - vaddr;
 		if (one_copy > size)
 			one_copy = size;
 
 		page = (char *)co_os_map(cmon->manager, pfn);
-		rc = host_func(cmon, host_data, page + (vaddr & ~PAGE_MASK), one_copy, dir);
+		rc = host_func(cmon, host_data, page + (vaddr & ~CO_ARCH_PAGE_MASK), one_copy, dir);
 		co_os_unmap(cmon->manager, page, pfn);
 
 		if (!CO_OK(rc))
@@ -125,7 +127,7 @@ co_rc_t co_split_by_pages_and_callback(
 
 	/* Split page one by one (including partials) */
 	while (size > 0) {
-		one_copy = ((offset + PAGE_SIZE) & PAGE_MASK) - offset;
+		one_copy = ((offset + CO_ARCH_PAGE_SIZE) & CO_ARCH_PAGE_MASK) - offset;
 		if (one_copy > size)
 			one_copy = size;
 
@@ -189,7 +191,7 @@ co_rc_t co_manager_create_pfns_and_callback_callback(
 	}
 	
 	mapped_page = co_os_map(cbdata->monitor->manager, real_pfn);
-	rc = cbdata->func(mapped_page + (offset & (~PAGE_MASK)), cbdata->data, size);
+	rc = cbdata->func(mapped_page + (offset & (~CO_ARCH_PAGE_MASK)), cbdata->data, size);
 	co_os_unmap(cbdata->monitor->manager, mapped_page, real_pfn);
 
 	return CO_RC(OK);
@@ -275,10 +277,10 @@ co_manager_create_pfns_create_ptes_callback(
 
 	for (i=0; i < size/sizeof(linux_pte_t); i++) {
 		if (*pfns != 0)
-			*ptes = pte_modify(__pte((*pfns) << PAGE_SHIFT), 
-			    __pgprot(_PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED));
+			*ptes = (*pfns << PAGE_SHIFT) |  
+			    _PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED;
 		else
-			*ptes = __pte(0);
+			*ptes = 0;
 		pfns++;
 		ptes++;
 	}

@@ -14,8 +14,9 @@
  * Routines to copy data between coLinux space and host space.
  */
 
-#include "monitor.h"
 #include "manager.h"
+
+struct co_monitor;
 
 typedef enum {
 	/* From Host OS to coLinux */
@@ -37,7 +38,7 @@ typedef enum {
  */
 
 typedef co_rc_t (*co_monitor_transfer_func_t)(
-	co_monitor_t *cmon, 
+	struct co_monitor *cmon, 
 	void *host_data, 
 	void *linuxvm, 
 	unsigned long size, 
@@ -46,7 +47,7 @@ typedef co_rc_t (*co_monitor_transfer_func_t)(
 
 
 extern co_rc_t co_monitor_host_linuxvm_transfer(
-	co_monitor_t *cmon, 
+	struct co_monitor *cmon, 
 	void *host_data, 
 	co_monitor_transfer_func_t host_func, 
 	vm_ptr_t para, 
@@ -58,26 +59,26 @@ extern co_rc_t co_monitor_host_linuxvm_transfer(
  * memcpy-like transfer implementation:
  */
 
-extern co_rc_t co_monitor_host_to_linuxvm(co_monitor_t *cmon, void *from, 
+extern co_rc_t co_monitor_host_to_linuxvm(struct co_monitor *cmon, void *from, 
 					  vm_ptr_t to, unsigned long size); 
-extern co_rc_t co_monitor_linuxvm_to_host(co_monitor_t *cmon, vm_ptr_t from, 
+extern co_rc_t co_monitor_linuxvm_to_host(struct co_monitor *cmon, vm_ptr_t from, 
 					  void *to, unsigned long size); 
 
 extern co_rc_t co_monitor_copy_and_create_pfns(
-	co_monitor_t *monitor, 
+	struct co_monitor *monitor, 
 	vm_ptr_t address,
 	unsigned long size,
 	char *source
 	);
 
 extern co_rc_t co_monitor_scan_and_create_pfns(
-	co_monitor_t *monitor, 
+	struct co_monitor *monitor, 
 	vm_ptr_t address,
 	unsigned long size
 	);
 
 extern co_rc_t co_monitor_create_ptes(
-	co_monitor_t *monitor, 
+	struct co_monitor *monitor, 
 	vm_ptr_t address,
 	unsigned long size,
 	co_pfn_t *source

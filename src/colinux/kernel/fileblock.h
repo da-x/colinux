@@ -19,13 +19,15 @@ typedef enum {
 
 struct co_monitor_file_block_dev;
 typedef struct co_monitor_file_block_dev co_monitor_file_block_dev_t;
- 
+
+struct co_monitor;
+
 typedef struct {
 	co_rc_t (*get_size)(co_monitor_file_block_dev_t *fdev, unsigned long long *size);
-	co_rc_t (*open)(co_monitor_t *cmon, co_monitor_file_block_dev_t *fdev);
-	co_rc_t (*read)(co_monitor_t *cmon, co_block_dev_t *dev, 
+	co_rc_t (*open)(struct co_monitor *cmon, co_monitor_file_block_dev_t *fdev);
+	co_rc_t (*read)(struct co_monitor *cmon, co_block_dev_t *dev, 
 			co_monitor_file_block_dev_t *fdev, co_block_request_t *request);
-	co_rc_t (*write)(co_monitor_t *cmon, co_block_dev_t *dev, 
+	co_rc_t (*write)(struct co_monitor *cmon, co_block_dev_t *dev, 
 			 co_monitor_file_block_dev_t *fdev, co_block_request_t *request);
 	co_rc_t (*close)(co_monitor_file_block_dev_t *fdev);
 } co_monitor_file_block_operations_t;
@@ -33,7 +35,7 @@ typedef struct {
 struct co_monitor_file_block_dev {
 	co_block_dev_t dev; /* Must stay as the first field */
 
-	co_monitor_t *monitor;
+	struct co_monitor *monitor;
 	co_monitor_file_block_state_t state;
 	co_pathname_t pathname;
 	co_monitor_file_block_operations_t *op;

@@ -82,6 +82,7 @@ int co_os_manager_ioctl(struct inode *inode, struct file *file,
 
 out:
 	vfree(buffer);
+
 	return ret;
 }
 
@@ -138,17 +139,4 @@ void co_os_manager_free(co_osdep_manager_t osdep)
 	remove_proc_entry("ioctl", osdep->proc_root);
 	remove_proc_entry("colinux", &proc_root);
 	co_os_free(osdep);
-}
-
-co_rc_t co_monitor_os_init(co_monitor_t *cmon)
-{
-	co_rc_t rc = CO_RC_OK;
-	
-	cmon->osdep = NULL;
-
-	return rc;
-}
-
-void co_monitor_os_exit(co_monitor_t *cmon)
-{
 }

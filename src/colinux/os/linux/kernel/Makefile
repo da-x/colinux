@@ -8,12 +8,23 @@ BUILD_PATH := $(BUILD_PATH)/kernel
 #-----------------------------------------------------------------
 
 LOCAL_TARGETS = $(BUILD_PATH)/driver.o
+LOCAL_OBJS = \
+	core.o \
+
+LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
+
+$(LOCAL_OBJS) : %.o : %.c
+	$(TOOL_KERNEL_CC) $(HOST_API_CFLAGS)
+
+$(BUILD_PATH)/kernel.o : $(LOCAL_OBJS)
+	$(TOOL_LD_RELOC)
 
 $(BUILD_PATH)/module/prelinked_driver.o : \
 	$(BUILD_ROOT)/colinux/kernel/kernel.o \
 	$(BUILD_ROOT)/colinux/arch/current/arch.o \
 	$(BUILD_ROOT)/colinux/common/common.a \
-	
+	$(BUILD_PATH)/kernel.o
+
 	$(TOOL_LD_RELOC)
 
 prelinked_driver: $(BUILD_PATH)/module/prelinked_driver.o
@@ -26,8 +37,9 @@ kernel_module: $(BUILD_PATH)/module/colinux.ko
 LOCAL_TARGETS := $(BUILD_PATH)/prelinked_driver.o
 
 CLEAN_FILES := $(CLEAN_FILES) \
-	$(LOCAL_TARGETS) $(BUILD_PATH)/module/*.o
+	$(LOCAL_OBJS) $(LOCAL_TARGETS) $(BUILD_PATH)/module/*.o
 
 #-----------------------------------------------------------------
 BUILD_PATH := $(shell dirname $(BUILD_PATH))
 endif
+

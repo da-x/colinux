@@ -10,12 +10,15 @@
 #ifndef __COLINUX_KERNEL_MANAGER_H__
 #define __COLINUX_KERNEL_MANAGER_H__
 
-#include "monitor.h"
-
-#include <colinux/common/ioctl.h>
 #include <colinux/arch/manager.h>
+#include <colinux/arch/mmu.h>
 
 typedef struct co_osdep_manager *co_osdep_manager_t;
+
+typedef enum {
+	CO_MANAGER_STATE_NOT_INITIALIZED,
+	CO_MANAGER_STATE_INITIALIZED,
+} co_manager_state_t;
 
 /*
  * The manager module manages the running coLinux's systems.
@@ -42,7 +45,7 @@ typedef struct co_manager {
 extern co_rc_t co_manager_set_reversed_pfn(co_manager_t *manager, 
 					   co_pfn_t real_pfn, co_pfn_t pseudo_pfn);
 extern co_rc_t co_manager_load(co_manager_t *manager);
-extern co_rc_t co_manager_ioctl(co_manager_t *manager, co_monitor_ioctl_op_t ioctl, 
+extern co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl, 
 				void *io_buffer, unsigned long in_size,
 				unsigned long out_size, unsigned long *return_size,
 				void **private_data);

@@ -13,22 +13,11 @@
  * two operating systems.
  */ 
 
-#include <linux/config.h>
 #include <colinux/common/common.h>
 #include <colinux/kernel/monitor.h>
 #include <colinux/arch/passage.h>
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/os/kernel/misc.h>
-
-#include <memory.h>
-#include <linux/kernel.h>
-#include <asm/segment.h>
-#include <asm/pgtable.h>
-#include <asm/smp.h>
-
-/* A hack to reduce Linux kernel headers inclusion */ 
-#define __ASSEMBLY__
-#include <asm/desc.h>
 
 #include "cpuid.h"
 #include "manager.h"
@@ -486,7 +475,7 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 		(unsigned long)(cmon->passage_page),
 	};
 	co_arch_passage_page_t *pp = cmon->passage_page;
-	pgd_t pgd;
+	linux_pgd_t pgd;
 	unsigned long caps = 0;
 
 	caps = cmon->manager->archdep->caps;
@@ -539,7 +528,7 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	pp->linuxvm_state.ldt = 0;
 	pp->linuxvm_state.cr4 &= ~(X86_CR4_MCE | X86_CR4_PGE | X86_CR4_OSXMMEXCPT);
 	pgd = cmon->pgd;
-	pp->linuxvm_state.cr3 = pgd_val(pgd);
+	pp->linuxvm_state.cr3 = pgd;
 	pp->linuxvm_state.gdt.base = (struct x86_dt_entry *)cmon->import.kernel_gdt_table;
 	/* pp->linuxvm_state.gdt.limit = ((__TSS(NR_CPUS)) * 8) - 1; */
 	pp->linuxvm_state.gdt.limit = (8*0x20) - 1;
@@ -558,12 +547,13 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	pp->linuxvm_state.esp = cmon->import.kernel_init_task_union + 0x2000 - 0x50;
 	pp->linuxvm_state.flags &= ~(1 << 9); /* Turn IF off */
 	pp->linuxvm_state.return_eip = cmon->import.kernel_colinux_start;
-	pp->linuxvm_state.cs = __KERNEL_CS;
-	pp->linuxvm_state.ds = __KERNEL_DS;
-	pp->linuxvm_state.es = __KERNEL_DS;
-	pp->linuxvm_state.fs = __KERNEL_DS;
-	pp->linuxvm_state.gs = __KERNEL_DS;
-	pp->linuxvm_state.ss = __KERNEL_DS;
+
+	pp->linuxvm_state.cs = cmon->arch_info.kernel_cs;
+	pp->linuxvm_state.ds = cmon->arch_info.kernel_ds;
+	pp->linuxvm_state.es = cmon->arch_info.kernel_ds;
+	pp->linuxvm_state.fs = cmon->arch_info.kernel_ds;
+	pp->linuxvm_state.gs = cmon->arch_info.kernel_ds;
+	pp->linuxvm_state.ss = cmon->arch_info.kernel_ds;
 
 	co_debug("Passage page dump: %x\n", co_monitor_arch_passage_page_init);
 	co_debug("COUNTER: %d\n", pp->pad[0x20f]);

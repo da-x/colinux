@@ -18,6 +18,8 @@ typedef struct {
 	unsigned long kernel_swapper_pg_dir;
 	unsigned long kernel_idt_table;
 	unsigned long kernel_gdt_table;
+	unsigned long kernel_co_arch_info;
+	unsigned long kernel_co_info;
 } co_symbols_import_t;
 
 #endif

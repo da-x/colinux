@@ -182,17 +182,48 @@ void co_daemon_destroy(co_daemon_t *daemon)
 	co_os_free(daemon);
 }
 
+co_rc_t co_daemon_load_symbol_and_data(co_daemon_t *daemon, 
+				       const char *symbol_name, 
+				       unsigned long *address_out,
+				       void *buffer,
+				       unsigned long buffer_size)
+{
+	co_rc_t rc = CO_RC_OK;
+	Elf32_Sym *sym;
+	void *data;
+
+	sym = co_get_symbol_by_name(&daemon->elf_data, symbol_name);
+	if (sym) 
+		*address_out = sym->st_value;
+	else {
+		debug(daemon, "symbol %s not found\n", symbol_name);
+		return CO_RC(ERROR);
+		
+	}
+	
+	data = co_elf_get_symbol_data(&daemon->elf_data, sym);
+	if (data == NULL) {
+		debug(daemon, "data of symbol %s not found\n");
+		return CO_RC(ERROR);
+	}
+	
+	memcpy(buffer, data, buffer_size);
+
+	return rc;
+}
+
 co_rc_t co_daemon_load_symbol(co_daemon_t *daemon, 
-			      const char *pathname, unsigned long *address_out)
+			      const char *symbol_name, 
+			      unsigned long *address_out)
 {
 	co_rc_t rc = CO_RC_OK;
 	Elf32_Sym *sym;
 
-	sym = co_get_symbol_by_name(&daemon->elf_data, pathname);
+	sym = co_get_symbol_by_name(&daemon->elf_data, symbol_name);
 	if (sym) 
 		*address_out = sym->st_value;
 	else {
-		debug(daemon, "symbol %s not found\n", pathname);
+		debug(daemon, "symbol %s not found\n", symbol_name);
 		rc = CO_RC(ERROR);
 	}
 
@@ -297,6 +328,26 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 		rc = co_daemon_load_symbol(daemon, "cpu_gdt_table", &import->kernel_gdt_table);
 		if (!CO_OK(rc))
 			goto out;
+	}
+
+	rc = co_daemon_load_symbol_and_data(daemon, "co_info", &import->kernel_co_info,
+					    &create_params.info, sizeof(create_params.info));
+	if (!CO_OK(rc)) {
+		goto out;
+	}
+
+	rc = co_daemon_load_symbol_and_data(daemon, "co_arch_info", &import->kernel_co_arch_info,
+					    &create_params.arch_info, sizeof(create_params.arch_info));
+	if (!CO_OK(rc)) {
+		goto out;
+	}
+
+	if (create_params.info.api_version != CO_LINUX_API_VERSION) {
+		co_terminal_print("colinux: error, expected kernel API version %d, got %d\n", CO_LINUX_API_VERSION,
+				  create_params.info.api_version);
+
+		rc = CO_RC(VERSION_MISMATCHED);
+		goto out;
 	}
 
 	co_daemon_prepare_net_macs(daemon);

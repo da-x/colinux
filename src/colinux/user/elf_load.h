@@ -11,6 +11,8 @@
 #ifndef __COLINUX_USER_ELF_LOAD_H__
 #define __COLINUX_USER_ELF_LOAD_H__
 
+#include <colinux/common/common.h>
+
 #ifndef CO_HOST_API
 #include <linux/elf.h>
 #else
@@ -33,8 +35,9 @@ typedef	struct co_elf_data {
 
 struct co_daemon;
 
-co_rc_t co_elf_image_read(co_elf_data_t *pl, void *elf_buf, unsigned long size);
-co_rc_t co_elf_image_load(struct co_daemon *daemon);
-Elf32_Sym *co_get_symbol_by_name(co_elf_data_t *pl, const char *name);
+extern co_rc_t co_elf_image_read(co_elf_data_t *pl, void *elf_buf, unsigned long size);
+extern co_rc_t co_elf_image_load(struct co_daemon *daemon);
+extern Elf32_Sym *co_get_symbol_by_name(co_elf_data_t *pl, const char *name);
+extern void *co_elf_get_symbol_data(co_elf_data_t *pl, Elf32_Sym *symbol);
 
 #endif

@@ -10,7 +10,6 @@
      usefull.
    * (optional) Support kermit or other 'telnet upload' protocol, to 
      upload files from the console.
-   * Support alt-gr.
    * Fix F10 in FLTK.
 
  * Installer:
@@ -60,11 +59,10 @@
 
  * conet: 
    * Allow to send/receive big packets (> 2900).
-   * Support multiple virtual NICs.
    * To fix: If the host connection is lost and returned, colinux-daemon will not 
      automatically return conet.
    * Possibly WinPCAP related, but a fix for support of wireless networks
-     would be great
+     would be great.
    * Possibly WinPCAP related, compatibility with IPv6: IPv6 can be
      obtained but setting the IPv6 host address based on routeradvertisements
      is not working fine (I can see IPv6 traffic though in coLinux).

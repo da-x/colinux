@@ -63,9 +63,9 @@ co_rc_t co_manager_status(co_manager_handle_t handle, co_manager_ioctl_status_t 
 	rc = co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_STATUS,
 				 status, sizeof(*status), status, sizeof(*status), &returned);
 
-	if (status->periphery_api_version != CO_LINUX_PERIPHERY_ABI_VERSION) {
+	if (status->periphery_api_version != CO_LINUX_PERIPHERY_API_VERSION) {
 		co_terminal_print("colinux: driver version mismatch: expected %d got %d\n",
-				  CO_LINUX_PERIPHERY_ABI_VERSION, status->periphery_api_version);
+				  CO_LINUX_PERIPHERY_API_VERSION, status->periphery_api_version);
 		return CO_RC(VERSION_MISMATCHED);
 	}
 

@@ -7,9 +7,6 @@
  * the root directory.
  */
 
-#include <asm/page.h>
-#include <asm/pgtable.h>
-
 /*
  * Monitor
  *
@@ -24,6 +21,7 @@
 #include <colinux/os/kernel/time.h>
 #include <colinux/arch/passage.h>
 #include <colinux/arch/interrupt.h>
+#include <colinux/arch/mmu.h>
 
 #include "monitor.h"
 #include "manager.h"
@@ -120,7 +118,7 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 		goto out_error;
 	}	
 	
-	cmon->pgd = __pgd(swapper_pg_dir_pfn << PAGE_SHIFT);
+	cmon->pgd = swapper_pg_dir_pfn << PAGE_SHIFT;
 	co_debug_ulong(cmon->pgd);
 
 	rc = co_monitor_arch_passage_page_alloc(cmon);
@@ -142,7 +140,7 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 		goto out_error;
 	}
 
-	rc = co_monitor_create_ptes(cmon, cmon->import.kernel_swapper_pg_dir, PAGE_SIZE, pfns);
+	rc = co_monitor_create_ptes(cmon, cmon->import.kernel_swapper_pg_dir, CO_ARCH_PAGE_SIZE, pfns);
 	if (!CO_OK(rc)) {
 		co_debug("monitor: error initializing swapper_pg_dir (%x)\n", rc);
 		goto out_error;
@@ -160,7 +158,7 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 		goto out_error;
 	}	
 
-	rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP, PAGE_SIZE, pfns);
+	rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP, CO_ARCH_PAGE_SIZE, pfns);
 	if (!CO_OK(rc)) {
 		co_debug("monitor: error initializing self map (%x)\n", rc);
 		goto out_error;
@@ -575,7 +573,7 @@ static co_rc_t alloc_pseudo_physical_memory(co_monitor_t *monitor)
 
 	memset(monitor->pp_pfns, 0, sizeof(co_pfn_t *)*PTRS_PER_PGD);
 
-	rc = co_monitor_scan_and_create_pfns(monitor, __PAGE_OFFSET, monitor->physical_frames << PAGE_SHIFT);
+	rc = co_monitor_scan_and_create_pfns(monitor, CO_ARCH_KERNEL_OFFSET, monitor->physical_frames << PAGE_SHIFT);
 	if (!CO_OK(rc)) {
 		free_pseudo_physical_memory(monitor);
 		return rc;
@@ -604,7 +602,7 @@ static co_rc_t alloc_pseudo_physical_memory(co_monitor_t *monitor)
 
 	co_debug("monitor: creating page tables\n");
 
-	first_pp_pgd = __PAGE_OFFSET >> PGDIR_SHIFT;
+	first_pp_pgd = CO_ARCH_KERNEL_OFFSET >> PGDIR_SHIFT;
 	for (i=first_pp_pgd; i < PTRS_PER_PGD; i++) {
 		co_pfn_t *pfns = monitor->pp_pfns[i];
 		unsigned long address;
@@ -612,11 +610,11 @@ static co_rc_t alloc_pseudo_physical_memory(co_monitor_t *monitor)
 		if (!pfns)
 			break;
 
-		address = CO_VPTR_PSEUDO_RAM_PAGE_TABLES + ((i - first_pp_pgd) * PAGE_SIZE);
+		address = CO_VPTR_PSEUDO_RAM_PAGE_TABLES + ((i - first_pp_pgd) * CO_ARCH_PAGE_SIZE);
 
 		co_debug("monitor: creating one page table (at %x)\n", address);
 
-		rc = co_monitor_create_ptes(monitor, address, PAGE_SIZE, pfns);
+		rc = co_monitor_create_ptes(monitor, address, CO_ARCH_PAGE_SIZE, pfns);
 		if (!CO_OK(rc)) {
 			free_pseudo_physical_memory(monitor);
 			return rc;
@@ -684,10 +682,12 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 		goto out_free_linux_message_queue;
 
 	cmon->core_vaddr = import->kernel_start;
-	cmon->core_pages = (import->kernel_end - import->kernel_start + PAGE_SIZE - 1) >> PAGE_SHIFT;
+	cmon->core_pages = (import->kernel_end - import->kernel_start + CO_ARCH_PAGE_SIZE - 1) >> PAGE_SHIFT;
 	cmon->core_end = cmon->core_vaddr + (cmon->core_pages << PAGE_SHIFT);
 	cmon->import = params->import;
 	cmon->config = params->config;
+	cmon->info = params->info;
+	cmon->arch_info = params->arch_info;
 
 	if (cmon->config.ram_size == 0) {
 		/* Use default RAM sizes */
@@ -724,7 +724,7 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	cmon->memory_size <<= 20; /* Megify */
 
 	cmon->physical_frames = cmon->memory_size >> PAGE_SHIFT;
-	cmon->end_physical = __PAGE_OFFSET + cmon->memory_size;
+	cmon->end_physical = CO_ARCH_KERNEL_OFFSET + cmon->memory_size;
 	cmon->passage_page_vaddr = CO_VPTR_PASSAGE_PAGE;
 
 	rc = alloc_pseudo_physical_memory(cmon);
@@ -799,12 +799,12 @@ co_rc_t co_monitor_load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_
 	if (cmon->state != CO_MONITOR_STATE_INITIALIZED)
 		return CO_RC(ERROR);
 
-	pages = ((params->size + PAGE_SIZE) >> PAGE_SHIFT);
+	pages = ((params->size + CO_ARCH_PAGE_SIZE) >> PAGE_SHIFT);
 
         /*
 	 * Put initrd at the end of the address space.
 	 */
-	address = __PAGE_OFFSET + cmon->memory_size - (pages << PAGE_SHIFT);
+	address = CO_ARCH_KERNEL_OFFSET + cmon->memory_size - (pages << PAGE_SHIFT);
 	
 	co_debug("monitor: initrd address: %x (0x%x pages)\n", address, pages);
 

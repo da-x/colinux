@@ -12,8 +12,8 @@
 #define __CO_LINUX_KERNEL_MANAGER_H__
 
 #include <linux/proc_fs.h>
-#include <colinux/os/kernel/manager.h>
-#include <colinux/os/kernel/alloc.h>
+#include <colinux/os/alloc.h>
+#include <colinux/kernel/manager.h>
 
 struct co_osdep_manager {
 	struct proc_dir_entry *proc_root;

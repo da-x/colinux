@@ -12,6 +12,7 @@
 #define __COLINUX_OS_USER_MANAGER_H__
 
 #include <colinux/common/common.h>
+#include <colinux/os/kernel/manager.h>
 
 struct co_manager_handle;
 typedef struct co_manager_handle *co_manager_handle_t; 

@@ -7,9 +7,8 @@
  * the root directory.
  */
 
-#include <linux/kernel.h>
-
 #include "block.h"
+#include "monitor.h"
 
 void co_monitor_block_register_device(co_monitor_t *cmon, unsigned long index, co_block_dev_t *dev)
 {

@@ -22,17 +22,9 @@
  */
 
 #ifdef CO_KERNEL
-#ifdef CO_HOST_API
 typedef unsigned long linux_pte_t;
 typedef unsigned long linux_pmd_t;
 typedef unsigned long linux_pgd_t;
-#else
-
-#include <asm/page.h>
-typedef pte_t linux_pte_t;
-typedef pmd_t linux_pmd_t;
-typedef pgd_t linux_pgd_t;
-#endif
 #endif
 
 #include <linux/cooperative.h>
