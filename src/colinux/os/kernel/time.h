@@ -15,12 +15,12 @@
  * Obtains the GMT time_t from the host.
  */
 
-extern unsigned long co_os_get_time();
+extern unsigned long co_os_get_time(void);
 
 /*
  * Return 2^32 * (1 / (TSC clocks per usec)) for do_fast_gettimeoffset().
  */
-extern unsigned long co_os_get_high_prec_quotient();
+extern unsigned long co_os_get_high_prec_quotient(void);
 
 #endif
 

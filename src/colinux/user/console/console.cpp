@@ -287,6 +287,8 @@ co_rc_t console_window_t::detach()
 		return CO_RC(ERROR);
 
 	console = widget->get_console();
+	if (console == NULL)
+		return CO_RC(ERROR);
 
 	struct {
 		co_message_t message;
@@ -460,7 +462,7 @@ void console_window_t::handle_scancode(co_scan_code_t sc)
 
 	struct {
 		co_message_t message;
-		co_linux_message_t linux;
+		co_linux_message_t msg_linux;
 		co_scan_code_t code;
 	} message;
 		
@@ -469,9 +471,9 @@ void console_window_t::handle_scancode(co_scan_code_t sc)
 	message.message.priority = CO_PRIORITY_DISCARDABLE;
 	message.message.type = CO_MESSAGE_TYPE_OTHER;
 	message.message.size = sizeof(message) - sizeof(message.message);
-	message.linux.device = CO_DEVICE_KEYBOARD;
-	message.linux.unit = 0;
-	message.linux.size = sizeof(message.code);
+	message.msg_linux.device = CO_DEVICE_KEYBOARD;
+	message.msg_linux.unit = 0;
+	message.msg_linux.size = sizeof(message.code);
 	message.code = sc;
 
 	co_os_daemon_send_message(daemon_handle, &message.message);

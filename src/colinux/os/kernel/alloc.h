@@ -20,7 +20,7 @@
  */
 extern co_rc_t co_os_get_page(struct co_manager *manager, co_pfn_t *pfn);
 extern void *co_os_map(struct co_manager *manager, co_pfn_t pfn);
-extern void co_os_unmap(struct co_manager *manager, void *ptr);
+extern void co_os_unmap(struct co_manager *manager, void *ptr, co_pfn_t pfn);
 extern void co_os_put_page(struct co_manager *manager, co_pfn_t pfn);
 
 /* 

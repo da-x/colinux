@@ -7,8 +7,8 @@
  * the root directory.
  */
 
-#ifndef __CO_CONFIGURATION_H__
-#define __CO_CONFIGURATION_H__
+#ifndef __COLINUX_LINUX_CONFIG_H__
+#define __COLINUX_LINUX_CONFIG_H__
 
 #include "common.h"
 

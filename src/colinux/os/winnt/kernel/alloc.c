@@ -46,6 +46,8 @@ co_rc_t co_os_get_page(struct co_manager *manager, co_pfn_t *pfn)
 			return CO_RC(OUT_OF_PAGES);
 		}
 		
+		memset(page, 0, PAGE_SIZE);
+
 		*pfn = co_os_virt_to_phys(page) >> PAGE_SHIFT;
 		
 		rc = co_os_get_pfn_ptr(manager, *pfn, &mdl_keeper);
@@ -108,7 +110,7 @@ void *co_os_map(struct co_manager *manager, co_pfn_t pfn)
 	return ret;
 }
 
-void co_os_unmap(struct co_manager *manager, void *ptr)
+void co_os_unmap(struct co_manager *manager, void *ptr, co_pfn_t pfn)
 {
 	MmUnmapIoSpace(ptr, PAGE_SIZE);
 	manager->osdep->pages_mapped--;

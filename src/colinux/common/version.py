@@ -15,6 +15,7 @@ def main_by_string(input_string):
     output_lines.append('extern char colinux_compile_time[0x30];')
     output_lines.append('')
     output_lines.append('#endif')
+    output_lines.append('')
     return '\n'.join(output_lines)
 
 def main_by_params(inputf, outputf):

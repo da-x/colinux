@@ -128,8 +128,8 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/Makefile linux/arch/i386/kernel
  ifdef CONFIG_PCI
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/kernel/cooperative.c
 --- linux/arch/i386/kernel/cooperative.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/arch/i386/kernel/cooperative.c	2004-03-13 11:54:35.000000000 +0200
-@@ -0,0 +1,157 @@
++++ linux/arch/i386/kernel/cooperative.c	2004-03-27 18:10:57.000000000 +0200
+@@ -0,0 +1,162 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -182,6 +182,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/k
 +	set_tss_desc(nr,t);
 +	gdt_table[__TSS(nr)].b &= 0xfffffdff;
 +	load_TR(nr);
++	gdt_table[__TSS(nr)].b &= 0xfffffdff;
 +}
 +
 +void colinux_start_arch()
@@ -253,7 +254,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/k
 +	}
 +}
 +
-+void co_switch_wrapper(void)
++void co_switch_wrapper_protected(void)
 +{
 +	/*
 +	 * We don't trust the passage page code to safely restore %gs and %fs. 
@@ -284,6 +285,10 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/k
 +	loadsegment(gs, gs);
 +}
 +
++void co_switch_wrapper(void)
++{
++	co_switch_wrapper_protected();
++}
 +
 +CO_TRACE_CONTINUE;
 +
@@ -535,7 +540,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/i8259.c linux/arch/i386/kernel/
  }
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/process.c linux/arch/i386/kernel/process.c
 --- linux/arch/i386/kernel/process.c	2004-03-04 00:28:49.000000000 +0200
-+++ linux/arch/i386/kernel/process.c	2004-03-06 23:10:50.000000000 +0200
++++ linux/arch/i386/kernel/process.c	2004-04-04 09:41:01.000000000 +0200
 @@ -51,6 +51,7 @@
  #include <asm/apic.h>
  
@@ -560,45 +565,57 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/process.c linux/arch/i386/kerne
  		schedule();
  		check_pgt_cache();
  	}
-@@ -282,6 +287,8 @@
+@@ -280,6 +285,7 @@
+  */
+ void machine_real_restart(unsigned char *code, int length)
  {
++#ifndef CONFIG_COOPERATIVE
  	unsigned long flags;
  
-+	co_terminate(CO_TERMINATE_REBOOT);
-+
  	cli();
- 
- 	/* Write zero to CMOS register number 0x0f, which the BIOS POST
-@@ -367,6 +374,9 @@
+@@ -363,10 +369,14 @@
+ 	__asm__ __volatile__ ("ljmp $0x0008,%0"
+ 				:
+ 				: "i" ((void *) (0x1000 - sizeof (real_mode_switch) - 100)));
++#else
++	co_terminate(CO_TERMINATE_REBOOT);
++#endif
+ }
  
  void machine_restart(char * __unused)
  {
-+	co_terminate(CO_TERMINATE_REBOOT);
-+
 +#ifndef CONFIG_COOPERATIVE
  #if CONFIG_SMP
  	int cpuid;
  	
-@@ -430,14 +440,18 @@
+@@ -430,16 +440,26 @@
  	}
  
  	machine_real_restart(jump_to_bios, sizeof(jump_to_bios));
++#else
++	co_terminate(CO_TERMINATE_REBOOT);
 +#endif
  }
  
  void machine_halt(void)
  {
++#ifdef CONFIG_COOPERATIVE
 +	co_terminate(CO_TERMINATE_HALT);
++#endif
  }
  
  void machine_power_off(void)
  {
-+	co_terminate(CO_TERMINATE_POWEROFF);
-+
++#ifndef CONFIG_COOPERATIVE
  	if (pm_power_off)
  		pm_power_off();
++#else
++	co_terminate(CO_TERMINATE_POWEROFF);
++#endif
  }
-@@ -657,12 +671,20 @@
+ 
+ extern void show_trace(unsigned long* esp);
+@@ -657,12 +677,20 @@
  	 */
  	tss->esp0 = next->esp0;
  
@@ -3545,7 +3562,7 @@ diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.
 +MODULE_LICENSE("GPL");
 diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm-i386/cooperative.h
 --- linux/include/asm-i386/cooperative.h	1970-01-01 02:00:00.000000000 +0200
-+++ linux/include/asm-i386/cooperative.h	2004-03-13 16:54:21.000000000 +0200
++++ linux/include/asm-i386/cooperative.h	2004-03-27 15:15:23.000000000 +0200
 @@ -0,0 +1,128 @@
 +#ifndef __LINUX_ASM_COOPERATIVE_H__
 +#define __LINUX_ASM_COOPERATIVE_H__
@@ -3639,7 +3656,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm
 +					unsigned long dr7; 
 +					unsigned char code[0x1c0];
 +				} __attribute__((packed));
-+				unsigned char pad[0x200];
++				unsigned char pad[0x210];
 +			} __attribute__((packed));
 +			
 +			/* Machine states */
@@ -3677,7 +3694,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm
 +#endif
 diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dma.h
 --- linux/include/asm-i386/dma.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/dma.h	2004-03-21 20:32:54.000000000 +0200
++++ linux/include/asm-i386/dma.h	2004-03-27 15:15:28.000000000 +0200
 @@ -268,6 +268,8 @@
   *
   * Assumes DMA flip-flop is clear.
@@ -3698,7 +3715,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dm
  extern int request_dma(unsigned int dmanr, const char * device_id);	/* reserve a DMA channel */
 diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.h
 --- linux/include/asm-i386/io.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/io.h	2004-03-21 20:32:49.000000000 +0200
++++ linux/include/asm-i386/io.h	2004-03-27 15:15:28.000000000 +0200
 @@ -2,6 +2,7 @@
  #define _ASM_IO_H
  
@@ -3791,7 +3808,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/irq.h linux/include/asm-i386/ir
  #define NR_IRQS 16
 diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/page.h
 --- linux/include/asm-i386/page.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/page.h	2004-03-21 19:52:58.000000000 +0200
++++ linux/include/asm-i386/page.h	2004-03-27 15:15:28.000000000 +0200
 @@ -1,6 +1,10 @@
  #ifndef _I386_PAGE_H
  #define _I386_PAGE_H
@@ -3866,7 +3883,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/p
  #define VM_DATA_DEFAULT_FLAGS	(VM_READ | VM_WRITE | VM_EXEC | \
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgalloc.h linux/include/asm-i386/pgalloc.h
 --- linux/include/asm-i386/pgalloc.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/pgalloc.h	2004-03-21 19:52:58.000000000 +0200
++++ linux/include/asm-i386/pgalloc.h	2004-03-27 15:15:28.000000000 +0200
 @@ -11,8 +11,13 @@
  #define pte_quicklist (current_cpu_data.pte_quick)
  #define pgtable_cache_size (current_cpu_data.pgtable_cache_sz)
@@ -3903,7 +3920,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable-2level.h linux/include/
  #endif /* _I386_PGTABLE_2LEVEL_H */
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable.h linux/include/asm-i386/pgtable.h
 --- linux/include/asm-i386/pgtable.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/pgtable.h	2004-03-21 19:52:58.000000000 +0200
++++ linux/include/asm-i386/pgtable.h	2004-03-27 15:15:28.000000000 +0200
 @@ -320,8 +320,13 @@
  
  #define page_pte(page) page_pte_prot(page, __pgprot(0))
@@ -3921,7 +3938,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable.h linux/include/asm-i38
  #define pgd_index(address) ((address >> PGDIR_SHIFT) & (PTRS_PER_PGD-1))
 diff -X bin/dontdiff -urN linux/include/asm-i386/processor.h linux/include/asm-i386/processor.h
 --- linux/include/asm-i386/processor.h	2004-03-04 00:28:57.000000000 +0200
-+++ linux/include/asm-i386/processor.h	2004-03-21 19:52:58.000000000 +0200
++++ linux/include/asm-i386/processor.h	2004-03-27 15:15:28.000000000 +0200
 @@ -181,8 +181,18 @@
  #define X86_CR4_OSFXSR		0x0200	/* enable fast FPU save and restore */
  #define X86_CR4_OSXMMEXCPT	0x0400	/* enable unmasked SSE exceptions */
@@ -3963,7 +3980,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/system.h linux/include/asm-i386
  		     "pushl %%edi\n\t"					\
 diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/console.h
 --- linux/include/linux/console.h	2004-03-04 00:28:58.000000000 +0200
-+++ linux/include/linux/console.h	2004-03-21 19:53:01.000000000 +0200
++++ linux/include/linux/console.h	2004-03-27 15:15:37.000000000 +0200
 @@ -55,6 +55,7 @@
  extern const struct consw dummy_con;	/* dummy console buffer */
  extern const struct consw fb_con;	/* frame buffer based console */
@@ -3974,12 +3991,10 @@ diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/cons
  
 diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/cooperative.h
 --- linux/include/linux/cooperative.h	1970-01-01 02:00:00.000000000 +0200
-+++ linux/include/linux/cooperative.h	2004-03-21 20:19:38.000000000 +0200
-@@ -0,0 +1,293 @@
++++ linux/include/linux/cooperative.h	2004-03-27 15:15:28.000000000 +0200
+@@ -0,0 +1,287 @@
 +#ifndef __LINUX_COOPERATIVE_H__
 +#define __LINUX_COOPERATIVE_H__
-+
-+#include <linux/config.h>
 +
 +#ifdef __KERNEL__
 +#ifndef CO_KERNEL
@@ -3987,8 +4002,6 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +#define CO_KERNEL
 +#endif
 +#endif
-+
-+#ifdef CONFIG_COOPERATIVE
 +
 +extern void co_debug(const char *fmt, ...);
 +
@@ -4259,9 +4272,7 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +#else
 +
 +#define co_terminate(reason)	  do {} while(0)
-+#define co_debug(...args)         do {} while(0)
-+
-+#endif
++#define co_debug(...)         do {} while(0)
 +
 +#ifndef COLINUX_TRACE
 +#define CO_TRACE_STOP
@@ -4334,7 +4345,7 @@ diff -X bin/dontdiff -urN linux/kernel/Makefile linux/kernel/Makefile
  obj-$(CONFIG_MODULES) += ksyms.o
 diff -X bin/dontdiff -urN linux/kernel/cooperative.c linux/kernel/cooperative.c
 --- linux/kernel/cooperative.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/kernel/cooperative.c	2004-03-13 12:13:51.000000000 +0200
++++ linux/kernel/cooperative.c	2004-03-27 17:41:42.000000000 +0200
 @@ -0,0 +1,239 @@
 +/*
 + *  linux/kernel/cooperative.c
@@ -4598,7 +4609,7 @@ diff -X bin/dontdiff -urN linux/kernel/panic.c linux/kernel/panic.c
  #endif
 diff -X bin/dontdiff -urN linux/kernel/printk.c linux/kernel/printk.c
 --- linux/kernel/printk.c	2004-02-02 22:53:38.000000000 +0200
-+++ linux/kernel/printk.c	2004-03-06 23:10:50.000000000 +0200
++++ linux/kernel/printk.c	2004-03-27 17:39:50.000000000 +0200
 @@ -29,6 +29,8 @@
  
  #include <asm/uaccess.h>
@@ -4608,14 +4619,21 @@ diff -X bin/dontdiff -urN linux/kernel/printk.c linux/kernel/printk.c
  #if !defined(CONFIG_LOG_BUF_SHIFT) || (CONFIG_LOG_BUF_SHIFT == 0)
  #if defined(CONFIG_MULTIQUAD) || defined(CONFIG_IA64)
  #define LOG_BUF_LEN	(65536)
-@@ -432,6 +434,10 @@
+@@ -432,6 +434,9 @@
  	printed_len = vsnprintf(printk_buf, sizeof(printk_buf), fmt, args);
  	va_end(args);
  
 +#ifdef CONFIG_COOPERATIVE
 +	co_printk(printk_buf);
 +#endif
-+
  	/*
  	 * Copy the output into log_buf.  If the caller didn't provide
  	 * appropriate log level tags, we insert them here
+@@ -458,6 +463,7 @@
+ 		spin_unlock_irqrestore(&logbuf_lock, flags);
+ 		goto out;
+ 	}
++
+ 	if (!down_trylock(&console_sem)) {
+ 		/*
+ 		 * We own the drivers.  We can drop the spinlock and let

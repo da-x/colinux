@@ -13,14 +13,14 @@
  * two operating systems.
  */ 
 
+#include <linux/config.h>
+#include <colinux/common/common.h>
 #include <colinux/kernel/monitor.h>
 #include <colinux/arch/passage.h>
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/os/kernel/misc.h>
 
 #include <memory.h>
-
-#include <linux/cooperative.h>
 #include <linux/kernel.h>
 #include <asm/segment.h>
 #include <asm/pgtable.h>
@@ -31,6 +31,12 @@
 #include <asm/desc.h>
 
 #include "cpuid.h"
+
+#ifdef __CYGWIN__
+#define SYMBOL_PREFIX "_"
+#else
+#define SYMBOL_PREFIX ""
+#endif
 
 /*
  * These two pseudo variables mark the start and the end of the passage code.
@@ -53,8 +59,8 @@ static inline void memcpy_##_name_(void *dest)		\
 }							\
 							\
 asm(""							\
-    ".globl _"#_name_                        "\n"	\
-    "_"#_name_":"                            "\n"	\
+    ".globl " SYMBOL_PREFIX #_name_          "\n"	\
+    SYMBOL_PREFIX #_name_ ":"                "\n"	\
     "    push %ebx"                          "\n"	\
     "    push %esi"                          "\n"	\
     "    push %edi"                          "\n"	\
@@ -65,13 +71,14 @@ asm(""							\
     "    popl %esi"                          "\n"	\
     "    popl %ebx"                          "\n"	\
     "    ret"                                "\n"	\
-    ".globl _"#_name_"_end"                  "\n"	\
-    "_"#_name_"_end:;"                       "\n"	\
+    ".globl " SYMBOL_PREFIX #_name_ "_end"   "\n"	\
+    SYMBOL_PREFIX #_name_ "_end:;"           "\n"	\
     "");
 
 #define PASSAGE_CODE_NOWHERE_LAND()                     \
 /* Turn off special processor features */               \
-    "    movl $0, %ebx"                      "\n"       \
+    "    movl %cr4, %ebx"                    "\n"       \
+    "    andl $0xFFFFFF77, %ebx"             "\n"       \
     "    movl %ebx, %cr4"                    "\n"       \
 /*
  *  Relocate to other map of the passage page.
@@ -79,7 +86,7 @@ asm(""							\
  *  We do this by changing the current mapping to the passage temporary 
  *  address space, which contains the mapping of the passage page at the 
  *  two locations which are specific to the two operating systems.
- */ \
+ */							\
                                                         \
 /* Put the virtual address of the source passage page in EBX */ \
     "    movl %ecx, %ebx"                    "\n"       \
@@ -135,6 +142,10 @@ asm(""							\
 /* save return address */				\
     "    movl %ebx, 0x38(%ebp)"              "\n"	\
 							\
+/* save %cs for iret */					\
+    "    movl %cs, %ebx"                     "\n"	\
+    "    movl %ebx, 0x04(%ebp)"              "\n"	\
+							\
     _inner_						\
 							\
 /* get old ESP in EAX */				\
@@ -151,8 +162,6 @@ asm(""							\
 /* switch to old ESP */					\
     "    lss 0x40(%ebp), %esp"               "\n"       \
                                                         \
-/* switch to old CS:EIP. */                             \
-                                                        \
 /*
  * The trick below creates an interrupt call stack frame, in order
  * to restore the other state's CS. The other's FR is already on the
@@ -167,7 +176,6 @@ asm(""							\
     "    pushl %eax"        /* eip (2:) */   "\n"       \
     "    iret"                               "\n"       \
     "2:  "                                   "\n"       \
-
 
 #define PASSAGE_PAGE_PRESERVATION_FXSAVE(_inner_)	\
     "    fxsave 0x70(%ebp)"                  "\n"	\
@@ -185,6 +193,7 @@ asm(""							\
 /* Put the virtual address of the passage page in EBX */	\
     "    movl %ebp, %ebx"                    "\n"		\
     "    andl $0xFFFFF000, %ebx"             "\n"		\
+    "    incb 0x20f(%ebx)"                   "\n"		\
 								\
 /* save DR0 */							\
     "    movl %dr0, %eax"                    "\n"		\
@@ -217,7 +226,9 @@ asm(""							\
     "    movl $0x00000700, %eax"             "\n"		\
     "    movl %eax, 0x18(%ebx)"              "\n"		\
     "    movl %eax, %dr7"                    "\n"		\
-    _inner_                                                     \
+								\
+    _inner_							\
+								\
 /* Put the virtual address of the passage page in EBX */	\
     "    movl %ebp, %ebx"                    "\n"		\
     "    andl $0xFFFFF000, %ebx"             "\n"		\
@@ -306,8 +317,6 @@ asm(""							\
     "    movl %ebx, 0x08(%ebp)"              "\n"			\
     "    movl %es, %ebx"                     "\n"			\
     "    movl %ebx, 0x0C(%ebp)"              "\n"			\
-    "    movl %cs, %ebx"                     "\n"			\
-    "    movl %ebx, 0x04(%ebp)"              "\n"			\
 									\
 /* be on the safe side and nullify the segment registers */		\
     "    movl $0, %ebx"                      "\n"			\
@@ -348,7 +357,6 @@ _inner_									\
     "    movl %eax, %cr2"                    "\n"			\
 									\
 /* load other's CR4 */							\
-									\
     "    movl 0x14(%ebp), %eax"              "\n"			\
     "    movl %eax, %cr4"                    "\n"			\
 									\
@@ -383,10 +391,10 @@ _inner_									\
 PASSAGE_CODE_WRAP_IBCS(
 	co_monitor_passage_func_fxsave, 
 	PASSAGE_CODE_WRAP_SWITCH(
-		PASSAGE_PAGE_PRESERVATION_FXSAVE(
+		PASSAGE_PAGE_PRESERVATION_FXSAVE(	
 			PASSAGE_PAGE_PRESERVATION_DEBUG(
 				PASSAGE_PAGE_PRESERVATION_COMMON(
-					PASSAGE_CODE_NOWHERE_LAND()
+					PASSAGE_CODE_NOWHERE_LAND() 
 					)
 				)
 			)
@@ -489,13 +497,13 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 
 	has_cpuid = co_i386_has_cpuid();
 	if (has_cpuid == PFALSE) {
-		co_debug("Error, no CPUID, not supported! Sorry!");
+		co_debug("Error, no CPUID, not supported! Sorry!\n");
 		return CO_RC(ERROR);
 	}
 
 	rc = co_i386_get_cpuid_capabilities(&caps);
 	if (!CO_OK(rc)) {
-		co_debug("Error, couldn't get CPU capabilities");
+		co_debug("Error, couldn't get CPU capabilities\n");
 		return rc;
 	}
 
@@ -506,10 +514,10 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	 */
 
 	if (caps & (1 << X86_FEATURE_FXSR)) {
-		co_debug("CPU supports fxsave/fxrstor");
+		co_debug("CPU supports fxsave/fxrstor\n");
 		memcpy_co_monitor_passage_func_fxsave(&pp->code[0]);
 	} else {
-		co_debug("CPU supports fnsave/frstor");
+		co_debug("CPU supports fnsave/frstor\n");
 		memcpy_co_monitor_passage_func_fnsave(&pp->code[0]);
 	}
 	
@@ -532,8 +540,7 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	 */
 	co_passage_page_func(linuxvm_state, linuxvm_state);
 
-	co_debug("Passage page dump (Windows context)\n");
-
+	co_debug("Passage page dump (Host context)\n");
 	co_passage_page_dump(pp);
 
 	/*
@@ -541,12 +548,14 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	 * relocates its EIP inside the temporary passage address space.
 	 */
 	pp->linuxvm_state.other_map = va[1] - va[0];
+	pp->host_state = pp->linuxvm_state;
 	pp->host_state.other_map = va[0] - va[1];
 
 	/*
 	 * Init the Linux context.
 	 */ 
 	pp->linuxvm_state.tr = 0;
+	pp->linuxvm_state.ldt = 0;
 	pp->linuxvm_state.cr4 &= ~(X86_CR4_MCE | X86_CR4_PGE | X86_CR4_OSXMMEXCPT);
 	pgd = cmon->pgd;
 	pp->linuxvm_state.cr3 = pgd_val(pgd);
@@ -554,6 +563,11 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	pp->linuxvm_state.gdt.limit = ((__TSS(NR_CPUS)) * 8) - 1;
 	pp->linuxvm_state.idt.table = (struct x86_idt_entry *)cmon->import.kernel_idt_table;
 	pp->linuxvm_state.idt.size = 256*8 - 1;
+	pp->linuxvm_state.cr0 = 0x80010031;
+
+	if (pp->linuxvm_state.gdt.limit < pp->host_state.gdt.limit)
+		pp->linuxvm_state.gdt.limit = pp->host_state.gdt.limit;
+
 
 	/*
 	 * The stack doesn't start right in 0x2000 because we need some slack for
@@ -569,9 +583,15 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	pp->linuxvm_state.gs = __KERNEL_DS;
 	pp->linuxvm_state.ss = __KERNEL_DS;
 
-	co_debug("Passage page dump:\n");
+	co_debug("Passage page dump: %x\n", co_monitor_arch_passage_page_init);
+	co_debug("COUNTER: %d\n", pp->pad[0x20f]);
 
 	co_passage_page_dump(pp);
 
 	return CO_RC_OK;
+}
+
+void co_host_switch_wrapper(co_monitor_t *cmon)
+{
+	co_switch();
 }

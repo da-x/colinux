@@ -62,6 +62,7 @@ co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
 
 	if (!(daemon_handle = co_os_malloc(sizeof (*daemon_handle))))
 		goto co_os_open_daemon_pipe_error;
+
 	daemon_handle->handle = handle;
 	daemon_handle->loop = 1;
 	daemon_handle->rc = CO_RC(OK);
@@ -70,6 +71,7 @@ co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
 	daemon_handle->readable = CreateEvent(0, TRUE, TRUE, 0);
 	if (!(daemon_handle->shifted && daemon_handle->readable))
 		goto co_os_open_daemon_pipe_error;
+
 	daemon_handle->thread =
 	    CreateThread(0, 0, co_os_daemon_thread, daemon_handle, 0, 0);
 
@@ -90,8 +92,10 @@ co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
 			CloseHandle(daemon_handle->thread);
 		co_os_free(daemon_handle);
 	}
+
 	if (handle != INVALID_HANDLE_VALUE)
 		CloseHandle(handle);
+
 	return CO_RC(ERROR);
 }
 

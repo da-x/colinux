@@ -100,7 +100,7 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 			pte[j] = pte_modify(__pte(rpfn << PAGE_SHIFT), __pgprot(__PAGE_KERNEL));
 			reversed_page_count++;
 		}
-		co_os_unmap(manager, pte);
+		co_os_unmap(manager, pte, pfn);
 
 		manager->reversed_map_pgds[i] = (pfn << PAGE_SHIFT) | _KERNPG_TABLE; 
 
@@ -136,6 +136,7 @@ co_rc_t co_manager_set_reversed_pfn(co_manager_t *manager, co_pfn_t real_pfn, co
 {
 	int entry, top_level;
 	co_pfn_t *reversed_pfns;
+	co_pfn_t mapped_pfn;
 
 	top_level = real_pfn / PTRS_PER_PTE;
 	if (top_level >= manager->reversed_page_count)
@@ -143,9 +144,10 @@ co_rc_t co_manager_set_reversed_pfn(co_manager_t *manager, co_pfn_t real_pfn, co
 		
 	entry = real_pfn % PTRS_PER_PTE;
 
-	reversed_pfns = (typeof(reversed_pfns))(co_os_map(manager, manager->reversed_map_pfns[top_level]));
+	mapped_pfn = manager->reversed_map_pfns[top_level];
+	reversed_pfns = (typeof(reversed_pfns))(co_os_map(manager, mapped_pfn));
 	reversed_pfns[entry] = pseudo_pfn;
-	co_os_unmap(manager, reversed_pfns);
+	co_os_unmap(manager, reversed_pfns, mapped_pfn);
 
 	return CO_RC(OK);
 }

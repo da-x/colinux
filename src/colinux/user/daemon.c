@@ -8,6 +8,7 @@
  *
  */ 
 
+#include <colinux/common/common.h>
 #include <colinux/os/user/file.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/pipe.h>
@@ -643,7 +644,7 @@ void co_daemon_idle(void *data)
 	co_daemon_t *daemon = (typeof(daemon))data;
 	struct {
 		co_message_t message;
-		co_linux_message_t linux;
+		co_linux_message_t linux_msg;
 	} message;
 	double this_htime;
 	double reminder;
@@ -652,10 +653,10 @@ void co_daemon_idle(void *data)
 	message.message.to = CO_MODULE_LINUX;
 	message.message.priority = CO_PRIORITY_DISCARDABLE;
 	message.message.type = CO_MESSAGE_TYPE_OTHER;
-	message.message.size = sizeof(message.linux);
-	message.linux.device = CO_DEVICE_TIMER;
-	message.linux.unit = 0;
-	message.linux.size = 0;
+	message.message.size = sizeof(message.linux_msg);
+	message.linux_msg.device = CO_DEVICE_TIMER;
+	message.linux_msg.unit = 0;
+	message.linux_msg.size = 0;
 
 	this_htime = co_os_timer_highres();
 	reminder = this_htime - daemon->last_htime + daemon->reminder_htime;
@@ -800,6 +801,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	}
 
 	daemon->running = PTRUE;
+
 	while (daemon->running) {
 		co_monitor_ioctl_run_t *params;
 		unsigned long write_size = 0;

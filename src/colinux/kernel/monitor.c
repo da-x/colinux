@@ -36,12 +36,12 @@
 co_rc_t co_monitor_malloc(co_monitor_t *cmon, unsigned long bytes, void **ptr)
 {
 	void *block = co_os_malloc(bytes);
-
+	
 	if (block == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 
 	*ptr = block;
-
+	
 	cmon->blocks_allocated++;
 
 	return CO_RC(OK);
@@ -86,12 +86,10 @@ static co_rc_t colinux_dump_page_at_pfn(co_monitor_t *cmon, co_pfn_t pfn)
 {
 	unsigned long *page;
 
-	page = (unsigned long *)co_os_map(cmon->manager, pfn);
-	
+	page = (unsigned long *)co_os_map(cmon->manager, pfn);	
 	co_debug("dump of PFN %d\n", pfn);
 	colinux_dump_page(page);
-
-	co_os_unmap(cmon->manager, page);
+	co_os_unmap(cmon->manager, page, pfn);
 
 	return CO_RC(OK);
 }
@@ -115,7 +113,7 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 	co_pfn_t *pfns = NULL, self_map_pfn, passage_page_pfn, swapper_pg_dir_pfn;
 	unsigned long pp_pagetables_pgd, self_map_page_offset, passage_page_offset;
 	unsigned long reversed_physical_mapping_offset;
-	
+
 	rc = colinux_get_pfn(cmon, cmon->import.kernel_swapper_pg_dir, &swapper_pg_dir_pfn);
 	if (!CO_OK(rc)) {
 		co_debug("monitor: error getting swapper_pg_dir pfn (%x)\n", rc);
@@ -349,11 +347,15 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 		break;
 	}
 
-	co_switch();
+	co_host_switch_wrapper(cmon);
 
 	switch (co_passage_page->operation) {
 	case CO_OPERATION_FORWARD_INTERRUPT: {
 		co_monitor_arch_real_hardware_interrupt(cmon);
+		if (cmon->timer_interrupt == PFALSE)
+			return PTRUE;
+
+		cmon->timer_interrupt = PFALSE;
 		return PFALSE;
 	}
 	case CO_OPERATION_TERMINATE: {
@@ -363,6 +365,7 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 		} message;
 		
 		co_debug("monitor: linux terminated (%d)\n", co_passage_page->params[0]);
+
 		message.message.from = CO_MODULE_MONITOR;
 		message.message.to = CO_MODULE_DAEMON;
 		message.message.priority = CO_PRIORITY_IMPORTANT;
@@ -398,27 +401,6 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 		char *p = (char *)&co_passage_page->params[0];
 		p[0x200] = '\0';
 		co_monitor_debug_line(cmon, p);
-
-#if (1)	
-		{
-			/* DEBUG HACK */
-			char buf[0x50];
-			memset(buf, ' ', sizeof(buf));
-
-			co_unsigned_long_to_hex(&buf[0], co_passage_page->linuxvm_state.cs);
-			co_unsigned_long_to_hex(&buf[0x9*1], co_passage_page->linuxvm_state.ds);
-			co_unsigned_long_to_hex(&buf[0x9*2], co_passage_page->linuxvm_state.es);
-			co_unsigned_long_to_hex(&buf[0x9*3], co_passage_page->linuxvm_state.fs);
-			co_unsigned_long_to_hex(&buf[0x9*4], co_passage_page->linuxvm_state.gs);
-			co_unsigned_long_to_hex(&buf[0x9*5], co_passage_page->linuxvm_state.ss);
-			co_unsigned_long_to_hex(&buf[0x9*6], co_passage_page->linuxvm_state.ldt);
-			buf[0x9*7] = '\n';
-			buf[0x9*7+1] = '\0';
-
-			co_monitor_debug_line(cmon, buf);
-		}
-#endif
-
                 return PFALSE;
         }
 
@@ -854,7 +836,6 @@ co_rc_t co_monitor_run(co_monitor_t *cmon,
 
 	if (cmon->state == CO_MONITOR_STATE_RUNNING) {
 		/* Switch back and forth from Linux */
-
 		while (co_monitor_iteration(cmon));
 	}
 
@@ -903,3 +884,4 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 
 	return rc;
 }
+

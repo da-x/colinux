@@ -75,7 +75,7 @@ co_rc_t co_monitor_host_linuxvm_transfer(
 
 		page = (char *)co_os_map(cmon->manager, pfn);
 		rc = host_func(cmon, host_data, page + (vaddr & ~PAGE_MASK), one_copy, dir);
-		co_os_unmap(cmon->manager, page);
+		co_os_unmap(cmon->manager, page, pfn);
 
 		if (!CO_OK(rc))
 			return rc;
@@ -207,7 +207,7 @@ co_rc_t co_manager_create_pfns_and_callback_callback(
 	
 	mapped_page = co_os_map(cbdata->monitor->manager, real_pfn);
 	rc = cbdata->func(mapped_page + (offset & (~PAGE_MASK)), cbdata->data, size);
-	co_os_unmap(cbdata->monitor->manager, mapped_page);
+	co_os_unmap(cbdata->monitor->manager, mapped_page, real_pfn);
 
 	return CO_RC(OK);
 }

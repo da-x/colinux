@@ -13,10 +13,10 @@ BUILD_PATH := $(BUILD_PATH)/build
 LOCAL_TARGETS = $(BUILD_PATH)/driver.o
 
 $(BUILD_PATH)/driver.o : \
-	$(BUILD_ROOT)/colinux/common/common.o \
 	$(BUILD_ROOT)/colinux/kernel/kernel.o \
 	$(BUILD_ROOT)/colinux/os/current/kernel/kernel.o \
 	$(BUILD_ROOT)/colinux/arch/current/arch.o \
+	$(BUILD_ROOT)/colinux/common/common.a \
 
 	$(TOOL_LD_RELOC)
 

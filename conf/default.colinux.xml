@@ -7,5 +7,5 @@
     <bootparams>root=/dev/cobd0</bootparams>
     <image path="vmlinux"></image>
     <memory size="64"></memory>
-    <network index="0" type="tap" name="TAP"</network>
+    <network index="0" type="tap" name="TAP"></network>
 </colinux>

@@ -23,11 +23,11 @@ $(BUILD_PATH)/version.h : $(BUILD_PATH)/version.py $(BUILD_PATH)/../VERSION
 
 $(BUILD_PATH)/version.o : $(BUILD_PATH)/version.h
 
-$(BUILD_PATH)/common.o : $(LOCAL_OBJS)
-	$(TOOL_LD_RELOC)
+$(BUILD_PATH)/common.a : $(LOCAL_OBJS)
+	$(TOOL_AR)
 
 CLEAN_FILES := $(CLEAN_FILES) \
-	$(LOCAL_OBJS) $(BUILD_PATH)/common.o \
+	$(LOCAL_OBJS) $(BUILD_PATH)/common.a \
 	$(BUILD_PATH)/version.h
 
 #-----------------------------------------------------------------

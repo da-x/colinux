@@ -19,5 +19,17 @@ Windows port COLINUX_ARCH=i386 COLINUX_HOST_OS=winnt
         make colinux
 
     See the Makefile in the colinux/os/winnt/build directory.
+
+Linux port COLINUX_HOST_OS=linux
+
+    Also needed is the path to the sources of the target kernel.
+    Currently only 2.6.3 and above are supported.
+    
+    COLINUX_HOST_KERNEL_DIR=/path/to/your/kernel/tree
+
+    Or:
+
+    COLINUX_HOST_KERNEL_DIR=/lib/modules/\`uname -r\`/build
+
 "
 
