@@ -2,6 +2,9 @@ import os
 import wx
 from wxPython import wizard as wxWizard
 from xmlwrapper import XMLWrapper
+from common import *
+from blockdevice import BlockDevicesOptionArray
+from networkdevice import NetworkDevicesOptionArray
 
 class MainEditor(wx.SplitterWindow):
     def __init__(self, mainframe, *arg, **kw):
@@ -48,90 +51,6 @@ class ConfigurationItem(object):
 
     def title(self):
         raise NotImplemented()
-   
-class OptionPanel(object):
-    def __init__(self, splitter, mainframe):
-        self.panel = wx.Panel(splitter, -1)
-
-class OptionArrayPanel(OptionPanel):
-    CLASS_DESC = None
-    LONG_DESC = ''
-    SHORT_TREE_DESC = None
-    
-    def __init__(self, splitter, mainframe):
-        super(OptionArrayPanel, self).__init__(splitter, mainframe)
-        self.mainframe = mainframe
-        
-        label = wx.StaticText(self.panel, -1, self.CLASS_DESC, style=wx.ALIGN_CENTRE)
-        desc = wx.StaticText(self.panel, -1, self.LONG_DESC)
-        listctl = wx.ListCtrl(self.panel, -1, style=wx.LC_LIST)
-        listctl.InsertColumn(0, 'Title')
-
-        add = wx.Button(self.panel, -1, 'Add')
-        edit = wx.Button(self.panel, -1, 'Edit')
-        remove = wx.Button(self.panel, -1, 'Remove')
-
-        wx.EVT_BUTTON(add, -1, self.add)
-        
-        button_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        button_sizer.Add(add, 0, wx.ALL, 4)
-        button_sizer.Add(edit, 0, wx.ALL, 4)
-        button_sizer.Add(remove, 0, wx.ALL, 4)
-
-        panel_sizer = wx.BoxSizer(wx.VERTICAL)
-        panel_sizer.Add(label, 0, wx.EXPAND | wx.ALL, 2)
-        panel_sizer.Add(desc, 0, wx.EXPAND | wx.ALL, 2)
-        panel_sizer.Add(listctl, 1, wx.EXPAND | wx.ALL, 4)
-        panel_sizer.Add(button_sizer, 0, wx.ALIGN_CENTRE)
-
-        for index, item in enumerate(self.get_item_list().list):
-            listctl.InsertStringItem(index, item.title(long=True))
-        
-        self.panel.SetSizer(panel_sizer)
-
-    def add(self, event):
-        xml = self.add_wizard(self.mainframe)
-
-    class ItemPanel(OptionPanel):
-        def __init__(self, item, splitter, mainframe):
-            super(OptionArrayPanel.ItemPanel, self).__init__(splitter, mainframe)
-
-            label = wx.StaticText(self.panel, -1, item.title(), style=wx.ALIGN_CENTRE)
-            panelSizer = wx.BoxSizer(wx.VERTICAL)
-            panelSizer.Add(label, 0, wx.EXPAND | wx.ALL, 2)
-            self.panel.SetSizer(panelSizer)
-
-class BlockDevicesOptionArray(OptionArrayPanel):
-    CLASS_DESC = 'Storage Devices'
-    SHORT_TREE_DESC = 'Storage'
-    LONG_DESC = """Storage devices are represented in Linux as /dev/cobdX, where
-X is the number identifying the storage device."""
-    
-    class Item(ConfigurationItem):
-        DOS_DEVICES = '\\DosDevices\\'
-        def title(self, long=False):
-            index = int(self._xml_item.attr.index)
-            if long:
-                name = '/dev/cobd%d' % (index, )
-            else:
-                name = '[%d]' % (index, )
-            path = self._xml_item.attr.path
-            if path.startswith(self.DOS_DEVICES):
-                title = str(path[len(self.DOS_DEVICES):])
-            else:
-                title = path
-            title = '%s: %s' % (name, title)
-            return title
-
-    class ItemPanel(OptionArrayPanel.ItemPanel):
-        pass
-
-    def get_item_list(self):
-        return self.mainframe.block_devices
-
-    def add_wizard(self, mainframe):
-        from blockdevice import run_wizard
-        run_wizard(mainframe)
 
 class NetworkDevicesOptionArray(OptionArrayPanel):
     CLASS_DESC = 'Virtual Network Adapters'
@@ -154,23 +73,82 @@ class NetworkDevicesOptionArray(OptionArrayPanel):
         pass
 
 class ConfigurationItemList(object):
-    def __init__(self, optionpanel, xmlelements, maineditor):        
+    def __init__(self, optionpanel, xmlelements, maineditor, index_range):  
         self.root = maineditor.item_devices
         self.itemtree = maineditor.tree.AppendItem(self.root, optionpanel.SHORT_TREE_DESC)
         self.list = []
         self.optionpanel = optionpanel
         self.maineditor = maineditor        
+        self.elements = xmlelements
         for item in xmlelements:
-            self.add_item(item)
+            self.add_item(item, xml_update=False)
+        self.maineditor.tree.SetPyData(self.itemtree, lambda *arg, **kw:optionpanel(config_item_list=self, *arg))
+        self.index_range = index_range
 
-    def add_item(self, xml_item):
-        instance = self.optionpanel.Item(xml_item)        
+    def used_indexes(self):
+        return [int(item._xml_item.attr.index) for item in self.list]
+
+    def populate_index(self, xml_item):
+        used_index_list = self.used_indexes()
+        for valid_index in self.index_range:
+            if valid_index not in used_index_list:
+                xml_item.attr.index = str(valid_index)
+                return True
+        return False
+
+    def check_index(self, str_index, old_index):        
+        try:            
+            index = int(str_index)
+        except ValueError, e:
+            raise InvalidArrayIndexChosen("Index must be an integer", index)
+
+        if int(old_index) != int(index):
+            if index in self.used_indexes():
+                raise InvalidArrayIndexChosen("Index already used", index)
+            if index not in self.index_range:
+                raise InvalidArrayIndexChosen("Index out of range", index)
+            
+        return str(index)
+
+    def get_item_by_index(self, index):
+        tree = self.maineditor.tree
+        count = tree.GetChildrenCount(self.itemtree)
+        cookie = 0
+        child = ''
+        for i in xrange(count):
+            if i == 0:
+                (child, cookie) = tree.GetFirstChild(self.itemtree, cookie)
+            else:
+                (child, cookie) = tree.GetNextChild(self.itemtree, cookie)
+            if i == index:
+                return child
+        return None
+
+    def select_item_by_index(self, index):
+        tree = self.maineditor.tree
+        item = self.get_item_by_index(index)
+        tree.SelectItem(item)
+
+    def del_item(self, index):
+        tree = self.maineditor.tree
+        item = self.get_item_by_index(index)
+        if item:
+            tree.Delete(item)
+        del self.list[index]
+
+    def add_item(self, xml_item, xml_update=True):
+        instance = self.optionpanel.Item(xml_item)
         listitem = self.maineditor.tree.AppendItem(self.itemtree, instance.title())
+        set_title_func = lambda title:self.maineditor.tree.SetItemText(listitem, title)
         self.maineditor.tree.Expand(self.itemtree)
-        self.maineditor.tree.SetPyData(listitem, lambda *arg:self.optionpanel.ItemPanel(instance, *arg))
+        self.maineditor.tree.SetPyData(listitem, \
+                                       lambda *arg:self.optionpanel.ItemPanel(instance,
+                                                                              set_title_func,
+                                                                              self.check_index, *arg))
         self.list.append(instance)
         self.maineditor.tree.Expand(self.root)
-        self.maineditor.tree.SetPyData(self.itemtree, self.optionpanel)
+        if xml_update:
+            self.elements.object.appendChild(xml_item._object)
 
 class MainFrame(wx.Frame):
     def __init__(self, configurator, parent, id, title):
@@ -186,6 +164,8 @@ class MainFrame(wx.Frame):
                     pass
 
         self.SetDropTarget(filedropclass())
+        self._current_path = None
+        self._opened = False
         
         bar = self.CreateStatusBar(2)
         bar.SetStatusWidths([-1, 40])
@@ -196,11 +176,16 @@ class MainFrame(wx.Frame):
         menu.Append(wx.ID_NEW, '&New', 'New')
         wx.EVT_MENU(self, wx.ID_NEW, self.on_new)
         menu.Append(wx.ID_CLOSE, '&Close', 'Close')
+        menu.Enable(wx.ID_CLOSE, False)
         wx.EVT_MENU(self, wx.ID_CLOSE, self.on_close)
         menu.Append(wx.ID_OPEN, '&Open', 'Open a new configuration file')
         wx.EVT_MENU(self, wx.ID_OPEN, self.on_open)
         menu.Append(wx.ID_SAVE, '&Save', 'Save a configuration file')
+        wx.EVT_MENU(self, wx.ID_SAVE, self.on_save)
+        menu.Enable(wx.ID_SAVE, False)
         menu.Append(wx.ID_SAVEAS, 'Save &As...', 'Save a configuration file under different name')
+        wx.EVT_MENU(self, wx.ID_SAVEAS, self.on_save_as)
+        menu.Enable(wx.ID_SAVEAS, False)
         wizard_id = wx.NewId()
         menu.Append(wizard_id, '&Wizard', 'Wizard')
         menu.AppendSeparator()
@@ -214,7 +199,7 @@ class MainFrame(wx.Frame):
         self.Destroy()
         
     def AskSave(self):
-        if not (self._modified): return True
+        #if not (self._modified): return True
         
         flags = wx.ICON_EXCLAMATION | wx.YES_NO | wx.CANCEL | wx.CENTRE
         dlg = wx.MessageDialog(self, 'File is modified. Save before exit?',
@@ -222,7 +207,7 @@ class MainFrame(wx.Frame):
         say = dlg.ShowModal()
         dlg.Destroy()
         if say == wx.ID_YES:
-            #self.OnSaveOrSaveAs(wxCommandEvent(wxID_SAVE))
+            self.OnSaveOrSaveAs(wxCommandEvent(wxID_SAVE))
             if not self.modified: return True
         elif say == wx.ID_NO:
             return True
@@ -231,13 +216,29 @@ class MainFrame(wx.Frame):
     def on_open(self, event):
         self.gui_open()
 
-    def on_new(self, path):
+    def on_new(self, event):
         if not self.AskSave(): return
         self.new()
 
-    def on_close(self, path):
+    def on_close(self, event):
         if not self.AskSave(): return
         self.close()
+
+    def on_save(self, event):
+        if not self._current_path:
+            return self.on_save_as(event)
+        self.gui_save(self._current_path)
+
+    def on_save_as(self, event):
+        dlg = wx.FileDialog(self, 'Save', '',
+                            '', '*.colinux.xml', wx.SAVE | wx.CHANGE_DIR)
+        if dlg.ShowModal() == wx.ID_OK:
+            path = dlg.GetPath()
+            self.gui_save(path)
+            dlg.Destroy()
+
+    def gui_save(self, pathname):
+        self.save(pathname)
 
     def gui_open(self, path=None):
         if not self.AskSave(): return
@@ -256,6 +257,10 @@ class MainFrame(wx.Frame):
         if self._main_editor:
             self._main_editor.Destroy()
             self._main_editor = None
+        self._opened = False
+        self.menuBar.Enable(wx.ID_CLOSE, False)
+        self.menuBar.Enable(wx.ID_SAVE, False)
+        self.menuBar.Enable(wx.ID_SAVEAS, False)
 
     def new_layout(self):
         self.close()
@@ -270,25 +275,42 @@ class MainFrame(wx.Frame):
     def new(self):
         self.new_layout()
         self.open_xml(XMLWrapper.parse_string('<colinux></colinux>'))
+        self._current_path = None
 
     def open(self, path):
         self.new_layout()
-        self.open_xml(XMLWrapper.parse(open(path)))
+        wrapped = XMLWrapper.parse(open(path))
+        colinux, = wrapped.sub.colinux
+        colinux.striptext()
+        self.open_xml(wrapped)
         self.SetStatusText('Loaded: %s' % (path, ))
+        self._current_path = path
+
+    def save(self, path):
+        open(path, 'w').write(self.xml.build_string())
+        self.SetStatusText('Saved: %s' % (path, ))
+        self._current_path = path
+        self._modified = False
 
     def open_xml(self, xml):
         self.xml = xml
         self.xml_colinux, = self.xml.sub.colinux
+        self._opened = True        
+        self.menuBar.Enable(wx.ID_CLOSE, True)
+        self.menuBar.Enable(wx.ID_SAVE, True)
+        self.menuBar.Enable(wx.ID_SAVEAS, True)
 
         self.block_devices = ConfigurationItemList(
             BlockDevicesOptionArray,
             self.xml_colinux.sub.block_device,
-            self._main_editor)
+            self._main_editor,
+            range(32))
 
         self.network_devices = ConfigurationItemList(
             NetworkDevicesOptionArray,
             self.xml_colinux.sub.network,
-            self._main_editor)
+            self._main_editor,
+            range(32))
         
         self._modified = False        
 
