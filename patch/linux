@@ -1542,8 +1542,8 @@ diff -urN a/drivers/block/Makefile b/drivers/block/Makefile
  obj-$(CONFIG_BLK_DEV_XD)	+= xd.o
 diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 --- a/drivers/block/cobd.c	1970-01-01 02:00:00.000000000 +0200
-+++ b/drivers/block/cobd.c	2004-07-08 23:19:20.000000000 +0300
-@@ -0,0 +1,500 @@
++++ b/drivers/block/cobd.c	2004-07-17 18:06:25.000000000 +0300
+@@ -0,0 +1,536 @@
 +/*
 + *  Copyright (C) 2003 Dan Aloni <da-x@colinux.org>
 + *
@@ -1828,39 +1828,70 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +	return result;
 +}
 +
++struct cobd_alias_major {
++	const char *name;
++	int registered;
++	int number;
++};
++
 +struct cobd_alias {
 +	const char *name;
-+	int major;
++	struct cobd_alias_major *major;
 +	int minor_start;
 +	int minor_count;
 +	struct gendisk **gendisk;
 +};
 +
++struct cobd_alias_major cobd_aliases_major_ide0 = {
++	.name = "ide0",
++	.number = IDE0_MAJOR,
++};
++
++struct cobd_alias_major cobd_aliases_major_ide1 = {
++	.name = "ide1",
++	.number = IDE1_MAJOR,
++};
++
++struct cobd_alias_major cobd_aliases_major_ide2 = {
++	.name = "ide2",
++	.number = IDE2_MAJOR,
++};
++
++struct cobd_alias_major cobd_aliases_major_ide3 = {
++	.name = "ide3",
++	.number = IDE3_MAJOR,
++};
++
++struct cobd_alias_major cobd_aliases_major_sd = {
++	.name = "sd",
++	.number = SCSI_DISK0_MAJOR,
++};
++
 +struct cobd_alias cobd_aliases[] = {
-+	{"hda", IDE0_MAJOR, 0x01, 20, },
-+	{"hdb", IDE0_MAJOR, 0x41, 20, },
-+	{"hdc", IDE1_MAJOR, 0x01, 20, },
-+	{"hdd", IDE1_MAJOR, 0x41, 20, },
-+	{"hde", IDE2_MAJOR, 0x01, 20, },
-+	{"hdf", IDE2_MAJOR, 0x41, 20, },
-+	{"hdg", IDE3_MAJOR, 0x01, 20, },
-+	{"hdh", IDE3_MAJOR, 0x41, 20, },
-+	{"sda", SCSI_DISK0_MAJOR, 0x01, 0x0f, },
-+	{"sdb", SCSI_DISK0_MAJOR, 0x11, 0x0f, },
-+	{"sdc", SCSI_DISK0_MAJOR, 0x21, 0x0f, },
-+	{"sdd", SCSI_DISK0_MAJOR, 0x31, 0x0f, },
-+	{"sde", SCSI_DISK0_MAJOR, 0x41, 0x0f, },
-+	{"sdf", SCSI_DISK0_MAJOR, 0x51, 0x0f, },
-+	{"sdg", SCSI_DISK0_MAJOR, 0x61, 0x0f, },
-+	{"sdh", SCSI_DISK0_MAJOR, 0x71, 0x0f, },
-+	{"sdi", SCSI_DISK0_MAJOR, 0x81, 0x0f, },
-+	{"sdj", SCSI_DISK0_MAJOR, 0x91, 0x0f, },
-+	{"sdk", SCSI_DISK0_MAJOR, 0xa1, 0x0f, },
-+	{"sdl", SCSI_DISK0_MAJOR, 0xb1, 0x0f, },
-+	{"sdm", SCSI_DISK0_MAJOR, 0xc1, 0x0f, },
-+	{"sdn", SCSI_DISK0_MAJOR, 0xd1, 0x0f, },
-+	{"sdp", SCSI_DISK0_MAJOR, 0xe1, 0x0f, },
-+	{"sdq", SCSI_DISK0_MAJOR, 0xf1, 0x0f, },
++	{"hda", &cobd_aliases_major_ide0, 0x00, 21, },
++	{"hdb", &cobd_aliases_major_ide0, 0x40, 21, },
++	{"hdc", &cobd_aliases_major_ide1, 0x00, 21, },
++	{"hdd", &cobd_aliases_major_ide1, 0x40, 21, },
++	{"hde", &cobd_aliases_major_ide2, 0x00, 21, },
++	{"hdf", &cobd_aliases_major_ide2, 0x40, 21, },
++	{"hdg", &cobd_aliases_major_ide3, 0x00, 21, },
++	{"hdh", &cobd_aliases_major_ide3, 0x40, 21, },
++	{"sda", &cobd_aliases_major_sd, 0x00, 0x10, },
++	{"sdb", &cobd_aliases_major_sd, 0x10, 0x10, },
++	{"sdc", &cobd_aliases_major_sd, 0x20, 0x10, },
++	{"sdd", &cobd_aliases_major_sd, 0x30, 0x10, },
++	{"sde", &cobd_aliases_major_sd, 0x40, 0x10, },
++	{"sdf", &cobd_aliases_major_sd, 0x50, 0x10, },
++	{"sdg", &cobd_aliases_major_sd, 0x60, 0x10, },
++	{"sdh", &cobd_aliases_major_sd, 0x70, 0x10, },
++	{"sdi", &cobd_aliases_major_sd, 0x80, 0x10, },
++	{"sdj", &cobd_aliases_major_sd, 0x90, 0x10, },
++	{"sdk", &cobd_aliases_major_sd, 0xa0, 0x10, },
++	{"sdl", &cobd_aliases_major_sd, 0xb0, 0x10, },
++	{"sdm", &cobd_aliases_major_sd, 0xc0, 0x10, },
++	{"sdn", &cobd_aliases_major_sd, 0xd0, 0x10, },
++	{"sdp", &cobd_aliases_major_sd, 0xe0, 0x10, },
++	{"sdq", &cobd_aliases_major_sd, 0xf0, 0x10, },
 +	{NULL, },
 +};
 +
@@ -1872,6 +1903,7 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +
 +        while (isdigit(**s))
 +                i = i*10 + *((*s)++) - '0';
++
 +        return i;	
 +}
 +
@@ -1883,14 +1915,8 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +	const char *index_str_end = index_str_start;
 +
 +	int index = skip_atoi(&index_str_end);
-+	if (index_str_start == index_str_end) {
-+		printk(KERN_WARNING "index not specified for %s\n", alias_name_requested);
-+		return -1;
-+	}
 +
-+	index -= 1;
-+
-+	if (!((index >= 0) && (index < alias->minor_count))) {
++	if (!((index >= 0) && (index <= alias->minor_count))) {
 +		printk(KERN_WARNING "index out of bounds for alias %s (1 - %d)\n", 
 +		       alias_name_requested, alias->minor_count);
 +		return -1;
@@ -1904,11 +1930,15 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +			return -ENOMEM;
 +		}
 +
-+		if (register_blkdev(alias->major, alias->name)) {
-+			printk(KERN_WARNING "unable to get major number %d for cobd alias device %s\n", 
-+			       alias->major, alias_name_requested);
-+			kfree(gendisks);
-+			return -EIO;
++		if (!alias->major->registered) {
++			if (register_blkdev(alias->major->number, alias->major->name)) {
++				printk(KERN_WARNING "unable to get major number %d for cobd alias device %s\n", 
++				       alias->major->number, alias_name_requested);
++				kfree(gendisks);
++				return -EIO;
++			}
++
++			alias->major->registered = 1;
 +		}
 +
 +		alias->gendisk = gendisks;
@@ -1935,11 +1965,14 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +
 +	struct cobd_device *cobd = &cobd_devs[cobd_unit];
 +	blk_queue_hardsect_size(disk->queue, hardsect_size);
-+	disk->major = alias->major;
++	disk->major = alias->major->number;
 +	disk->first_minor = alias->minor_start + index;
 +	disk->fops = &cobd_fops;
-+	sprintf(disk->disk_name, "%s%d", alias->name, index + 1);
-+	sprintf(disk->devfs_name, "%s/%d", alias->name, index + 1);
++	if (index)
++		sprintf(disk->disk_name, "%s%d", alias->name, index);
++	else
++		sprintf(disk->disk_name, "%s", alias->name, index);
++	sprintf(disk->devfs_name, "%s/%d", alias->name, index);
 +	disk->private_data = cobd;
 +	add_disk(disk);
 +	alias->gendisk[index] = disk;
@@ -2016,7 +2049,10 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +		}
 +
 +		devfs_remove(alias->name);
-+		unregister_blkdev(alias->major, alias->name);
++		if (!alias->major->registered) {
++			unregister_blkdev(alias->major->number, alias->major->name);
++			alias->major->registered = 0;
++		}
 +		kfree(alias->gendisk);
 +
 +		alias++;
@@ -4188,7 +4224,7 @@ diff -urN a/include/linux/console.h b/include/linux/console.h
  
 diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 --- a/include/linux/cooperative.h	1970-01-01 02:00:00.000000000 +0200
-+++ b/include/linux/cooperative.h	2004-07-09 20:16:36.000000000 +0300
++++ b/include/linux/cooperative.h	2004-07-16 21:32:03.000000000 +0300
 @@ -0,0 +1,311 @@
 +/*
 + *  linux/include/linux/cooperative.h
@@ -4212,7 +4248,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +
 +#include <asm/cooperative.h>
 +
-+#define CO_LINUX_API_VERSION    3
++#define CO_LINUX_API_VERSION    4
 +
 +#pragma pack(0)
 +
