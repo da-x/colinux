@@ -13,5 +13,6 @@
 #include "manager.h"
 
 co_rc_t co_manager_get_page(struct co_manager *manager, co_pfn_t *pfn);
+co_rc_t co_monitor_get_pfn(co_monitor_t *cmon, vm_ptr_t address, co_pfn_t *pfn);
 
 #endif

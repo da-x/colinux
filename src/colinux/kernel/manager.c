@@ -20,6 +20,7 @@
 
 #include "manager.h"
 #include "monitor.h"
+#include "pages.h"
 
 co_rc_t co_manager_load(co_manager_t *manager)
 {
@@ -68,7 +69,6 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 		(((unsigned long)(-CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP) / PTRS_PER_PTE) / PTRS_PER_PGD) / sizeof(linux_pgd_t);
 
 	co_debug("manager: using %d table entries for reversed physical mapping\n", manager->reversed_map_pgds_count);
-
 	manager->reversed_map_pgds = (unsigned long *)(co_os_malloc(manager->reversed_map_pgds_count*sizeof(linux_pgd_t)));
 	if (!manager->reversed_map_pgds) {
 		if (!CO_OK(rc)) /* TODO: handle error */
@@ -93,8 +93,10 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 		pte = (typeof(pte))(co_os_map(manager, pfn));
 		for (j=0; j < PTRS_PER_PTE; j++) {
 			co_pfn_t rpfn;
-			if (reversed_page_count >= manager->reversed_page_count)
-				break;
+			if (reversed_page_count >= manager->reversed_page_count) {
+				pte[j] = __pte(0);
+				continue;
+			}
 
 			rpfn = manager->reversed_map_pfns[reversed_page_count];
 			pte[j] = pte_modify(__pte(rpfn << PAGE_SHIFT), __pgprot(__PAGE_KERNEL));
@@ -104,7 +106,7 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 
 		manager->reversed_map_pgds[i] = (pfn << PAGE_SHIFT) | _KERNPG_TABLE; 
 
-		covered_physical += (PTRS_PER_PTE * PTRS_PER_PGD * sizeof(linux_pgd_t));
+		covered_physical += (PTRS_PER_PTE * PTRS_PER_PGD);
 	}
 
 	return CO_RC(OK);

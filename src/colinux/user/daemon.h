@@ -41,6 +41,7 @@ typedef struct co_daemon {
 	char *buf;
 	double last_htime;
 	double reminder_htime;
+	bool_t send_ctrl_alt_del;
 } co_daemon_t;
 
 typedef enum {

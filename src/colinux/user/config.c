@@ -39,7 +39,7 @@ co_rc_t co_load_config_blockdev(co_config_t *out_config, mxml_element_t *element
 		return CO_RC(ERROR);
 	}
 
-	if (index >= CO_MAX_BLOCK_DEVICES) {
+	if (index >= CO_MODULE_MAX_COBD) {
 		co_debug("config: invalid block_dev element: bad index\n");
 		return CO_RC(ERROR);
 	}

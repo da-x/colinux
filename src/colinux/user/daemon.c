@@ -17,6 +17,7 @@
 #include <colinux/os/alloc.h>
 #include <colinux/os/timer.h>
 #include <colinux/user/macaddress.h>
+#include <colinux/user/debug.h>
 
 #include <memory.h>
 #include <stdarg.h>
@@ -463,6 +464,10 @@ co_rc_t co_daemon_handle_daemon(void *data, co_message_t *message)
 			debug(daemon, "DEBUG: %s", daemon_message->data);
 			break;
 		}
+		case CO_MONITOR_MESSAGE_TYPE_TRACE_POINT: {
+			co_daemon_trace_point((co_trace_point_info_t *)&daemon_message->data);
+			break;
+		}
 		}
 	} else if (message->from == CO_MODULE_CONSOLE) {
 		struct {
@@ -675,7 +680,6 @@ void co_daemon_idle(void *data)
 	} message;
 	double this_htime;
 	double reminder;
-	int count;
 
 	message.message.from = CO_MODULE_DAEMON;
 	message.message.to = CO_MODULE_LINUX;
@@ -864,6 +868,11 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 
 		co_daemon_idle(daemon);
 		daemon->idle = PFALSE;
+
+		if (daemon->send_ctrl_alt_del) {
+			co_daemon_send_ctrl_alt_del(daemon);
+			daemon->send_ctrl_alt_del = PFALSE;
+		}
 	}
 
 out:

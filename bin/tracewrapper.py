@@ -48,7 +48,6 @@ params.append('-DCOLINUX_TRACE')
 ppc_params = params[:]
 ppc_params.remove('-c')
 ppc_params.append('-E')
-
     
 oparam = ppc_params.index('-o')
 
@@ -67,6 +66,6 @@ params.append(trace_file)
 result = reexec(params)
 
 os.unlink(ppc_file)
-os.unlink(trace_file)
+#os.unlink(trace_file)
 
 sys.exit(result)

@@ -18,7 +18,6 @@ typedef int bool_t;
 #define PACKED_STRUCT __attribute__((packed))
 
 #define CO_MAX_MONITORS        16
-#define CO_MAX_BLOCK_DEVICES   32
 
 typedef enum {
     CO_RC_OK                         = 0,

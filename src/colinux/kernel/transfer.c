@@ -15,22 +15,7 @@
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/kernel/transfer.h>
 #include <colinux/kernel/manager.h>
-
-co_rc_t co_monitor_get_pfn(co_monitor_t *cmon, vm_ptr_t address, co_pfn_t *pfn)
-{
-	unsigned long current_pfn, pfn_group, pfn_index;
-
-	current_pfn = (address >> PAGE_SHIFT);
-	pfn_group = current_pfn / PTRS_PER_PTE;
-	pfn_index = current_pfn % PTRS_PER_PTE;
-
-	if (cmon->pp_pfns[pfn_group] == NULL)
-		return CO_RC(ERROR);
-
-	*pfn = cmon->pp_pfns[pfn_group][pfn_index];
-
-	return CO_RC(OK);
-}
+#include <colinux/kernel/pages.h>
 
 /*
  * This code allows direct copying from and to the Linux kernel address space.

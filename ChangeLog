@@ -1,7 +1,9 @@
 * Version 0.6.1 
-  * Linux port (for systems running kernel 2.6.x)
-  * Linux patch updated to 2.4.26	
   * Added the ability to send Ctrl-Alt-Del to the Linux machine.
+  * coLinux patch:	  
+    * Linux patch updated to 2.4.26	
+    * Linux port (for systems running kernel 2.6.x)
+    * Fixed a crash that could happen on swapoff().
   * Windows: 
     * Sizes of raw partition devices are now detected properly. This 
       means that the resierfs problems should be over, plus cat /dev/cobd* 
@@ -15,6 +17,9 @@
     * Added scripts for building the MingW32 cross compiler on Linux,
       plus scripts that download, compile, and install the libraries
       coLinux depends on.
+  * Linux port:
+    * Sending SIGHUP to the daemon causes it to issue Ctrl-Alt-Del on the
+      Linux VM.
   * Consoles: 
     * Fixed a bug in the clear operation: let it clear with the right video 
       erase character so that ncurses apps would appear properly.

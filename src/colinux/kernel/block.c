@@ -22,7 +22,7 @@ void co_monitor_unregister_and_free_block_devices(co_monitor_t *cmon)
 {
 	long i;
 
-	for (i=0; i < CO_MAX_BLOCK_DEVICES; i++) {
+	for (i=0; i < CO_MODULE_MAX_COBD; i++) {
 		co_block_dev_t *dev = cmon->block_devs[i];
 		if (!dev)
 			continue;
@@ -34,7 +34,7 @@ void co_monitor_unregister_and_free_block_devices(co_monitor_t *cmon)
 
 co_block_dev_t *co_monitor_block_dev_from_index(co_monitor_t *cmon, unsigned long index)
 {
-	if (index >= CO_MAX_BLOCK_DEVICES)
+	if (index >= CO_MODULE_MAX_COBD)
 		return NULL;
 
 	return cmon->block_devs[index];

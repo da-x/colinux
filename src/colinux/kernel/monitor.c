@@ -323,6 +323,44 @@ void co_monitor_debug_line(co_monitor_t *cmon, const char *text)
 	co_message_switch_message(&cmon->message_switch, &message->message);
 }
 
+void co_monitor_trace_point_info(co_monitor_t *cmon, co_trace_point_info_t *info)
+{
+	struct {
+		co_message_t message;
+		co_daemon_message_t payload;
+		co_trace_point_info_t data;
+	} *message = NULL;
+	unsigned long size;
+
+	size = sizeof(message->payload) + sizeof(message->data);
+	message = (typeof(message))co_os_malloc(size + sizeof(message->message));
+	if (message == NULL)
+		return;
+
+	message->message.from = CO_MODULE_MONITOR;
+	message->message.to = CO_MODULE_DAEMON;
+	message->message.priority = CO_PRIORITY_DISCARDABLE;
+	message->message.type = CO_MESSAGE_TYPE_OTHER;
+	message->message.size = size;
+	message->payload.type = CO_MONITOR_MESSAGE_TYPE_TRACE_POINT;
+	message->data = *info;
+
+	co_message_switch_message(&cmon->message_switch, &message->message);
+}
+
+bool_t co_monitor_trace_point(co_monitor_t *cmon)
+{
+	co_trace_point_info_t *info = ((co_trace_point_info_t *)&(co_passage_page->params[0]));
+
+	if (info->index < 3000000) {
+		return PTRUE;
+	}
+
+	co_monitor_trace_point_info(cmon, info);
+
+	return PFALSE;
+}
+
 void co_unsigned_long_to_hex(char *text, unsigned long number)
 {
 	int count = 8;
@@ -404,6 +442,10 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
                 return PFALSE;
         }
 
+        case CO_OPERATION_TRACE_POINT: {
+		return co_monitor_trace_point(cmon);
+        }
+
 	case CO_OPERATION_MESSAGE_TO_MONITOR: {
 		co_message_t *message;
 		co_rc_t rc;
@@ -460,9 +502,7 @@ co_rc_t co_monitor_load_configuration(co_monitor_t *cmon)
 	co_rc_t rc = CO_RC_OK; 
 	long i;
 
-	co_debug("cobd: maximum: %d\n", CO_MAX_BLOCK_DEVICES);
-
-	for (i=0; i < CO_MAX_BLOCK_DEVICES; i++) {
+	for (i=0; i < CO_MODULE_MAX_COBD; i++) {
 		co_monitor_file_block_dev_t *dev;
 		co_block_dev_desc_t *conf_dev = &cmon->config.block_devs[i];
 		if (!conf_dev->enabled)

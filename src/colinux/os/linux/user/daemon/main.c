@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
+#include <signal.h>
 
 #include <colinux/user/daemon.h>
 #include <colinux/user/monitor.h>
@@ -18,10 +19,18 @@
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/pipe.h>
 
+static co_daemon_t *daemon = NULL;
+
+void sighup_handler(int sig)
+{
+	co_terminal_print("Receieved SIGHUP\n");	
+
+	daemon->send_ctrl_alt_del = PTRUE;
+}
+
 int main(int argc, char *argv[]) 
 {
 	co_rc_t rc = CO_RC_OK;
-	co_daemon_t *daemon = NULL;
 	co_start_parameters_t start_parameters;
 	co_manager_handle_t handle;
 	bool_t installed = PFALSE;
@@ -129,14 +138,18 @@ int main(int argc, char *argv[])
 	if (!CO_OK(rc))
 		goto out_destroy;
 
+	signal(SIGHUP, sighup_handler);
 	rc = co_daemon_run(daemon);
+	signal(SIGHUP, SIG_DFL);
 
 	co_daemon_end_monitor(daemon);
 
 out_destroy:
 	co_daemon_destroy(daemon);
+	daemon = NULL;
 
 out:
+	
 	co_terminal_print("daemon: removing kernel driver\n");
 	co_os_manager_remove();
 

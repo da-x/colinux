@@ -87,7 +87,7 @@ typedef struct co_config {
 	 * Information about block devices that we import to
 	 * Linux and the index of the block device to boot from.
 	 */
-	co_block_dev_desc_t block_devs[CO_MAX_BLOCK_DEVICES];
+	co_block_dev_desc_t block_devs[CO_MODULE_MAX_COBD];
 	long block_root_device_index;
 
 	/*

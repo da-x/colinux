@@ -129,7 +129,7 @@ typedef struct co_monitor {
 	/* 
 	 * Block devices
 	 */
-	struct co_block_dev *block_devs[CO_MAX_BLOCK_DEVICES];
+	struct co_block_dev *block_devs[CO_MODULE_MAX_COBD];
 
 	/*
 	 * Message passing stuff

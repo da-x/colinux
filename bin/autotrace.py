@@ -134,6 +134,7 @@ class CTracer(CParser):
         self.last_level1_token = None
         self.bracet = []
         self.sub_tokens = []
+        self.sub_tokens_with_return_trace = []
         self.in_return = False
         self.in_return_skip_space = False
         self.return_tokens = []
@@ -146,6 +147,21 @@ class CTracer(CParser):
 
         self.outfile.write('extern void co_trace_ent(void *);\n');
         self.outfile.write('extern void co_trace_ent_name(void *, const char *);\n');
+        self.outfile.write('extern void co_trace_ret(void *);\n');
+        self.outfile.write(
+"""
+#define CO_TRACE_RET_VALUE(_value_) ({	\
+        typeof(_value_) __ret_value__;	\
+        co_trace_ret((void *)&TRACE_FUNCTION_NAME);    \
+	__ret_value__ = _value_;	\
+})
+
+#define CO_TRACE_RET {	\
+        co_trace_ret((void *)&TRACE_FUNCTION_NAME);    \
+}
+
+""")
+        
 
     def error(self):
         for debug in self.debug_tokens:
@@ -195,35 +211,43 @@ class CTracer(CParser):
                 no_sub = False
                 if self.in_return_skip_space:
                     if type == 'space':
+                        self.sub_tokens_with_return_trace.append(token)
                         self.sub_tokens.append(token)
                         no_sub  = True
                     else:
                         self.in_return_skip_space = False
 
                 if not no_sub:
-                    if token == ';':
-                        # self.sub_tokens += [' TRACE_RET('] + self.return_tokens + [')']
-                        self.sub_tokens += self.return_tokens 
+                    if token == ';' and self.in_return_bracet_level == self.bracet_level:
+                        self.sub_tokens_with_return_trace += ['do {CO_TRACE_RET; return '] + self.return_tokens + ['; } while(0)']
+                        #    self.sub_tokens_with_return_trace += ['return CO_TRACE_RET_VALUE('] + self.return_tokens + [')']
+                        self.sub_tokens += self.return_tokens
                         self.return_tokens = []
                         self.in_return = False
+                        self.sub_tokens_with_return_trace.append(token)
                         self.sub_tokens.append(token)
                     else:
                         self.return_tokens.append(token)
             else:
+                if not token == 'return':
+                    self.sub_tokens_with_return_trace.append(token)
                 self.sub_tokens.append(token)
-
+                
             if token == 'return':
                 self.in_return = True
                 self.in_return_skip_space = True
+                self.in_return_bracet_level = self.bracet_level;
 
         if type == 'close_bracet':
             if self.bracet_level == 0 :
                 if token == '}' and self.activated and self.func_name != None:
                     params_str = ''
-                    params_str = ' '.join(['TRACE_X(%s)' % (x, ) for x in self.params_list])
-                    self.outfile.write(' co_trace_ent_name((void *)&%s, "%s"); {' % (self.func_name, self.func_name))
-                    self.outfile.write(''.join(self.sub_tokens))
-                    self.outfile.write('};')
+                    #params_str = ' '.join(['TRACE_X(%s)' % (x, ) for x in self.params_list])
+                    self.outfile.write('\n#define TRACE_FUNCTION_NAME %s\n' % (self.func_name, ))
+                    self.outfile.write(' co_trace_ent((void *)&%s); {' % (self.func_name, ))
+                    self.outfile.write(''.join(self.sub_tokens_with_return_trace))
+                    self.outfile.write('}; CO_TRACE_RET; ')
+                    self.outfile.write('\n#undef TRACE_FUNCTION_NAME\n')
                 else:
                     self.outfile.write(''.join(self.sub_tokens))
                 self.func_name = None
@@ -253,6 +277,7 @@ class CTracer(CParser):
             self.bracet.append(token)
             if self.bracet_level == 1:
                 self.sub_tokens = []
+                self.sub_tokens_with_return_trace = []
                 if token == '(':
                     self.params_list = []
 
