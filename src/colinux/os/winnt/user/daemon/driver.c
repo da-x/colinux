@@ -5,6 +5,7 @@
  *
  * Service support by Jaroslaw Kowalski <jaak@zd.com.pl>, 2004 (c)
  * Driver service separation by Daniel R. Slater <dan_slater@yahoo.com>, 2004 (c)
+ * Driver installation fixes by Gourge Boutwell <gboutwel@praize.com>, 2004 (c)
  * 
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -25,6 +26,9 @@
 #include "misc.h"
 #include "driver.h"
 
+/*
+ * This function makes sure the driver is installed and initializes it.
+ */
 co_rc_t co_winnt_install_driver(void) 
 {
 	co_rc_t rc = CO_RC_OK;
@@ -64,6 +68,50 @@ co_rc_t co_winnt_install_driver(void)
 	return CO_RC(OK);
 }
 
+/*
+ * This function makes sure the driver is initialized and is of the 
+ * correct version.
+ */
+co_rc_t co_winnt_initialize_driver(void)
+{
+	co_rc_t rc = CO_RC_OK;
+	co_manager_ioctl_status_t status = {0, };
+	co_manager_handle_t handle;
+
+	handle = co_os_manager_open();
+	if (!handle) {
+		co_ntevent_print("daemon: cannot open driver\n");
+		return CO_RC(ERROR);
+	}		
+
+	rc = co_manager_status(handle, &status);
+	if (!CO_OK(rc)) {
+		if (CO_RC_GET_CODE(rc) == CO_RC_VERSION_MISMATCHED) {
+			co_ntevent_print("daemon: driver version is %d while expected version %d\n", 
+					 status.periphery_api_version, CO_LINUX_PERIPHERY_ABI_VERSION);
+		} else {
+			co_ntevent_print("daemon: detected a old buggy driver version\n");
+		}
+			
+		co_os_manager_close(handle);
+		return CO_RC(VERSION_MISMATCHED);
+	}
+
+	if (status.state == CO_MANAGER_STATE_NOT_INITIALIZED) {
+		rc = co_manager_init(handle, PTRUE); /* lazy unload */
+		if (!CO_OK(rc)) {
+			co_terminal_print("daemon: error initializing kernel driver\n");
+			co_os_manager_close(handle);
+			return rc;
+		}
+	}
+
+	/* 
+	 * Alright, driver is initialized.
+	 */
+	return CO_RC(OK);
+}
+
 co_rc_t co_winnt_remove_driver(void) 
 {
 	co_rc_t rc = CO_RC_OK;
@@ -91,9 +139,14 @@ co_rc_t co_winnt_remove_driver(void)
 	
 	rc = co_manager_status(handle, &status);
 	if (!CO_OK(rc)) {
-		co_terminal_print("daemon: couldn't get driver status (rc %x)\n", rc);
+		if (CO_RC_GET_CODE(rc) == CO_RC_VERSION_MISMATCHED) {
+			co_ntevent_print("daemon: driver version is %d while expected version %d\n", 
+					 status.periphery_api_version, CO_LINUX_PERIPHERY_ABI_VERSION);
+		} else {
+			co_ntevent_print("daemon: detected a old buggy driver version\n");
+		}
+
 		co_os_manager_close(handle);
-		co_terminal_print("daemon: asuming its an old buggy version, trying to remove it\n");
 		co_os_manager_remove();
 		return CO_RC(ERROR);
 	}		
@@ -127,30 +180,18 @@ co_rc_t co_winnt_daemon_main_with_driver(char *argv[])
 		if (installed) {
 			co_terminal_print("daemon: driver is installed\n");
 
-			handle = co_os_manager_open();
-			if (!handle) {
-				co_terminal_print("daemon: cannot open driver\n");
-				return CO_RC(ERROR);
-			}		
-
-			rc = co_manager_status(handle, &status);
+			rc = co_winnt_initialize_driver();
 			if (!CO_OK(rc)) {
-				if (CO_RC_GET_CODE(rc) == CO_LINUX_PERIPHERY_ABI_VERSION) {
-					co_terminal_print("daemon: detected an old driver version, trying to remove itn");
-				} else {
-					co_terminal_print("daemon: detected a buggy driver version, trying to remove it\n");
+				if (CO_RC_GET_CODE(rc) == CO_RC_VERSION_MISMATCHED) {
+					co_terminal_print("daemon: trying to remove driver\n");
+					co_os_manager_remove();
+					failures++;
+					continue;
 				}
-				co_os_manager_close(handle);
-				co_os_manager_remove();
-				failures++;
-				continue;
-			}
-
-			if (status.state == CO_MANAGER_STATE_NOT_INITIALIZED) {
-				rc = co_manager_init(handle, PTRUE); /* lazy unload */
-				if (!CO_OK(rc)) {
-					co_terminal_print("daemon: error initializing kernel driver\n");
-					co_os_manager_close(handle);
+			} else {
+				handle = co_os_manager_open();
+				if (!handle) {
+					co_terminal_print("daemon: cannot open driver\n");
 					return CO_RC(ERROR);
 				}
 			}
@@ -179,8 +220,8 @@ co_rc_t co_winnt_daemon_main_with_driver(char *argv[])
 	} while (failures < 3);
 
 	if (failures >= 3) {
-		co_terminal_print("daemon: too many retries, giving up\n");
-		return CO_RC(ERROR); 
+		co_terminal_print("daemon: too many retries, givingup\n");
+		return CO_RC(ERROR);
 	}
 		
 	co_terminal_print("daemon: running\n");

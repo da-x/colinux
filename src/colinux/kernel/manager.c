@@ -11,8 +11,6 @@
 #include <asm/page.h>
 #include <asm/pgtable.h>
 
-#include <memory.h>
-
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/os/kernel/monitor.h>
 #include <colinux/os/kernel/manager.h>
@@ -107,7 +105,8 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 			}
 
 			rpfn = manager->reversed_map_pfns[reversed_page_count];
-			pte[j] = pte_modify(__pte(rpfn << PAGE_SHIFT), __pgprot(__PAGE_KERNEL));
+			pte[j] = pte_modify(__pte(rpfn << PAGE_SHIFT), __pgprot(
+			    _PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED));
 			reversed_page_count++;
 		}
 		co_os_unmap(manager, pte, pfn);

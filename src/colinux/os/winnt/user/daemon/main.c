@@ -29,6 +29,7 @@
 #include "driver.h"
 
 static co_daemon_t *g_daemon = NULL;
+bool_t co_running_as_service = PFALSE;
 
 /*
  * co_winnt_daemon_stop:
@@ -156,6 +157,15 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 	}
 
 	if (winnt_parameters.run_service) {
+		co_rc_t rc;
+
+		co_running_as_service = PTRUE;
+
+		rc = co_winnt_initialize_driver();
+		if (rc != CO_RC(OK)) {
+			return CO_RC(ERROR);
+		}
+		
 		return co_winnt_daemon_initialize_service(args, winnt_parameters.service_name);
 	} 
 

@@ -10,8 +10,6 @@
 #include <asm/page.h>
 #include <asm/pgtable.h>
 
-#include <memory.h>
-
 /*
  * Monitor
  *

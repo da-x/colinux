@@ -23,6 +23,7 @@
 #include "cmdline.h"
 #include "misc.h"
 #include "driver.h"
+#include "service.h"
 
 /* 
  * The coLinux driver that the colinux service depends on - needs 
@@ -36,6 +37,7 @@
  *  and later. Will try to dynamically load the function pointer
  *  so we still can run under Windows NT 4.0
  */
+
 void co_winnt_set_service_restart_options(SC_HANDLE schService)
 {
 	BOOL (WINAPI *ChangeServiceConfig2Ptr)(SC_HANDLE h, DWORD dw, LPVOID lp) = NULL;
@@ -76,20 +78,20 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, co_start_pa
 	char error_message[1024];
 	char *service_user_name = NULL;
 
-	co_terminal_print("daemon: installing service '%s'\n", service_name);
+	co_ntevent_print("daemon: installing service '%s'\n", service_name);
 	if (!GetModuleFileName(0, exe_name, sizeof(exe_name))) {
-		co_terminal_print("Cannot determine exe name. Install failed.\n");
+		co_ntevent_print("Cannot determin exe name. Install failed.\n");
 		return CO_RC(ERROR);
 	}
 
 	schSCManager = OpenSCManager(0, 0, SC_MANAGER_ALL_ACCESS);
 	if (schSCManager == 0) {
-		co_terminal_print("daemon: cannot open service control manager. Install failed.\n");
+		co_ntevent_print("daemon: cannot open service control maanger. Install failed.\n");
 		return CO_RC(ERROR);
 	}
 
 	co_snprintf(command, sizeof(command), "\"%s\" --run-service \"%s\" -d -c \"%s\"", exe_name, service_name, start_parameters->config_path);
-	co_terminal_print("daemon: service command line: %s\n", command);
+	co_ntevent_print("daemon: service command line: %s\n", command);
 
 	if (co_winnt_is_winxp_or_better())
 		service_user_name = "NT AUTHORITY\\NetworkService";
@@ -101,14 +103,14 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, co_start_pa
 
 	if (schService != 0) {	
 	        co_winnt_set_service_restart_options(schService);
-		co_terminal_print("daemon: service installed.\n");
+		co_ntevent_print("daemon: service installed.\n");
 		CloseServiceHandle(schService);
 		CloseServiceHandle(schSCManager);
 		return CO_RC(OK);
 	}
 
 	co_winnt_get_last_error(error_message, sizeof(error_message));
-	co_terminal_print("daemon: failed to install service: %s\n", error_message);
+	co_ntevent_print("daemon: failed to install service: %s\n", error_message);
 	CloseServiceHandle(schSCManager);
 
 	return CO_RC(ERROR);
@@ -122,9 +124,9 @@ int co_winnt_daemon_remove_service(const char *service_name)
 	char command[1024];
 	char error_message[1024];
 
-	co_terminal_print("daemon: removing service '%s'\n", service_name);
+	co_ntevent_print("daemon: removing service '%s'\n", service_name);
 	if (!GetModuleFileName(0, exe_name, sizeof(exe_name))) {
-		co_terminal_print("daemon: cannot determine exe name. Remove failed.\n");
+		co_ntevent_print("daemon: cannot determine exe name. Remove failed.\n");
 		return CO_RC(ERROR);
 	}
 
@@ -132,28 +134,28 @@ int co_winnt_daemon_remove_service(const char *service_name)
 
 	schSCManager = OpenSCManager(0, 0, SC_MANAGER_ALL_ACCESS);
 	if (schSCManager == 0) {
-		co_terminal_print("daemon: cannot open service control manager. Remove failed.\n");
+		co_ntevent_print("daemon: cannot open service control manager. Remove failed.\n");
 		return CO_RC(ERROR);
 	}
 
 	schService = OpenService(schSCManager, service_name, SERVICE_ALL_ACCESS);
 	if (schService == 0) {
 		co_winnt_get_last_error(error_message, sizeof(error_message));
-		co_terminal_print("daemon: failed to remove service. OpenService() failed\n");
+		co_ntevent_print("daemon: failed to remove service. OpenService() failed\n");
 		CloseServiceHandle(schSCManager);
 		return CO_RC(ERROR);
 	}
 
 	if (!DeleteService(schService))	{
 		co_winnt_get_last_error(error_message, sizeof(error_message));
-		co_terminal_print("daemon: failed to remove service: %s\n", error_message);
+		co_ntevent_print("daemon: failed to remove service: %s\n", error_message);
 		CloseServiceHandle(schService);
 		return CO_RC(ERROR);
 	}
 
 	CloseServiceHandle(schService);
 	CloseServiceHandle(schSCManager);
-	co_terminal_print("daemon: service '%s' removed successfully.\n", service_name);
+	co_ntevent_print("daemon: service '%s' removed successfully.\n", service_name);
 
 	return CO_RC(OK);
 }
@@ -234,6 +236,8 @@ void WINAPI service_main(int _argc, char **_argv)
 
 bool_t co_winnt_daemon_initialize_service(char **args,  const char *service_name) 
 {
+	char error_message[1024];
+
 	SERVICE_TABLE_ENTRY dispatch_table[] = {
 		{ (char *)service_name, (LPSERVICE_MAIN_FUNCTION)service_main },
 		{ 0, 0 },
@@ -243,8 +247,47 @@ bool_t co_winnt_daemon_initialize_service(char **args,  const char *service_name
 	running_service_name = service_name;
 
 	if (!StartServiceCtrlDispatcher(dispatch_table)) {
+		co_ntevent_print("service: Failed to initialize: %s\n", error_message);
 		return PFALSE;
 	} else {
 		return PTRUE;
 	}
+}
+
+void co_ntevent_print(const char *format, ...)
+{
+	HANDLE hEventLog;
+	char buf[0x100];
+	va_list ap;
+
+	va_start(ap, format);
+	vsnprintf(buf, sizeof(buf), format, ap);
+	va_end(ap);
+
+	co_terminal_print("%s", buf);
+
+	if (co_running_as_service != PTRUE)
+		return;
+
+	hEventLog = RegisterEventSource(NULL, "coLinux");
+
+	if (hEventLog == NULL) {
+		co_terminal_print("Error registering event source.");
+		return;
+	}
+
+	const char* szMsgs[] = { buf };
+
+	if (ReportEvent(hEventLog,		// Event Log Handle
+		EVENTLOG_INFORMATION_TYPE,	// Event type
+		0,				// Event category
+		1,				// Event ID
+		NULL,				// User Security Identifier
+		1,				// # of Strings
+		0,				// Size of Data in Bytes
+		szMsgs,				// Message Strings
+		NULL) == 0) 			// Address of Data
+		co_terminal_print_last_error("Error reporting to Event Log!");
+	
+	DeregisterEventSource(hEventLog);
 }

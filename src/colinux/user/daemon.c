@@ -217,10 +217,12 @@ co_rc_t co_daemon_load_symbol(co_daemon_t *daemon,
 	Elf32_Sym *sym;
 
 	sym = co_get_symbol_by_name(&daemon->elf_data, pathname);
-	if (sym)
+	if (sym) 
 		*address_out = sym->st_value;
-	else 
+	else {
 		debug(daemon, "symbol %s not found\n", pathname);
+		rc = CO_RC(ERROR);
+	}
 
 	return rc;
 }
@@ -269,8 +271,12 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 		goto out;
 
 	rc = co_daemon_load_symbol(daemon, "init_task_union", &import->kernel_init_task_union);
-	if (!CO_OK(rc)) 
-		goto out;
+	if (!CO_OK(rc)) {
+		rc = co_daemon_load_symbol(daemon, "init_thread_union", &import->kernel_init_task_union);
+		if (!CO_OK(rc)) {
+			goto out;
+		}
+	}
 
 	rc = co_daemon_load_symbol(daemon, "colinux_start", &import->kernel_colinux_start);
 	if (!CO_OK(rc)) 
@@ -285,14 +291,18 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 		goto out;
 
 	rc = co_daemon_load_symbol(daemon, "gdt_table", &import->kernel_gdt_table);
-	if (!CO_OK(rc)) 
-		goto out;
+	if (!CO_OK(rc)) {
+		rc = co_daemon_load_symbol(daemon, "cpu_gdt_table", &import->kernel_gdt_table);
+		if (!CO_OK(rc))
+			goto out;
+	}
 
 	co_daemon_prepare_net_macs(daemon);
 
 	create_params.config = daemon->config;
 
 	rc = co_user_monitor_create(&daemon->monitor, &create_params);
+
 out:
 	return rc;
 }

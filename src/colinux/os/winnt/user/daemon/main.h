@@ -15,5 +15,6 @@
 
 extern void co_winnt_daemon_stop(void);
 extern int co_winnt_daemon_main(char *argv[]);
+extern bool_t co_running_as_service;
 
 #endif

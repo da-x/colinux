@@ -63,8 +63,21 @@ anything.
    filesystem image. Be sure to review the XML file for any additional 
    configuration that may be needed.
 
-7. Run coLinux-daemon.exe. The current directory should be the installation 
-   directory, because that is where it will look for default.colinux.xml.
+7. Run coLinux. The current directory should be the installation directory, 
+   because that is where it will look for default.colinux.xml.
+
+	a. Running as an service.  
+		colinux-daemon.exe --install-service "Cooperative Linux"
+		Also, to remove the service:
+		colinux-daemon.exe --remove-service.
+	   Then go to the Service Manager and start the "Cooperative Linux" 
+	   service,
+	   OR net start "Cooperative Linux"
+	   Last, got to the installation directory and double-click on
+	   	colinux-console-fltk.exe OR
+		colinux-console-nt.exe		
+	b. As an regular application. 
+		colinux-daemon.exe
    
    The console window opens and you would see a Linux machine booting in 
    that window.
@@ -83,6 +96,10 @@ Command Line Parameters
 The following command line paramaters may be useful in operating Cooperative 
 Linux.
 
+	-a #
+		Allows you to specify the instance of Coooperative Linux
+		that you will be connecting to.
+
 	-c filename.XML
 		Allows you to choose a specific XML configuration file to use.
 
@@ -90,14 +107,21 @@ Linux.
 		Allows you to specify either the FLTK (default) or NT (-t nt) 
 		console to use on startup. 
 
-	-i servicename
+	--install-service servicename
 		Allows you to install Cooperative Linux as a service. Also 
 		use the -c parameter to specify your configuration file when 
 		doing this. <servicename> is whatever you want it to be called.
 
-	-r servicename
+	--remove-service servicename
 		Allows you to remove the Cooperative Linux service. 
 
+	--install-drvier
+		This command to install the driver portion of Cooperative 
+		Linux.
+	
+	--remove-driver
+		This command will remove the driver portion of Cooperative
+		Linux.
 
 
 Common Problems

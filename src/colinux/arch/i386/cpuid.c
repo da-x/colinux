@@ -61,6 +61,7 @@ void co_i386_get_cpuid(unsigned long op, cpuid_t *cpuid)
 	    : "0" (op));
 }
 
+#if (0)
 unsigned long co_i386_get_cpu_vendor()
 {
 	cpuid_t cpuid;
@@ -102,6 +103,7 @@ unsigned long co_i386_get_cpu_vendor()
 
 	return X86_VENDOR_UNKNOWN;
 }
+#endif
 
 co_rc_t co_i386_get_cpuid_capabilities(unsigned long *caps)
 {

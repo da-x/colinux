@@ -10,8 +10,6 @@
 #include <asm/page.h>
 #include <asm/pgtable.h>
 
-#include <memory.h>
-
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/kernel/transfer.h>
 #include <colinux/kernel/manager.h>
@@ -277,7 +275,8 @@ co_manager_create_pfns_create_ptes_callback(
 
 	for (i=0; i < size/sizeof(linux_pte_t); i++) {
 		if (*pfns != 0)
-			*ptes = pte_modify(__pte((*pfns) << PAGE_SHIFT), __pgprot(__PAGE_KERNEL));
+			*ptes = pte_modify(__pte((*pfns) << PAGE_SHIFT), 
+			    __pgprot(_PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED));
 		else
 			*ptes = __pte(0);
 		pfns++;

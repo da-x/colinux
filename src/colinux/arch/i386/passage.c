@@ -541,7 +541,8 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	pgd = cmon->pgd;
 	pp->linuxvm_state.cr3 = pgd_val(pgd);
 	pp->linuxvm_state.gdt.base = (struct x86_dt_entry *)cmon->import.kernel_gdt_table;
-	pp->linuxvm_state.gdt.limit = ((__TSS(NR_CPUS)) * 8) - 1;
+	/* pp->linuxvm_state.gdt.limit = ((__TSS(NR_CPUS)) * 8) - 1; */
+	pp->linuxvm_state.gdt.limit = (8*0x20) - 1;
 	pp->linuxvm_state.idt.table = (struct x86_idt_entry *)cmon->import.kernel_idt_table;
 	pp->linuxvm_state.idt.size = 256*8 - 1;
 	pp->linuxvm_state.cr0 = 0x80010031;

@@ -1,0 +1,3 @@
+In order to run the coLinux configurator, you need to install python
+2.3. Windows users can user the installer from www.python.org. You 
+need to choose the Tkinter GUI option on installation.

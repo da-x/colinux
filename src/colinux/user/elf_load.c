@@ -150,7 +150,7 @@ co_rc_t co_section_load(co_daemon_t *daemon, unsigned long index)
 
 	section = co_get_section_header(&daemon->elf_data, index);
 	if (section->sh_flags & SHF_ALLOC) {
-		if (section->sh_type == SHT_NOBITS)  
+		if (section->sh_type == SHT_NOBITS)
 			params.user_ptr = NULL;
 		else
 			params.user_ptr = co_get_at_offset(&daemon->elf_data, section, 0);
