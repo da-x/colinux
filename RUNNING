@@ -13,7 +13,7 @@ This means that running it may crash the host (Windows or Linux system).
 KNOWN ISSUES:
 
   Any known issues for an release can be found on the Wiki 
-(http://wiki.colinux.org)
+(http://wiki.colinux.org/cgi-bin/FrontPage)
 
   PLEASE REPORT and read about problems on the colinux-devel@sourceforge.net 
 mailing list or file an Bug report at 
@@ -32,7 +32,8 @@ See other 2.6 upgrade resources for information about other changes.
  3) Gentoo users need to be careful, Gentoo tends to use devfs when 
 upgrading to 0.6.2 and so block device names change from cobdX to cobd/X 
 and render the image unbootable.  For more details and solutions see the
-2.6 related information on the Wiki (http://wiki.colinux.org)
+2.6 related information on the Wiki 
+(http://wiki.colinux.org/cgi-bin/FrontPage)
 
 RUNNING:
 
@@ -52,7 +53,8 @@ anything.
 	then be either shared or bridged with a physical network connection. 
 	Note that this requires Internet Connection Sharing or Bridging 
 	(Windows XP or higher) or a 3rd party Internet connection 
-        sharing application. See the Wiki at wiki.colinux.org for more 
+        sharing application. See the Wiki at 
+	http://wiki.colinux.org/cgi-bin/FrontPage for more 
         information/help. The TAP method autmatically chooses the TAP 
         first TAP adapter it finds, if this is not correct for you, you 
         can specify the specific adapter by name (name="TAP1"). 
@@ -63,7 +65,7 @@ anything.
 	that type="bridged" and the 'name' parameter needs to be set to a 
 	substring of the network connection name that you will be bridging 
 	with (e.g. name="Local Area Connection"). See the Wiki at 
-	http://wiki.colinux.org for more information/help.
+	http://wiki.colinux.org/cgi-bin/FrontPage for more information/help.
 
 4. Choose whether to download a root file system from the Cooperative Linux 
    sourceforge page. The installer will try to download directly in 
@@ -113,8 +115,8 @@ Post Installation
 
 You may wish to set up some post installation parameters, including increasing
 the amount of memory allocated to Cooperative Linux, or adding a swap 
-partition. See the Wiki at wiki.colinux.org for additional help on these 
-tasks.
+partition. See the Wiki at http://wiki.colinux.org/cgi-bin/FrontPage for 
+additional help on these tasks.
 
 
 Command Line Parameters
@@ -208,8 +210,8 @@ Common Problems
 		missing, or was specified incorrectly.
 
   Additional problems not know at time of release are typically 
-documented on the Wiki (http://wiki.colinux.org), look there for known 
-problems.  If your problem isn't listed, report on the 
+documented on the Wiki (http://wiki.colinux.org/cgi-bin/FrontPage), look 
+there for known problems.  If your problem isn't listed, report on the 
 colinux-devel@sourceforge.net mailing list or file an Bug report at 
 http://www.sourceforge.net/projects/colinux
 
@@ -242,7 +244,8 @@ http://www.sourceforge.net/project/colinux
 	WIKI
 		The community has contributed wonderful and helpful 
                 information on numerous topics, which is available at
-                http://wiki.colinux.org (You can contribute here too!)
+                http://wiki.colinux.org/cgi-bin/FrontPage (You can 
+		contribute here too!)
 	
 	Mailing Lists
 		Visit the colinux.org website and choose from the available 
