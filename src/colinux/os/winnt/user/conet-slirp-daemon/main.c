@@ -190,13 +190,17 @@ int wait_loop(HANDLE daemon_handle)
 	HANDLE wait_list[1];
 	ULONG status;
 	co_rc_t rc;
+	int ret;
+	fd_set rfds, wfds, xfds;
+	int nfds;
+	struct timeval tv;
 	
 	co_win32_overlapped_init(&daemon_overlapped, daemon_handle);
 	wait_list[0] = daemon_overlapped.read_event;
 	co_win32_overlapped_read_async(&daemon_overlapped); 
 
 	while (1) {
-		status = WaitForMultipleObjects(1, wait_list, FALSE, INFINITE); 
+		status = WaitForMultipleObjects(1, wait_list, FALSE, 1); 
 			
 		switch (status) {
 		case WAIT_OBJECT_0: { /* daemon */
@@ -208,6 +212,19 @@ int wait_loop(HANDLE daemon_handle)
 		}
 		default:
 			break;
+		}
+
+		nfds = -1;
+		FD_ZERO(&rfds);
+		FD_ZERO(&wfds);
+		FD_ZERO(&xfds);
+
+		slirp_select_fill(&nfds, &rfds, &wfds, &xfds);
+		tv.tv_sec = 0;
+		tv.tv_usec = 1000;
+		ret = select(nfds + 1, &rfds, &wfds, &xfds, &tv);
+		if (ret >= 0) {
+			slirp_select_poll(&rfds, &wfds, &xfds);
 		}
 	}
 
@@ -242,42 +259,6 @@ void slirp_output(const uint8_t *pkt, int pkt_len)
 	
 	co_win32_overlapped_write_async(&daemon_overlapped, &message, sizeof(message));
 }
-
-DWORD WINAPI slirp_thread_func(LPVOID lpParam)
-{
-	int ret;
-
-	while (1) {
-		/* Slirp main loop as copied from QEMU. */
-		fd_set rfds, wfds, xfds;
-		int nfds;
-		struct timeval tv;
-		
-		nfds = -1;
-		FD_ZERO(&rfds);
-		FD_ZERO(&wfds);
-		FD_ZERO(&xfds);
-
-		WaitForSingleObject(slirp_mutex, INFINITE);
-		slirp_select_fill(&nfds, &rfds, &wfds, &xfds);
-		tv.tv_sec = 0;
-		tv.tv_usec = 10000;
-		ret = select(nfds + 1, &rfds, &wfds, &xfds, &tv);
-		if (ret >= 0) {
-			slirp_select_poll(&rfds, &wfds, &xfds);
-		}
-		ReleaseMutex(slirp_mutex);
-		
-		if (nfds == -1) 
-			Sleep(10);
-	}
-
-	/* We should never get to here. */
-	co_debug_lvl(network, 5, "unexpected exit from slirp loop\n");
-	ExitProcess(0);
-	return 0;
-}
-
 
 /********************************************************************************
  * parameters
@@ -387,7 +368,6 @@ int main(int argc, char *argv[])
 {	
 	co_rc_t rc;
 	HANDLE daemon_handle = 0;
-	HANDLE slirp_thread;
 	int exit_code = 0;
 	co_daemon_handle_t daemon_handle_;
 	start_parameters_t start_parameters;
@@ -422,12 +402,6 @@ int main(int argc, char *argv[])
 	co_set_terminal_print_hook(terminal_print_hook_func);
 
 	co_terminal_print("Slirp loop running\n");
-
-	slirp_thread = CreateThread(NULL, 0, slirp_thread_func, NULL, 0, NULL);
-	if (slirp_thread == NULL) {
-		co_terminal_print("Failed to spawn slirp_thread\n");
-		goto out;
-	}
 
 	daemon_handle = daemon_handle_->handle;
 	exit_code = wait_loop(daemon_handle);
