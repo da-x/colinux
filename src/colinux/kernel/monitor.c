@@ -114,9 +114,9 @@ co_rc_t co_monitor_colinux_context_alloc_maps(co_monitor_t *cmon)
 	co_rc_t rc;
 
 	cmon->page_tables_size = cmon->physical_frames * sizeof(unsigned long *);
-	cmon->page_tables_pages = (cmon->page_tables_size + PAGE_SHIFT-1) >> PAGE_SHIFT;
+	cmon->page_tables_pages = (cmon->page_tables_size + PAGE_SIZE-1) >> PAGE_SHIFT;
 	cmon->pa_maps_size = cmon->manager->host_memory_pages * sizeof(unsigned long);
-	cmon->pa_maps_pages = (cmon->pa_maps_size + PAGE_SHIFT-1) >> PAGE_SHIFT;
+	cmon->pa_maps_pages = (cmon->pa_maps_size + PAGE_SIZE-1) >> PAGE_SHIFT;
 
 	rc = co_monitor_alloc_pages(cmon, cmon->page_tables_pages, (void **)&cmon->page_tables);
 	if (!CO_OK(rc)) {

@@ -6,7 +6,7 @@ else
 BUILD_PATH := $(BUILD_PATH)/console
 #-----------------------------------------------------------------
 
-USER_CFLAGS = $(CFLAGS) 
+USER_CFLAGS += $(CFLAGS) 
 # -DDEBUG_CO_RC
 
 LOCAL_OBJS = \

@@ -22,9 +22,6 @@ with the Debian diff applied:
    make 
    make install
 
-WARNING: binutils 2.14, when used to build coLinux, would cause bad 
-code generation.
-
 Download the w32api package from www.mingw.org, and install it under $PREFIX
 in this manner:
 

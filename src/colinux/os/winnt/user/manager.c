@@ -54,7 +54,7 @@ void co_os_manager_close(co_manager_handle_t handle)
 	co_os_free(handle);
 }
 
-co_rc_t co_os_manager_ioctl (
+co_rc_t co_os_manager_ioctl(
 	co_manager_handle_t kernel_device,
 	unsigned long code,
 	void *input_buffer,
@@ -63,7 +63,7 @@ co_rc_t co_os_manager_ioctl (
 	unsigned long output_buffer_size,
 	unsigned long *output_returned)
 {
-	DWORD   BytesReturned;
+	DWORD   BytesReturned = 0;
 	BOOL    rc;
 
 	if (output_returned == NULL)
@@ -76,7 +76,7 @@ co_rc_t co_os_manager_ioctl (
 			     output_buffer, output_buffer_size, 
 			     output_returned, NULL);
   
-	if (!rc)
+	if (rc == FALSE)
 		return CO_RC(ERROR);
 
 	return CO_RC(OK);
@@ -277,7 +277,9 @@ co_rc_t coui_unload_driver_by_name(char *name)
 	}
 	
 	CloseServiceHandle(schSCManager); 
-    
+
+	Sleep(1); /* A hack that gives run time for the removal of the driver */
+			
 	return rc;
 } 
 
@@ -294,12 +296,15 @@ co_rc_t coui_load_driver_by_name(char *name, char *path)
 	GetFullPathName(path, sizeof(fullpath), fullpath, NULL);
 	
 	rc = coui_install_driver(schSCManager, name, fullpath);
-	if (!CO_OK(rc))
+	if (!CO_OK(rc)) {
+		CloseServiceHandle(schSCManager);    
 		return rc;
+	}
 
 	rc = coui_start_driver(schSCManager, name); 
 	if (!CO_OK(rc)) {
 		coui_remove_driver(schSCManager, name); 
+		CloseServiceHandle(schSCManager);    
 		return rc;
 	}
 
@@ -307,6 +312,7 @@ co_rc_t coui_load_driver_by_name(char *name, char *path)
 	if (!CO_OK(rc)) {
 		coui_stop_driver(schSCManager, name);  
 		coui_remove_driver(schSCManager, name); 
+		CloseServiceHandle(schSCManager);    
 		return rc;
 	}
 

@@ -1,3 +1,7 @@
+* Version 0.5.3
+  * Fixed a BSOD bug. 
+  * No longer depending on the Microsoft DDK for the build (review doc/building).
+	
 * Version 0.5.2
   * Added some missing files to the build tree
   * doc/cygwin-cross-build - How to build a cygwin cross compilation tools

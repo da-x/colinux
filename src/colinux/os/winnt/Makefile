@@ -12,6 +12,11 @@ else
 $(error Other Windows architectures not supported yet!)
 endif
 
+CFLAGS_WINVER = 0x05000
+USER_CFLAGS += -DWINVER=$(CFLAGS_WINVER)
+USER_CFLAGS += -DWINVER=$(CFLAGS_WINVER)
+KERNEL_CFLAGS += -DWINVER=$(CFLAGS_WINVER)
+
 ifeq ($(GCCTRACE),Y)
 CC=$(BUILD_ROOT)/../bin/tracewrapper.py $(CROSS_TARGET)gcc
 else

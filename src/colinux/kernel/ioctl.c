@@ -277,6 +277,20 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 	return rc;
 }
 
+co_rc_t co_manager_init(co_manager_t *manager, void *io_buffer)
+{
+	co_manager_ioctl_init_t *params;
+
+	params = (typeof(params))(io_buffer);
+
+	manager->host_memory_amount = params->physical_memory_size;
+	manager->host_memory_pages = manager->host_memory_amount >> PAGE_SHIFT;
+
+	manager->state = CO_MANAGER_STATE_INITIALIZED;
+
+	return CO_RC(OK);
+}
+
 co_rc_t co_manager_ioctl(co_manager_t *manager, co_monitor_ioctl_op_t ioctl, 
 			 void *io_buffer, unsigned long in_size,
 			 unsigned long out_size, unsigned long *return_size)
@@ -303,14 +317,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, co_monitor_ioctl_op_t ioctl,
 
 	if (manager->state == CO_MANAGER_STATE_NOT_INITIALIZED) {
 		if (ioctl == CO_MANAGER_IOCTL_INIT) {
-			co_manager_ioctl_init_t *params;
-
-			params = (typeof(params))(io_buffer);
-
-			manager->host_memory_amount = params->physical_memory_size;
-			manager->host_memory_pages = manager->host_memory_amount >> PAGE_SHIFT;
-
-			manager->state = CO_MANAGER_STATE_INITIALIZED;
+			return co_manager_init(manager, io_buffer);
 		} else {
 			co_debug("invalid ioctl when not initialized\n");
 			return CO_RC_ERROR;
