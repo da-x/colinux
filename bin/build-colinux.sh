@@ -10,6 +10,8 @@ KERNEL=linux-$KERNEL_VERSION
 KERNEL_URL=http://www.kernel.org/pub/linux/kernel/$KERNEL_DIR 
 KERNEL_ARCHIVE=$KERNEL.tar.bz2
 
+COLINUX_TARGET_KERNEL_PATH=../../linux
+
 PATH="PREFIX/$TARGET/bin:$PATH"
 
 download_files()
