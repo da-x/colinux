@@ -1,7 +1,11 @@
 * Version 0.6.2
   * initrd support was added (teesoft2004 at yahoo.com.cn).
     To activate it you can specify e.g. <initrd path="..." /> in the
-    configuration.
+    configuration
+  * Changed PCAP handling to use Connection Name instead of 
+    Adapter/Device/Driver name. Name is +now uniform between PCAP & 
+    TAP and multiple devices of the same/make/model should be able 
+    to be connected to. (George Boutwell).  
 
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).
