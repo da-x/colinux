@@ -1,8 +1,10 @@
-#!/bin/sh -x
+#!/bin/sh
 
 source ./build-common.sh
 
 # See ./commom.sh
+
+# Remember: Please update also conf/kernel-config, if changing kernel version!
 
 KERNEL_DIR=v2.6
 KERNEL_VERSION=2.6.8.1
@@ -57,21 +59,30 @@ configure_kernel()
 	#  in the future, but keeping backwards compatability.
 	cp "$TOPDIR/../conf/linux-config" "$TOPDIR/../conf/linux-$KERNEL_VERSION-config"
 	cp "$TOPDIR/../conf/linux-$KERNEL_VERSION-config" .config
-	make oldconfig &> configure.log
+	make silentoldconfig &> configure.log
 	if test $? -ne 0; then
+		tail configure.log
 	        echo "Kernel $KERNEL_VERSION configure failed"
 	        echo "   - log available: $COLINUX_TARGET_KERNEL_PATH/configure.log"
+
+		# Ask user for new things
+		echo "If config to old for kernel-Version?"
+		echo "   Run 'make oldconfig' on kerneltree, than"
+		echo "   copy .config as conf/linux-config for colinux and"
+		echo "   run build again."
 	        exit 1
 	fi
 	echo "Making Kernel $KERNEL_VERSION"
 	make dep &> make-dep.log
 	if test $? -ne 0; then
+		tail make-dep.log
 	        echo "Kernel $KERNEL_VERSION make dep failed"
 	        echo "   - log available: $COLINUX_TARGET_KERNEL_PATH/make-dep.log"
 	        exit 1
 	fi
 	make vmlinux &> make.log
 	if test $? -ne 0; then
+		tail make.log
 	        echo "Kernel $KERNEL_VERSION make failed"
 	        echo "   - log available: $COLINUX_TARGET_KERNEL_PATH/make.log"
 	        exit 1
@@ -86,10 +97,37 @@ install_kernel()
 	echo "Installing Kernel $KERNEL_VERSION in $PREFIX/dist"
 	mkdir -p "$PREFIX/dist"
 	cp -a vmlinux $PREFIX/dist
-	
-	# It would be nice to install kernel modules
-	# and then tar them up here.
+	cd "$TOPDIR"
+}
 
+build_modules()
+{
+	cd "$TOPDIR"
+	cd "$COLINUX_TARGET_KERNEL_PATH"
+	echo "Making Modules $KERNEL_VERSION"
+	make INSTALL_MOD_PATH=`pwd`/_install modules modules_install &> make-modules.log
+	if test $? -ne 0; then
+		tail make-modules.log
+	        echo "Kernel $KERNEL_VERSION make modules failed"
+	        echo "   - log available: $COLINUX_TARGET_KERNEL_PATH/make-modules.log"
+	        exit 1
+	fi
+	cd "$TOPDIR"
+}
+
+install_modules()
+{
+	cd "$TOPDIR"
+	CO_VERSION=`cat ../src/colinux/VERSION`
+	cd "$COLINUX_TARGET_KERNEL_PATH"
+	echo "Installing Modules $KERNEL_VERSION in $PREFIX/dist"
+	mkdir -p "$PREFIX/dist"
+	cd _install/lib/modules
+	tar cfz $PREFIX/dist/modules-$KERNEL_VERSION-co-$CO_VERSION.tar.gz $KERNEL_VERSION-co-$CO_VERSION
+	if test $? -ne 0; then
+	        echo "Kernel $KERNEL_VERSION-co-$CO_VERSION modules install failed"
+	        exit 1
+	fi
 	cd "$TOPDIR"
 }
 
@@ -98,10 +136,16 @@ build_kernel()
         download_files
 	# Only Download? Than ready.
 	test "$1" = "--download-only" && exit 0
+
+	# Build and install Kernel vmlinux
 	extract_kernel
 	patch_kernel
 	configure_kernel
 	install_kernel
+
+	# Build and install Modules
+	build_modules
+	install_modules
 }
 
 build_kernel $1

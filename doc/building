@@ -82,6 +82,13 @@ The coLinux console depends on:
 To compile source for windows targed, the compiler must self compiled
 for this target. You can not download a binary of this compiler!
 
+This need a Compiler devel-libs and a lot of tools:
+    gnu/gcc 3.1.1
+    patch-2.5.9
+    bison-1.75-109   need by binutils (yacc 91.7.30 have a error YYEMPTY)
+    texinfo-4.5      need by binutils
+    ... and many more ...
+
 Creat a new directory, extract colinux source in this directory, make scripts
 executable and ran the download-script in "bin" directory.
 
@@ -98,9 +105,14 @@ Files will be download into directory /home/$USER/colinux-build/download.
     ./build-all.sh
 
 This is a completly build process for binutils, cross compiler, libraries,
-kernel and colinux daemons. (Half hour on 1.8MHz Pentium)
+kernel and colinux daemons. (30 Minutes on 1.8MHz Pentium)
 
-Compiled executables for windows haost stored in directory mingw32/dist now.
+The build process based on script build-all.sh works completly at top-level
+directory colinux-build. The cross-Compiler was also installed in users directory
+(no system wide). We never need root rights for installing headers, libs or
+programs.
+
+Compiled executables for windows host stored in directory mingw32/dist now.
 
 
 3.2.2 Configuration script compiling
@@ -113,17 +125,17 @@ download-all.sh			Download all missing files
 build-all.sh			Extract (OVERWRITE!) and compile all files
     build-cross.sh		Extract and compile the cross compiler
     build-colinux-libs.sh	Extract and compile all libs
-    build-kernel.sh		Extract, patch and compile the kernel
-    build-colinux.sh		Recompile only the colinux daemons
+    build-kernel.sh		Extract, patch, compile the kernel and modules
+    build-colinux.sh		Recompile only the colinux daemons and console
 
 ! Any starts of compile script will delete all source and extract it again!
 ! If you have changed some sources, do not use these scripts!
 ! Call "make" into directory manualy!
 
-After Download a new version of colinux daemons you should only extract source
+After Download a new version of colinux source, should only extract source
 at same top level directory and run the last scripts build-kernel.sh and
-build-colinux.sh. In some cases you must also compile the libs. The cross compiler
-mostly you never need compile again.
+build-colinux.sh. In some cases must also compile the libs.
+The cross compiler mostly you never need compile again.
 
 
 3.2.3 Source tree sample for a mingw build process
