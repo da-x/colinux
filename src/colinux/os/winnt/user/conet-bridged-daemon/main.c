@@ -365,6 +365,7 @@ pcap_init()
 {
 	pcap_if_t *alldevs = NULL;
 	pcap_if_t *device = NULL;
+	pcap_if_t *found_device = NULL;
 	int exit_code = 0;
 	pcap_t *adhandle = NULL;
 	char errbuf[PCAP_ERRBUF_SIZE];
@@ -402,9 +403,23 @@ pcap_init()
 
 		if (strcmp(connection_name_data, "") != 0) {
 			co_terminal_print("Checking connection: %s\n", connection_name_data);
+			/*
+			  Do an partial search, if partial search is found,
+			   set this device as he found device, but continue
+			   looping through devices.
+			 */
+			if (strstr(connection_name_data, daemon_parameters->interface_name) != NULL &&
+			    found_device == NULL) {
+				found_device = device;
+			}
 			
-			if (strstr(connection_name_data, daemon_parameters->interface_name) != NULL)
-				break;
+			/*
+			 If an exact match exists, over-ride any found device,
+			  setting exact match device to it.
+			 */
+			if (strcmp(connection_name_data, daemon_parameters->interface_name) == 0) {
+				found_device = device;
+			}
 		}
 		else {
 			co_terminal_print("Adapter %s doesn't have a connection\n", device->description);
@@ -413,11 +428,13 @@ pcap_init()
 		device = device->next;
 	}
 
-	if (device == NULL) {
+	if (found_device == NULL) {
 		co_terminal_print("No matching adapter\n");
                 exit_code = -1;
                 goto pcap_out_close;
 	}
+
+	device = found_device;
 
 	/* Open the first adapter. */
 	if ((adhandle = pcap_open_live(device->name,	// name of the device
