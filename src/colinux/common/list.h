@@ -78,10 +78,20 @@ static inline void co_list_del(co_list_t *entry)
 #define co_list_each(pos, head) \
 	(pos = (head)->next; pos != (head); pos = pos->next)
 
-#define co_list_each_entry(pos, head, member)  		       \
-	for (co_list_entry_assign((head)->next, pos, member);	       \
-	     &pos->member != (head); 				       \
-	     co_list_entry_assign(pos->member.next, pos, member))     \
+#define co_list_each_entry(pos, head, member)				\
+	for (co_list_entry_assign((head)->next, pos, member);		\
+	     &pos->member != (head);					\
+	     co_list_entry_assign(pos->member.next, pos, member))	\
+									\
+
+#define co_list_each_entry_safe(pos, pos_next, head, member)		\
+	for (co_list_entry_assign((head)->next, pos, member),		\
+             co_list_entry_assign(pos->member.next, pos_next, member);	\
+                                                                        \
+             &pos->member != (head);                                    \
+                                                                        \
+             pos = pos_next,                                            \
+             co_list_entry_assign(pos->member.next, pos_next, member))  \
 
 
 #endif

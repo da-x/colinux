@@ -51,6 +51,7 @@ LOCAL_TARGET += $(DRIVER_TARGET)
 LOCAL_FILES = \
 	$(BUILD_ROOT)/colinux/os/current/user/daemon/colinux-daemon.exe \
 	$(BUILD_ROOT)/colinux/os/current/user/console/colinux-console-fltk.exe \
+	$(BUILD_ROOT)/colinux/os/current/user/debug/colinux-debug-daemon.exe \
 	$(BUILD_ROOT)/colinux/os/current/user/console-nt/colinux-console-nt.exe \
 	$(BUILD_ROOT)/colinux/os/current/user/conet-daemon/colinux-net-daemon.exe \
 	$(DRIVER_TARGET) \

@@ -13,6 +13,8 @@
 #include <colinux/arch/manager.h>
 #include <colinux/arch/mmu.h>
 
+#include "debug.h"
+
 typedef struct co_osdep_manager *co_osdep_manager_t;
 
 typedef enum {
@@ -37,10 +39,18 @@ typedef struct co_manager {
 	unsigned long reversed_map_pgds_count;
 
 	int monitors_count;
-	bool_t lazy_unload;
 	co_osdep_manager_t osdep;
 	co_archdep_manager_t archdep;
+
+	co_manager_debug_t debug;
 } co_manager_t;
+
+struct co_monitor;
+
+typedef struct co_manager_per_fd_state {
+	struct co_monitor *monitor;
+	co_debug_section_t *debug_section;
+} co_manager_per_fd_state_t;
 
 extern co_rc_t co_manager_set_reversed_pfn(co_manager_t *manager, 
 					   co_pfn_t real_pfn, co_pfn_t pseudo_pfn);

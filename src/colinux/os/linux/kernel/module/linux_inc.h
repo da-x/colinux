@@ -13,4 +13,5 @@
 #include <linux/timer.h>
 #include <linux/time.h>
 #include <linux/vmalloc.h>
-
+#include <linux/wait.h>
+#include <asm/semaphore.h>

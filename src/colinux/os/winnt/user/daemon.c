@@ -20,6 +20,7 @@
 #include "daemon.h"
 
 #include <colinux/os/alloc.h>
+#include <colinux/common/messages.h>
 
 static DWORD WINAPI co_os_daemon_thread(LPVOID data);
 
@@ -31,20 +32,21 @@ co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
 	long written = 0;
 	char pathname[0x100];
 	co_daemon_handle_t daemon_handle = 0;
+	co_module_name_t module_name;
 
 	snprintf(pathname, sizeof (pathname), "\\\\.\\pipe\\coLinux%d",
 		 (int) linux_id);
 
-	co_debug("pipe client %d/%d: Connecting to daemon...\n", linux_id,
-		 module_id);
+	co_module_repr(module_id, &module_name);
+
+	co_debug("connecting to instance %d as %s\n", linux_id, module_name);
 
 	if (!WaitNamedPipe(pathname, NMPWAIT_USE_DEFAULT_WAIT)) {
 		co_debug("Connection timed out (%x)\n", GetLastError());
 		goto co_os_open_daemon_pipe_error;
 	}
 
-	co_debug("pipe client %d/%d: Connection established\n", linux_id,
-		 module_id);
+	co_debug("connection established\n");
 
 	handle = CreateFile(pathname,
 			    GENERIC_READ | GENERIC_WRITE,
@@ -55,8 +57,8 @@ co_os_open_daemon_pipe(co_id_t linux_id, co_module_t module_id,
 
 	/* Identify ourselves to the daemon */
 	if (!WriteFile(handle, &module_id, sizeof (module_id), &written, NULL)) {
-		co_debug("pipe client %d/%d: Attachment failed\n", linux_id,
-			 module_id);
+		co_debug("attachment failed\n");
+
 		goto co_os_open_daemon_pipe_error;
 	}
 

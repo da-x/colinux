@@ -19,7 +19,6 @@
 #include <colinux/os/alloc.h>
 #include <colinux/os/user/misc.h>
 
-
 void co_terminal_print(const char *format, ...)
 {
 	char buf[0x100];

@@ -9,10 +9,21 @@
  */
 
 #include "../ddk.h"
+#include "../manager.h"
 
 #include <colinux/common/debug.h>
 
 void co_debug_line(char *line)
 {
-	DbgPrint("%s", line);
+	if (!co_global_manager) {
+		DbgPrint("%s", line);
+		return;
+	}
+
+	if (!co_global_manager->debug.ready) {
+		DbgPrint("%s", line);
+		return;
+	}
+
+	co_debug_write_str(&co_global_manager->debug, &co_global_manager->debug.section, line);
 }

@@ -18,9 +18,9 @@ $(LOCAL_OBJS) : %.o : %.c
 LOCAL_TARGETS = $(LOCAL_OBJS) $(LOCAL_EXE)
 
 $(LOCAL_EXE) : \
-	$(BUILD_ROOT)/colinux/user/user.a \
-	$(BUILD_ROOT)/colinux/os/current/user/user.o \
 	$(LOCAL_OBJS) \
+	$(BUILD_ROOT)/colinux/os/current/user/user.o \
+	$(BUILD_ROOT)/colinux/user/user.a \
 	$(BUILD_ROOT)/colinux/common/common.a \
 
 	$(CC) $^ -o $@ -luser32 -lgdi32 -lkernel32 -lmxml -lwpcap -lwsock32

@@ -19,7 +19,7 @@ typedef int bool_t;
 
 #define CO_MAX_MONITORS 16
 
-#define CO_LINUX_PERIPHERY_API_VERSION    9
+#define CO_LINUX_PERIPHERY_API_VERSION    10
 
 typedef enum {
     CO_RC_OK                         = 0,

@@ -32,7 +32,7 @@ void sighup_handler(int sig)
 	colinux_daemon->send_ctrl_alt_del = PTRUE;
 }
 
-int main(int argc, char *argv[]) 
+static int daemon_main(int argc, char *argv[])
 {
 	co_rc_t rc = CO_RC_OK;
 	co_start_parameters_t start_parameters;
@@ -117,6 +117,19 @@ out:
 	} else {
 		ret = 0;
 	}
+
+	return ret;
+}
+
+int main(int argc, char *argv[]) 
+{
+	int ret;
+
+	co_debug_start();
+
+	ret = daemon_main(argc, argv);
+
+	co_debug_end();
 
 	return ret;
 }

@@ -43,9 +43,11 @@ static int __init test_module_init(void)
 
 static void __exit test_module_exit(void)
 {
-	if (global_manager != NULL) {
-		co_manager_unload(global_manager);
-		co_os_free(global_manager);
+	if (global_manager != NULL) {		
+		co_manager_t *manager = global_manager;
+		co_manager_unload(manager);
+		global_manager = NULL;
+		co_os_free(manager);
 	}
 
 	printk("colinux: module unloaded\n");

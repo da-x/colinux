@@ -10,7 +10,6 @@ LOCAL_OBJS = \
 	monitor.o \
 	manager.o \
 	alloc.o \
-	debug.o \
 	misc.o \
 	file.o \
 	pipe.o \
@@ -31,6 +30,6 @@ CLEAN_FILES := $(CLEAN_FILES) \
 	$(LOCAL_OBJS) $(BUILD_PATH)/user.a
 
 #-----------------------------------------------------------------
-include $(call BUILD_SUBDIRS, daemon console conet-daemon coserial-daemon)
+include $(call BUILD_SUBDIRS, daemon console conet-daemon coserial-daemon debug)
 BUILD_PATH := $(shell dirname $(BUILD_PATH))
 endif

@@ -14,5 +14,7 @@
 #include <colinux/common/common.h>
 
 extern void co_daemon_trace_point(co_trace_point_info_t *info);
+extern void co_debug_start(void);
+extern void co_debug_end(void);
 
 #endif

@@ -17,6 +17,7 @@
 
 #include <colinux/common/version.h>
 #include <colinux/user/daemon.h>
+#include <colinux/user/debug.h>
 #include <colinux/user/monitor.h>
 #include <colinux/user/manager.h>
 #include <colinux/user/cmdline.h>
@@ -178,11 +179,6 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 
 		co_running_as_service = PTRUE;
 
-		rc = co_winnt_initialize_driver(PTRUE);
-		if (rc != CO_RC(OK)) {
-			return CO_RC(ERROR);
-		}
-		
 		co_terminal_print("colinux: running as service '%s'\n", winnt_parameters.service_name);
 
 		return co_winnt_daemon_initialize_service(&start_parameters, winnt_parameters.service_name);
@@ -191,11 +187,6 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 	if (!start_parameters.config_specified){
 		co_daemon_syntax();
 		co_winnt_daemon_syntax();
-		return CO_RC(ERROR);
-	}
-
-	rc = co_winnt_initialize_driver(PTRUE);
-	if (rc != CO_RC(OK)) {
 		return CO_RC(ERROR);
 	}
 
@@ -212,10 +203,14 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	co_rc_t rc;
 
 	co_current_win32_instance = hInstance;
+	co_debug_start();
 
 	rc = co_winnt_main(szCmdLine);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))  {
+    		co_debug_end();
 		return -1;
+	}
 
+	co_debug_end();
 	return 0;
 }

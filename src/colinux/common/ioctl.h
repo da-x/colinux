@@ -22,6 +22,8 @@ typedef enum {
 	CO_MANAGER_IOCTL_CREATE,
 	CO_MANAGER_IOCTL_MONITOR,
 	CO_MANAGER_IOCTL_STATUS,
+	CO_MANAGER_IOCTL_DEBUG,
+	CO_MANAGER_IOCTL_DEBUG_READER,
 } co_manager_ioctl_t;
 
 /* interface for CO_MANAGER_IOCTL_CREATE: */
@@ -55,11 +57,19 @@ typedef struct {
 /* interface for CO_MANAGER_IOCTL_STATUS: */
 typedef struct {
 	unsigned long state; /* co_manager_state_t */
-	bool_t lazy_unload;
+	unsigned long reserved;
 	int monitors_count;
 	int periphery_api_version;
 	int linux_api_version;
 } co_manager_ioctl_status_t;
+
+/* interface for CO_MANAGER_IOCTL_DEBUG_READER: */
+typedef struct {
+	co_rc_t rc;
+	void *user_buffer;
+	unsigned long user_buffer_size;
+	unsigned long filled;
+} co_manager_ioctl_debug_reader_t;
 
 /*
  * Monitor ioctl()s

@@ -933,14 +933,14 @@ co_rc_t co_monitor_run(co_monitor_t *cmon,
 
 co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buffer,
 			 unsigned long in_size, unsigned long out_size, 
-			 unsigned long *return_size, void **private_data)
+			 unsigned long *return_size, co_manager_per_fd_state_t *fd_state)
 {
 	co_rc_t rc = CO_RC_ERROR;
 
 	switch (io_buffer->op) {
 	case CO_MONITOR_IOCTL_DESTROY: {
+		fd_state->monitor = NULL;
 		co_monitor_destroy(cmon);
-		*private_data = NULL;
 		return CO_RC_OK;
 	}
 	case CO_MONITOR_IOCTL_LOAD_SECTION: {

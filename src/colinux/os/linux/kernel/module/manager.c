@@ -17,6 +17,39 @@ int co_os_manager_open(struct inode *inode, struct file *file)
 {
 	file->private_data = (void *)NULL;
 
+        if (!try_module_get(THIS_MODULE))
+		return -EBUSY;
+
+	return 0;
+}
+
+static int co_os_manager_ioctl_buffer(co_linux_io_t *ioctl, char *buffer, struct file *file)
+{
+	co_rc_t rc;
+	unsigned long return_size = 0;
+
+	if (copy_from_user(buffer, ioctl->input_buffer, ioctl->input_buffer_size))
+		return -EFAULT;
+
+	rc = co_manager_ioctl(global_manager, 
+			      ioctl->code, 
+			      buffer, ioctl->input_buffer_size,
+			      ioctl->output_buffer_size, &return_size,
+			      &file->private_data);
+	if (!CO_OK(rc))
+		return -EIO;
+
+	if (return_size) {
+		if (copy_to_user(ioctl->output_buffer, buffer, return_size))
+			return -EFAULT;
+	}
+
+	if (ioctl->output_returned != NULL) {
+		if (copy_to_user(ioctl->output_returned, &return_size, sizeof(unsigned long))) {
+			return -EFAULT;
+		}
+	}
+
 	return 0;
 }
 
@@ -24,70 +57,44 @@ int co_os_manager_ioctl(struct inode *inode, struct file *file,
 			unsigned int cmd, unsigned long arg)
 {
 	co_linux_io_t ioctl;
-	void *buffer;
-	unsigned long buffer_size, return_size = 0;
+	unsigned long buffer_size;
 	int ret = -1;
-	co_rc_t rc;
 
-	if (cmd != CO_LINUX_IOCTL_ID) {
+	if (cmd != CO_LINUX_IOCTL_ID)
 		return -1;
-	}
 
 	if (copy_from_user(&ioctl, (void *)arg, sizeof(ioctl)))
                 return -EFAULT;
 
 	buffer_size = ioctl.input_buffer_size;
-	if (buffer_size > ioctl.output_buffer_size)
+	if (buffer_size < ioctl.output_buffer_size)
 		buffer_size = ioctl.output_buffer_size;
 
-	if (buffer_size > 0x400000) {
+	if (buffer_size > 0x400000)
 		return -EIO;
-	}
-
-	buffer = vmalloc(buffer_size);
-	if (buffer == NULL) {
-		co_debug("ioctl buffer too big: %x\n", buffer_size);
-		return -ENOMEM;
-	}
-
-	if (copy_from_user(buffer, ioctl.input_buffer, ioctl.input_buffer_size)) {
-		ret = -EFAULT;
-		goto out;
-	}
-
-	rc = co_manager_ioctl(global_manager, 
-			      ioctl.code, 
-			      buffer, ioctl.input_buffer_size,
-			      ioctl.output_buffer_size, &return_size,
-			      &file->private_data);
-	if (!CO_OK(rc)) {
-		ret = -EIO;
-		goto out;
-	}
-
-	if (copy_to_user(ioctl.output_buffer, buffer, return_size)) {
-		ret = -EFAULT;
-		goto out;
-	}
-
-	if (ioctl.output_returned != NULL) {
-		if (copy_to_user(ioctl.output_returned, &return_size, sizeof(unsigned long))) {
-			ret = -EFAULT;
-			goto out;
+	
+	if (buffer_size > 80) {
+		void *buffer = vmalloc(buffer_size);
+		if (buffer == NULL) {
+			    co_debug("ioctl buffer too big: %x\n", buffer_size);
+			    return -ENOMEM;
 		}
+
+		ret = co_os_manager_ioctl_buffer(&ioctl, buffer, file);
+		vfree(buffer);
+	} else {
+		char on_stack[80];
+		ret = co_os_manager_ioctl_buffer(&ioctl, on_stack, file);
 	}
-
-	ret = 0;
-
-out:
-	vfree(buffer);
-
+	    
 	return ret;
 }
 
 int co_os_manager_release(struct inode *inode, struct file *file)
 {
 	co_manager_cleanup(global_manager, &file->private_data);
+
+	module_put(THIS_MODULE);
 
 	return 0;
 }

@@ -22,25 +22,22 @@ void co_terminal_print(const char *format, ...)
 {
 	char buf[0x100];
 	va_list ap;
+	int len;
 
 	va_start(ap, format);
 	vsnprintf(buf, sizeof(buf), format, ap);
 	va_end(ap);
 
-	printf("%s", buf);
-
-#ifdef COLINUX_DEBUG
-	{
-		FILE *logfile = fopen("c:\\colinux.log", "a");
-		if (logfile) {
-			fprintf(logfile, "%s", buf);
-			fclose(logfile);
-		}
-	}
-#endif
+	printf("%s: %s", _colinux_module, buf);
 
 	if (terminal_print_hook != NULL)
 		terminal_print_hook(buf);
+
+	len = strlen(buf);
+	while (len > 0  &&  buf[len-1] == '\n')
+		buf[len - 1] = '\0';
+		
+	co_debug_lvl(9, "prints \"%s\"\n", buf);
 }
 
 void co_set_terminal_print_hook(co_terminal_print_hook_func_t func)

@@ -23,6 +23,7 @@
 
 #include <colinux/os/alloc.h>
 #include <colinux/os/user/misc.h>
+#include <colinux/user/debug.h>
 #include <colinux/user/cmdline.h>
 #include <colinux/common/common.h>
 
@@ -188,10 +189,12 @@ static co_rc_t coserial_main(int argc, char *argv[])
 	int instance = 0;
 	bool_t instance_specified = PFALSE;
 	
+	co_debug_start();
+
 	rc = co_cmdline_params_alloc(&argv[1], argc-1, &cmdline);
 	if (!CO_OK(rc)) {
 		co_terminal_print("coserial: error parsing arguments\n");
-		return rc;
+		goto out_clean;
 	}
 
 	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-i", 
@@ -219,6 +222,9 @@ static co_rc_t coserial_main(int argc, char *argv[])
 
 out:
 	co_cmdline_params_free(cmdline);
+
+out_clean:
+	co_debug_end();
 
 	return rc;
 }

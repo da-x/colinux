@@ -5,6 +5,8 @@
 #include <colinux/os/user/pipe.h>
 #include <colinux/os/user/daemon.h>
 
+#if (0)
+
 int client()
 {
 	co_rc_t rc;
@@ -140,16 +142,43 @@ int server()
 	return 0;
 }
 
+endif
+#endif
+
+#include <colinux/common/list.h>
+
+struct y {
+	int a;
+	int a1;
+	co_list_t node;
+};
+
+struct x {
+	int a;
+	int a1;
+	int a2;
+	int a3;
+	int a4;
+	co_list_t node;
+	int b;
+};
+
 int main(int argc, char *argv[])
 {
-	if (argc < 2) {
-		printf("Invalid parmater\n");
-		return 0;
-	}
-		
-	if (strcmp(argv[1], "client") == 0) {
-		return client();
-	}
 
-	return server();
+	struct y z;
+	struct x t, s, x;
+	struct x *pos, *pos_next;
+
+	co_list_init(&z.node);
+	co_list_add_tail(&t, &z.node);
+	co_list_add_tail(&s, &z.node);
+	co_list_add_tail(&x, &z.node);
+
+        co_list_each_entry_safe(pos, pos_next, &z.node, node) {
+		printf("%x %x %x\n", pos, &pos->node, &z.node);
+	}
+	
+
+	return 0;
 }

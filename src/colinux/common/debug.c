@@ -34,7 +34,6 @@ void co_debug_(const char *module, int level, const char *filename,
 	char buf[0x100];
 	int len_buf;
 	va_list ap;
-
 	if (level > 10)
 		return;
 

@@ -10,6 +10,10 @@
 
 #include "console.h"
 
+extern "C" {
+#include <colinux/user/debug.h>
+}
+
 static console_window_t *global_window = 0;
 
 void
@@ -29,6 +33,8 @@ co_user_console_main(int argc, char **argv)
 
 	global_window = &window;
 
+	co_debug_start();
+	
 	rc = window.parse_args(argc, argv);
 	if (!CO_OK(rc)) {
 		co_debug("The console program was unable to parse the parameters.\n");
@@ -47,10 +53,14 @@ co_user_console_main(int argc, char **argv)
 
 	window.online(false);
 
-	if (CO_OK(rc))
+	if (CO_OK(rc)) {
+		co_debug_end();
 		return 0;
+	}
 
       co_user_console_main_error:
 	co_debug("The console program encountered an error: %08x\n", rc);
+
+	co_debug_end();
 	return -1;
 }

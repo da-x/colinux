@@ -16,6 +16,7 @@ LOCAL_OBJS = \
 	macaddress.o \
 	daemon.o \
 	cmdline.o \
+	debug.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 
@@ -31,6 +32,6 @@ CLEAN_FILES := $(CLEAN_FILES) \
 	$(LOCAL_OBJS) $(BUILD_PATH)/user.a
 
 #-----------------------------------------------------------------
-include $(call BUILD_SUBDIRS, console-base console)
+include $(call BUILD_SUBDIRS, console-base console debug)
 BUILD_PATH := $(shell dirname $(BUILD_PATH))
 endif

@@ -210,7 +210,7 @@ co_rc_t get_device_guid(
 			}
 			else {
 				if (is_tap_win32_dev(enum_name)) {
-					co_terminal_print("conet-daemon: found TAP device named \"%s\"\n", name_data);
+					co_terminal_print("found TAP device named \"%s\"\n", name_data);
 
 					snprintf(name, name_size, "%s", enum_name);
 					if (actual_name) {
@@ -264,7 +264,7 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 	if (!CO_OK(rc))
 		return CO_RC(NOT_FOUND);
 
-	co_terminal_print("conet-daemon: opening TAP: \"%s\"\n", name_buffer);
+	co_terminal_print("opening TAP: \"%s\"\n", name_buffer);
 
 	/*
 	 * Open Windows TAP-Win32 adapter
@@ -285,7 +285,7 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 		);
 
 	if (handle == INVALID_HANDLE_VALUE) {
-		co_terminal_print_last_error("conet-daemon: tap device open");
+		co_terminal_print_last_error("tap device open");
 		return CO_RC(ERROR);
 	}
 
@@ -294,12 +294,12 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 			       &version, sizeof (version), &version_len, NULL);
 
 	if (bret == FALSE) {
-		co_terminal_print_last_error("conet-daemon: error getting driver version");
+		co_terminal_print_last_error("error getting driver version");
 		CloseHandle(handle);
 		return CO_RC(ERROR);
 	}
 
-	co_terminal_print("conet-daemon: driver version %d.%d\n", version.major, version.minor);
+	co_terminal_print("driver version %d.%d\n", version.major, version.minor);
 	
 	*phandle = handle;
 

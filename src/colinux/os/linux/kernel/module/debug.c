@@ -10,9 +10,19 @@
 
 #include "linux_inc.h"
 
-#include <colinux/common/debug.h>
+#include <colinux/kernel/debug.h>
 
 void co_debug_line(char *str)
 {
-	printk("%s", str);
+	if (!global_manager) {
+		printk("%s", str);
+		return;
+	}
+
+	if (!global_manager->debug.ready) {
+		printk("%s", str);
+		return;
+	}
+
+	co_debug_write_str(&global_manager->debug, &global_manager->debug.section, str);
 }

@@ -10,7 +10,6 @@ LOCAL_OBJS = \
 	manager.o \
 	file.o \
 	alloc.o \
-	debug.o \
 	misc.o \
 	osdep.o \
 	timer.o \
@@ -31,6 +30,6 @@ CLEAN_FILES := $(CLEAN_FILES) \
 
 #-----------------------------------------------------------------
 include $(call BUILD_SUBDIRS, daemon conet-daemon console \
-	console-nt conet-bridged-daemon install)
+	console-nt conet-bridged-daemon install debug)
 BUILD_PATH := $(shell dirname $(BUILD_PATH))
 endif

@@ -21,6 +21,7 @@ LOCAL_TARGETS = $(LOCAL_OBJS) $(LOCAL_EXE)
 
 $(LOCAL_EXE) : \
 	$(BUILD_ROOT)/colinux/user/console-base/user-console.o \
+	$(BUILD_ROOT)/colinux/user/user.a \
 	$(BUILD_ROOT)/colinux/os/current/user/user.o \
 	$(LOCAL_OBJS) \
 	$(BUILD_ROOT)/colinux/common/common.a \

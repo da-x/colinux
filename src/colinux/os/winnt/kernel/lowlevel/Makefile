@@ -13,6 +13,8 @@ LOCAL_OBJS = \
 	misc.o \
 	debug.o \
 	alloc.o \
+	wait.o \
+	user.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

@@ -13,6 +13,7 @@
 #include <stdio.h>
 
 #include <colinux/common/common.h>
+#include <colinux/user/debug.h>
 #include <colinux/os/user/misc.h>
 
 #include "tap-win32.h"
@@ -383,37 +384,41 @@ int main(int argc, char *argv[])
 	start_parameters_t start_parameters;
 	char *prefered_name = NULL;
 
+	co_debug_start();
+
 	co_set_terminal_print_hook(terminal_print_hook_func);
 
 	rc = handle_paramters(&start_parameters, argc, argv);
-	if (!CO_OK(rc)) 
-		return -1;
+	if (!CO_OK(rc)) {
+		exit_code = -1;
+		goto out;
+	}
 
 	daemon_parameters = &start_parameters;
 
 	prefered_name = daemon_parameters->name_specified ? daemon_parameters->interface_name : NULL;
 	if (prefered_name == NULL) {
-		co_terminal_print("conet-daemon: auto selecting TAP\n");
+		co_terminal_print("auto selecting TAP\n");
  	} else {
-		co_terminal_print("conet-daemon: searching TAP device named \"%s\"\n", prefered_name);
+		co_terminal_print("searching TAP device named \"%s\"\n", prefered_name);
 	}
 
 	rc = open_tap_win32(&tap_handle, prefered_name);
 	if (!CO_OK(rc)) {
 		if (CO_RC_GET_CODE(rc) == CO_RC_NOT_FOUND) {
-			co_terminal_print("conet-daemon: TAP device not found\n");
+			co_terminal_print("TAP device not found\n");
 		} else {
-			co_terminal_print("conet-daemon: error opening TAP device (%x)\n", rc);
+			co_terminal_print("error opening TAP device (%x)\n", rc);
 		}
 		exit_code = -1;
 		goto out;
 	}
 
-	co_terminal_print("conet-daemon: enabling TAP...\n");
+	co_terminal_print("enabling TAP...\n");
 
 	ret = tap_win32_set_status(tap_handle, TRUE);
 	if (!ret) {
-		co_terminal_print("conet-daemon: error enabling TAP Win32\n");
+		co_terminal_print("error enabling TAP Win32\n");
 		exit_code = -1;
 		goto out_close;
 
@@ -422,7 +427,7 @@ int main(int argc, char *argv[])
 	rc = co_os_open_daemon_pipe(daemon_parameters->instance, 
 				    CO_MODULE_CONET0 + daemon_parameters->index, &daemon_handle_);
 	if (!CO_OK(rc)) {
-		co_terminal_print("conet-daemon: Error opening a pipe to the daemon\n");
+		co_terminal_print("Error opening a pipe to the daemon\n");
 		goto out_close;
 	}
 
@@ -434,5 +439,6 @@ out_close:
 	CloseHandle(tap_handle);
 
 out:
+	co_debug_end();
 	return exit_code;
 }

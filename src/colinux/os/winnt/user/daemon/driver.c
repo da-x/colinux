@@ -19,6 +19,7 @@
 #include <colinux/common/ioctl.h>
 #include <colinux/user/daemon.h>
 #include <colinux/user/manager.h>
+#include <colinux/user/debug.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/winnt/kernel/driver.h>
 #include <colinux/os/winnt/user/misc.h>
@@ -37,9 +38,9 @@ co_rc_t co_win32_manager_is_installed(bool_t *installed)
 	rc = co_os_manager_is_installed(installed);
 	if (!CO_OK(rc)) {
 		if (CO_RC_GET_CODE(rc) == CO_RC_ACCESS_DENIED)
-			co_terminal_print("daemon: access defined, not enough privileges\n");
+			co_terminal_print("access defined, not enough privileges\n");
 		else
-			co_terminal_print("daemon: error, unable to determine if driver is installed (rc %x)\n", rc);
+			co_terminal_print("error, unable to determine if driver is installed (rc %x)\n", rc);
 	}
 
 	return rc;
@@ -60,54 +61,22 @@ co_rc_t co_winnt_install_driver(void)
 	}
 
 	if (installed) {
-		co_terminal_print("daemon: driver already installed\n");
+		co_terminal_print("driver already installed\n");
 		return CO_RC(OK);
 	}
 	
 	rc = co_winnt_driver_install_lowlevel();
 	if (!CO_OK(rc)) {
-		co_terminal_print("daemon: cannot install\n");
+		co_terminal_print("cannot install\n");
 		return CO_RC(ERROR);
 	}
 	
 	handle = co_os_manager_open();
 	if (handle == NULL) {
-		co_terminal_print("daemon: error opening kernel driver\n");
+		co_terminal_print("error opening kernel driver\n");
 		return CO_RC(ERROR);
 	}
 	
-	return CO_RC(OK);
-}
-
-/*
- * This function makes sure the driver is initialized and is of the 
- * correct version.
- */
-co_rc_t co_winnt_initialize_driver(bool_t lazy_unload)
-{
-	co_rc_t rc = CO_RC_OK;
-	co_manager_ioctl_status_t status = {0, };
-	co_manager_handle_t handle;
-
-	handle = co_os_manager_open();
-	if (!handle) {
-		co_ntevent_print("daemon: cannot open driver\n");
-		return CO_RC(ERROR);
-	}		
-
-	rc = co_manager_status(handle, &status);
-	if (!CO_OK(rc)) {
-		if (CO_RC_GET_CODE(rc) == CO_RC_VERSION_MISMATCHED) {
-			co_ntevent_print("daemon: driver version is %d while expected version %d\n", 
-					 status.periphery_api_version, CO_LINUX_PERIPHERY_API_VERSION);
-		} else {
-			co_ntevent_print("daemon: detected a old buggy driver version\n");
-		}
-			
-		co_os_manager_close(handle);
-		return CO_RC(VERSION_MISMATCHED);
-	}
-
 	return CO_RC(OK);
 }
 
@@ -123,13 +92,13 @@ co_rc_t co_winnt_remove_driver(void)
 		return rc;
 
 	if (!installed) {
-		co_terminal_print("daemon: driver not installed\n");
+		co_terminal_print("driver not installed\n");
 		return CO_RC(OK);
 	}
 
 	handle = co_os_manager_open();
 	if (!handle) {
-		co_terminal_print("daemon: couldn't get driver handle, removing anyway\n");
+		co_terminal_print("couldn't get driver handle, removing anyway\n");
 		co_winnt_driver_remove_lowlevel();
 		return CO_RC(ERROR);
 	}		
@@ -137,10 +106,10 @@ co_rc_t co_winnt_remove_driver(void)
 	rc = co_manager_status(handle, &status);
 	if (!CO_OK(rc)) {
 		if (CO_RC_GET_CODE(rc) == CO_RC_VERSION_MISMATCHED) {
-			co_ntevent_print("daemon: driver version is %d while expected version %d\n", 
+			co_ntevent_print("driver version is %d while expected version %d\n", 
 					 status.periphery_api_version, CO_LINUX_PERIPHERY_API_VERSION);
 		} else {
-			co_ntevent_print("daemon: detected a old buggy driver version\n");
+			co_ntevent_print("detected a old buggy driver version\n");
 		}
 
 		co_os_manager_close(handle);
@@ -149,7 +118,7 @@ co_rc_t co_winnt_remove_driver(void)
 	}		
 
 	if (status.monitors_count != 0) {
-		co_terminal_print("daemon: monitors are running, cannot remove driver\n");
+		co_terminal_print("monitors are running, cannot remove driver\n");
 		co_os_manager_close(handle);
 		return CO_RC(ERROR);
 	}
@@ -166,32 +135,31 @@ void co_winnt_status_driver(void)
 	co_manager_handle_t handle;
 	co_manager_ioctl_status_t status = {0, };
 
-	co_terminal_print("daemon: checking if the driver is installed\n");
+	co_terminal_print("checking if the driver is installed\n");
 
 	rc = co_win32_manager_is_installed(&installed);
 	if (!CO_OK(rc))
 		return;
 
 	if (!installed) {
-		co_terminal_print("daemon: driver not installed\n");
+		co_terminal_print("driver not installed\n");
 		return;
 	}
 
 	handle = co_os_manager_open();
 	if (!handle) {
-		co_terminal_print("daemon: couldn't get driver handle\n");
+		co_terminal_print("couldn't get driver handle\n");
 		return;
 	}		
 	
 	rc = co_manager_status(handle, &status);
 	if (!CO_OK(rc)) {
-		co_terminal_print("daemon: couldn't get driver status (rc %x)\n", rc);
+		co_terminal_print("couldn't get driver status (rc %x)\n", rc);
 		co_os_manager_close(handle);
 		return;
 	}		
 
-	co_terminal_print("daemon: current number of monitors: %x\n", status.monitors_count);
-	co_terminal_print("daemon: lazy_unload: %d\n", status.lazy_unload);
+	co_terminal_print("current number of monitors: %x\n", status.monitors_count);
 	co_os_manager_close(handle);
 }
 
@@ -230,6 +198,8 @@ co_rc_t co_winnt_remove_driver_lowlevel(IN SC_HANDLE  SchSCManager, IN LPCTSTR D
 	SC_HANDLE  schService; 
 	co_rc_t   rc;
 
+	co_debug_end();
+
 	schService = OpenService (SchSCManager, 
 				  DriverName, 
 				  SERVICE_ALL_ACCESS); 
@@ -243,7 +213,7 @@ co_rc_t co_winnt_remove_driver_lowlevel(IN SC_HANDLE  SchSCManager, IN LPCTSTR D
 		rc = CO_RC(ERROR_REMOVING_DRIVER);
  
 	CloseServiceHandle(schService); 
- 
+
 	return rc; 
 } 
  
@@ -340,7 +310,7 @@ co_rc_t co_winnt_load_driver_lowlevel_by_name(char *name, char *path)
 	PathRemoveFileSpec(fullpath);
 	PathCombine(driverfullpath, fullpath, path);
 
-	co_terminal_print("daemon: loading %s\n", driverfullpath);
+	co_terminal_print("loading %s\n", driverfullpath);
 
 	schSCManager = OpenSCManager(NULL,                 // machine (NULL == local) 
 				     NULL,                 // database (NULL == default) 

@@ -22,6 +22,7 @@
 #include <FL/Fl_Widget.H>
 
 extern "C" {
+#include <colinux/user/debug.h>
 #include <colinux/user/monitor.h>
 #include <colinux/user/manager.h>
 #include <colinux/common/console.h>

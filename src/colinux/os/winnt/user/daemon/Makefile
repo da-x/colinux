@@ -32,10 +32,10 @@ CLEAN_FILES := $(CLEAN_FILES) \
 
 $(LOCAL_EXE) : \
 	$(BUILD_PATH)/res/daemon.res \
-	$(BUILD_ROOT)/colinux/os/current/user/user.o \
 	$(LOCAL_OBJS) \
 	$(BUILD_ROOT)/colinux/user/user.a \
-	$(BUILD_ROOT)/colinux/common/common.a
+	$(BUILD_ROOT)/colinux/common/common.a \
+	$(BUILD_ROOT)/colinux/os/current/user/user.o \
 
 	$(CC) $^ -o $@ -lmxml $(USER_DEFAULT_LIBS)
 

@@ -152,13 +152,15 @@ typedef struct co_monitor {
 	co_arch_info_t arch_info;
 } co_monitor_t;
 
+struct co_manager_per_fd_state;
+
 extern co_rc_t co_monitor_create(struct co_manager *manager, co_manager_ioctl_create_t *params, 
 				 co_monitor_t **cmon_out);
 extern co_rc_t co_monitor_destroy(co_monitor_t *cmon);
 
 extern co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buffer,
 				unsigned long in_size, unsigned long out_size, 
-				unsigned long *return_size, void **private_data);
+				unsigned long *return_size, struct co_manager_per_fd_state *fd_state);
 
 extern co_rc_t co_monitor_alloc_pages(co_monitor_t *cmon, unsigned long pages, void **address);
 extern co_rc_t co_monitor_free_pages(co_monitor_t *cmon, unsigned long pages, void *address);

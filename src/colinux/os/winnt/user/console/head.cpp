@@ -16,7 +16,7 @@ extern "C" {
 
 #include <colinux/user/console/main.h>
 
-COLINUX_DEFINE_MODULE("colinux-console-nt");
+COLINUX_DEFINE_MODULE("colinux-console-fltk");
 
 static char scancode_state[0x100];
 static char scancode_state_e0[0x100];

@@ -186,10 +186,12 @@ int main(int argc, char *argv[])
 	int unit = 0;
 	int colinux_instance = 0;
 
+	co_debug_start();
+
 	co_terminal_print("Cooperative Linux TAP network daemon\n");
 	if (argc < 3) {
 		syntax();
-		return -1;
+		goto out;
 	}
 
 	snprintf(tap_name, sizeof(tap_name), "conet-host-%d-%d", colinux_instance, unit);
@@ -218,5 +220,6 @@ out_close:
 	close(tap_fd);
 
 out:
+	co_debug_end();
 	return exit_code;
 }

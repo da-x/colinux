@@ -100,9 +100,9 @@ co_rc_t co_manager_load(co_manager_t *manager)
 {
 	co_rc_t rc;
 
-	co_debug("loaded to host kernel\n");
-
 	co_memset(manager, 0, sizeof(*manager));
+
+	co_debug("loaded to host kernel\n");
 
 	rc = co_os_physical_memory_pages(&manager->host_memory_pages);
 	if (!CO_OK(rc))
@@ -118,17 +118,33 @@ co_rc_t co_manager_load(co_manager_t *manager)
 	manager->host_memory_amount = manager->host_memory_pages << CO_ARCH_PAGE_SHIFT;
 	manager->state = CO_MANAGER_STATE_INITIALIZED;
 
-	rc = co_manager_arch_init(manager, &manager->archdep);
+	rc = co_debug_init(&manager->debug);
 	if (!CO_OK(rc))
 		return rc;
 
+	rc = co_manager_arch_init(manager, &manager->archdep);
+	if (!CO_OK(rc))
+		goto out_err_debug;
+
 	rc = co_os_manager_init(manager, &manager->osdep);
-	if (!CO_OK(rc)) {
-		co_manager_arch_free(manager->archdep);
-	}
+	if (!CO_OK(rc))
+		goto out_err_arch;
 
 	rc = alloc_reversed_pfns(manager);
+	if (!CO_OK(rc))
+		goto out_err_os;
 
+	return rc;
+
+/* error path */
+out_err_os:
+	co_os_manager_free(manager->osdep);
+	
+out_err_arch:
+	co_manager_arch_free(manager->archdep);
+
+out_err_debug:
+	co_debug_free(&manager->debug);
 	return rc;
 }
 
@@ -181,20 +197,55 @@ void co_manager_unload(co_manager_t *manager)
 	free_reversed_pfns(manager);
 	co_os_manager_free(manager->osdep);
 	co_manager_arch_free(manager->archdep);
+	co_debug_free(&manager->debug);
+}
+
+static co_rc_t create_private_data(void **private_data, co_manager_per_fd_state_t **fd_state_out)
+{
+	co_manager_per_fd_state_t **fd_state;
+
+	fd_state = (typeof(fd_state))private_data;
+
+	if (*fd_state) {
+		*fd_state_out = *fd_state;
+		return CO_RC(OK);
+	}
+
+	*fd_state = (co_manager_per_fd_state_t *)co_os_malloc(sizeof(co_manager_per_fd_state_t));
+	if (!*fd_state)
+		return CO_RC(OUT_OF_MEMORY);
+
+	(*fd_state)->monitor = NULL;
+	(*fd_state)->debug_section = NULL;
+
+	*fd_state_out = *fd_state;
+
+	return CO_RC(OK);
 }
 
 co_rc_t co_manager_cleanup(co_manager_t *manager, void **private_data)
 {
-	co_monitor_t *cmon = NULL;
+	co_manager_per_fd_state_t *fd_state;
 
-	cmon = (typeof(cmon))(*private_data);
-	if (cmon != NULL) {
-		co_debug("process exited abnormally, destroying attached monitor\n");
+	fd_state = ((typeof(fd_state))(*private_data));
+	if (!fd_state)
+		return CO_RC(OK);
 
-		co_monitor_destroy(cmon);
-
-		*private_data = NULL;
+	if (fd_state->monitor != NULL) {
+		co_monitor_t *mon = fd_state->monitor;
+		co_debug("process exited abnormally, removing attached monitor\n");
+		fd_state->monitor = NULL;
+		co_monitor_destroy(mon);
 	}
+
+	if (fd_state->debug_section != NULL) {
+		co_debug_fold(&manager->debug, fd_state->debug_section);
+		fd_state->debug_section = NULL;
+	}
+
+	co_os_free(fd_state);
+
+	*private_data = NULL;
 	
 	return CO_RC(OK);
 }
@@ -216,13 +267,32 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 		params = (typeof(params))(io_buffer);
 		params->state = manager->state;
 		params->monitors_count = manager->monitors_count;
-		params->lazy_unload = manager->lazy_unload;
 		params->periphery_api_version = CO_LINUX_PERIPHERY_API_VERSION;
 		params->linux_api_version = CO_LINUX_API_VERSION;
 
 		*return_size = sizeof(*params);
-
 		return rc;
+	}
+	case CO_MANAGER_IOCTL_DEBUG: {
+		co_manager_per_fd_state_t *fd_state = NULL;
+
+		rc = create_private_data(private_data, &fd_state);
+
+		if (CO_OK(rc))
+			co_debug_write(&manager->debug, &fd_state->debug_section, io_buffer, in_size);
+
+		return CO_RC(OK);
+	}
+	case CO_MANAGER_IOCTL_DEBUG_READER: {
+		co_manager_ioctl_debug_reader_t *params;
+
+		params = (typeof(params))(io_buffer);
+		params->rc = co_debug_read(&manager->debug, params->user_buffer, 
+					   params->user_buffer_size, &params->filled);
+
+		*return_size = sizeof(*params);
+
+		return CO_RC(OK);
 	}
 	default:
 		break;
@@ -237,9 +307,13 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 		co_manager_ioctl_create_t *params = (typeof(params))(io_buffer);
 
 		params->rc = co_monitor_create(manager, params, &cmon);
+		if (CO_OK(params->rc)) {
+			co_manager_per_fd_state_t *fd_state = NULL;
 
-		if (CO_OK(params->rc))
-			*private_data = (void *)cmon;
+			params->rc = create_private_data(private_data, &fd_state);
+			if (CO_OK(params->rc))
+				fd_state->monitor = cmon;
+		}
 
 		*return_size = sizeof(*params);
 
@@ -247,6 +321,8 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 	}
 	case CO_MANAGER_IOCTL_MONITOR: {
 		co_manager_ioctl_monitor_t *params = (typeof(params))(io_buffer);
+		co_manager_per_fd_state_t *fd_state;
+
 		*return_size = sizeof(*params);
 
 		if (in_size < sizeof(*params)) {
@@ -255,15 +331,16 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 			break;
 		}
 		
-		cmon = (typeof(cmon))(*private_data);
-		if (!cmon) {
-			co_debug("no monitor is attached\n");
+		fd_state = ((typeof(fd_state))(*private_data));
+		if (!fd_state || !fd_state->monitor) {
 			params->rc = CO_RC(MONITOR_NOT_LOADED);
 			break;
 		}
 		
 		in_size -= sizeof(*params);
-		params->rc = co_monitor_ioctl(cmon, params, in_size, out_size,  return_size, private_data);
+
+		cmon = fd_state->monitor;
+		params->rc = co_monitor_ioctl(cmon, params, in_size, out_size, return_size, fd_state);
 		break;
 
 	}

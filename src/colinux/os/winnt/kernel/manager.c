@@ -12,6 +12,8 @@
 
 #include <colinux/os/alloc.h>
 
+co_manager_t *co_global_manager = NULL;
+
 co_rc_t co_os_get_pfn_ptr(struct co_manager *manager, co_pfn_t pfn, co_os_mdl_ptr_t **mdl_out)
 {
 	co_os_mdl_ptr_t *current = &manager->osdep->map_root;
@@ -82,7 +84,11 @@ co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
 	if (*osdep == NULL)
 		return CO_RC(ERROR);
 
+	co_global_manager = manager;
+
 	memset(*osdep, 0, sizeof(**osdep));
+
+	MmResetDriverPaging(&co_global_manager);
 
 	return rc;
 }

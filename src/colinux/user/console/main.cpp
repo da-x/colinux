@@ -24,20 +24,29 @@ int co_user_console_main(int argc, char **argv)
 {
 	co_rc_t rc;
 	console_window_t window;
+	int ret;
 
 	global_window = &window;
+
+	co_debug_start();
 
 	rc = window.parse_args(argc, argv);
 	if (!CO_OK(rc)) {
 		co_debug("Error parsing parameters (%d)\n", rc);
-		return -1;
+		ret = -1;
+		goto out;
 	}
 
 	rc = window.start(); 
 	if (!CO_OK(rc)) {
 		co_debug("Error starting console (%d)\n", rc);
-		return -1;
+		ret = -1;
+		goto out;
 	}
 
-	return Fl::run();
+	ret = Fl::run();
+out:
+	co_debug_end();
+
+	return ret;
 }
