@@ -1,6 +1,6 @@
-diff -urN a/CREDITS b/CREDITS
---- a/CREDITS
-+++ b/CREDITS
+diff -X dontdiff -urN a/CREDITS b/CREDITS
+--- a/CREDITS	2004-12-24 15:35:23.000000000 -0600
++++ b/CREDITS	2005-01-07 13:51:10.510000000 -0600
 @@ -52,6 +52,12 @@
  S: Buenos Aires
  S: Argentina
@@ -14,9 +14,9 @@ diff -urN a/CREDITS b/CREDITS
  N: Tim Alpaerts
  E: tim_alpaerts@toyota-motor-europe.com
  D: 802.2 class II logical link control layer,
-diff -urN a/Makefile b/Makefile
---- a/Makefile
-+++ b/Makefile
+diff -X dontdiff -urN a/Makefile b/Makefile
+--- a/Makefile	2004-12-24 15:35:01.000000000 -0600
++++ b/Makefile	2005-01-07 13:51:10.510000000 -0600
 @@ -319,6 +319,11 @@
  AS		= $(CROSS_COMPILE)as
  LD		= $(CROSS_COMPILE)ld
@@ -29,9 +29,9 @@ diff -urN a/Makefile b/Makefile
  CPP		= $(CC) -E
  AR		= $(CROSS_COMPILE)ar
  NM		= $(CROSS_COMPILE)nm
-diff -urN a/arch/i386/Kconfig b/arch/i386/Kconfig
---- a/arch/i386/Kconfig
-+++ b/arch/i386/Kconfig
+diff -X dontdiff -urN a/arch/i386/Kconfig b/arch/i386/Kconfig
+--- a/arch/i386/Kconfig	2004-12-24 15:34:01.000000000 -0600
++++ b/arch/i386/Kconfig	2005-01-07 13:51:10.510000000 -0600
 @@ -205,6 +205,7 @@
  
  config M586TSC
@@ -71,9 +71,9 @@ diff -urN a/arch/i386/Kconfig b/arch/i386/Kconfig
  source "drivers/acpi/Kconfig"
  
  menu "APM (Advanced Power Management) BIOS Support"
-diff -urN a/arch/i386/kernel/Makefile b/arch/i386/kernel/Makefile
---- a/arch/i386/kernel/Makefile
-+++ b/arch/i386/kernel/Makefile
+diff -X dontdiff -urN a/arch/i386/kernel/Makefile b/arch/i386/kernel/Makefile
+--- a/arch/i386/kernel/Makefile	2004-12-24 15:34:01.000000000 -0600
++++ b/arch/i386/kernel/Makefile	2005-01-07 13:51:10.510000000 -0600
 @@ -17,6 +17,7 @@
  obj-$(CONFIG_X86_MSR)		+= msr.o
  obj-$(CONFIG_X86_CPUID)		+= cpuid.o
@@ -82,9 +82,9 @@ diff -urN a/arch/i386/kernel/Makefile b/arch/i386/kernel/Makefile
  obj-$(CONFIG_APM)		+= apm.o
  obj-$(CONFIG_X86_SMP)		+= smp.o smpboot.o
  obj-$(CONFIG_X86_TRAMPOLINE)	+= trampoline.o
-diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
---- a/arch/i386/kernel/cooperative.c
-+++ b/arch/i386/kernel/cooperative.c
+diff -X dontdiff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
+--- a/arch/i386/kernel/cooperative.c	1969-12-31 18:00:00.000000000 -0600
++++ b/arch/i386/kernel/cooperative.c	2005-01-07 13:51:10.520000000 -0600
 @@ -0,0 +1,340 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
@@ -426,9 +426,9 @@ diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 +};
 +
 +CO_TRACE_CONTINUE;
-diff -urN a/arch/i386/kernel/cpu/common.c b/arch/i386/kernel/cpu/common.c
---- a/arch/i386/kernel/cpu/common.c
-+++ b/arch/i386/kernel/cpu/common.c
+diff -X dontdiff -urN a/arch/i386/kernel/cpu/common.c b/arch/i386/kernel/cpu/common.c
+--- a/arch/i386/kernel/cpu/common.c	2004-12-24 15:33:50.000000000 -0600
++++ b/arch/i386/kernel/cpu/common.c	2005-01-07 13:51:10.520000000 -0600
 @@ -4,6 +4,7 @@
  #include <linux/smp.h>
  #include <linux/module.h>
@@ -452,9 +452,9 @@ diff -urN a/arch/i386/kernel/cpu/common.c b/arch/i386/kernel/cpu/common.c
  
  	/*
  	 * Force FPU initialization:
-diff -urN a/arch/i386/kernel/entry.S b/arch/i386/kernel/entry.S
---- a/arch/i386/kernel/entry.S
-+++ b/arch/i386/kernel/entry.S
+diff -X dontdiff -urN a/arch/i386/kernel/entry.S b/arch/i386/kernel/entry.S
+--- a/arch/i386/kernel/entry.S	2004-12-24 15:34:27.000000000 -0600
++++ b/arch/i386/kernel/entry.S	2005-01-07 13:51:10.520000000 -0600
 @@ -158,7 +158,7 @@
  	ALIGN
  ret_from_exception:
@@ -464,9 +464,9 @@ diff -urN a/arch/i386/kernel/entry.S b/arch/i386/kernel/entry.S
  	GET_THREAD_INFO(%ebp)
  	movl EFLAGS(%esp), %eax		# mix EFLAGS and CS
  	movb CS(%esp), %al
-diff -urN a/arch/i386/kernel/head.S b/arch/i386/kernel/head.S
---- a/arch/i386/kernel/head.S
-+++ b/arch/i386/kernel/head.S
+diff -X dontdiff -urN a/arch/i386/kernel/head.S b/arch/i386/kernel/head.S
+--- a/arch/i386/kernel/head.S	2004-12-24 15:33:52.000000000 -0600
++++ b/arch/i386/kernel/head.S	2005-01-07 13:51:10.520000000 -0600
 @@ -238,6 +238,7 @@
  	rep
  	movsl
@@ -484,9 +484,9 @@ diff -urN a/arch/i386/kernel/head.S b/arch/i386/kernel/head.S
  	.long __BOOT_DS
  
  ready:	.byte 0
-diff -urN a/arch/i386/kernel/i387.c b/arch/i386/kernel/i387.c
---- a/arch/i386/kernel/i387.c
-+++ b/arch/i386/kernel/i387.c
+diff -X dontdiff -urN a/arch/i386/kernel/i387.c b/arch/i386/kernel/i387.c
+--- a/arch/i386/kernel/i387.c	2004-12-24 15:35:49.000000000 -0600
++++ b/arch/i386/kernel/i387.c	2005-01-07 13:51:10.520000000 -0600
 @@ -17,6 +17,7 @@
  #include <asm/user.h>
  #include <asm/ptrace.h>
@@ -514,9 +514,9 @@ diff -urN a/arch/i386/kernel/i387.c b/arch/i386/kernel/i387.c
  /*
   * ptrace request handlers.
   */
-diff -urN a/arch/i386/kernel/i8259.c b/arch/i386/kernel/i8259.c
---- a/arch/i386/kernel/i8259.c
-+++ b/arch/i386/kernel/i8259.c
+diff -X dontdiff -urN a/arch/i386/kernel/i8259.c b/arch/i386/kernel/i8259.c
+--- a/arch/i386/kernel/i8259.c	2004-12-24 15:35:28.000000000 -0600
++++ b/arch/i386/kernel/i8259.c	2005-01-07 13:51:10.520000000 -0600
 @@ -26,9 +26,89 @@
  #include <asm/i8259.h>
  
@@ -706,9 +706,9 @@ diff -urN a/arch/i386/kernel/i8259.c b/arch/i386/kernel/i8259.c
  	/*
  	 * Cover the whole vector space, no vector can escape
  	 * us. (some of these will be overridden and become
-diff -urN a/arch/i386/kernel/ioport.c b/arch/i386/kernel/ioport.c
---- a/arch/i386/kernel/ioport.c
-+++ b/arch/i386/kernel/ioport.c
+diff -X dontdiff -urN a/arch/i386/kernel/ioport.c b/arch/i386/kernel/ioport.c
+--- a/arch/i386/kernel/ioport.c	2004-12-24 15:34:44.000000000 -0600
++++ b/arch/i386/kernel/ioport.c	2005-01-07 13:51:10.520000000 -0600
 @@ -15,6 +15,7 @@
  #include <linux/stddef.h>
  #include <linux/slab.h>
@@ -737,9 +737,9 @@ diff -urN a/arch/i386/kernel/ioport.c b/arch/i386/kernel/ioport.c
  	if (level > 3)
  		return -EINVAL;
  	/* Trying to gain more privileges? */
-diff -urN a/arch/i386/kernel/process.c b/arch/i386/kernel/process.c
---- a/arch/i386/kernel/process.c
-+++ b/arch/i386/kernel/process.c
+diff -X dontdiff -urN a/arch/i386/kernel/process.c b/arch/i386/kernel/process.c
+--- a/arch/i386/kernel/process.c	2004-12-24 15:33:47.000000000 -0600
++++ b/arch/i386/kernel/process.c	2005-01-07 13:51:10.520000000 -0600
 @@ -52,6 +52,7 @@
  
  #include <linux/irq.h>
@@ -782,9 +782,9 @@ diff -urN a/arch/i386/kernel/process.c b/arch/i386/kernel/process.c
  		}
  		schedule();
  	}
-diff -urN a/arch/i386/kernel/reboot.c b/arch/i386/kernel/reboot.c
---- a/arch/i386/kernel/reboot.c
-+++ b/arch/i386/kernel/reboot.c
+diff -X dontdiff -urN a/arch/i386/kernel/reboot.c b/arch/i386/kernel/reboot.c
+--- a/arch/i386/kernel/reboot.c	2004-12-24 15:34:29.000000000 -0600
++++ b/arch/i386/kernel/reboot.c	2005-01-07 13:51:10.520000000 -0600
 @@ -13,6 +13,7 @@
  #include <asm/uaccess.h>
  #include <asm/apic.h>
@@ -839,9 +839,9 @@ diff -urN a/arch/i386/kernel/reboot.c b/arch/i386/kernel/reboot.c
  	lapic_shutdown();
  
  	if (efi_enabled)
-diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
---- a/arch/i386/kernel/setup.c
-+++ b/arch/i386/kernel/setup.c
+diff -X dontdiff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
+--- a/arch/i386/kernel/setup.c	2004-12-24 15:34:45.000000000 -0600
++++ b/arch/i386/kernel/setup.c	2005-01-07 13:51:10.520000000 -0600
 @@ -39,6 +39,7 @@
  #include <linux/efi.h>
  #include <linux/init.h>
@@ -1050,9 +1050,9 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  }
  
  #include "setup_arch_post.h"
-diff -urN a/arch/i386/kernel/sysenter.c b/arch/i386/kernel/sysenter.c
---- a/arch/i386/kernel/sysenter.c
-+++ b/arch/i386/kernel/sysenter.c
+diff -X dontdiff -urN a/arch/i386/kernel/sysenter.c b/arch/i386/kernel/sysenter.c
+--- a/arch/i386/kernel/sysenter.c	2004-12-24 15:35:40.000000000 -0600
++++ b/arch/i386/kernel/sysenter.c	2005-01-07 13:51:10.540000000 -0600
 @@ -13,6 +13,7 @@
  #include <linux/gfp.h>
  #include <linux/string.h>
@@ -1083,9 +1083,9 @@ diff -urN a/arch/i386/kernel/sysenter.c b/arch/i386/kernel/sysenter.c
  	return 0;
  }
  
-diff -urN a/arch/i386/kernel/time.c b/arch/i386/kernel/time.c
---- a/arch/i386/kernel/time.c
-+++ b/arch/i386/kernel/time.c
+diff -X dontdiff -urN a/arch/i386/kernel/time.c b/arch/i386/kernel/time.c
+--- a/arch/i386/kernel/time.c	2004-12-24 15:34:45.000000000 -0600
++++ b/arch/i386/kernel/time.c	2005-01-07 13:51:10.540000000 -0600
 @@ -45,6 +45,7 @@
  #include <linux/sysdev.h>
  #include <linux/bcd.h>
@@ -1150,17 +1150,17 @@ diff -urN a/arch/i386/kernel/time.c b/arch/i386/kernel/time.c
  	spin_lock(&rtc_lock);
  
  	if (efi_enabled)
-diff -urN a/arch/i386/kernel/timers/Makefile b/arch/i386/kernel/timers/Makefile
---- a/arch/i386/kernel/timers/Makefile
-+++ b/arch/i386/kernel/timers/Makefile
+diff -X dontdiff -urN a/arch/i386/kernel/timers/Makefile b/arch/i386/kernel/timers/Makefile
+--- a/arch/i386/kernel/timers/Makefile	2004-12-24 15:33:48.000000000 -0600
++++ b/arch/i386/kernel/timers/Makefile	2005-01-07 13:51:10.540000000 -0600
 @@ -7,3 +7,4 @@
  obj-$(CONFIG_X86_CYCLONE_TIMER)	+= timer_cyclone.o
  obj-$(CONFIG_HPET_TIMER)	+= timer_hpet.o
  obj-$(CONFIG_X86_PM_TIMER)	+= timer_pm.o
 +obj-$(CONFIG_COOPERATIVE)	+= timer_cooperative.o
-diff -urN a/arch/i386/kernel/timers/timer.c b/arch/i386/kernel/timers/timer.c
---- a/arch/i386/kernel/timers/timer.c
-+++ b/arch/i386/kernel/timers/timer.c
+diff -X dontdiff -urN a/arch/i386/kernel/timers/timer.c b/arch/i386/kernel/timers/timer.c
+--- a/arch/i386/kernel/timers/timer.c	2004-12-24 15:35:39.000000000 -0600
++++ b/arch/i386/kernel/timers/timer.c	2005-01-07 13:51:10.540000000 -0600
 @@ -13,6 +13,9 @@
  #endif
  /* list of timers, ordered by preference, NULL terminated */
@@ -1171,9 +1171,9 @@ diff -urN a/arch/i386/kernel/timers/timer.c b/arch/i386/kernel/timers/timer.c
  #ifdef CONFIG_X86_CYCLONE_TIMER
  	&timer_cyclone_init,
  #endif
-diff -urN a/arch/i386/kernel/timers/timer_cooperative.c b/arch/i386/kernel/timers/timer_cooperative.c
---- a/arch/i386/kernel/timers/timer_cooperative.c
-+++ b/arch/i386/kernel/timers/timer_cooperative.c
+diff -X dontdiff -urN a/arch/i386/kernel/timers/timer_cooperative.c b/arch/i386/kernel/timers/timer_cooperative.c
+--- a/arch/i386/kernel/timers/timer_cooperative.c	1969-12-31 18:00:00.000000000 -0600
++++ b/arch/i386/kernel/timers/timer_cooperative.c	2005-01-07 13:51:10.540000000 -0600
 @@ -0,0 +1,140 @@
 +/*
 + *  Cooperative mode timer.
@@ -1315,9 +1315,9 @@ diff -urN a/arch/i386/kernel/timers/timer_cooperative.c b/arch/i386/kernel/timer
 +	.init =	init_cooperative_timer,
 +	.opts = &timer_cooperative,
 +};
-diff -urN a/arch/i386/kernel/timers/timer_cyclone.c b/arch/i386/kernel/timers/timer_cyclone.c
---- a/arch/i386/kernel/timers/timer_cyclone.c
-+++ b/arch/i386/kernel/timers/timer_cyclone.c
+diff -X dontdiff -urN a/arch/i386/kernel/timers/timer_cyclone.c b/arch/i386/kernel/timers/timer_cyclone.c
+--- a/arch/i386/kernel/timers/timer_cyclone.c	2004-12-24 15:35:15.000000000 -0600
++++ b/arch/i386/kernel/timers/timer_cyclone.c	2005-01-07 13:51:10.540000000 -0600
 @@ -103,7 +103,7 @@
  		jiffies_64++;
  }
@@ -1327,9 +1327,9 @@ diff -urN a/arch/i386/kernel/timers/timer_cyclone.c b/arch/i386/kernel/timers/ti
  {
  	u32 offset;
  
-diff -urN a/arch/i386/kernel/timers/timer_hpet.c b/arch/i386/kernel/timers/timer_hpet.c
---- a/arch/i386/kernel/timers/timer_hpet.c
-+++ b/arch/i386/kernel/timers/timer_hpet.c
+diff -X dontdiff -urN a/arch/i386/kernel/timers/timer_hpet.c b/arch/i386/kernel/timers/timer_hpet.c
+--- a/arch/i386/kernel/timers/timer_hpet.c	2004-12-24 15:35:24.000000000 -0600
++++ b/arch/i386/kernel/timers/timer_hpet.c	2005-01-07 13:51:10.540000000 -0600
 @@ -73,7 +73,7 @@
  	return base + cycles_2_ns(this_offset - last_offset);
  }
@@ -1339,9 +1339,9 @@ diff -urN a/arch/i386/kernel/timers/timer_hpet.c b/arch/i386/kernel/timers/timer
  {
  	register unsigned long eax, edx;
  
-diff -urN a/arch/i386/kernel/timers/timer_none.c b/arch/i386/kernel/timers/timer_none.c
---- a/arch/i386/kernel/timers/timer_none.c
-+++ b/arch/i386/kernel/timers/timer_none.c
+diff -X dontdiff -urN a/arch/i386/kernel/timers/timer_none.c b/arch/i386/kernel/timers/timer_none.c
+--- a/arch/i386/kernel/timers/timer_none.c	2004-12-24 15:34:57.000000000 -0600
++++ b/arch/i386/kernel/timers/timer_none.c	2005-01-07 13:51:10.540000000 -0600
 @@ -6,7 +6,7 @@
  	/* nothing needed */
  }
@@ -1351,9 +1351,9 @@ diff -urN a/arch/i386/kernel/timers/timer_none.c b/arch/i386/kernel/timers/timer
  {
  	return 0;
  }
-diff -urN a/arch/i386/kernel/timers/timer_pit.c b/arch/i386/kernel/timers/timer_pit.c
---- a/arch/i386/kernel/timers/timer_pit.c
-+++ b/arch/i386/kernel/timers/timer_pit.c
+diff -X dontdiff -urN a/arch/i386/kernel/timers/timer_pit.c b/arch/i386/kernel/timers/timer_pit.c
+--- a/arch/i386/kernel/timers/timer_pit.c	2004-12-24 15:35:25.000000000 -0600
++++ b/arch/i386/kernel/timers/timer_pit.c	2005-01-07 13:51:10.550000000 -0600
 @@ -89,7 +89,7 @@
   * comp.protocols.time.ntp!
   */
@@ -1363,9 +1363,9 @@ diff -urN a/arch/i386/kernel/timers/timer_pit.c b/arch/i386/kernel/timers/timer_
  {
  	int count;
  	unsigned long flags;
-diff -urN a/arch/i386/kernel/timers/timer_pm.c b/arch/i386/kernel/timers/timer_pm.c
---- a/arch/i386/kernel/timers/timer_pm.c
-+++ b/arch/i386/kernel/timers/timer_pm.c
+diff -X dontdiff -urN a/arch/i386/kernel/timers/timer_pm.c b/arch/i386/kernel/timers/timer_pm.c
+--- a/arch/i386/kernel/timers/timer_pm.c	2004-12-24 15:33:59.000000000 -0600
++++ b/arch/i386/kernel/timers/timer_pm.c	2005-01-07 13:51:10.550000000 -0600
 @@ -227,7 +227,7 @@
   * get the offset (in microseconds) from the last call to mark_offset()
   *	- Called holding a reader xtime_lock
@@ -1375,9 +1375,9 @@ diff -urN a/arch/i386/kernel/timers/timer_pm.c b/arch/i386/kernel/timers/timer_p
  {
  	u32 now, offset, delta = 0;
  
-diff -urN a/arch/i386/kernel/timers/timer_tsc.c b/arch/i386/kernel/timers/timer_tsc.c
---- a/arch/i386/kernel/timers/timer_tsc.c
-+++ b/arch/i386/kernel/timers/timer_tsc.c
+diff -X dontdiff -urN a/arch/i386/kernel/timers/timer_tsc.c b/arch/i386/kernel/timers/timer_tsc.c
+--- a/arch/i386/kernel/timers/timer_tsc.c	2004-12-24 15:35:01.000000000 -0600
++++ b/arch/i386/kernel/timers/timer_tsc.c	2005-01-07 13:51:10.550000000 -0600
 @@ -83,7 +83,7 @@
   */
  static unsigned long fast_gettimeoffset_quotient;
@@ -1387,9 +1387,9 @@ diff -urN a/arch/i386/kernel/timers/timer_tsc.c b/arch/i386/kernel/timers/timer_
  {
  	register unsigned long eax, edx;
  
-diff -urN a/arch/i386/kernel/traps.c b/arch/i386/kernel/traps.c
---- a/arch/i386/kernel/traps.c
-+++ b/arch/i386/kernel/traps.c
+diff -X dontdiff -urN a/arch/i386/kernel/traps.c b/arch/i386/kernel/traps.c
+--- a/arch/i386/kernel/traps.c	2004-12-24 15:34:01.000000000 -0600
++++ b/arch/i386/kernel/traps.c	2005-01-07 13:51:10.560000000 -0600
 @@ -51,6 +51,9 @@
  #include <asm/arch_hooks.h>
  #include <asm/kdebug.h>
@@ -1430,9 +1430,9 @@ diff -urN a/arch/i386/kernel/traps.c b/arch/i386/kernel/traps.c
  	if (notify_die(DIE_DEBUG, "debug", regs, condition, error_code,
  					SIGTRAP) == NOTIFY_STOP)
  		return;
-diff -urN a/arch/i386/kernel/vmlinux.lds.S b/arch/i386/kernel/vmlinux.lds.S
---- a/arch/i386/kernel/vmlinux.lds.S
-+++ b/arch/i386/kernel/vmlinux.lds.S
+diff -X dontdiff -urN a/arch/i386/kernel/vmlinux.lds.S b/arch/i386/kernel/vmlinux.lds.S
+--- a/arch/i386/kernel/vmlinux.lds.S	2004-12-24 15:35:50.000000000 -0600
++++ b/arch/i386/kernel/vmlinux.lds.S	2005-01-07 13:51:10.580000000 -0600
 @@ -14,11 +14,12 @@
  {
    . = __PAGE_OFFSET + 0x100000;
@@ -1447,9 +1447,9 @@ diff -urN a/arch/i386/kernel/vmlinux.lds.S b/arch/i386/kernel/vmlinux.lds.S
  	*(.fixup)
  	*(.gnu.warning)
  	} = 0x9090
-diff -urN a/arch/i386/mm/fault.c b/arch/i386/mm/fault.c
---- a/arch/i386/mm/fault.c
-+++ b/arch/i386/mm/fault.c
+diff -X dontdiff -urN a/arch/i386/mm/fault.c b/arch/i386/mm/fault.c
+--- a/arch/i386/mm/fault.c	2004-12-24 15:33:48.000000000 -0600
++++ b/arch/i386/mm/fault.c	2005-01-07 13:51:10.580000000 -0600
 @@ -449,7 +449,8 @@
  	printk(KERN_ALERT " printing eip:\n");
  	printk("%08lx\n", regs->eip);
@@ -1477,9 +1477,9 @@ diff -urN a/arch/i386/mm/fault.c b/arch/i386/mm/fault.c
  		pgd_k = init_mm.pgd + index;
  
  		if (!pgd_present(*pgd_k))
-diff -urN a/arch/i386/mm/init.c b/arch/i386/mm/init.c
---- a/arch/i386/mm/init.c
-+++ b/arch/i386/mm/init.c
+diff -X dontdiff -urN a/arch/i386/mm/init.c b/arch/i386/mm/init.c
+--- a/arch/i386/mm/init.c	2004-12-24 15:35:23.000000000 -0600
++++ b/arch/i386/mm/init.c	2005-01-07 13:51:10.580000000 -0600
 @@ -27,6 +27,7 @@
  #include <linux/slab.h>
  #include <linux/proc_fs.h>
@@ -1592,9 +1592,9 @@ diff -urN a/arch/i386/mm/init.c b/arch/i386/mm/init.c
  
  	/*
  	 * Subtle. SMP is doing it's boot stuff late (because it has to
-diff -urN a/arch/i386/mm/ioremap.c b/arch/i386/mm/ioremap.c
---- a/arch/i386/mm/ioremap.c
-+++ b/arch/i386/mm/ioremap.c
+diff -X dontdiff -urN a/arch/i386/mm/ioremap.c b/arch/i386/mm/ioremap.c
+--- a/arch/i386/mm/ioremap.c	2004-12-24 15:34:27.000000000 -0600
++++ b/arch/i386/mm/ioremap.c	2005-01-07 13:51:10.580000000 -0600
 @@ -11,6 +11,7 @@
  #include <linux/vmalloc.h>
  #include <linux/init.h>
@@ -1619,9 +1619,9 @@ diff -urN a/arch/i386/mm/ioremap.c b/arch/i386/mm/ioremap.c
  	if (!p) 
  		return p; 
  
-diff -urN a/drivers/block/Kconfig b/drivers/block/Kconfig
---- a/drivers/block/Kconfig
-+++ b/drivers/block/Kconfig
+diff -X dontdiff -urN a/drivers/block/Kconfig b/drivers/block/Kconfig
+--- a/drivers/block/Kconfig	2004-12-24 15:34:26.000000000 -0600
++++ b/drivers/block/Kconfig	2005-01-07 13:51:10.580000000 -0600
 @@ -358,6 +358,15 @@
  	  "real" root file system, etc. See <file:Documentation/initrd.txt>
  	  for details.
@@ -1638,9 +1638,9 @@ diff -urN a/drivers/block/Kconfig b/drivers/block/Kconfig
  config INITRAMFS_SOURCE
  	string "Source directory of cpio_list"
  	default ""
-diff -urN a/drivers/block/Makefile b/drivers/block/Makefile
---- a/drivers/block/Makefile
-+++ b/drivers/block/Makefile
+diff -X dontdiff -urN a/drivers/block/Makefile b/drivers/block/Makefile
+--- a/drivers/block/Makefile	2004-12-24 15:35:24.000000000 -0600
++++ b/drivers/block/Makefile	2005-01-07 13:51:10.580000000 -0600
 @@ -29,6 +29,7 @@
  obj-$(CONFIG_ATARI_SLM)		+= acsi_slm.o
  obj-$(CONFIG_AMIGA_Z2RAM)	+= z2ram.o
@@ -1649,9 +1649,9 @@ diff -urN a/drivers/block/Makefile b/drivers/block/Makefile
  obj-$(CONFIG_BLK_DEV_LOOP)	+= loop.o
  obj-$(CONFIG_BLK_DEV_PS2)	+= ps2esdi.o
  obj-$(CONFIG_BLK_DEV_XD)	+= xd.o
-diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
---- a/drivers/block/cobd.c
-+++ b/drivers/block/cobd.c
+diff -X dontdiff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
+--- a/drivers/block/cobd.c	1969-12-31 18:00:00.000000000 -0600
++++ b/drivers/block/cobd.c	2005-01-07 13:51:10.580000000 -0600
 @@ -0,0 +1,540 @@
 +/*
 + *  Copyright (C) 2003 Dan Aloni <da-x@colinux.org>
@@ -2193,9 +2193,9 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +module_exit(cobd_exit);
 +
 +
-diff -urN a/drivers/char/Makefile b/drivers/char/Makefile
---- a/drivers/char/Makefile
-+++ b/drivers/char/Makefile
+diff -X dontdiff -urN a/drivers/char/Makefile b/drivers/char/Makefile
+--- a/drivers/char/Makefile	2004-12-24 15:35:29.000000000 -0600
++++ b/drivers/char/Makefile	2005-01-07 13:51:10.580000000 -0600
 @@ -27,6 +27,7 @@
  obj-$(CONFIG_STALLION)		+= stallion.o
  obj-$(CONFIG_ISTALLION)		+= istallion.o
@@ -2204,10 +2204,10 @@ diff -urN a/drivers/char/Makefile b/drivers/char/Makefile
  obj-$(CONFIG_DIGIEPCA)		+= epca.o
  obj-$(CONFIG_SPECIALIX)		+= specialix.o
  obj-$(CONFIG_MOXA_INTELLIO)	+= moxa.o
-diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
---- a/drivers/char/cocd.c
-+++ b/drivers/char/cocd.c
-@@ -0,0 +1,276 @@
+diff -X dontdiff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
+--- a/drivers/char/cocd.c	1969-12-31 18:00:00.000000000 -0600
++++ b/drivers/char/cocd.c	2005-01-07 14:19:27.720000000 -0600
+@@ -0,0 +1,384 @@
 +/*
 + *  Copyright (C) 2004 Dan Aloni <da-x@colinux.org>
 + *
@@ -2216,6 +2216,17 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 + *  Compatible with UML, also based on some code from there.
 + *  Also based on The tiny_tty.c example driver by Greg Kroah-Hartman (greg@kroah.com).
 + */
++
++/*
++ * 20040908: Ballard, Jonathan H. <jhballard@hotmail.com>
++ * 	   : Implemented cocd_task() & throttle.
++ * 20041224: Used schedule() instead of shedule_work().
++ * 20050101: Uses interruptible_sleep_on() and wake_up() instead of schedule().
++ *         : Uses list_*() for dispatched data flow to each unit.
++ *         : Handles multiple units in seperate tasks.
++ *
++*/
++
 +
 +#include <linux/major.h>
 +#include <linux/config.h>
@@ -2229,7 +2240,9 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +#include <linux/ioctl.h>
 +#include <linux/device.h>
 +#include <linux/console.h>
++#include <linux/wait.h>
 +
++#include <linux/workqueue.h>
 +#include <linux/devfs_fs_kernel.h>
 +#include <linux/tty.h>
 +#include <linux/tty_flip.h>
@@ -2239,13 +2252,74 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +#include <asm/uaccess.h>
 +
 +struct cocd_tty {
-+	struct tty_struct	*tty;		/* pointer to the tty for this device */
 +	struct semaphore	sem;		/* locks this structure */
-+	int			open_count;	/* number of times this port has been opened */
++	struct tty_struct	*tty;		/* tty for this device */
++	unsigned		open_count;	/* open()/close() tally */
++	struct work_struct	work;		/* individual unit task */
++	struct list_head	inq;		/* input queue */
++	wait_queue_head_t	waitq;
++	int			throttled;	/* data flow throttle bit */
 +};
 +
 +static struct tty_driver *cocd_driver = NULL;
 +DECLARE_MUTEX(cocd_sem);
++
++static void cocd_unit_task(void *data)
++{
++	co_message_node_t *input;
++	struct cocd_tty *cocd = data;
++	co_linux_message_t *message;
++	char *p, *e, *m;
++	struct tty_struct *tty;
++
++	tty = cocd->tty;
++
++	while(cocd->open_count) {
++		down(&cocd->sem);
++		if(list_empty(&cocd->inq)) {
++			up(&cocd->sem);
++			interruptible_sleep_on(&cocd->waitq);
++			continue;
++			}
++		input = list_entry(cocd->inq.prev, co_message_node_t, node);
++		up(&cocd->sem);
++
++		message = (co_linux_message_t *)&input->msg.data;
++		e = (m = p = message->data) + message->size;
++		while(p < e && cocd->open_count) {
++			if(cocd->throttled) {
++				interruptible_sleep_on(&cocd->waitq);
++				continue;
++				}
++			if(e < (m += (TTY_FLIPBUF_SIZE - tty->flip.count)))
++				m = e;
++			while(p < m) 
++				tty_insert_flip_char(tty, *(p++), 0);
++			if(tty->flip.count >= TTY_FLIPBUF_SIZE) {
++				tty_flip_buffer_push(tty);
++			}
++		}
++		down(&cocd->sem);
++		list_del(&input->node);
++		up(&cocd->sem);
++		co_free_message(input);
++		if(tty->flip.count && cocd->open_count) {
++			if(cocd->throttled) {
++				interruptible_sleep_on(&cocd->waitq);
++				}
++			tty_flip_buffer_push(tty);
++			continue;
++		}
++	}
++	down(&cocd->sem);
++	while(!list_empty(&cocd->inq)) {
++		input = list_entry(cocd->inq.prev, co_message_node_t, node);
++		list_del(&input->node);
++		co_free_message(input);
++		}
++	up(&cocd->sem);
++	kfree(cocd);
++}
 +
 +int cocd_open(struct tty_struct *tty, struct file * filp)
 +{
@@ -2253,10 +2327,18 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +
 +	down(&cocd_sem);
 +
-+	cocd = (struct cocd_tty *)tty->driver_data;
-+	if (!cocd) {
-+		cocd = kmalloc(sizeof(*cocd), GFP_KERNEL);
-+		if (!cocd) {
++	/* MOD_INC_USE_COUNT; - Removed in 2.6, reference count is handled
++	 *   outside the module in 2.6
++	 */
++
++	if ((cocd = (struct cocd_tty *)tty->driver_data)) {
++		down (&cocd->sem);
++	} else {
++		if(!(cocd = kmalloc(sizeof(*cocd), GFP_KERNEL))) {
++			/* MOD_DEC_USE_COUNT; - Removed in 2.6, reference count
++			 *   is handled  outside the module in 2.6
++			 */
++
 +			up(&cocd_sem);
 +			return -ENOMEM;
 +		}
@@ -2264,9 +2346,13 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +		init_MUTEX_LOCKED(&cocd->sem);
 +		cocd->open_count = 0;
 +		cocd->tty = tty;
++		cocd->throttled = 0;
++		INIT_WORK(&cocd->work, cocd_unit_task, cocd);
++		INIT_LIST_HEAD(&cocd->inq);
++		init_waitqueue_head(&cocd->waitq);
 +		tty->driver_data = cocd;
-+	} else {
-+		down (&cocd->sem);
++		tty->low_latency = 1;
++		schedule_work(&cocd->work);
 +	}
 +
 +	cocd->open_count++;
@@ -2292,69 +2378,68 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +	down(&cocd->sem);
 +	if (cocd->open_count == 1) { /* last close */
 +		tty->driver_data = NULL;
++		wake_up(&cocd->waitq);
 +	}
 +	cocd->open_count--;
 +	up(&cocd->sem);
 +
-+	if (tty->driver_data == NULL)
-+		kfree(cocd);
-+
 +out:
++	/* MOD_DEC_USE_COUNT; - Removed in 2.6, reference count is handled
++	 *   outside the module in 2.6
++	 */
++
 +	up(&cocd_sem);
 +}
 +
 +void cocd_interrupt(void)
 +{
-+	co_message_node_t *node_message;
-+
 +	if (!cocd_driver)
 +		return;
 +
-+	while (co_get_message(&node_message, CO_DEVICE_SERIAL)) {
-+		struct tty_struct *tty = NULL;
-+		struct cocd_tty *cocd = NULL;
-+		unsigned long i;
-+		co_linux_message_t *message;
++	co_message_node_t *input;
++	if(!co_get_message(&input, CO_DEVICE_SERIAL))
++		return;
++	if(!input)
++		return;
 +
-+		message = (co_linux_message_t *)&node_message->msg.data;
-+
-+		if (message->unit >= CO_MODULE_MAX_SERIAL)
-+			goto next;
-+		
-+		tty = cocd_driver->ttys[message->unit];
-+		if (!tty)
-+			goto next;
-+
-+		cocd = (struct cocd_tty *)tty->driver_data;
-+		if (!cocd)
-+			goto next;
-+		
++	co_linux_message_t *message;
++	struct tty_struct *tty;
++	struct cocd_tty *cocd;
++	message = (co_linux_message_t *)&input->msg.data;
++	down(&cocd_sem);
++	if (message->unit < CO_MODULE_MAX_SERIAL
++	 && (tty = cocd_driver->ttys[message->unit])
++	 && (cocd = (struct cocd_tty *)tty->driver_data)) {
++		up(&cocd_sem);
 +		down(&cocd->sem);
-+
-+		for (i=0; i < message->size; i++) {
-+			if (tty->flip.count >= TTY_FLIPBUF_SIZE)
-+				tty_flip_buffer_push(tty);
-+
-+			tty_insert_flip_char(tty, message->data[i], 0);
-+		}
-+
-+		tty_flip_buffer_push(tty);
-+
++		list_add_tail(&input->node,&cocd->inq);
 +		up(&cocd->sem);
-+
-+	next:
-+		co_free_message(node_message);
-+	}
++		wake_up(&cocd->waitq);
++		return;
++		}
++	up(&cocd_sem);
++	co_free_message(input);
 +}
 +
-+int cocd_write(struct tty_struct * tty,
++int cocd_write(struct tty_struct * tty, int from_user,
 +	       const unsigned char *buf, int count)
 +{
++	char *allocated_kbuf = NULL;
 +	const char *kbuf = NULL;
 +	const char *kbuf_scan = NULL;
 +	int count_left;
 +
-+	kbuf = buf;
++	if (from_user) {
++		allocated_kbuf = kmalloc(count, GFP_KERNEL);
++		if (copy_from_user(allocated_kbuf, buf, count)) {
++			kfree(allocated_kbuf);
++			return -EFAULT;
++		}
++		kbuf = allocated_kbuf;
++	} else {
++		kbuf = buf;
++	}
++
 +	kbuf_scan = kbuf;
 +	count_left = count;
 +
@@ -2366,13 +2451,16 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +		co_send_message(CO_MODULE_LINUX,
 +				CO_MODULE_SERIAL0 + tty->index,
 +				CO_PRIORITY_DISCARDABLE,
-+				CO_MESSAGE_TYPE_OTHER,
++				CO_MESSAGE_TYPE_STRING,
 +				count_partial,
 +				kbuf_scan);
 +		
 +		count_left -= count_partial;
 +		kbuf_scan += count_partial;
 +	}
++
++	if (from_user)
++		kfree(allocated_kbuf);
 +
 +	return count;
 +}
@@ -2400,8 +2488,27 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +{
 +}
 +
++void cocd_throttle(struct tty_struct * tty)
++{
++	struct cocd_tty *cocd;
++	cocd = (struct cocd_tty *)tty->driver_data;
++	if (!cocd)
++		return;
++	down(&cocd->sem);
++	cocd->throttled = 1;
++	up(&cocd->sem);
++}
++
 +void cocd_unthrottle(struct tty_struct * tty)
 +{
++	struct cocd_tty *cocd;
++	cocd = (struct cocd_tty *)tty->driver_data;
++	if (!cocd)
++		return;
++	down(&cocd->sem);
++	cocd->throttled = 0;
++	up(&cocd->sem);
++	wake_up(&cocd->waitq);
 +}
 +
 +void cocd_flush_buffer(struct tty_struct *tty)
@@ -2423,6 +2530,7 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +	.write = cocd_write,
 +	.write_room = cocd_write_room,
 +	.flush_buffer = cocd_flush_buffer,
++	.throttle = cocd_throttle,
 +	.unthrottle = cocd_unthrottle,
 +	.hangup = cocd_hangup, 
 +	.chars_in_buffer = cocd_chars_in_buffer, 
@@ -2471,7 +2579,7 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +	cocd_driver->type = TTY_DRIVER_TYPE_SERIAL;
 +	cocd_driver->subtype = 0;
 +	cocd_driver->init_termios = tty_std_termios;
-+	cocd_driver->flags = TTY_DRIVER_REAL_RAW;
++	cocd_driver->flags = 0;
 +
 +	tty_set_operations(cocd_driver, &cocd_ops);
 +	
@@ -2484,9 +2592,9 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +}
 +
 +module_init(cocd_init);
-diff -urN a/drivers/input/keyboard/Kconfig b/drivers/input/keyboard/Kconfig
---- a/drivers/input/keyboard/Kconfig
-+++ b/drivers/input/keyboard/Kconfig
+diff -X dontdiff -urN a/drivers/input/keyboard/Kconfig b/drivers/input/keyboard/Kconfig
+--- a/drivers/input/keyboard/Kconfig	2004-12-24 15:35:39.000000000 -0600
++++ b/drivers/input/keyboard/Kconfig	2005-01-07 13:51:10.580000000 -0600
 @@ -16,7 +16,7 @@
  	default y
  	depends on INPUT && INPUT_KEYBOARD
@@ -2496,9 +2604,9 @@ diff -urN a/drivers/input/keyboard/Kconfig b/drivers/input/keyboard/Kconfig
  	select SERIO_GSCPS2 if GSC
  	help
  	  Say Y here if you want to use a standard AT or PS/2 keyboard. Usually
-diff -urN a/drivers/input/keyboard/atkbd.c b/drivers/input/keyboard/atkbd.c
---- a/drivers/input/keyboard/atkbd.c
-+++ b/drivers/input/keyboard/atkbd.c
+diff -X dontdiff -urN a/drivers/input/keyboard/atkbd.c b/drivers/input/keyboard/atkbd.c
+--- a/drivers/input/keyboard/atkbd.c	2004-12-24 15:36:01.000000000 -0600
++++ b/drivers/input/keyboard/atkbd.c	2005-01-07 13:51:10.590000000 -0600
 @@ -26,6 +26,7 @@
  #include <linux/input.h>
  #include <linux/serio.h>
@@ -2517,9 +2625,9 @@ diff -urN a/drivers/input/keyboard/atkbd.c b/drivers/input/keyboard/atkbd.c
  /*
   * Some systems, where the bit-twiddling when testing the io-lines of the
   * controller may confuse the keyboard need a full reset of the keyboard. On
-diff -urN a/drivers/input/mouse/Kconfig b/drivers/input/mouse/Kconfig
---- a/drivers/input/mouse/Kconfig
-+++ b/drivers/input/mouse/Kconfig
+diff -X dontdiff -urN a/drivers/input/mouse/Kconfig b/drivers/input/mouse/Kconfig
+--- a/drivers/input/mouse/Kconfig	2004-12-24 15:35:24.000000000 -0600
++++ b/drivers/input/mouse/Kconfig	2005-01-07 13:51:10.590000000 -0600
 @@ -14,7 +14,7 @@
  config MOUSE_PS2
  	tristate "PS/2 mouse"
@@ -2622,9 +2730,9 @@ diff -urN a/drivers/input/mouse/Kconfig b/drivers/input/mouse/Kconfig
  	select SERIO
  	help
  	  Say Y (or M) if you want to use a DEC VSXXX-AA (hockey
-diff -urN a/drivers/input/mouse/Makefile b/drivers/input/mouse/Makefile
---- a/drivers/input/mouse/Makefile
-+++ b/drivers/input/mouse/Makefile
+diff -X dontdiff -urN a/drivers/input/mouse/Makefile b/drivers/input/mouse/Makefile
+--- a/drivers/input/mouse/Makefile	2004-12-24 15:34:26.000000000 -0600
++++ b/drivers/input/mouse/Makefile	2005-01-07 13:51:10.590000000 -0600
 @@ -11,6 +11,7 @@
  obj-$(CONFIG_MOUSE_MAPLE)	+= maplemouse.o
  obj-$(CONFIG_MOUSE_PC110PAD)	+= pc110pad.o
@@ -2633,9 +2741,9 @@ diff -urN a/drivers/input/mouse/Makefile b/drivers/input/mouse/Makefile
  obj-$(CONFIG_MOUSE_SERIAL)	+= sermouse.o
  obj-$(CONFIG_MOUSE_VSXXXAA)	+= vsxxxaa.o
  
-diff -urN a/drivers/input/mouse/comouse.c b/drivers/input/mouse/comouse.c
---- a/drivers/input/mouse/comouse.c
-+++ b/drivers/input/mouse/comouse.c
+diff -X dontdiff -urN a/drivers/input/mouse/comouse.c b/drivers/input/mouse/comouse.c
+--- a/drivers/input/mouse/comouse.c	1969-12-31 18:00:00.000000000 -0600
++++ b/drivers/input/mouse/comouse.c	2005-01-07 13:51:10.590000000 -0600
 @@ -0,0 +1,74 @@
 +/*
 + * Virtual mouse driver for Linux
@@ -2711,9 +2819,9 @@ diff -urN a/drivers/input/mouse/comouse.c b/drivers/input/mouse/comouse.c
 +
 +module_init(comouse_init);
 +module_exit(comouse_exit);
-diff -urN a/drivers/input/serio/Kconfig b/drivers/input/serio/Kconfig
---- a/drivers/input/serio/Kconfig
-+++ b/drivers/input/serio/Kconfig
+diff -X dontdiff -urN a/drivers/input/serio/Kconfig b/drivers/input/serio/Kconfig
+--- a/drivers/input/serio/Kconfig	2004-12-24 15:34:58.000000000 -0600
++++ b/drivers/input/serio/Kconfig	2005-01-07 13:51:10.600000000 -0600
 @@ -20,7 +20,7 @@
  	tristate "i8042 PC Keyboard controller" if EMBEDDED || !X86
  	default y
@@ -2760,18 +2868,18 @@ diff -urN a/drivers/input/serio/Kconfig b/drivers/input/serio/Kconfig
 +	tristate "Cooperative Linux virtual keyboard controller driver"
 +	depends on COOPERATIVE
 +	default y
-diff -urN a/drivers/input/serio/Makefile b/drivers/input/serio/Makefile
---- a/drivers/input/serio/Makefile
-+++ b/drivers/input/serio/Makefile
+diff -X dontdiff -urN a/drivers/input/serio/Makefile b/drivers/input/serio/Makefile
+--- a/drivers/input/serio/Makefile	2004-12-24 15:33:51.000000000 -0600
++++ b/drivers/input/serio/Makefile	2005-01-07 13:51:10.600000000 -0600
 @@ -18,3 +18,4 @@
  obj-$(CONFIG_SERIO_PCIPS2)	+= pcips2.o
  obj-$(CONFIG_SERIO_MACEPS2)	+= maceps2.o
  obj-$(CONFIG_SERIO_RAW)		+= serio_raw.o
 +obj-$(CONFIG_SERIO_COKBD)	+= cokbd.o
 \ No newline at end of file
-diff -urN a/drivers/input/serio/cokbd.c b/drivers/input/serio/cokbd.c
---- a/drivers/input/serio/cokbd.c
-+++ b/drivers/input/serio/cokbd.c
+diff -X dontdiff -urN a/drivers/input/serio/cokbd.c b/drivers/input/serio/cokbd.c
+--- a/drivers/input/serio/cokbd.c	1969-12-31 18:00:00.000000000 -0600
++++ b/drivers/input/serio/cokbd.c	2005-01-07 13:51:10.600000000 -0600
 @@ -0,0 +1,155 @@
 +/*
 + *  Cooperative Linux virtual keyboard controller driver
@@ -2928,9 +3036,9 @@ diff -urN a/drivers/input/serio/cokbd.c b/drivers/input/serio/cokbd.c
 +
 +module_init(cokbdio_init);
 +module_exit(cokbdio_exit);
-diff -urN a/drivers/net/Kconfig b/drivers/net/Kconfig
---- a/drivers/net/Kconfig
-+++ b/drivers/net/Kconfig
+diff -X dontdiff -urN a/drivers/net/Kconfig b/drivers/net/Kconfig
+--- a/drivers/net/Kconfig	2004-12-24 15:35:25.000000000 -0600
++++ b/drivers/net/Kconfig	2005-01-07 13:51:10.600000000 -0600
 @@ -127,6 +127,10 @@
  
  	  If you don't know what to use this for, you don't need it.
@@ -2942,9 +3050,9 @@ diff -urN a/drivers/net/Kconfig b/drivers/net/Kconfig
  config NET_SB1000
  	tristate "General Instruments Surfboard 1000"
  	depends on NETDEVICES && PNP
-diff -urN a/drivers/net/Makefile b/drivers/net/Makefile
---- a/drivers/net/Makefile
-+++ b/drivers/net/Makefile
+diff -X dontdiff -urN a/drivers/net/Makefile b/drivers/net/Makefile
+--- a/drivers/net/Makefile	2004-12-24 15:34:29.000000000 -0600
++++ b/drivers/net/Makefile	2005-01-07 13:51:10.600000000 -0600
 @@ -152,6 +152,7 @@
  
  # This is also a 82596 and should probably be merged
@@ -2953,9 +3061,9 @@ diff -urN a/drivers/net/Makefile b/drivers/net/Makefile
  
  obj-$(CONFIG_ETH16I) += eth16i.o
  obj-$(CONFIG_ZORRO8390) += zorro8390.o 8390.o
-diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
---- a/drivers/net/conet.c
-+++ b/drivers/net/conet.c
+diff -X dontdiff -urN a/drivers/net/conet.c b/drivers/net/conet.c
+--- a/drivers/net/conet.c	1969-12-31 18:00:00.000000000 -0600
++++ b/drivers/net/conet.c	2005-01-07 13:51:10.610000000 -0600
 @@ -0,0 +1,305 @@
 +/*
 + *  Copyright (C) 2003-2004 Dan Aloni <da-x@gmx.net>
@@ -3262,9 +3370,9 @@ diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 +
 +module_init(conet_init_module);
 +module_exit(conet_cleanup_module);
-diff -urN a/drivers/video/console/Kconfig b/drivers/video/console/Kconfig
---- a/drivers/video/console/Kconfig
-+++ b/drivers/video/console/Kconfig
+diff -X dontdiff -urN a/drivers/video/console/Kconfig b/drivers/video/console/Kconfig
+--- a/drivers/video/console/Kconfig	2004-12-24 15:34:26.000000000 -0600
++++ b/drivers/video/console/Kconfig	2005-01-07 13:51:10.610000000 -0600
 @@ -6,7 +6,7 @@
  
  config VGA_CONSOLE
@@ -3298,9 +3406,9 @@ diff -urN a/drivers/video/console/Kconfig b/drivers/video/console/Kconfig
  	default y
  
  config FRAMEBUFFER_CONSOLE
-diff -urN a/drivers/video/console/Makefile b/drivers/video/console/Makefile
---- a/drivers/video/console/Makefile
-+++ b/drivers/video/console/Makefile
+diff -X dontdiff -urN a/drivers/video/console/Makefile b/drivers/video/console/Makefile
+--- a/drivers/video/console/Makefile	2004-12-24 15:34:44.000000000 -0600
++++ b/drivers/video/console/Makefile	2005-01-07 13:51:10.610000000 -0600
 @@ -23,6 +23,7 @@
  obj-$(CONFIG_PROM_CONSOLE)        += promcon.o promcon_tbl.o
  obj-$(CONFIG_STI_CONSOLE)         += sticon.o sticore.o
@@ -3309,9 +3417,9 @@ diff -urN a/drivers/video/console/Makefile b/drivers/video/console/Makefile
  obj-$(CONFIG_MDA_CONSOLE)         += mdacon.o
  obj-$(CONFIG_FRAMEBUFFER_CONSOLE) += fbcon.o bitblit.o font.o
  obj-$(CONFIG_FB_TILEBLITTING)     += tileblit.o
-diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
---- a/drivers/video/console/cocon.c
-+++ b/drivers/video/console/cocon.c
+diff -X dontdiff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
+--- a/drivers/video/console/cocon.c	1969-12-31 18:00:00.000000000 -0600
++++ b/drivers/video/console/cocon.c	2005-01-07 13:51:10.610000000 -0600
 @@ -0,0 +1,464 @@
 +/*
 + *  linux/drivers/video/cocon.c -- Cooperative Linux console VGA driver
@@ -3777,9 +3885,9 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +};
 +
 +MODULE_LICENSE("GPL");
-diff -urN a/fs/Kconfig b/fs/Kconfig
---- a/fs/Kconfig
-+++ b/fs/Kconfig
+diff -X dontdiff -urN a/fs/Kconfig b/fs/Kconfig
+--- a/fs/Kconfig	2004-12-24 15:34:58.000000000 -0600
++++ b/fs/Kconfig	2005-01-07 13:51:10.610000000 -0600
 @@ -1758,6 +1758,18 @@
  
  source "fs/ncpfs/Kconfig"
@@ -3799,18 +3907,18 @@ diff -urN a/fs/Kconfig b/fs/Kconfig
  config CODA_FS
  	tristate "Coda file system support (advanced network fs)"
  	depends on INET
-diff -urN a/fs/Makefile b/fs/Makefile
---- a/fs/Makefile
-+++ b/fs/Makefile
+diff -X dontdiff -urN a/fs/Makefile b/fs/Makefile
+--- a/fs/Makefile	2004-12-24 15:34:58.000000000 -0600
++++ b/fs/Makefile	2005-01-07 13:51:10.610000000 -0600
 @@ -94,3 +94,5 @@
  obj-$(CONFIG_BEFS_FS)		+= befs/
  obj-$(CONFIG_HOSTFS)		+= hostfs/
  obj-$(CONFIG_HPPFS)		+= hppfs/
 +obj-$(CONFIG_COFUSE_FS)		+= cofusefs/
 +
-diff -urN a/fs/cofusefs/Makefile b/fs/cofusefs/Makefile
---- a/fs/cofusefs/Makefile
-+++ b/fs/cofusefs/Makefile
+diff -X dontdiff -urN a/fs/cofusefs/Makefile b/fs/cofusefs/Makefile
+--- a/fs/cofusefs/Makefile	1969-12-31 18:00:00.000000000 -0600
++++ b/fs/cofusefs/Makefile	2005-01-07 13:51:10.610000000 -0600
 @@ -0,0 +1,8 @@
 +#
 +# Makefile for the Linux cofuse filesystem routines.
@@ -3820,9 +3928,9 @@ diff -urN a/fs/cofusefs/Makefile b/fs/cofusefs/Makefile
 +
 +cofusefs-objs := inode.o dir.o file.o util.o dev.o
 +
-diff -urN a/fs/cofusefs/dev.c b/fs/cofusefs/dev.c
---- a/fs/cofusefs/dev.c
-+++ b/fs/cofusefs/dev.c
+diff -X dontdiff -urN a/fs/cofusefs/dev.c b/fs/cofusefs/dev.c
+--- a/fs/cofusefs/dev.c	1969-12-31 18:00:00.000000000 -0600
++++ b/fs/cofusefs/dev.c	2005-01-07 13:51:10.610000000 -0600
 @@ -0,0 +1,889 @@
 +/*
 +    FUSE: Filesystem in Userspace
@@ -4713,9 +4821,9 @@ diff -urN a/fs/cofusefs/dev.c b/fs/cofusefs/dev.c
 + * c-basic-offset: 8
 + * End:
 + */
-diff -urN a/fs/cofusefs/dir.c b/fs/cofusefs/dir.c
---- a/fs/cofusefs/dir.c
-+++ b/fs/cofusefs/dir.c
+diff -X dontdiff -urN a/fs/cofusefs/dir.c b/fs/cofusefs/dir.c
+--- a/fs/cofusefs/dir.c	1969-12-31 18:00:00.000000000 -0600
++++ b/fs/cofusefs/dir.c	2005-01-07 13:51:10.620000000 -0600
 @@ -0,0 +1,961 @@
 +/*
 +    FUSE: Filesystem in Userspace
@@ -5678,9 +5786,9 @@ diff -urN a/fs/cofusefs/dir.c b/fs/cofusefs/dir.c
 + * c-basic-offset: 8
 + * End:
 + */
-diff -urN a/fs/cofusefs/file.c b/fs/cofusefs/file.c
---- a/fs/cofusefs/file.c
-+++ b/fs/cofusefs/file.c
+diff -X dontdiff -urN a/fs/cofusefs/file.c b/fs/cofusefs/file.c
+--- a/fs/cofusefs/file.c	1969-12-31 18:00:00.000000000 -0600
++++ b/fs/cofusefs/file.c	2005-01-07 13:51:10.620000000 -0600
 @@ -0,0 +1,542 @@
 +/*
 +    FUSE: Filesystem in Userspace
@@ -6224,9 +6332,9 @@ diff -urN a/fs/cofusefs/file.c b/fs/cofusefs/file.c
 + * c-basic-offset: 8
 + * End:
 + */
-diff -urN a/fs/cofusefs/fuse_i.h b/fs/cofusefs/fuse_i.h
---- a/fs/cofusefs/fuse_i.h
-+++ b/fs/cofusefs/fuse_i.h
+diff -X dontdiff -urN a/fs/cofusefs/fuse_i.h b/fs/cofusefs/fuse_i.h
+--- a/fs/cofusefs/fuse_i.h	1969-12-31 18:00:00.000000000 -0600
++++ b/fs/cofusefs/fuse_i.h	2005-01-07 13:51:10.620000000 -0600
 @@ -0,0 +1,297 @@
 +/*
 +    COFUSE: Filesystem in an host of Cooperative Linux
@@ -6525,9 +6633,9 @@ diff -urN a/fs/cofusefs/fuse_i.h b/fs/cofusefs/fuse_i.h
 +	unsigned long flags;
 +	char name[0x80];
 +};
-diff -urN a/fs/cofusefs/inode.c b/fs/cofusefs/inode.c
---- a/fs/cofusefs/inode.c
-+++ b/fs/cofusefs/inode.c
+diff -X dontdiff -urN a/fs/cofusefs/inode.c b/fs/cofusefs/inode.c
+--- a/fs/cofusefs/inode.c	1969-12-31 18:00:00.000000000 -0600
++++ b/fs/cofusefs/inode.c	2005-01-07 13:51:10.620000000 -0600
 @@ -0,0 +1,545 @@
 +/*
 +    FUSE: Filesystem in Userspace
@@ -7074,9 +7182,9 @@ diff -urN a/fs/cofusefs/inode.c b/fs/cofusefs/inode.c
 + * c-basic-offset: 8
 + * End:
 + */
-diff -urN a/fs/cofusefs/util.c b/fs/cofusefs/util.c
---- a/fs/cofusefs/util.c
-+++ b/fs/cofusefs/util.c
+diff -X dontdiff -urN a/fs/cofusefs/util.c b/fs/cofusefs/util.c
+--- a/fs/cofusefs/util.c	1969-12-31 18:00:00.000000000 -0600
++++ b/fs/cofusefs/util.c	2005-01-07 13:51:10.620000000 -0600
 @@ -0,0 +1,78 @@
 +/*
 +    FUSE: Filesystem in Userspace
@@ -7156,9 +7264,9 @@ diff -urN a/fs/cofusefs/util.c b/fs/cofusefs/util.c
 + * c-basic-offset: 8
 + * End:
 + */
-diff -urN a/fs/namespace.c b/fs/namespace.c
---- a/fs/namespace.c
-+++ b/fs/namespace.c
+diff -X dontdiff -urN a/fs/namespace.c b/fs/namespace.c
+--- a/fs/namespace.c	2004-12-24 15:35:01.000000000 -0600
++++ b/fs/namespace.c	2005-01-07 13:51:10.620000000 -0600
 @@ -1015,7 +1015,7 @@
  	/* Discard magic */
  	if ((flags & MS_MGC_MSK) == MS_MGC_VAL)
@@ -7168,9 +7276,9 @@ diff -urN a/fs/namespace.c b/fs/namespace.c
  	/* Basic sanity checks */
  
  	if (!dir_name || !*dir_name || !memchr(dir_name, 0, PAGE_SIZE))
-diff -urN a/include/asm-i386/bug.h b/include/asm-i386/bug.h
---- a/include/asm-i386/bug.h
-+++ b/include/asm-i386/bug.h
+diff -X dontdiff -urN a/include/asm-i386/bug.h b/include/asm-i386/bug.h
+--- a/include/asm-i386/bug.h	2004-12-24 15:34:01.000000000 -0600
++++ b/include/asm-i386/bug.h	2005-01-07 13:51:10.650000000 -0600
 @@ -10,11 +10,17 @@
   */
  
@@ -7189,9 +7297,9 @@ diff -urN a/include/asm-i386/bug.h b/include/asm-i386/bug.h
  #else
  #define BUG() __asm__ __volatile__("ud2\n")
  #endif
-diff -urN a/include/asm-i386/cooperative.h b/include/asm-i386/cooperative.h
---- a/include/asm-i386/cooperative.h
-+++ b/include/asm-i386/cooperative.h
+diff -X dontdiff -urN a/include/asm-i386/cooperative.h b/include/asm-i386/cooperative.h
+--- a/include/asm-i386/cooperative.h	1969-12-31 18:00:00.000000000 -0600
++++ b/include/asm-i386/cooperative.h	2005-01-07 13:51:10.650000000 -0600
 @@ -0,0 +1,184 @@
 +/*
 + *  linux/include/asm/cooperative.h
@@ -7377,9 +7485,9 @@ diff -urN a/include/asm-i386/cooperative.h b/include/asm-i386/cooperative.h
 +} __attribute__((packed)) co_arch_info_t;
 +
 +#endif
-diff -urN a/include/asm-i386/cooperative_internal.h b/include/asm-i386/cooperative_internal.h
---- a/include/asm-i386/cooperative_internal.h
-+++ b/include/asm-i386/cooperative_internal.h
+diff -X dontdiff -urN a/include/asm-i386/cooperative_internal.h b/include/asm-i386/cooperative_internal.h
+--- a/include/asm-i386/cooperative_internal.h	1969-12-31 18:00:00.000000000 -0600
++++ b/include/asm-i386/cooperative_internal.h	2005-01-07 13:51:10.650000000 -0600
 @@ -0,0 +1,33 @@
 +/*
 + *  linux/include/asm/cooperative_internal.h
@@ -7414,9 +7522,9 @@ diff -urN a/include/asm-i386/cooperative_internal.h b/include/asm-i386/cooperati
 +#endif
 +
 +#endif
-diff -urN a/include/asm-i386/dma.h b/include/asm-i386/dma.h
---- a/include/asm-i386/dma.h
-+++ b/include/asm-i386/dma.h
+diff -X dontdiff -urN a/include/asm-i386/dma.h b/include/asm-i386/dma.h
+--- a/include/asm-i386/dma.h	2004-12-24 15:34:45.000000000 -0600
++++ b/include/asm-i386/dma.h	2005-01-07 13:51:10.650000000 -0600
 @@ -268,6 +268,7 @@
   *
   * Assumes DMA flip-flop is clear.
@@ -7433,9 +7541,9 @@ diff -urN a/include/asm-i386/dma.h b/include/asm-i386/dma.h
  
  
  /* These are in kernel/dma.c: */
-diff -urN a/include/asm-i386/fixmap.h b/include/asm-i386/fixmap.h
---- a/include/asm-i386/fixmap.h
-+++ b/include/asm-i386/fixmap.h
+diff -X dontdiff -urN a/include/asm-i386/fixmap.h b/include/asm-i386/fixmap.h
+--- a/include/asm-i386/fixmap.h	2004-12-24 15:33:50.000000000 -0600
++++ b/include/asm-i386/fixmap.h	2005-01-07 13:51:10.650000000 -0600
 @@ -31,6 +31,7 @@
  #include <linux/threads.h>
  #include <asm/kmap_types.h>
@@ -7444,9 +7552,9 @@ diff -urN a/include/asm-i386/fixmap.h b/include/asm-i386/fixmap.h
  
  /*
   * Here we define all the compile-time 'special' virtual
-diff -urN a/include/asm-i386/io.h b/include/asm-i386/io.h
---- a/include/asm-i386/io.h
-+++ b/include/asm-i386/io.h
+diff -X dontdiff -urN a/include/asm-i386/io.h b/include/asm-i386/io.h
+--- a/include/asm-i386/io.h	2004-12-24 15:35:40.000000000 -0600
++++ b/include/asm-i386/io.h	2005-01-07 13:51:10.650000000 -0600
 @@ -104,12 +104,15 @@
   * address. 
   */
@@ -7474,9 +7582,9 @@ diff -urN a/include/asm-i386/io.h b/include/asm-i386/io.h
  #define __SLOW_DOWN_IO "jmp 1f; 1: jmp 1f; 1:"
  #else
  #define __SLOW_DOWN_IO "outb %%al,$0x80;"
-diff -urN a/include/asm-i386/mach-default/irq_vectors.h b/include/asm-i386/mach-default/irq_vectors.h
---- a/include/asm-i386/mach-default/irq_vectors.h
-+++ b/include/asm-i386/mach-default/irq_vectors.h
+diff -X dontdiff -urN a/include/asm-i386/mach-default/irq_vectors.h b/include/asm-i386/mach-default/irq_vectors.h
+--- a/include/asm-i386/mach-default/irq_vectors.h	2004-12-24 15:34:26.000000000 -0600
++++ b/include/asm-i386/mach-default/irq_vectors.h	2005-01-07 13:51:10.650000000 -0600
 @@ -67,6 +67,11 @@
  
  #define TIMER_IRQ 0
@@ -7489,9 +7597,9 @@ diff -urN a/include/asm-i386/mach-default/irq_vectors.h b/include/asm-i386/mach-
  /*
   * 16 8259A IRQ's, 208 potential APIC interrupt sources.
   * Right now the APIC is mostly only used for SMP.
-diff -urN a/include/asm-i386/mach-default/irq_vectors_limits.h b/include/asm-i386/mach-default/irq_vectors_limits.h
---- a/include/asm-i386/mach-default/irq_vectors_limits.h
-+++ b/include/asm-i386/mach-default/irq_vectors_limits.h
+diff -X dontdiff -urN a/include/asm-i386/mach-default/irq_vectors_limits.h b/include/asm-i386/mach-default/irq_vectors_limits.h
+--- a/include/asm-i386/mach-default/irq_vectors_limits.h	2004-12-24 15:34:26.000000000 -0600
++++ b/include/asm-i386/mach-default/irq_vectors_limits.h	2005-01-07 13:51:10.650000000 -0600
 @@ -5,7 +5,7 @@
  #define NR_IRQS FIRST_SYSTEM_VECTOR
  #define NR_IRQ_VECTORS NR_IRQS
@@ -7501,9 +7609,9 @@ diff -urN a/include/asm-i386/mach-default/irq_vectors_limits.h b/include/asm-i38
  #define NR_IRQS 224
  # if (224 >= 32 * NR_CPUS)
  # define NR_IRQ_VECTORS NR_IRQS
-diff -urN a/include/asm-i386/mc146818rtc.h b/include/asm-i386/mc146818rtc.h
---- a/include/asm-i386/mc146818rtc.h
-+++ b/include/asm-i386/mc146818rtc.h
+diff -X dontdiff -urN a/include/asm-i386/mc146818rtc.h b/include/asm-i386/mc146818rtc.h
+--- a/include/asm-i386/mc146818rtc.h	2004-12-24 15:35:23.000000000 -0600
++++ b/include/asm-i386/mc146818rtc.h	2005-01-07 13:51:10.650000000 -0600
 @@ -4,6 +4,7 @@
  #ifndef _ASM_MC146818RTC_H
  #define _ASM_MC146818RTC_H
@@ -7533,9 +7641,9 @@ diff -urN a/include/asm-i386/mc146818rtc.h b/include/asm-i386/mc146818rtc.h
  #define RTC_IRQ 8
  
  #endif /* _ASM_MC146818RTC_H */
-diff -urN a/include/asm-i386/mmzone.h b/include/asm-i386/mmzone.h
---- a/include/asm-i386/mmzone.h
-+++ b/include/asm-i386/mmzone.h
+diff -X dontdiff -urN a/include/asm-i386/mmzone.h b/include/asm-i386/mmzone.h
+--- a/include/asm-i386/mmzone.h	2004-12-24 15:34:45.000000000 -0600
++++ b/include/asm-i386/mmzone.h	2005-01-07 13:51:10.650000000 -0600
 @@ -6,7 +6,9 @@
  #ifndef _ASM_MMZONE_H_
  #define _ASM_MMZONE_H_
@@ -7556,9 +7664,9 @@ diff -urN a/include/asm-i386/mmzone.h b/include/asm-i386/mmzone.h
  
  #ifdef CONFIG_X86_NUMAQ            /* we have contiguous memory on NUMA-Q */
  #define pfn_valid(pfn)          ((pfn) < num_physpages)
-diff -urN a/include/asm-i386/page.h b/include/asm-i386/page.h
---- a/include/asm-i386/page.h
-+++ b/include/asm-i386/page.h
+diff -X dontdiff -urN a/include/asm-i386/page.h b/include/asm-i386/page.h
+--- a/include/asm-i386/page.h	2004-12-24 15:34:01.000000000 -0600
++++ b/include/asm-i386/page.h	2005-01-07 13:51:10.650000000 -0600
 @@ -13,6 +13,7 @@
  #ifndef __ASSEMBLY__
  
@@ -7587,9 +7695,9 @@ diff -urN a/include/asm-i386/page.h b/include/asm-i386/page.h
  
  #define PAGE_OFFSET		((unsigned long)__PAGE_OFFSET)
  #define VMALLOC_RESERVE		((unsigned long)__VMALLOC_RESERVE)
-diff -urN a/include/asm-i386/param.h b/include/asm-i386/param.h
---- a/include/asm-i386/param.h
-+++ b/include/asm-i386/param.h
+diff -X dontdiff -urN a/include/asm-i386/param.h b/include/asm-i386/param.h
+--- a/include/asm-i386/param.h	2004-12-24 15:34:01.000000000 -0600
++++ b/include/asm-i386/param.h	2005-01-07 13:51:10.660000000 -0600
 @@ -2,8 +2,12 @@
  #define _ASMi386_PARAM_H
  
@@ -7603,9 +7711,9 @@ diff -urN a/include/asm-i386/param.h b/include/asm-i386/param.h
  # define CLOCKS_PER_SEC		(USER_HZ)	/* like times() */
  #endif
  
-diff -urN a/include/asm-i386/pgalloc.h b/include/asm-i386/pgalloc.h
---- a/include/asm-i386/pgalloc.h
-+++ b/include/asm-i386/pgalloc.h
+diff -X dontdiff -urN a/include/asm-i386/pgalloc.h b/include/asm-i386/pgalloc.h
+--- a/include/asm-i386/pgalloc.h	2004-12-24 15:33:50.000000000 -0600
++++ b/include/asm-i386/pgalloc.h	2005-01-07 13:51:10.660000000 -0600
 @@ -6,15 +6,16 @@
  #include <asm/fixmap.h>
  #include <linux/threads.h>
@@ -7626,9 +7734,9 @@ diff -urN a/include/asm-i386/pgalloc.h b/include/asm-i386/pgalloc.h
  }
  /*
   * Allocate and free page tables.
-diff -urN a/include/asm-i386/pgtable-2level.h b/include/asm-i386/pgtable-2level.h
---- a/include/asm-i386/pgtable-2level.h
-+++ b/include/asm-i386/pgtable-2level.h
+diff -X dontdiff -urN a/include/asm-i386/pgtable-2level.h b/include/asm-i386/pgtable-2level.h
+--- a/include/asm-i386/pgtable-2level.h	2004-12-24 15:34:57.000000000 -0600
++++ b/include/asm-i386/pgtable-2level.h	2005-01-07 13:51:10.660000000 -0600
 @@ -8,6 +8,9 @@
  #define pgd_ERROR(e) \
  	printk("%s:%d: bad pgd %08lx.\n", __FILE__, __LINE__, pgd_val(e))
@@ -7665,9 +7773,9 @@ diff -urN a/include/asm-i386/pgtable-2level.h b/include/asm-i386/pgtable-2level.
  
  /*
   * All present user pages are user-executable:
-diff -urN a/include/asm-i386/pgtable.h b/include/asm-i386/pgtable.h
---- a/include/asm-i386/pgtable.h
-+++ b/include/asm-i386/pgtable.h
+diff -X dontdiff -urN a/include/asm-i386/pgtable.h b/include/asm-i386/pgtable.h
+--- a/include/asm-i386/pgtable.h	2004-12-24 15:35:23.000000000 -0600
++++ b/include/asm-i386/pgtable.h	2005-01-07 13:51:10.660000000 -0600
 @@ -25,6 +25,8 @@
  #include <linux/list.h>
  #include <linux/spinlock.h>
@@ -7690,9 +7798,9 @@ diff -urN a/include/asm-i386/pgtable.h b/include/asm-i386/pgtable.h
  #endif /* !CONFIG_DISCONTIGMEM */
  
  #define pmd_large(pmd) \
-diff -urN a/include/asm-i386/processor.h b/include/asm-i386/processor.h
---- a/include/asm-i386/processor.h
-+++ b/include/asm-i386/processor.h
+diff -X dontdiff -urN a/include/asm-i386/processor.h b/include/asm-i386/processor.h
+--- a/include/asm-i386/processor.h	2004-12-24 15:33:50.000000000 -0600
++++ b/include/asm-i386/processor.h	2005-01-07 13:51:10.660000000 -0600
 @@ -182,8 +182,7 @@
  }
  
@@ -7703,9 +7811,9 @@ diff -urN a/include/asm-i386/processor.h b/include/asm-i386/processor.h
  
  /*
   * Intel CPU features in CR4
-diff -urN a/include/asm-i386/timer.h b/include/asm-i386/timer.h
---- a/include/asm-i386/timer.h
-+++ b/include/asm-i386/timer.h
+diff -X dontdiff -urN a/include/asm-i386/timer.h b/include/asm-i386/timer.h
+--- a/include/asm-i386/timer.h	2004-12-24 15:34:27.000000000 -0600
++++ b/include/asm-i386/timer.h	2005-01-07 13:51:10.660000000 -0600
 @@ -19,7 +19,7 @@
  struct timer_opts {
  	char* name;
@@ -7725,9 +7833,9 @@ diff -urN a/include/asm-i386/timer.h b/include/asm-i386/timer.h
  
  extern unsigned long calibrate_tsc(void);
  extern void init_cpu_khz(void);
-diff -urN a/include/linux/console.h b/include/linux/console.h
---- a/include/linux/console.h
-+++ b/include/linux/console.h
+diff -X dontdiff -urN a/include/linux/console.h b/include/linux/console.h
+--- a/include/linux/console.h	2004-12-24 15:34:32.000000000 -0600
++++ b/include/linux/console.h	2005-01-07 13:51:10.000000000 -0600
 @@ -61,6 +61,7 @@
  extern const struct consw dummy_con;	/* dummy console buffer */
  extern const struct consw fb_con;	/* frame buffer based console */
@@ -7736,9 +7844,9 @@ diff -urN a/include/linux/console.h b/include/linux/console.h
  extern const struct consw newport_con;	/* SGI Newport console  */
  extern const struct consw prom_con;	/* SPARC PROM console */
  
-diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
---- a/include/linux/cooperative.h
-+++ b/include/linux/cooperative.h
+diff -X dontdiff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
+--- a/include/linux/cooperative.h	1969-12-31 18:00:00.000000000 -0600
++++ b/include/linux/cooperative.h	2005-01-07 13:51:10.000000000 -0600
 @@ -0,0 +1,322 @@
 +/*
 + *  linux/include/linux/cooperative.h
@@ -8062,9 +8170,9 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +#include "cooperative_fs.h"
 +
 +#endif
-diff -urN a/include/linux/cooperative_fs.h b/include/linux/cooperative_fs.h
---- a/include/linux/cooperative_fs.h
-+++ b/include/linux/cooperative_fs.h
+diff -X dontdiff -urN a/include/linux/cooperative_fs.h b/include/linux/cooperative_fs.h
+--- a/include/linux/cooperative_fs.h	1969-12-31 18:00:00.000000000 -0600
++++ b/include/linux/cooperative_fs.h	2005-01-07 13:51:10.000000000 -0600
 @@ -0,0 +1,267 @@
 +/*
 +    FUSE: Filesystem in Userspace
@@ -8333,9 +8441,9 @@ diff -urN a/include/linux/cooperative_fs.h b/include/linux/cooperative_fs.h
 + * c-basic-offset: 8
 + * End:
 + */
-diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_internal.h
---- a/include/linux/cooperative_internal.h
-+++ b/include/linux/cooperative_internal.h
+diff -X dontdiff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_internal.h
+--- a/include/linux/cooperative_internal.h	1969-12-31 18:00:00.000000000 -0600
++++ b/include/linux/cooperative_internal.h	2005-01-07 13:51:10.000000000 -0600
 @@ -0,0 +1,80 @@
 +/*
 + *  linux/include/linux/cooperative.h
@@ -8417,9 +8525,9 @@ diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_int
 +#endif
 +
 +#endif
-diff -urN a/include/linux/major.h b/include/linux/major.h
---- a/include/linux/major.h
-+++ b/include/linux/major.h
+diff -X dontdiff -urN a/include/linux/major.h b/include/linux/major.h
+--- a/include/linux/major.h	2004-12-24 15:34:26.000000000 -0600
++++ b/include/linux/major.h	2005-01-07 13:51:10.000000000 -0600
 @@ -130,6 +130,7 @@
  #define VIOCD_MAJOR		113
  
@@ -8428,9 +8536,9 @@ diff -urN a/include/linux/major.h b/include/linux/major.h
  
  #define SCSI_DISK8_MAJOR	128
  #define SCSI_DISK9_MAJOR	129
-diff -urN a/init/do_mounts.c b/init/do_mounts.c
---- a/init/do_mounts.c
-+++ b/init/do_mounts.c
+diff -X dontdiff -urN a/init/do_mounts.c b/init/do_mounts.c
+--- a/init/do_mounts.c	2004-12-24 15:34:31.000000000 -0600
++++ b/init/do_mounts.c	2005-01-07 13:51:10.000000000 -0600
 @@ -175,6 +175,7 @@
  	for (p = s; *p; p++)
  		if (*p == '/')
@@ -8439,9 +8547,9 @@ diff -urN a/init/do_mounts.c b/init/do_mounts.c
  	res = try_name(s, 0);
  	if (res)
  		goto done;
-diff -urN a/init/main.c b/init/main.c
---- a/init/main.c
-+++ b/init/main.c
+diff -X dontdiff -urN a/init/main.c b/init/main.c
+--- a/init/main.c	2004-12-24 15:34:01.000000000 -0600
++++ b/init/main.c	2005-01-07 13:51:10.000000000 -0600
 @@ -537,6 +537,7 @@
  		panic(panic_later, panic_param);
  	profile_init();
@@ -8450,9 +8558,9 @@ diff -urN a/init/main.c b/init/main.c
  #ifdef CONFIG_BLK_DEV_INITRD
  	if (initrd_start && !initrd_below_start_ok &&
  			initrd_start < min_low_pfn << PAGE_SHIFT) {
-diff -urN a/kernel/Makefile b/kernel/Makefile
---- a/kernel/Makefile
-+++ b/kernel/Makefile
+diff -X dontdiff -urN a/kernel/Makefile b/kernel/Makefile
+--- a/kernel/Makefile	2004-12-24 15:34:26.000000000 -0600
++++ b/kernel/Makefile	2005-01-07 13:51:10.000000000 -0600
 @@ -26,6 +26,7 @@
  obj-$(CONFIG_KPROBES) += kprobes.o
  obj-$(CONFIG_SYSFS) += ksysfs.o
@@ -8461,9 +8569,9 @@ diff -urN a/kernel/Makefile b/kernel/Makefile
  
  ifneq ($(CONFIG_IA64),y)
  # According to Alan Modra <alan@linuxcare.com.au>, the -fno-omit-frame-pointer is
-diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
---- a/kernel/cooperative.c
-+++ b/kernel/cooperative.c
+diff -X dontdiff -urN a/kernel/cooperative.c b/kernel/cooperative.c
+--- a/kernel/cooperative.c	1969-12-31 18:00:00.000000000 -0600
++++ b/kernel/cooperative.c	2005-01-07 13:51:10.000000000 -0600
 @@ -0,0 +1,354 @@
 +/*
 + *  linux/kernel/cooperative.c
@@ -8819,9 +8927,9 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +EXPORT_SYMBOL(co_terminate);
 +
 +CO_TRACE_CONTINUE;
-diff -urN a/kernel/panic.c b/kernel/panic.c
---- a/kernel/panic.c
-+++ b/kernel/panic.c
+diff -X dontdiff -urN a/kernel/panic.c b/kernel/panic.c
+--- a/kernel/panic.c	2004-12-24 15:35:29.000000000 -0600
++++ b/kernel/panic.c	2005-01-07 13:51:10.000000000 -0600
 @@ -18,6 +18,7 @@
  #include <linux/sysrq.h>
  #include <linux/interrupt.h>
@@ -8841,9 +8949,9 @@ diff -urN a/kernel/panic.c b/kernel/panic.c
  #ifdef CONFIG_SMP
  	smp_send_stop();
  #endif
-diff -urN a/kernel/printk.c b/kernel/printk.c
---- a/kernel/printk.c
-+++ b/kernel/printk.c
+diff -X dontdiff -urN a/kernel/printk.c b/kernel/printk.c
+--- a/kernel/printk.c	2004-12-24 15:35:40.000000000 -0600
++++ b/kernel/printk.c	2005-01-07 13:51:10.000000000 -0600
 @@ -34,6 +34,8 @@
  
  #include <asm/uaccess.h>
@@ -8862,14 +8970,14 @@ diff -urN a/kernel/printk.c b/kernel/printk.c
  	/*
  	 * Copy the output into log_buf.  If the caller didn't provide
  	 * appropriate log level tags, we insert them here
-diff -urN a/localversion b/localversion
---- a/localversion
-+++ b/localversion
+diff -X dontdiff -urN a/localvarion-cooperative b/localvarion-cooperative
+--- a/localvarion-cooperative	1969-12-31 18:00:00.000000000 -0600
++++ b/localvarion-cooperative	2005-01-07 13:51:10.000000000 -0600
 @@ -0,0 +1 @@
 +-co-0.6.2-pre7
-diff -urN a/mm/bootmem.c b/mm/bootmem.c
---- a/mm/bootmem.c
-+++ b/mm/bootmem.c
+diff -X dontdiff -urN a/mm/bootmem.c b/mm/bootmem.c
+--- a/mm/bootmem.c	2004-12-24 15:34:30.000000000 -0600
++++ b/mm/bootmem.c	2005-01-07 13:51:10.000000000 -0600
 @@ -17,6 +17,7 @@
  #include <linux/bootmem.h>
  #include <linux/mmzone.h>
@@ -8902,9 +9010,9 @@ diff -urN a/mm/bootmem.c b/mm/bootmem.c
  	memset(ret, 0, size);
  	return ret;
  }
-diff -urN a/mm/page_alloc.c b/mm/page_alloc.c
---- a/mm/page_alloc.c
-+++ b/mm/page_alloc.c
+diff -X dontdiff -urN a/mm/page_alloc.c b/mm/page_alloc.c
+--- a/mm/page_alloc.c	2004-12-24 15:33:51.000000000 -0600
++++ b/mm/page_alloc.c	2005-01-07 13:51:10.000000000 -0600
 @@ -32,7 +32,7 @@
  #include <linux/sysctl.h>
  #include <linux/cpu.h>
@@ -8942,6 +9050,3 @@ diff -urN a/mm/page_alloc.c b/mm/page_alloc.c
  	return page;
  }
  
-diff -urN a/scripts/kconfig/libkconfig.so b/scripts/kconfig/libkconfig.so
---- a/scripts/kconfig/libkconfig.so
-+++ b/scripts/kconfig/libkconfig.so
