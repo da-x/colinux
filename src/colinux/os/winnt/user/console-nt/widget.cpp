@@ -438,6 +438,15 @@ console_widget_NT_t::loop()
 			message.linux.device = CO_DEVICE_KEYBOARD;
 			message.linux.unit = 0;
 			message.linux.size = sizeof (message.code);
+
+			if (i.Event.KeyEvent.wVirtualKeyCode == 18	&& i.Event.KeyEvent.dwControlKeyState & ENHANCED_KEY) {
+				// AltGr has an extended scancode
+				message.code.code = 0xe0;
+				message.code.down = i.Event.KeyEvent.bKeyDown;
+	
+				window->event(message.message);
+			}
+
 			message.code.code = i.Event.KeyEvent.wVirtualScanCode;
 			message.code.down = i.Event.KeyEvent.bKeyDown;
 
