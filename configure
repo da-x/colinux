@@ -1,0 +1,577 @@
+#!/bin/sh
+
+# File: configure
+#
+# Simlpe configure script for develop coLinux and cross platform,
+# create makefile and bin/user-build.cfg.
+#
+# - Henry Nestler <henry@bigfoot.de>
+#
+# More arguments and directory options:
+#	./configure --help
+
+# Some defaults from config file (Kernel version and dir)
+source bin/sample.user-build.cfg
+
+# Some default values
+target=i686-pc-mingw32
+nonopt=NONE
+prefix=NONE
+distdir=NONE
+downloaddir=NONE
+logfile=NONE
+hostkerneldir=NONE
+colinux_os=NONE
+configfile="bin/user-build.cfg"
+makefileout="Makefile"
+no_create=
+kernel_untar="yes"
+
+# Try the directory containing this script, then its working dir.
+prog=$0
+confdir=`echo $prog|sed 's%/[^/][^/]*$%%'`
+test "x$confdir" = "x$prog" && confdir=.
+
+# Go into source dir and give path absolute
+srcdir=`( cd $confdir ; pwd )`
+#echo "Default srcdir=$srcdir"
+
+# Go into upper of source dir and give path absolute
+topdir=`( cd $srcdir/.. ; pwd )`
+#echo "Default topdir=$topdir"
+
+prev=
+for option
+do
+
+  # If the previous option needs an argument, assign it.
+  if test -n "$prev"; then
+    eval "$prev=\$option"
+    prev=
+    continue
+  fi
+
+  case "$option" in
+  -*=*) optarg=`echo "$option" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+  *) optarg= ;;
+  esac
+
+  case "$option" in
+
+  help | -help | --help | --hel | --he)
+    # Omit some internal or obsolete options to make the list less imposing.
+    # This message is too long to be a string in the A/UX 3.1 sh.
+    cat << EOF
+
+Usage: configure [options] [host]
+Options: [defaults in brackets after descriptions]
+Configuration:
+  --help                  print this message
+
+Host type:
+  --target=TARGET         configure for TARGET [$target]
+  --colinux-os=OS         target platform string OS=linux|winnt [winnt]
+
+Directories:
+  --srcdir=DIR            directory of this script
+                          [$srcdir]
+  --topdir=TOPDIR         base directory for all other dirs
+                          [$topdir]
+  --downloaddir=DIR       source download, extract and compile tools
+                          [\$TOPDIR/download]
+  --prefix=PREFIX         install architecture-independent files in PREFIX
+                          [\$TOPDIR/mingw32]
+  --distdir=DIR           distribution of all winnt files
+                          [\$PREFIX/dist]
+  --targetkerneldir=DIR   path to your patched colinux (Guest) kernel tree
+  --hostkerneldir=DIR     path to your host kernel (only for linux as host)
+
+Options:
+  --configfile=FILE       outputfile for batch build [$configfile]
+  --logfile=ARG           logfile for build process, open append.
+                          use \$\$ for process id and separate files.
+                          [\$TOPDIR/log/build-colinux-\$\$.log]
+  --no-kernel-untar       Do not delete and untar kernel tree, if exist.
+-------------------------------------------------------------------------------
+Sample for WinNT as host (default):
+  ./configure --target=i686-pc-mingw32 \\
+	--downloaddir=$SOURCE_DIR \\
+	--prefix=$PREFIX
+
+Sample for Linux as host:
+  ./configure --target=i686-pc-linux \\
+	--downloaddir=$SOURCE_DIR \\
+	--targetkerneldir=$SOURCE_DIR/linux-$KERNEL_VERSION
+	--hostkerneldir=/usr/src/`uname -r`
+
+EOF
+
+    exit 0 ;;
+
+  --topdir)
+    prev=topdir ;;
+  --topdir=*)
+    topdir="$optarg" ;;
+
+  --srcdir)
+    prev=srcdir ;;
+  --srcdir=*)
+    srcdir="$optarg" ;;
+
+  --target)
+    prev=target ;;
+  --target=*)
+    target="$optarg" ;;
+
+  --prefix)
+    prev=prefix ;;
+  --prefix=*)
+    prefix="$optarg" ;;
+
+  --downloaddir)
+    prev=downloaddir ;;
+  --downloaddir=*)
+    downloaddir="$optarg" ;;
+
+  --distdir)
+    prev=distdir ;;
+  --distdir=*)
+    distdir="$optarg" ;;
+
+  --targetkerneldir)
+    prev=targetkerneldir ;;
+  --targetkerneldir=*)
+    targetkerneldir="$optarg" ;;
+
+  --hostkerneldir)
+    prev=hostkerneldir ;;
+  --hostkerneldir=*)
+    hostkerneldir="$optarg" ;;
+
+  --colinux-os)
+    prev=colinux-os ;;
+  --colinux-os=*)
+    colinux_os="$optarg" ;;
+
+  --configfile)
+    prev=configfile ;;
+  --configfile=*)
+    configfile="$optarg" ;;
+
+  --logfile)
+    prev=logfile ;;
+  --logfile=*)
+    logfile="$optarg" ;;
+
+  -no-create | --no-create | --no-creat | --no-crea | --no-cre \
+  | --no-cr | --no-c)
+    no_create=yes ;;
+
+  -no-kernel-untar | --no-kernel-untar | --no-kernel | \
+  -disable-kernel-untar | --disable-kernel-untar)
+    kernel_untar=no ;;
+
+  -*) { echo "configure: error: $option: invalid option; use --help to show usage" 1>&2; exit 1; }
+    ;;
+
+  *)
+    if test -n "`echo $option| sed 's/[-a-z0-9.]//g'`"; then
+      echo "configure: warning: $option: invalid host type" 1>&2
+    fi
+    if test "x$nonopt" != xNONE; then
+      { echo "configure: error: can only configure for one host and one target at a time" 1>&2; exit 1; }
+    fi
+    nonopt="$option"
+    ;;
+
+  esac
+done
+
+if test -n "$prev"; then
+  { echo "configure: error: missing argument to --`echo $prev | sed 's/_/-/g'`" 1>&2; exit 1; }
+fi
+
+if test "`cd $srcdir && pwd`" != "`pwd`" && test -f $srcdir/config.status; then
+  { echo "configure: error: source directory already configured; run "make distclean" there first" 1>&2; exit 1; }
+fi
+
+#
+# Check for target system
+#
+
+case "$target" in
+NONE)
+  case $nonopt in
+  NONE) target=$host ;;
+  *) target=$nonopt ;;
+  esac ;;
+esac
+
+target_cpu=`echo $target | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\1/'`
+target_vendor=`echo $target | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\2/'`
+target_os=`echo $target | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\3/'`
+
+echo " target_cpu=$target_cpu"
+echo " target_vendor=$target_vendor"
+echo " target_os=$target_os"
+
+#
+# Check building for linux or winnt
+# Mapping real OS into coLinux OS-Name
+#
+case $colinux_os in
+NONE)
+  case $target_os in
+  linux | Linux) colinux_os="linux" ;;
+  *) colinux_os="winnt" ;;
+  esac ;;
+esac
+echo "Setting colinux_os=$colinux_os"
+
+# Default prefix directory
+case $prefix in
+NONE)
+  case $target_os in
+  NONE) prefix="$topdir/prefix-unknown" ;;
+  linux) prefix="$topdir/$target_os" ;;
+  *) prefix="$topdir/mingw32" ;;
+  esac
+  echo "Setting prefix=$prefix"
+  ;;
+esac
+
+# Default dist directory
+case $distdir in
+NONE)
+  distdir="$prefix/dist"
+  echo "Setting distdir=$distdir"
+  ;;
+esac
+
+# Default download directory
+case $downloaddir in
+NONE)
+  downloaddir="$topdir/download"
+  echo "Setting downloaddir=$downloaddir"
+  ;;
+esac
+
+# Extract supported kernel version from default config file (sourced at top)
+colinux_version=`cat src/colinux/VERSION`
+echo " colinux_version=$colinux_version"
+target_kernel_dir="$KERNEL_DIR"
+echo " target_kernel_dir=$target_kernel_dir"
+target_kernel_version="$KERNEL_VERSION"
+echo " target_kernel_version=$target_kernel_version"
+targetkerneldir="$downloaddir/linux-$target_kernel_version"
+echo "Setting targetkerneldir=$targetkerneldir"
+
+#
+# Check host system
+#
+
+if [ "$target_os" = "linux" ] ; then
+
+ #UNAME_MACHINE=`(uname -m) 2>/dev/null` || UNAME_MACHINE=unknown
+ UNAME_RELEASE=`(uname -r) 2>/dev/null` || UNAME_RELEASE=unknown
+ #UNAME_SYSTEM=`(uname -s) 2>/dev/null`  || UNAME_SYSTEM=unknown
+ #UNAME_VERSION=`(uname -v) 2>/dev/null` || UNAME_VERSION=unknown
+
+ #echo " UNAME_MACHINE=$UNAME_MACHINE"
+ echo " UNAME_RELEASE=$UNAME_RELEASE"
+ #echo " UNAME_SYSTEM=$UNAME_SYSTEM"
+ #echo " UNAME_VERSION=$UNAME_VERSION"
+
+ # Search Linux-Host kernel sourcs:
+ # 1. /lib/modules/$UNAME_RELEASE/source
+ # 2. /lib/modules/$UNAME_RELEASE/build
+ # 3. /usr/src/linux
+ # 4. /usr/src/linux-$UNAME_RELEASE
+
+ if [ "$hostkerneldir" = "NONE" ] ; then
+  if [ -d /lib/modules/$UNAME_RELEASE/source ] ; then
+    hostkerneldir="/lib/modules/$UNAME_RELEASE/source"
+  elif [ -d /lib/modules/$UNAME_RELEASE/build ] ; then
+    hostkerneldir="/lib/modules/$UNAME_RELEASE/build"
+  elif [ -d /usr/src/linux ] ; then
+    hostkerneldir="/usr/src/linux"
+  elif [ -d /usr/src/linux-$UNAME_RELEASE ] ; then
+    hostkerneldir="/usr/src/linux-$UNAME_RELEASE"
+  else
+    { echo "configure: error: source directory for host kernel missing, use --hostkerneldir" 1>&2; exit 1; }
+  fi
+  echo "Setting hostkerneldir=$hostkerneldir"
+ fi
+
+  #RUN_VERSION_PATCHLEVEL=`echo $UNAME_RELEASE | sed 's/^\([^\.]*\)\.\([^\.]*\)\.\(.*\)$/\1\.\2/'`
+
+  if [ ! -f $hostkerneldir/Makefile ] ; then
+    { echo "configure: error: missing host kernel source in $hostkerneldir" 1>&2; exit 1; }
+  fi
+
+  # Hostkernel must be >= 2.6 (compile external module)
+  HOST_VERSION=`grep "^VERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
+  echo " HOST_VERSION=$HOST_VERSION"
+  HOST_PATCHLEVEL=`grep "^PATCHLEVEL = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
+  echo " HOST_PATCHLEVEL=$HOST_PATCHLEVEL"
+  HOST_SUBLEVEL=`grep "^SUBLEVEL = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
+  echo " HOST_SUBLEVEL=$HOST_SUBLEVEL"
+  HOST_EXTRAVERSION=`grep "^EXTRAVERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
+  test -z "$HOST_EXTRAVERSION" || echo " HOST_EXTRAVERSION=$HOST_EXTRAVERSION"
+
+  if [ "$HOST_VERSION.$HOST_PATCHLEVEL" != "2.6" ] ; then
+    { echo "configure: error: host kernel $HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL is to old! Need 2.6.x" 1>&2; exit 1; }
+  fi
+
+  if [ "$HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL" != "$target_kernel_version" ] ; then
+    echo -e "\n WARNING! Running kernel is not same as host kernel - You can not run colinux on this machine!\n"
+  fi
+
+fi
+
+# Default logfile directory
+case $logfile in
+NONE)
+  logfile="$topdir/log/build-colinux-\$\$.log"
+  echo "Setting logfile=$logfile"
+  ;;
+esac
+
+# $1 Name of comomponent
+# $2 Call for check
+# $3 Version need (for future only)
+# sample: "wget-1.8" "wget --version" "1.8"
+check_exec_tool()
+{
+  echo -n "Checking for $1 ... "
+  # 
+  if ($2) </dev/null >/dev/null 2>&1; then
+    echo "found"
+  else
+    echo "missing"
+    exit 1
+  fi
+}
+
+check_rpm_tool()
+{
+  echo -n "Checking rpm for $1 ... "
+  # 
+  if (rpm -qa | grep "$2") </dev/null >/dev/null 2>&1; then
+    echo "found"
+  else
+    echo "missing"
+    exit 1
+  fi
+}
+
+
+#
+# Check for tools
+#
+check_exec_tool "wget" "wget --version" "1.8"
+check_exec_tool "unzip" "unzip -h" "2.3"
+check_exec_tool "Python interpreter" "python -V" "2.3"
+check_exec_tool "patch" "patch --version" "2.5"
+check_exec_tool "make" "make --version" "3.80"
+# bison-1.75-109   need by binutils (yacc 91.7.30 have a error YYEMPTY)
+check_exec_tool "bison" "bison --version" "1.75"
+# texinfo-4.5      need by binutils
+check_exec_tool "texinfo" "texindex --version" "4.5"
+
+case $colinux_os in
+  linux) # for Linux
+    check_exec_tool "gcc g++" "g++ --version" "3.x.x"
+    check_exec_tool "X11 devel" "xcursor-config --version" ""
+    check_exec_tool "FLTK devel (patched)" "fltk-config --version" "1.1.4"
+    check_exec_tool "mxml devel" "mxmldoc --version" ""
+  ;;
+  *) # for Winnt
+  ;;
+esac
+
+#
+# do nothing, if trace option enabled
+#
+test "$no_create" = yes && { echo "nothing created!" 1>&2; exit 1; }
+
+# Create log-Directory
+logfile_dir=`dirname $logfile`
+test -d $logfile_dir || mkdir -p $logfile_dir
+
+# Create Distdir
+test -d $distdir || mkdir -p $distdir
+
+# Backup old makefile
+test -f $makefileout && mv $makefileout $makefileout.old
+
+#
+# Create Makefile in base directory
+#
+
+echo "Create toplevel $makefileout"
+    cat > $makefileout << EOF
+# $makefileout for coLinux $colinux_version created by configure at `date`
+
+TARGET=$target
+SRCDIR=$srcdir
+USER_TOPDIR=$topdir
+PREFIX=$prefix
+DOWNLOAD=$downloaddir
+DISTDIR=$distdir
+
+# Need some variables and PATH of cross compiler in make. Export this all
+export COLINUX_TARGET_KERNEL_PATH=$targetkerneldir
+export COLINUX_INSTALL_DIR=\$(DISTDIR)
+
+EOF
+
+case $colinux_os in
+  linux) # for Linux
+    cat >> $makefileout << EOF
+export COLINUX_HOST_KERNEL_DIR=$hostkerneldir
+export COLINUX_HOST_OS=linux
+
+# Need some variables and PATH of cross compiler in make. Export this all
+.PHONY: all
+all: colinux
+
+EOF
+  ;;
+  *) # for Winnt
+    cat >> $makefileout << EOF
+export PATH := \$(PREFIX)/bin:\${PATH}
+
+.PHONY: all cross cross libs winapi kernel colinux
+all: cross winapi kernel colinux
+
+#
+# Check all tools via md5sum
+#
+
+cross:
+	@md5sum --check \$(DOWNLOAD)/.build-cross.md5 >>/dev/null 2>&1 || \\
+	{ cd bin && ./build-cross.sh; }
+
+libs: winapi
+
+winapi:
+	@md5sum --check \$(DOWNLOAD)/.build-colinux-libs.md5 >>/dev/null 2>&1 || \\
+	{ cd bin && ./build-colinux-libs.sh; }
+
+kernel:
+	@md5sum --check \$(DOWNLOAD)/.build-kernel.md5 >>/dev/null 2>&1 || \\
+	{ cd bin && ./build-kernel.sh; }
+
+# Download all missing sources (for cross compile)
+download:
+	@cd bin && ./download-all.sh
+
+EOF
+  ;;
+esac
+
+    cat >> $makefileout << EOF
+.PHONY: colinux install download clean distclean
+# Compile daemons
+colinux:
+	@cd src && make colinux
+
+# Install daemons
+install:
+	@cd src && make install
+
+clean:
+	@cd src && make clean
+
+help:
+	@echo  ''
+	@echo  'Execute "make" or "make all" to build all targets'
+	@echo  'Execute "make install" to install all targets on \$(DISTDIR)'
+	@echo  ''
+	@echo  'Other generic targets:'
+	@echo  '  all		- Build crosstools, all targets marked with [*]'
+	@echo  '* download	- Download all sources (for cross tools)'
+	@echo  '* cross		- Build and install cross compiler and binutils'
+	@echo  '* libs		- Build and install libs: fltk,win32api'
+	@echo  '* kernel	- Build and install colinux kernel vmlinux and modules'
+	@echo  '* colinux	- Build colinux daemons'
+	@echo  '  install	- Install colinux daemons'
+	@echo  ''
+	@echo  'Cleaning colinux build (daemons only, no cross compiler):'
+	@echo  '  clean		- remove most generated files but keep the config and distry files'
+	@echo  '  distclean	- remove all generated files + config + md5sum'
+	@echo  ''
+
+distclean: clean
+	rm -f $makefileout $makefileout.old \\
+	 $configfile $configfile.old \\
+	 \$(DOWNLOAD)/.build-*.md5
+
+EOF
+
+# Backup old config file
+test -f $configfile && mv $configfile $configfile.old
+
+#
+# Create config-file
+# (only needed for winnt in scripts, such bin/build-colinux.sh)
+#
+
+echo "Create $configfile"
+    cat > $configfile << EOF
+# $configfile
+# Configfile for coLinux $colinux_version created by configure at `date`
+
+# Kernel version we are targeting
+#
+KERNEL_DIR="$target_kernel_dir"
+KERNEL_VERSION="$target_kernel_version"
+
+# Setup target OS
+COLINUX_HOST_OS="$colinux_os"
+
+# Directory where we start for all subdirs in build processing
+# default: /home/\$USER/src/coinux-devel  (use only in this file)
+USER_TOPDIR="$topdir"
+
+# Directory where we store download sources or where we find source already stored
+# In this directoy the cross-tools will be extract and compile (GCC and Co.)
+# default: \$USER_TOPDIR/download
+SOURCE_DIR="$downloaddir"
+
+# Directory for compiler binary (build by cross)
+# default: \$USER_TOPDIR/mingw32
+# (/usr/local/mingw32 not supported by this scripts, need root level)
+PREFIX="$prefix"
+
+# Link to colinux kernel, need for colinux daemons build processing (Guest kernel)
+# default: ../../linux	(is \$USER_TOPDIR/linux)
+COLINUX_TARGET_KERNEL_PATH="$targetkerneldir"
+
+# HOST-Kernel (only, if host system is linux)
+#  export COLINUX_HOST_KERNEL_DIR=/path/to/your/host/kernel
+COLINUX_HOST_KERNEL_DIR="$hostkerneldir"
+
+# Install directory
+# default: \$PREFIX/dist
+COLINUX_INSTALL_DIR="$distdir"
+
+# Logfile of building (append)
+#
+COLINUX_BUILD_LOG="$logfile"
+
+# Overwrite kerneltree before rebuild? yes/no
+# yes: Build script will overwrite kerneltree and config (default)
+# no: Build script leave kernel source untouched. User can make some pachtes and config
+#
+COLINUX_KERNEL_UNTAR="$kernel_untar"
+
+EOF
+
+    cat << EOF
+Configure DONE
+
+Ready for "make download && make && make install"
+
+EOF
