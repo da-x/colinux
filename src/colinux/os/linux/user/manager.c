@@ -18,15 +18,19 @@
 #include <colinux/os/alloc.h>
 #include <colinux/os/user/manager.h>
 
+#include "reactor.h"
+
 #include "../ioctl.h"
 
 co_manager_handle_t co_os_manager_open(void)
 {
-	int fd;
+	int fd, ret;
 
 	fd = open("/proc/colinux/ioctl", O_RDWR);
 	if (fd == -1)
 		return NULL;
+
+	ret = fcntl(fd, F_SETFD, FD_CLOEXEC);
 
 	return (co_manager_handle_t)(fd);
 }
@@ -72,4 +76,22 @@ co_rc_t co_os_manager_is_installed(bool_t *installed)
 		*installed = (ret != -1);
 
 	return CO_RC(OK);
+}
+
+co_rc_t co_os_reactor_monitor_create(
+	co_reactor_t reactor, co_manager_handle_t whandle,
+	co_reactor_user_receive_func_t receive,
+	co_reactor_user_t *handle_out)
+{
+	*handle_out = NULL;
+
+	return co_linux_reactor_packet_user_create(
+		reactor, (int)whandle, receive,
+		(co_linux_reactor_packet_user_t *)handle_out);
+	
+}
+
+void co_os_reactor_monitor_destroy(co_reactor_user_t handle)
+{
+	co_linux_reactor_packet_user_destroy((co_linux_reactor_packet_user_t)handle);
 }

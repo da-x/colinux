@@ -85,6 +85,7 @@ void co_daemon_syntax()
 	co_terminal_print("                     (default: colinux.default.xml)\n");
 	co_terminal_print("      -d             Don't launch and attach a coLinux console on\n");
 	co_terminal_print("                     startup\n");
+	co_terminal_print("      -k             Suppress kernel messages\n");
 	co_terminal_print("      -t name        When spawning a console, this is the type of \n");
 	co_terminal_print("                     console (e.g, nt, fltk, etc...)\n");
 	co_terminal_print("\n");
@@ -111,6 +112,7 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 
 	start_parameters->show_help = PFALSE;
 	start_parameters->config_specified = PFALSE;
+	start_parameters->suppress_printk = PFALSE;
 
 	co_snprintf(start_parameters->console, sizeof(start_parameters->console), "fltk");
 
@@ -129,6 +131,11 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 		return rc;
 
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-d", &dont_launch_console);
+
+	if (!CO_OK(rc)) 
+		return rc;
+
+	rc = co_cmdline_params_argumentless_parameter(cmdline, "-k", &start_parameters->suppress_printk);
 
 	if (!CO_OK(rc)) 
 		return rc;
@@ -474,7 +481,7 @@ void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon)
 {
 }
 
-co_rc_t co_daemon_handle_printk(co_message_t *message)
+co_rc_t co_daemon_handle_printk(co_daemon_t *daemon, co_message_t *message)
 {
 	if (message->type == CO_MESSAGE_TYPE_STRING) {
 		char *string_start = message->data;
@@ -486,8 +493,10 @@ co_rc_t co_daemon_handle_printk(co_message_t *message)
 			string_start += 3;
 		}
 
-		co_terminal_print_color(CO_TERM_COLOR_WHITE, 
-					"%s", string_start);
+		if (!daemon->start_parameters->suppress_printk) {
+			co_terminal_print_color(CO_TERM_COLOR_WHITE, 
+						"%s", string_start);
+		}
 
 		if (co_strstr(string_start, "VFS: Unable to mount root fs on")) {
 			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
@@ -510,6 +519,7 @@ static co_rc_t message_receive(co_reactor_user_t user, unsigned char *buffer, un
 	unsigned long message_size;
 	long size_left = size;
 	long position = 0;
+	co_daemon_t *daemon = (typeof(daemon))(user->private_data);
 
 	while (size_left > 0) {
 		message = (typeof(message))(&buffer[position]);
@@ -518,7 +528,7 @@ static co_rc_t message_receive(co_reactor_user_t user, unsigned char *buffer, un
 		if (size_left >= 0) {
 			switch(message->to) {
 			case CO_MODULE_PRINTK:
-				co_daemon_handle_printk(message);
+				co_daemon_handle_printk(daemon, message);
 			default:
 				break;
 			}
@@ -560,7 +570,7 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 		}
 
 		case CO_NETDEV_TYPE_TAP: {
-			rc = co_launch_process("colinux-net-daemon -c %d %s -i %d", daemon->id, interface_name, i);
+			rc = co_launch_process("colinux-net-daemon -i %d -u %d %s", daemon->id, i, interface_name);
 			break;
 		}
 
@@ -620,13 +630,15 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 		return rc;
 
 	co_terminal_print("PID: %d\n", daemon->id);
-	
+
 	rc = co_user_monitor_open(reactor, message_receive,
 				  daemon->id, modules, sizeof(modules)/sizeof(co_module_t),
 				  &message_monitor);
 
 	if (!CO_OK(rc))
 		goto out;
+
+	message_monitor->reactor_user->private_data = (void *)daemon;
 
 	if (daemon->start_parameters->launch_console) {
 		co_terminal_print("colinux: launching console\n");

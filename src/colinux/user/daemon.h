@@ -27,6 +27,7 @@ typedef struct co_daemon_start_parameters {
 	char console[0x20];
 
 	/* optionally gathered from command line */
+	bool_t suppress_printk;
 	bool_t cmdline_config;
 	co_config_t config;
 } co_start_parameters_t;

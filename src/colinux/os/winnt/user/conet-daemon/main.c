@@ -104,7 +104,7 @@ void co_net_syntax()
 	co_terminal_print("\n");
 	co_terminal_print("syntax: \n");
 	co_terminal_print("\n");
-	co_terminal_print("  colinux-net-daemon -c 0 -i index [-h] [-n 'adapter name']\n");
+	co_terminal_print("  colinux-net-daemon -c [pid] -i index [-h] [-n 'adapter name']\n");
 	co_terminal_print("\n");
 	co_terminal_print("    -h                      Show this help text\n");
 	co_terminal_print("    -n 'adapter name'       The name of the network adapter to attach to\n");

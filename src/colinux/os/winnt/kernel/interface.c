@@ -149,14 +149,11 @@ static NTSTATUS manager_write(co_manager_t *manager, co_manager_open_desc_t open
 	if (opened->monitor) {
 		char *buffer;
 		unsigned long size;
-		co_queue_t *queue;
 		co_message_t *message;
 		unsigned long message_size;
 		long size_left;
 		long position;
 		
-		queue = &opened->monitor->linux_message_queue;
-
 		buffer = Irp->AssociatedIrp.SystemBuffer;
 		size = Irp->IoStatus.Information;
 		size_left = size;

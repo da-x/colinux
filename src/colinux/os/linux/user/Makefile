@@ -12,12 +12,11 @@ LOCAL_OBJS = \
 	alloc.o \
 	misc.o \
 	file.o \
-	pipe.o \
 	exec.o \
-	daemon.o \
 	unix.o \
 	frame.o \
 	cobdpath.o \
+	reactor.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

@@ -143,7 +143,7 @@ co_rc_t co_os_manager_userspace_eof(co_manager_t *manager, co_manager_open_desc_
 		IoCompleteRequest(Irp, IO_NO_INCREMENT);
 	}
 
-	return PFALSE;
+	return CO_RC(OK);
 }
 
 co_id_t co_os_current_id(void)

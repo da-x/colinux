@@ -358,7 +358,6 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 			return CO_RC(ERROR);
 			
 		rc = co_monitor_create(manager, params, &cmon);
-		co_debug_system("%x\n", rc);
 		if (CO_OK(rc)) {
 			opened->monitor = cmon;
 			opened->monitor_owner = PTRUE;

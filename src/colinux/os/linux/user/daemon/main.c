@@ -21,7 +21,6 @@
 #include <colinux/user/debug.h>
 #include <colinux/os/user/manager.h>
 #include <colinux/os/user/misc.h>
-#include <colinux/os/user/pipe.h>
 
 COLINUX_DEFINE_MODULE("colinux-daemon");
 
