@@ -16,7 +16,6 @@ LOCAL_OBJS = \
 	manager.o \
 	pages.o \
 	debug.o \
-	filesystem.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

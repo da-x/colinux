@@ -41,7 +41,6 @@ typedef int bool_t;
 	X(TIMEOUT)				\
 	X(ACCESS_DENIED)			\
 	X(COMPILER_MISMATCHED)			\
-	X(INVALID_PARAMETER)			\
 
 #define X(name) CO_RC_ERROR_##name,
 typedef enum {
@@ -64,21 +63,6 @@ typedef long co_rc_t;
 #ifndef COLINUX_FILE_ID           
 #define COLINUX_FILE_ID           0
 #endif
-
-/* 
- * co_rc_t is comprised of:
- *
- * 31                               0
- *   --------------------------------
- *                         eeeeeeeeee   10
- *              lllllllllll             11
- *    iiiiiiiiii                        10
- *    
- *  i - file id
- *  l - line number
- *  e - error code
- *  
- */
 
 #define CO_BITS_OFFSET_ERROR_CODE   0
 #define CO_BITS_COUNT_ERROR_CODE    10

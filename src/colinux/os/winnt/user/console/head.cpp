@@ -12,12 +12,12 @@
 
 extern "C" {
 	#include <colinux/common/debug.h>
+	#include "../osdep.h"
 }
 
 #include <colinux/user/console/main.h>
 
 COLINUX_DEFINE_MODULE("colinux-console-fltk");
-
 
 
 /*
@@ -26,6 +26,11 @@ COLINUX_DEFINE_MODULE("colinux-console-fltk");
  * of the key pressed (with 0xE0 in high byte if extended).
  */
 static WORD vkey_state[256];
+
+/*
+ * Handler of hook for keyboard events
+ */
+static HHOOK current_hook;
 
 
 static void handle_scancode( WORD code )
@@ -41,7 +46,6 @@ static void handle_scancode( WORD code )
 	sc.code = code & 0xFF;
 	co_user_console_handle_scancode( sc );
 }
-
 
 /*
  * First attempt to make the console copy/paste text.
@@ -98,7 +102,6 @@ static int PasteClipboardIntoColinux( )
 }
 
 
-static HHOOK current_hook;
 static LRESULT CALLBACK keyboard_hook(
     int nCode,
     WPARAM wParam,
@@ -173,30 +176,29 @@ void co_user_console_keyboard_focus_change( unsigned long keyboard_focus )
 		for ( int i = 0; i < 255; ++i )
 			if ( vkey_state[i] )
 			{
-				co_scan_code_t sc;
-				sc.down = 1;	/* to work with old kernels */
-				if ( vkey_state[i] & 0xE000 )
-				{	// extended key
-					sc.code = 0xE0;
-					co_user_console_handle_scancode( sc );
-				}
-				sc.code = vkey_state[i] & 0xFF;
-				co_user_console_handle_scancode( sc );
+				handle_scancode( vkey_state[i] );
 				vkey_state[i] = 0;
 			}
 		vkey_state[255] = 0;
 	}
 }
 
-int main( int argc, char **argv )
+int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR cmdLine, int )
 {
-	// Initialize keyboard state array
+	// Initialize keyboard hook
 	memset( vkey_state, 0, sizeof(vkey_state) );
-
 	current_hook = SetWindowsHookEx(WH_KEYBOARD,
 					keyboard_hook,
 					NULL,
 					GetCurrentThreadId());
 
+	// "Normalize" arguments
+	// NOTE: I choosed to ignore parsing errors here as they should
+	//       be caught later
+	int argc = 0;
+	char **argv = NULL;
+	co_os_parse_args( cmdLine, &argc, &argv );
+
+	// Run main console procedure
 	return co_user_console_main(argc, argv);
 }

@@ -11,7 +11,7 @@ FILEOS VOS__WINDOWS32
     BLOCK "040904B0" {    
       VALUE "Comment", ""
       VALUE "CompanyName","Open Source software"
-      VALUE "FileDescription", "Experiment program"
+      VALUE "FileDescription", "coLinux daemon program"
       VALUE "FileVersion", "coLinux version"
       VALUE "LegalCopyright","Copyright (c) coLinux project"
       VALUE "OriginalFilename","colinux-daemon.exe"

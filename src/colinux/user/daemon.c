@@ -176,11 +176,10 @@ co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **
 	memcpy(daemon->config.config_path, start_parameters->config_path, 
 	       sizeof(start_parameters->config_path));
 
-        rc = co_console_create(80, 25, 25, &daemon->console);
-        if (!CO_OK(rc))
-                goto out_free;
+	rc = co_console_create(80, 25, 25, &daemon->console);
+	if (!CO_OK(rc))
+		goto out_free;
 
-	
 	rc = co_load_config_file(daemon);
 	if (!CO_OK(rc)) {
 		co_debug("error loading configuration\n");

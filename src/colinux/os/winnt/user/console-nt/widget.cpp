@@ -12,10 +12,11 @@
 #include <windows.h>
 
 #include "widget.h"
+#include <colinux/user/console-base/main.h>
 
 extern "C" {
 #include <colinux/os/alloc.h>
-#include <colinux/os/current/user/daemon.h>
+#include <colinux/os/winnt/user/daemon.h>
 
 	// Not found in w32api/mingw
 extern PASCAL BOOL GetCurrentConsoleFont(HANDLE hConsoleOutput,
@@ -26,6 +27,14 @@ extern PASCAL COORD GetConsoleFontSize(HANDLE hConsoleOutput,
 }
 
 static BOOL ctrl_exit;
+
+/*
+ * Storage of current keyboard state.
+ * For every virtual key (256), it is 0 (for released) or the scancode
+ * of the key pressed (with 0xE0 in high byte if extended).
+ */
+static WORD vkey_state[256];
+
 
 console_widget_t *
 co_console_widget_create()
@@ -49,7 +58,7 @@ co_console_widget_control_handler(DWORD T)
 console_widget_NT_t::console_widget_NT_t()
 :  console_widget_t()
 {
-	keyed = 0;
+	memset( vkey_state, 0, sizeof(vkey_state) );
 	buffer = 0;
 	screen = 0;
 	input = 0;
@@ -424,59 +433,18 @@ console_widget_NT_t::loop()
 		window->online(false);
 		return CO_RC(OK);
 	}
-	if (i.EventType == KEY_EVENT) {
-
-		if (i.Event.KeyEvent.bKeyDown || keyed) {
-			if (i.Event.KeyEvent.wVirtualKeyCode == 91
-			    && i.Event.KeyEvent.
-			    dwControlKeyState & ENHANCED_KEY) {
-				keyed = 1;
-			} else
-			    if (i.Event.KeyEvent.wVirtualKeyCode == 92
-				&& i.Event.KeyEvent.
-				dwControlKeyState & ENHANCED_KEY) {
-				keyed = 1;
-			} else if (i.Event.KeyEvent.wVirtualKeyCode == 18 && i.Event.KeyEvent.dwControlKeyState & LEFT_ALT_PRESSED && keyed == 1) {	// window+alt key
-				window->online(false);
-				return CO_RC(OK);
-			} else if (i.Event.KeyEvent.wVirtualKeyCode == 18 && i.Event.KeyEvent.dwControlKeyState & RIGHT_ALT_PRESSED && keyed == 1) {	// window+alt key
-				window->online(false);
-				return CO_RC(OK);
-			} else
-				keyed = 0;
-		} else
-			keyed = 0;
-
-		if (window->online()) {
-			struct {
-				co_message_t message;
-				co_linux_message_t linux;
-				co_scan_code_t code;
-			} message;
-
-			message.message.from = CO_MODULE_CONSOLE;
-			message.message.to = CO_MODULE_LINUX;
-			message.message.priority = CO_PRIORITY_DISCARDABLE;
-			message.message.type = CO_MESSAGE_TYPE_OTHER;
-			message.message.size =
-			    sizeof (message) - sizeof (message.message);
-			message.linux.device = CO_DEVICE_KEYBOARD;
-			message.linux.unit = 0;
-			message.linux.size = sizeof (message.code);
-
-			if (i.Event.KeyEvent.wVirtualKeyCode == 18	&& i.Event.KeyEvent.dwControlKeyState & ENHANCED_KEY) {
-				// AltGr has an extended scancode
-				message.code.code = 0xe0;
-				message.code.down = i.Event.KeyEvent.bKeyDown;
-	
-				window->event(message.message);
-			}
-
-			message.code.code = i.Event.KeyEvent.wVirtualScanCode;
-			message.code.down = i.Event.KeyEvent.bKeyDown;
-
-			window->event(message.message);
-		}
+	switch ( i.EventType )
+	{
+	case KEY_EVENT:
+		ProcessKeyEvent( i.Event.KeyEvent );
+		break;
+	case FOCUS_EVENT:
+		/* MSDN says this events should be ignored ??? */
+		ProcessFocusEvent( i.Event.FocusEvent );
+		break;
+	case MOUSE_EVENT:
+		/* *TODO: must be enabled first also */
+		break;
 	}
 	return CO_RC(OK);
 }
@@ -502,4 +470,94 @@ console_widget_NT_t::idle()
 	HANDLE h[2] = { input, d->readable };
 	WaitForMultipleObjects(2, h, FALSE, INFINITE);
 	return CO_RC(OK);
+}
+
+void send_key( DWORD code )
+{
+	co_scan_code_t sc;
+	sc.down = 1;	/* to work with old kernels that don't ignore this field */
+	/* send e0 if extended key */
+	if ( code & 0xE000 )
+	{
+		sc.code = 0xE0;
+		co_user_console_handle_scancode( sc );
+	}
+	sc.code = code & 0xFF;
+	co_user_console_handle_scancode( sc );
+}
+
+void console_widget_NT_t::ProcessKeyEvent( KEY_EVENT_RECORD& ker )
+{
+	const BYTE vkey     = static_cast<BYTE>( ker.wVirtualKeyCode );
+	const WORD flags    = ker.dwControlKeyState;
+	const bool released = (ker.bKeyDown == FALSE);
+	const bool extended = flags & ENHANCED_KEY;
+	WORD       code     = ker.wVirtualScanCode;
+
+	/* Special key processing */
+	switch ( vkey )
+	{
+	case VK_LWIN:
+	case VK_RWIN:
+		// Check if LeftAlt+Win (detach from colinux)
+		if ( !released && (flags & LEFT_ALT_PRESSED) )
+		{
+			window->online(false);
+			return;
+		}
+		// Signal Win key pressed/released
+		if ( released )	vkey_state[255] &= ~1;
+		else			vkey_state[255] |=  1;
+	case VK_APPS:	// Window Context Menu
+		return;		// Let windows process this keys
+	case VK_MENU:
+		// Check if Win+LeftAlt (detach from colinux)
+		if ( (vkey_state[255] & 1) && !released )
+		{
+			window->online(false);
+			return;
+		}
+		break;
+	}
+
+	/* Normal key processing */
+	if ( extended )
+		code |= 0xE000; /* extended scan-code code */
+	if ( released )
+	{	/* key was released */
+		code |= 0x80;
+		if ( vkey_state[vkey] == 0 )
+			return;		/* ignore release of not pressed keys */
+		vkey_state[vkey] = 0;
+	}
+	else
+	{	/* Key pressed */
+		vkey_state[vkey] = code | 0x80;
+	}
+
+	/* Send key scancode */
+	send_key( code );
+
+	return;
+}
+
+/*
+ * console_widget_NT_t::ProcessFocusEvent
+ *
+ * MSDN says this event is used internally only and should be ignored.
+ * But it seems to work ok, at least on XP ???
+ * I believe a broken focus handler is better than nothing, so here it is.
+ */
+void console_widget_NT_t::ProcessFocusEvent( FOCUS_EVENT_RECORD& fer )
+{
+	if ( ! fer.bSetFocus )
+	{
+		for ( int i = 0; i < 255; ++i )
+			if ( vkey_state[i] )
+			{	// release it
+				send_key( vkey_state[i] );
+				vkey_state[i] = 0;
+			}
+		vkey_state[255] = 0;
+	}
 }

@@ -1,8 +1,0 @@
-execute true bin/build-all.sh
-execute true bin/build-colinux-libs.sh
-execute true bin/build-colinux.sh
-execute true bin/build-common.sh
-execute true bin/build-cross.sh
-execute true bin/build-kernel.sh
-execute true bin/download-all.sh
-execute true src/intro

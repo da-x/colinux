@@ -25,7 +25,7 @@ $(LOCAL_EXE) : \
 	$(BUILD_ROOT)/colinux/user/user.a \
 	$(BUILD_ROOT)/colinux/os/current/user/user.a \
 
-	$(GPP) $^ -o $@ -lmxml -lfltk $(USER_DEFAULT_LIBS)
+	$(GPP) -mwindows $^ -o $@ -lmxml -lfltk $(USER_DEFAULT_LIBS)
 
 CLEAN_FILES := $(CLEAN_FILES) \
 	$(LOCAL_OBJS) $(LOCAL_EXE)

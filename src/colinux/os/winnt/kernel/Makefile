@@ -12,9 +12,7 @@ LOCAL_OBJS = \
 	interface.o \
 	manager.o \
 	alloc.o \
-	filesystem.o \
-	fileio.o \
-	time.o \
+
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

@@ -39,7 +39,9 @@ class console_widget_NT_t:public console_widget_t {
 	HANDLE input;
 	HANDLE output;
 	CONSOLE_CURSOR_INFO cursor;
-	unsigned keyed;
+
+	void ProcessKeyEvent( KEY_EVENT_RECORD& ker );
+	void ProcessFocusEvent( FOCUS_EVENT_RECORD& fer );
 
 	co_rc_t op_scroll_up(
 			const co_console_unit &topRow,

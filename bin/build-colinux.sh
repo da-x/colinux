@@ -39,6 +39,7 @@ install_colinux_daemons()
 	cp -a $BASE/daemon/colinux-daemon.exe $INSTALL_DIR/
 	cp -a $BASE/coserial-daemon/colinux-serial-daemon.exe $INSTALL_DIR/
 	cp -a $BASE/debug/colinux-debug-daemon.exe $INSTALL_DIR/
+	cp -a $BASE/conet-slirp-daemon/colinux-slirp-net-daemon.exe $INSTALL_DIR/
 	cp -a colinux/os/winnt/build/linux.sys $INSTALL_DIR/
 	# Strip debug information form distribution executable
 	strip $INSTALL_DIR/*.exe

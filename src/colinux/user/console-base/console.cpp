@@ -331,21 +331,17 @@ console_window_t::event(co_message_t & message)
 	}
 }
 
+// nlucas: this code is identical to console_window_t::handle_scancode
+//         in colinux\user\console\console.cpp.
 void console_window_t::handle_scancode(co_scan_code_t sc) const
 {
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return;
 
-//      if (!window || !window->keyboard_focus)
-//              return;
-
 	struct {
-		co_message_t
-		    message;
-		co_linux_message_t
-		    linux;
-		co_scan_code_t
-		    code;
+		co_message_t		message;
+		co_linux_message_t	linux;
+		co_scan_code_t		code;
 	} message;
 
 	message.message.from = CO_MODULE_CONSOLE;

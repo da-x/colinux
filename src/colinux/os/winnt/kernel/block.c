@@ -10,6 +10,7 @@
 
 #include "ddk.h"
 
+
 #include <ddk/ntdddisk.h>
 
 #include <colinux/os/alloc.h>
@@ -17,23 +18,149 @@
 #include <colinux/kernel/fileblock.h>
 #include <colinux/kernel/monitor.h>
 
-#include "fileio.h"
+NTSTATUS co_os_open_file(char *pathname, PHANDLE FileHandle)
+{    
+	NTSTATUS status;
+	OBJECT_ATTRIBUTES ObjectAttributes;
+	IO_STATUS_BLOCK IoStatusBlock;
+	UNICODE_STRING unipath;
+	ANSI_STRING ansi;
+    
+	ansi.Buffer = pathname;
+	ansi.Length = strlen(pathname);
+	ansi.MaximumLength = ansi.Length + 1;
 
-static co_rc_t co_os_file_block_read(co_monitor_t *linuxvm, co_block_dev_t *dev, 
-			      co_monitor_file_block_dev_t *fdev, co_block_request_t *request)
+	RtlAnsiStringToUnicodeString(&unipath, &ansi, TRUE);
+
+	InitializeObjectAttributes(&ObjectAttributes, 
+				   &unipath,
+				   OBJ_CASE_INSENSITIVE,
+				   NULL,
+				   NULL);
+
+	status = ZwCreateFile(FileHandle, 
+			      FILE_READ_DATA | FILE_WRITE_DATA | SYNCHRONIZE,
+			      &ObjectAttributes,
+			      &IoStatusBlock,
+			      NULL,
+			      0,
+			      0,
+			      FILE_OPEN,
+			      FILE_SYNCHRONOUS_IO_NONALERT,
+			      NULL,
+			      0);
+
+	if (status != STATUS_SUCCESS)
+		co_debug("ZwOpenFile() returned error: %x\n", status);
+
+	RtlFreeUnicodeString(&unipath);
+
+	return status;
+}
+
+NTSTATUS co_os_close_file(PHANDLE FileHandle)
+{    
+	NTSTATUS status = 0;
+
+	status = ZwClose(FileHandle);
+
+	return status;
+}
+
+typedef struct {
+	LARGE_INTEGER offset;
+	co_monitor_file_block_dev_t *fdev;
+} co_os_transfer_file_block_data_t;
+
+co_rc_t co_os_transfer_file_block(co_monitor_t *cmon, 
+				  void *host_data, void *linuxvm, unsigned long size, 
+				  co_monitor_transfer_dir_t dir)
 {
-	return co_os_file_block_read_write(linuxvm, (HANDLE)(fdev->sysdep),
-					   request->offset, request->address,
-					   request->size, PTRUE);
+	IO_STATUS_BLOCK isb;
+	NTSTATUS status;
+	co_os_transfer_file_block_data_t *data;
+	co_rc_t rc = CO_RC_OK;
+	HANDLE FileHandle;
+
+	data = (co_os_transfer_file_block_data_t *)host_data;
+
+	FileHandle = (HANDLE)(data->fdev->sysdep);
+
+	if (CO_MONITOR_TRANSFER_FROM_HOST == dir) {
+		status = ZwReadFile(FileHandle,
+				    NULL,
+				    NULL,
+				    NULL, 
+				    &isb,
+				    linuxvm,
+				    size,
+				    &data->offset,
+				    NULL);
+	}
+	else {
+		status = ZwWriteFile(FileHandle,
+				     NULL,
+				     NULL,
+				     NULL, 
+				     &isb,
+				     linuxvm,
+				     size,
+				     &data->offset,
+				     NULL);
+	}
+
+	if (status != STATUS_SUCCESS) {
+		co_debug("block io failed: %x %x (reason: %x)\n", linuxvm, size,
+			   status);
+		rc = CO_RC(ERROR);
+	}
+
+	data->offset.QuadPart += size;
+
+	return rc;
 }
 
 
-static co_rc_t co_os_file_block_write(co_monitor_t *linuxvm, co_block_dev_t *dev, 
-			       co_monitor_file_block_dev_t *fdev, co_block_request_t *request)
+co_rc_t co_os_file_block_read(co_monitor_t *linuxvm,
+			     co_block_dev_t *dev, 
+			     co_monitor_file_block_dev_t *fdev,
+			     co_block_request_t *request)
 {
-	return co_os_file_block_read_write(linuxvm, (HANDLE)(fdev->sysdep),
-					   request->offset, request->address,
-					   request->size, PFALSE);
+	co_rc_t rc;
+	co_os_transfer_file_block_data_t data;
+	
+	data.offset.QuadPart = request->offset;
+	data.fdev = fdev;
+
+	rc = co_monitor_host_linuxvm_transfer(linuxvm, 
+					   &data, 
+					   co_os_transfer_file_block,
+					   request->address,
+					   (unsigned long)request->size,
+					   CO_MONITOR_TRANSFER_FROM_HOST);
+
+	return rc;
+}
+
+
+co_rc_t co_os_file_block_write(co_monitor_t *linuxvm,
+			       co_block_dev_t *dev, 
+			       co_monitor_file_block_dev_t *fdev,
+			       co_block_request_t *request)
+{
+	co_rc_t rc;
+	co_os_transfer_file_block_data_t data;
+	
+	data.offset.QuadPart = request->offset;
+	data.fdev = fdev;
+	
+	rc = co_monitor_host_linuxvm_transfer(linuxvm,
+					   &data, 
+					   co_os_transfer_file_block,
+					   request->address,
+					   (unsigned long)request->size,
+					   CO_MONITOR_TRANSFER_FROM_LINUX);
+	return rc;
 }
 
 static bool_t probe_area(HANDLE handle, LARGE_INTEGER offset, char *test_buffer, unsigned long size)
@@ -175,7 +302,7 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 	co_debug("%s: device %s\n", __FUNCTION__, fdev->pathname);
 
 	if (fdev->sysdep == NULL) {
-		status = co_os_open_file(fdev->pathname, &FileHandle, FILE_READ_DATA);
+		status = co_os_open_file(fdev->pathname, &FileHandle);
 		if (status != STATUS_SUCCESS)
 			return CO_RC(ERROR);
 
@@ -214,7 +341,7 @@ co_rc_t co_os_file_block_open(co_monitor_t *linuxvm, co_monitor_file_block_dev_t
 	HANDLE FileHandle;
 	NTSTATUS status;
 
-	status = co_os_open_file(fdev->pathname, &FileHandle, FILE_READ_DATA | FILE_WRITE_DATA);
+	status = co_os_open_file(fdev->pathname, &FileHandle);
 	if (status != STATUS_SUCCESS)
 		return CO_RC(ERROR);
 

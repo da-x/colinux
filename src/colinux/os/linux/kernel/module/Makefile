@@ -29,7 +29,6 @@ $(MODULE_NAME)-objs := \
 	mutex.o \
 	user.o \
 	wait.o \
-	fs.o \
 	prelinked_driver.o \
 
 MODULE_OBJECT := $(MODULE_NAME).ko

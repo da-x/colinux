@@ -28,7 +28,7 @@ $(BUILD_PATH)/user.a : $(LOCAL_OBJS)
 	$(TOOL_AR)
 
 CLEAN_FILES := $(CLEAN_FILES) \
-	$(LOCAL_OBJS) $(BUILD_PATH)/user.o
+	$(LOCAL_OBJS) $(BUILD_PATH)/user.a
 
 #-----------------------------------------------------------------
 include $(call BUILD_SUBDIRS, daemon conet-daemon console \

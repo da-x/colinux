@@ -36,6 +36,7 @@ COLINUX_DEFINE_MODULE("colinux-daemon");
 
 static co_daemon_t *g_daemon = NULL;
 bool_t co_running_as_service = PFALSE;
+static bool_t stoped = PFALSE;
 
 /*
  * co_winnt_daemon_stop:
@@ -48,7 +49,39 @@ void co_winnt_daemon_stop(void)
 {
 	if (g_daemon != NULL) {
 		co_daemon_send_ctrl_alt_del(g_daemon);
+		stoped = PTRUE;
 	}
+}
+
+/*
+ * co_winnt_daemon_ctrl_handler
+ *
+ * This callback function is called when the user closes the console window,
+ * the system is shuting down or the user is loging off (and other control
+ * events, like Ctrl+Break).
+ * If we handle it, we must return TRUE, otherwise return false to let
+ * windows or other control handler process the event.
+ * This is needed because the default handler just calls ExitProcess(),
+ * making sh*t out of the colinux system.
+ */
+static BOOL WINAPI co_winnt_daemon_ctrl_handler( DWORD dwCtrlType )
+{
+	switch ( dwCtrlType )
+	{
+	case CTRL_C_EVENT:
+	case CTRL_BREAK_EVENT:
+		return TRUE;	// Don't let the user kill us that easily ;)
+	case CTRL_CLOSE_EVENT:
+	case CTRL_LOGOFF_EVENT:	
+	case CTRL_SHUTDOWN_EVENT:
+		// Shutdown CoLinux "gracefully"
+		co_winnt_daemon_stop( );
+		return TRUE;
+	}
+	// Let windows or others handle it
+	// In reality, there are no more events, so this should never
+	// be executed (unless in future windows versions)
+	return FALSE;
 }
 
 co_rc_t co_winnt_daemon_main(co_start_parameters_t *start_parameters) 
@@ -63,7 +96,10 @@ co_rc_t co_winnt_daemon_main(co_start_parameters_t *start_parameters)
 	}
 
 	co_winnt_affinity_workaround();
-	
+
+	// Don't get aborted ;)
+	SetConsoleCtrlHandler( co_winnt_daemon_ctrl_handler, TRUE );
+
 	rc = co_daemon_create(start_parameters, &g_daemon);
 	if (!CO_OK(rc))
 		goto out;
@@ -95,6 +131,8 @@ out:
 	} else {
 		ret = CO_RC(OK);
 	}
+
+	SetConsoleCtrlHandler( co_winnt_daemon_ctrl_handler, FALSE );
 
 	return ret; 
 }
