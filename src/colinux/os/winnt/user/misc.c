@@ -28,7 +28,7 @@ void co_terminal_print(const char *format, ...)
 	vsnprintf(buf, sizeof(buf), format, ap);
 	va_end(ap);
 
-	printf("%s: %s", _colinux_module, buf);
+	printf("%s", buf);
 
 	if (terminal_print_hook != NULL)
 		terminal_print_hook(buf);

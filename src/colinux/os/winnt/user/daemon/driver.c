@@ -102,7 +102,6 @@ co_rc_t co_winnt_remove_driver(void)
 		co_winnt_driver_remove_lowlevel();
 		return CO_RC(ERROR);
 	}		
-	
 	rc = co_manager_status(handle, &status);
 	if (!CO_OK(rc)) {
 		if (CO_RC_GET_CODE(rc) == CO_RC_VERSION_MISMATCHED) {
@@ -198,8 +197,6 @@ co_rc_t co_winnt_remove_driver_lowlevel(IN SC_HANDLE  SchSCManager, IN LPCTSTR D
 	SC_HANDLE  schService; 
 	co_rc_t   rc;
 
-	co_debug_end();
-
 	schService = OpenService (SchSCManager, 
 				  DriverName, 
 				  SERVICE_ALL_ACCESS); 
@@ -276,6 +273,8 @@ co_rc_t co_winnt_unload_driver_lowlevel_by_name(char *name)
 { 
 	SC_HANDLE   schSCManager; 
 	co_rc_t rc;
+
+	co_debug_end();
 
 	schSCManager = OpenSCManager (NULL,                 // machine (NULL == local) 
 				      NULL,                 // database (NULL == default) 

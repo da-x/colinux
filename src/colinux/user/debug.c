@@ -32,7 +32,10 @@ void co_debug_buf(const char *buf, long size)
 
 void co_debug_end(void)
 {	
-	if (handle != NULL)
-		co_os_manager_close(handle);
+	co_manager_handle_t saved_handle = handle;
+
 	handle = NULL;
+
+	if (saved_handle != NULL)
+		co_os_manager_close(saved_handle);
 }
