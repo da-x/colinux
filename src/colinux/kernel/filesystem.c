@@ -266,7 +266,7 @@ static co_rc_t inode_rename(co_filesystem_t *filesystem, co_inode_t *dir,
 	new_dir_inode = ino_num_to_inode(new_dir_num, filesystem);
 	if (!new_dir_inode) 
 		return CO_RC(ERROR);
-	rc = filesystem->ops->inode_rename(filesystem, dir, new_dir_inode, oldname, newname);;
+	rc = filesystem->ops->inode_rename(filesystem, dir, new_dir_inode, oldname, newname);
 	if (CO_OK(rc)) {
 		co_inode_t *old_inode = find_inode(filesystem, dir, oldname);
 		if (old_inode)
@@ -663,6 +663,23 @@ void co_monitor_unregister_filesystems(co_monitor_t *cmon)
  *  Flat mode implementation.
  */
 
+static co_rc_t flat_mode_inode_rename(co_filesystem_t *filesystem, co_inode_t *old_inode, co_inode_t *new_inode, 
+			     char *oldname, char *newname)
+{
+	co_pathname_t old_dirname, new_dirname;
+	co_rc_t rc;
+
+	rc = co_os_fs_dir_inode_to_path(filesystem, old_inode, &old_dirname, oldname);
+	if (!CO_OK(rc))
+		return rc;
+
+	rc = co_os_fs_dir_inode_to_path(filesystem, new_inode, &new_dirname, newname);
+	if (!CO_OK(rc))
+		return rc;
+
+	return co_os_file_rename(old_dirname, new_dirname);
+}
+
 static co_rc_t flat_mode_getattr(co_filesystem_t *fs, co_inode_t *dir,
 				 char *name, struct fuse_attr *attr)
 {
@@ -774,6 +791,7 @@ static co_rc_t flat_mode_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs
 }
 
 static struct co_filesystem_ops flat_mode = {
+	.inode_rename = flat_mode_inode_rename,
 	.getattr = flat_mode_getattr,
 	.getdir = flat_mode_getdir,
 	.inode_read_write = flat_mode_inode_read_write,
