@@ -870,7 +870,16 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  
  	for (;;) {
  		/*
-@@ -1026,9 +1036,13 @@
+@@ -1019,6 +1029,8 @@
+ static unsigned long __init setup_memory(void)
+ {
+ 	unsigned long bootmap_size, start_pfn, max_low_pfn;
++	extern char _end;
++	unsigned long start_va = 0;
+ 
+ 	/*
+ 	 * partially used pages are not usable - thus
+@@ -1026,9 +1038,16 @@
  	 */
  	start_pfn = PFN_UP(init_pg_tables_end);
  
@@ -879,6 +888,9 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
 -	max_low_pfn = find_max_low_pfn();
 +	if (cooperative_mode_enabled()) {
 +	     max_low_pfn = max_pfn = co_memory_size / PAGE_SIZE;
++	     start_pfn = PFN_UP(__pa((unsigned long)&_end)) + 0x10;
++	     start_va = (unsigned long)__va(start_pfn << PAGE_SHIFT);
++	     co_alloc_pages(start_va, 0x20);
 +	} else {
 +	     find_max_pfn();
 +	     
@@ -887,37 +899,42 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  
  #ifdef CONFIG_HIGHMEM
  	highstart_pfn = highend_pfn = max_pfn;
-@@ -1045,32 +1059,42 @@
- 	 */
- 	bootmap_size = init_bootmem(start_pfn, max_low_pfn);
+@@ -1040,37 +1059,47 @@
+ #endif
+ 	printk(KERN_NOTICE "%ldMB LOWMEM available.\n",
+ 			pages_to_mb(max_low_pfn));
+-	/*
+-	 * Initialize the boot-time allocator (with low memory only):
+-	 */
+-	bootmap_size = init_bootmem(start_pfn, max_low_pfn);
  
 -	register_bootmem_low_pages(max_low_pfn);
--
--	/*
+ 
+ 	/*
 -	 * Reserve the bootmem bitmap itself as well. We do this in two
 -	 * steps (first step was init_bootmem()) because this catches
 -	 * the (very unlikely) case of us accidentally initializing the
 -	 * bootmem allocator with an invalid RAM area.
--	 */
++	 * Initialize the boot-time allocator (with low memory only):
+ 	 */
 -	reserve_bootmem(HIGH_MEMORY, (PFN_PHYS(start_pfn) +
 -			 bootmap_size + PAGE_SIZE-1) - (HIGH_MEMORY));
--
++	bootmap_size = init_bootmem(start_pfn, max_low_pfn);
+ 
 -	/*
 -	 * reserve physical page 0 - it's a special BIOS page on many boxes,
 -	 * enabling clean reboots, SMP operation, laptop functions.
 -	 */
 -	reserve_bootmem(0, PAGE_SIZE);
-+	{
-+		extern char _end;
-+		unsigned long bootmem_end = (((unsigned long)&_end) + bootmap_size + (0x10 << PAGE_SHIFT));
-+		unsigned long physical_end = __PAGE_OFFSET + (max_low_pfn << PAGE_SHIFT);
-+	    
-+		free_bootmem(__pa(bootmem_end), physical_end - bootmem_end);
-+	}
  
 -	/* reserve EBDA region, it's a 4K region */
 -	reserve_ebda_region();
-+	if (!cooperative_mode_enabled()) {
++	if (cooperative_mode_enabled()) {
++		unsigned long bootmem_end = start_va + bootmap_size + (0x10 << PAGE_SHIFT);
++		unsigned long physical_end = __PAGE_OFFSET + (max_low_pfn << PAGE_SHIFT);
++	    
++		free_bootmem(__pa(bootmem_end), physical_end - bootmem_end);
++	} else {
 +		register_bootmem_low_pages(max_low_pfn); 
 +		
 +		/*
@@ -954,7 +971,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  
  #ifdef CONFIG_SMP
  	/*
-@@ -1094,6 +1118,7 @@
+@@ -1094,6 +1123,7 @@
  #endif
  
  #ifdef CONFIG_BLK_DEV_INITRD
@@ -962,7 +979,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  	if (LOADER_TYPE && INITRD_START) {
  		if (INITRD_START + INITRD_SIZE <= (max_low_pfn << PAGE_SHIFT)) {
  			reserve_bootmem(INITRD_START, INITRD_SIZE);
-@@ -1109,6 +1134,17 @@
+@@ -1109,6 +1139,17 @@
  			initrd_start = 0;
  		}
  	}
@@ -980,7 +997,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  #endif
  	return max_low_pfn;
  }
-@@ -1315,6 +1351,7 @@
+@@ -1315,6 +1356,7 @@
  		efi_enabled = 1;
  #endif
  
@@ -988,7 +1005,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
   	ROOT_DEV = old_decode_dev(ORIG_ROOT_DEV);
   	drive_info = DRIVE_INFO;
   	screen_info = SCREEN_INFO;
-@@ -1338,7 +1375,7 @@
+@@ -1338,7 +1380,7 @@
  	ARCH_SETUP
  	if (efi_enabled)
  		efi_init();
@@ -997,7 +1014,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  		printk(KERN_INFO "BIOS-provided physical RAM map:\n");
  		print_memory_map(machine_specific_memory_setup());
  	}
-@@ -1392,8 +1429,9 @@
+@@ -1392,8 +1434,9 @@
  	}
  #endif
  
@@ -1009,7 +1026,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  
  #ifdef CONFIG_X86_GENERICARCH
  	generic_apic_probe(*cmdline_p);
-@@ -1411,9 +1449,14 @@
+@@ -1411,9 +1454,14 @@
  		get_smp_config();
  #endif
  
@@ -1025,7 +1042,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  #if defined(CONFIG_VGA_CONSOLE)
  	if (!efi_enabled || (efi_mem_type(0xa0000) != EFI_CONVENTIONAL_MEMORY))
  		conswitchp = &vga_con;
-@@ -1421,6 +1464,7 @@
+@@ -1421,6 +1469,7 @@
  	conswitchp = &dummy_con;
  #endif
  #endif
@@ -7722,7 +7739,7 @@ diff -urN a/include/linux/console.h b/include/linux/console.h
 diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 --- a/include/linux/cooperative.h
 +++ b/include/linux/cooperative.h
-@@ -0,0 +1,320 @@
+@@ -0,0 +1,322 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -7745,7 +7762,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +
 +#include <asm/cooperative.h>
 +
-+#define CO_LINUX_API_VERSION    7
++#define CO_LINUX_API_VERSION    8
 +
 +#pragma pack(0)
 +
@@ -7764,6 +7781,8 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +	CO_OPERATION_DEBUG_LINE,
 +	CO_OPERATION_GET_HIGH_PREC_TIME,
 +	CO_OPERATION_TRACE_POINT,
++	CO_OPERATION_FREE_PAGES,
++	CO_OPERATION_ALLOC_PAGES,
 +} co_operation_t;
 +
 +#define CO_MODULE_MAX_CONET    16
@@ -8317,7 +8336,7 @@ diff -urN a/include/linux/cooperative_fs.h b/include/linux/cooperative_fs.h
 diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_internal.h
 --- a/include/linux/cooperative_internal.h
 +++ b/include/linux/cooperative_internal.h
-@@ -0,0 +1,78 @@
+@@ -0,0 +1,80 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -8347,6 +8366,8 @@ diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_int
 +extern void co_switch_wrapper(void);
 +extern void co_idle_processor(void);
 +extern void co_terminate(co_termination_reason_t reason);
++extern void co_free_pages(unsigned long vaddr, int order);
++extern int co_alloc_pages(unsigned long vaddr, int order);
 +extern void co_start_kernel(void);
 +extern void co_arch_start_kernel(void);
 +extern void co_handle_jiffies(long count);
@@ -8443,7 +8464,7 @@ diff -urN a/kernel/Makefile b/kernel/Makefile
 diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 --- a/kernel/cooperative.c
 +++ b/kernel/cooperative.c
-@@ -0,0 +1,322 @@
+@@ -0,0 +1,354 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -8761,6 +8782,38 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +	return 0;
 +}
 +
++
++void co_free_pages(unsigned long vaddr, int order)
++{
++	unsigned long flags;
++	
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_FREE_PAGES;
++	co_passage_page->params[0] = vaddr;
++	co_passage_page->params[1] = order;
++	co_switch_wrapper();
++	co_passage_page_release(flags);
++}
++
++int co_alloc_pages(unsigned long vaddr, int order)
++{
++	unsigned long flags;
++	long result;
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_ALLOC_PAGES;
++	co_passage_page->params[0] = vaddr;
++	co_passage_page->params[1] = order;
++	co_switch_wrapper();
++	result = (long)co_passage_page->params[4];
++	co_passage_page_release(flags);
++
++	if (result < 0)
++		return -ENOMEM;
++
++	return 0;
++}
++
 +__initcall(initcall_message_queues);
 +
 +EXPORT_SYMBOL(co_terminate);
@@ -8814,6 +8867,81 @@ diff -urN a/localversion b/localversion
 +++ b/localversion
 @@ -0,0 +1 @@
 +-co-0.6.2-pre7
+diff -urN a/mm/bootmem.c b/mm/bootmem.c
+--- a/mm/bootmem.c
++++ b/mm/bootmem.c
+@@ -17,6 +17,7 @@
+ #include <linux/bootmem.h>
+ #include <linux/mmzone.h>
+ #include <linux/module.h>
++#include <linux/cooperative_internal.h>
+ #include <asm/dma.h>
+ #include <asm/io.h>
+ 
+@@ -248,6 +249,23 @@
+ 	for (i = start; i < start+areasize; i++)
+ 		if (unlikely(test_and_set_bit(i, bdata->node_bootmem_map)))
+ 			BUG();
++
++	if (cooperative_mode_enabled()) {
++		unsigned long alloc_address = (unsigned long)ret;
++		unsigned long alloc_size = size;
++		int result;
++
++		alloc_size += (alloc_address & (~PAGE_MASK));
++		alloc_address &= PAGE_MASK;
++		alloc_size = (alloc_size + PAGE_SIZE - 1) >> PAGE_SHIFT;
++
++		result = co_alloc_pages(alloc_address, alloc_size);
++		if (result) {
++			free_bootmem((unsigned long)ret, size);
++			return NULL;
++		}
++	}
++
+ 	memset(ret, 0, size);
+ 	return ret;
+ }
+diff -urN a/mm/page_alloc.c b/mm/page_alloc.c
+--- a/mm/page_alloc.c
++++ b/mm/page_alloc.c
+@@ -32,7 +32,7 @@
+ #include <linux/sysctl.h>
+ #include <linux/cpu.h>
+ #include <linux/nodemask.h>
+-
++#include <linux/cooperative_internal.h>
+ #include <asm/tlbflush.h>
+ 
+ nodemask_t node_online_map = NODE_MASK_NONE;
+@@ -184,6 +184,9 @@
+ {
+ 	unsigned long page_idx, index, mask;
+ 
++	if (cooperative_mode_enabled())
++		co_free_pages((unsigned long)page_address(page), 1 << order);
++
+ 	if (order)
+ 		destroy_compound_page(page, order);
+ 	mask = (~0UL) << order;
+@@ -738,6 +741,17 @@
+ got_pg:
+ 	zone_statistics(zonelist, z);
+ 	kernel_map_pages(page, 1 << order, 1);
++
++	if (cooperative_mode_enabled()) {
++		int ret;
++
++		ret = co_alloc_pages((unsigned long)page_address(page), 1 << order);
++		if (ret) {
++			__free_pages_ok(page, order);
++			return NULL;
++		}
++	}
++
+ 	return page;
+ }
+ 
 diff -urN a/scripts/kconfig/libkconfig.so b/scripts/kconfig/libkconfig.so
 --- a/scripts/kconfig/libkconfig.so
 +++ b/scripts/kconfig/libkconfig.so

@@ -12,7 +12,44 @@
 
 #include "manager.h"
 
-co_rc_t co_manager_get_page(struct co_manager *manager, co_pfn_t *pfn);
-co_rc_t co_monitor_get_pfn(co_monitor_t *cmon, vm_ptr_t address, co_pfn_t *pfn);
+extern co_rc_t co_manager_get_page(struct co_manager *manager, co_pfn_t *pfn);
+extern co_rc_t co_monitor_get_pfn(co_monitor_t *cmon, vm_ptr_t address, co_pfn_t *pfn);
+
+extern co_rc_t co_monitor_copy_and_create_pfns(
+	struct co_monitor *monitor, 
+	vm_ptr_t address,
+	unsigned long size,
+	char *source
+	);
+
+extern co_rc_t co_monitor_scan_and_create_pfns(
+	struct co_monitor *monitor, 
+	vm_ptr_t address,
+	unsigned long size
+	);
+
+extern co_rc_t co_monitor_create_ptes(
+	struct co_monitor *monitor, 
+	vm_ptr_t address,
+	unsigned long size,
+	co_pfn_t *source
+	);
+
+extern co_rc_t co_monitor_copy_region(
+	struct co_monitor *monitor, 
+	vm_ptr_t address,
+	unsigned long size,
+	char *data_to_copy
+	);
+
+extern co_rc_t co_monitor_alloc_and_map_page(
+	struct co_monitor *monitor, 
+	vm_ptr_t address
+	);
+
+extern co_rc_t co_monitor_free_and_unmap_page(
+	struct co_monitor *monitor, 
+	vm_ptr_t address
+	);
 
 #endif

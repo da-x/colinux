@@ -32,6 +32,7 @@
 #include "fileblock.h"
 #include "transfer.h"
 #include "filesystem.h"
+#include "pages.h"
 
 co_rc_t co_monitor_malloc(co_monitor_t *cmon, unsigned long bytes, void **ptr)
 {
@@ -54,22 +55,6 @@ co_rc_t co_monitor_free(co_monitor_t *cmon, void *ptr)
 	cmon->blocks_allocated--;
 
 	return CO_RC(OK);
-}
-
-static co_rc_t colinux_get_pfn(co_monitor_t *cmon, vm_ptr_t address, co_pfn_t *pfn)
-{
-	unsigned long current_pfn, pfn_group, pfn_index;
-
-	current_pfn = (address >> CO_ARCH_PAGE_SHIFT);
-	pfn_group = current_pfn / PTRS_PER_PTE;
-	pfn_index = current_pfn % PTRS_PER_PTE;
-
-	if (cmon->pp_pfns[pfn_group] == NULL)
-		return CO_RC(ERROR);
-
-	*pfn = cmon->pp_pfns[pfn_group][pfn_index];
-
-	return CO_RC(OK);;
 }
 
 #if (0)
@@ -101,7 +86,7 @@ static co_rc_t colinux_dump_page_at_address(co_monitor_t *cmon, vm_ptr_t address
 	co_pfn_t pfn = 0;
 
 	co_debug("dump of address %08x\n", address);
-	rc = colinux_get_pfn(cmon, address, &pfn);
+	rc = co_monitor_get_pfn(cmon, address, &pfn);
 	if (!CO_OK(rc))
 		return rc;
 
@@ -109,14 +94,14 @@ static co_rc_t colinux_dump_page_at_address(co_monitor_t *cmon, vm_ptr_t address
 }
 #endif
 
-static co_rc_t colinux_init(co_monitor_t *cmon)
+static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 {
 	co_rc_t rc = CO_RC(OK);
 	co_pfn_t *pfns = NULL, self_map_pfn, passage_page_pfn, swapper_pg_dir_pfn;
 	unsigned long pp_pagetables_pgd, self_map_page_offset, passage_page_offset;
 	unsigned long reversed_physical_mapping_offset;
 
-	rc = colinux_get_pfn(cmon, cmon->import.kernel_swapper_pg_dir, &swapper_pg_dir_pfn);
+	rc = co_monitor_get_pfn(cmon, cmon->import.kernel_swapper_pg_dir, &swapper_pg_dir_pfn);
 	if (!CO_OK(rc)) {
 		co_debug("error getting swapper_pg_dir pfn (%x)\n", rc);
 		goto out_error;
@@ -164,11 +149,11 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 
 	rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP, CO_ARCH_PAGE_SIZE, pfns);
 	if (!CO_OK(rc)) {
-		co_debug("error initializing self map (%x)\n", rc);
+		co_debug("error initializing self_map (%x)\n", rc);
 		goto out_error;
 	}
 
-	rc = colinux_get_pfn(cmon, CO_VPTR_SELF_MAP, &self_map_pfn);
+	rc = co_monitor_get_pfn(cmon, CO_VPTR_SELF_MAP, &self_map_pfn);
 	if (!CO_OK(rc)) {
 		co_debug("error getting self_map pfn (%x)\n", rc);
 		goto out_error;
@@ -219,7 +204,8 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 		* sizeof(linux_pte_t);
 
 	for (io_buffer_page=0; io_buffer_page < io_buffer_num_pages; io_buffer_page++) {
-		unsigned long io_buffer_pfn = co_os_virt_to_phys(&cmon->io_buffer[CO_ARCH_PAGE_SIZE*io_buffer_page]) >> CO_ARCH_PAGE_SHIFT;
+		unsigned long io_buffer_pfn = 
+			co_os_virt_to_phys(&cmon->io_buffer[CO_ARCH_PAGE_SIZE*io_buffer_page]) >> CO_ARCH_PAGE_SHIFT;
 
 		rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP + io_buffer_offset, 
 					    sizeof(linux_pte_t), &io_buffer_pfn);
@@ -438,6 +424,86 @@ bool_t co_monitor_trace_point(co_monitor_t *cmon)
 	return PFALSE;
 }
 
+
+static bool_t co_terminate(co_monitor_t *cmon)
+{
+	struct {
+		co_message_t message;
+		co_daemon_message_t payload;
+	} message;
+		
+	co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_TERMINATE)\n");
+	co_debug("linux terminated (%d)\n", co_passage_page->params[0]);
+		
+	message.message.from = CO_MODULE_MONITOR;
+	message.message.to = CO_MODULE_DAEMON;
+	message.message.priority = CO_PRIORITY_IMPORTANT;
+	message.message.type = CO_MESSAGE_TYPE_OTHER;
+	message.message.size = sizeof(message.payload);
+	message.payload.type = CO_MONITOR_MESSAGE_TYPE_TERMINATED;
+	message.payload.terminated.reason = co_passage_page->params[0];
+
+	co_message_switch_dup_message(&cmon->message_switch, &message.message);
+
+	cmon->state = CO_MONITOR_STATE_TERMINATED;
+
+	return PFALSE;
+}
+
+static bool_t co_idle(co_monitor_t *cmon)
+{
+	co_message_t message;
+
+	co_debug_lvl(context_switch, 15, "switching from linux (CO_OPERATION_IDLE)\n");
+		
+	message.from = CO_MODULE_MONITOR;
+	message.to = CO_MODULE_IDLE;
+	message.priority = CO_PRIORITY_DISCARDABLE;
+	message.type = CO_MESSAGE_TYPE_STRING;
+	message.size = 0;
+
+	co_message_switch_dup_message(&cmon->message_switch, &message);
+
+	return PFALSE;
+}
+
+static void co_free_pages(co_monitor_t *cmon, vm_ptr_t address, int num_pages)
+{
+	//co_debug_system("free_pages: %x %x\n", address, num_pages);
+#if (1)
+	unsigned long scan_address;
+	int j;
+
+	scan_address = address;
+	for (j=0; j < num_pages; j++) {
+		co_monitor_free_and_unmap_page(cmon, scan_address);
+		scan_address += CO_ARCH_PAGE_SIZE;
+	}
+#endif
+}
+
+static co_rc_t co_alloc_pages(co_monitor_t *cmon, vm_ptr_t address, int num_pages)
+{
+#if (1)
+	//co_debug_system("alloc_pages: %x %x\n", address, num_pages);
+	unsigned long scan_address;
+	co_rc_t rc = CO_RC(OK);
+	int i;
+
+	scan_address = address;
+	for (i=0; i < num_pages; i++) {
+		rc = co_monitor_alloc_and_map_page(cmon, scan_address);
+		if (!CO_OK(rc))
+			break;
+		scan_address += CO_ARCH_PAGE_SIZE;
+	}
+
+	return rc;
+#else
+	return CO_RC(OK);
+#endif
+}
+
 /*
  * iteration - returning PTRUE means that the driver will return 
  * immediately to Linux instead of returning to the host's 
@@ -462,6 +528,18 @@ static bool_t iteration(co_monitor_t *cmon)
 		co_monitor_arch_enable_interrupts();
 	
 	switch (co_passage_page->operation) {
+	case CO_OPERATION_FREE_PAGES: {
+		co_free_pages(cmon, co_passage_page->params[0], co_passage_page->params[1]);
+		return PTRUE;
+	}
+
+	case CO_OPERATION_ALLOC_PAGES: {
+		co_rc_t rc;
+		rc = co_alloc_pages(cmon, co_passage_page->params[0], co_passage_page->params[1]);
+		co_passage_page->params[4] = (unsigned long)(rc);
+		return PTRUE;
+	}
+
 	case CO_OPERATION_FORWARD_INTERRUPT: {
 		co_debug_lvl(context_switch, 15, "switching from linux (CO_OPERATION_FORWARD_INTERRUPT), %d\n",
 			     cmon->timer_interrupt);
@@ -472,44 +550,11 @@ static bool_t iteration(co_monitor_t *cmon)
 		}
 		return PFALSE;
 	}
-	case CO_OPERATION_TERMINATE: {
-		struct {
-			co_message_t message;
-			co_daemon_message_t payload;
-		} message;
-		
-		co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_TERMINATE)\n");
-		co_debug("linux terminated (%d)\n", co_passage_page->params[0]);
-		
-		message.message.from = CO_MODULE_MONITOR;
-		message.message.to = CO_MODULE_DAEMON;
-		message.message.priority = CO_PRIORITY_IMPORTANT;
-		message.message.type = CO_MESSAGE_TYPE_OTHER;
-		message.message.size = sizeof(message.payload);
-		message.payload.type = CO_MONITOR_MESSAGE_TYPE_TERMINATED;
-		message.payload.terminated.reason = co_passage_page->params[0];
+	case CO_OPERATION_TERMINATE: 
+		return co_terminate(cmon);
 
-		co_message_switch_dup_message(&cmon->message_switch, &message.message);
-
-		cmon->state = CO_MONITOR_STATE_TERMINATED;
-
-		return PFALSE;
-	}
-	case CO_OPERATION_IDLE: {
-		co_message_t message;
-
-		co_debug_lvl(context_switch, 15, "switching from linux (CO_OPERATION_IDLE)\n");
-		
-		message.from = CO_MODULE_MONITOR;
-		message.to = CO_MODULE_IDLE;
-		message.priority = CO_PRIORITY_DISCARDABLE;
-		message.type = CO_MESSAGE_TYPE_STRING;
-		message.size = 0;
-
-		co_message_switch_dup_message(&cmon->message_switch, &message);
-
-		return PFALSE;
-	}
+	case CO_OPERATION_IDLE:
+		return co_idle(cmon);
 
         case CO_OPERATION_DEBUG_LINE: {
 		char *p = (char *)&co_passage_page->params[0];
@@ -529,25 +574,19 @@ static bool_t iteration(co_monitor_t *cmon)
 		co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_MESSAGE_TO_MONITOR)\n");
 
 		message = (co_message_t *)cmon->io_buffer;
-
 		/* message = (co_message_t *)(&co_passage_page->params[0]); */
-
 		rc = co_message_switch_dup_message(&cmon->message_switch, message);
 
 		return PFALSE;
 	}
 	case CO_OPERATION_DEVICE: {
 		unsigned long device = co_passage_page->params[0];
-
 		co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_DEVICE)\n");
-
 		return device_request(cmon, device, &co_passage_page->params[1]);
 	}
 	case CO_OPERATION_GET_TIME: {
 		co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_GET_TIME)\n");
-
 		co_passage_page->params[0] = co_os_get_time();
-
 		return PTRUE;
 	}
 	case CO_OPERATION_GET_HIGH_PREC_TIME: {
@@ -651,11 +690,9 @@ static void free_pseudo_physical_memory(co_monitor_t *monitor)
 	co_debug("done freeing\n");
 }
 
-static co_rc_t alloc_pseudo_physical_memory(co_monitor_t *monitor)
+static co_rc_t alloc_pp_ram_mapping(co_monitor_t *monitor)
 {
 	co_rc_t rc;
-	int i, j;
-	co_pfn_t pseudo_pfn = 0, first_pp_pgd;
 
 	co_debug("allocating page frames for pseudo physical RAM...\n");
 
@@ -665,53 +702,13 @@ static co_rc_t alloc_pseudo_physical_memory(co_monitor_t *monitor)
 
 	co_memset(monitor->pp_pfns, 0, sizeof(co_pfn_t *)*PTRS_PER_PGD);
 
-	rc = co_monitor_scan_and_create_pfns(monitor, CO_ARCH_KERNEL_OFFSET, monitor->physical_frames << CO_ARCH_PAGE_SHIFT);
-	if (!CO_OK(rc)) {
+	rc = co_monitor_scan_and_create_pfns(
+		monitor, 
+		CO_VPTR_PSEUDO_RAM_PAGE_TABLES, 
+		CO_ARCH_PAGE_SIZE * (monitor->memory_size >> CO_ARCH_PMD_SHIFT));
+
+	if (!CO_OK(rc))
 		free_pseudo_physical_memory(monitor);
-		return rc;
-	}
-
-	co_debug("setting reversed map\n");
-
-	for (i=0; i < PTRS_PER_PGD; i++) {
-		if (monitor->pp_pfns[i] == NULL)
-			continue;
-
-		for (j=0; j < PTRS_PER_PTE; j++) {
-			co_pfn_t real_pfn = monitor->pp_pfns[i][j];
-
-			if (real_pfn != 0) {
-				rc = co_manager_set_reversed_pfn(monitor->manager, real_pfn, pseudo_pfn);
-				if (!CO_OK(rc)) {
-					free_pseudo_physical_memory(monitor);
-					return rc;
-				}
-			}
-
-			pseudo_pfn++;
-		}
-	}
-
-	co_debug("creating page tables\n");
-
-	first_pp_pgd = CO_ARCH_KERNEL_OFFSET >> PGDIR_SHIFT;
-	for (i=first_pp_pgd; i < PTRS_PER_PGD; i++) {
-		co_pfn_t *pfns = monitor->pp_pfns[i];
-		unsigned long address;
-
-		if (!pfns)
-			break;
-
-		address = CO_VPTR_PSEUDO_RAM_PAGE_TABLES + ((i - first_pp_pgd) * CO_ARCH_PAGE_SIZE);
-
-		co_debug("creating one page table (at %x)\n", address);
-
-		rc = co_monitor_create_ptes(monitor, address, CO_ARCH_PAGE_SIZE, pfns);
-		if (!CO_OK(rc)) {
-			free_pseudo_physical_memory(monitor);
-			return rc;
-		}
-	}
 
 	return rc;
 }
@@ -850,7 +847,7 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	cmon->end_physical = CO_ARCH_KERNEL_OFFSET + cmon->memory_size;
 	cmon->passage_page_vaddr = CO_VPTR_PASSAGE_PAGE;
 
-	rc = alloc_pseudo_physical_memory(cmon);
+	rc = alloc_pp_ram_mapping(cmon);
         if (!CO_OK(rc)) {
 		goto out_free_os_dep;
 	}
@@ -913,8 +910,9 @@ static co_rc_t load_section(co_monitor_t *cmon, co_monitor_ioctl_load_section_t 
 
 	if (params->user_ptr) {
 		co_debug("loading section at 0x%x (0x%x bytes)\n", params->address, params->size);
-		rc = co_monitor_copy_and_create_pfns(
-			cmon, params->address, params->size, params->buf);
+		rc = co_monitor_copy_region(cmon, params->address, params->size, params->buf);
+	} else {
+		rc = co_monitor_copy_region(cmon, params->address, params->size, NULL);
 	}
 
 	return rc;
@@ -944,8 +942,7 @@ static co_rc_t load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_t *p
 		return CO_RC(ERROR);
 	}
 
-	rc = co_monitor_copy_and_create_pfns(cmon, address, params->size, params->buf);
-
+	rc = co_monitor_copy_region(cmon, address, params->size, params->buf);
 	if (!CO_OK(rc)) {
 		co_debug("initrd copy failed (%x)\n", rc);
 		return rc;
@@ -1000,7 +997,7 @@ static co_rc_t start(co_monitor_t *cmon)
 		return CO_RC(ERROR);
 	}
 		
-	rc = colinux_init(cmon);
+	rc = guest_address_space_init(cmon);
 	if (!CO_OK(rc)) {
 		co_debug("error initializing coLinux context (%d)\n", rc);
 		return rc;
