@@ -3404,7 +3404,7 @@ diff -urN a/drivers/video/console/Makefile b/drivers/video/console/Makefile
 diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 --- a/drivers/video/console/cocon.c
 +++ b/drivers/video/console/cocon.c
-@@ -0,0 +1,464 @@
+@@ -0,0 +1,414 @@
 +/*
 + *  linux/drivers/video/cocon.c -- Cooperative Linux console VGA driver
 + *
@@ -3431,6 +3431,7 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +#include <linux/vt_kern.h>
 +#include <linux/selection.h>
 +#include <linux/init.h>
++#include <linux/bootmem.h>
 +
 +#include <linux/cooperative_internal.h>
 +
@@ -3454,30 +3455,98 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +static u8 cocon_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink, u8 underline, u8 reverse);
 +static void cocon_invert_region(struct vc_data *c, u16 *p, int count);
 +
++#define COCON_MEM_SIZE  0x10000
++#define MESSAGESIZE(_1) ((char*)(&message->_1 + 1) - (char*)message)
++
++// static co_cocon_common_t *common;
++static void *data;
++static unsigned data_size;
++
++static void cocon_message_throw(void)
++{
++#if 0
++	unsigned long flags;
++	common->locked = 0;
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_CONSOLE;
++	co_passage_page->params[1] = 0;
++	co_switch_wrapper();
++	co_passage_page_release(flags);
++#endif
++	co_send_message(
++		CO_MODULE_LINUX,
++		CO_MODULE_CONSOLE,
++		CO_PRIORITY_DISCARDABLE,
++		CO_MESSAGE_TYPE_STRING,
++		data_size,
++		data);
++//	kfree(data);
++}
++
++static void cocon_message_post(void)
++{
++#if 0
++	common->locked = 0;
++#endif
++	cocon_message_throw();
++}
++
++static co_console_message_t *cocon_message_grab(size_t size)
++{
++#if 0
++	co_cocon_packet_t *packet;
++	
++	if((common->effectiveSize + (unsigned)size + sizeof(co_cocon_common_t)) > COCON_MEM_SIZE) {
++		cocon_message_throw();
++		if(common->effectiveSize)
++			common->effectiveSize = 0; //UPDATE: throw error
++	}
++	common->locked = 1;
++	packet = ((void*)&common->packet) + common->effectiveSize;
++	packet->size = (unsigned)size + sizeof(co_message_t);
++	packet->message.from = CO_MODULE_LINUX;
++	packet->message.to = CO_MODULE_CONSOLE;
++	packet->message.priority = CO_PRIORITY_DISCARDABLE;
++	packet->message.type = CO_MESSAGE_TYPE_STRING;
++	packet->message.size = size;
++	common->effectiveSize += size + sizeof(co_cocon_packet_t);
++	return (co_console_message_t*)(&packet->message.data);
++#endif
++	data_size = size;
++	return data;
++}
++
 +static const char __init *cocon_startup(void)
 +{
-+	unsigned long flags;
 +	co_console_message_t *message;
-+	co_message_t *co_message;
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++#if 0
++	unsigned long flags;
++#endif
++
++	data = alloc_bootmem_pages(COCON_MEM_SIZE);
++	memset((void*)data, 0, COCON_MEM_SIZE);
++
++#if 0
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_CONSOLE;
++	co_passage_page->params[1] = (unsigned long)common;
++	co_passage_page->params[2] = (unsigned long)COCON_MEM_SIZE;
++	co_switch_wrapper();
++	co_passage_page_release(flags);
++#endif
++
++	message = cocon_message_grab(MESSAGESIZE(type));
 +	message->type = CO_OPERATION_CONSOLE_STARTUP;
-+	co_send_message_restore(flags);
-+
++	cocon_message_throw();
 +	return "CoCON";
 +}
 +
 +static void cocon_init(struct vc_data *c, int init)
 +{
-+	unsigned long flags;
 +	co_console_message_t *message;
-+	co_message_t *co_message;
 +
 +	/* We cannot be loaded as a module, therefore init is always 1 */
 +	c->vc_can_do_color = 1;
@@ -3487,102 +3556,63 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	c->vc_visible_origin = 0;
 +	c->vc_origin = 0;
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++	message = cocon_message_grab(MESSAGESIZE(type));
 +	message->type = CO_OPERATION_CONSOLE_INIT;
-+	co_send_message_restore(flags);
++	cocon_message_throw();
 +}
 +
 +static void cocon_deinit(struct vc_data *c)
 +{
-+	unsigned long flags;
 +	co_console_message_t *message;
-+	co_message_t *co_message;
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++	message = cocon_message_grab(MESSAGESIZE(type));
 +	message->type = CO_OPERATION_CONSOLE_DEINIT;
-+	co_send_message_restore(flags);
-+
++	cocon_message_throw();
 +}
 +
 +static void cocon_clear(struct vc_data *c, int top, int left, int rows, int cols)
 +{
-+	unsigned long flags;
 +	co_console_message_t *message;
-+	co_message_t *co_message;
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->clear + 1)) - ((char *)message);
++	message = cocon_message_grab(MESSAGESIZE(clear));
 +	message->type = CO_OPERATION_CONSOLE_CLEAR;
 +	message->clear.top = top;
 +	message->clear.left = left;
 +	message->clear.bottom = top + rows - 1;
 +	message->clear.right = left + cols - 1;
 +	message->clear.charattr = c->vc_video_erase_char;
-+	co_send_message_restore(flags);
++	cocon_message_post();
 +}
 +
 +static void cocon_putc(struct vc_data *c, int charattr, int y, int x)
 +{
-+	unsigned long flags;
-+	co_message_t *co_message;
 +	co_console_message_t *message;
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->putc + 1)) - ((char *)message);
++	message = cocon_message_grab(MESSAGESIZE(putc));
 +	message->type = CO_OPERATION_CONSOLE_PUTC;
 +	message->putc.x = x;
 +	message->putc.y = y;
 +	message->putc.charattr = charattr;
-+	co_send_message_restore(flags);
++	cocon_message_post();
 +}
 +
 +
 +static void cocon_putcs(struct vc_data *conp, 
 +			const unsigned short *s, int count, int yy, int xx)
 +{
-+	unsigned long flags;
 +	co_console_message_t *message;
-+	co_message_t *co_message;
 +
 +	if (count > CO_MAX_PARAM_SIZE/2 - 16) 
 +		return;
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->putcs + 1)) - ((char *)message) + 
-+		count * sizeof(unsigned short);
++	message = cocon_message_grab(MESSAGESIZE(putcs)
++		+ count * sizeof(unsigned short));
 +	message->type = CO_OPERATION_CONSOLE_PUTCS;
 +	message->putcs.x = xx;
 +	message->putcs.y = yy;
 +	message->putcs.count = count;
 +	memcpy(&message->putcs.data, s, count * sizeof(unsigned short));
-+	co_send_message_restore(flags);
++	cocon_message_post();
 +}
 +
 +static u8 cocon_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink, u8 underline, u8 reverse)
@@ -3605,23 +3635,15 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +
 +static void cocon_invert_region(struct vc_data *c, u16 *p, int count)
 +{
-+	unsigned long flags;
-+	co_message_t *co_message;
 +	co_console_message_t *message;
 +	unsigned long x = (unsigned long)(p - c->vc_origin);  // UPDATE: vc_origin = 0; but not yet
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->invert + 1)) - ((char *)message);
++	message = cocon_message_grab(MESSAGESIZE(invert));
 +	message->type = CO_OPERATION_CONSOLE_INVERT_REGION;
 +	message->invert.y = ((unsigned)x)/c->vc_cols;
 +	message->invert.x = ((unsigned)x)-(message->invert.y);
 +	message->invert.count = count;
-+	co_send_message_restore(flags);
++	cocon_message_post();
 +
 +	while (count--) {
 +		u16 a = scr_readw(p);
@@ -3633,21 +3655,13 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +
 +static void cocon_cursor(struct vc_data *c, int mode)
 +{
-+	unsigned long flags;
 +	co_console_message_t *message;
-+	co_message_t *co_message;
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->cursor + 1)) - ((char *)message);;
++	message = cocon_message_grab(MESSAGESIZE(cursor));
 +	if (mode==CM_ERASE) {
 +		message->type = CO_OPERATION_CONSOLE_CURSOR_ERASE;
 +		message->cursor.height = 0;
-+		co_send_message_restore(flags);
++		cocon_message_post();
 +		return;
 +	}
 +
@@ -3680,62 +3694,38 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +		break;
 +	}
 +
-+	co_send_message_restore(flags);
++	cocon_message_post();
 +}
 +
 +static int cocon_switch(struct vc_data *c)
 +{
-+	unsigned long flags;
 +	co_console_message_t *message;
-+	co_message_t *co_message;
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++	message = cocon_message_grab(MESSAGESIZE(type));
 +	message->type = CO_OPERATION_CONSOLE_SWITCH;
-+	co_send_message_restore(flags);
++	cocon_message_post();
 +
 +	return 1;	/* Redrawing not needed */
 +}
 +
 +static int cocon_set_palette(struct vc_data *c, unsigned char *table)
 +{
-+	unsigned long flags;
 +	co_console_message_t *message;
-+	co_message_t *co_message;
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++	message = cocon_message_grab(MESSAGESIZE(type));
 +	message->type = CO_OPERATION_CONSOLE_SET_PALETTE;
-+	co_send_message_restore(flags);
++	cocon_message_post();
 +
 +	return 1;
 +}
 +
 +static int cocon_blank(struct vc_data *c, int blank, int mode_switchg)
 +{
-+	unsigned long flags;
 +	co_console_message_t *message;
-+	co_message_t *co_message;
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++	message = cocon_message_grab(MESSAGESIZE(type));
 +	message->type = CO_OPERATION_CONSOLE_BLANK;
-+	co_send_message_restore(flags);
++	cocon_message_post();
 +
 +	return 1;
 +}
@@ -3743,72 +3733,40 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +
 +static int cocon_scrolldelta(struct vc_data *c, int lines)
 +{
-+	unsigned long flags;
 +	co_console_message_t *message;
-+	co_message_t *co_message;
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++	message = cocon_message_grab(MESSAGESIZE(type));
 +	message->type = CO_OPERATION_CONSOLE_SCROLLDELTA;
-+	co_send_message_restore(flags);
++	cocon_message_post();
 +
 +	return 1;
 +}
 +
 +static int cocon_set_origin(struct vc_data *c)
 +{
-+	unsigned long flags;
 +	co_console_message_t *message;
-+	co_message_t *co_message;
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++	message = cocon_message_grab(MESSAGESIZE(type));
 +	message->type = CO_OPERATION_CONSOLE_SET_ORIGIN;
-+	co_send_message_restore(flags);
++	cocon_message_post();
 +
 +	return 1;
 +}
 +
 +static void cocon_save_screen(struct vc_data *c)
 +{
-+	unsigned long flags;
 +	co_console_message_t *message;
-+	co_message_t *co_message;
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++	message = cocon_message_grab(MESSAGESIZE(type));
 +	message->type = CO_OPERATION_CONSOLE_SAVE_SCREEN;
-+	co_send_message_restore(flags);
++	cocon_message_post();
 +}
 +
 +static int cocon_scroll(struct vc_data *c, int t, int b, int dir, int lines)
 +{
-+	unsigned long flags;
 +	co_console_message_t *message;
-+	co_message_t *co_message;
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->scroll + 1)) - ((char *)message);
++	message = cocon_message_grab(MESSAGESIZE(scroll));
 +	if (dir == SM_UP)
 +		message->type = CO_OPERATION_CONSOLE_SCROLL_UP;
 +	else
@@ -3816,24 +3774,16 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	message->scroll.top = t;
 +	message->scroll.bottom = b-1;
 +	message->scroll.lines = lines;
-+	co_send_message_restore(flags);
++	cocon_message_post();
 +
 +	return 0;
 +}
 +
 +static void cocon_bmove(struct vc_data *c, int sy, int sx, int dy, int dx, int h, int w)
 +{
-+	unsigned long flags;
 +	co_console_message_t *message;
-+	co_message_t *co_message;
 +
-+	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->bmove + 1)) - ((char *)message);
++	message = cocon_message_grab(MESSAGESIZE(bmove));
 +	message->type = CO_OPERATION_CONSOLE_BMOVE;
 +	message->bmove.row = dy;
 +	message->bmove.column = dx;
@@ -3841,7 +3791,7 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	message->bmove.left = sx;
 +	message->bmove.bottom = sy + h - 1;
 +	message->bmove.right = sx + w - 1;
-+	co_send_message_restore(flags);
++	cocon_message_post();
 +}
 +
 +/*
@@ -7832,7 +7782,7 @@ diff -urN a/include/linux/console.h b/include/linux/console.h
 diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 --- a/include/linux/cooperative.h
 +++ b/include/linux/cooperative.h
-@@ -0,0 +1,322 @@
+@@ -0,0 +1,351 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -7855,7 +7805,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +
 +#include <asm/cooperative.h>
 +
-+#define CO_LINUX_API_VERSION    8
++#define CO_LINUX_API_VERSION    9
 +
 +#pragma pack(0)
 +
@@ -7876,6 +7826,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +	CO_OPERATION_TRACE_POINT,
 +	CO_OPERATION_FREE_PAGES,
 +	CO_OPERATION_ALLOC_PAGES,
++	CO_OPERATION_CONSOLE
 +} co_operation_t;
 +
 +#define CO_MODULE_MAX_CONET    16
@@ -7934,6 +7885,8 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +	CO_DEVICE_POWER,
 +	CO_DEVICE_SERIAL,
 +	CO_DEVICE_FILESYSTEM,
++	CO_DEVICE_MESSAGE,
++	CO_DEVICE_PEM,
 +
 +	CO_DEVICES_TOTAL,
 +} co_device_t;
@@ -8082,6 +8035,32 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +		co_cursor_pos_t cursor;
 +	};
 +} __attribute__((packed)) co_console_message_t;
++
++/*
++ * Common semaphore between host and guest
++ * UPDATE: allow asynchrnous mode
++ */
++
++#define co_semaphore_try_enter(sem) ((sem)->count ? 0 : ++(sem)->count)
++#define co_semaphore_exit(sem) ((sem)->count = 0)
++
++typedef struct {
++	unsigned count;
++} __attribute__((packed)) co_semaphore;
++
++typedef struct {
++	unsigned size;
++	co_message_t message;
++} __attribute__((packed)) co_pem_packet_t;
++
++typedef struct {
++	co_semaphore semaphore;
++	unsigned weight;
++	unsigned capacity;
++	void *host_virtual_address;
++	void *host_data;
++	co_pem_packet_t packet;
++} __attribute__((packed)) co_pem_t;
 +
 +typedef struct {	
 +	unsigned long index;
@@ -8429,7 +8408,7 @@ diff -urN a/include/linux/cooperative_fs.h b/include/linux/cooperative_fs.h
 diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_internal.h
 --- a/include/linux/cooperative_internal.h
 +++ b/include/linux/cooperative_internal.h
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,95 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -8446,6 +8425,12 @@ diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_int
 +#include <linux/list.h>
 +
 +#ifdef CONFIG_COOPERATIVE
++
++/*
++ * Message Queue default size
++ */
++ 
++#define CO_MESSAGE_QUEUE_SIZE 0x10000
 +
 +typedef struct {
 +	struct list_head node;
@@ -8465,16 +8450,25 @@ diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_int
 +extern void co_arch_start_kernel(void);
 +extern void co_handle_jiffies(long count);
 +
-+extern void co_send_message(co_module_t from, 
-+			    co_module_t to,
-+			    co_priority_t priority,
-+			    co_message_type_t type,
-+			    unsigned long size,
-+			    const char *data);
++extern void co_send_message(
++		co_module_t from,
++		co_module_t to,
++		co_priority_t priority,
++		co_message_type_t type,
++		unsigned long size,
++		const char *data);
++
++extern void *co_message_grab(
++		co_module_t from,
++		co_module_t to,
++		co_priority_t priority,
++		co_message_type_t type,
++		unsigned long size);
++
++extern void co_message_post(void);
++extern void co_message_throw(void);
++			
 +extern unsigned long co_get_host_time(void);
-+extern co_message_t *co_send_message_save(unsigned long *flags);
-+extern co_message_t *co_get_message_save(unsigned long *flags);
-+extern void co_send_message_restore(unsigned long flags);
 +
 +extern void cocd_interrupt(void);
 +
@@ -8557,7 +8551,7 @@ diff -urN a/kernel/Makefile b/kernel/Makefile
 diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 --- a/kernel/cooperative.c
 +++ b/kernel/cooperative.c
-@@ -0,0 +1,354 @@
+@@ -0,0 +1,601 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -8575,6 +8569,11 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +#include <linux/slab.h>
 +#include <linux/cooperative_internal.h>
 +
++#include <linux/notifier.h>
++#include <linux/percpu.h>
++#include <linux/cpu.h>
++#include <linux/kthread.h>
++
 +CO_TRACE_STOP;
 +
 +void start_kernel(void);
@@ -8587,7 +8586,6 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +unsigned long co_initrd_size = 0;
 +char co_boot_parameters[CO_BOOTPARAM_STRING_LENGTH];
 +
-+
 +typedef struct {
 +	struct list_head list;
 +	int num_messages;
@@ -8597,36 +8595,102 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +co_message_queue_t co_outgoing_messages;
 +co_message_queue_t co_incoming_messages;
 +co_message_queue_t *co_incoming_queued_messages;
++co_pem_t *co_messages_to_host = 0;
++co_pem_t *co_messages_to_guest = 0;
 +
 +void co_start_kernel(void)
 +{
-+        co_core_end = co_passage_page->params[0];
-+        co_memory_size = co_passage_page->params[1];
-+        co_initrd = (void *)co_passage_page->params[2];
-+        co_initrd_size = co_passage_page->params[3];
++	co_core_end = co_passage_page->params[0];
++	co_memory_size = co_passage_page->params[1];
++	co_initrd = (void *)co_passage_page->params[2];
++	co_initrd_size = co_passage_page->params[3];
 +
-+        memcpy(co_boot_parameters, &co_passage_page->params[10], 
-+               sizeof(co_boot_parameters));
-+
++	memcpy(co_boot_parameters, &co_passage_page->params[10], 
++		sizeof(co_boot_parameters));
++	printk("--- start ---\n");
 +	co_arch_start_kernel();
 +
 +	/* should never be reached */
 +	co_terminate(CO_TERMINATE_END);
 +}
 +
-+co_message_t *co_send_message_save(unsigned long *flags)
++static void co_message_add_to_incoming(co_message_t *message, unsigned long size)
 +{
-+	co_passage_page_assert_valid();	
-+	co_passage_page_acquire(flags);
-+	co_passage_page->operation = CO_OPERATION_MESSAGE_TO_MONITOR;
-+	return ((co_message_t *)CO_VPTR_IO_AREA_START);
++	co_message_node_t *message_copy;
++
++	message_copy = kmalloc(size + sizeof(co_message_node_t) - sizeof(co_message_t), 
++			       GFP_ATOMIC);
++	if (!message_copy)
++		return;
++	
++	memcpy(&message_copy->msg, message, size);
++	list_add_tail(&message_copy->node, &co_incoming_messages.list);
 +}
 +
-+void co_send_message_restore(unsigned long flags)
++static void co_message_gather(void)
 +{
++	co_pem_packet_t *packet, *end;
++
++	if (!co_messages_to_guest->weight)
++		return;
++	if ((!co_semaphore_try_enter(&co_messages_to_guest->semaphore)))
++		return;
++
++	if( (end = (void*)(packet = &co_messages_to_guest->packet) + co_messages_to_guest->weight) != packet )
++		do co_message_add_to_incoming(&packet->message, packet->size);
++		while((packet = ((void*)&packet->message + packet->size)) != end);
++
++	co_messages_to_guest->weight = 0;
++	co_semaphore_exit(&co_messages_to_guest->semaphore);
++	// messages process in IS
++}
++	
++void co_message_throw(void)
++{
++	unsigned long flags;
++	co_messages_to_host->semaphore.count = 0;
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_MESSAGE;
++	co_passage_page->params[1] = 0;
 +	co_switch_wrapper();
 +	co_passage_page_release(flags);
 +}
++
++void co_message_post(void)
++{
++	co_messages_to_host->semaphore.count = 0;
++}
++
++void *co_message_grab(
++		co_module_t from,
++		co_module_t to,
++		co_priority_t priority,
++		co_message_type_t type,
++		unsigned long size)
++{
++	co_pem_packet_t *packet;
++
++	if(((unsigned)size + sizeof(co_pem_t)) > co_messages_to_host->capacity)
++		BUG();
++	if((co_messages_to_host->weight + (unsigned)size + sizeof(co_pem_t)) > co_messages_to_host->capacity) {
++		co_message_throw();
++		if(co_messages_to_host->weight)
++			BUG();
++		co_message_gather();
++	}
++	co_messages_to_host->semaphore.count = 1;
++	packet = ((void*)&co_messages_to_host->packet) + co_messages_to_host->weight;
++	packet->size = (unsigned)size + sizeof(co_message_t);
++	packet->message.from = from;
++	packet->message.to = to;
++	packet->message.priority = priority;
++	packet->message.type = type;
++	packet->message.size = size;
++	co_messages_to_host->weight += size + sizeof(co_pem_packet_t);
++	return (void*)(&packet->message.data);
++}
++
 +
 +void co_send_message_s(co_message_t *message, const char *data)
 +{
@@ -8654,28 +8718,24 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +		     unsigned long size,
 +		     const char *data)
 +{
-+	co_message_t params;
-+
-+	params.from = from;
-+	params.to = to;
-+	params.priority = priority;
-+	params.type = type;
-+	params.size = size;
-+
-+	co_send_message_s(&params, data);
-+}
-+
-+static void co_message_add_to_incoming(co_message_t *message, unsigned long size)
-+{
-+	co_message_node_t *message_copy;
-+
-+	message_copy = kmalloc(size + sizeof(co_message_node_t) - sizeof(co_message_t), 
-+			       GFP_ATOMIC);
-+	if (!message_copy)
-+		return;
++	if(!co_messages_to_host) {
++		co_message_t params;
 +	
-+	memcpy(&message_copy->msg, message, size);
-+	list_add_tail(&message_copy->node, &co_incoming_messages.list);
++		params.from = from;
++		params.to = to;
++		params.priority = priority;
++		params.type = type;
++		params.size = size;
++	
++		co_send_message_s(&params, data);
++		return;
++	}
++	void *p = co_message_grab(from, to, priority, type, size);
++	memcpy(p, data, size);
++	if(priority == CO_PRIORITY_DISCARDABLE)
++		co_message_post();
++	else
++		co_message_throw();
 +}
 +
 +void co_callback(unsigned long flags)
@@ -8745,6 +8805,9 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +void co_idle_processor(void)
 +{
 +	unsigned long flags;
++
++	if(co_messages_to_guest)
++		co_message_gather();
 +
 +	co_passage_page_assert_valid();	
 +
@@ -8852,30 +8915,6 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +	.compiler_minor = __GNUC_MINOR__,
 +};
 +
-+static int __init initcall_message_queues(void)
-+{
-+	int queue_index;
-+
-+	INIT_LIST_HEAD(&co_outgoing_messages.list);
-+	INIT_LIST_HEAD(&co_incoming_messages.list);
-+
-+	co_incoming_queued_messages = kmalloc(sizeof(co_message_queue_t) * CO_DEVICES_TOTAL, 
-+					      GFP_KERNEL);
-+	if (!co_incoming_queued_messages)
-+		panic("unable to allocate message queues\n");
-+
-+	for (queue_index=0; queue_index < CO_DEVICES_TOTAL; queue_index++) {
-+		co_message_queue_t *queue = &co_incoming_queued_messages[queue_index];
-+		queue->num_messages = 0;
-+		INIT_LIST_HEAD(&queue->list);
-+	}
-+
-+	co_messages_active = 1;
-+
-+	return 0;
-+}
-+
-+
 +void co_free_pages(unsigned long vaddr, int order)
 +{
 +	unsigned long flags;
@@ -8907,7 +8946,209 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +	return 0;
 +}
 +
-+__initcall(initcall_message_queues);
++static void co_message_queues_init(void)
++{
++	int queue_index;
++
++	co_messages_active = 1;
++
++	INIT_LIST_HEAD(&co_outgoing_messages.list);
++	INIT_LIST_HEAD(&co_incoming_messages.list);
++
++	co_incoming_queued_messages =
++		kmalloc(sizeof(co_message_queue_t) * CO_DEVICES_TOTAL, GFP_KERNEL);
++	if (!co_incoming_queued_messages)
++		panic("unable to allocate message queues\n");
++
++	for (queue_index=0; queue_index < CO_DEVICES_TOTAL; queue_index++) {
++		co_message_queue_t *queue = &co_incoming_queued_messages[queue_index];
++		queue->num_messages = 0;
++		INIT_LIST_HEAD(&queue->list);
++	}
++}
++
++co_pem_t* co_pem_open(unsigned capacity, unsigned mode)
++{
++	unsigned long flags;
++	unsigned order = 0;
++	unsigned size = PAGE_SIZE;
++	co_pem_t *pem;
++	unsigned address;
++
++	while(size < capacity && order < MAX_ORDER)
++		order++, size *= 2;
++	if(!(pem = (co_pem_t *)__get_free_pages(GFP_KERNEL, order)))
++		return 0;
++	printk("PEM: got size\n");
++	pem->capacity = PAGE_SIZE << order;
++	pem->semaphore.count = 0;
++	pem->weight = 0;
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_PEM;
++	co_passage_page->params[1] = 1; // 1 open , 0 close
++	co_passage_page->params[2] = (unsigned)pem;
++	co_passage_page->params[3] = mode;
++	co_switch_wrapper();
++	address = co_passage_page->params[1];
++	co_passage_page_release(flags);
++	printk("PEM: address %x\n", address);
++	if(address)
++		return pem;
++	free_pages((unsigned)pem,order);
++	return 0;
++}
++
++void co_pem_close(co_pem_t *pem)
++{
++	unsigned long flags;
++	unsigned order = 0;
++	unsigned size = PAGE_SIZE;
++
++	while(size < pem->capacity && order < MAX_ORDER)
++		order++, size *= 2;
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_PEM;
++	co_passage_page->params[1] = 0; // 1 open , 0 close
++	co_passage_page->params[2] = (unsigned)pem;
++	co_switch_wrapper();
++	co_passage_page_release(flags);
++	free_pages((unsigned)pem,order);
++}
++
++static int co_message_pem_init(void)
++{
++	unsigned long flags;
++	unsigned rc;
++
++	printk("PEM: Ballard (jhballard@hotmail.com)\n");
++
++	co_messages_to_host = co_pem_open(CO_MESSAGE_QUEUE_SIZE, 0);
++	if(!co_messages_to_host) {
++		printk("PEM: not opened1\n");
++		return 0;
++	}
++		
++	co_messages_to_guest = co_pem_open(CO_MESSAGE_QUEUE_SIZE, 0);
++	if(!co_messages_to_guest) {
++		printk("PEM: not opened3\n");
++		co_pem_close(co_messages_to_host);
++		co_messages_to_host = 0;
++		return 0;
++	}
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_MESSAGE;
++	co_passage_page->params[1] = (unsigned)co_messages_to_host->host_virtual_address;
++	co_passage_page->params[2] = (unsigned)co_messages_to_guest->host_virtual_address;
++	co_switch_wrapper();
++	rc = co_passage_page->params[1];
++	co_passage_page_release(flags);
++	if(rc) {
++		printk("PEM: opened (basic capacity=%dK)\n", co_messages_to_host->capacity/1024);
++		return 1;
++	}
++
++	co_pem_close(co_messages_to_host);
++	co_pem_close(co_messages_to_guest);
++	co_messages_to_host = 0;
++	co_messages_to_guest = 0;
++	printk("PEM: not opened2\n");
++	return 0;
++}
++
++/*
++ * Intraoperative Subsystem:
++ * Most of the cooperative mode involves synchronous passages between
++ * guest and host, but we want to allow asynchronous tasks to perform on
++ * either side without the limitation of the 1/hz schedule boundary.
++ */
++
++static DEFINE_PER_CPU(struct task_struct *, is_vector);
++static void *is_cpu_main;
++
++static int is_kthread(void *binded_cpu)
++{
++	set_user_nice(current, 10);
++	current->flags |= PF_NOFREEZE;
++
++	while (!kthread_should_stop()) {
++		if (!co_messages_to_guest->weight) {
++			set_current_state(TASK_INTERRUPTIBLE);
++			schedule();
++		}
++		__set_current_state(TASK_RUNNING);
++
++		co_message_gather();
++		co_handle_incoming_messages();
++
++		// UPDATE: switch to Windows if priority
++	}
++	return 0;
++}
++
++static int __devinit is_callback(
++	struct notifier_block *nfb,
++	unsigned long action,
++	void *hcpu)
++{
++	int hotcpu = (unsigned long)hcpu;
++	struct task_struct *p;
++
++	switch (action) {
++	case CPU_UP_PREPARE:
++		// UPDATE: we may not need to bind to a cpu, but we can stay single-processed this way until we have better async passage
++//		if(hotcpu != is_cpu_main)
++//			return NOTIFY_BAD;
++		p = kthread_create(is_kthread, hcpu, "IS/%d", hotcpu);
++		if (IS_ERR(p)) {
++			printk("Intraoperative subsystem for %i failed\n", hotcpu);
++			return NOTIFY_BAD;
++		}
++		kthread_bind(p, hotcpu);
++  		per_cpu(is_vector, hotcpu) = p;
++ 		break;
++	case CPU_ONLINE:
++		wake_up_process(per_cpu(is_vector, hotcpu));
++		break;
++#ifdef CONFIG_HOTPLUG_CPU
++	case CPU_UP_CANCELED:
++		kthread_bind(per_cpu(is_vector, hotcpu), smp_processor_id());
++	case CPU_DEAD:
++		p = per_cpu(is_vector, hotcpu);
++		per_cpu(is_vector, hotcpu) = NULL;
++		kthread_stop(p);
++		takeover_tasklets(hotcpu);
++		break;
++#endif /* CONFIG_HOTPLUG_CPU */
++ 	}
++	return NOTIFY_OK;
++}
++
++static struct notifier_block __devinitdata is_nb = {
++	.notifier_call = is_callback
++};
++
++static int __init co_is_init(void)
++{
++	co_message_queues_init();
++	if(!co_message_pem_init()) {
++		// we resort purely to synchronous passage if PEM doesn't open
++		return 0;
++	}
++
++	// we have PEM open, allow asynchronous passage in IS
++	is_cpu_main = (void *)(long)smp_processor_id();
++	is_callback(&is_nb, CPU_UP_PREPARE, is_cpu_main);
++	is_callback(&is_nb, CPU_ONLINE, is_cpu_main);
++	register_cpu_notifier(&is_nb);
++
++	return 0;
++}
++
++__initcall(co_is_init);
 +
 +EXPORT_SYMBOL(co_terminate);
 +

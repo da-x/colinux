@@ -142,7 +142,7 @@ typedef struct co_monitor {
 	struct co_filesystem *filesystems[CO_MODULE_MAX_COFS];
 
 	/*
-	 * Message passing stuff
+	 * Message system
 	 */ 
 	co_message_switch_t message_switch;
 	co_queue_t user_message_queue;
@@ -151,8 +151,11 @@ typedef struct co_monitor {
 	co_monitor_user_kernel_shared_t *shared;
 	void *shared_user_address;
 	void *shared_handle;
+	
+	co_pem_t *messages_to_host;
+	co_pem_t *messages_to_guest;
 
-        /*
+	/*
 	 * initrd
 	 */
 	unsigned long initrd_address;

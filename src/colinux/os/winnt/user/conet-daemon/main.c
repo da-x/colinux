@@ -204,6 +204,71 @@ void co_win32_overlapped_init(co_win32_overlapped_t *overlapped, HANDLE handle)
 	overlapped->write_overlapped.hEvent = overlapped->write_event; 
 }
 
+#define USE_DAEMON_READ
+
+#ifdef USE_DAEMON_READ
+
+//static co_daemon_handle_t hDaemon;
+
+int wait_loop(co_daemon_handle_t daemon, HANDLE tap_handle)
+{
+	HANDLE wait_list[2];
+	ULONG status;
+	DWORD size;
+	co_rc_t rc;
+	co_message_t *message;
+	
+//	hDaemon = daemon;
+	
+	co_win32_overlapped_init(&daemon_overlapped, daemon->handle);
+	co_win32_overlapped_init(&tap_overlapped, tap_handle);
+
+	wait_list[0] = tap_overlapped.read_event;
+	wait_list[1] = daemon->readable;
+
+	co_win32_overlapped_read_async(&tap_overlapped);
+	rc = co_os_daemon_message_receive(daemon, &message, 0);
+	if(CO_OK(rc) && message) {
+		profile_me("from linux");
+		WriteFile(tap_handle, message->data, message->size, &size, 0);
+		//co_win32_overlapped_write_async(&tap_overlapped, message->data, message->size);
+		co_os_daemon_message_deallocate(daemon, message);
+	}
+
+	while (1) {
+		status = WaitForMultipleObjects(2, wait_list, FALSE, INFINITE); 
+			
+		switch (status) {
+		case WAIT_OBJECT_0: {/* tap */
+			profile_me("from tap");
+			rc = co_win32_overlapped_read_completed(&tap_overlapped);
+			if (!CO_OK(rc))
+				return 0;
+
+			break;
+		}
+		case WAIT_OBJECT_0+1: {/* linux */
+			rc = co_os_daemon_message_receive(daemon, &message, 0);
+			co_debug("rc=%d message=%x (%d)",rc, message, ERROR_BROKEN_PIPE);
+			if(CO_RC_GET_CODE(rc) == CO_RC_BROKEN_PIPE)
+				return 0;
+			if(CO_OK(rc) && message) {
+				profile_me("from linux");
+				co_win32_overlapped_write_async(&tap_overlapped, message->data, message->size);
+				co_os_daemon_message_deallocate(daemon, message);
+			}
+			break;
+		}
+		default:
+			break;
+		}
+	}
+
+	return 0;
+}
+
+#else
+
 int wait_loop(HANDLE daemon_handle, HANDLE tap_handle)
 {
 	HANDLE wait_list[2];
@@ -245,6 +310,7 @@ int wait_loop(HANDLE daemon_handle, HANDLE tap_handle)
 
 	return 0;
 }
+#endif
 
 /********************************************************************************
  * parameters
@@ -431,7 +497,11 @@ int main(int argc, char *argv[])
 	}
 
 	daemon_handle = daemon_handle_->handle;
+#ifdef USE_DAEMON_READ
+	exit_code = wait_loop(daemon_handle_, tap_handle);
+#else
 	exit_code = wait_loop(daemon_handle, tap_handle);
+#endif
 	co_os_daemon_pipe_close(daemon_handle_);
 
 out_close:

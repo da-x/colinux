@@ -223,6 +223,81 @@ out_error:
 	return rc;
 }
 
+static void co_monitor_messages(co_monitor_t *cmon)
+{
+	co_pem_packet_t *packet, *end;
+	co_pem_t *pem;
+
+	if(!(pem = cmon->messages_to_host) && pem->weight)
+		return;
+	if(!co_semaphore_try_enter(&pem->semaphore))
+		return;
+	if( (end = (void*)(packet = &pem->packet) + pem->weight) != packet )
+		do co_message_switch_dup_message(&cmon->message_switch, &packet->message);
+		while((packet = ((void*)&packet->message + packet->size)) != end);
+	pem->weight = 0;
+	co_semaphore_exit(&pem->semaphore);
+}
+
+co_rc_t co_monitor_pem_open(co_monitor_t *cmon, vm_ptr_t guest, co_pem_t **host)
+{
+	vm_ptr_t vaddr = guest;
+	unsigned pages;
+	co_pfn_t pfn;
+	co_pem_t *pem;
+	unsigned i;
+	void *common;
+	co_rc_t rc;
+
+	*host = 0;
+	if((vaddr & CO_ARCH_PAGE_MASK) != vaddr) {
+		co_debug("page aligned address required");
+		return CO_RC(ERROR);
+	}
+
+	co_monitor_get_pfn(cmon, vaddr, &pfn);
+	pem = co_os_map(cmon->manager, pfn);
+	if(!pem) {
+		co_debug("unable to map memory for PEM");
+		return CO_RC(ERROR);
+	}
+	pages = (pem->capacity + (CO_ARCH_PAGE_SIZE-1)) / CO_ARCH_PAGE_SIZE;
+	co_os_unmap(cmon->manager, pem, pfn);
+	if(!pages) {
+		co_debug("unset capacity in PEM");
+		return CO_RC(ERROR);
+	}
+
+	rc = co_os_common_allocate(cmon->manager, pages, &common);
+	if(!CO_OK(rc)) {
+		co_debug("unable to allocate common memory for PEM");
+		return CO_RC(ERROR);
+	}
+	
+	for(i = 0; i < pages; i++) {
+		co_monitor_get_pfn(cmon, vaddr, &pfn);
+		co_os_common_index(cmon->manager, common, pfn, i);
+		vaddr += CO_ARCH_PAGE_SIZE;
+	}
+
+	rc = co_os_common_map(cmon->manager, common, (void**)&pem);
+	if(!CO_OK(rc)) {
+		co_debug("unable to map common memory for PEM");
+		return CO_RC(ERROR);
+	}
+
+	pem->host_data = common;
+	pem->host_virtual_address = *host = pem;
+	co_debug("opened PEM @ %X with capacity %d", pem, pem->capacity);
+	return CO_RC(OK);
+}
+
+void co_monitor_pem_close(co_pem_t *pem)
+{
+	// UPDATE: free resources
+	return;
+}
+
 static bool_t device_request(co_monitor_t *cmon, co_device_t device, unsigned long *params)
 {
 	switch (device) {
@@ -283,6 +358,32 @@ static bool_t device_request(co_monitor_t *cmon, co_device_t device, unsigned lo
 		co_monitor_file_system(cmon, params[0], params[1], &params[2]);
 		return PTRUE;
 	}
+	case CO_DEVICE_MESSAGE: {
+		if(*params) {
+			cmon->messages_to_host = (co_pem_t *)*params;
+			*params = 1;
+			params++;
+			cmon->messages_to_guest = (co_pem_t *)*params;
+			return PTRUE;
+		}
+		co_monitor_messages(cmon);
+		return PTRUE;
+	}
+	case CO_DEVICE_PEM: {
+		if(*params) {
+			co_pem_t *pem;
+			co_rc_t rc;
+			rc = co_monitor_pem_open(cmon,(vm_ptr_t)*(params+1), &pem);
+			if(!CO_OK(rc)) {
+				*params = 0;
+				return PTRUE;
+			}
+			*params = (unsigned)pem;
+			return PTRUE;
+		}
+		co_monitor_pem_close((co_pem_t *)*params);
+		return PTRUE;
+	}
 	default:
 		break;
 	}	
@@ -290,10 +391,56 @@ static bool_t device_request(co_monitor_t *cmon, co_device_t device, unsigned lo
 	return PTRUE;
 }
 
+static co_rc_t co_messages_to_guest_fill(co_monitor_t *cmon)
+{
+	co_pem_packet_t *packet;
+	co_rc_t rc;
+
+	if(!co_semaphore_try_enter(&cmon->messages_to_guest->semaphore))
+		return CO_RC(OK);
+
+	co_queue_t *queue = &cmon->linux_message_queue;
+	while (co_queue_size(queue) != 0) 
+	{
+		co_message_queue_item_t *message_item;
+		rc = co_queue_peek_tail(queue, (void **)&message_item);
+		if (!CO_OK(rc)) {
+			co_semaphore_exit(&cmon->messages_to_guest->semaphore);
+			return rc;
+		}
+		
+		co_message_t *message = message_item->message;
+		rc = co_queue_pop_tail(queue, (void **)&message_item);
+		if (!CO_OK(rc)) {
+			co_semaphore_exit(&cmon->messages_to_guest->semaphore);
+			return rc;
+		}
+
+		if((cmon->messages_to_guest->weight + (unsigned)message->size + sizeof(co_pem_t)) > cmon->messages_to_guest->capacity)
+			break;
+		packet = ((void*)&cmon->messages_to_guest->packet) + cmon->messages_to_guest->weight;
+		packet->size = (unsigned)message->size + sizeof(co_message_t);
+		co_memcpy(&packet->message, message, packet->size);
+		cmon->messages_to_guest->weight += message->size + sizeof(co_pem_packet_t);
+
+		co_queue_free(queue, message_item);
+		co_os_free(message);
+	}
+	co_semaphore_exit(&cmon->messages_to_guest->semaphore);
+
+	return CO_RC(OK);
+	
+}
+
 static co_rc_t callback_return_messages(co_monitor_t *cmon)
 {	
 	co_rc_t rc;
 	unsigned char *io_buffer, *io_buffer_end;
+
+	if(cmon->messages_to_guest) {
+		co_passage_page->params[0] = 0;
+		return co_messages_to_guest_fill(cmon);
+	}
 
 	io_buffer = cmon->io_buffer;
 	if (!io_buffer)
@@ -455,6 +602,10 @@ static bool_t co_idle(co_monitor_t *cmon)
 	co_message_t message;
 
 	co_debug_lvl(context_switch, 15, "switching from linux (CO_OPERATION_IDLE)\n");
+
+	if(cmon->messages_to_host) {
+		co_monitor_messages(cmon);
+	}
 		
 	message.from = CO_MODULE_MONITOR;
 	message.to = CO_MODULE_IDLE;
@@ -518,6 +669,9 @@ static bool_t iteration(co_monitor_t *cmon)
 		callback_return(cmon);
 		break;
 	}
+
+	if(cmon->messages_to_guest)
+		co_messages_to_guest_fill(cmon);
 
 	co_debug_lvl(context_switch, 14, "switching to linux (%d)\n", co_passage_page->operation);
 	co_host_switch_wrapper(cmon);
