@@ -34,7 +34,6 @@
  * Miscellaneous enhancements and fixes:
    * Lack of entropy - empty /dev/random
    * Make it work on PAE setups.
-   * Make UML work on coLinux (SKAS included).
    * Make coLinux work on Windows NT 4 SP*.
    * Address all reported SMP issues.
    * The first search path for files specified in the XML, such as in 
@@ -47,8 +46,6 @@
      add support for it in the driver itself - but that requires more 
      changes. The behaviour of the daemon with regard the VM's termination
      could also be specified in the XML.
-   * Use initrd as a method to provide kernel modules (instead of 
-     modules.tar.gz)
    * Support to shutdown/suspend/resume (just!) coLinux so it becomes
      transportable between hosts.
    * Hostfs support
@@ -87,7 +84,7 @@
 
  * Cleanups:
    * Merge console into console-base.
-   * Clear out some function naming brain damager and make more use
+   * Clear out some function naming brain damage and make more use
      of the 'static' keyword :).
    * The usual tidbits: comments, refactoring, etc.
 

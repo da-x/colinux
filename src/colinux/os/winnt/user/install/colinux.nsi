@@ -1,6 +1,7 @@
 ;Cooeprative Linux installer
 ;Written by NEBOR Regis
 ;Modified by Dan Aloni (c) 2004
+;Modified 8/20/2004 by George P Boutwell
 
 ;-------------------------------------
 ;Good look
@@ -136,9 +137,14 @@ Section "coLinux" SeccoLinux
   File "..\console-nt\coLinux-console-nt.exe"
   File "..\conet-daemon\coLinux-net-daemon.exe"
   File "..\daemon\coLinux-daemon.exe"
+  File "..\debug\coLinux-debug-daemon.exe"
+  ;Enable when working correctly
+  ;File "..\debug\coLinux-serial-daemon.exe"
   File "..\..\build\linux.sys"
   File "premaid\vmlinux"
-  File "premaid\vmlinux-modules.tar.gz"
+  ;File "premaid\vmlinux-modules.tar.gz"
+  ; initrd replaces vmlinux-modules.tar.gz as preferred way to ship modules.
+  File "premaid\initrd.gz"
   File "premaid\README"
 
   ;Backup config file if present

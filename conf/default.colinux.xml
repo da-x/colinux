@@ -2,7 +2,12 @@
 <colinux>
     <!-- This line needs to point to your root file system. 
   	 For example change "root_fs" to the name of the Debian image.
-         Inside coLinux it will be /dev/cobd0 -->
+         Inside coLinux it will be /dev/cobd0 
+	 
+	 Note you can now added alias="devname", 
+	   i.e. alias="hda" or alias="hda1" including scsi 
+	 Note 2 If you use alias on block device 0, you'll, also, want
+	   to change your  bootparams root  -->
     <block_device index="0" path="\DosDevices\c:\coLinux\root_fs" 
     enabled="true" />
     
@@ -16,6 +21,9 @@
     <!-- bootparams allows you to pass kernel boot parameters -->
     <bootparams>root=/dev/cobd0</bootparams>
 
+    <!-- Initial RamDISK (initrd) support -->
+    <initrd path="intrd.gz" />
+    
     <!-- image allows you to specify the kernel to boot -->
     <image path="vmlinux" />
 
@@ -24,6 +32,6 @@
     <memory size="64" />
 
     <!-- This allows you to modify networking parameters, see the README 
-         or website for more information -->
+         or website or wiki for more information -->
     <network index="0" type="tap" />
 </colinux>
