@@ -98,6 +98,8 @@ class Compiler(Executer):
             parameters += ["-I" + path for path in compiler_includes]
             compiler_flags = tool_run_inf.options.get('compiler_flags', [])
             parameters += compiler_flags
+            compiler_optimization = tool_run_inf.options.get('compiler_optimization', "-O2")
+            parameters += [compiler_optimization]
             compiler_defines = tool_run_inf.options.get('compiler_defines', {})
             defines = compiler_defines.items()
             defines.sort()

@@ -63,7 +63,7 @@ targets['build'] = Target(
         ),
         appenders=dict(
             compiler_flags=[
-                '-Wno-trigraphs', '-fno-strict-aliasing', '-Wall', '-O2',
+                '-Wno-trigraphs', '-fno-strict-aliasing', '-Wall', 
             ] + compiler_flags,
             compiler_includes=[
                 'src',
