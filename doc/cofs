@@ -1,0 +1,88 @@
+The cofs driver in the coLinux kernel is based on work by the people 
+responsible for the fuse-1.3 library and kernel code, namely Miklos 
+Szeredi <miklos@szeredi.hu>.
+ 
+cofs is similar to UML's hostfs. It is a binding between the host's 
+VFS and Linux's VFS layers. By using cofs it is possible to mount 
+host OS directories inside Linux.
+
+* Flat mode (default)
+
+  Mounting in flat mode (the default) under Windows, means that the 
+  expected behavior of the mounted file system is similar to that of 
+  vfar or samba, which means there is no support for the regular 
+  UNIX meta data and all the UNIX attributes (mode, uid, gid) are
+  virtually the same for all files and directories. Creation of special 
+  files like symlinks, device nodes, and pipes are not supported.
+
+* UNIX meta data mode
+
+  Future versions of cofs support will introduce the UNIX meta data
+  mode, which is similiar to hostfs. It will allow to have a true
+  UNIX file system on top of a Windows (or Linux) file system by 
+  storing the VM's UNIX meta data as regular inaccessible files. 
+  Theoretically, it will allow to boot a full Linux system without 
+  a root file system image.
+
+* Ports
+
+  For the host OS side, cofs is only supported on the Windows port 
+  at the time this is written (October 23, 2004).
+
+  The planned Linux port will be designed to behave more like UML's
+  hostfs in flat mode (with support for UNIX attributes), and UML's
+  humfs in UNIX meta data mode.
+
+* Configuring cofs (using the colinux-daemon command line interface):
+
+    cofsXX=host-pathname
+
+  XX is a number between 0 and 31.
+
+* mount syntax:
+
+    mount -t cofs (cofs)XX(:path) (-o options) /mnt/point
+     
+  'cofs' as a prefix to the device name is optional and its purpose
+  it clarity. 
+
+  The optional ':path' suffix can specify an inner path to mount 
+  instead of the mapped root.
+
+  'options' are parallel to smbfs:
+
+    gid=        Set the default group.
+    uid=        Set the default user.
+    dmask=      Set the default directory permission.
+    fmask=      Set the default regular file permission.
+
+* Examples:
+    
+  Using the following configuration:
+  
+    colinux-daemon kernel=vmlinux hda1=root_fs cofs0=c:\ 
+
+      This map cofs0 to c:\.
+
+    mount -t cofs 0 /mnt/windows
+
+      Mount c:\ as /mnt/windows.
+
+    mount -t cofs cofs0 -o uid=dax,gid=dax /mnt/windows
+
+      Mount c:\ as /mnt/windows and give dax full access to all the
+      files and directories.
+
+    mount -t cofs cofs0:Share -o uid=dax,gid=dax,dmask=0700,fmask=0700 /mnt/windows
+
+      Mount c:\Share as /mnt/windows and give dax exclusive full 
+      access to all the files and directories.
+
+    mount -t cofs cofs0:Share -o uid=dax,gid=dax,dmask=0700,fmask=0700 /mnt/windows
+
+      Mount c:\Share as /mnt/windows and give dax exclusive full 
+      access to all the files and directories.
+
+    An example fstab entry:
+
+      cofs0:Share      /mnt/windows            cofs    defaults          0 0

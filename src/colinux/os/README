@@ -1,0 +1,10 @@
+This directory contains the host OS dependant code.
+
+The OS independant headers of the OS dependent code are under 
+the user and kernel subdirectories (for userspace and kernel space).
+Common headers (for both userspace and kernel space) are in this
+directory.
+
+For every supported operating system, there is one directory 
+that contains all its dependent code. The 'current' symlink points
+to the currently selected operating system for the build.

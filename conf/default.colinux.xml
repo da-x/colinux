@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<colinux>
+    <!-- This line needs to point to your root file system. 
+  	 For example change "root_fs" to the name of the Debian image.
+         Inside coLinux it will be /dev/cobd0 
+	 
+	 Block Device Aliasing: You can now handle most dual-boot issues
+	 by adding an alias="devname" to block_device. i.e. alias="hda",
+	 alias="hda1" You can do this for SCSI as well as IDE.  You need
+	 to be aware that if you add an alias, you need to change your
+	 bootparams root="devname" appropriately (you may need to use
+	 devfs naming in some situations).  -->
+    <block_device index="0" path="\DosDevices\c:\coLinux\root_fs" 
+    enabled="true" />
+    
+    <!-- This line can specify a swap file if you wish, or an additional
+         image file, it will /dev/cobd1. Additional block_devices can
+	 be specified in the same manner by increasing the index -->
+
+    <block_device index="1" path="\DosDevices\c:\coLinux\swap_device" 
+    enabled="true" />
+
+    <!-- bootparams allows you to pass kernel boot parameters -->
+    <bootparams>root=/dev/cobd0</bootparams>
+
+    <!-- Initial RamDISK (initrd) support -->
+    <initrd path="initrd.gz" />
+    
+    <!-- image allows you to specify the kernel to boot -->
+    <image path="vmlinux" />
+
+    <!-- this line allows you to specify the amount of memory available 
+         to coLinux -->
+    <memory size="64" />
+
+    <!-- This allows you to modify networking parameters, see the README 
+         or website or wiki for more information -->
+    <network index="0" type="tap" />
+</colinux>

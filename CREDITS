@@ -1,0 +1,48 @@
+coLinux - Cooperative Linux.
+
+Sponsored by AIST 2004. (http://www.aist.go.jp/)
+
+Creator and chief maintainer:
+    Dan Aloni - responsible for the development of the basic
+    fundamentals: context switching, hardware abstraction, 
+    basic design. 
+
+Additional developers and contributors:
+    Jun Okajima (Digital Infra Inc.) - Developer and maintainer of cofbdev 
+    Cooperative Frame Buffer device, not yet merged
+    
+    Pat Erley 
+    random patches
+    
+    Alejandro R. Sedeno <asedeno@mit.edu> 
+    pcap support, bridged networking
+    
+    Ballard, Jonathan H. <californiakidd@users.sourceforge.net>
+    various patches, native nt console
+    
+    Thomas Fritzsche <tf@noto.de> 
+    scripting
+    
+    George Boutwell <gboutwel@praize.com> 
+    scripting, various patches
+    
+    Jaroslaw Kowalski <jaak@zd.com.pl>
+    support for installing as a Windows service
+    
+    Daniel R. Slater <dan_slater@yahoo.com> 
+    patches for Windows service support
+    
+    Regis NEBOR <rnebor@hotmail.com>
+    NSIS installer script
+
+Incoroprated code from the following contributers / projects:
+    slirp, QEMU 
+    Copyright (c) 2004 Fabrice Bellard
+    Copyright (c) 1995 Danny Gasparovski.
+    See: src/colinux/user/slirp/COPYRIGHT
+   
+Producer:
+    Kuniyasu Suzaki, Senior Reseacher, AIST
+
+Portion of this program is copyright (c) AIST, 2003-. All rights reserved.
+Licensed under GPL (see LICENSE).
