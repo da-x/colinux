@@ -101,6 +101,7 @@ void co_daemon_syntax()
 	co_terminal_print("          colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1\n");
 	co_terminal_print("\n");
 	co_terminal_print("      Unhandled paramters are forwarded to the kernel's boot parameters string.\n");
+	co_terminal_print("\n");
 }
 
 co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_parameters_t *start_parameters)

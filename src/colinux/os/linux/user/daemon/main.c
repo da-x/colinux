@@ -43,6 +43,8 @@ static int daemon_main(int argc, char *argv[])
 
 	co_daemon_print_header();
 
+	memset(&start_parameters, 0, sizeof(start_parameters));
+
 	rc = co_cmdline_params_alloc(argv, argc, &cmdline);
 	if (!CO_OK(rc)) {
 		co_terminal_print("daemon: error parsing arguments\n");
@@ -56,7 +58,7 @@ static int daemon_main(int argc, char *argv[])
 		return -1;
 	}
 
-	if (start_parameters.show_help) {
+	if (!start_parameters.config_specified || start_parameters.show_help) {
 		co_daemon_syntax();
 		return 0;
 	}

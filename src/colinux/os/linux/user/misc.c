@@ -33,7 +33,8 @@ void co_terminal_print(const char *format, ...)
 	vsnprintf(buf, sizeof(buf), format, ap);
 	va_end(ap);
 
-	printf("%s: %s", _colinux_module, buf);
+	//printf("%s: %s", _colinux_module, buf);
+	printf("%s", buf);
 
 	len = strlen(buf);
 	while (len > 0  &&  buf[len-1] == '\n')
@@ -92,3 +93,7 @@ void co_udp_socket_close(int sock)
 	close(sock);
 }
 
+co_rc_t co_canonize_cobd_path(co_pathname_t *pathname)
+{
+	return CO_RC(OK);
+}
