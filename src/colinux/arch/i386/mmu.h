@@ -32,6 +32,18 @@ typedef unsigned long co_pfn_t;
 #define PGDIR_SHIFT     22
 #define PTRS_PER_PGD    1024
 
+#define CO_ARCH_PMD_SHIFT       22
+#define CO_ARCH_PMD_MASK        (~(CO_ARCH_PMD_SIZE-1))
+#define CO_ARCH_PMD_SIZE        (1UL << CO_ARCH_PMD_SHIFT)
+
+#define CO_ARCH_PAE_PGD_SHIFT   30
+#define CO_ARCH_PAE_PGD_MASK        (~(CO_ARCH_PAE_PGD_SIZE-1))
+#define CO_ARCH_PAE_PGD_SIZE        (1UL << CO_ARCH_PAE_PGD_SHIFT)
+
+#define CO_ARCH_PAE_PMD_SHIFT   21
+#define CO_ARCH_PAE_PMD_MASK        (~(CO_ARCH_PAE_PMD_SIZE-1))
+#define CO_ARCH_PAE_PMD_SIZE        (1UL << CO_ARCH_PAE_PMD_SHIFT)
+
 #define CO_ARCH_PAGE_SHIFT      12
 #define CO_ARCH_PAGE_SIZE       (1 << CO_ARCH_PAGE_SHIFT)
 #define CO_ARCH_PAGE_MASK       (~(CO_ARCH_PAGE_SIZE-1))

@@ -58,6 +58,7 @@
     (George Boutwell).
   * Enhanced coLinux keyboard handling support (sends raw scan codes
     from Windows to linux) (Nuno Lucas).
+  * Should now work under PAE setups.
 
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).

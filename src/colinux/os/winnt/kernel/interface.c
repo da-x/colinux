@@ -147,6 +147,7 @@ DriverEntry(
 	WCHAR deviceLinkBuffer[]  = L"\\DosDevices\\" CO_DRIVER_NAME;
 	UNICODE_STRING deviceLinkUnicodeString;
 	co_manager_t *co_manager;
+	co_rc_t rc;
 
 	RtlInitUnicodeString (&deviceNameUnicodeString, deviceNameBuffer);
 
@@ -179,7 +180,7 @@ DriverEntry(
 	DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = dispatch_wrapper;
 	DriverObject->DriverUnload                         = driver_unload;
 
-	co_manager_load(co_manager);
+	rc = co_manager_load(co_manager);
 
 	return STATUS_SUCCESS;
 }

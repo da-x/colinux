@@ -67,7 +67,7 @@ co_rc_t co_winnt_install_driver(void)
 	
 	rc = co_winnt_driver_install_lowlevel();
 	if (!CO_OK(rc)) {
-		co_terminal_print("cannot install\n");
+		co_terminal_print("cannot install (%x)\n", rc);
 		return CO_RC(ERROR);
 	}
 	
@@ -158,7 +158,14 @@ void co_winnt_status_driver(void)
 		return;
 	}		
 
-	co_terminal_print("current number of monitors: %x\n", status.monitors_count);
+	if (status.state >= CO_MANAGER_STATE_INITIALIZED)
+		co_terminal_print("current state: %d (fully initialized)\n", status.state);
+	else
+		co_terminal_print("current state: %d\n", status.state);
+
+	co_terminal_print("current number of monitors: %d\n", status.monitors_count);
+	co_terminal_print("current linux api version: %d\n", status.linux_api_version);
+	co_terminal_print("current periphery api version: %d\n", status.periphery_api_version);
 	co_os_manager_close(handle);
 }
 

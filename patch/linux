@@ -3711,7 +3711,7 @@ diff -urN a/include/asm-i386/bug.h b/include/asm-i386/bug.h
 diff -urN a/include/asm-i386/cooperative.h b/include/asm-i386/cooperative.h
 --- a/include/asm-i386/cooperative.h
 +++ b/include/asm-i386/cooperative.h
-@@ -0,0 +1,160 @@
+@@ -0,0 +1,184 @@
 +/*
 + *  linux/include/asm/cooperative.h
 + *
@@ -3807,15 +3807,17 @@ diff -urN a/include/asm-i386/cooperative.h b/include/asm-i386/cooperative.h
 +	unsigned long dr7;
 +        #define CO_ARCH_STATE_STACK_DR7 "0x5C"
 +
-+	unsigned long other_map;
-+        #define CO_ARCH_STATE_STACK_OTHERMAP "0x60"
++	unsigned long temp_cr3;
++        #define CO_ARCH_STATE_STACK_TEMP_CR3 "0x60"
 +
 +	unsigned long relocate_eip; 
 +        #define CO_ARCH_STATE_STACK_RELOCATE_EIP "0x64"
-+        #define CO_ARCH_STATE_STACK_RELOCATE_EIP_AFTER "0x68"
 +
 +	unsigned long pad1;
-+	unsigned long pad2;
++        #define CO_ARCH_STATE_STACK_RELOCATE_EIP_AFTER "0x68"
++
++	unsigned long va;
++        #define CO_ARCH_STATE_STACK_VA "0x6C"
 +
 +	unsigned char fxstate[0x200];
 +        #define CO_ARCH_STATE_STACK_FXSTATE "0x70"
@@ -3823,24 +3825,41 @@ diff -urN a/include/asm-i386/cooperative.h b/include/asm-i386/cooperative.h
 +
 +#define CO_MAX_PARAM_SIZE 0x400
 +
++typedef struct co_arch_passage_page_normal_address_space {
++	unsigned long pgd[0x400];
++	unsigned long pte[2][0x400];
++} co_arch_passage_page_normal_address_space_t;
++
++typedef struct co_arch_passage_page_pae_address_space {
++	unsigned long long main[0x200];
++	unsigned long long pgd[2][0x200];
++	unsigned long long pte[2][0x200];
++} co_arch_passage_page_pae_address_space_t;
++
 +typedef struct co_arch_passage_page {
 +	union {
 +		struct {
 +			union {
 +				struct {
-+					unsigned long temp_pgd_physical;
++					unsigned long self_physical_address;
 +					unsigned long dr0;
 +					unsigned long dr1;
 +					unsigned long dr2;
 +					unsigned long dr3;
 +					unsigned long dr6;
 +					unsigned long dr7; 
-+					unsigned char code[0x1c0];
++					unsigned char code[0x230];
 +				} __attribute__((packed));
-+				unsigned char pad[0x210];
++				unsigned char pad[0x250]; /* Be careful! see NOTE below */
 +			} __attribute__((packed));
 +			
 +			/* Machine states */
++
++			/* 
++			 * NOTE: *_state fields must be aligned at 16 bytes boundary since
++			 * the fxsave/fxload instructions expect an aligned arugment.
++			 */
++
 +			co_arch_state_stack_t host_state; 
 +			co_arch_state_stack_t linuxvm_state;
 +			
@@ -3850,8 +3869,13 @@ diff -urN a/include/asm-i386/cooperative.h b/include/asm-i386/cooperative.h
 +		} __attribute__((packed));
 +		unsigned char first_page[0x1000];
 +	};
-+	unsigned long temp_pgd[0x400];
-+	unsigned long temp_pte[2][0x400];
++
++	/* page tables for passage address spaces */
++	co_arch_passage_page_normal_address_space_t guest_normal;
++	union {
++		co_arch_passage_page_normal_address_space_t host_normal;
++		co_arch_passage_page_pae_address_space_t host_pae;
++	} __attribute__((packed));
 +} co_arch_passage_page_t;
 +
 +/*

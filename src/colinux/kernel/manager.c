@@ -118,25 +118,33 @@ co_rc_t co_manager_load(co_manager_t *manager)
 	co_debug("machine has %d MB of RAM\n", (manager->host_memory_pages >> 8));
 
 	manager->host_memory_amount = manager->host_memory_pages << CO_ARCH_PAGE_SHIFT;
-	manager->state = CO_MANAGER_STATE_INITIALIZED;
 
 	rc = co_debug_init(&manager->debug);
 	if (!CO_OK(rc))
 		return rc;
 
+	manager->state = CO_MANAGER_STATE_INITIALIZED_DEBUG;
+
 	rc = co_manager_arch_init(manager, &manager->archdep);
 	if (!CO_OK(rc))
 		goto out_err_debug;
+
+	manager->state = CO_MANAGER_STATE_INITIALIZED_ARCH;
 
 	rc = co_os_manager_init(manager, &manager->osdep);
 	if (!CO_OK(rc))
 		goto out_err_arch;
 
+	manager->state = CO_MANAGER_STATE_INITIALIZED_OSDEP;
+
 	rc = alloc_reversed_pfns(manager);
 	if (!CO_OK(rc))
 		goto out_err_os;
 
+	manager->state = CO_MANAGER_STATE_INITIALIZED;
 	return rc;
+
+	manager->state = CO_MANAGER_STATE_NOT_INITIALIZED;
 
 /* error path */
 out_err_os:
@@ -147,6 +155,7 @@ out_err_arch:
 
 out_err_debug:
 	co_debug_free(&manager->debug);
+
 	return rc;
 }
 
@@ -196,10 +205,19 @@ void co_manager_unload(co_manager_t *manager)
 {
 	co_debug("unloaded from host kernel\n");
 
-	free_reversed_pfns(manager);
-	co_os_manager_free(manager->osdep);
-	co_manager_arch_free(manager->archdep);
-	co_debug_free(&manager->debug);
+	if (manager->state >= CO_MANAGER_STATE_INITIALIZED)
+		free_reversed_pfns(manager);
+
+	if (manager->state >= CO_MANAGER_STATE_INITIALIZED_OSDEP)
+		co_os_manager_free(manager->osdep);
+
+	if (manager->state >= CO_MANAGER_STATE_INITIALIZED_ARCH)
+		co_manager_arch_free(manager->archdep);
+
+	if (manager->state >= CO_MANAGER_STATE_INITIALIZED_DEBUG)
+		co_debug_free(&manager->debug);
+
+	manager->state = CO_MANAGER_STATE_NOT_INITIALIZED;
 }
 
 static co_rc_t create_private_data(void **private_data, co_manager_per_fd_state_t **fd_state_out)
@@ -320,7 +338,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 		break;
 	}
 
-	if (manager->state == CO_MANAGER_STATE_NOT_INITIALIZED) {
+	if (manager->state < CO_MANAGER_STATE_INITIALIZED) {
 		return CO_RC_ERROR;
 	}
 
