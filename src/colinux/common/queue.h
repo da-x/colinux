@@ -66,6 +66,11 @@ extern co_rc_t co_queue_get_prev(co_queue_t *queue, void **ptr);
 extern co_rc_t co_queue_pop_tail(co_queue_t *queue, void **ptr);
 
 /**
+ * only peeks at an item from the tail and returns a pointer to it.
+*/
+extern co_rc_t co_queue_peek_tail(co_queue_t *queue, void **ptr);
+
+/**
  * frees a buffer allocated by co_queue_malloc*().
  */
 extern co_rc_t co_queue_free(co_queue_t *queue, void *ptr);

@@ -48,9 +48,9 @@ if [ "$KERNEL_DIR" = "" ] ; then
     echo "Please specify the $""KERNEL_DIR in user-build.cfg (e.g. KERNEL_DIR=v2.6"
     exit -1
 fi
-# KERNEL_VERSION: the full kernel version (e.g. 2.6.10)
+# KERNEL_VERSION: the full kernel version (e.g. 2.6.8.1)
 if [ "$KERNEL_VERSION" = "" ] ; then
-    echo "Please specify the $""KERNEL_VERSION in user-build.cfg (e.g. KERNEL_VERSION=2.6.10"
+    echo "Please specify the $""KERNEL_VERSION in user-build.cfg (e.g. KERNEL_VERSION=2.6.8.1"
     exit -1
 fi
 

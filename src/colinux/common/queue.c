@@ -144,3 +144,20 @@ co_rc_t co_queue_pop_tail(co_queue_t *queue, void **ptr)
 
 	return CO_RC(OK);
 }
+
+co_rc_t co_queue_peek_tail(co_queue_t *queue, void **ptr)
+{
+	co_list_t *item;
+	co_queue_item_t *queue_item;
+
+	if (queue->items_count == 0)
+		return CO_RC(ERROR);
+
+	item = queue->head.prev;
+
+	queue_item = co_list_entry(item, co_queue_item_t, node);
+
+	*ptr = (void *)(&queue_item->data);
+
+	return CO_RC(OK);
+}

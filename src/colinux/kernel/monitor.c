@@ -319,19 +319,21 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 	while (co_queue_size(queue) != 0) 
 	{
 		co_message_queue_item_t *message_item;
-		rc = co_queue_pop_tail(queue, (void **)&message_item);
+		rc = co_queue_peek_tail(queue, (void **)&message_item);
 		if (!CO_OK(rc))
 			return rc;
 		
 		co_message_t *message = message_item->message;
 		unsigned long size = message->size + sizeof(*message);
-		co_queue_free(queue, message_item);
 		
 		if (io_buffer + size > io_buffer_end) {
-			co_os_free(message);
 			break;
 		}
 		
+		rc = co_queue_pop_tail(queue, (void **)&message_item);
+		if (!CO_OK(rc))
+			return rc;
+		co_queue_free(queue, message_item);
 		co_memcpy(io_buffer, message, size);
 		io_buffer += size;
 		co_os_free(message);
