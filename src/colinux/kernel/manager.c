@@ -293,7 +293,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 		params->linux_api_version = CO_LINUX_API_VERSION;
 
 		*return_size = sizeof(*params);
-		return rc;
+		return CO_RC(OK);
 	}
 
 	case CO_MANAGER_IOCTL_INFO: {
@@ -304,11 +304,12 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 		params->hostmem_used = manager->hostmem_used;
 
 		*return_size = sizeof(*params);
-		return rc;
+		return CO_RC(OK);
 	}
 
 	case CO_MANAGER_IOCTL_DEBUG: {
 		co_debug_write_vector_t vec;
+
 		vec.vec_size = 0;
 		vec.size = in_size;
 		vec.ptr = io_buffer;
@@ -357,6 +358,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 			return CO_RC(ERROR);
 			
 		rc = co_monitor_create(manager, params, &cmon);
+		co_debug_system("%x\n", rc);
 		if (CO_OK(rc)) {
 			opened->monitor = cmon;
 			opened->monitor_owner = PTRUE;
@@ -364,8 +366,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 
 		params->rc = rc;
 		*return_size = sizeof(*params);
-
-		return rc;
+		break;
 	}
 	case CO_MANAGER_IOCTL_ATTACH: {
 		co_manager_ioctl_attach_t *params = (typeof(params))(io_buffer);

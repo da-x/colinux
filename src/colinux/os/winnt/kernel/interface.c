@@ -301,17 +301,15 @@ static NTSTATUS manager_dispatch(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 
 		ioctl = (co_manager_ioctl_t)(CO_GET_IOCTL_METHOD(ioControlCode));
 
-		rc = co_manager_ioctl(manager, ioctl, ioBuffer, 
-				      inputBufferLength,
-				      outputBufferLength,
-				      &Irp->IoStatus.Information,
-				      opened);
+		co_manager_ioctl(manager, ioctl, ioBuffer, 
+				 inputBufferLength,
+				 outputBufferLength,
+				 &Irp->IoStatus.Information,
+				 opened);
 
-		if (!CO_OK(rc))
-			ntStatus = STATUS_INVALID_PARAMETER; 
-		else
-			ntStatus = STATUS_SUCCESS;
+		/* Intrinsic Success / Failure indictation is returned per ioctl. */
 
+		ntStatus = STATUS_SUCCESS;
 		break;
 	}
 	}

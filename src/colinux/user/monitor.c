@@ -28,6 +28,7 @@ co_rc_t co_user_monitor_create(co_user_monitor_t **out_mon, co_manager_ioctl_cre
 {
 	co_manager_handle_t handle;
 	co_user_monitor_t *mon;
+	co_rc_t rc;
 
 	mon = co_os_malloc(sizeof(*mon));
 	if (!mon)
@@ -41,8 +42,14 @@ co_rc_t co_user_monitor_create(co_user_monitor_t **out_mon, co_manager_ioctl_cre
 		return CO_RC(ERROR);
 	}
 
-	co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_CREATE,
-			    params, sizeof(*params), params, sizeof(*params), NULL);
+	rc = co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_CREATE,
+				 params, sizeof(*params), params, sizeof(*params), NULL);
+
+	if (!CO_OK(rc)) {
+		co_os_free(mon);
+		co_os_manager_close(handle);
+		return params->rc;
+	}
 
 	if (!CO_OK(params->rc)) {
 		co_os_free(mon);
@@ -109,7 +116,7 @@ co_rc_t co_user_monitor_open(co_reactor_t reactor, co_reactor_user_receive_func_
 
 	*out_mon = mon;
 
-	return CO_RC(OK);
+	return rc;
 }
 
 void co_user_monitor_close(co_user_monitor_t *monitor)

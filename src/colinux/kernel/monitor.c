@@ -72,7 +72,6 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 	}	
 	
 	cmon->pgd = swapper_pg_dir_pfn << CO_ARCH_PAGE_SHIFT;
-	co_debug_ulong(cmon->pgd);
 
 	rc = co_monitor_arch_passage_page_alloc(cmon);
 	if (!CO_OK(rc)) {
@@ -100,7 +99,6 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 	}
 
 	reversed_physical_mapping_offset = (CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP >> PGDIR_SHIFT)*sizeof(linux_pgd_t);
-	co_debug_ulong(reversed_physical_mapping_offset);
 
 	rc = co_monitor_copy_and_create_pfns(cmon, 
 					     cmon->import.kernel_swapper_pg_dir + reversed_physical_mapping_offset, 
@@ -616,6 +614,8 @@ static void free_pseudo_physical_memory(co_monitor_t *monitor)
 static co_rc_t alloc_pp_ram_mapping(co_monitor_t *monitor)
 {
 	co_rc_t rc;
+	unsigned long full_page_tables_size;
+	unsigned long partial_page_table_size;
 
 	co_debug("allocating page frames for pseudo physical RAM...\n");
 
@@ -625,13 +625,27 @@ static co_rc_t alloc_pp_ram_mapping(co_monitor_t *monitor)
 
 	co_memset(monitor->pp_pfns, 0, sizeof(co_pfn_t *)*PTRS_PER_PGD);
 
+	full_page_tables_size = CO_ARCH_PAGE_SIZE * (monitor->memory_size >> CO_ARCH_PMD_SHIFT);
+	partial_page_table_size = ((monitor->memory_size & ~CO_ARCH_PMD_MASK) >> CO_ARCH_PAGE_SHIFT);
+
 	rc = co_monitor_scan_and_create_pfns(
 		monitor, 
 		CO_VPTR_PSEUDO_RAM_PAGE_TABLES, 
-		CO_ARCH_PAGE_SIZE * (monitor->memory_size >> CO_ARCH_PMD_SHIFT));
+		full_page_tables_size);
 
-	if (!CO_OK(rc))
+	if (CO_OK(rc)) {
+		if (partial_page_table_size) {
+			rc = co_monitor_scan_and_create_pfns(
+				monitor, 
+				CO_VPTR_PSEUDO_RAM_PAGE_TABLES + full_page_tables_size, 
+				partial_page_table_size);
+		}
+	}
+
+	
+	if (!CO_OK(rc)) {
 		free_pseudo_physical_memory(monitor);
+	}
 
 	return rc;
 }
