@@ -221,6 +221,10 @@ static NTSTATUS manager_dispatch(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 			irpStack->FileObject->FsContext = opened;
 			break;
 		}
+		case IRP_MJ_CLOSE:
+		case IRP_MJ_CLEANUP: 
+			break;
+
 		default:
 			ntStatus = STATUS_NO_SUCH_DEVICE;
 			goto complete;
@@ -232,11 +236,13 @@ static NTSTATUS manager_dispatch(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 	outputBufferLength = irpStack->Parameters.DeviceIoControl.OutputBufferLength;
 
 	switch (irpStack->MajorFunction) {
-	case IRP_MJ_CLEANUP: {
-		irpStack->FileObject->FsContext = NULL;
-		co_manager_open_desc_deactive_and_close(manager, opened);
+	case IRP_MJ_CLOSE:
+	case IRP_MJ_CLEANUP: 
+		if (opened) {
+			irpStack->FileObject->FsContext = NULL;
+			co_manager_open_desc_deactive_and_close(manager, opened);
+		}
 		break;
-	}
 
 	case IRP_MJ_READ: {
 		Irp->IoStatus.Information = irpStack->Parameters.Read.Length;
@@ -297,7 +303,6 @@ static NTSTATUS manager_dispatch(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 		}
 
 		ioctl = (co_manager_ioctl_t)(CO_GET_IOCTL_METHOD(ioControlCode));
-
 		co_manager_ioctl(manager, ioctl, ioBuffer, 
 				 inputBufferLength,
 				 outputBufferLength,

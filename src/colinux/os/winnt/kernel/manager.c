@@ -138,7 +138,7 @@ co_rc_t co_os_manager_userspace_eof(co_manager_t *manager, co_manager_open_desc_
 
 		co_manager_close(manager, opened);
 
-		Irp->IoStatus.Status =  STATUS_PIPE_BROKEN;
+		Irp->IoStatus.Status = STATUS_PIPE_BROKEN;
 		Irp->IoStatus.Information = 0;
 		IoCompleteRequest(Irp, IO_NO_INCREMENT);
 	}

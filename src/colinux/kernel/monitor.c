@@ -264,7 +264,8 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 	if (!cmon->io_buffer)
 		return CO_RC(ERROR);
 
-	cmon->io_buffer->messages_waiting = 0;
+	if (cmon->io_buffer->messages_waiting)
+		return CO_RC(OK);
 
 	io_buffer = cmon->io_buffer->buffer;
 	io_buffer_end = io_buffer + CO_VPTR_IO_AREA_SIZE - sizeof(co_io_buffer_t);
@@ -393,11 +394,9 @@ static bool_t co_idle(co_monitor_t *cmon)
 
 	co_os_wait_sleep(cmon->idle_wait);
 
-	co_os_mutex_acquire(cmon->linux_message_queue_mutex);
 	queue = &cmon->linux_message_queue;
 	if (co_queue_size(queue) == 0)
 		next_iter = PFALSE;
-	co_os_mutex_release(cmon->linux_message_queue_mutex);
 
 	return next_iter;
 }
@@ -761,7 +760,9 @@ static co_rc_t alloc_shared_page(co_monitor_t *cmon)
 
 static void free_shared_page(co_monitor_t *cmon)
 {
-	co_os_userspace_unmap(cmon->shared_user_address, cmon->shared_handle, 1);
+	if (cmon->shared_user_address) {
+		co_os_userspace_unmap(cmon->shared_user_address, cmon->shared_handle, 1);
+	}
 	co_os_free_pages(cmon->shared, 1);
 }
 
@@ -1086,9 +1087,9 @@ static co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
 	co_monitor_os_exit(cmon);
 	co_queue_flush(&cmon->linux_message_queue);
         co_os_timer_destroy(cmon->timer);
-	co_console_destroy(cmon->console);
 	co_os_mutex_destroy(cmon->connected_modules_write_lock);
 	co_os_mutex_destroy(cmon->linux_message_queue_mutex);
+	co_console_destroy(cmon->console);
 	cmon->console = NULL;
 
 	co_debug("after free: %d blocks\n", cmon->blocks_allocated);
@@ -1109,6 +1110,8 @@ static void send_monitor_end_messages(co_monitor_t *cmon)
 			continue;
 
 		co_manager_send_eof(cmon->manager, opened);
+		cmon->connected_modules[i] = NULL;
+		co_manager_close(cmon->manager, opened);
 	}
 	co_os_mutex_release(cmon->connected_modules_write_lock);
 }
@@ -1118,6 +1121,7 @@ co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monit
 	co_manager_t *manager;
 	int new_count;
 	bool_t destroy = PFALSE;
+	bool_t end_messages = PFALSE;
 
 	manager = cmon->manager;
 
@@ -1133,7 +1137,7 @@ co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monit
 		}
 
 		if (monitor_owner)
-			send_monitor_end_messages(cmon);
+			end_messages = PTRUE;
 
 		if (cmon->refcount == 0) {
 			destroy = PTRUE;
@@ -1141,8 +1145,12 @@ co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monit
 	}
 	co_os_mutex_release(manager->lock);
 
-	if (destroy)
-		return co_monitor_destroy(cmon, PTRUE);
+	if (end_messages)
+		send_monitor_end_messages(cmon);
+
+	if (destroy) {
+		return co_monitor_destroy(cmon, monitor_owner);
+	}
 
 	return CO_RC(OK);
 }

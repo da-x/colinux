@@ -197,7 +197,7 @@ co_rc_t co_manager_open(co_manager_t *manager, co_manager_open_desc_t *opened_ou
 static co_rc_t co_manager_close_(co_manager_t *manager, co_manager_open_desc_t opened)
 {
 	co_os_manager_userspace_close(opened);
-	
+
 	if (opened->monitor != NULL) {
 		co_monitor_t *mon = opened->monitor;
 		opened->monitor = NULL;
@@ -245,14 +245,17 @@ co_rc_t co_manager_close(co_manager_t *manager, co_manager_open_desc_t opened)
 	close = (opened->ref_count == 0);
 	co_os_mutex_release(opened->lock);
 
-	if (close)
+	if (close) {
 		return co_manager_close_(manager, opened);
+	}
 
 	return CO_RC(OK);
 }
 
 co_rc_t co_manager_open_desc_deactive_and_close(co_manager_t *manager, co_manager_open_desc_t opened)
 {
+	co_rc_t rc;
+
 	opened->active = PFALSE;
 	if (opened->monitor != NULL) {
 		co_monitor_t *mon = opened->monitor;
@@ -269,7 +272,9 @@ co_rc_t co_manager_open_desc_deactive_and_close(co_manager_t *manager, co_manage
 		co_os_mutex_release(mon->connected_modules_write_lock);
 	}
 	
-	return co_manager_close(manager, opened);
+	rc = co_manager_close(manager, opened);
+	
+	return rc;
 }
 
 co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl, 
