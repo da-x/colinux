@@ -100,6 +100,7 @@ co_rc_t co_cmdline_get_next_equality(co_command_line_params_t cmdline, const cha
 		co_snprintf(value, value_size, "%s", &key_found[1]);
 		
 		*out_exists = PTRUE;
+		break;
 	}
 
 	return CO_RC(OK);
