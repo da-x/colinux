@@ -9033,17 +9033,37 @@ diff -urN a/mm/page_alloc.c b/mm/page_alloc.c
  	if (order)
  		destroy_compound_page(page, order);
  	mask = (~0UL) << order;
-@@ -738,6 +741,17 @@
+@@ -738,6 +741,37 @@
  got_pg:
  	zone_statistics(zonelist, z);
  	kernel_map_pages(page, 1 << order, 1);
 +
 +	if (cooperative_mode_enabled()) {
-+		int ret;
++		int result, retries_left;
 +
-+		ret = co_alloc_pages((unsigned long)page_address(page), 1 << order);
-+		if (ret) {
-+			__free_pages_ok(page, order);
++		retries_left = 10;
++
++		while (retries_left > 0) {
++			result = co_alloc_pages((unsigned long)page_address(page), 1 << order);
++			if (result) {
++				unsigned long cache_size;
++				/* 
++				 * Whoops, we have allocated too much of the
++				 * host OS's memory, time to free some cache.
++				 * cache.
++				 */
++				cache_size = get_page_cache_size()-total_swapcache_pages;
++				cache_size /= 2;
++				if (cache_size < ((1 << order)*2))
++					cache_size = (1 << order)*2;
++				shrink_all_memory(cache_size);
++			} else
++				break;
++			retries_left--;
++		}
++
++		if (result) {
++			__free_pages(page, order);
 +			return NULL;
 +		}
 +	}
@@ -9051,3 +9071,15 @@ diff -urN a/mm/page_alloc.c b/mm/page_alloc.c
  	return page;
  }
  
+diff -urN a/mm/vmscan.c b/mm/vmscan.c
+--- a/mm/vmscan.c
++++ b/mm/vmscan.c
+@@ -1180,7 +1180,7 @@
+ 	wake_up_interruptible(&zone->zone_pgdat->kswapd_wait);
+ }
+ 
+-#ifdef CONFIG_PM
++#if defined(CONFIG_PM) || defined(CONFIG_COOPERATIVE)
+ /*
+  * Try to free `nr_pages' of memory, system-wide.  Returns the number of freed
+  * pages.
