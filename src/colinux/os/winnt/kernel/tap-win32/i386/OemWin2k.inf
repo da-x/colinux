@@ -11,26 +11,56 @@
 ; chkinf c:\src\openvpn\tap-win32\i386\oemwin2k.inf
 ; OUTPUT -> file:///c:/WINDDK/3790/tools/chkinf/htm/c%23+src+openvpn+tap-win32+i386+__OemWin2k.htm
 
+;*********************************************************
+; Note to Developers:
+;
+; If you are bundling the TAP-Win32 driver with your app,
+; you should try to rename it in such a way that it will
+; not collide with other instances of TAP-Win32 defined
+; by other apps.  Multiple versions of the TAP-Win32
+; driver, each installed by different apps, can coexist
+; on the same machine if you follow these guidelines:
+;
+; (1) Rename all tapXXXX instances in this file to
+;     something different (use at least 5 characters
+;     for this name!)
+; (2) Change the "!define TAP" definition in openvpn.nsi
+;     to match what you changed tapXXXX to.
+; (3) Change TARGETNAME in SOURCES to match what you
+;     changed tapXXXX to.
+; (4) Change TAP_COMPONENT_ID in common.h to match what
+;     you changed tapXXXX to.
+; (5) Change SZDEPENDENCIES in service.h to match what
+;     you changed tapXXXX to.
+; (6) Change DeviceDescription and Provider strings.
+; (7) Change PRODUCT_STRING in constants.h to what you
+;     set DeviceDescription to.
+;
+;*********************************************************
+
 [Version]
    Signature = "$Windows NT$"
    CatalogFile = tap.cat
    ClassGUID = {4d36e972-e325-11ce-bfc1-08002be10318}
-   Provider = %l_Provider%
+   Provider = %Provider%
    Class = Net
-   DriverVer=05/13/2004,7.00.00.0001
+
+; This version number should match the version
+; number given in SOURCES.
+   DriverVer=05/15/2004,8.00.00.0001
 
 [Strings]
-   l_DeviceDescription = "TAP-Win32 Adapter"
-   l_Provider = "TapWin32Project"
+   DeviceDescription = "TAP-Win32 Adapter V8 (coLinux)"
+   Provider = "TAP-Win32 Provider (coLinux)"
 
 ;----------------------------------------------------------------
 ;                      Manufacturer + Product Section (Done)
 ;----------------------------------------------------------------
 [Manufacturer]
-   %l_Provider% = TapWin32Project
+   %Provider% = tap0801co
 
-[TapWin32Project]
-   %l_DeviceDescription% = TAP.ndi, TAPDEV
+[tap0801co]
+   %DeviceDescription% = tap0801co.ndi, tap0801co
 
 ;---------------------------------------------------------------
 ;                             Driver Section (Done)
@@ -45,23 +75,23 @@
 ;    NCF_HAS_UI = 0x80
 ;----------------- Characteristics ------------
 
-[TAP.ndi]
-   CopyFiles       = TAP.driver, TAP.files
-   AddReg          = TAP.reg
-   AddReg          = TAP.params.reg
+[tap0801co.ndi]
+   CopyFiles       = tap0801co.driver, tap0801co.files
+   AddReg          = tap0801co.reg
+   AddReg          = tap0801co.params.reg
    Characteristics = 0x81
 
-[TAP.ndi.Services]
-   AddService = TAP,        2, TAP.service
+[tap0801co.ndi.Services]
+   AddService = tap0801co,        2, tap0801co.service
 
-[TAP.reg]
-   HKR, Ndi,            Service,      0, "TAP"
+[tap0801co.reg]
+   HKR, Ndi,            Service,      0, "tap0801co"
    HKR, Ndi\Interfaces, UpperRange,   0, "ndis5"
    HKR, Ndi\Interfaces, LowerRange,   0, "ethernet"
-   HKR, ,               Manufacturer, 0, "%l_Provider%"
-   HKR, ,               ProductName,  0, "TAP"
+   HKR, ,               Manufacturer, 0, "%Provider%"
+   HKR, ,               ProductName,  0, "%DeviceDescription%"
 
-[TAP.params.reg]
+[tap0801co.params.reg]
    HKR, Ndi\params\MTU,                ParamDesc, 0, "MTU"
    HKR, Ndi\params\MTU,                Type,      0, "int"
    HKR, Ndi\params\MTU,                Default,   0, "1500"
@@ -96,13 +126,13 @@
 ;    SERVICE_DISABLED     = 0x4
 ;---------- Start Mode ---------------
 
-[TAP.service]
-   DisplayName = %l_DeviceDescription%
+[tap0801co.service]
+   DisplayName = %DeviceDescription%
    ServiceType = 1
    StartType = 3
    ErrorControl = 1
    LoadOrderGroup = NDIS
-   ServiceBinary = %12%\tapdrvr.sys
+   ServiceBinary = %12%\tap0801co.sys
 
 ;-----------------------------------------------------------------
 ;                                File Installation
@@ -118,25 +148,25 @@
 ; 1 = "Intel Driver Disk 1",e100bex.sys,,
 
 [SourceDisksNames]
-   1 = %l_DeviceDescription%, tapdrvr.sys
+   1 = %DeviceDescription%, tap0801co.sys
 
 ; SourceDisksFiles
 ; filename_on_source = diskID[, [subdir][, size]]
 ; e100bex.sys = 1,, ; on distribution disk 1
 
 [SourceDisksFiles]
-tapdrvr.sys = 1
+tap0801co.sys = 1
 
 [DestinationDirs]
-   TAP.files  = 11
-   TAP.driver = 12
+   tap0801co.files  = 11
+   tap0801co.driver = 12
 
-[TAP.files]
+[tap0801co.files]
 ;   TapPanel.cpl,,,6   ; COPYFLG_NOSKIP | COPYFLG_NOVERSIONCHECK
 ;   cipsrvr.exe,,,6     ; COPYFLG_NOSKIP | COPYFLG_NOVERSIONCHECK
 
-[TAP.driver]
-   tapdrvr.sys,,,6     ; COPYFLG_NOSKIP | COPYFLG_NOVERSIONCHECK
+[tap0801co.driver]
+   tap0801co.sys,,,6     ; COPYFLG_NOSKIP | COPYFLG_NOVERSIONCHECK
 
 ;---------------------------------------------------------------
 ;                                      End

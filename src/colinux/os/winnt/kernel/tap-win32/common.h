@@ -66,3 +66,11 @@
 #define SYSDEVICEDIR      "\\Device\\"
 #define USERDEVICEDIR     "\\DosDevices\\Global\\"
 #define TAPSUFFIX         ".tap"
+
+//=========================================================
+// TAP_COMPONENT_ID -- This string defines the TAP driver
+// type -- different component IDs can reside in the system
+// simultaneously.
+//=========================================================
+
+#define TAP_COMPONENT_ID "tap0801co"

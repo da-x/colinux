@@ -31,9 +31,7 @@
 //                        Product and Version public settings
 //====================================================================
 
-#define PRODUCT_STRING "TAP VPN Adapter."
-#define TAP_SERVICE_NAME "TAP_Daemon"
-#define TAP_DRIVER_NAME "TAP"
+#define PRODUCT_STRING "TAP-Win32 Adapter V8 (coLinux)"
 
 #define TAP_NDIS_MAJOR_VERSION 5
 #define TAP_NDIS_MINOR_VERSION 0

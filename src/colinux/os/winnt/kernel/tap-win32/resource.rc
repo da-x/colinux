@@ -2,7 +2,8 @@
 #include <ntverp.h>
 
 /* get VERSION */
-#include "../config-win32.h"
+#include "config-win32.h"
+#include "common.h"
 
 /* VER_FILETYPE, VER_FILESUBTYPE, VER_FILEDESCRIPTION_STR
  * and VER_INTERNALNAME_STR must be defined before including COMMON.VER
@@ -34,8 +35,8 @@
 
 #define VER_COMPANYNAME_STR         "The OpenVPN Project"
 #define VER_FILEDESCRIPTION_STR     "TAP-Win32 Virtual Network Driver"
-#define VER_ORIGINALFILENAME_STR    "tapdrvr.sys"
-#define VER_LEGALCOPYRIGHT_YEARS    "2003"
+#define VER_ORIGINALFILENAME_STR    TAP_COMPONENT_ID ".sys"
+#define VER_LEGALCOPYRIGHT_YEARS    "2003-2004"
 #define VER_LEGALCOPYRIGHT_STR      "James Yonan and Damion K. Wilson"
 
 
