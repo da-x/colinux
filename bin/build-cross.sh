@@ -47,7 +47,7 @@ install_libs()
 	cd "$PREFIX/$TARGET"
 	gzip -dc "$SRCDIR/$MINGW_ARCHIVE" | tar x
 	gzip -dc "$SRCDIR/$W32API_ARCHIVE" | tar x
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 extract_binutils()
@@ -56,36 +56,36 @@ extract_binutils()
 	rm -rf "$BINUTILS"
 	echo "Extracting binutils"
 	gzip -dc "$SRCDIR/$BINUTILS_ARCHIVE" | tar x
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 configure_binutils()
 {
-	cd "$TOPDIR"
+	cd "$BINDIR"
 	rm -rf "binutils-$TARGET"
 	mkdir "binutils-$TARGET"
 	cd "binutils-$TARGET"
 	echo "Configuring binutils"
 	"$SRCDIR/$BINUTILS/configure" --prefix="$PREFIX" --target=$TARGET &> configure.log
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 build_binutils()
 {
-	cd "$TOPDIR/binutils-$TARGET"
+	cd "$BINDIR/binutils-$TARGET"
 	echo "Building binutils"
 	make >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "make binutils failed"
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 install_binutils()
 {
-	cd "$TOPDIR/binutils-$TARGET"
+	cd "$BINDIR/binutils-$TARGET"
 	echo "Installing binutils"
 	make install >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "install binutils failed"
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 extract_gcc()
@@ -95,7 +95,7 @@ extract_gcc()
 	echo "Extracting gcc"
 	gzip -dc "$SRCDIR/$GCC_ARCHIVE1" | tar x
 	gzip -dc "$SRCDIR/$GCC_ARCHIVE2" | tar x
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 patch_gcc()
@@ -104,13 +104,13 @@ patch_gcc()
 		echo "Patching gcc"
 		cd "$SRCDIR/$GCC"
 		patch -p1 < "$SRCDIR/$GCC_PATCH"
-		cd "$TOPDIR"
+		cd "$BINDIR"
 	fi
 }
 
 configure_gcc()
 {
-	cd "$TOPDIR"
+	cd "$BINDIR"
 	rm -rf "gcc-$TARGET"
 	mkdir "gcc-$TARGET"
 	cd "gcc-$TARGET"
@@ -121,25 +121,25 @@ configure_gcc()
 		--with-gnu-as --with-gnu-ld \
 		--without-newlib --disable-multilib >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "configure gcc failed"
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 build_gcc()
 {
-	cd "$TOPDIR/gcc-$TARGET"
+	cd "$BINDIR/gcc-$TARGET"
 	echo "Building gcc"
 	make LANGUAGES="c c++" >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "make gcc failed"
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 install_gcc()
 {
-	cd "$TOPDIR/gcc-$TARGET"
+	cd "$BINDIR/gcc-$TARGET"
 	echo "Installing gcc"
 	make LANGUAGES="c c++" install >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "install gcc failed"
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 final_tweaks()

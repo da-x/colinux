@@ -11,7 +11,7 @@
 #	./configure --help
 
 # Some defaults from config file (Kernel version and dir, binutil version)
-cd bin; source build-common.sh; cd ..
+cd bin; source build-common.sh --get-vars; cd ..
 
 # Some default values
 target=i686-pc-mingw32
@@ -25,6 +25,7 @@ colinux_os=NONE
 configfile="bin/user-build.cfg"
 makefileout="Makefile"
 no_create=
+verbose=no
 kernel_untar="yes"
 
 # Try the directory containing this script, then its working dir.
@@ -93,6 +94,7 @@ Options:
                           [\$TOPDIR/log/build-colinux-\$\$.log]
   --no-kernel-untar       Do not delete and untar kernel tree, if exist.
   --no-create             Test only this configure, no Makefile create
+  --verbose               More messages in configure.
 -------------------------------------------------------------------------------
 Sample for WinNT as host (default):
   ./configure --target=i686-pc-mingw32 \\
@@ -178,7 +180,10 @@ EOF
   -disable-kernel-untar | --disable-kernel-untar)
     kernel_untar=no ;;
 
-  -*) { echo "configure: error: $option: invalid option; use --help to show usage" 1>&2; exit 1; }
+  -v | -verbose | --verbose)
+    verbose=yes ;;
+
+   -*) { echo "configure: error: $option: invalid option; use --help to show usage" 1>&2; exit 1; }
     ;;
 
   *)
@@ -219,9 +224,18 @@ target_cpu=`echo $target | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\1/'`
 target_vendor=`echo $target | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\2/'`
 target_os=`echo $target | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\3/'`
 
-echo " target_cpu=$target_cpu"
-echo " target_vendor=$target_vendor"
-echo " target_os=$target_os"
+if [ "$verbose" = "yes" ]; then
+  echo " confdir=$confdir"
+  echo " srcdir=$srcdir"
+  echo " topdir=$topdir"
+
+  echo " TOPDIR=$TOPDIR"
+  echo " BINDIR=$BINDIR"
+
+  echo " target_cpu=$target_cpu"
+  echo " target_vendor=$target_vendor"
+  echo " target_os=$target_os"
+fi
 
 #
 # Check building for linux or winnt
@@ -265,15 +279,18 @@ NONE)
 esac
 
 # Colinux extra version
-colinux_version=`cat src/colinux/VERSION`
-echo " colinux_version=$colinux_version"
+colinux_version=$CO_VERSION
 
 # Extract supported kernel version from default config file (sourced at top)
 target_kernel_dir="$KERNEL_DIR"
-echo " target_kernel_dir=$target_kernel_dir"
 target_kernel_version="$KERNEL_VERSION"
-echo " target_kernel_version=$target_kernel_version"
 targetkerneldir="$downloaddir/linux-$target_kernel_version"
+
+if [ "$verbose" = "yes" ]; then
+  echo " colinux_version=$colinux_version"
+  echo " target_kernel_dir=$target_kernel_dir"
+  echo " target_kernel_version=$target_kernel_version"
+fi
 echo "Setting targetkerneldir=$targetkerneldir"
 
 #
@@ -529,7 +546,7 @@ test "$missing" = yes && exit 1
 if [ "$target_os" != "linux" ] ; then
     save_path=$PATH
     export PATH=$prefix/bin:$PATH
-    echo " prefix=$prefix"
+    test "$verbose" = "yes" && echo " prefix=$prefix"
 
     # get version from binaries
     check_exec_tool "$target-gcc" "$target-gcc -dumpversion" "$GCC_VERSION" || { doit_cross="$doit_cross gcc"; rm -f $downloaddir/$BINUTILS_CHECKSUM; }
@@ -653,7 +670,7 @@ help:
 	@echo  ''
 	@echo  'Other generic targets:'
 	@echo  '  all		- Build crosstools, all targets marked with [*]'
-	@echo  '* download	- Download all sources (for cross tools)'
+	@echo  '* download	- Download all sources (for cross tools and libs)'
 	@echo  '* cross		- Build and install cross compiler and binutils'
 	@echo  '* libs		- Build and install libs: fltk,win32api'
 	@echo  '* kernel	- Build and install colinux kernel vmlinux and modules'

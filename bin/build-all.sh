@@ -4,6 +4,6 @@
 source build-common.sh --build-all $@
 
 echo "
-!!!	Script will be remove in future, please call in toplevel directory
-!!!	'./configure && make && make install'
+!!!	Script build-all.sh will be remove in future, please run
+!!!	'./configure && make && make install' in toplevel directory
 "

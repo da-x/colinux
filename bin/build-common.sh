@@ -45,7 +45,13 @@ fi
 TARGET=i686-pc-mingw32
 
 # you probably don't need to change anything from here down
-TOPDIR=`pwd`
+# BINDIR is bin directory with scripts
+BINDIR=`pwd`
+
+# TOPDIR is the directory with ./configure
+TOPDIR=`dirname $BINDIR`
+
+# Downloads store here
 SRCDIR="$SOURCE_DIR"
 
 # (from build-cross.sh) #
@@ -107,9 +113,11 @@ WINPCAP_SRC_ARCHIVE="$WINPCAP_SRC"_3_0.zip
 # KERNEL_VERSION: full kernel version (e.g. 2.6.11)
 # KERNEL_DIR: sub-dir in www.kernel.org for the download (e.g. v2.6)
 #
-KERNEL_PATCH_FILE=`ls ../patch/linux-*`
-KERNEL_VERSION=`echo $KERNEL_PATCH_FILE | sed -r -e 's/^.*([0-9]+).([0-9]+).([0-9]+).*$/\1.\2.\3/'`
-KERNEL_DIR=`echo $KERNEL_VERSION | sed -r -e 's/^([0-9]+)\.([0-9]+)\.([0-9]+).*$/v\1.\2/'`
+KERNEL_VERSION=`ls $TOPDIR/patch/linux-*.diff | sed -r -e 's/^.+\-([0-9\.]+)\.diff$/\1/'`
+KERNEL_DIR=`echo $KERNEL_VERSION | sed -r -e 's/^([0-9]+)\.([0-9]+)\..+$/v\1.\2/'`
+
+CO_VERSION=`cat $TOPDIR/src/colinux/VERSION`
+COMPLETE_KERNEL_NAME=$KERNEL_VERSION-co-$CO_VERSION
 
 # (from build-kernel.sh) #
 
@@ -117,7 +125,24 @@ KERNEL=linux-$KERNEL_VERSION
 KERNEL_URL=http://www.kernel.org/pub/linux/kernel/$KERNEL_DIR
 KERNEL_ARCHIVE=$KERNEL.tar.bz2
 KERNEL_CHECKSUM=$SRCDIR/.build-kernel.md5
+KERNEL_PATCH=patch/linux-$KERNEL_VERSION.diff
 
+# Developer private patchfile. Used after maintainer patch,
+# use also for manipulate ".config". Sourced in kernel build directory.
+PRIVATE_PATCH=patch/linux-private.patch
+
+# coLinux kernel we are targeting
+if [ -z "$KERNEL_VERSION" -o -z "$KERNEL_DIR" ] ; then
+    # What's wrong here?
+    echo "Can't find the kernel patch, probably wrong script, or"
+    echo "file patch/linux-*.diff don't exist?"
+    exit -1
+fi
+
+# Get variables for configure only? Than end here.
+if [ "$1" = "--get-vars" ]; then
+    return
+fi
 
 # where does it go?
 if [ "$PREFIX" = "" ] ; then
@@ -134,14 +159,6 @@ fi
 # coLinux enabled kernel source?
 if [ "$COLINUX_TARGET_KERNEL_PATH" = "" ] ; then
     echo "Please specify the $""COLINUX_TARGET_KERNEL_PATH in user-build.cfg (e.g, /tmp/$USER/linux-co)"
-    exit -1
-fi
-
-# coLinux kernel we are targeting
-if [ -z "$KERNEL_VERSION" -o -z "$KERNEL_DIR" ] ; then
-    # What's wrong here?
-    echo "Can't find the kernel patch, probably wrong script, or"
-    echo "file $KERNEL_PATCH_FILES don't exist?"
     exit -1
 fi
 
@@ -183,7 +200,7 @@ download_file()
 	else
 		echo "Found $1 in the srcdir $SRCDIR"
 	fi
-  	cd "$TOPDIR"
+  	cd "$BINDIR"
 }
 
 #

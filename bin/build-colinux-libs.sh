@@ -17,19 +17,19 @@ download_files()
 check_md5sums()
 {
 	echo "Check md5sum"
-	cd "$TOPDIR/.."
+	cd "$TOPDIR"
 	if md5sum -c $W32LIBS_CHECKSUM >>$COLINUX_BUILD_LOG 2>&1 ; then
 		echo "Skip w32api.h, libfltk.a, libmxml.a, libwin32k.a"
 		echo " - already installed on $PREFIX/$TARGET/lib"
 		exit 0
 	fi
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 create_md5sums()
 {
 	echo "Create md5sum"
-	cd "$TOPDIR/.."
+	cd "$TOPDIR"
 	md5sum -b \
 	    patch/$FLTK-win32.diff \
 	    $W32API_PATCH \
@@ -42,7 +42,7 @@ create_md5sums()
 	    $PREFIX/$TARGET/include/.w32api.version \
 	    > $W32LIBS_CHECKSUM
 	test $? -ne 0 && error_exit 1 "can not create md5sum"
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 #
@@ -55,15 +55,15 @@ extract_fltk()
 	rm -rf "$FLTK"
 	echo "Extracting FLTK"
 	bzip2 -dc "$SRCDIR/$FLTK_ARCHIVE" | tar x
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 patch_fltk()
 {
 	cd "$SRCDIR/$FLTK"
-	patch -p1 < "$TOPDIR/../patch/$FLTK-win32.diff"
+	patch -p1 < "$TOPDIR/patch/$FLTK-win32.diff"
 	test $? -ne 0 && error_exit 1 "FLTK patch failed"
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 configure_fltk()
@@ -90,7 +90,7 @@ configure_fltk()
 	echo "Making FLTK"
 	make -C src >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "FLTK make failed"
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 install_fltk()
@@ -100,7 +100,7 @@ install_fltk()
 	cp lib/*.a $PREFIX/$TARGET/lib
 	cp -a FL $PREFIX/$TARGET/include/
 	echo "$FLTK_VERSION" >$PREFIX/$TARGET/include/.fltk.version
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 build_fltk()
@@ -121,7 +121,7 @@ extract_mxml()
 	rm -rf "$MXML"
 	echo "Extracting MXML"
 	gzip -dc "$SRCDIR/$MXML_ARCHIVE" | tar x
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 configure_mxml()
@@ -133,7 +133,7 @@ configure_mxml()
 	echo "Making MXML"
 	make libmxml.a >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "MXML make failed"
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 install_mxml()
@@ -143,7 +143,7 @@ install_mxml()
 	cp libmxml.a $PREFIX/$TARGET/lib
 	cp mxml.h $PREFIX/$TARGET/include
 	echo "$MXML_VERSION" >$PREFIX/$TARGET/include/.mxml.version
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 build_mxml()
@@ -163,17 +163,17 @@ extract_w32api_src()
 	cd "$SRCDIR"
 	rm -rf "$W32API_SRC"
 	gzip -dc "$SRCDIR/$W32API_SRC_ARCHIVE" | tar x
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 patch_w32api_src()
 {
 	if [ -z "$W32API_PATCH" ]; then
-		echo "Patching w32api - $TOPDIR/../$W32API_PATCH"
+		echo "Patching w32api - $TOPDIR/$W32API_PATCH"
 		cd "$SRCDIR/$W32API_SRC"
-		patch -p1 < "$TOPDIR/../$W32API_PATCH"
+		patch -p1 < "$TOPDIR/$W32API_PATCH"
 		test $? -ne 0 && error_exit 1 "w32api source patch failed"
-		cd "$TOPDIR"
+		cd "$BINDIR"
 	fi
 }
 
@@ -187,7 +187,7 @@ configure_w32api_src()
 	echo "Making w32api source"
 	make >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "w32api source make failed"
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 install_w32api_src()
@@ -197,7 +197,7 @@ install_w32api_src()
 	make install >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "w32api make install failed"
 	echo "$W32API_VERSION" >$PREFIX/$TARGET/include/.w32api.version
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 build_w32api_src()
@@ -216,7 +216,7 @@ extract_winpcap_src()
 	rm -rf "$WINPCAP_SRC"
 	echo "Extracting winpcap source"
 	unzip "$WINPCAP_SRC_ARCHIVE" >>$COLINUX_BUILD_LOG 2>&1
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 install_winpcap_src()
@@ -236,7 +236,7 @@ install_winpcap_src()
 	        echo "winpcap install failed"
 	        exit 1
 	fi
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 build_winpcap_src()

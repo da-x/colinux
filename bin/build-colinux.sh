@@ -12,19 +12,19 @@ export COLINUX_INSTALL_DIR
 compile_colinux_daemons()
 {
 	echo "Compiling colinux (daemons)"
-	cd "$TOPDIR/../src"
+	cd "$TOPDIR/src"
 	make colinux >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "colinux make failed"
-	cd "$TOPDIR"
+	cd "$BINDIR"
 }
 
 install_colinux_daemons()
 {
 	echo "Installing colinux (daemons) to $COLINUX_INSTALL_DIR/"
-	cd "$TOPDIR/../src"
+	cd "$TOPDIR/src"
 	make install
 	test $? -ne 0 && error_exit 1 "colinux install failed"
-	cd $TOPDIR
+	cd $BINDIR
 }
 
 build_colinux_daemons()
