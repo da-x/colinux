@@ -7,9 +7,9 @@ diff -urN a/CREDITS b/CREDITS
  
 +A: Dan Aloni
 +E: da-x@colinux.org
-+D: Copaertative Linux
++D: Cooperative Linux
 +D: Various kernel patches
-+S: Isreal
++S: Israel
 +
  N: Tim Alpaerts
  E: tim_alpaerts@toyota-motor-europe.com
@@ -6883,8 +6883,8 @@ diff -urN a/fs/cofusefs/inode.c b/fs/cofusefs/inode.c
 +static struct option opts[] = {
 +	{ "uid",	0, 'u' },
 +	{ "gid",	0, 'g' },
-+	{ "file_mode",	0, 'f' },
-+	{ "dir_mode",	0, 'd' },
++	{ "fmask",	0, 'f' },
++	{ "dmask",	0, 'd' },
 +	{ NULL,		0, 0}
 +};
 +

@@ -1,3 +1,27 @@
+diff -urN -x '*.o' -x '*.a' -x Makefile -x 'config.*' w32api-2.5/include/ddk/ntapi.h w32api-2.5-mod/include/ddk/ntapi.h
+--- w32api-2.5/include/ddk/ntapi.h	2003-09-12 16:24:45.000000000 +0300
++++ w32api-2.5-mod/include/ddk/ntapi.h	2004-10-23 14:25:24.000000000 +0200
+@@ -665,6 +665,20 @@
+   OUT PULONG  ReturnLength  OPTIONAL);
+ 
+ NTOSAPI
++NTAPI
++NTSTATUS
++NtQueryFullAttributesFile(
++    IN POBJECT_ATTRIBUTES ObjectAttributes,
++    OUT PFILE_NETWORK_OPEN_INFORMATION FileInformation);
++
++NTOSAPI
++NTAPI
++NTSTATUS
++ZwQueryFullAttributesFile(
++    IN POBJECT_ATTRIBUTES ObjectAttributes,
++    OUT PFILE_NETWORK_OPEN_INFORMATION FileInformation);
++
++NTOSAPI
+ NTSTATUS
+ NTAPI
+ ZwSetSystemInformation(
 diff -urN -x '*.o' -x '*.a' -x Makefile -x 'config.*' w32api-2.5/include/ddk/winddk.h w32api-2.5-mod/include/ddk/winddk.h
 --- w32api-2.5/include/ddk/winddk.h	2004-02-15 09:32:36.000000000 +0200
 +++ w32api-2.5-mod/include/ddk/winddk.h	2004-10-22 19:03:53.000000000 +0200
@@ -19,7 +43,7 @@ diff -urN -x '*.o' -x '*.a' -x Makefile -x 'config.*' w32api-2.5/include/ddk/win
   * RtlEqualLuid( 
 diff -urN -x '*.o' -x '*.a' -x Makefile -x 'config.*' w32api-2.5/lib/ddk/ntoskrnl.def w32api-2.5-mod/lib/ddk/ntoskrnl.def
 --- w32api-2.5/lib/ddk/ntoskrnl.def	2004-02-15 09:32:37.000000000 +0200
-+++ w32api-2.5-mod/lib/ddk/ntoskrnl.def	2004-10-23 10:53:30.000000000 +0200
++++ w32api-2.5-mod/lib/ddk/ntoskrnl.def	2004-10-23 14:31:51.000000000 +0200
 @@ -644,7 +644,7 @@
  MmAllocateContiguousMemorySpecifyCache@20
  MmAllocateMappingAddress@8
@@ -38,7 +62,7 @@ diff -urN -x '*.o' -x '*.a' -x Makefile -x 'config.*' w32api-2.5/lib/ddk/ntoskrn
  MmMapLockedPages@8
  MmMapLockedPagesSpecifyCache@24
  MmMapLockedPagesWithReservedMapping@16
-@@ -1316,7 +1316,7 @@
+@@ -1316,10 +1316,10 @@
  ;ZwQueryBootOptions
  ZwQueryDefaultLocale@8
  ZwQueryDefaultUILanguage@4
@@ -46,7 +70,11 @@ diff -urN -x '*.o' -x '*.a' -x Makefile -x 'config.*' w32api-2.5/lib/ddk/ntoskrn
 +ZwQueryDirectoryFile@44
  ZwQueryDirectoryObject@28
  ;ZwQueryEaFile
- ;ZwQueryFullAttributesFile
+-;ZwQueryFullAttributesFile
++ZwQueryFullAttributesFile@8
+ ZwQueryInformationFile@20
+ ZwQueryInformationJobObject@20
+ ZwQueryInformationProcess@20
 @@ -1333,7 +1333,7 @@
  ZwQuerySymbolicLinkObject@12
  ZwQuerySystemInformation@16
