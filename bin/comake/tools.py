@@ -116,6 +116,13 @@ class Compiler(Executer):
         
         parameters.append('-o')
         parameters.append(tool_run_inf.target.pathname)
+
+        compiler_strip = tool_run_inf.options.get('compiler_strip', False)
+        if compiler_strip:
+            parameters.append(';')
+            parameters.append(self.get_cross_build_tool("strip --strip-debug", tool_run_inf))
+            parameters.append(tool_run_inf.target.pathname)
+
         command_line = ' '.join(parameters)
         return command_line
 

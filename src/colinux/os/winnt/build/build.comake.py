@@ -8,7 +8,7 @@ targets['executables'] = Target(
     Input('colinux-bridged-net-daemon.exe'),
     Input('colinux-slirp-net-daemon.exe'),
     Input('colinux-serial-daemon.exe'),
-    Input('colinux.sys'),
+    Input('linux.sys'),
     ],
     tool = Empty(),
 )
@@ -19,6 +19,7 @@ def generate_options(compiler_def_type, libs=None):
     return Options(
         overriders = dict(
             compiler_def_type = compiler_def_type,
+            compiler_strip = True,
         ),
         appenders = dict(
         compiler_flags = [
@@ -31,10 +32,10 @@ def generate_options(compiler_def_type, libs=None):
     )
 
 user_dep = [Input('../user/user-all.a')]
+user_res = [Input('../user/daemon/res/daemon.res')]
 
 targets['colinux-daemon.exe'] = Target(
-    inputs = [
-#        Input('../../../common/version.h', only_build_dep=True), # TODO: remove
+    inputs = user_res + [
         Input('../user/daemon/daemon.o'),
     ] + user_dep,
     tool = Compiler(),
@@ -42,7 +43,7 @@ targets['colinux-daemon.exe'] = Target(
 )
 
 targets['colinux-net-daemon.exe'] = Target(
-    inputs = [
+    inputs = user_res + [
        Input('../user/conet-daemon/build.o'),
        Input('../../../user/daemon-base/build.o'),
     ] + user_dep,
@@ -51,7 +52,7 @@ targets['colinux-net-daemon.exe'] = Target(
 )
 
 targets['colinux-bridged-net-daemon.exe'] = Target(
-    inputs = [
+    inputs = user_res + [
        Input('../user/conet-bridged-daemon/build.o'),
        Input('../../../user/daemon-base/build.o'),
     ] + user_dep,
@@ -60,7 +61,7 @@ targets['colinux-bridged-net-daemon.exe'] = Target(
 )
 
 targets['colinux-slirp-net-daemon.exe'] = Target(
-    inputs = [
+    inputs = user_res + [
        Input('../user/conet-slirp-daemon/build.o'),
        Input('../../../user/slirp/build.o'),
        Input('../../../user/daemon-base/build.o'),
@@ -70,7 +71,7 @@ targets['colinux-slirp-net-daemon.exe'] = Target(
 )
 
 targets['colinux-serial-daemon.exe'] = Target(
-    inputs = [
+    inputs = user_res + [
        Input('../user/coserial-daemon/build.o'),
        Input('../../../user/daemon-base/build.o'),
     ] + user_dep,
@@ -79,7 +80,7 @@ targets['colinux-serial-daemon.exe'] = Target(
 )
 
 targets['colinux-console-fltk.exe'] = Target(
-    inputs = [
+    inputs = user_res + [
        Input('../user/console/build.o'),
        Input('../../../user/console/build.o'),
     ] + user_dep,
@@ -88,7 +89,7 @@ targets['colinux-console-fltk.exe'] = Target(
 )
 
 targets['colinux-console-nt.exe'] = Target(
-    inputs = [
+    inputs = user_res + [
        Input('../user/console-nt/build.o'),
        Input('../../../user/console-base/build.o'),
     ] + user_dep,
@@ -97,7 +98,7 @@ targets['colinux-console-nt.exe'] = Target(
 )
 
 targets['colinux-debug-daemon.exe'] = Target(
-    inputs = [
+    inputs = user_res + [
        Input('../user/debug/build.o'),
        Input('../../../user/debug/build.o'),
     ] + user_dep,
@@ -133,13 +134,16 @@ def script_cmdline(scripter, tool_run_inf):
      inputs[0].pathname))
     return command_line
 
-targets['colinux.sys'] = Target(
+targets['linux.sys'] = Target(
     tool = Script(script_cmdline),
     inputs = [
        Input('driver.o'),
        Input('driver.base.exp'),
     ],
     options = Options(
+        overriders = dict(
+            compiler_strip = True,
+        ),
         appenders = dict(
             compiler_defines = dict(
                 __KERNEL__=None,
@@ -191,3 +195,12 @@ targets['driver.base.tmp'] = Target(
        Input('driver.o'),
     ],
 )
+
+targets['installer'] = Target(
+    inputs = [
+       Input('executables'),
+       Input('../user/install/coLinux.exe'),
+    ],
+    tool = Empty(),
+)
+

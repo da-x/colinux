@@ -2,13 +2,14 @@ import os, copy, md5
 from lib import normal_path
 
 class RawTarget(object):
-    def __init__(self, inputs=None, tool=None, options=None, mono_options=None):  
+    def __init__(self, inputs=None, tool=None, options=None, mono_options=None, settings_options=None): 
         self.inputs = inputs
         if inputs is None:
             self.inputs = []
         self.tool = tool
         self.options = options
         self.mono_options = mono_options
+        self.settings_options = settings_options
 
     def __repr__(self):
         return 'RawTarget(inputs=%r)' % (self.inputs, )
@@ -215,6 +216,9 @@ class COMakeFile(object):
 
 _globals_dict = None
 
+class BuildCancelError(Exception):
+    pass
+
 def get_global_dict():
     global _globals_dict
     if _globals_dict is None:
@@ -224,6 +228,7 @@ def get_global_dict():
         _globals_dict['Options'] = RawOptions
         _globals_dict['pathjoin'] = os.path.join
         _globals_dict['getenv'] = os.getenv
+        _globals_dict['BuildCancelError'] = BuildCancelError
         from comake.tools import exported_tools
         for tool in exported_tools:            
             _globals_dict[tool.__name__] = tool
@@ -292,6 +297,10 @@ def create_target_tree(pathname):
         options = copy.deepcopy(options)
         if raw_target.options:
             raw_target.options.affect(options)
+
+        if raw_target.settings_options:
+            from settings import settings
+            raw_target.settings_options.affect(vars(settings))
 
         inputs = []
         for index, tinput in enumerate(raw_target.inputs):

@@ -133,11 +133,11 @@ Section "coLinux" SeccoLinux
   ; the uninstall section
 
   SetOutPath "$INSTDIR"
-  File "..\console\coLinux-console-fltk.exe"
-  File "..\console-nt\coLinux-console-nt.exe"
-  File "..\conet-daemon\coLinux-net-daemon.exe"
-  File "..\conet-slirp-daemon\coLinux-slirp-net-daemon.exe"
-  File "..\daemon\coLinux-daemon.exe"
+  File "..\..\build\coLinux-console-fltk.exe"
+  File "..\..\build\coLinux-console-nt.exe"
+  File "..\..\build\coLinux-net-daemon.exe"
+  File "..\..\build\coLinux-slirp-net-daemon.exe"
+  File "..\..\build\coLinux-daemon.exe"
   File /oname=README.txt "..\..\..\..\..\..\RUNNING"
   File /oname=news.txt "..\..\..\..\..\..\NEWS" 
   File /oname=cofs.txt  "..\..\..\..\..\..\doc\cofs"
@@ -197,7 +197,7 @@ Section "coLinux Bridged Ethernet (WinPcap)" SeccoLinuxBridgedNet
   ; the uninstall section
 
   SetOutPath "$INSTDIR"
-  File "..\conet-bridged-daemon\coLinux-bridged-net-daemon.exe"
+  File "..\..\build\coLinux-bridged-net-daemon.exe"
 
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------

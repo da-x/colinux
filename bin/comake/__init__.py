@@ -13,15 +13,21 @@ def main(args):
     filename = args[0]
     os.chdir(build_root)
 
+    if '--help' in args:
+        print "make.py [target_name] (--help) (--dump)"
+        return
+
     if args[0] == 'clean':
         from comake.target import clean
         clean()
     else:
         from comake.target import create_target_tree, statistics
-        from comake.target import TargetNotFoundError
+        from comake.target import TargetNotFoundError, BuildCancelError
         print "Analyzing target tree..."
         try:
             target_tree = create_target_tree(filename)
+        except BuildCancelError:
+            return
         except TargetNotFoundError:
             return
             
