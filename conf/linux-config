@@ -663,6 +663,7 @@ CONFIG_SMB_FS=y
 # CONFIG_SMB_NLS_DEFAULT is not set
 # CONFIG_CIFS is not set
 # CONFIG_NCP_FS is not set
+CONFIG_COFUSE_FS=y
 # CONFIG_CODA_FS is not set
 # CONFIG_AFS_FS is not set
 
