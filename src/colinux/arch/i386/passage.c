@@ -95,7 +95,7 @@ asm(""							\
 	"    movl %eax, %cr0"                    "\n"			\
 									\
 	"    movl "CO_ARCH_STATE_STACK_CR4"(%ecx), %eax"  "\n"		\
-	"    addl $0xffffff7f, %eax"  "\n"		             	\
+	"    andl $0x00000020, %eax"  "\n"		             	\
 	"    movl %eax, %cr4" "\n"					\
 	"    movl "CO_ARCH_STATE_STACK_TEMP_CR3"(%ecx), %eax"  "\n"	\
 	"    movl %eax, %cr3" "\n"					\
@@ -113,9 +113,6 @@ asm(""							\
 	"    ret"                                "\n"			\
 									\
 	"  4:\n"							\
-	"    movl "CO_ARCH_STATE_STACK_CR3"(%ebp), %eax""\n"		\
-	"    movl %eax, %cr3"                    "\n"			\
-
 
 #define PASSAGE_CODE_WRAP_SWITCH(_inner_)				\
 /* read return address and state pointers  */				\
@@ -331,14 +328,14 @@ asm(""							\
     "    movl %eax, "CO_ARCH_STATE_STACK_CR3"(%ebp)"      "\n"		\
 									\
 _inner_									\
-/* load other's CR4 */			                	        \
+/* load other's CR4 */							\
     "    movl "CO_ARCH_STATE_STACK_CR4"(%ebp), %eax"              "\n"	\
     "    movl %eax, %cr4"                    "\n"			\
 									\
-/* load other's CR3 */			                	        \
+/* load other's CR3 */							\
     "    movl "CO_ARCH_STATE_STACK_CR3"(%ebp), %eax"              "\n"	\
     "    movl %eax, %cr3"                    "\n"			\
-                                                                        \
+									\
 /* load other's CR0 */							\
     "    movl "CO_ARCH_STATE_STACK_CR0"(%ebp), %eax"              "\n"	\
     "    movl %eax, %cr0"                    "\n"			\
@@ -373,7 +370,7 @@ _inner_									\
     "    cmpw $0, %ax"                       "\n"			\
     "    jz 1f"                              "\n"			\
     "    ltr %ax"                            "\n"			\
-    "1:"                                     "\n"
+    "1:"                                     "\n"                       \
 
 PASSAGE_CODE_WRAP_IBCS(
 	co_monitor_passage_func_fxsave, 

@@ -22,6 +22,7 @@ typedef int bool_t;
 
 #define CO_ERRORS_X_MACRO			\
 	X(ERROR)				\
+	X(PAE_ENABLED)	         		\
 	X(VERSION_MISMATCHED)			\
 	X(OUT_OF_MEMORY)			\
 	X(OUT_OF_PAGES)				\
