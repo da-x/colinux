@@ -1,5 +1,5 @@
 diff -urN a/CREDITS b/CREDITS
---- a/CREDITS	2004-06-16 08:19:43.000000000 +0300
+--- a/CREDITS	2004-06-22 09:23:56.000000000 +0300
 +++ b/CREDITS	2004-06-22 09:20:07.000000000 +0300
 @@ -54,6 +54,12 @@
  S: CH-1015 Lausanne
@@ -15,7 +15,7 @@ diff -urN a/CREDITS b/CREDITS
  E: tim_alpaerts@toyota-motor-europe.com
  D: 802.2 class II logical link control layer,
 diff -urN a/Makefile b/Makefile
---- a/Makefile	2004-06-22 09:15:16.000000000 +0300
+--- a/Makefile	2004-06-22 09:23:56.000000000 +0300
 +++ b/Makefile	2004-06-22 09:20:07.000000000 +0300
 @@ -1,7 +1,7 @@
  VERSION = 2
@@ -39,7 +39,7 @@ diff -urN a/Makefile b/Makefile
  AR		= $(CROSS_COMPILE)ar
  NM		= $(CROSS_COMPILE)nm
 diff -urN a/arch/i386/Kconfig b/arch/i386/Kconfig
---- a/arch/i386/Kconfig	2004-06-22 09:15:16.000000000 +0300
+--- a/arch/i386/Kconfig	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/Kconfig	2004-06-22 09:20:07.000000000 +0300
 @@ -201,6 +201,7 @@
  
@@ -81,7 +81,7 @@ diff -urN a/arch/i386/Kconfig b/arch/i386/Kconfig
  
  menu "APM (Advanced Power Management) BIOS Support"
 diff -urN a/arch/i386/kernel/Makefile b/arch/i386/kernel/Makefile
---- a/arch/i386/kernel/Makefile	2004-06-16 08:19:01.000000000 +0300
+--- a/arch/i386/kernel/Makefile	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/kernel/Makefile	2004-06-22 09:20:07.000000000 +0300
 @@ -17,6 +17,7 @@
  obj-$(CONFIG_X86_MSR)		+= msr.o
@@ -298,7 +298,7 @@ diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 +
 +CO_TRACE_CONTINUE;
 diff -urN a/arch/i386/kernel/cpu/common.c b/arch/i386/kernel/cpu/common.c
---- a/arch/i386/kernel/cpu/common.c	2004-06-22 09:15:16.000000000 +0300
+--- a/arch/i386/kernel/cpu/common.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/kernel/cpu/common.c	2004-06-22 09:20:07.000000000 +0300
 @@ -2,6 +2,7 @@
  #include <linux/string.h>
@@ -324,7 +324,7 @@ diff -urN a/arch/i386/kernel/cpu/common.c b/arch/i386/kernel/cpu/common.c
  	/*
  	 * Force FPU initialization:
 diff -urN a/arch/i386/kernel/entry.S b/arch/i386/kernel/entry.S
---- a/arch/i386/kernel/entry.S	2004-06-16 08:19:02.000000000 +0300
+--- a/arch/i386/kernel/entry.S	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/kernel/entry.S	2004-06-22 09:20:07.000000000 +0300
 @@ -192,7 +192,7 @@
  	ALIGN
@@ -336,7 +336,7 @@ diff -urN a/arch/i386/kernel/entry.S b/arch/i386/kernel/entry.S
  	movl EFLAGS(%esp), %eax		# mix EFLAGS and CS
  	movb CS(%esp), %al
 diff -urN a/arch/i386/kernel/head.S b/arch/i386/kernel/head.S
---- a/arch/i386/kernel/head.S	2004-06-16 08:18:57.000000000 +0300
+--- a/arch/i386/kernel/head.S	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/kernel/head.S	2004-06-22 09:20:07.000000000 +0300
 @@ -399,7 +399,7 @@
  .data
@@ -348,7 +348,7 @@ diff -urN a/arch/i386/kernel/head.S b/arch/i386/kernel/head.S
  
  ready:	.byte 0
 diff -urN a/arch/i386/kernel/i387.c b/arch/i386/kernel/i387.c
---- a/arch/i386/kernel/i387.c	2004-06-22 09:15:16.000000000 +0300
+--- a/arch/i386/kernel/i387.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/kernel/i387.c	2004-06-22 09:20:07.000000000 +0300
 @@ -17,6 +17,7 @@
  #include <asm/user.h>
@@ -406,7 +406,7 @@ diff -urN a/arch/i386/kernel/i387.c b/arch/i386/kernel/i387.c
   * ptrace request handlers.
   */
 diff -urN a/arch/i386/kernel/i8259.c b/arch/i386/kernel/i8259.c
---- a/arch/i386/kernel/i8259.c	2004-06-22 09:15:16.000000000 +0300
+--- a/arch/i386/kernel/i8259.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/kernel/i8259.c	2004-06-22 09:20:07.000000000 +0300
 @@ -25,9 +25,87 @@
  #include <asm/i8259.h>
@@ -596,7 +596,7 @@ diff -urN a/arch/i386/kernel/i8259.c b/arch/i386/kernel/i8259.c
  	 * Cover the whole vector space, no vector can escape
  	 * us. (some of these will be overridden and become
 diff -urN a/arch/i386/kernel/ioport.c b/arch/i386/kernel/ioport.c
---- a/arch/i386/kernel/ioport.c	2004-06-22 09:15:16.000000000 +0300
+--- a/arch/i386/kernel/ioport.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/kernel/ioport.c	2004-06-22 09:20:07.000000000 +0300
 @@ -15,6 +15,7 @@
  #include <linux/stddef.h>
@@ -627,7 +627,7 @@ diff -urN a/arch/i386/kernel/ioport.c b/arch/i386/kernel/ioport.c
  		return -EINVAL;
  	/* Trying to gain more privileges? */
 diff -urN a/arch/i386/kernel/process.c b/arch/i386/kernel/process.c
---- a/arch/i386/kernel/process.c	2004-06-22 09:15:16.000000000 +0300
+--- a/arch/i386/kernel/process.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/kernel/process.c	2004-06-22 09:20:07.000000000 +0300
 @@ -52,6 +52,7 @@
  
@@ -648,7 +648,7 @@ diff -urN a/arch/i386/kernel/process.c b/arch/i386/kernel/process.c
  				idle = default_idle;
  
 diff -urN a/arch/i386/kernel/reboot.c b/arch/i386/kernel/reboot.c
---- a/arch/i386/kernel/reboot.c	2004-06-22 09:15:16.000000000 +0300
+--- a/arch/i386/kernel/reboot.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/kernel/reboot.c	2004-06-22 09:20:07.000000000 +0300
 @@ -12,6 +12,7 @@
  #include <asm/uaccess.h>
@@ -702,7 +702,7 @@ diff -urN a/arch/i386/kernel/reboot.c b/arch/i386/kernel/reboot.c
  		efi.reset_system(EFI_RESET_SHUTDOWN, EFI_SUCCESS, 0, 0);
  	if (pm_power_off)
 diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
---- a/arch/i386/kernel/setup.c	2004-06-22 09:15:16.000000000 +0300
+--- a/arch/i386/kernel/setup.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/kernel/setup.c	2004-06-22 09:20:07.000000000 +0300
 @@ -39,6 +39,7 @@
  #include <linux/efi.h>
@@ -893,7 +893,7 @@ diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
  
  #include "setup_arch_post.h"
 diff -urN a/arch/i386/kernel/sysenter.c b/arch/i386/kernel/sysenter.c
---- a/arch/i386/kernel/sysenter.c	2004-06-22 09:15:16.000000000 +0300
+--- a/arch/i386/kernel/sysenter.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/kernel/sysenter.c	2004-06-22 09:20:07.000000000 +0300
 @@ -13,6 +13,7 @@
  #include <linux/gfp.h>
@@ -921,7 +921,7 @@ diff -urN a/arch/i386/kernel/sysenter.c b/arch/i386/kernel/sysenter.c
  }
  
 diff -urN a/arch/i386/kernel/time.c b/arch/i386/kernel/time.c
---- a/arch/i386/kernel/time.c	2004-06-22 09:15:16.000000000 +0300
+--- a/arch/i386/kernel/time.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/kernel/time.c	2004-06-22 09:20:07.000000000 +0300
 @@ -45,6 +45,7 @@
  #include <linux/sysdev.h>
@@ -962,7 +962,7 @@ diff -urN a/arch/i386/kernel/time.c b/arch/i386/kernel/time.c
  
  	if (efi_enabled)
 diff -urN a/arch/i386/kernel/timers/timer.c b/arch/i386/kernel/timers/timer.c
---- a/arch/i386/kernel/timers/timer.c	2004-06-22 09:15:16.000000000 +0300
+--- a/arch/i386/kernel/timers/timer.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/kernel/timers/timer.c	2004-06-22 09:20:07.000000000 +0300
 @@ -13,6 +13,7 @@
  #endif
@@ -981,7 +981,7 @@ diff -urN a/arch/i386/kernel/timers/timer.c b/arch/i386/kernel/timers/timer.c
  	NULL,
  };
 diff -urN a/arch/i386/kernel/vmlinux.lds.S b/arch/i386/kernel/vmlinux.lds.S
---- a/arch/i386/kernel/vmlinux.lds.S	2004-06-16 08:19:01.000000000 +0300
+--- a/arch/i386/kernel/vmlinux.lds.S	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/kernel/vmlinux.lds.S	2004-06-22 09:20:07.000000000 +0300
 @@ -13,6 +13,7 @@
  {
@@ -992,7 +992,7 @@ diff -urN a/arch/i386/kernel/vmlinux.lds.S b/arch/i386/kernel/vmlinux.lds.S
    .text : {
  	*(.text)
 diff -urN a/arch/i386/mm/fault.c b/arch/i386/mm/fault.c
---- a/arch/i386/mm/fault.c	2004-06-16 08:18:37.000000000 +0300
+--- a/arch/i386/mm/fault.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/mm/fault.c	2004-06-22 09:20:07.000000000 +0300
 @@ -486,7 +486,7 @@
  		pte_t *pte_k;
@@ -1004,7 +1004,7 @@ diff -urN a/arch/i386/mm/fault.c b/arch/i386/mm/fault.c
  
  		if (!pgd_present(*pgd_k))
 diff -urN a/arch/i386/mm/init.c b/arch/i386/mm/init.c
---- a/arch/i386/mm/init.c	2004-06-22 09:15:16.000000000 +0300
+--- a/arch/i386/mm/init.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/mm/init.c	2004-06-22 09:20:07.000000000 +0300
 @@ -27,6 +27,7 @@
  #include <linux/slab.h>
@@ -1117,7 +1117,7 @@ diff -urN a/arch/i386/mm/init.c b/arch/i386/mm/init.c
  	/*
  	 * Subtle. SMP is doing it's boot stuff late (because it has to
 diff -urN a/arch/i386/mm/ioremap.c b/arch/i386/mm/ioremap.c
---- a/arch/i386/mm/ioremap.c	2004-06-22 09:15:16.000000000 +0300
+--- a/arch/i386/mm/ioremap.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/arch/i386/mm/ioremap.c	2004-06-22 09:20:07.000000000 +0300
 @@ -11,6 +11,7 @@
  #include <linux/vmalloc.h>
@@ -1144,7 +1144,7 @@ diff -urN a/arch/i386/mm/ioremap.c b/arch/i386/mm/ioremap.c
  		return p; 
  
 diff -urN a/drivers/block/Kconfig b/drivers/block/Kconfig
---- a/drivers/block/Kconfig	2004-06-16 08:19:01.000000000 +0300
+--- a/drivers/block/Kconfig	2004-06-22 09:23:56.000000000 +0300
 +++ b/drivers/block/Kconfig	2004-06-22 09:20:07.000000000 +0300
 @@ -339,6 +339,15 @@
  	  "real" root file system, etc. See <file:Documentation/initrd.txt>
@@ -1163,7 +1163,7 @@ diff -urN a/drivers/block/Kconfig b/drivers/block/Kconfig
  	bool "Support for Large Block Devices"
  	depends on X86 || MIPS32 || PPC32 || ARCH_S390_31 || SUPERH
 diff -urN a/drivers/block/Makefile b/drivers/block/Makefile
---- a/drivers/block/Makefile	2004-06-16 08:19:52.000000000 +0300
+--- a/drivers/block/Makefile	2004-06-22 09:23:56.000000000 +0300
 +++ b/drivers/block/Makefile	2004-06-22 09:20:07.000000000 +0300
 @@ -29,6 +29,7 @@
  obj-$(CONFIG_ATARI_SLM)		+= acsi_slm.o
@@ -1464,7 +1464,7 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +
 +
 diff -urN a/drivers/char/Makefile b/drivers/char/Makefile
---- a/drivers/char/Makefile	2004-06-16 08:20:04.000000000 +0300
+--- a/drivers/char/Makefile	2004-06-22 09:23:56.000000000 +0300
 +++ b/drivers/char/Makefile	2004-06-22 09:20:07.000000000 +0300
 @@ -24,6 +24,7 @@
  obj-$(CONFIG_STALLION)		+= stallion.o
@@ -1768,7 +1768,7 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +
 +module_init(cocd_init);
 diff -urN a/drivers/input/keyboard/Kconfig b/drivers/input/keyboard/Kconfig
---- a/drivers/input/keyboard/Kconfig	2004-06-16 08:20:04.000000000 +0300
+--- a/drivers/input/keyboard/Kconfig	2004-06-22 09:23:56.000000000 +0300
 +++ b/drivers/input/keyboard/Kconfig	2004-06-22 09:20:07.000000000 +0300
 @@ -16,7 +16,7 @@
  	default y
@@ -1780,7 +1780,7 @@ diff -urN a/drivers/input/keyboard/Kconfig b/drivers/input/keyboard/Kconfig
  	help
  	  Say Y here if you want to use a standard AT or PS/2 keyboard. Usually
 diff -urN a/drivers/input/keyboard/atkbd.c b/drivers/input/keyboard/atkbd.c
---- a/drivers/input/keyboard/atkbd.c	2004-06-22 09:15:16.000000000 +0300
+--- a/drivers/input/keyboard/atkbd.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/drivers/input/keyboard/atkbd.c	2004-06-22 09:20:07.000000000 +0300
 @@ -26,6 +26,7 @@
  #include <linux/input.h>
@@ -1801,7 +1801,7 @@ diff -urN a/drivers/input/keyboard/atkbd.c b/drivers/input/keyboard/atkbd.c
   * Some systems, where the bit-twiddling when testing the io-lines of the
   * controller may confuse the keyboard need a full reset of the keyboard. On
 diff -urN a/drivers/input/mouse/Kconfig b/drivers/input/mouse/Kconfig
---- a/drivers/input/mouse/Kconfig	2004-06-22 09:15:16.000000000 +0300
+--- a/drivers/input/mouse/Kconfig	2004-06-22 09:23:56.000000000 +0300
 +++ b/drivers/input/mouse/Kconfig	2004-06-22 09:20:07.000000000 +0300
 @@ -14,7 +14,7 @@
  config MOUSE_PS2
@@ -1915,7 +1915,7 @@ diff -urN a/drivers/input/mouse/Kconfig b/drivers/input/mouse/Kconfig
  	  Say Y here if you have NEC PC-9801/PC-9821 computer and want its
  	  native mouse supported.
 diff -urN a/drivers/input/mouse/Makefile b/drivers/input/mouse/Makefile
---- a/drivers/input/mouse/Makefile	2004-06-16 08:19:01.000000000 +0300
+--- a/drivers/input/mouse/Makefile	2004-06-22 09:23:56.000000000 +0300
 +++ b/drivers/input/mouse/Makefile	2004-06-22 09:20:07.000000000 +0300
 @@ -12,6 +12,7 @@
  obj-$(CONFIG_MOUSE_PC110PAD)	+= pc110pad.o
@@ -2001,7 +2001,7 @@ diff -urN a/drivers/input/mouse/comouse.c b/drivers/input/mouse/comouse.c
 +module_init(comouse_init);
 +module_exit(comouse_exit);
 diff -urN a/drivers/input/serio/Kconfig b/drivers/input/serio/Kconfig
---- a/drivers/input/serio/Kconfig	2004-06-22 09:15:16.000000000 +0300
+--- a/drivers/input/serio/Kconfig	2004-06-22 09:23:56.000000000 +0300
 +++ b/drivers/input/serio/Kconfig	2004-06-22 09:20:07.000000000 +0300
 @@ -20,7 +20,7 @@
  	tristate "i8042 PC Keyboard controller" if EMBEDDED || !X86
@@ -2022,7 +2022,7 @@ diff -urN a/drivers/input/serio/Kconfig b/drivers/input/serio/Kconfig
 +	depends on COOPERATIVE
 +	default y
 diff -urN a/drivers/input/serio/Makefile b/drivers/input/serio/Makefile
---- a/drivers/input/serio/Makefile	2004-06-16 08:18:57.000000000 +0300
+--- a/drivers/input/serio/Makefile	2004-06-22 09:23:56.000000000 +0300
 +++ b/drivers/input/serio/Makefile	2004-06-22 09:20:07.000000000 +0300
 @@ -17,3 +17,4 @@
  obj-$(CONFIG_SERIO_GSCPS2)	+= gscps2.o
@@ -2189,7 +2189,7 @@ diff -urN a/drivers/input/serio/cokbd.c b/drivers/input/serio/cokbd.c
 +module_init(cokbdio_init);
 +module_exit(cokbdio_exit);
 diff -urN a/drivers/net/Kconfig b/drivers/net/Kconfig
---- a/drivers/net/Kconfig	2004-06-16 08:19:52.000000000 +0300
+--- a/drivers/net/Kconfig	2004-06-22 09:23:56.000000000 +0300
 +++ b/drivers/net/Kconfig	2004-06-22 09:20:07.000000000 +0300
 @@ -127,6 +127,10 @@
  
@@ -2203,7 +2203,7 @@ diff -urN a/drivers/net/Kconfig b/drivers/net/Kconfig
  	tristate "General Instruments Surfboard 1000"
  	depends on NETDEVICES && PNP
 diff -urN a/drivers/net/Makefile b/drivers/net/Makefile
---- a/drivers/net/Makefile	2004-06-16 08:19:03.000000000 +0300
+--- a/drivers/net/Makefile	2004-06-22 09:23:56.000000000 +0300
 +++ b/drivers/net/Makefile	2004-06-22 09:20:07.000000000 +0300
 @@ -147,6 +147,7 @@
  
@@ -2528,7 +2528,7 @@ diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 +module_init(conet_init_module);
 +module_exit(conet_cleanup_module);
 diff -urN a/drivers/video/console/Kconfig b/drivers/video/console/Kconfig
---- a/drivers/video/console/Kconfig	2004-06-22 09:15:16.000000000 +0300
+--- a/drivers/video/console/Kconfig	2004-06-22 09:23:56.000000000 +0300
 +++ b/drivers/video/console/Kconfig	2004-06-22 09:20:07.000000000 +0300
 @@ -6,7 +6,7 @@
  
@@ -2564,7 +2564,7 @@ diff -urN a/drivers/video/console/Kconfig b/drivers/video/console/Kconfig
  
  config FRAMEBUFFER_CONSOLE
 diff -urN a/drivers/video/console/Makefile b/drivers/video/console/Makefile
---- a/drivers/video/console/Makefile	2004-06-16 08:19:22.000000000 +0300
+--- a/drivers/video/console/Makefile	2004-06-22 09:23:56.000000000 +0300
 +++ b/drivers/video/console/Makefile	2004-06-22 09:20:07.000000000 +0300
 @@ -23,6 +23,7 @@
  obj-$(CONFIG_PROM_CONSOLE)        += promcon.o promcon_tbl.o
@@ -3062,7 +3062,7 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +
 +MODULE_LICENSE("GPL");
 diff -urN a/include/asm-i386/bug.h b/include/asm-i386/bug.h
---- a/include/asm-i386/bug.h	2004-06-16 08:18:59.000000000 +0300
+--- a/include/asm-i386/bug.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/asm-i386/bug.h	2004-06-22 09:20:07.000000000 +0300
 @@ -10,11 +10,15 @@
   */
@@ -3276,7 +3276,7 @@ diff -urN a/include/asm-i386/cooperative.h b/include/asm-i386/cooperative.h
 +
 +#endif
 diff -urN a/include/asm-i386/dma.h b/include/asm-i386/dma.h
---- a/include/asm-i386/dma.h	2004-06-22 09:15:16.000000000 +0300
+--- a/include/asm-i386/dma.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/asm-i386/dma.h	2004-06-22 09:20:07.000000000 +0300
 @@ -268,6 +268,7 @@
   *
@@ -3295,7 +3295,7 @@ diff -urN a/include/asm-i386/dma.h b/include/asm-i386/dma.h
  
  /* These are in kernel/dma.c: */
 diff -urN a/include/asm-i386/fixmap.h b/include/asm-i386/fixmap.h
---- a/include/asm-i386/fixmap.h	2004-06-22 09:15:16.000000000 +0300
+--- a/include/asm-i386/fixmap.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/asm-i386/fixmap.h	2004-06-22 09:20:07.000000000 +0300
 @@ -22,6 +22,7 @@
  #include <linux/threads.h>
@@ -3314,7 +3314,7 @@ diff -urN a/include/asm-i386/fixmap.h b/include/asm-i386/fixmap.h
  #define FIXADDR_START	(FIXADDR_TOP - __FIXADDR_SIZE)
  
 diff -urN a/include/asm-i386/io.h b/include/asm-i386/io.h
---- a/include/asm-i386/io.h	2004-06-16 08:20:26.000000000 +0300
+--- a/include/asm-i386/io.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/asm-i386/io.h	2004-06-22 09:20:07.000000000 +0300
 @@ -102,6 +102,9 @@
  
@@ -3327,7 +3327,7 @@ diff -urN a/include/asm-i386/io.h b/include/asm-i386/io.h
  }
  
 diff -urN a/include/asm-i386/mach-default/irq_vectors.h b/include/asm-i386/mach-default/irq_vectors.h
---- a/include/asm-i386/mach-default/irq_vectors.h	2004-06-16 08:19:02.000000000 +0300
+--- a/include/asm-i386/mach-default/irq_vectors.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/asm-i386/mach-default/irq_vectors.h	2004-06-22 09:20:07.000000000 +0300
 @@ -67,6 +67,11 @@
  
@@ -3342,7 +3342,7 @@ diff -urN a/include/asm-i386/mach-default/irq_vectors.h b/include/asm-i386/mach-
   * 16 8259A IRQ's, 208 potential APIC interrupt sources.
   * Right now the APIC is mostly only used for SMP.
 diff -urN a/include/asm-i386/mach-default/irq_vectors_limits.h b/include/asm-i386/mach-default/irq_vectors_limits.h
---- a/include/asm-i386/mach-default/irq_vectors_limits.h	2004-06-16 08:19:01.000000000 +0300
+--- a/include/asm-i386/mach-default/irq_vectors_limits.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/asm-i386/mach-default/irq_vectors_limits.h	2004-06-22 09:20:07.000000000 +0300
 @@ -5,7 +5,7 @@
  #define NR_IRQS FIRST_SYSTEM_VECTOR
@@ -3354,7 +3354,7 @@ diff -urN a/include/asm-i386/mach-default/irq_vectors_limits.h b/include/asm-i38
  # if (224 >= 32 * NR_CPUS)
  # define NR_IRQ_VECTORS NR_IRQS
 diff -urN a/include/asm-i386/mc146818rtc.h b/include/asm-i386/mc146818rtc.h
---- a/include/asm-i386/mc146818rtc.h	2004-06-22 09:15:16.000000000 +0300
+--- a/include/asm-i386/mc146818rtc.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/asm-i386/mc146818rtc.h	2004-06-22 09:20:07.000000000 +0300
 @@ -4,6 +4,7 @@
  #ifndef _ASM_MC146818RTC_H
@@ -3386,7 +3386,7 @@ diff -urN a/include/asm-i386/mc146818rtc.h b/include/asm-i386/mc146818rtc.h
  
  #endif /* _ASM_MC146818RTC_H */
 diff -urN a/include/asm-i386/mmzone.h b/include/asm-i386/mmzone.h
---- a/include/asm-i386/mmzone.h	2004-06-22 09:15:16.000000000 +0300
+--- a/include/asm-i386/mmzone.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/asm-i386/mmzone.h	2004-06-22 09:20:07.000000000 +0300
 @@ -6,7 +6,9 @@
  #ifndef _ASM_MMZONE_H_
@@ -3409,7 +3409,7 @@ diff -urN a/include/asm-i386/mmzone.h b/include/asm-i386/mmzone.h
  #ifdef CONFIG_X86_NUMAQ            /* we have contiguous memory on NUMA-Q */
  #define pfn_valid(pfn)          ((pfn) < num_physpages)
 diff -urN a/include/asm-i386/page.h b/include/asm-i386/page.h
---- a/include/asm-i386/page.h	2004-06-22 09:15:16.000000000 +0300
+--- a/include/asm-i386/page.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/asm-i386/page.h	2004-06-22 09:20:07.000000000 +0300
 @@ -13,6 +13,7 @@
  #ifndef __ASSEMBLY__
@@ -3440,7 +3440,7 @@ diff -urN a/include/asm-i386/page.h b/include/asm-i386/page.h
  #define PAGE_OFFSET		((unsigned long)__PAGE_OFFSET)
  #define VMALLOC_RESERVE		((unsigned long)__VMALLOC_RESERVE)
 diff -urN a/include/asm-i386/param.h b/include/asm-i386/param.h
---- a/include/asm-i386/param.h	2004-06-16 08:19:01.000000000 +0300
+--- a/include/asm-i386/param.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/asm-i386/param.h	2004-06-22 09:20:07.000000000 +0300
 @@ -2,8 +2,12 @@
  #define _ASMi386_PARAM_H
@@ -3456,7 +3456,7 @@ diff -urN a/include/asm-i386/param.h b/include/asm-i386/param.h
  #endif
  
 diff -urN a/include/asm-i386/pgalloc.h b/include/asm-i386/pgalloc.h
---- a/include/asm-i386/pgalloc.h	2004-06-16 08:18:57.000000000 +0300
+--- a/include/asm-i386/pgalloc.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/asm-i386/pgalloc.h	2004-06-22 09:20:07.000000000 +0300
 @@ -6,15 +6,16 @@
  #include <asm/fixmap.h>
@@ -3479,7 +3479,7 @@ diff -urN a/include/asm-i386/pgalloc.h b/include/asm-i386/pgalloc.h
  /*
   * Allocate and free page tables.
 diff -urN a/include/asm-i386/pgtable-2level.h b/include/asm-i386/pgtable-2level.h
---- a/include/asm-i386/pgtable-2level.h	2004-06-22 09:15:16.000000000 +0300
+--- a/include/asm-i386/pgtable-2level.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/asm-i386/pgtable-2level.h	2004-06-22 09:20:07.000000000 +0300
 @@ -1,6 +1,9 @@
  #ifndef _I386_PGTABLE_2LEVEL_H
@@ -3518,7 +3518,7 @@ diff -urN a/include/asm-i386/pgtable-2level.h b/include/asm-i386/pgtable-2level.
  /*
   * Bits 0, 6 and 7 are taken, split up the 29 bits of offset
 diff -urN a/include/asm-i386/pgtable.h b/include/asm-i386/pgtable.h
---- a/include/asm-i386/pgtable.h	2004-06-22 09:15:16.000000000 +0300
+--- a/include/asm-i386/pgtable.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/asm-i386/pgtable.h	2004-06-22 09:20:07.000000000 +0300
 @@ -25,6 +25,8 @@
  #include <linux/list.h>
@@ -3543,7 +3543,7 @@ diff -urN a/include/asm-i386/pgtable.h b/include/asm-i386/pgtable.h
  
  #define pmd_large(pmd) \
 diff -urN a/include/asm-i386/processor.h b/include/asm-i386/processor.h
---- a/include/asm-i386/processor.h	2004-06-16 08:18:56.000000000 +0300
+--- a/include/asm-i386/processor.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/asm-i386/processor.h	2004-06-22 09:20:07.000000000 +0300
 @@ -180,8 +180,7 @@
  }
@@ -3556,7 +3556,7 @@ diff -urN a/include/asm-i386/processor.h b/include/asm-i386/processor.h
  /*
   * Intel CPU features in CR4
 diff -urN a/include/linux/console.h b/include/linux/console.h
---- a/include/linux/console.h	2004-06-16 08:19:22.000000000 +0300
+--- a/include/linux/console.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/linux/console.h	2004-06-22 09:20:07.000000000 +0300
 @@ -57,6 +57,7 @@
  extern const struct consw dummy_con;	/* dummy console buffer */
@@ -3940,7 +3940,7 @@ diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_int
 +
 +#endif
 diff -urN a/include/linux/major.h b/include/linux/major.h
---- a/include/linux/major.h	2004-06-16 08:19:02.000000000 +0300
+--- a/include/linux/major.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/linux/major.h	2004-06-22 09:20:07.000000000 +0300
 @@ -130,6 +130,7 @@
  #define VIOCD_MAJOR		113
@@ -3951,7 +3951,7 @@ diff -urN a/include/linux/major.h b/include/linux/major.h
  #define SCSI_DISK8_MAJOR	128
  #define SCSI_DISK9_MAJOR	129
 diff -urN a/init/main.c b/init/main.c
---- a/init/main.c	2004-06-16 08:19:01.000000000 +0300
+--- a/init/main.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/init/main.c	2004-06-22 09:20:07.000000000 +0300
 @@ -446,6 +446,7 @@
  		panic(panic_later, panic_param);
@@ -3962,7 +3962,7 @@ diff -urN a/init/main.c b/init/main.c
  	if (initrd_start && !initrd_below_start_ok &&
  			initrd_start < min_low_pfn << PAGE_SHIFT) {
 diff -urN a/kernel/Makefile b/kernel/Makefile
---- a/kernel/Makefile	2004-06-16 08:19:01.000000000 +0300
+--- a/kernel/Makefile	2004-06-22 09:23:56.000000000 +0300
 +++ b/kernel/Makefile	2004-06-22 09:20:07.000000000 +0300
 @@ -23,6 +23,7 @@
  obj-$(CONFIG_STOP_MACHINE) += stop_machine.o
@@ -4323,7 +4323,7 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +
 +CO_TRACE_CONTINUE;
 diff -urN a/kernel/panic.c b/kernel/panic.c
---- a/kernel/panic.c	2004-06-22 09:15:16.000000000 +0300
+--- a/kernel/panic.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/kernel/panic.c	2004-06-22 09:20:07.000000000 +0300
 @@ -19,6 +19,7 @@
  #include <linux/syscalls.h>
@@ -4345,7 +4345,7 @@ diff -urN a/kernel/panic.c b/kernel/panic.c
  	smp_send_stop();
  #endif
 diff -urN a/kernel/printk.c b/kernel/printk.c
---- a/kernel/printk.c	2004-06-22 09:15:16.000000000 +0300
+--- a/kernel/printk.c	2004-06-22 09:23:56.000000000 +0300
 +++ b/kernel/printk.c	2004-06-22 09:20:07.000000000 +0300
 @@ -33,6 +33,8 @@
  
