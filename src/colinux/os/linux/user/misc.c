@@ -24,17 +24,14 @@
 #include <colinux/os/timer.h>
 #include <colinux/os/user/misc.h>
 
-void co_terminal_print(const char *format, ...)
+
+static void co_terminal_printv(const char *format, va_list ap)
 {
 	char buf[0x100];
-	va_list ap;
 	int len;
 
-	va_start(ap, format);
 	vsnprintf(buf, sizeof(buf), format, ap);
-	va_end(ap);
 
-	//printf("%s: %s", _colinux_module, buf);
 	printf("%s", buf);
 
 	len = co_strlen(buf);
@@ -42,6 +39,26 @@ void co_terminal_print(const char *format, ...)
 		buf[len - 1] = '\0';
 		
 	co_debug_lvl(prints, 11, "prints \"%s\"\n", buf);
+}
+
+void co_terminal_print(const char *format, ...)
+{
+	va_list ap;
+
+	va_start(ap, format);
+	co_terminal_printv(format, ap);
+	va_end(ap);
+}
+
+void co_terminal_print_color(co_terminal_color_t color, const char *format, ...)
+{
+	va_list ap;
+	
+	/* FIXME: colors (ncurses? */
+
+	va_start(ap, format);
+	co_terminal_printv(format, ap);
+	va_end(ap);
 }
 
 double co_os_timer_highres()

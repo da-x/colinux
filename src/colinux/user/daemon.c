@@ -525,6 +525,16 @@ co_rc_t co_daemon_handle_printk(void *data, co_message_t *message)
 			string_start += 3;
 		}
 		co_terminal_print("%s", string_start);
+		if (co_strstr(string_start, "Kernel panic: VFS: Unable to mount root fs on") == string_start) {
+			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
+						"colinux: kernel panic suggests that either you forget to supply a\n");
+			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
+						"root= kernel boot paramter or the file / device mapped to the root\n");
+			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
+						"file system is not found or inaccessible. Please Check your.\n");
+			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
+						"coLinux configuration.\n");
+		}
 	}
 
 	co_os_free(message);

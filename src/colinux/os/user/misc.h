@@ -15,7 +15,12 @@
 
 typedef void (*co_terminal_print_hook_func_t)(char *str);
 
+typedef enum {
+	CO_TERM_COLOR_YELLOW = 1,
+} co_terminal_color_t;
+
 extern void co_terminal_print(const char *format, ...);
+extern void co_terminal_print_color(co_terminal_color_t color, const char *format, ...);
 extern void co_set_terminal_print_hook(co_terminal_print_hook_func_t func);
 extern int co_udp_socket_connect(const char *addr, unsigned short int port);
 extern int co_udp_socket_send(int sock, const char *buffer, unsigned long size);
