@@ -17,10 +17,10 @@
     from all the coLinux components. This also changes the way things
     are printed when you run the daemon (it is now easier to see
     what belongs to what). All debug messages are off by default,
-    so things my go a little faster.
+    so things may go a little faster.
   * An API version number was added to make sure that you use the
     right vmlinux and user-space executables with the right coLinux 
-    driver (otherwise it can cause crashes if the APIs changes).
+    driver (previously it caused crashes if the APIs changed).
   * Bug fix: A tiny memory leak when coLinux is shutting down.
   * Bug fix: Proper reference counting of the driver in the Linux
     port.
