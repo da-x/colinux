@@ -15,7 +15,6 @@
 
 struct co_os_wait {
 	wait_queue_head_t head;
-	bool_t signaled;
 };
 
 co_rc_t co_os_wait_create(co_os_wait_t *wait_out)
@@ -30,7 +29,6 @@ co_rc_t co_os_wait_create(co_os_wait_t *wait_out)
 		return CO_RC(OUT_OF_MEMORY);
 	
 	init_waitqueue_head(&wait->head);
-	wait->signaled = PFALSE;
 
 	*wait_out = wait;
 
@@ -41,21 +39,14 @@ void co_os_wait_sleep(co_os_wait_t wait)
 {
 	DEFINE_WAIT(wait_one);
 
-	if (!wait->signaled) {
-		prepare_to_wait(&wait->head, &wait_one, TASK_INTERRUPTIBLE);
-		schedule();
-		finish_wait(&wait->head, &wait_one);
-	}
-
-	wait->signaled = PFALSE;
+	prepare_to_wait(&wait->head, &wait_one, TASK_INTERRUPTIBLE);
+	schedule();
+	finish_wait(&wait->head, &wait_one);
 }
 
 void co_os_wait_wakeup(co_os_wait_t wait)
 {
-	if (!wait->signaled) {
-		wait->signaled = PTRUE;
-		wake_up_interruptible_all(&wait->head);
-	}
+	wake_up_interruptible_all(&wait->head);
 }
 
 void co_os_wait_destroy(co_os_wait_t wait)
