@@ -262,7 +262,6 @@ struct tcpcb *tcp_drop(struct tcpcb *tp, int err)
  *		errno = tp->t_softerror;
  */
 /*	so->so_error = errno; */
-	    printf("%s:%d\n", __FILE__, __LINE__);
 	return (tcp_close(tp));
 }
 
@@ -364,7 +363,6 @@ tcp_sockclosed(tp)
 	case TCPS_LISTEN:
 	case TCPS_SYN_SENT:
 		tp->t_state = TCPS_CLOSED;
-	    printf("%s:%d\n", __FILE__, __LINE__);
 		tp = tcp_close(tp);
 		break;
 
@@ -493,7 +491,6 @@ tcp_connect(inso)
 	(void) tcp_mss(sototcpcb(so), 0);
 
 	if ((s = accept(inso->s,(struct sockaddr *)&addr,&addrlen)) < 0) {
-	    printf("%s:%d\n", __FILE__, __LINE__);
 		tcp_close(sototcpcb(so)); /* This will sofree() as well */
 		return;
 	}

@@ -705,7 +705,6 @@ findso:
 	      *ip=save_ip;
 	      icmp_error(m, ICMP_UNREACH,code, 0,strerror(errno));
 	    }
-	    printf("%s:%d\n", __FILE__, __LINE__);
 	    tp = tcp_close(tp);
 	    m_free(m);
 	  } else {
@@ -727,7 +726,6 @@ findso:
 	   * Check if the connect succeeded
 	   */
 	  if (so->so_state & SS_NOFDREF) {
-	    printf("%s:%d\n", __FILE__, __LINE__);
 	    tp = tcp_close(tp);
 	    goto dropwithreset;
 	  }
@@ -919,7 +917,6 @@ trimthenstep6:
 	 */
 	if ((so->so_state & SS_NOFDREF) &&
 	    tp->t_state > TCPS_CLOSE_WAIT && ti->ti_len) {
-	    printf("%s:%d\n", __FILE__, __LINE__);
 		tp = tcp_close(tp);
 		tcpstat.tcps_rcvafterclose++;
 		goto dropwithreset;
@@ -944,7 +941,6 @@ trimthenstep6:
 			    tp->t_state == TCPS_TIME_WAIT &&
 			    SEQ_GT(ti->ti_seq, tp->rcv_nxt)) {
 				iss = tp->rcv_nxt + TCP_ISSINCR;
-	    printf("%s:%d\n", __FILE__, __LINE__);
 				tp = tcp_close(tp);
 				goto findso;
 			}
@@ -1003,14 +999,12 @@ trimthenstep6:
 	close:
 		tp->t_state = TCPS_CLOSED;
 		tcpstat.tcps_drops++;
-	    printf("%s:%d\n", __FILE__, __LINE__);
 		tp = tcp_close(tp);
 		goto drop;
 
 	case TCPS_CLOSING:
 	case TCPS_LAST_ACK:
 	case TCPS_TIME_WAIT:
-	    printf("%s:%d\n", __FILE__, __LINE__);
 		tp = tcp_close(tp);
 		goto drop;
 	}
@@ -1284,7 +1278,6 @@ trimthenstep6:
 		 */
 		case TCPS_LAST_ACK:
 			if (ourfinisacked) {
-	    printf("%s:%d\n", __FILE__, __LINE__);
 				tp = tcp_close(tp);
 				goto drop;
 			}
