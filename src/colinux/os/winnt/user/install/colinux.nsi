@@ -170,7 +170,7 @@ Section "coLinux Virtual Ethernet Driver (TAP-Win32)" SeccoLinuxNet
 
   SetOutPath "$INSTDIR\netdriver"
   File "premaid\netdriver\OemWin2k.inf"
-  File "premaid\netdriver\tapdrvr.sys"
+  File "premaid\netdriver\tap0801co.sys"
   File "premaid\netdriver\devcon.exe"
 
   ;--------------------------------------------------------------/FILES--
@@ -317,7 +317,7 @@ Section -post
     ; If devcon error occurred, $5 will
     ; be nonzero.
     IntOp $5 0 & 0
-    nsExec::ExecToStack '"$INSTDIR\netdriver\devcon.exe" hwids TAPdev'
+    nsExec::ExecToStack '"$INSTDIR\netdriver\devcon.exe" hwids TAP0801co'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
     DetailPrint "devcon hwids returned: $R0"
@@ -334,7 +334,7 @@ Section -post
 
  ;tapupdate:
     DetailPrint "TAP-Win32 UPDATE"
-    nsExec::ExecToLog '"$INSTDIR\netdriver\devcon.exe" update "$INSTDIR\netdriver\OemWin2k.inf" TAPdev'
+    nsExec::ExecToLog '"$INSTDIR\netdriver\devcon.exe" update "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
     DetailPrint "devcon update returned: $R0"
@@ -342,7 +342,7 @@ Section -post
 
  tapinstall:
     DetailPrint "TAP-Win32 INSTALL"
-    nsExec::ExecToLog '"$INSTDIR\netdriver\devcon.exe" install "$INSTDIR\netdriver\OemWin2k.inf" TAPdev'
+    nsExec::ExecToLog '"$INSTDIR\netdriver\devcon.exe" install "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
     DetailPrint "devcon install returned: $R0"
@@ -392,7 +392,7 @@ Section "Uninstall"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux"
 
   DetailPrint "TAP-Win32 REMOVE"
-  nsExec::ExecToLog '"$INSTDIR\netdriver\devcon.exe" remove TAP'
+  nsExec::ExecToLog '"$INSTDIR\netdriver\devcon.exe" remove TAP0801co'
   Pop $R0 # return value/error/timeout
   DetailPrint "devcon remove returned: $R0"
 
@@ -414,7 +414,7 @@ Section "Uninstall"
   Delete "$INSTDIR\default.coLinux.xml"
 
   Delete "$INSTDIR\netdriver\OemWin2k.inf"
-  Delete "$INSTDIR\netdriver\tapdrvr.sys"
+  Delete "$INSTDIR\netdriver\tap0801co.sys"
   Delete "$INSTDIR\netdriver\devcon.exe"
   
   ;--------------------------------------------------------------/FILES--
