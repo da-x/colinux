@@ -74,6 +74,37 @@ typedef struct co_netdev_desc {
 	unsigned char mac_address[6];
 } co_netdev_desc_t;
 
+typedef enum {
+	/* 
+	 * Flat mode - we use as much meta data as we can from the hot
+	 * os in order to provide a UNIX file system. It's a simple 
+	 * effortless implementation of an host FS.
+	 */
+	CO_COFS_TYPE_FLAT = 1,
+
+	/*
+	 * Unix Meta-data - we maintain the UNIX metadata of the guest
+	 * mount in a parallel host FS directory structure. This means
+	 * that the guest file meta data is disconnected from the host
+	 * OS file meta data entirely, allowing to provide a 'true' UNIX
+	 * file system on Windows, for example.
+	 */
+	CO_COFS_TYPE_UNIX_METADATA = 2,
+} co_cofs_type_t;
+
+typedef struct co_cofsdev_desc_t {
+	/*
+	 * Determines whether we use this device slot or not.
+	 */
+	bool_t enabled;
+
+	/* Fully qualified kernel pathname for the mounted file system */
+	co_pathname_t pathname;
+	
+	/* Host-OS type of mount */
+	co_cofs_type_t type;
+} co_cofsdev_desc_t;
+
 /*
  * Per-machine coLinux configuration
  */
@@ -102,6 +133,11 @@ typedef struct co_config {
 	 * Network devices
 	 */
 	co_netdev_desc_t net_devs[CO_MODULE_MAX_CONET];
+
+	/*
+	 * File systems
+	 */
+	co_cofsdev_desc_t cofs_devs[CO_MODULE_MAX_COFS];
 
 	/*
 	 * Parameters passed to the kernel at boot.

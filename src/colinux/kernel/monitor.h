@@ -137,6 +137,11 @@ typedef struct co_monitor {
 	struct co_block_dev *block_devs[CO_MODULE_MAX_COBD];
 
 	/*
+	 * File Systems
+	 */
+	struct co_filesystem *filesystems[CO_MODULE_MAX_COFS];
+
+	/*
 	 * Message passing stuff
 	 */ 
 	co_message_switch_t message_switch;
