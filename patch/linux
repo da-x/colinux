@@ -4493,8 +4493,8 @@ diff -urN a/kernel/Makefile b/kernel/Makefile
  # According to Alan Modra <alan@linuxcare.com.au>, the -fno-omit-frame-pointer is
 diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 --- a/kernel/cooperative.c	1970-01-01 02:00:00.000000000 +0200
-+++ b/kernel/cooperative.c	2004-07-09 15:30:45.000000000 +0300
-@@ -0,0 +1,319 @@
++++ b/kernel/cooperative.c	2004-07-10 18:09:08.000000000 +0300
+@@ -0,0 +1,322 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -4505,6 +4505,7 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 + */
 +
 +#include <linux/kernel.h>
++#include <linux/module.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
 +#include <linux/mm.h>
@@ -4812,6 +4813,8 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +}
 +
 +__initcall(initcall_message_queues);
++
++EXPORT_SYMBOL(co_terminate);
 +
 +CO_TRACE_CONTINUE;
 diff -urN a/kernel/panic.c b/kernel/panic.c
