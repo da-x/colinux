@@ -14,6 +14,7 @@
 
 #include <colinux/os/alloc.h>
 #include <colinux/common/libc.h>
+#include <colinux/common/unicode.h>
 #include <colinux/kernel/transfer.h>
 #include <colinux/kernel/fileblock.h>
 #include <colinux/kernel/monitor.h>
@@ -22,6 +23,34 @@
 
 #include "time.h"
 #include "fileio.h"
+
+co_rc_t co_winnt_utf8_to_unicode(const char *src, UNICODE_STRING *unicode_str)
+{
+	co_rc_t rc;
+	co_wchar_t *wstring;
+	unsigned long size;
+
+	unicode_str->Buffer = NULL;
+
+	rc = co_utf8_dup_to_wc(src, &wstring, &size);
+	if (!CO_OK(rc))
+		return rc;
+
+	unicode_str->Length = size * sizeof(WCHAR);
+	unicode_str->MaximumLength = (size + 1) * sizeof(WCHAR);
+	unicode_str->Buffer = wstring;
+
+	return CO_RC(OK);
+}
+
+void co_winnt_free_unicode(UNICODE_STRING *unicode_str)
+{
+	if (!unicode_str->Buffer)
+		return;
+
+	co_utf8_free_wc(unicode_str->Buffer);
+	unicode_str->Buffer = NULL;
+}
 
 static co_rc_t status_convert(NTSTATUS status)
 {
@@ -34,7 +63,6 @@ static co_rc_t status_convert(NTSTATUS status)
 	}
 
 	if (status != STATUS_SUCCESS) {
-		co_debug_system("STATUS %x\n", status);
 		return CO_RC(ERROR);
 	}
 
@@ -49,15 +77,11 @@ co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned long open
 	OBJECT_ATTRIBUTES ObjectAttributes;
 	IO_STATUS_BLOCK IoStatusBlock;
 	UNICODE_STRING unipath;
-	ANSI_STRING ansi;
-    
-	ansi.Buffer = pathname;
-	ansi.Length = strlen(pathname);
-	ansi.MaximumLength = ansi.Length + 1;
+	co_rc_t rc;
 
-	status = RtlAnsiStringToUnicodeString(&unipath, &ansi, TRUE);
-	if (!NT_SUCCESS(status))
-		return status_convert(status);
+	rc = co_winnt_utf8_to_unicode(pathname, &unipath);
+	if (!CO_OK(rc))
+		return rc;
 
 	InitializeObjectAttributes(&ObjectAttributes, 
 				   &unipath,
@@ -80,7 +104,7 @@ co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned long open
 	if (status != STATUS_SUCCESS)
 		co_debug("ZwOpenFile() returned error: %x\n", status);
 
-	RtlFreeUnicodeString(&unipath);
+	co_winnt_free_unicode(&unipath);
 
 	return status_convert(status);
 }
@@ -310,22 +334,28 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 	co_pathname_t filename;
 	UNICODE_STRING dirname_unicode;
 	UNICODE_STRING filename_unicode;
-	ANSI_STRING dirname_ansi;
-	ANSI_STRING filename_ansi;
 	OBJECT_ATTRIBUTES attributes;
 	NTSTATUS status;
 	HANDLE handle;
 	struct {
-		FILE_FULL_DIRECTORY_INFORMATION entry;
+		union {
+			FILE_FULL_DIRECTORY_INFORMATION entry;
+			FILE_BOTH_DIRECTORY_INFORMATION entry2;
+		};
 		WCHAR name[0x80];
 	} entry_buffer;
 	IO_STATUS_BLOCK io_status;
 	co_rc_t rc;
 	int len;
-
+	LARGE_INTEGER LastAccessTime;
+	LARGE_INTEGER LastWriteTime;
+	LARGE_INTEGER ChangeTime;
+	LARGE_INTEGER EndOfFile;
+	ULONG FileAttributes;
+ 
 	co_snprintf(dirname, sizeof(dirname), "%s", fullname);
 	
-	len = strlen(dirname);
+	len = co_strlen(dirname);
 	
 	while (len > 0 && (dirname[len-1] != '\\'))
 		len--;
@@ -334,31 +364,22 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 
 	dirname[len] = '\0';
 
-        dirname_ansi.Length = len;
-        dirname_ansi.MaximumLength = dirname_ansi.Length;
-        dirname_ansi.Buffer = &dirname[0];
- 
-        status = RtlAnsiStringToUnicodeString(&dirname_unicode, &dirname_ansi, TRUE);
-        if (!NT_SUCCESS(status))
-                return status_convert(status);
- 
-        filename_ansi.Length = strlen(filename);
-        filename_ansi.MaximumLength = filename_ansi.Length;
-        filename_ansi.Buffer = filename;
- 
-        status = RtlAnsiStringToUnicodeString(&filename_unicode, &filename_ansi, TRUE);
-        if (!NT_SUCCESS(status)) {
-                rc = status_convert(status);
-                goto error_1;
-        }
+	rc = co_winnt_utf8_to_unicode(dirname, &dirname_unicode);
+	if (!CO_OK(rc))
+		return rc;
+
+	rc = co_winnt_utf8_to_unicode(filename, &filename_unicode);
+	if (!CO_OK(rc))
+		goto error_1;
+
  
         InitializeObjectAttributes(&attributes, &dirname_unicode,
                                    OBJ_CASE_INSENSITIVE, NULL, NULL);
  
         status = ZwCreateFile(&handle, FILE_LIST_DIRECTORY,
-                             &attributes, &io_status, NULL, 0, FILE_SHARE_READ | FILE_SHARE_WRITE /* TODO: add | FILE_SHARE_DELETE */, 
-                             FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT | FILE_DIRECTORY_FILE, 
-                             NULL, 0);
+			      &attributes, &io_status, NULL, 0, FILE_SHARE_READ | FILE_SHARE_WRITE /* TODO: add | FILE_SHARE_DELETE */, 
+			      FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT | FILE_DIRECTORY_FILE, 
+			      NULL, 0);
 
 	if (!NT_SUCCESS(status)) {
                 rc = status_convert(status);
@@ -370,38 +391,62 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
                                       FileFullDirectoryInformation, PTRUE, &filename_unicode, 
                                       PTRUE);
         if (!NT_SUCCESS(status)) {
-                rc = status_convert(status);
-                goto error_3;
-        }
+		if (status == STATUS_UNMAPPABLE_CHARACTER) {
+			status = ZwQueryDirectoryFile(handle, NULL, NULL, 0, &io_status, 
+						      &entry_buffer, sizeof(entry_buffer), 
+						      FileBothDirectoryInformation, PTRUE, &filename_unicode, 
+						      PTRUE);
+			
+			if (!NT_SUCCESS(status)) {
+				rc = status_convert(status);
+				goto error_3;
+			} else {
+				LastAccessTime = entry_buffer.entry2.LastAccessTime;
+				LastWriteTime = entry_buffer.entry2.LastWriteTime;
+				ChangeTime = entry_buffer.entry2.ChangeTime;
+				EndOfFile = entry_buffer.entry2.EndOfFile;
+				FileAttributes = entry_buffer.entry2.FileAttributes;
+			}
+		} else {
+			rc = status_convert(status);
+			goto error_3;
+		}
+        } else {
+		LastAccessTime = entry_buffer.entry.LastAccessTime;
+		LastWriteTime = entry_buffer.entry.LastWriteTime;
+		ChangeTime = entry_buffer.entry.ChangeTime;
+		EndOfFile = entry_buffer.entry.EndOfFile;
+		FileAttributes = entry_buffer.entry.FileAttributes;
+	}
  
         attr->uid = 0;
         attr->gid = 0;
         attr->rdev = 0;
         attr->_dummy = 0;
  
-        attr->atime = windows_time_to_unix_time(entry_buffer.entry.LastAccessTime);
-        attr->mtime = windows_time_to_unix_time(entry_buffer.entry.LastWriteTime);
-        attr->ctime = windows_time_to_unix_time(entry_buffer.entry.ChangeTime);
+        attr->atime = windows_time_to_unix_time(LastAccessTime);
+        attr->mtime = windows_time_to_unix_time(LastWriteTime);
+        attr->ctime = windows_time_to_unix_time(ChangeTime);
  
         attr->mode = FUSE_S_IRWXU | FUSE_S_IRGRP | FUSE_S_IROTH;
  
-        if (entry_buffer.entry.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+        if (FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
                 attr->mode |= FUSE_S_IFDIR;
         else
                 attr->mode |= FUSE_S_IFREG;
 
 	attr->nlink = 1;
-        attr->size = entry_buffer.entry.EndOfFile.QuadPart;
-        attr->blocks = (entry_buffer.entry.EndOfFile.QuadPart + ((1<<10)-1)) >> 10;
+        attr->size = EndOfFile.QuadPart;
+        attr->blocks = (EndOfFile.QuadPart + ((1<<10)-1)) >> 10;
 	
         rc = CO_RC(OK);
 	
 error_3:
         ZwClose(handle);
 error_2:
-        RtlFreeUnicodeString(&filename_unicode);
+	co_winnt_free_unicode(&filename_unicode);
 error_1:
-        RtlFreeUnicodeString(&dirname_unicode);
+	co_winnt_free_unicode(&dirname_unicode);
         return rc;
 }
  
@@ -409,68 +454,6 @@ error_1:
 co_rc_t co_os_file_get_attr(char *filename, struct fuse_attr *attr)
 {
 	return file_get_attr_alt(filename, attr);
-#if (0)
-	/* ZwQueryFullAttributesFile is not exported on Windows 2000, buggers this */
-	FILE_NETWORK_OPEN_INFORMATION fi;
-	NTSTATUS status;
-	OBJECT_ATTRIBUTES attributes;
-	UNICODE_STRING dirname_unicode;
-	ANSI_STRING ansi_string;
-	int len;
-	co_rc_t rc = CO_RC(OK);
-
-	len = co_strlen(&filename[0]);
-
-	co_debug_lvl(filesystem, 10, "%s of '%s'\n",  "getattr", &filename[0]);
-
-	ansi_string.Length = len;
-	ansi_string.MaximumLength = ansi_string.Length;
-	ansi_string.Buffer = &filename[0];
-
-	status = RtlAnsiStringToUnicodeString(&dirname_unicode, &ansi_string, TRUE);
-	if (!NT_SUCCESS(status))
-		return status_convert(status);
-
-	InitializeObjectAttributes(&attributes, &dirname_unicode,
-				   OBJ_CASE_INSENSITIVE, NULL, NULL);
-
-	status = ZwQueryFullAttributesFile(&attributes, &fi);
-
-	if (!NT_SUCCESS(status)) {
-		rc = status_convert(status);
-		goto error;
-
-	}
-	attr->uid = 0;
-	attr->gid = 0;
-	attr->rdev = 0;
-	attr->_dummy = 0;
-	attr->blocks = 0;
-
-	attr->atime = windows_time_to_unix_time(fi.LastAccessTime);
-	attr->mtime = windows_time_to_unix_time(fi.LastWriteTime);
-	attr->ctime = windows_time_to_unix_time(fi.ChangeTime);
-
-	attr->mode = FUSE_S_IRGRP | FUSE_S_IXGRP | FUSE_S_IRWXU | FUSE_S_IROTH | FUSE_S_IWOTH;
-
-	if (fi.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-		attr->mode |= FUSE_S_IFDIR;
-	else
-		attr->mode |= FUSE_S_IFREG;
-
-	attr->nlink = 1;
-	attr->size = fi.EndOfFile.QuadPart;
-	attr->blocks = (fi.EndOfFile.QuadPart + ((1<<10)-1)) >> 10;
-
-error:
-	RtlFreeUnicodeString(&dirname_unicode);
-
-	if (!CO_OK(rc)) {
-		rc = file_get_attr_alt(filename, attr);
-	}
-
-	return rc;
-#endif
 }
 
 static void remove_read_only_func(void *data, VOID *buffer, ULONG len)
@@ -484,17 +467,13 @@ co_rc_t co_os_file_unlink(char *filename)
 {
 	OBJECT_ATTRIBUTES ObjectAttributes;
 	UNICODE_STRING unipath;
-	ANSI_STRING ansi;
 	NTSTATUS status;
 	bool_t tried_read_only_removal = PFALSE;
-
-	ansi.Buffer = filename;
-	ansi.Length = strlen(filename);
-	ansi.MaximumLength = ansi.Length + 1;
+	co_rc_t rc;
 	
-	status = RtlAnsiStringToUnicodeString(&unipath, &ansi, TRUE);
-	if (!NT_SUCCESS(status))
-		return status_convert(status);
+	rc = co_winnt_utf8_to_unicode(filename, &unipath);
+	if (!CO_OK(rc))
+		return rc;
 
 	InitializeObjectAttributes(&ObjectAttributes, 
 				   &unipath,
@@ -503,7 +482,6 @@ co_rc_t co_os_file_unlink(char *filename)
 				   NULL);
 
 retry:
-
 	status = ZwDeleteFile(&ObjectAttributes);
 	if (status != STATUS_SUCCESS) {
 		if (!tried_read_only_removal) {
@@ -524,7 +502,7 @@ retry:
 		co_debug_lvl(filesystem, 10, "ZwDeleteFile() returned error: %x\n", status);
 	}
 
-	RtlFreeUnicodeString(&unipath);
+	co_winnt_free_unicode(&unipath);
 
 	return status_convert(status);
 }
@@ -557,13 +535,13 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	NTSTATUS status;
 	IO_STATUS_BLOCK io_status;
 	FILE_RENAME_INFORMATION *rename_info;
-	UNICODE_STRING filename_unicode;
 	HANDLE handle;
-	ANSI_STRING ansi_string;
 	int block_size;
+	int char_count;
 	co_rc_t rc;
 
-	block_size = (strlen(dest_filename) + 1)*sizeof(WCHAR) + sizeof(FILE_RENAME_INFORMATION);
+	char_count = co_utf8_mbstrlen(dest_filename);
+	block_size = (char_count + 1)*sizeof(WCHAR) + sizeof(FILE_RENAME_INFORMATION);
 	rename_info = (FILE_RENAME_INFORMATION *)co_os_malloc(block_size);
 	if (!rename_info)
 		return CO_RC(OUT_OF_MEMORY);
@@ -574,21 +552,11 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 
 	rename_info->ReplaceIfExists = FALSE;
 	rename_info->RootDirectory = NULL;
-	rename_info->FileNameLength = strlen(dest_filename)*sizeof(WCHAR);
+	rename_info->FileNameLength = char_count * sizeof(WCHAR);
 
-	filename_unicode.Buffer = rename_info->FileName;
-	filename_unicode.MaximumLength = (strlen(dest_filename)+1)*sizeof(WCHAR);
-	filename_unicode.Length = 0;
-
-	ansi_string.Length = co_strlen(dest_filename);
-	ansi_string.MaximumLength = ansi_string.Length;
-	ansi_string.Buffer = dest_filename;
-			
-	status = RtlAnsiStringToUnicodeString(&filename_unicode, &ansi_string, FALSE);
-	if (!NT_SUCCESS(status)) {
-		rc = status_convert(status);
+	rc = co_utf8_mbstowcs(rename_info->FileName, dest_filename, char_count + 1);
+	if (!CO_OK(rc))
 		goto error;
-	}
 	
 	co_debug_lvl(filesystem, 10, "rename of '%s' to '%s'\n", filename, dest_filename);
 
@@ -620,7 +588,6 @@ co_rc_t co_os_file_mknod(char *filename)
 co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 {
 	UNICODE_STRING dirname_unicode;
-	UNICODE_STRING filename_unicode;
 	OBJECT_ATTRIBUTES attributes;
 	NTSTATUS status;
 	HANDLE handle;
@@ -628,21 +595,16 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 	unsigned long dir_entries_buffer_size = 0x1000;
 	IO_STATUS_BLOCK io_status;
 	BOOLEAN first_iteration = TRUE;
-	ANSI_STRING ansi_string;
 	co_filesystem_name_t *new_name;
 	co_rc_t rc;
 
 	co_list_init(&names->list);
 
-	ansi_string.Length = strlen(dirname);
-	ansi_string.MaximumLength = ansi_string.Length;
-	ansi_string.Buffer = &dirname[0];
-
 	co_debug_lvl(filesystem, 10, "listing of '%s'\n", dirname);
 
-	status = RtlAnsiStringToUnicodeString(&dirname_unicode, &ansi_string, TRUE);
-	if (!NT_SUCCESS(status))
-		return status_convert(status);
+	rc = co_winnt_utf8_to_unicode(dirname, &dirname_unicode);
+	if (!CO_OK(rc))
+		return rc;
 
 	InitializeObjectAttributes(&attributes, &dirname_unicode,
 				   OBJ_CASE_INSENSITIVE, NULL, NULL);
@@ -673,11 +635,11 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 		entry = dir_entries_buffer;
   
 		for (;;) {
-			filename_unicode.Buffer = entry->FileName;
-			filename_unicode.MaximumLength = entry->FileNameLength;
-			filename_unicode.Length = entry->FileNameLength;
+			int filename_utf8_length;
+			
+			filename_utf8_length = co_utf8_wctowbstrlen(entry->FileName, entry->FileNameLength/sizeof(WCHAR));
 
-			new_name = co_os_malloc(entry->FileNameLength/sizeof(WCHAR) + sizeof(co_filesystem_name_t) + 2);
+			new_name = co_os_malloc(filename_utf8_length + sizeof(co_filesystem_name_t) + 2);
 			if (!new_name) {
 				rc = CO_RC(ERROR);
 				goto error_2;
@@ -688,26 +650,18 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 			else
 				new_name->type = FUSE_DT_REG;
 
-			ansi_string.Length = 0;
-			ansi_string.MaximumLength = entry->FileNameLength/sizeof(WCHAR) + 1;
-			ansi_string.Buffer = &new_name->name[0];
-			
-			status = RtlUnicodeStringToAnsiString(&ansi_string, &filename_unicode, FALSE);
-			if (!NT_SUCCESS(status)) {
-				rc = status_convert(status);
+			rc = co_utf8_wcstombs(new_name->name, entry->FileName, filename_utf8_length + 1);
+			if (!CO_OK(rc)) {
 				co_os_free(new_name);
 				goto error_2;
 			}
 
-			ansi_string.Buffer[ansi_string.Length] = '\0';
-	
 			co_list_add_tail(&new_name->node, &names->list);
-			
 			if (entry->NextEntryOffset == 0)
 				break;
 			
 			entry = (FILE_DIRECTORY_INFORMATION *)(((char *)entry) + entry->NextEntryOffset);
-		} 
+		}
 
 		first_iteration = FALSE;
 	}
@@ -724,7 +678,7 @@ error_2:
 error_1:
 	ZwClose(handle);
 error:
-	RtlFreeUnicodeString(&dirname_unicode);
+	co_winnt_free_unicode(&dirname_unicode);
 	return rc;
 }
 

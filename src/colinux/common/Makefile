@@ -17,6 +17,8 @@ LOCAL_OBJS = \
 	libc_strtol.o \
 	snprintf.o \
 	file_ids.o \
+	unicode.o \
+
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 
