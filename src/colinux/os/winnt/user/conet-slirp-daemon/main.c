@@ -290,7 +290,7 @@ void co_net_syntax()
 	co_terminal_print("\n");
 	co_terminal_print("syntax: \n");
 	co_terminal_print("\n");
-	co_terminal_print("  colinux-slirp-net-daemon -c 0 -i index [-h] [-n 'adapter name']\n");
+	co_terminal_print("  colinux-slirp-net-daemon -c 0 -i index [-h]\n");
 	co_terminal_print("\n");
 	co_terminal_print("    -h                      Show this help text\n");
 	co_terminal_print("    -i index                Network device index number (0 for eth0, 1 for\n");

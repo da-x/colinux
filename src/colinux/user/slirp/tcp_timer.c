@@ -160,7 +160,6 @@ tcp_timers(tp, timer)
 		    tp->t_idle <= tcp_maxidle)
 			tp->t_timer[TCPT_2MSL] = tcp_keepintvl;
 		else{
-			printf("%s:%d\n", __FILE__, __LINE__);
 			tp = tcp_close(tp);
 		}
 		break;

@@ -47,7 +47,7 @@ static int daemon_main(int argc, char *argv[])
 
 	co_memset(&start_parameters, 0, sizeof(start_parameters));
 
-	rc = co_cmdline_params_alloc(argv, argc, &cmdline);
+	rc = co_cmdline_params_alloc(&argv[1], argc-1, &cmdline);
 	if (!CO_OK(rc)) {
 		co_terminal_print("daemon: error parsing arguments\n");
 		return CO_RC(ERROR);

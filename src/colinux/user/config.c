@@ -641,8 +641,7 @@ static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, 
 	conf->net_devs[index].type = CO_NETDEV_TYPE_SLIRP;
 	conf->net_devs[index].enabled = PTRUE;
 
-	co_terminal_print("configured Slirp at '%s' device as eth%d\n", 
-			  conf->net_devs[index].desc, index);
+	co_terminal_print("configured Slirp as eth%d\n", index);
 
 	return CO_RC(OK);
 }

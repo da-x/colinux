@@ -10,12 +10,14 @@ else
 BUILD_PATH := $(BUILD_PATH)/build
 #-----------------------------------------------------------------
 
-LOCAL_FILES = \
-	$(BUILD_ROOT)/colinux/os/current/user/console/colinux-console-fltk \
-	$(BUILD_ROOT)/colinux/os/current/user/daemon/colinux-daemon \
-	$(BUILD_ROOT)/colinux/os/current/user/debug/colinux-debug-daemon \
-	$(BUILD_ROOT)/colinux/os/current/user/conet-daemon/colinux-net-daemon \
-	$(BUILD_ROOT)/colinux/os/current/user/coserial-daemon/colinux-serial-daemon \
+LOCAL_FILES_PATH = $(BUILD_ROOT)/colinux/os/current/user
+LOCAL_FILES := \
+	$(LOCAL_FILES_PATH)/console/colinux-console-fltk \
+	$(LOCAL_FILES_PATH)/daemon/colinux-daemon \
+	$(LOCAL_FILES_PATH)/debug/colinux-debug-daemon \
+	$(LOCAL_FILES_PATH)/conet-daemon/colinux-net-daemon \
+	$(LOCAL_FILES_PATH)/conet-slirp-daemon/colinux-slirp-net-daemon \
+	$(LOCAL_FILES_PATH)/coserial-daemon/colinux-serial-daemon \
 
 LOCAL_TARGETS := $(LOCAL_TARGET) $(BUILD_PATH)/driver.o
 
