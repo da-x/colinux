@@ -17,7 +17,6 @@ co_rc_t co_manager_arch_init(co_manager_t *manager, co_archdep_manager_t *out_ar
 {
 	co_rc_t rc;
 	co_archdep_manager_t archdep;
-	unsigned long cr4;
 
 	*out_archdep = NULL;
 

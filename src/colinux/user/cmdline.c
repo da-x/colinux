@@ -50,7 +50,7 @@ co_rc_t co_cmdline_params_argumentless_parameter(co_command_line_params_t cmdlin
 		if (!cmdline->argv[i])
 			continue;
 
-		if (strcmp(cmdline->argv[i], name) == 0) {
+		if (co_strcmp(cmdline->argv[i], name) == 0) {
 			cmdline->argv[i] = NULL;
 			*out_exists = PTRUE;
 			return CO_RC(OK);
@@ -59,6 +59,103 @@ co_rc_t co_cmdline_params_argumentless_parameter(co_command_line_params_t cmdlin
 
 	return CO_RC(OK);
 }
+
+co_rc_t co_cmdline_get_next_equality(co_command_line_params_t cmdline, const char *expected_prefix, int max_suffix_len,
+				     char *key, int key_size, char *value, int value_size, bool_t *out_exists)
+{
+	int i;
+	int prefix_len = co_strlen(expected_prefix);
+
+	*out_exists = PFALSE;
+
+	for (i=0; i < cmdline->argc; i++) {
+		const char *key_found;
+		char *arg = cmdline->argv[i];
+		int key_len;
+
+		if (!cmdline->argv[i])
+			continue;
+		
+		key_found = co_strstr(cmdline->argv[i], "=");
+		if (!key_found)
+			continue;
+		
+		if (!!co_strncmp(expected_prefix, cmdline->argv[i], prefix_len))
+			continue;
+		
+		cmdline->argv[i] = NULL;
+		
+		key_len = (key_found - arg) - prefix_len;
+		if (key_len > 0) {
+			if (key_size < key_len + 1)
+				return CO_RC(ERROR);
+			
+			co_memcpy(key, prefix_len + arg, key_len);
+			key[key_len] = '\0';
+		}
+		
+		if (co_strlen(&key_found[1]) + 1 > value_size)
+			return CO_RC(ERROR);
+		
+		co_snprintf(value, value_size, "%s", &key_found[1]);
+		
+		*out_exists = PTRUE;
+	}
+
+	return CO_RC(OK);
+}
+
+co_rc_t co_cmdline_get_next_equality_int_prefix(co_command_line_params_t cmdline, const char *expected_prefix, 
+						int *key_int, char *value, int value_size, bool_t *out_exists)
+{
+	char number[11];
+	co_rc_t rc;
+	
+	rc = co_cmdline_get_next_equality(cmdline, expected_prefix, sizeof(number) - 1,
+					  number, sizeof(number), value, value_size, out_exists);
+	if (!CO_OK(rc)) 
+		return rc;
+	
+	if (*out_exists) {
+		char *number_parse  = NULL;
+		int value_int;
+		
+		value_int = co_strtol(number, &number_parse, 10);
+		if (number_parse == number) {
+			/* not a number */
+			return CO_RC(ERROR);
+		}
+
+		*key_int = value_int;
+	}
+
+	return CO_RC(OK);
+}
+
+co_rc_t co_cmdline_get_next_equality_int_value(co_command_line_params_t cmdline, const char *expected_prefix, 
+					       int *value_int, bool_t *out_exists)
+{
+	char value[0x100];
+	co_rc_t rc;
+	
+	rc = co_cmdline_get_next_equality(cmdline, expected_prefix, 0, NULL, 0, value, sizeof(value), out_exists);
+	if (!CO_OK(rc)) 
+		return rc;
+	
+	if (*out_exists) {
+		char *value_parse = NULL;
+		
+		*value_int = co_strtol(value, &value_parse, 10);
+		if (value_parse == value) {
+			/* not a number */
+			return CO_RC(ERROR);
+		}
+	}
+
+	return CO_RC(OK);
+}
+
+
 
 static co_rc_t one_arugment_parameter(co_command_line_params_t cmdline, 
 				      const char *name, 
@@ -77,7 +174,7 @@ static co_rc_t one_arugment_parameter(co_command_line_params_t cmdline,
 		if (!cmdline->argv[i])
 			continue;
 
-		if (strcmp(cmdline->argv[i], name) != 0)
+		if (co_strcmp(cmdline->argv[i], name) != 0)
 			continue;
 
 		if (i >= cmdline->argc -1)
@@ -132,7 +229,7 @@ co_rc_t co_cmdline_params_one_arugment_int_parameter(co_command_line_params_t cm
 		return rc;
 
 	if (out_exists && *out_exists) { 
-		*out_int = strtol(arg_buf, &end_ptr, 10);
+		*out_int = co_strtol(arg_buf, &end_ptr, 10);
 		if (end_ptr == arg_buf)
 			return CO_RC(ERROR);
 	}
@@ -165,6 +262,36 @@ co_rc_t co_cmdline_params_check_for_no_unparsed_parameters(co_command_line_param
 
 	if (count != 0)
 		return CO_RC(ERROR);
+
+	return CO_RC(OK);
+}
+
+co_rc_t co_cmdline_params_format_remaining_parameters(co_command_line_params_t cmdline,
+						      char *str_out, int size)
+{
+	int i;
+	char *str_out_orig = str_out;
+
+	str_out_orig[0] = '\0';
+
+	for (i=0; i < cmdline->argc; i++) {
+		int param_size;
+
+		if (!cmdline->argv[i])
+			continue;
+
+		co_snprintf(str_out, size, (str_out_orig[0] == '\0') ? "%s" : " %s", cmdline->argv[i]);
+
+		param_size = co_strlen(str_out);
+
+		str_out += param_size;
+		size -= param_size;
+
+		if (size == 0)
+			break;
+
+		cmdline->argv[i] = NULL;
+	}
 
 	return CO_RC(OK);
 }

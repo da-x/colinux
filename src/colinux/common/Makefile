@@ -14,6 +14,7 @@ LOCAL_OBJS = \
 	messages.o \
 	version.o \
 	libc.o \
+	libc_strtol.o \
 	snprintf.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
@@ -21,8 +22,19 @@ LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 $(LOCAL_OBJS) : %.o : %.c
 	$(TOOL_KERNEL_CC)
 
+$(BUILD_PATH)/libc_strtol.c : $(BUILD_PATH)/libc.c
+	ln -s $(notdir $^) $@
+
+CLEAN_FILES := $(CLEAN_FILES) \
+	$(BUILD_PATH)/libc_strtol.c
+
+$(TARGET_FLAGS)_libc.c = -DCO_LIBC__MISC
+$(TARGET_FLAGS)_libc_strtol.c = -DCO_LIBC__STRTOL
+
 $(BUILD_PATH)/version.h : $(BUILD_PATH)/version.py $(BUILD_PATH)/../VERSION
 	python $(word 1,$^) $(word 2,$^) $@
+
+$(BUILD_PATH)/version.o : $(BUILD_PATH)/version.h
 
 $(BUILD_PATH)/version.o : $(BUILD_PATH)/version.h
 

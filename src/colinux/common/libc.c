@@ -13,6 +13,8 @@
 
 #include "libc.h"
 
+#ifdef CO_LIBC__MISC
+
 void *co_memset(void *s, int c, long n)
 {
 	return memset(s, c, n);
@@ -29,3 +31,33 @@ void co_bzero(void *s, long n)
 	bzero(s, n);
 }
 
+const char *co_strstr(const char *haystack, const char *needle)
+{
+	return strstr(haystack, needle);
+}
+
+int co_strlen(const char *s)
+{
+	return strlen(s);
+}
+
+int co_strcmp(const char *s1, const char *s2)
+{
+	return strcmp(s1, s2);
+}
+
+int co_strncmp(const char *s1, const char *s2, int n)
+{
+	return strncmp(s1, s2, n);
+}
+
+#endif
+
+#ifdef CO_LIBC__STRTOL
+
+int co_strtol(const char *s1, char **s2, int n)
+{
+	return strtol(s1, s2, n);
+}
+
+#endif

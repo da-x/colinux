@@ -16,6 +16,7 @@
 #include <stdarg.h>
 
 #include <colinux/common/version.h>
+#include <colinux/common/libc.h>
 #include <colinux/user/daemon.h>
 #include <colinux/user/debug.h>
 #include <colinux/user/monitor.h>
@@ -107,6 +108,9 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 	int argc = 0;
 	char **args = NULL;
 
+	co_memset(&start_parameters, 0, sizeof(start_parameters));
+	co_memset(&winnt_parameters, 0, sizeof(winnt_parameters));
+
 	co_daemon_print_header();
 
 	rc = co_os_parse_args(szCmdLine, &argc, &args);
@@ -128,6 +132,7 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 		if (!CO_OK(rc)) {
 			co_terminal_print("daemon: error parsing parameters\n");
 		}
+
 		co_daemon_syntax();
 		co_winnt_daemon_syntax();
 		return CO_RC(ERROR);
@@ -188,8 +193,10 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 	}
 
 	if (!start_parameters.config_specified){
-		co_daemon_syntax();
-		co_winnt_daemon_syntax();
+		if (!start_parameters.cmdline_config) {
+			co_daemon_syntax();
+			co_winnt_daemon_syntax();
+		}
 		return CO_RC(ERROR);
 	}
 

@@ -12,7 +12,12 @@
 
 #include <colinux/common/libc.h>
 #include <colinux/common/config.h>
+#include <colinux/user/cmdline.h>
+#include <colinux/os/user/misc.h>
+#include <colinux/os/user/cobdpath.h>
 #include "macaddress.h"
+
+#include "daemon.h"
 
 co_rc_t co_load_config_blockdev(co_config_t *out_config, mxml_element_t *element)
 {
@@ -335,5 +340,211 @@ co_rc_t co_load_config(char *text, co_config_t *out_config)
 	if (strcmp(out_config->vmlinux_path, "") == 0)
 		snprintf(out_config->vmlinux_path, sizeof(out_config->vmlinux_path), "vmlinux");
 
+	return rc;
+}
+
+
+/************************/
+
+/* new command line configuration gathering scheme */
+
+static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_config_t *conf)
+{
+	bool_t exists;
+	char param[0x100];
+	co_rc_t rc;
+
+	do {
+		int index;
+		exists = PFALSE;
+
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cobd", &index, param, 
+							     sizeof(param), &exists);
+		if (!CO_OK(rc)) 
+			return rc;
+		
+		if (exists) {
+			co_block_dev_desc_t *cobd;
+
+			if (index < 0  || index >= CO_MODULE_MAX_COBD) {
+				co_terminal_print("invalid cobd index: %d\n", index);
+				return CO_RC(ERROR);
+			}
+
+			cobd = &conf->block_devs[index];
+			cobd->enabled = PTRUE;
+
+			co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
+
+			co_canonize_cobd_path(&cobd->pathname);
+
+			co_terminal_print("mapping cobd%d to %s\n", index, cobd->pathname);
+		}
+	} while (exists);
+
+	return CO_RC(OK);
+}
+
+static co_rc_t allocate_by_alias(co_config_t *conf, const char *prefix, const char *suffix, 
+				 const char *param)
+{
+	co_block_dev_desc_t *cobd;
+	int i;
+
+	for (i=0; i < CO_MODULE_MAX_COBD; i++) {
+		cobd = &conf->block_devs[i];
+		
+		if (!cobd->enabled)
+			break;
+	}
+
+	if (i == CO_MODULE_MAX_COBD) {
+		co_terminal_print("no available cobd for new alias\n");
+		return CO_RC(ERROR);
+	}
+
+	cobd->enabled = PTRUE;
+	co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
+	cobd->alias_used = PTRUE;
+	snprintf(cobd->alias, sizeof(cobd->alias), "%s%s", prefix, suffix);
+
+	co_canonize_cobd_path(&cobd->pathname);
+
+	co_terminal_print("selected cobd%d for %s%s, mapping to '%s'\n", i, prefix, suffix, cobd->pathname);
+
+	return CO_RC(OK);
+}
+
+static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_config_t *conf)
+{
+	const char *prefixes[] = {"sd", "hd"};
+	const char *prefix;
+	bool_t exists;
+	char param[0x100];
+	co_rc_t rc;
+	int i;
+
+	for (i=0; i < sizeof(prefixes)/sizeof(char *); i++) {
+		prefix = prefixes[i];
+		char suffix[5];
+			
+		do {
+			rc = co_cmdline_get_next_equality(cmdline, prefix, sizeof(suffix)-1, suffix, sizeof(suffix), 
+							  param, sizeof(param), &exists);
+			if (!CO_OK(rc)) 
+				return rc;
+			
+			if (!exists)
+				break;
+
+ 			if (!co_strncmp(":cobd", param, 5)) {
+				char *index_str = &param[5];
+				char *number_parse  = NULL;
+				int index;
+				co_block_dev_desc_t *cobd;
+				
+				index = co_strtol(index_str, &number_parse, 10);
+				if (number_parse == index_str) {
+					co_terminal_print("invalid alias: %s%s=%s\n", prefix, suffix, param);
+					return CO_RC(ERROR);
+				}
+
+				if (index < 0  || index >= CO_MODULE_MAX_COBD) {
+					co_terminal_print("invalid cobd index %d in alias %s%s\n", index, prefix, suffix);
+					return CO_RC(ERROR);
+				}
+
+				cobd = &conf->block_devs[index];
+				if (!cobd->enabled) {
+					co_terminal_print("warning alias on disabled cobd%d\n", index);
+				}
+				
+				if (cobd->alias_used) {
+					co_terminal_print("error, alias cannot be used twice for cobd%d\n", index);
+					return CO_RC(ERROR);
+				}
+
+				cobd->alias_used = PTRUE;
+				snprintf(cobd->alias, sizeof(cobd->alias), "%s%s", prefix, suffix);
+
+				co_terminal_print("mapping %s%s to param\n", prefix, suffix, &param[1]);
+				
+			} else {
+				rc = allocate_by_alias(conf, prefix, suffix, param);
+				if (!CO_OK(rc))
+					return rc;
+			}
+		} while (exists);
+	}
+
+	return CO_RC(OK);
+}
+
+static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *conf)
+{
+	co_rc_t rc;
+	bool_t exists;
+
+	rc = co_cmdline_get_next_equality(cmdline, "initrd", 0, NULL, 0, 
+					  conf->initrd_path, sizeof(conf->initrd_path),
+					  &conf->initrd_enabled);
+	if (!CO_OK(rc)) 
+		return rc;
+
+	if (conf->initrd_enabled)
+		co_terminal_print("using '%s' as initrd image\n", conf->initrd_path);
+
+	rc = co_cmdline_get_next_equality_int_value(cmdline, "mem", (int *)&conf->ram_size, &exists);
+	if (!CO_OK(rc)) 
+		return rc;
+
+	if (!exists)
+		conf->ram_size = 32;
+		
+	co_terminal_print("configuring %d MB of virtual RAM\n", conf->ram_size);
+
+	rc = parse_args_config_cobd(cmdline, conf);
+	if (!CO_OK(rc))
+		return rc;
+
+	rc = parse_args_config_aliases(cmdline, conf);
+	if (!CO_OK(rc))
+		return rc;
+
+	return rc;
+}
+
+co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_parameters_t *start_parameters)
+{
+	co_rc_t rc, rc_;
+	co_config_t *conf;
+
+	start_parameters->cmdline_config = PFALSE;
+	conf = &start_parameters->config;
+
+	rc = co_cmdline_get_next_equality(cmdline, "kernel", 0, NULL, 0, 
+					  conf->vmlinux_path, sizeof(conf->vmlinux_path),
+					  &start_parameters->cmdline_config);
+	if (!CO_OK(rc))
+		return rc;
+
+	if (!start_parameters->cmdline_config)
+		return CO_RC(OK);
+
+	co_terminal_print("using '%s' as kernel image\n", conf->vmlinux_path);
+
+	rc = parse_config_args(cmdline, conf);
+	
+	rc_ = co_cmdline_params_format_remaining_parameters(cmdline, conf->boot_parameters_line,
+							    sizeof(conf->boot_parameters_line));
+	if (!CO_OK(rc_))
+		return rc_;
+	
+	if (CO_OK(rc)) {
+		co_terminal_print("kernel boot parameters: '%s'\n", conf->boot_parameters_line);
+		co_terminal_print("\n");
+		start_parameters->config_specified = PTRUE;
+	}
+	
 	return rc;
 }

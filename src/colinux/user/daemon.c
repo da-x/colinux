@@ -10,6 +10,7 @@
 
 #include <colinux/common/common.h>
 #include <colinux/common/version.h>
+#include <colinux/common/libc.h>
 #include <colinux/os/user/file.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/pipe.h>
@@ -33,6 +34,11 @@ co_rc_t co_load_config_file(co_daemon_t *daemon)
 	co_rc_t rc;
 	char *buf = NULL;
 	unsigned long size = 0 ;
+
+	if (daemon->start_parameters->cmdline_config) {
+		daemon->config = daemon->start_parameters->config;
+		return CO_RC(OK);
+	}
 
 	co_debug("loading configuration from %s\n", daemon->config.config_path);
 
@@ -71,7 +77,8 @@ void co_daemon_syntax()
 	co_daemon_print_header();
 	co_terminal_print("syntax: \n");
 	co_terminal_print("\n");
-	co_terminal_print("    colinux-daemon [-h] [-c config.xml] [-d]\n");
+	co_terminal_print("    colinux-daemon [-h] [-d] [-t name]\n");
+	co_terminal_print("                   ([-c config.xml]|[configuration and boot parameters])\n");
 	co_terminal_print("\n");
 	co_terminal_print("      -h             Show this help text\n");
 	co_terminal_print("      -c config.xml  Specify configuration file\n");
@@ -80,7 +87,20 @@ void co_daemon_syntax()
 	co_terminal_print("                     startup\n");
 	co_terminal_print("      -t name        When spawning a console, this is the type of \n");
 	co_terminal_print("                     console (e.g, nt, fltk, etc...)\n");
-
+	co_terminal_print("\n");
+	co_terminal_print("      Configuration and boot parameters:\n");
+	co_terminal_print("\n");
+	co_terminal_print("        When specifying kernel=vmlinux (where vmlinux is the kernel image file\n");
+	co_terminal_print("        the -c option is not needed. Instead, you pass all configuration via\n");
+	co_terminal_print("        the command line, for example:\n");
+	co_terminal_print("\n");
+	co_terminal_print("          colinux-daemon kernel=vmlinux cobd0=root_fs root=/dev/cobd0 hda1=cobd0\n");
+	co_terminal_print("\n");
+	co_terminal_print("      Use of new aliases automatically allocates cobd(s), for example:\n");
+	co_terminal_print("\n");
+	co_terminal_print("          colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1\n");
+	co_terminal_print("\n");
+	co_terminal_print("      Unhandled paramters are forwarded to the kernel's boot parameters string.\n");
 }
 
 co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_parameters_t *start_parameters)
@@ -118,6 +138,8 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 		return rc;
 
 	start_parameters->launch_console = !dont_launch_console;
+
+	rc = co_parse_config_args(cmdline, start_parameters);
 	
 	return CO_RC(OK);
 }
@@ -157,6 +179,7 @@ co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **
         if (!CO_OK(rc))
                 goto out_free;
 
+	
 	rc = co_load_config_file(daemon);
 	if (!CO_OK(rc)) {
 		co_debug("error loading configuration\n");

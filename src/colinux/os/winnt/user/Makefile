@@ -17,6 +17,7 @@ LOCAL_OBJS = \
 	daemon.o \
 	exec.o \
 	udp.o \
+	cobdpath.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 
