@@ -158,14 +158,14 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 	if (!CO_OK(rc)) {
 		co_terminal_print("daemon: error parsing arguments\n");
 		co_daemon_syntax();
-		return CO_RC(ERROR);
+		return rc;
 	}
 
 	rc = co_cmdline_params_alloc(args, argc, &cmdline);
 	if (!CO_OK(rc)) {
 		co_terminal_print("daemon: error parsing arguments\n");
 		co_os_free_parsed_args(args);
-		return CO_RC(ERROR);
+		return rc;
 	}
 
 	rc = co_daemon_parse_args(cmdline, &start_parameters);

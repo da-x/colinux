@@ -70,52 +70,97 @@ asm(""							\
     SYMBOL_PREFIX #_name_ "_end:;"           "\n"	\
     "");
 
+#define PASSAGE_CODE_NOWHERE_LAND_SHORT()               \
+    /* Turn off special processor features */           \
+    "    movl %cr4, %ebx"                    "\n"       \
+    "    andl $0xFFFFFF77, %ebx"             "\n"       \
+    "    movl %ebx, %cr4"                    "\n"       \
+/*
+ *  Relocate to other map of the passage page.
+ * 
+ *  We do this by changing the current mapping to the passage temporary 
+ *  address space, which contains the mapping of the passage page at the 
+ *  two locations which are specific to the two operating systems.
+ */							\
+                                                        \
+/* Put the virtual address of the source passage page in EBX */ \
+    "    movl %ecx, %ebx"                    "\n"       \
+    "    andl $0xFFFFF000, %ebx"             "\n"       \
+                                                        \
+/* 
+ * Take the physical address of the temporary address space page directory 
+ * pointer and put it in CR3.
+ */ \
+    "    movl (%ebx), %eax"                  "\n"       \
+    "    movl %eax, %cr3"                    "\n"       \
+/*
+ * Read the 'other_map' field, which is the difference between the two
+ * mappings.
+ */ \
+    "    movl "CO_ARCH_STATE_STACK_OTHERMAP"(%ebp), %eax"   "\n"  \
+   \
+/*  
+ * First, we relocate EIP by putting it in 0x64(%ebp). That's why we load
+ * ESP with 0x68(%esp). The call that follows puts the EIP where we want.
+ * Afterwards the EIP is in %(esp) so we relocate it by adding the 
+ * relocation offset. We also add the difference between 2 and 3 so that
+ * the 'ret' that follows will put us in 3 intead of 2, but in the other 
+ * mapping.
+ */ \
+    "    leal "CO_ARCH_STATE_STACK_RELOCATE_EIP_AFTER"(%ebp), %esp"              "\n"       \
+    "    call 2f"                            "\n"       \
+    "2:  addl %eax, (%esp)"                  "\n"       \
+    "    addl $3f-2b, (%esp)"                "\n"       \
+    "    ret"                                "\n"       \
+    "3:  addl %eax, %ecx"                    "\n"       \
+    "    movl %ecx, %ebp"                    "\n"       \
+
 #define PASSAGE_CODE_NOWHERE_LAND()					\
-	"    movl %ecx, %ebx"                    "\n"			\
-	"    andl $0xFFFFF000, %ebx"             "\n"			\
-	"    movl (%ebx), %edx"                  "\n"			\
-	"    movl %edx, %eax"                    "\n"			\
-	"    leal "CO_ARCH_STATE_STACK_RELOCATE_EIP_AFTER"(%ebp), %esp"           "\n" \
-	"    call 2f"                            "\n"			\
-	"2:  pop %ebx"                           "\n"			\
-	"    andl $0x00000FFF, %ebx"             "\n"			\
-	"    orl %eax, %ebx"                     "\n"			\
-	"    addl $3f-2b, %ebx"                  "\n"			\
-	"    movl "CO_ARCH_STATE_STACK_TEMP_CR3"(%ebp), %eax"  "\n"	\
-	"    movl %eax, %cr3"                    "\n"			\
-	"    call *%ebx"                         "\n"			\
-	"    jmp 4f"                             "\n"			\
-	"3:     "                                "\n"			\
-	"    movl "CO_ARCH_STATE_STACK_VA"(%ebp), %eax" "\n"		\
-	"    subl %edx, %eax"                    "\n"			\
-	"    subl %eax, %ecx"                    "\n"			\
-	"    subl %eax, %ebp"                    "\n"			\
-	"    subl %eax, (%esp)"                  "\n"			\
-	"    subl %eax, %esp"                    "\n"			\
+    "    movl %ecx, %ebx"                    "\n"			\
+    "    andl $0xFFFFF000, %ebx"             "\n"			\
+    "    movl (%ebx), %edx"                  "\n"			\
+    "    movl %edx, %eax"                    "\n"			\
+    "    leal "CO_ARCH_STATE_STACK_RELOCATE_EIP_AFTER"(%ebp), %esp"           "\n" \
+    "    call 2f"                            "\n"			\
+    "2:  pop %ebx"                           "\n"			\
+    "    andl $0x00000FFF, %ebx"             "\n"			\
+    "    orl %eax, %ebx"                     "\n"			\
+    "    addl $3f-2b, %ebx"                  "\n"			\
+    "    movl "CO_ARCH_STATE_STACK_TEMP_CR3"(%ebp), %eax"  "\n"		\
+    "    movl %eax, %cr3"                    "\n"			\
+    "    call *%ebx"                         "\n"			\
+    "    jmp 4f"                             "\n"			\
+    "3:     "                                "\n"			\
+    "    movl "CO_ARCH_STATE_STACK_VA"(%ebp), %eax" "\n"		\
+    "    subl %edx, %eax"                    "\n"			\
+    "    subl %eax, %ecx"                    "\n"			\
+    "    subl %eax, %ebp"                    "\n"			\
+    "    subl %eax, (%esp)"                  "\n"			\
+    "    subl %eax, %esp"                    "\n"			\
 									\
-	"    movl %cr0, %eax"                    "\n"			\
-	"    andl $0x7fffffff, %eax"             "\n"			\
-	"    movl %eax, %cr0"                    "\n"			\
+    "    movl %cr0, %eax"                    "\n"			\
+    "    andl $0x7fffffff, %eax"             "\n"			\
+    "    movl %eax, %cr0"                    "\n"			\
 									\
-	"    movl "CO_ARCH_STATE_STACK_CR4"(%ecx), %eax"  "\n"		\
-	"    andl $0x00000020, %eax"  "\n"		             	\
-	"    movl %eax, %cr4" "\n"					\
-	"    movl "CO_ARCH_STATE_STACK_TEMP_CR3"(%ecx), %eax"  "\n"	\
-	"    movl %eax, %cr3" "\n"					\
+    "    movl "CO_ARCH_STATE_STACK_CR4"(%ecx), %eax"  "\n"		\
+    "    andl $0x00000020, %eax"  "\n"					\
+    "    movl %eax, %cr4" "\n"						\
+    "    movl "CO_ARCH_STATE_STACK_TEMP_CR3"(%ecx), %eax"  "\n"		\
+    "    movl %eax, %cr3" "\n"						\
 									\
-	"    movl %cr0, %eax"                    "\n"			\
-	"    orl $0x80000000, %eax"              "\n"			\
-	"    movl %eax, %cr0"                    "\n"			\
+    "    movl %cr0, %eax"                    "\n"			\
+    "    orl $0x80000000, %eax"              "\n"			\
+    "    movl %eax, %cr0"                    "\n"			\
 									\
-	"    movl "CO_ARCH_STATE_STACK_VA"(%ecx), %eax" "\n"		\
-	"    subl %edx, %eax"                    "\n"			\
-	"    addl %eax, %esp"                    "\n"			\
-	"    addl %eax, (%esp)"                  "\n"			\
-	"    addl %eax, %ecx"                    "\n"			\
-	"    movl %ecx, %ebp"                    "\n"			\
-	"    ret"                                "\n"			\
+    "    movl "CO_ARCH_STATE_STACK_VA"(%ecx), %eax" "\n"		\
+    "    subl %edx, %eax"                    "\n"			\
+    "    addl %eax, %esp"                    "\n"			\
+    "    addl %eax, (%esp)"                  "\n"			\
+    "    addl %eax, %ecx"                    "\n"			\
+    "    movl %ecx, %ebp"                    "\n"			\
+    "    ret"                                "\n"			\
 									\
-	"  4:\n"							\
+    "  4:\n"								\
 
 #define PASSAGE_CODE_WRAP_SWITCH(_inner_)				\
 /* read return address and state pointers  */				\
@@ -401,6 +446,34 @@ PASSAGE_CODE_WRAP_IBCS(
 		)
 	)
 
+PASSAGE_CODE_WRAP_IBCS(
+	co_monitor_passage_func_short_fxsave, 
+	PASSAGE_CODE_WRAP_SWITCH(
+		PASSAGE_PAGE_PRESERVATION_FXSAVE(	
+			PASSAGE_PAGE_PRESERVATION_DEBUG(
+				PASSAGE_PAGE_PRESERVATION_COMMON(
+					PASSAGE_CODE_NOWHERE_LAND_SHORT() 
+					)
+				)
+			)
+		)
+	)
+
+PASSAGE_CODE_WRAP_IBCS(
+	co_monitor_passage_func_short_fnsave,
+	PASSAGE_CODE_WRAP_SWITCH(
+		PASSAGE_PAGE_PRESERVATION_FNSAVE(
+			PASSAGE_PAGE_PRESERVATION_DEBUG(
+				PASSAGE_PAGE_PRESERVATION_COMMON(
+					PASSAGE_CODE_NOWHERE_LAND_SHORT()
+					)
+				)
+			)
+		)
+	)
+
+
+
 co_rc_t co_monitor_arch_passage_page_alloc(co_monitor_t *cmon)
 {
 	co_rc_t rc;
@@ -470,6 +543,48 @@ static inline void co_passage_page_dump(co_arch_passage_page_t *page)
 	co_debug("Linux state\n");
 	co_passage_page_dump_state(&page->linuxvm_state);
 }
+
+static void short_temp_address_space_init(co_arch_passage_page_normal_address_space_t *pp, 
+					  unsigned long pa, unsigned long *va)
+{
+	int i;
+
+	struct {
+		unsigned long pmd;
+		unsigned long pte;
+		unsigned long paddr;
+	} maps[2];
+
+	for (i=0; i < 2; i++) {
+		maps[i].pmd = va[i] >> PMD_SHIFT;
+		maps[i].pte = (va[i] & ~PMD_MASK) >> CO_ARCH_PAGE_SHIFT;
+		maps[i].paddr = co_os_virt_to_phys(&pp->pte[i]);
+	}
+	/*
+	 * Currently this is not the case, but it is possible that 
+	 * these two virtual address are on the same PTE page. In that
+	 * case we don't need pte[1].
+	 *
+	 * NOTE: If the two virtual addresses are identical then it
+	 * would still work (other_map will be 0 in both contexts).
+	 */
+
+	if (maps[0].pmd == maps[1].pmd){
+		/* Use one page table */
+
+		pp->pgd[maps[0].pmd] = _KERNPG_TABLE | maps[0].paddr;
+		pp->pte[0][maps[0].pte] = _KERNPG_TABLE | pa;
+		pp->pte[0][maps[1].pte] = _KERNPG_TABLE | pa;
+	} else {
+		/* Use two page tables */
+
+		pp->pgd[maps[0].pmd] = _KERNPG_TABLE | maps[0].paddr;
+		pp->pgd[maps[1].pmd] = _KERNPG_TABLE | maps[1].paddr;
+		pp->pte[0][maps[0].pte] = _KERNPG_TABLE | pa;
+		pp->pte[1][maps[1].pte] = _KERNPG_TABLE | pa;
+	}
+}
+ 
 
 /*
  * Create the temp_pgd address space.
@@ -554,10 +669,18 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	 */
 	if (caps & (1 << CO_ARCH_X86_FEATURE_FXSR)) {
 		co_debug("CPU supports fxsave/fxrstor\n");
-		memcpy_co_monitor_passage_func_fxsave(&pp->code[0]);
+		if (!co_is_pae_enabled()) {
+			memcpy_co_monitor_passage_func_short_fxsave(&pp->code[0]);
+		} else {
+			memcpy_co_monitor_passage_func_fxsave(&pp->code[0]);
+		}
 	} else {
 		co_debug("CPU supports fnsave/frstor\n");
-		memcpy_co_monitor_passage_func_fnsave(&pp->code[0]);
+		if (!co_is_pae_enabled()) {
+			memcpy_co_monitor_passage_func_short_fnsave(&pp->code[0]);
+		} else {
+			memcpy_co_monitor_passage_func_fnsave(&pp->code[0]);
+		}
 	}
 
 	pp->self_physical_address = co_os_virt_to_phys(&pp->first_page);
@@ -566,25 +689,33 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	 * Init temporary address space page tables for host side:
 	 */
 	if (!co_is_pae_enabled()) {
-		normal_temp_address_space_init(&pp->host_normal, pp->self_physical_address, 
-					       (unsigned long)(&pp->first_page));
-		pp->host_state.temp_cr3 = co_os_virt_to_phys(&pp->host_normal);
+		unsigned long va[2] = {
+			(unsigned long)(cmon->passage_page_vaddr),
+			(unsigned long)(pp),
+		};
+
+		pp->temp_pgd_physical = co_os_virt_to_phys(&pp->temp_space.pgd);
+		short_temp_address_space_init(&pp->temp_space, co_os_virt_to_phys(&pp->first_page), va);
+
+		pp->linuxvm_state.other_map = va[1] - va[0];
+		pp->host_state.other_map = va[0] - va[1];
+
 	} else {
 		pae_temp_address_space_init(&pp->host_pae, pp->self_physical_address, 
 					    (unsigned long)(&pp->first_page));
 		pp->host_state.temp_cr3 = co_os_virt_to_phys(&pp->host_pae);
+		pp->host_state.va = (unsigned long)(&pp->first_page);
+
+		/*
+		 * Init the Linux context.
+		 */ 
+		pp->linuxvm_state.temp_cr3 = co_os_virt_to_phys(&pp->guest_normal);
+		normal_temp_address_space_init(&pp->guest_normal, pp->self_physical_address,
+					       (unsigned long)(cmon->passage_page_vaddr));
+		
+		pp->linuxvm_state.va = (unsigned long)(cmon->passage_page_vaddr);
 	}
 
-	pp->host_state.va = (unsigned long)(&pp->first_page);
-
-	/*
-	 * Init the Linux context.
-	 */ 
-	pp->linuxvm_state.temp_cr3 = co_os_virt_to_phys(&pp->guest_normal);
-	normal_temp_address_space_init(&pp->guest_normal, pp->self_physical_address,
-				       (unsigned long)(cmon->passage_page_vaddr));
-
-	pp->linuxvm_state.va = (unsigned long)(cmon->passage_page_vaddr);
 	pp->linuxvm_state.dr0 = co_get_dr0();
 	pp->linuxvm_state.dr1 = co_get_dr1();
 	pp->linuxvm_state.dr2 = co_get_dr2();

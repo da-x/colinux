@@ -139,8 +139,10 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 
 	rc = co_parse_config_args(cmdline, start_parameters);
 
-	if (!CO_OK(rc))
+	if (!CO_OK(rc)) {
+		co_terminal_print("daemon: error parsing configuration parameters and boot params\n");
 		return rc;
+	}
 	
 	return CO_RC(OK);
 }

@@ -333,6 +333,7 @@ co_rc_t co_cmdline_get_next_equality_int_prefix(co_command_line_params_t cmdline
 		value_int = co_strtol(number, &number_parse, 10);
 		if (number_parse == number) {
 			/* not a number */
+			co_terminal_print("cmdline: suffix not a number\n");
 			return CO_RC(ERROR);
 		}
 

@@ -167,7 +167,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 	unsigned long io_buffer_host_address = (unsigned long)(cmon->io_buffer);
 
 	for (io_buffer_page=0; io_buffer_page < io_buffer_num_pages; io_buffer_page++) {
-		unsigned long io_buffer_pfn = co_os_virt_to_phys(io_buffer_host_address) >> CO_ARCH_PAGE_SHIFT;
+		unsigned long io_buffer_pfn = co_os_virt_to_phys((void *)io_buffer_host_address) >> CO_ARCH_PAGE_SHIFT;
 		
 		rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP + io_buffer_offset,
 					    sizeof(linux_pte_t), &io_buffer_pfn);

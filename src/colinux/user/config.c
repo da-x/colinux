@@ -350,7 +350,7 @@ static co_rc_t parse_args_networking(co_command_line_params_t cmdline, co_config
 
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "eth", &index, param, 
 							     sizeof(param), &exists);
-		if (!CO_OK(rc)) 
+		if (!CO_OK(rc))
 			return rc;
 		
 		if (exists) {
@@ -458,9 +458,10 @@ co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_paramete
 	rc = co_cmdline_get_next_equality(cmdline, "kernel", 0, NULL, 0, 
 					  conf->vmlinux_path, sizeof(conf->vmlinux_path),
 					  &start_parameters->cmdline_config);
-
-	if (!CO_OK(rc))
+		
+	if (!CO_OK(rc)) {
 		return rc;
+	}
 
 	if (!start_parameters->cmdline_config)
 		return CO_RC(OK);
@@ -468,6 +469,9 @@ co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_paramete
 	co_terminal_print("using '%s' as kernel image\n", conf->vmlinux_path);
 
 	rc = parse_config_args(cmdline, conf);
+	if (!CO_OK(rc)) {
+		co_terminal_print("daemon: error parsing configuration parameters\n");
+	}
 	
 	rc_ = co_cmdline_params_format_remaining_parameters(cmdline, conf->boot_parameters_line,
 							    sizeof(conf->boot_parameters_line));
