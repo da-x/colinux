@@ -14,6 +14,7 @@ LOCAL_OBJS = \
 	misc.o \
 	file.o \
 	pipe.o \
+	fifo.o \
 	exec.o \
 	daemon.o \
 	unix.o \
