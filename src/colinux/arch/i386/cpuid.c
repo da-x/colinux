@@ -1,7 +1,7 @@
 /*
  * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@gmx.net>, 2004 (c)
+ * Dan Aloni <da-x@colinux.org>, 2004 (c)
  * Copied some stuff over from Linux's arch/i386.
  *
  * The code is licensed under the GPL. See the COPYING file at
@@ -105,9 +105,8 @@ unsigned long co_i386_get_cpu_vendor()
 
 co_rc_t co_i386_get_cpuid_capabilities(unsigned long *caps)
 {
-	unsigned long id = co_i386_get_cpu_vendor();
 	cpuid_t cpuid;
-	unsigned long highest_op, i;
+	unsigned long highest_op;
 
 	co_i386_get_cpuid(0, &cpuid);
 	highest_op = cpuid.highest_op;

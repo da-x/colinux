@@ -1,7 +1,7 @@
 /*
  * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@gmx.net>, 2003 (c)
+ * Dan Aloni <da-x@colinux.org>, 2003 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -147,10 +147,6 @@ asm(""							\
 /* get flags */						\
     "    movl 0x3C(%ebp), %ebx"              "\n"	\
     "    movl %ebx, (%eax)"                  "\n"	\
-							\
-/* put address of passage page in ecx */		\
-    "    movl %ebp, %ecx"                    "\n"	\
-    "    andl $0xFFFFF000, %ecx"             "\n"	\
 							\
 /* switch to old ESP */					\
     "    lss 0x40(%ebp), %esp"               "\n"       \
@@ -534,7 +530,7 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	 * Optionally it can be rewritten so wouldn't need it at all, and
 	 * start with a completely _clean_ state.
 	 */
-	co_passage_page_func(colx_state, colx_state);
+	co_passage_page_func(linuxvm_state, linuxvm_state);
 
 	co_debug("Passage page dump (Windows context)\n");
 
@@ -544,34 +540,34 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	 * Link the two states to each other so that the passage code properly
 	 * relocates its EIP inside the temporary passage address space.
 	 */
-	pp->colx_state.other_map = va[1] - va[0];
+	pp->linuxvm_state.other_map = va[1] - va[0];
 	pp->host_state.other_map = va[0] - va[1];
 
 	/*
 	 * Init the Linux context.
 	 */ 
-	pp->colx_state.tr = 0;
-	pp->colx_state.cr4 &= ~(X86_CR4_MCE | X86_CR4_PGE | X86_CR4_OSXMMEXCPT);
+	pp->linuxvm_state.tr = 0;
+	pp->linuxvm_state.cr4 &= ~(X86_CR4_MCE | X86_CR4_PGE | X86_CR4_OSXMMEXCPT);
 	pgd = cmon->pgd;
-	pp->colx_state.cr3 = pgd_val(pgd);
-	pp->colx_state.gdt.base = (struct x86_dt_entry *)cmon->import.kernel_gdt_table;
-	pp->colx_state.gdt.limit = ((__TSS(NR_CPUS)) * 8) - 1;
-	pp->colx_state.idt.table = (struct x86_idt_entry *)cmon->import.kernel_idt_table;
-	pp->colx_state.idt.size = 256*8 - 1;
+	pp->linuxvm_state.cr3 = pgd_val(pgd);
+	pp->linuxvm_state.gdt.base = (struct x86_dt_entry *)cmon->import.kernel_gdt_table;
+	pp->linuxvm_state.gdt.limit = ((__TSS(NR_CPUS)) * 8) - 1;
+	pp->linuxvm_state.idt.table = (struct x86_idt_entry *)cmon->import.kernel_idt_table;
+	pp->linuxvm_state.idt.size = 256*8 - 1;
 
 	/*
 	 * The stack doesn't start right in 0x2000 because we need some slack for
 	 * the exit of the passage code.
 	 */
-	pp->colx_state.esp = cmon->import.kernel_init_task_union + 0x2000 - 0x50;
-	pp->colx_state.flags &= ~(1 << 9); /* Turn IF off */
-	pp->colx_state.return_eip = cmon->import.kernel_colinux_start;
-	pp->colx_state.cs = __KERNEL_CS;
-	pp->colx_state.ds = __KERNEL_DS;
-	pp->colx_state.es = __KERNEL_DS;
-	pp->colx_state.fs = __KERNEL_DS;
-	pp->colx_state.gs = __KERNEL_DS;
-	pp->colx_state.ss = __KERNEL_DS;
+	pp->linuxvm_state.esp = cmon->import.kernel_init_task_union + 0x2000 - 0x50;
+	pp->linuxvm_state.flags &= ~(1 << 9); /* Turn IF off */
+	pp->linuxvm_state.return_eip = cmon->import.kernel_colinux_start;
+	pp->linuxvm_state.cs = __KERNEL_CS;
+	pp->linuxvm_state.ds = __KERNEL_DS;
+	pp->linuxvm_state.es = __KERNEL_DS;
+	pp->linuxvm_state.fs = __KERNEL_DS;
+	pp->linuxvm_state.gs = __KERNEL_DS;
+	pp->linuxvm_state.ss = __KERNEL_DS;
 
 	co_debug("Passage page dump:\n");
 

@@ -1,7 +1,7 @@
 /*
  * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@gmx.net>, 2003 (c)
+ * Dan Aloni <da-x@colinux.org>, 2003 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -45,6 +45,9 @@ extern void co_debug(const char *fmt, ...);
 extern void co_vdebug(const char *format, va_list ap);
 extern void co_debug_line(char *line);
 extern void co_snprintf(char *buf, int size, const char *format, ...);
+
+#define co_debug_ulong(name) \
+	co_debug("%s: 0x%x\n", #name, name)
 
 #ifndef COLINUX_TRACE
 #undef CO_TRACE_STOP

@@ -8,13 +8,23 @@
       wait state, and error recovery.
     * merged the NT-native console. 
     * console updates and improvements (cocon, console-nt)
+    * update FLTK/console clearscreen (20040305)
+    * enabled console-nt exit (20040305)
   * Added more checks to the XML parsing.
-  * Made context switch code more sensitve about processor's capabilities,
-    running coLinux on old AMD processors will hopefully not cause a reboot 
-    anymore.
+  * Made the context switch code more sensitive about the processor's 
+    capabilities, running coLinux on old AMD processors will hopefully not 
+    cause a reboot anymore.
   * Linux patch upgraded to 2.4.25.
-  * This time, hopefully fixed the %fs/%gs issue for good.
-  
+  * Hopefully fixed the %fs/%gs issue for good.
+  * vmlinux can now be bigger while not causing the host to boot, this means
+    that you can compile more stuff not as modules.
+  * Reimplemented the method in which coLinux allocates memory in the host
+    kernel. It now allocates memory from the unmapped free page pool, which  
+    means you can use more than 256MB of RAM, unlike the previous method. 
+    Note that the first coLinux boot may be a little slower since Windows is 
+    freeing cache and swapping out stuff in order to provide accommodation for 
+    Linux's memory. You can see it in action by looking at the Task Manager.
+
 * Version 0.5.4 AKA "Focal Segmental Glomerulosclerosis" (%gs/%fs) release
   * Fixed an issue with i686-optimized pthread and the preservation of 
     %gs and %fs. The crashes that were caused by the i686 Gentoo image 

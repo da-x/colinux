@@ -240,7 +240,7 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
 	case CO_OPERATION_CONSOLE_SCROLL_UP:
 	case CO_OPERATION_CONSOLE_SCROLL_DOWN: {
 		unsigned long t = message->scroll.top;     /* Start of scroll region (row) */
-		unsigned long b = message->scroll.bottom;     /* End of scroll region (row) */
+		unsigned long b = message->scroll.bottom+1;    /* End of scroll region (row) */
 
 		damage_console(0, t, console->x, b - t + 1);
 		break;
@@ -271,6 +271,38 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
 		damage_console(console->cursor.x, console->cursor.y, 1, 1);
 		break;
 	}
+
+	case CO_OPERATION_CONSOLE_CLEAR:{
+		unsigned t = message->clear.top;
+		unsigned l = message->clear.left;
+		unsigned b = message->clear.bottom;
+		unsigned r = message->clear.right;
+		damage_console(l, t, r-l+1, b-t+1);
+	}
+
+	case CO_OPERATION_CONSOLE_BMOVE:{
+		unsigned y = message->bmove.row;
+		unsigned x = message->bmove.column;
+		unsigned t = message->bmove.top;
+		unsigned l = message->bmove.left;
+		unsigned b = message->bmove.bottom;
+		unsigned r = message->bmove.right;
+		damage_console(x, y, r-l+1, b-t+1);
+
+	}
+
+	case CO_OPERATION_CONSOLE_STARTUP:
+	case CO_OPERATION_CONSOLE_INIT:
+	case CO_OPERATION_CONSOLE_DEINIT:
+	case CO_OPERATION_CONSOLE_SWITCH:
+	case CO_OPERATION_CONSOLE_BLANK:
+	case CO_OPERATION_CONSOLE_FONT_OP:
+	case CO_OPERATION_CONSOLE_SET_PALETTE:
+	case CO_OPERATION_CONSOLE_SCROLLDELTA:
+	case CO_OPERATION_CONSOLE_SET_ORIGIN:
+	case CO_OPERATION_CONSOLE_SAVE_SCREEN:
+	case CO_OPERATION_CONSOLE_INVERT_REGION:
+		break;
 	}
 
 	return CO_RC(OK);

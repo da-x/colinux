@@ -1,6 +1,6 @@
 diff -X bin/dontdiff -urN linux/CREDITS linux/CREDITS
 --- linux/CREDITS	2004-03-04 00:28:48.000000000 +0200
-+++ linux/CREDITS	2004-03-04 00:16:11.000000000 +0200
++++ linux/CREDITS	2004-03-06 23:10:50.000000000 +0200
 @@ -54,6 +54,12 @@
  S: CH-1015 Lausanne
  S: Switzerland
@@ -16,7 +16,7 @@ diff -X bin/dontdiff -urN linux/CREDITS linux/CREDITS
  D: 802.2 class II logical link control layer,
 diff -X bin/dontdiff -urN linux/Documentation/devices.txt linux/Documentation/devices.txt
 --- linux/Documentation/devices.txt	2004-03-04 00:28:48.000000000 +0200
-+++ linux/Documentation/devices.txt	2004-03-04 00:16:11.000000000 +0200
++++ linux/Documentation/devices.txt	2004-03-06 23:10:50.000000000 +0200
 @@ -1926,6 +1926,13 @@
  		 17 = /dev/cosa1c1	2nd board, 2nd channel
  		    ...
@@ -33,7 +33,7 @@ diff -X bin/dontdiff -urN linux/Documentation/devices.txt linux/Documentation/de
  		  1 = /dev/solnp1
 diff -X bin/dontdiff -urN linux/Makefile linux/Makefile
 --- linux/Makefile	2004-03-04 00:28:48.000000000 +0200
-+++ linux/Makefile	2004-03-04 00:19:47.000000000 +0200
++++ linux/Makefile	2004-03-06 23:10:50.000000000 +0200
 @@ -1,7 +1,7 @@
  VERSION = 2
  PATCHLEVEL = 4
@@ -57,7 +57,7 @@ diff -X bin/dontdiff -urN linux/Makefile linux/Makefile
  NM		= $(CROSS_COMPILE)nm
 diff -X bin/dontdiff -urN linux/arch/i386/config.in linux/arch/i386/config.in
 --- linux/arch/i386/config.in	2004-03-04 00:28:49.000000000 +0200
-+++ linux/arch/i386/config.in	2004-03-04 00:16:11.000000000 +0200
++++ linux/arch/i386/config.in	2004-03-06 23:10:50.000000000 +0200
 @@ -226,13 +226,20 @@
  bool 'MTRR (Memory Type Range Register) support' CONFIG_MTRR
  bool 'Symmetric multi-processing support' CONFIG_SMP
@@ -116,7 +116,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/config.in linux/arch/i386/config.in
        tristate 'MDA text console (dual-headed) (EXPERIMENTAL)' CONFIG_MDA_CONSOLE
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/Makefile linux/arch/i386/kernel/Makefile
 --- linux/arch/i386/kernel/Makefile	2004-02-02 22:53:38.000000000 +0200
-+++ linux/arch/i386/kernel/Makefile	2004-02-15 22:26:14.000000000 +0200
++++ linux/arch/i386/kernel/Makefile	2004-03-06 23:10:50.000000000 +0200
 @@ -18,7 +18,7 @@
  
  obj-y	:= process.o semaphore.o signal.o entry.o traps.o irq.o vm86.o \
@@ -128,8 +128,8 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/Makefile linux/arch/i386/kernel
  ifdef CONFIG_PCI
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/kernel/cooperative.c
 --- linux/arch/i386/kernel/cooperative.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/arch/i386/kernel/cooperative.c	2004-03-05 07:56:22.000000000 +0200
-@@ -0,0 +1,158 @@
++++ linux/arch/i386/kernel/cooperative.c	2004-03-13 11:54:35.000000000 +0200
+@@ -0,0 +1,157 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -156,7 +156,6 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/k
 +	".section .text\n"
 +	".globl colinux_start\n"
 +	"colinux_start:\n"
-+	"       push %ecx\n"
 +	"       call colinux_start_arch\n"
 +	".previous\n"
 +	"");
@@ -185,10 +184,10 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/k
 +	load_TR(nr);
 +}
 +
-+void colinux_start_arch(co_arch_passage_page_t *passage_page)
++void colinux_start_arch()
 +{
 +	colinux_early_cpu_init();
-+	colinux_start_c(passage_page);
++	colinux_start_c();
 +}
 +
 +void co_handle_device_interrupt(co_linux_message_t *message)
@@ -290,7 +289,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/k
 +
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/head.S linux/arch/i386/kernel/head.S
 --- linux/arch/i386/kernel/head.S	2004-02-02 22:53:38.000000000 +0200
-+++ linux/arch/i386/kernel/head.S	2004-02-24 15:34:05.000000000 +0200
++++ linux/arch/i386/kernel/head.S	2004-03-06 23:10:50.000000000 +0200
 @@ -320,7 +320,7 @@
  	ret
  
@@ -317,7 +316,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/head.S linux/arch/i386/kernel/h
  SYMBOL_NAME(gdt):
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/i8259.c linux/arch/i386/kernel/i8259.c
 --- linux/arch/i386/kernel/i8259.c	2004-02-02 22:53:38.000000000 +0200
-+++ linux/arch/i386/kernel/i8259.c	2004-03-03 23:27:44.000000000 +0200
++++ linux/arch/i386/kernel/i8259.c	2004-03-06 23:10:50.000000000 +0200
 @@ -23,6 +23,7 @@
  #include <asm/apic.h>
  
@@ -536,7 +535,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/i8259.c linux/arch/i386/kernel/
  }
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/process.c linux/arch/i386/kernel/process.c
 --- linux/arch/i386/kernel/process.c	2004-03-04 00:28:49.000000000 +0200
-+++ linux/arch/i386/kernel/process.c	2004-03-05 07:21:18.000000000 +0200
++++ linux/arch/i386/kernel/process.c	2004-03-06 23:10:50.000000000 +0200
 @@ -51,6 +51,7 @@
  #include <asm/apic.h>
  
@@ -622,7 +621,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/process.c linux/arch/i386/kerne
  	 * Restore %fs and %gs.
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/setup.c
 --- linux/arch/i386/kernel/setup.c	2004-03-04 00:28:49.000000000 +0200
-+++ linux/arch/i386/kernel/setup.c	2004-03-04 00:16:11.000000000 +0200
++++ linux/arch/i386/kernel/setup.c	2004-03-06 23:10:50.000000000 +0200
 @@ -108,6 +108,7 @@
  #include <asm/processor.h>
  #include <linux/console.h>
@@ -812,7 +811,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/
  /*
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/time.c
 --- linux/arch/i386/kernel/time.c	2004-03-04 00:28:49.000000000 +0200
-+++ linux/arch/i386/kernel/time.c	2004-03-04 00:16:11.000000000 +0200
++++ linux/arch/i386/kernel/time.c	2004-03-06 23:10:50.000000000 +0200
 @@ -121,6 +121,8 @@
  
  extern spinlock_t i8259A_lock;
@@ -884,7 +883,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/t
  static struct irqaction irq0  = { timer_interrupt, SA_INTERRUPT, 0, "timer", NULL, NULL};
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/traps.c linux/arch/i386/kernel/traps.c
 --- linux/arch/i386/kernel/traps.c	2004-02-02 22:53:38.000000000 +0200
-+++ linux/arch/i386/kernel/traps.c	2004-02-23 08:59:51.000000000 +0200
++++ linux/arch/i386/kernel/traps.c	2004-03-06 23:10:50.000000000 +0200
 @@ -852,11 +852,20 @@
  	"rorl $16,%%eax" \
  	: "=m"(*(n)) : "a" (addr), "r"(n), "ir"(limit), "i"(type))
@@ -908,7 +907,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/traps.c linux/arch/i386/kernel/
  	_set_tssldt_desc(gdt_table+__LDT(n), (int)addr, ((size << 3)-1), 0x82);
 diff -X bin/dontdiff -urN linux/arch/i386/mm/fault.c linux/arch/i386/mm/fault.c
 --- linux/arch/i386/mm/fault.c	2004-03-04 00:28:49.000000000 +0200
-+++ linux/arch/i386/mm/fault.c	2004-03-04 00:16:11.000000000 +0200
++++ linux/arch/i386/mm/fault.c	2004-03-06 23:10:50.000000000 +0200
 @@ -380,7 +380,11 @@
  		pte_t *pte_k;
  
@@ -923,7 +922,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/mm/fault.c linux/arch/i386/mm/fault.c
  		if (!pgd_present(*pgd_k))
 diff -X bin/dontdiff -urN linux/arch/i386/mm/init.c linux/arch/i386/mm/init.c
 --- linux/arch/i386/mm/init.c	2004-02-02 22:53:38.000000000 +0200
-+++ linux/arch/i386/mm/init.c	2004-02-23 08:59:51.000000000 +0200
++++ linux/arch/i386/mm/init.c	2004-03-13 11:54:07.000000000 +0200
 @@ -38,6 +38,8 @@
  #include <asm/apic.h>
  #include <asm/tlb.h>
@@ -979,7 +978,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/mm/init.c linux/arch/i386/mm/init.c
  	free_area_init(zones_size);
  }
  
-@@ -485,6 +496,31 @@
+@@ -485,6 +496,22 @@
  
  	bad_ppro = ppro_with_ram_bug();
  
@@ -990,28 +989,19 @@ diff -X bin/dontdiff -urN linux/arch/i386/mm/init.c linux/arch/i386/mm/init.c
 +	 * other pseudo physical space.
 +	 */
 +	{
-+	    unsigned long bootmem_end = co_core_end + \
++	    unsigned long bootmem_end = co_core_end +
 +		(co_bootmem_pages << PAGE_SHIFT);
 +	    unsigned long physical_end = __PAGE_OFFSET + 
 +		(max_low_pfn << PAGE_SHIFT);
 +
 +	    free_bootmem(__pa(bootmem_end), physical_end - bootmem_end);
-+
-+	    /* But reserve the PPTM */
-+	    reserve_bootmem(__pa(CO_PPTM_OFFSET), CO_PPTM_SIZE);
-+
-+	    /* And the RPPTM */
-+	    reserve_bootmem(__pa(CO_RPPTM_OFFSET), co_rpptm_size);
-+
-+	    /* And of course, the passage page! */
-+	    reserve_bootmem(__pa(bootmem_end), PAGE_SIZE);
 +	}
 +
 +#endif
  	/* this will put all low memory onto the freelists */
  	totalram_pages += free_all_bootmem();
  
-@@ -521,7 +557,7 @@
+@@ -521,7 +548,7 @@
  	reservedpages = free_pages_init();
  
  	codesize =  (unsigned long) &_etext - (unsigned long) &_text;
@@ -1020,7 +1010,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/mm/init.c linux/arch/i386/mm/init.c
  	initsize =  (unsigned long) &__init_end - (unsigned long) &__init_begin;
  
  	printk(KERN_INFO "Memory: %luk/%luk available (%dk kernel code, %dk reserved, %dk data, %dk init, %ldk highmem)\n",
-@@ -538,19 +574,21 @@
+@@ -538,19 +565,21 @@
  	if (!cpu_has_pae)
  		panic("cannot execute a PAE-enabled kernel on a PAE-less CPU!");
  #endif
@@ -1044,7 +1034,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/mm/init.c linux/arch/i386/mm/init.c
  }
  
  /* Put this after the callers, so that it cannot be inlined */
-@@ -579,6 +617,9 @@
+@@ -579,6 +608,9 @@
  
  void free_initmem(void)
  {
@@ -1054,7 +1044,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/mm/init.c linux/arch/i386/mm/init.c
  	unsigned long addr;
  
  	addr = (unsigned long)(&__init_begin);
-@@ -589,6 +630,7 @@
+@@ -589,6 +621,7 @@
  		totalram_pages++;
  	}
  	printk (KERN_INFO "Freeing unused kernel memory: %dk freed\n", (&__init_end - &__init_begin) >> 10);
@@ -1064,7 +1054,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/mm/init.c linux/arch/i386/mm/init.c
  #ifdef CONFIG_BLK_DEV_INITRD
 diff -X bin/dontdiff -urN linux/arch/i386/vmlinux.lds linux/arch/i386/vmlinux.lds
 --- linux/arch/i386/vmlinux.lds	2004-02-02 22:53:38.000000000 +0200
-+++ linux/arch/i386/vmlinux.lds	2004-02-15 22:26:14.000000000 +0200
++++ linux/arch/i386/vmlinux.lds	2004-03-06 23:10:50.000000000 +0200
 @@ -7,50 +7,72 @@
  SECTIONS
  {
@@ -1182,7 +1172,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/vmlinux.lds linux/arch/i386/vmlinux.ld
    /DISCARD/ : {
 diff -X bin/dontdiff -urN linux/drivers/block/Config.in linux/drivers/block/Config.in
 --- linux/drivers/block/Config.in	2004-02-02 22:53:38.000000000 +0200
-+++ linux/drivers/block/Config.in	2004-02-15 22:26:14.000000000 +0200
++++ linux/drivers/block/Config.in	2004-03-06 23:10:50.000000000 +0200
 @@ -49,6 +49,10 @@
  fi
  dep_bool '  Initial RAM disk (initrd) support' CONFIG_BLK_DEV_INITRD $CONFIG_BLK_DEV_RAM
@@ -1196,7 +1186,7 @@ diff -X bin/dontdiff -urN linux/drivers/block/Config.in linux/drivers/block/Conf
  endmenu
 diff -X bin/dontdiff -urN linux/drivers/block/Makefile linux/drivers/block/Makefile
 --- linux/drivers/block/Makefile	2004-02-02 22:53:38.000000000 +0200
-+++ linux/drivers/block/Makefile	2004-02-15 22:26:14.000000000 +0200
++++ linux/drivers/block/Makefile	2004-03-06 23:10:50.000000000 +0200
 @@ -31,6 +31,7 @@
  obj-$(CONFIG_BLK_DEV_DAC960)	+= DAC960.o
  obj-$(CONFIG_BLK_DEV_UMEM)	+= umem.o
@@ -1207,7 +1197,7 @@ diff -X bin/dontdiff -urN linux/drivers/block/Makefile linux/drivers/block/Makef
  
 diff -X bin/dontdiff -urN linux/drivers/block/cobd.c linux/drivers/block/cobd.c
 --- linux/drivers/block/cobd.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/drivers/block/cobd.c	2004-02-25 03:44:38.000000000 +0200
++++ linux/drivers/block/cobd.c	2004-03-06 23:10:50.000000000 +0200
 @@ -0,0 +1,284 @@
 +/*
 + *  Copyright (C) 2003 Dan Aloni <da-x@gmx.net>
@@ -1495,7 +1485,7 @@ diff -X bin/dontdiff -urN linux/drivers/block/cobd.c linux/drivers/block/cobd.c
 +
 diff -X bin/dontdiff -urN linux/drivers/block/ll_rw_blk.c linux/drivers/block/ll_rw_blk.c
 --- linux/drivers/block/ll_rw_blk.c	2004-03-04 00:28:53.000000000 +0200
-+++ linux/drivers/block/ll_rw_blk.c	2004-03-04 00:16:12.000000000 +0200
++++ linux/drivers/block/ll_rw_blk.c	2004-03-06 23:10:50.000000000 +0200
 @@ -1557,7 +1557,7 @@
  #ifdef CONFIG_BLK_DEV_FD
  	floppy_init();
@@ -1507,7 +1497,7 @@ diff -X bin/dontdiff -urN linux/drivers/block/ll_rw_blk.c linux/drivers/block/ll
  #endif
 diff -X bin/dontdiff -urN linux/drivers/char/Makefile linux/drivers/char/Makefile
 --- linux/drivers/char/Makefile	2004-03-04 00:28:53.000000000 +0200
-+++ linux/drivers/char/Makefile	2004-03-04 00:16:12.000000000 +0200
++++ linux/drivers/char/Makefile	2004-03-06 23:10:50.000000000 +0200
 @@ -169,6 +169,10 @@
    KEYBD = dummy_keyb.o
  endif
@@ -1521,7 +1511,7 @@ diff -X bin/dontdiff -urN linux/drivers/char/Makefile linux/drivers/char/Makefil
  obj-$(CONFIG_SERIAL_HCDP) += hcdp_serial.o
 diff -X bin/dontdiff -urN linux/drivers/char/colx_keyb.c linux/drivers/char/colx_keyb.c
 --- linux/drivers/char/colx_keyb.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/drivers/char/colx_keyb.c	2004-02-15 22:26:14.000000000 +0200
++++ linux/drivers/char/colx_keyb.c	2004-03-06 23:10:50.000000000 +0200
 @@ -0,0 +1,1221 @@
 +/*
 + * linux/drivers/char/pc_keyb.c
@@ -2746,7 +2736,7 @@ diff -X bin/dontdiff -urN linux/drivers/char/colx_keyb.c linux/drivers/char/colx
 +
 diff -X bin/dontdiff -urN linux/drivers/char/vt.c linux/drivers/char/vt.c
 --- linux/drivers/char/vt.c	2004-02-02 22:53:38.000000000 +0200
-+++ linux/drivers/char/vt.c	2004-02-15 22:26:14.000000000 +0200
++++ linux/drivers/char/vt.c	2004-03-06 23:10:50.000000000 +0200
 @@ -90,10 +90,10 @@
   * comments - KDMKTONE doesn't put the process to sleep.
   */
@@ -2764,7 +2754,7 @@ diff -X bin/dontdiff -urN linux/drivers/char/vt.c linux/drivers/char/vt.c
  kd_nosound(unsigned long ignored)
 diff -X bin/dontdiff -urN linux/drivers/net/Config.in linux/drivers/net/Config.in
 --- linux/drivers/net/Config.in	2004-03-04 00:28:54.000000000 +0200
-+++ linux/drivers/net/Config.in	2004-03-04 00:16:12.000000000 +0200
++++ linux/drivers/net/Config.in	2004-03-06 23:10:50.000000000 +0200
 @@ -286,6 +286,10 @@
     dep_tristate 'iSeries Virtual Ethernet driver support' CONFIG_VETH $CONFIG_PPC_ISERIES
  fi
@@ -2778,7 +2768,7 @@ diff -X bin/dontdiff -urN linux/drivers/net/Config.in linux/drivers/net/Config.i
  fi
 diff -X bin/dontdiff -urN linux/drivers/net/Makefile linux/drivers/net/Makefile
 --- linux/drivers/net/Makefile	2004-03-04 00:28:54.000000000 +0200
-+++ linux/drivers/net/Makefile	2004-03-04 00:16:12.000000000 +0200
++++ linux/drivers/net/Makefile	2004-03-06 23:10:50.000000000 +0200
 @@ -211,6 +211,7 @@
  
  # This is also a 82596 and should probably be merged
@@ -2789,7 +2779,7 @@ diff -X bin/dontdiff -urN linux/drivers/net/Makefile linux/drivers/net/Makefile
  obj-$(CONFIG_ZORRO8390) += zorro8390.o 8390.o
 diff -X bin/dontdiff -urN linux/drivers/net/conet.c linux/drivers/net/conet.c
 --- linux/drivers/net/conet.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/drivers/net/conet.c	2004-02-25 03:43:44.000000000 +0200
++++ linux/drivers/net/conet.c	2004-03-06 23:10:50.000000000 +0200
 @@ -0,0 +1,205 @@
 +/*
 + *  Copyright (C) 2003-2004 Dan Aloni <da-x@gmx.net>
@@ -2998,7 +2988,7 @@ diff -X bin/dontdiff -urN linux/drivers/net/conet.c linux/drivers/net/conet.c
 +module_exit(conet_cleanup_module);
 diff -X bin/dontdiff -urN linux/drivers/video/Makefile linux/drivers/video/Makefile
 --- linux/drivers/video/Makefile	2004-03-04 00:28:55.000000000 +0200
-+++ linux/drivers/video/Makefile	2004-03-04 00:16:13.000000000 +0200
++++ linux/drivers/video/Makefile	2004-03-06 23:10:50.000000000 +0200
 @@ -15,7 +15,8 @@
  		  fbcon-iplan2p8.o fbcon-vga-planes.o fbcon-cfb16.o \
  		  fbcon-cfb2.o fbcon-cfb24.o fbcon-cfb32.o fbcon-cfb4.o \
@@ -3019,7 +3009,7 @@ diff -X bin/dontdiff -urN linux/drivers/video/Makefile linux/drivers/video/Makef
  obj-$(CONFIG_FONT_SUN8x16)        += font_sun8x16.o
 diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.c
 --- linux/drivers/video/cocon.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/drivers/video/cocon.c	2004-03-02 23:00:11.000000000 +0200
++++ linux/drivers/video/cocon.c	2004-03-06 23:10:50.000000000 +0200
 @@ -0,0 +1,492 @@
 +/*
 + *  linux/drivers/video/cocon.c -- Cooperative Linux console VGA driver
@@ -3515,8 +3505,8 @@ diff -X bin/dontdiff -urN linux/drivers/video/cocon.c linux/drivers/video/cocon.
 +MODULE_LICENSE("GPL");
 diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm-i386/cooperative.h
 --- linux/include/asm-i386/cooperative.h	1970-01-01 02:00:00.000000000 +0200
-+++ linux/include/asm-i386/cooperative.h	2004-02-24 20:15:45.000000000 +0200
-@@ -0,0 +1,117 @@
++++ linux/include/asm-i386/cooperative.h	2004-03-13 16:54:21.000000000 +0200
+@@ -0,0 +1,128 @@
 +#ifndef __LINUX_ASM_COOPERATIVE_H__
 +#define __LINUX_ASM_COOPERATIVE_H__
 +
@@ -3569,6 +3559,8 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm
 +	unsigned char fxstate[0x200]; /* 0x70 */
 +} __attribute__((packed)) co_arch_state_stack_t;
 +
++extern void co_debug(const char *fmt, ...);
++
 +static inline void co_passage_page_dump_state(co_arch_state_stack_t *state)
 +{
 +	co_debug("cs: %04x   ds: %04x   es: %04x   fs: %04x   gs: %04x   ss: %04x\n",
@@ -3612,7 +3604,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm
 +			
 +			/* Machine states */
 +			co_arch_state_stack_t host_state; 
-+			co_arch_state_stack_t colx_state;
++			co_arch_state_stack_t linuxvm_state;
 +			
 +			/* Control parameters */
 +			unsigned long operation;
@@ -3630,13 +3622,22 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm
 +	co_passage_page_dump_state(&page->host_state);
 +
 +	co_debug("Linux state\n");
-+	co_passage_page_dump_state(&page->colx_state);
++	co_passage_page_dump_state(&page->linuxvm_state);
 +}
++
++/*
++ * Address space layout:
++ */
++
++#define CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP   (0xff000000)
++#define CO_VPTR_PSEUDO_RAM_PAGE_TABLES       (0xfef00000) 
++#define CO_VPTR_PASSAGE_PAGE                 (0xfeeff000)
++#define CO_VPTR_SELF_MAP                     (0xfec00000)
 +
 +#endif
 diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dma.h
 --- linux/include/asm-i386/dma.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/dma.h	2004-03-05 07:17:58.000000000 +0200
++++ linux/include/asm-i386/dma.h	2004-03-13 19:31:46.000000000 +0200
 @@ -268,6 +268,8 @@
   *
   * Assumes DMA flip-flop is clear.
@@ -3657,7 +3658,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dm
  extern int request_dma(unsigned int dmanr, const char * device_id);	/* reserve a DMA channel */
 diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.h
 --- linux/include/asm-i386/io.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/io.h	2004-03-05 07:17:58.000000000 +0200
++++ linux/include/asm-i386/io.h	2004-03-13 19:30:52.000000000 +0200
 @@ -2,6 +2,7 @@
  #define _ASM_IO_H
  
@@ -3727,7 +3728,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.
  #endif
 diff -X bin/dontdiff -urN linux/include/asm-i386/irq.h linux/include/asm-i386/irq.h
 --- linux/include/asm-i386/irq.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/irq.h	2004-02-15 22:26:14.000000000 +0200
++++ linux/include/asm-i386/irq.h	2004-03-06 23:10:50.000000000 +0200
 @@ -14,6 +14,10 @@
  
  #define TIMER_IRQ 0
@@ -3750,7 +3751,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/irq.h linux/include/asm-i386/ir
  #define NR_IRQS 16
 diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/page.h
 --- linux/include/asm-i386/page.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/page.h	2004-02-15 22:26:14.000000000 +0200
++++ linux/include/asm-i386/page.h	2004-03-13 12:20:57.000000000 +0200
 @@ -1,6 +1,10 @@
  #ifndef _I386_PAGE_H
  #define _I386_PAGE_H
@@ -3762,30 +3763,38 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/p
  /* PAGE_SHIFT determines the page size */
  #define PAGE_SHIFT	12
  #define PAGE_SIZE	(1UL << PAGE_SHIFT)
-@@ -80,6 +84,22 @@
+@@ -10,6 +14,7 @@
+ #ifndef __ASSEMBLY__
+ 
+ #include <linux/config.h>
++#include <asm/cooperative.h>
+ 
+ #ifdef CONFIG_X86_USE_3DNOW
+ 
+@@ -80,6 +85,22 @@
  
  #define __PAGE_OFFSET		(0xC0000000)
  
 +#ifdef CONFIG_COOPERATIVE
 +
-+#define CO_PPTM_OFFSET     (__PAGE_OFFSET + 0x400000)
-+#define CO_RPPTM_OFFSET    (__PAGE_OFFSET + 0x800000)
++#define CO_PPTM_OFFSET     (CO_VPTR_PSEUDO_RAM_PAGE_TABLES)
++#define CO_RPPTM_OFFSET    (CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP)
 +
 +#define CO_PFN(vaddr)      ((((unsigned long)vaddr) - __PAGE_OFFSET) >> PAGE_SHIFT)
 +#define CO_PA(pfn)         (((unsigned long *)CO_PPTM_OFFSET)[pfn])
 +#define CO_PFN_PA(vaddr)   CO_PA(CO_PFN(vaddr))
 +#define CO_PPTM_SIZE       (max_low_pfn * sizeof(pte_t))
 +
-+#define CO_VA(pa)          (((unsigned long *)CO_RPPTM_OFFSET)[((pa) >> PAGE_SHIFT)])
-+#define CO_VA_PFN(pa)      CO_PFN(CO_VA(pa))
++#define CO_VA_PFN(pa)      (((unsigned long *)CO_RPPTM_OFFSET)[((pa) >> PAGE_SHIFT)])
 +#define CO_VA_PAGE(pa)     (mem_map + CO_VA_PFN(pa))
++#define CO_VA(pa)          ((CO_VA_PFN(pa) << PAGE_SHIFT) + __PAGE_OFFSET)
 +
 +#endif
 +
  /*
   * This much address space is reserved for vmalloc() and iomap()
   * as well as fixmap mappings.
-@@ -96,11 +116,16 @@
+@@ -96,11 +117,16 @@
   */
  
  #if 1	/* Set to zero for a slightly smaller kernel */
@@ -3802,7 +3811,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/p
  #else
  #define BUG() __asm__ __volatile__("ud2\n")
  #endif
-@@ -129,9 +154,11 @@
+@@ -129,9 +155,11 @@
  #define VMALLOC_RESERVE		((unsigned long)__VMALLOC_RESERVE)
  #define __MAXMEM		(-__PAGE_OFFSET-__VMALLOC_RESERVE)
  #define MAXMEM			((unsigned long)(-PAGE_OFFSET-VMALLOC_RESERVE))
@@ -3817,7 +3826,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/p
  #define VM_DATA_DEFAULT_FLAGS	(VM_READ | VM_WRITE | VM_EXEC | \
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgalloc.h linux/include/asm-i386/pgalloc.h
 --- linux/include/asm-i386/pgalloc.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/pgalloc.h	2004-03-05 07:17:58.000000000 +0200
++++ linux/include/asm-i386/pgalloc.h	2004-03-13 12:44:16.000000000 +0200
 @@ -11,8 +11,13 @@
  #define pte_quicklist (current_cpu_data.pte_quick)
  #define pgtable_cache_size (current_cpu_data.pgtable_cache_sz)
@@ -3835,7 +3844,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgalloc.h linux/include/asm-i38
   * Allocate and free page tables.
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable-2level.h linux/include/asm-i386/pgtable-2level.h
 --- linux/include/asm-i386/pgtable-2level.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/pgtable-2level.h	2004-02-15 22:26:14.000000000 +0200
++++ linux/include/asm-i386/pgtable-2level.h	2004-03-06 23:10:50.000000000 +0200
 @@ -58,8 +58,14 @@
  }
  #define ptep_get_and_clear(xp)	__pte(xchg(&(xp)->pte_low, 0))
@@ -3854,7 +3863,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable-2level.h linux/include/
  #endif /* _I386_PGTABLE_2LEVEL_H */
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable.h linux/include/asm-i386/pgtable.h
 --- linux/include/asm-i386/pgtable.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/pgtable.h	2004-03-04 00:16:27.000000000 +0200
++++ linux/include/asm-i386/pgtable.h	2004-03-13 12:44:16.000000000 +0200
 @@ -320,8 +320,13 @@
  
  #define page_pte(page) page_pte_prot(page, __pgprot(0))
@@ -3872,7 +3881,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable.h linux/include/asm-i38
  #define pgd_index(address) ((address >> PGDIR_SHIFT) & (PTRS_PER_PGD-1))
 diff -X bin/dontdiff -urN linux/include/asm-i386/processor.h linux/include/asm-i386/processor.h
 --- linux/include/asm-i386/processor.h	2004-03-04 00:28:57.000000000 +0200
-+++ linux/include/asm-i386/processor.h	2004-03-04 00:16:14.000000000 +0200
++++ linux/include/asm-i386/processor.h	2004-03-13 12:44:14.000000000 +0200
 @@ -181,8 +181,18 @@
  #define X86_CR4_OSFXSR		0x0200	/* enable fast FPU save and restore */
  #define X86_CR4_OSXMMEXCPT	0x0400	/* enable unmasked SSE exceptions */
@@ -3895,7 +3904,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/processor.h linux/include/asm-i
   * Save the cr4 feature set we're using (ie
 diff -X bin/dontdiff -urN linux/include/asm-i386/system.h linux/include/asm-i386/system.h
 --- linux/include/asm-i386/system.h	2004-02-02 22:39:43.000000000 +0200
-+++ linux/include/asm-i386/system.h	2004-03-05 07:17:57.000000000 +0200
++++ linux/include/asm-i386/system.h	2004-03-06 23:19:12.000000000 +0200
 @@ -12,7 +12,15 @@
  struct task_struct;	/* one of the stranger aspects of C forward declarations.. */
  extern void FASTCALL(__switch_to(struct task_struct *prev, struct task_struct *next));
@@ -3914,7 +3923,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/system.h linux/include/asm-i386
  		     "pushl %%edi\n\t"					\
 diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/console.h
 --- linux/include/linux/console.h	2004-03-04 00:28:58.000000000 +0200
-+++ linux/include/linux/console.h	2004-03-04 00:16:31.000000000 +0200
++++ linux/include/linux/console.h	2004-03-13 14:13:33.000000000 +0200
 @@ -55,6 +55,7 @@
  extern const struct consw dummy_con;	/* dummy console buffer */
  extern const struct consw fb_con;	/* frame buffer based console */
@@ -3925,7 +3934,7 @@ diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/cons
  
 diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/cooperative.h
 --- linux/include/linux/cooperative.h	1970-01-01 02:00:00.000000000 +0200
-+++ linux/include/linux/cooperative.h	2004-03-02 22:59:53.000000000 +0200
++++ linux/include/linux/cooperative.h	2004-03-13 16:54:59.000000000 +0200
 @@ -0,0 +1,292 @@
 +#ifndef __LINUX_COOPERATIVE_H__
 +#define __LINUX_COOPERATIVE_H__
@@ -4050,12 +4059,12 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +
 +#ifdef CO_KERNEL
 +# ifdef CO_COLINUX_KERNEL
-+   extern co_arch_passage_page_t *co_passage_page;
-+#  define co_current (co_passage_page->colx_state)
++#  define co_passage_page  ((co_arch_passage_page_t *)(CO_VPTR_PASSAGE_PAGE))
++#  define co_current (co_passage_page->linuxvm_state)
 +#  define co_other (co_passage_page->host_state)
 +# else
 +#  define co_passage_page  (cmon->passage_page)
-+#  define co_other (co_passage_page->colx_state)
++#  define co_other (co_passage_page->linuxvm_state)
 +#  define co_current (co_passage_page->host_state)
 +# endif
 +
@@ -4221,7 +4230,7 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +#endif
 diff -X bin/dontdiff -urN linux/include/linux/major.h linux/include/linux/major.h
 --- linux/include/linux/major.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/linux/major.h	2004-02-15 22:26:14.000000000 +0200
++++ linux/include/linux/major.h	2004-03-06 23:10:50.000000000 +0200
 @@ -142,6 +142,7 @@
  #define LVM_CHAR_MAJOR	109	/* Logical Volume Manager */
  
@@ -4232,7 +4241,7 @@ diff -X bin/dontdiff -urN linux/include/linux/major.h linux/include/linux/major.
  #define RAW_MAJOR	162
 diff -X bin/dontdiff -urN linux/init/do_mounts.c linux/init/do_mounts.c
 --- linux/init/do_mounts.c	2004-02-02 22:53:38.000000000 +0200
-+++ linux/init/do_mounts.c	2004-02-15 22:26:14.000000000 +0200
++++ linux/init/do_mounts.c	2004-03-06 23:10:50.000000000 +0200
 @@ -255,6 +255,9 @@
  	{ "ftld", 0x2c18 },
  	{ "mtdblock", 0x1f00 },
@@ -4245,7 +4254,7 @@ diff -X bin/dontdiff -urN linux/init/do_mounts.c linux/init/do_mounts.c
  
 diff -X bin/dontdiff -urN linux/init/main.c linux/init/main.c
 --- linux/init/main.c	2004-02-02 22:53:38.000000000 +0200
-+++ linux/init/main.c	2004-02-23 08:59:51.000000000 +0200
++++ linux/init/main.c	2004-03-06 23:10:50.000000000 +0200
 @@ -74,6 +74,8 @@
  #include <asm/smp.h>
  #endif
@@ -4272,7 +4281,7 @@ diff -X bin/dontdiff -urN linux/init/main.c linux/init/main.c
  #define smp_init()	do { } while (0)
 diff -X bin/dontdiff -urN linux/kernel/Makefile linux/kernel/Makefile
 --- linux/kernel/Makefile	2004-02-02 22:53:38.000000000 +0200
-+++ linux/kernel/Makefile	2004-02-15 22:26:14.000000000 +0200
++++ linux/kernel/Makefile	2004-03-06 23:10:50.000000000 +0200
 @@ -14,7 +14,7 @@
  obj-y     = sched.o dma.o fork.o exec_domain.o panic.o printk.o \
  	    module.o exit.o itimer.o info.o time.o softirq.o resource.o \
@@ -4284,8 +4293,8 @@ diff -X bin/dontdiff -urN linux/kernel/Makefile linux/kernel/Makefile
  obj-$(CONFIG_MODULES) += ksyms.o
 diff -X bin/dontdiff -urN linux/kernel/cooperative.c linux/kernel/cooperative.c
 --- linux/kernel/cooperative.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/kernel/cooperative.c	2004-02-22 00:19:25.000000000 +0200
-@@ -0,0 +1,248 @@
++++ linux/kernel/cooperative.c	2004-03-13 12:13:51.000000000 +0200
+@@ -0,0 +1,239 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -4301,8 +4310,6 @@ diff -X bin/dontdiff -urN linux/kernel/cooperative.c linux/kernel/cooperative.c
 +#include <linux/mm.h>
 +#include <linux/cooperative.h>
 +
-+co_arch_passage_page_t *co_passage_page = NULL;
-+
 +CO_TRACE_STOP;
 +
 +void start_kernel(void);
@@ -4314,22 +4321,15 @@ diff -X bin/dontdiff -urN linux/kernel/cooperative.c linux/kernel/cooperative.c
 +unsigned long co_rpptm_size = 0;
 +char co_boot_parameters[CO_BOOTPARAM_STRING_LENGTH];
 +
-+void colinux_start_c(co_arch_passage_page_t *passage_page)
++void colinux_start_c()
 +{
-+	/* This parameter is push by colinux_start. */
-+	co_passage_page = passage_page;    
-+
 +	co_core_end = co_passage_page->params[0];
 +	co_bootmem_pages = co_passage_page->params[1];
 +	co_memory_size = co_passage_page->params[2];
 +	co_rpptm_size = co_passage_page->params[3];
 +	memcpy(co_boot_parameters, &co_passage_page->params[4], 
 +	       sizeof(co_boot_parameters));
-+	/* 
-+	 * Now that we know the address of the passage page, 
-+	 * we can switch back.
-+	 */
-+	
++
 +	start_kernel();
 +
 +	co_terminate(CO_TERMINATE_END);
@@ -4536,7 +4536,7 @@ diff -X bin/dontdiff -urN linux/kernel/cooperative.c linux/kernel/cooperative.c
 +CO_TRACE_CONTINUE;
 diff -X bin/dontdiff -urN linux/kernel/panic.c linux/kernel/panic.c
 --- linux/kernel/panic.c	2004-02-02 22:53:38.000000000 +0200
-+++ linux/kernel/panic.c	2004-02-15 22:26:14.000000000 +0200
++++ linux/kernel/panic.c	2004-03-06 23:10:50.000000000 +0200
 @@ -18,6 +18,8 @@
  #include <linux/interrupt.h>
  #include <linux/console.h>
@@ -4557,7 +4557,7 @@ diff -X bin/dontdiff -urN linux/kernel/panic.c linux/kernel/panic.c
  #endif
 diff -X bin/dontdiff -urN linux/kernel/printk.c linux/kernel/printk.c
 --- linux/kernel/printk.c	2004-02-02 22:53:38.000000000 +0200
-+++ linux/kernel/printk.c	2004-02-15 22:26:14.000000000 +0200
++++ linux/kernel/printk.c	2004-03-06 23:10:50.000000000 +0200
 @@ -29,6 +29,8 @@
  
  #include <asm/uaccess.h>

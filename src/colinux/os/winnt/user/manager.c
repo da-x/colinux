@@ -1,7 +1,7 @@
 /*
  * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@gmx.net>, 2003 (c)
+ * Dan Aloni <da-x@colinux.org>, 2003 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -263,10 +263,10 @@ co_rc_t coui_unload_driver_by_name(char *name)
 				      SC_MANAGER_ALL_ACCESS // access required 
 		); 
  
-	co_debug("Stopping driver service\n");
+	co_debug("driver: stopping driver service\n");
 	rc = coui_stop_driver(schSCManager, name);  
 
-	co_debug("Removing driver service\n");
+	co_debug("driver: removing driver service\n");
 	rc = coui_remove_driver(schSCManager, name);
 	
 	CloseServiceHandle(schSCManager); 

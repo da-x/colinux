@@ -1,7 +1,7 @@
 /*
  * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@gmx.net>, 2003 (c)
+ * Dan Aloni <da-x@colinux.org>, 2003 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -178,7 +178,7 @@ co_rc_t co_message_switch_free_rule(co_message_switch_t *ms, co_module_t destina
 
 	co_debug("co_message_switch: freeing rule for %d\n", rule->destination);
 
-	co_list_del(&rule->node);	
+	co_list_del(&rule->node);
 	co_os_free(rule);
 
 	return CO_RC(OK);

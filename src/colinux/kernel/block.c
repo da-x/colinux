@@ -1,7 +1,7 @@
 /*
  * coLinux
  *
- * Dan Aloni <da-x@gmx.net, 2003 (c)
+ * Dan Aloni <da-x@colinux.org, 2003 (c)
  */
 
 #include <linux/kernel.h>

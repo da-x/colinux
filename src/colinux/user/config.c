@@ -1,7 +1,7 @@
 /*
  * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@gmx.net>, 2003 (c)
+ * Dan Aloni <da-x@colinux.org>, 2003 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -35,17 +35,17 @@ co_rc_t co_load_config_blockdev(co_config_t *out_config, mxml_element_t *element
 	}
 	
 	if (index < 0) {
-		co_debug("Invalid block_dev element: bad index\n");
+		co_debug("config: invalid block_dev element: bad index\n");
 		return CO_RC(ERROR);
 	}
 
 	if (index >= CO_MAX_BLOCK_DEVICES) {
-		co_debug("Invalid block_dev element: bad index\n");
+		co_debug("config: invalid block_dev element: bad index\n");
 		return CO_RC(ERROR);
 	}
 
 	if (path == NULL) {
-		co_debug("Invalid block_dev element: bad path\n");
+		co_debug("config: invalid block_dev element: bad path\n");
 		return CO_RC(ERROR);
 	}
 
@@ -70,7 +70,7 @@ co_rc_t co_load_config_image(co_config_t *out_config, mxml_element_t *element)
 	}
 	
 	if (path == NULL) {
-		co_debug("Invalid image element: bad path\n");
+		co_debug("config: invalid image element: bad path\n");
 		return CO_RC(ERROR);
 	}
 
@@ -164,13 +164,13 @@ co_rc_t co_load_config_memory(co_config_t *out_config, mxml_element_t *element)
 	}
 	
 	if (element_text == NULL) {
-		printf("Invalid memory element: bad memory specification\n");
+		co_debug("config: invalid memory element: bad memory specification\n");
 		return CO_RC(ERROR);
 	}
 
 	rc = co_str_to_unsigned_long(element_text, &out_config->ram_size);
 	if (!CO_OK(rc))
-		printf("Invalid memory element: invalid size format\n");
+		co_debug("config: invalid memory element: invalid size format\n");
 
 	return rc;
 }
@@ -195,7 +195,7 @@ co_rc_t co_load_config_network(co_config_t *out_config, mxml_element_t *element)
 
 			rc = co_parse_mac_address(element_text, desc.mac_address);
 			if (!CO_OK(rc)) { 
-				printf("Invalid network element: invalid mac address specified (use the xx:xx:xx:xx:xx:xx format)\n");
+				co_debug("config: invalid network element: invalid mac address specified (use the xx:xx:xx:xx:xx:xx format)\n");
 				return rc;
 			}
 
@@ -206,12 +206,12 @@ co_rc_t co_load_config_network(co_config_t *out_config, mxml_element_t *element)
 
 			rc = co_str_to_unsigned_long(element_text, &index);
 			if (!CO_OK(rc)) {
-				printf("Invalid network element: invalid index format\n");
+				co_debug("config: invalid network element: invalid index format\n");
 				return CO_RC(ERROR);
 			}
 			
 			if (index < 0  ||  index >= CO_MODULE_MAX_CONET) {
-				printf("Invalid network element: invalid index %d\n", (int)index);
+				co_debug("config: invalid network element: invalid index %d\n", (int)index);
 				return CO_RC(ERROR);
 			}
 
@@ -230,14 +230,14 @@ co_rc_t co_load_config_network(co_config_t *out_config, mxml_element_t *element)
 			} else if (strcmp(element_text, "tap") == 0) {
 				desc.type = CO_NETDEV_TYPE_TAP;
 			} else {
-				printf("Invalid network element: invalid type %s\n", element_text);
+				co_debug("config: invalid network element: invalid type %s\n", element_text);
 				return CO_RC(ERROR);
 			}
 		}
 	}
 
 	if (index == -1) {
-		printf("Invalid network element: index not specified\n");
+		co_debug("config: invalid network element: index not specified\n");
 		return CO_RC(ERROR);
 	}
 
@@ -254,14 +254,14 @@ co_rc_t co_load_config(char *text, co_config_t *out_config)
 
 	tree = mxmlLoadString(NULL, text, NULL);
 	if (tree == NULL) {
-		printf("Error parsing config XML. Please check XML's validity\n");
+		co_debug("config: error parsing config XML. Please check XML's validity\n");
 		return CO_RC(ERROR);
 	}
 
 	node = mxmlFindElement(tree, tree, "colinux", NULL, NULL, MXML_DESCEND);
 
 	if (node == NULL) {
-		printf("Couldn't find colinux element within XML\n");
+		co_debug("config: couldn't find colinux element within XML\n");
 		return CO_RC(ERROR);
 	}
 

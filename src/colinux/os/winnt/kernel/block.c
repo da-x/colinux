@@ -1,7 +1,7 @@
 /*
  * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@gmx.net>, 2003 (c)
+ * Dan Aloni <da-x@colinux.org>, 2003 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -68,7 +68,7 @@ typedef struct {
 } co_os_transfer_file_block_data_t;
 
 co_rc_t co_os_transfer_file_block(co_monitor_t *cmon, 
-				  void *host_data, void *colx, unsigned long size, 
+				  void *host_data, void *linuxvm, unsigned long size, 
 				  co_monitor_transfer_dir_t dir)
 {
 	IO_STATUS_BLOCK isb;
@@ -87,7 +87,7 @@ co_rc_t co_os_transfer_file_block(co_monitor_t *cmon,
 				    NULL,
 				    NULL, 
 				    &isb,
-				    colx,
+				    linuxvm,
 				    size,
 				    &data->offset,
 				    NULL);
@@ -98,14 +98,14 @@ co_rc_t co_os_transfer_file_block(co_monitor_t *cmon,
 				     NULL,
 				     NULL, 
 				     &isb,
-				     colx,
+				     linuxvm,
 				     size,
 				     &data->offset,
 				     NULL);
 	}
 
 	if (status != STATUS_SUCCESS) {
-		co_debug("block io failed: %x %x (reason: %x)\n", colx, size,
+		co_debug("block io failed: %x %x (reason: %x)\n", linuxvm, size,
 			   status);
 		rc = CO_RC(ERROR);
 	}
@@ -116,7 +116,7 @@ co_rc_t co_os_transfer_file_block(co_monitor_t *cmon,
 }
 
 
-co_rc_t co_os_file_block_read(co_monitor_t *colx,
+co_rc_t co_os_file_block_read(co_monitor_t *linuxvm,
 			     co_block_dev_t *dev, 
 			     co_monitor_file_block_dev_t *fdev,
 			     co_block_request_t *request)
@@ -127,7 +127,7 @@ co_rc_t co_os_file_block_read(co_monitor_t *colx,
 	data.offset.QuadPart = request->offset;
 	data.fdev = fdev;
 
-	rc = co_monitor_host_colx_transfer(colx, 
+	rc = co_monitor_host_linuxvm_transfer(linuxvm, 
 					   &data, 
 					   co_os_transfer_file_block,
 					   request->address,
@@ -138,7 +138,7 @@ co_rc_t co_os_file_block_read(co_monitor_t *colx,
 }
 
 
-co_rc_t co_os_file_block_write(co_monitor_t *colx,
+co_rc_t co_os_file_block_write(co_monitor_t *linuxvm,
 			       co_block_dev_t *dev, 
 			       co_monitor_file_block_dev_t *fdev,
 			       co_block_request_t *request)
@@ -149,12 +149,12 @@ co_rc_t co_os_file_block_write(co_monitor_t *colx,
 	data.offset.QuadPart = request->offset;
 	data.fdev = fdev;
 	
-	rc = co_monitor_host_colx_transfer(colx,
+	rc = co_monitor_host_linuxvm_transfer(linuxvm,
 					   &data, 
 					   co_os_transfer_file_block,
 					   request->address,
 					   (unsigned long)request->size,
-					   CO_MONITOR_TRANSFER_FROM_COLX);
+					   CO_MONITOR_TRANSFER_FROM_LINUX);
 	return rc;
 }
 
@@ -189,7 +189,7 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 	return rc;
 }
 
-co_rc_t co_os_file_block_open(co_monitor_t *colx, co_monitor_file_block_dev_t *fdev)
+co_rc_t co_os_file_block_open(co_monitor_t *linuxvm, co_monitor_file_block_dev_t *fdev)
 {
 	HANDLE FileHandle;
 	NTSTATUS status;

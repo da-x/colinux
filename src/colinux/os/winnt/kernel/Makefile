@@ -10,6 +10,9 @@ LOCAL_OBJS = \
 	core.o \
 	block.o \
 	interface.o \
+	manager.o \
+	alloc.o \
+
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

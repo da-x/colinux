@@ -1,7 +1,7 @@
 /*
  * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@gmx.net>, 2003 (c)
+ * Dan Aloni <da-x@colinux.org>, 2003 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -138,6 +138,66 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 		console->cursor = message->cursor;
 		break;
 	}
+
+	case CO_OPERATION_CONSOLE_CLEAR:{
+		unsigned t = message->clear.top;
+		unsigned l ;
+		unsigned b = message->clear.bottom;
+		unsigned r = message->clear.right;
+		co_console_cell_t *cell;
+
+		while(t<=b) {
+			l = message->clear.left;
+			cell = &console->screen[t*console->x+l];
+			while(l++<=r) {
+				cell->attr = 0x07;
+				(cell++)->ch = ' ';
+			}
+			t++;
+		}
+		break;
+	}
+
+	case CO_OPERATION_CONSOLE_BMOVE:{
+		unsigned y = message->bmove.row;
+		unsigned x = message->bmove.column;
+		unsigned t = message->bmove.top;
+		unsigned l = message->bmove.left;
+		unsigned b = message->bmove.bottom;
+		unsigned r = message->bmove.right;
+
+		if(y<t) {
+			while(t<=b) {
+				memmove(&console->screen[y*console->x+x],
+					&console->screen[t*console->x+l],
+					r-l+1);
+				t++;
+				y++;
+			}
+		} else	{
+			y+=b-t;
+			while(t<=b) {
+				memmove(&console->screen[y*console->x+x],
+					&console->screen[b*console->x+l],
+					r-l+1);
+				b--;
+				y--;
+			}
+		}
+	}
+
+	case CO_OPERATION_CONSOLE_STARTUP:
+	case CO_OPERATION_CONSOLE_INIT:
+	case CO_OPERATION_CONSOLE_DEINIT:
+	case CO_OPERATION_CONSOLE_SWITCH:
+	case CO_OPERATION_CONSOLE_BLANK:
+	case CO_OPERATION_CONSOLE_FONT_OP:
+	case CO_OPERATION_CONSOLE_SET_PALETTE:
+	case CO_OPERATION_CONSOLE_SCROLLDELTA:
+	case CO_OPERATION_CONSOLE_SET_ORIGIN:
+	case CO_OPERATION_CONSOLE_SAVE_SCREEN:
+	case CO_OPERATION_CONSOLE_INVERT_REGION:
+		break;
 	}
 
 	return CO_RC(OK);

@@ -1,7 +1,7 @@
 /*
  * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@gmx.net>, 2003 (c)
+ * Dan Aloni <da-x@colinux.org>, 2003 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -16,6 +16,7 @@
 #include <colinux/common/ioctl.h>
 #include <colinux/common/console.h>
 #include <colinux/common/messages.h>
+#include <colinux/arch/current/mmu.h>
 #include <colinux/os/kernel/mutex.h>
 #include <colinux/os/timer.h>
 
@@ -62,12 +63,6 @@ typedef struct co_monitor {
 	struct co_monitor_osdep *osdep; 
 
 	/*
-	 * Reference counting 
-	 */
-	unsigned long refcount;
-	long blocking_threads;
-
-	/*
 	 * State of monitor.
 	 */ 
 	co_monitor_state_t state;
@@ -86,18 +81,17 @@ typedef struct co_monitor {
 	 * The passage page
 	 */
 	struct co_arch_passage_page *passage_page;  /* The virtual address of the 
-							 PP in the host */
-	vm_ptr_t passage_page_vaddr;                  /* The virtual address of the 
-							 PP in Linux */
+						       PP in the host */
+	vm_ptr_t passage_page_vaddr;                /* The virtual address of the 
+						       PP in Linux */
 
 	/*
 	 * Core stuff (Linux kernel image) 
 	 */
-	void *core_image;                /* Host VA where we loaded our vmlinux */ 
+	co_pfn_t *core_pfns;             /* Arrays of PFNs that hold the kernel core */ 
 	vm_ptr_t core_vaddr;             /* Where the core sits (the famous C0100000) */
 	vm_ptr_t core_end;               /* Where the core ends */
 	unsigned long core_pages;        /* number of pages our core takes */    
-
 	co_symbols_import_t import;      /* Addresse of symbols in the kernel */
 
 	/*
@@ -107,47 +101,19 @@ typedef struct co_monitor {
 	unsigned long physical_frames;  /* The number of pages in that RAM */
 	unsigned long end_physical;     /* In what virtual address the map of the 
 					   pseudo physical RAM ends */
-
-	linux_pte_t *page_tables;            /* Linux's page tables that map the PPRAM.
-					        A total of cmon_physical_frames PTEs. */
-	unsigned long page_tables_size;      /* The number of bytes the page tables take */
-	unsigned long page_tables_pages;     /* The number of pages the page tables take */
+	co_pfn_t **pp_pfns;
 
 	/* 
 	 * Dynamic allocations in the host
 	 */
-
 	unsigned long blocks_allocated;
-
-	/* 
-	 * Dynamic allocations in the PPRAM 
-	 */
-
-	unsigned long allocated_pages_num;   /* Number of pages we allocated from the host */
-	unsigned long *pages_allocated;      /* Map of PPRAM PFN to how much we allocated 
-						there */
-
-	/*
-	 * Reversed mapping between physical memory and virtual addresses.
-	 */
-
-	vm_ptr_t *pa_to_colx_va;     /* A map between a real physical PFN and an 
-				        address of mapping in Linux's pseudo 
-				        physical RAM */
-
-	/* 
-	 * The bootmem
-	 */
-
-	unsigned long bootmem_pages; /* Number of empty bootmem pages to map after the core */
-	void *bootmem;               /* Allocated bootmem (a total of bootmem_pages pages) */
 
 	/*
 	 * Page global directory
 	 */
 	linux_pgd_t pgd;             /* Pointer to the physical address PGD of 
 					Linux (to be put in CR3 eventually */
-	linux_pmd_t *pgd_page;	     /* Pointer to that PGD inside 'core_image' */
+	co_pfn_t **pgd_pfns;
 
 	/*
 	 * Devices

@@ -25,10 +25,25 @@ extern PASCAL COORD GetConsoleFontSize(HANDLE hConsoleOutput,
                                        DWORD nFont);
 }
 
+static BOOL ctrl_exit;
+
 console_widget_t *
 co_console_widget_create()
 {
 	return new console_widget_NT_t();
+}
+
+BOOL WINAPI
+co_console_widget_control_handler(DWORD T)
+{
+	DWORD r;
+	INPUT_RECORD c;
+	if (!(T == CTRL_CLOSE_EVENT || T == CTRL_LOGOFF_EVENT)) 
+		return false;
+	memset(&c, 0, sizeof(INPUT_RECORD));
+	c.EventType = KEY_EVENT;
+	WriteConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &c, 1, &r);
+	return ctrl_exit = true;
 }
 
 console_widget_NT_t::console_widget_NT_t()
@@ -41,6 +56,8 @@ console_widget_NT_t::console_widget_NT_t()
 	output = 0;
 	blank.Attributes = FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_RED;
 	blank.Char.AsciiChar = ' ';
+	ctrl_exit = false;
+	SetConsoleCtrlHandler(co_console_widget_control_handler, true);
 }
 
 co_rc_t
@@ -110,6 +127,7 @@ console_widget_NT_t::console_window(console_window_t * W)
 
 console_widget_NT_t::~console_widget_NT_t()
 {
+	SetConsoleCtrlHandler(co_console_widget_control_handler, false);
 	if (screen)
 		co_os_free(screen);
 	CloseHandle(buffer);
@@ -371,6 +389,10 @@ console_widget_NT_t::loop()
 
 	INPUT_RECORD i;
 	ReadConsoleInput(input, &i, 1, &r);
+	if(ctrl_exit) {
+		window->online(false);
+		return CO_RC(OK);
+	}
 	if (i.EventType == KEY_EVENT) {
 
 		if (i.Event.KeyEvent.bKeyDown || keyed) {

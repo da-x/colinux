@@ -1,7 +1,7 @@
 /*
  * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@gmx.net>, 2003 (c)
+ * Dan Aloni <da-x@colinux.org>, 2003 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -41,7 +41,7 @@ co_rc_t co_load_config_file(co_daemon_t *daemon)
 	char *buf = NULL;
 	unsigned long size = 0 ;
 
-	co_terminal_print("colinux: loading configuration from %s\n", daemon->config.config_path);
+	co_terminal_print("daemon: loading configuration from %s\n", daemon->config.config_path);
 	rc = co_os_file_load(&daemon->config.config_path, &buf, &size);
 	if (!CO_OK(rc)) {
 		debug(daemon, "error loading configuration file\n");

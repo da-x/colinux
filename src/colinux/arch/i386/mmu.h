@@ -8,9 +8,9 @@
  *
  */
 
-#ifndef __CO_OS_KERNEL_MISC_H__
-#define __CO_OS_KERNEL_MISC_H__
+#ifndef __CO_OS_ARCH_MMU_H__
+#define __CO_OS_ARCH_MMU_H__
 
-extern unsigned long co_os_virt_to_phys(void *addr);
+typedef unsigned long co_pfn_t;
 
 #endif
