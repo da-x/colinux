@@ -1,3 +1,9 @@
+Thu Jun 10 10:58:13 2004  George Boutwell  <gboutwel@praize.com>
+
+	* src/colinux/os/winnt/user/conet-bridged-daemon/pcap-registry.h
+	* src/colinux/os/winnt/user/conet-bridged-daemon/main.c:
+	Added pcap-registry.h, changed PCAP handling to use Connection Name instead of Adapter/Device/Driver name.  Name is now uniform between PCAP & TAP and multiple devices of the same/make/model should be able to be connected to.
+	
 Sat May 29 16:15:04 2004  Dan Aloni  <da-x@colinux.org>
 
 	* src/colinux/os/winnt/user/daemon/service.c (co_winnt_daemon_install_as_service): 

@@ -18,6 +18,7 @@
 #include <colinux/common/common.h>
 #include <colinux/user/macaddress.h>
 #include "../daemon.h"
+#include "pcap-registry.h"
 
 /*
  * IMPORTANT NOTE:
@@ -26,6 +27,12 @@
  * to work against coLinux0. Expect changes.
  *
  */
+ 
+
+/*******************************************************************************
+ * Defines
+ */
+#define PCAP_NAME_HDR "\\Device\\NPF_"
 
 /*******************************************************************************
  * Type Declarations
@@ -295,6 +302,60 @@ pcap2Daemon(LPVOID lpParam)
 }
 
 /*******************************************************************************
+ * Get the Connection name for an PCAP Interface (using NetCfgInstanceId).
+ */
+co_rc_t get_device_name(char *name,
+                        int name_size,
+			char *actual_name,
+			int actual_name_size)
+{
+	char connection_string[256];
+	HKEY connection_key;
+	char name_data[256];
+	DWORD name_type;
+	const char name_string[] = "Name";
+	LONG status;
+	DWORD len;
+
+	snprintf(connection_string,
+	         sizeof(connection_string),
+		 "%s\\%s\\Connection",
+		 NETWORK_CONNECTIONS_KEY, name);
+
+        status = RegOpenKeyEx(
+	         HKEY_LOCAL_MACHINE,
+		 connection_string,
+		 0,
+		 KEY_READ,
+		 &connection_key);
+
+        if (status == ERROR_SUCCESS) {
+		len = sizeof(name_data);
+		status = RegQueryValueEx(
+			connection_key,
+			name_string,
+			NULL,
+			&name_type,
+			name_data,
+			&len);
+		if (status != ERROR_SUCCESS || name_type != REG_SZ) {
+			printf("Error opening registry key: %s\\%s\\%s",					NETWORK_CONNECTIONS_KEY, connection_string, name_string);
+			return CO_RC(ERROR);
+		}
+		else {
+			if (name_data) {
+				snprintf(actual_name, actual_name_size, "%s", name_data);
+			}
+		}
+		
+		RegCloseKey(connection_key);
+		
+	}
+
+	return CO_RC(OK);
+}
+
+/*******************************************************************************
  * Initialize winPCap interface.
  */
 int
@@ -321,14 +382,28 @@ pcap_init()
 	}
 
 	device = alldevs;
+	char name_data[256];
+	char connection_name_data[256];
 	while (device) {
-		co_debug("bridged-net-daemon: Checking adapter: %s\n", device->description);
+		
+		memset(connection_name_data, 0, sizeof(connection_name_data));
 
 		if (daemon_parameters->name_specified == PFALSE)
 			break;
-		
-		if (strstr(device->description, daemon_parameters->interface_name) != NULL)
-			break;
+
+		snprintf(name_data, sizeof(name_data), "%s", device->name+(sizeof(PCAP_NAME_HDR) - 1));
+
+		get_device_name(name_data, sizeof(name_data),
+		                connection_name_data, sizeof(connection_name_data));
+		if (strcmp(connection_name_data, "") != 0) {
+			co_debug("bridged-net-daemon: Checking connection: %s\n", connection_name_data);
+			
+			if (strstr(connection_name_data, daemon_parameters->interface_name) != NULL)
+				break;
+		}
+		else {
+				co_debug("briged-net-daemon: Adapter %s doesn't have a connection\n", device->description);
+		}
 
 		device = device->next;
 	}

@@ -1,5 +1,7 @@
 * Version 0.6.2
-  * No changes yet ;)
+  * initrd support was added (teesoft2004 at yahoo.com.cn).
+    To activate it you can specify e.g. <initrd path="..." /> in the
+    configuration.
 
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).
