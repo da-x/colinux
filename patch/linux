@@ -1018,7 +1018,7 @@ diff -urN a/arch/i386/kernel/sysenter.c b/arch/i386/kernel/sysenter.c
  
 diff -urN a/arch/i386/kernel/time.c b/arch/i386/kernel/time.c
 --- a/arch/i386/kernel/time.c	2004-06-22 09:23:56.000000000 +0300
-+++ b/arch/i386/kernel/time.c	2004-06-22 09:20:07.000000000 +0300
++++ b/arch/i386/kernel/time.c	2004-07-14 06:45:55.000000000 +0300
 @@ -45,6 +45,7 @@
  #include <linux/sysdev.h>
  #include <linux/bcd.h>
@@ -1027,7 +1027,33 @@ diff -urN a/arch/i386/kernel/time.c b/arch/i386/kernel/time.c
  
  #include <asm/io.h>
  #include <asm/smp.h>
-@@ -174,6 +175,9 @@
+@@ -94,8 +95,9 @@
+ void do_gettimeofday(struct timeval *tv)
+ {
+ 	unsigned long seq;
+-	unsigned long usec, sec;
+-	unsigned long max_ntp_tick;
++	unsigned long sec;
++	long usec;
++	long max_ntp_tick;
+ 
+ 	do {
+ 		unsigned long lost;
+@@ -129,6 +131,13 @@
+ 		sec++;
+ 	}
+ 
++	if (cooperative_mode_enabled()) {
++		while (usec < 0) {
++			usec += 1000000;
++			sec--;
++		}
++	}
++
+ 	tv->tv_sec = sec;
+ 	tv->tv_usec = usec;
+ }
+@@ -174,6 +183,9 @@
  {
  	int retval;
  
@@ -1037,7 +1063,7 @@ diff -urN a/arch/i386/kernel/time.c b/arch/i386/kernel/time.c
  	/* gets recalled with irq locally disabled */
  	spin_lock(&rtc_lock);
  	if (efi_enabled)
-@@ -231,7 +235,8 @@
+@@ -231,7 +243,8 @@
  	 * CMOS clock accordingly every ~11 minutes. Set_rtc_mmss() has to be
  	 * called as close as possible to 500 ms before the new second starts.
  	 */
@@ -1047,7 +1073,7 @@ diff -urN a/arch/i386/kernel/time.c b/arch/i386/kernel/time.c
  	    xtime.tv_sec > last_rtc_update + 660 &&
  	    (xtime.tv_nsec / 1000)
  			>= USEC_AFTER - ((unsigned) TICK_SIZE) / 2 &&
-@@ -295,6 +300,9 @@
+@@ -295,6 +308,9 @@
  {
  	unsigned long retval;
  
@@ -1067,7 +1093,7 @@ diff -urN a/arch/i386/kernel/timers/Makefile b/arch/i386/kernel/timers/Makefile
 +obj-$(CONFIG_COOPERATIVE)	+= timer_cooperative.o
 diff -urN a/arch/i386/kernel/timers/timer.c b/arch/i386/kernel/timers/timer.c
 --- a/arch/i386/kernel/timers/timer.c	2004-06-22 09:23:56.000000000 +0300
-+++ b/arch/i386/kernel/timers/timer.c	2004-07-09 20:54:57.000000000 +0300
++++ b/arch/i386/kernel/timers/timer.c	2004-07-15 22:35:03.000000000 +0300
 @@ -13,6 +13,9 @@
  #endif
  /* list of timers, ordered by preference, NULL terminated */
@@ -1080,8 +1106,8 @@ diff -urN a/arch/i386/kernel/timers/timer.c b/arch/i386/kernel/timers/timer.c
  #endif
 diff -urN a/arch/i386/kernel/timers/timer_cooperative.c b/arch/i386/kernel/timers/timer_cooperative.c
 --- a/arch/i386/kernel/timers/timer_cooperative.c	1970-01-01 02:00:00.000000000 +0200
-+++ b/arch/i386/kernel/timers/timer_cooperative.c	2004-07-09 21:30:39.000000000 +0300
-@@ -0,0 +1,98 @@
++++ b/arch/i386/kernel/timers/timer_cooperative.c	2004-07-16 00:29:27.000000000 +0300
+@@ -0,0 +1,127 @@
 +/*
 + *  Cooperative mode timer.
 + *
@@ -1094,76 +1120,105 @@ diff -urN a/arch/i386/kernel/timers/timer_cooperative.c b/arch/i386/kernel/timer
 +#include <asm/timer.h>
 +#include <asm/cooperative.h>
 +#include <asm/div64.h>
++#include <asm/param.h>
 +
 +#include <linux/cooperative.h>
 +#include <linux/cooperative_internal.h>
 +
 +static unsigned long long first_time;
-+static unsigned long long this_time;
-+static unsigned long long frequencey;
-+static unsigned long long last_mark;
++static unsigned long frequencey;
++static unsigned long long last_mark, last_mark_quotient;
++static unsigned long long last_time;
 +
-+static void query_host(void)
++static unsigned long long query_host_highprec_time(void)
 +{
 +	unsigned long flags;
-+	
++	unsigned long long this_time;
++	unsigned long long diff;
++
 +	co_passage_page_assert_valid();	
 +	
 +	co_passage_page_acquire(&flags);
 +	co_passage_page->operation = CO_OPERATION_GET_HIGH_PREC_TIME;
 +	co_switch_wrapper();
++
 +	this_time = *(unsigned long long *)(&co_passage_page->params[0]);
-+	frequencey = *(unsigned long long *)(&co_passage_page->params[2]);
++	frequencey = *(unsigned long *)(&co_passage_page->params[2]);
++	diff = ((long long)this_time - (long long)last_time);
++	
++	/*
++	 * There shouldn't be any particularly large difference between
++	 * the current and last host timestamps. For sanity, reset the 
++         * global reference variables if we encounter any difference 
++	 * larger than one second.
++	 */
++
++	if (diff < 0 || diff > frequencey) {
++		first_time = this_time;
++		last_mark_quotient = last_mark = 0;
++	}
++
++	last_time = this_time;
 +	co_passage_page_release(flags);
++
++	return this_time;
 +}
 +
-+static unsigned long long monotonic_clock(void)
++static unsigned long long monotonic_clock_cooperative(void)
 +{
-+	query_host();
-+	
-+	unsigned long long diff, result, sub_secs;
-+	unsigned long reminder = 0;
-+	
-+	diff = this_time - first_time;
-+	
-+	result = div_ll_X_l_rem(diff, frequencey, &reminder);
-+	result *= 1000000000;
-+	
-+	sub_secs = reminder;
-+	sub_secs *= 1000000000;
-+
-+	result += div_ll_X_l_rem(sub_secs, frequencey, &reminder);
-+	
-+	return result;
++	return 0;
 +}
 +
-+static unsigned long get_offset(void)
++static long get_offset_cooperative(void)
 +{
-+	query_host();
++	unsigned long flags;
 +
-+	unsigned long long diff = (this_time - last_mark)*1000000;
-+	unsigned long reminder = 0;
-+	unsigned long result = div_ll_X_l_rem(diff, frequencey, &reminder);
++	local_irq_save(flags);
++	
++	unsigned long long this_time = query_host_highprec_time() - first_time;
++	unsigned long reminder = 0, result;
++	long long diff, lldiff;
++	long signed_result;
 +
-+	return result;
++	diff = ((long long)this_time - (long long)(last_mark));
++	if (diff < 0)
++		lldiff = -diff;
++	else
++		lldiff = diff;
++	
++	lldiff *= 1000000;
++	result = div_ll_X_l_rem(lldiff, frequencey, &reminder);
++
++	signed_result = result;
++	if (diff < 0)
++		signed_result = -signed_result;
++
++	local_irq_restore(flags);
++	return signed_result;
 +}
 +
-+static void mark_offset(void)
++static void mark_offset_cooperative(void)
 +{
-+	query_host();
++	unsigned long flags;
++	local_irq_save(flags);
 +
-+	last_mark = this_time;
++	last_mark += frequencey / HZ;
++	last_mark_quotient += frequencey % HZ;
++	if (frequencey > HZ) {
++		last_mark += 1;
++		last_mark_quotient -= HZ;
++	}
++
++	local_irq_restore(flags);
 +}
 +
-+static void delay(unsigned long loops)
++static void delay_cooperative(unsigned long loops)
 +{
 +}
 +
 +static int __init init_cooperative_timer(char* override)
 +{
-+	query_host();
-+	
-+	first_time = this_time;
++	first_time = query_host_highprec_time();
 +
 +	/* Always pick this timer */
 +	return 0;
@@ -1175,11 +1230,71 @@ diff -urN a/arch/i386/kernel/timers/timer_cooperative.c b/arch/i386/kernel/timer
 +struct timer_opts timer_cooperative = {
 +	.name = 		"cooperative",
 +	.init =			init_cooperative_timer,
-+	.mark_offset =		mark_offset,
-+	.get_offset =		get_offset,
-+	.monotonic_clock =	monotonic_clock,
-+	.delay = 		delay,
++	.mark_offset =		mark_offset_cooperative,
++	.get_offset =		get_offset_cooperative,
++	.monotonic_clock =	monotonic_clock_cooperative,
++	.delay = 		delay_cooperative,
 +};
+diff -urN a/arch/i386/kernel/timers/timer_cyclone.c b/arch/i386/kernel/timers/timer_cyclone.c
+--- a/arch/i386/kernel/timers/timer_cyclone.c	2004-06-16 08:19:42.000000000 +0300
++++ b/arch/i386/kernel/timers/timer_cyclone.c	2004-07-14 06:48:33.000000000 +0300
+@@ -103,7 +103,7 @@
+ 		jiffies_64++;
+ }
+ 
+-static unsigned long get_offset_cyclone(void)
++static long get_offset_cyclone(void)
+ {
+ 	u32 offset;
+ 
+diff -urN a/arch/i386/kernel/timers/timer_hpet.c b/arch/i386/kernel/timers/timer_hpet.c
+--- a/arch/i386/kernel/timers/timer_hpet.c	2004-06-16 08:19:52.000000000 +0300
++++ b/arch/i386/kernel/timers/timer_hpet.c	2004-07-14 06:48:21.000000000 +0300
+@@ -73,7 +73,7 @@
+ 	return base + cycles_2_ns(this_offset - last_offset);
+ }
+ 
+-static unsigned long get_offset_hpet(void)
++static long get_offset_hpet(void)
+ {
+ 	register unsigned long eax, edx;
+ 
+diff -urN a/arch/i386/kernel/timers/timer_none.c b/arch/i386/kernel/timers/timer_none.c
+--- a/arch/i386/kernel/timers/timer_none.c	2004-06-16 08:19:26.000000000 +0300
++++ b/arch/i386/kernel/timers/timer_none.c	2004-07-14 06:47:07.000000000 +0300
+@@ -11,7 +11,7 @@
+ 	/* nothing needed */
+ }
+ 
+-static unsigned long get_offset_none(void)
++static long get_offset_none(void)
+ {
+ 	return 0;
+ }
+diff -urN a/arch/i386/kernel/timers/timer_pm.c b/arch/i386/kernel/timers/timer_pm.c
+--- a/arch/i386/kernel/timers/timer_pm.c	2004-06-16 08:18:58.000000000 +0300
++++ b/arch/i386/kernel/timers/timer_pm.c	2004-07-14 06:48:50.000000000 +0300
+@@ -189,7 +189,7 @@
+  * get the offset (in microseconds) from the last call to mark_offset()
+  *	- Called holding a reader xtime_lock
+  */
+-static unsigned long get_offset_pmtmr(void)
++static long get_offset_pmtmr(void)
+ {
+ 	u32 now, offset, delta = 0;
+ 
+diff -urN a/arch/i386/kernel/timers/timer_tsc.c b/arch/i386/kernel/timers/timer_tsc.c
+--- a/arch/i386/kernel/timers/timer_tsc.c	2004-06-16 08:19:42.000000000 +0300
++++ b/arch/i386/kernel/timers/timer_tsc.c	2004-07-14 06:47:27.000000000 +0300
+@@ -80,7 +80,7 @@
+  */
+ static unsigned long fast_gettimeoffset_quotient;
+ 
+-static unsigned long get_offset_tsc(void)
++static long get_offset_tsc(void)
+ {
+ 	register unsigned long eax, edx;
+ 
 diff -urN a/arch/i386/kernel/traps.c b/arch/i386/kernel/traps.c
 --- a/arch/i386/kernel/traps.c	2004-06-16 08:19:01.000000000 +0300
 +++ b/arch/i386/kernel/traps.c	2004-06-26 15:57:56.000000000 +0300
@@ -4031,7 +4146,16 @@ diff -urN a/include/asm-i386/processor.h b/include/asm-i386/processor.h
   * Intel CPU features in CR4
 diff -urN a/include/asm-i386/timer.h b/include/asm-i386/timer.h
 --- a/include/asm-i386/timer.h	2004-06-16 08:19:02.000000000 +0300
-+++ b/include/asm-i386/timer.h	2004-07-09 20:09:10.000000000 +0300
++++ b/include/asm-i386/timer.h	2004-07-14 06:46:54.000000000 +0300
+@@ -19,7 +19,7 @@
+ 	char* name;
+ 	int (*init)(char *override);
+ 	void (*mark_offset)(void);
+-	unsigned long (*get_offset)(void);
++	long (*get_offset)(void);
+ 	unsigned long long (*monotonic_clock)(void);
+ 	void (*delay)(unsigned long);
+ };
 @@ -43,6 +43,9 @@
  #ifdef CONFIG_X86_CYCLONE_TIMER
  extern struct timer_opts timer_cyclone;
