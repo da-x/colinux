@@ -1,33 +1,36 @@
 # Old manifest: 999b177514109866d8d34382ff37f3e1e4ad6582
-# New manifest: 7783ce5b2770551bcc22a8cc166251417dc8bfa5
+# New manifest: 5518141481170c446b8afb82658a68ee28d46a05
 # Summary of changes:
 # 
 #   add arch/i386/kernel/cooperative.c
-#    as 6d51141f4d243de31dea2e2dd242d16b6aed8870
+#    as 33d7c3a26fc4a5f3fa0c358de65259101cacd74b
 # 
 #   add drivers/block/cobd.c
-#    as af2d79b507ee175c9c5a791af29ad00742dc4a07
+#    as 10119d4ec60285a1594be304461d5ce4591e2fb8
 # 
 #   add drivers/input/mouse/comouse.c
 #    as 92b321d6e8704e451b6d1a8b416dfcfbb3f2bcff
 # 
 #   add drivers/input/serio/cokbd.c
-#    as c1e3ce4f74a56fa093d4de78db0d28166997b417
+#    as 0ebadd5e094ca2ea4d684489a7a9e0b75bf76644
 # 
 #   add drivers/net/conet.c
-#    as f6adb04153cc672588d47787492201e483800518
+#    as cad366c80e5720f606aa1f15316295809cb2acf6
 # 
 #   add drivers/video/console/cocon.c
-#    as 5e55ab0b01474d6c3c47dd84516d9f0bf51bc569
+#    as 7012a6cd9b8bc9246f808826ff3f6852616616df
 # 
 #   add include/asm-i386/cooperative.h
-#    as 23c64ba82bea6248cc018d967ed0e426958ff351
+#    as d0922298d36b40d5463c79c3d0041975f37ab900
 # 
 #   add include/linux/cooperative.h
-#    as aed2105a2fad0415d12de7b6266a5bd1e0d3f72b
+#    as b6ab36be84be7f319f1d0dd7f889c8b825b03552
+# 
+#   add include/linux/cooperative_internal.h
+#    as 444481e8a89a5c74e47b55b53e35045332322914
 # 
 #   add kernel/cooperative.c
-#    as 8765450a96dd4abd146ed1e0ea72eddc4c46f03f
+#    as 00fc9450d7351ae0df4eed31ca9b7e2d3c0ce437
 # 
 #   patch CREDITS
 #    from d848c2c364dce0a45758830abfb4b643ddea12ae
@@ -47,7 +50,7 @@
 # 
 #   patch arch/i386/kernel/cpu/common.c
 #    from b99074a7097586b5e1e43e9846be3d6932c2ef9b
-#      to 48f7ddff539ac39706430f0d4a18aaa6059f1869
+#      to 08e78e7600ed4542250cce9b7104acbd5b69f17a
 # 
 #   patch arch/i386/kernel/entry.S
 #    from 2e737a0718e4099fc4f8ebb1c7494743d25c73e5
@@ -59,35 +62,35 @@
 # 
 #   patch arch/i386/kernel/i387.c
 #    from 83c970f4869b5b28369b8312847dcd73f61e4cda
-#      to fbb384ed63080f5e261c58f133fb71a855e20647
+#      to f087d1e4c16a84c4a6799dd8d2c77e0a9156b6a1
 # 
 #   patch arch/i386/kernel/i8259.c
 #    from 3c2dcc7c559b0e2c9a27a696c097fff34cdf2837
-#      to 5963fd2bde02bd7e5cc1be18c7f0b343501aa526
+#      to bb11274d7fe637489e633e39ec2582dfb108cb49
 # 
 #   patch arch/i386/kernel/ioport.c
 #    from 6cf2452a8c0079a0aaca8ecb19aeedf2eb3e2f7c
-#      to eda3d10ffb613f3a52e77953d10a026ca4d31b39
+#      to b463965c76e66c8987090b3ae9fd13942d235082
 # 
 #   patch arch/i386/kernel/process.c
 #    from 18183f111df3dba7623109efdb12bad559089df6
-#      to 7d14ad1cb718ae9bc27f4ae59ff3b80787b1a54d
+#      to ca301b9a173c28422bcf17ad89ac44d91724a3ba
 # 
 #   patch arch/i386/kernel/reboot.c
 #    from 5587161a3d1828fdbae02b8d1228d98be1f74431
-#      to c29685f968e5a80732fa506d1b7ee5006546745b
+#      to 83d8cd72b9fa4833331d5040277d8b92a1849fda
 # 
 #   patch arch/i386/kernel/setup.c
 #    from d7984d0bf518eaae1f5ccd55028d601023b81835
-#      to 4c620fe0f0b55ab17e0760aa9490198f8e49d9e3
+#      to e738b984eec14b941192fdc902df415452a15ede
 # 
 #   patch arch/i386/kernel/sysenter.c
 #    from 030f859ef57cd7fd14def28f9c978eab1a6d7679
-#      to e30017aae3fb145e405e5eacd549edfc1045e009
+#      to 7e06dee443009c7c327ae4cb1b8c98f6ce77fd3c
 # 
 #   patch arch/i386/kernel/time.c
 #    from 3d7c6900e17386edaa3169d9a6683ef26b047a6f
-#      to 24485aa9ce79f9fdefedc6b98f53b301716527da
+#      to 1fc854ddb7b33d25de3f7b7af2e78191eac54bd2
 # 
 #   patch arch/i386/kernel/timers/timer.c
 #    from ce821396562c466f779764c055540ed3a35e1bad
@@ -103,11 +106,11 @@
 # 
 #   patch arch/i386/mm/init.c
 #    from 8d466e7890a21c71d8a96d07e835e4313378e21e
-#      to c006a63b594ad7e59829468dbb5d847311229d58
+#      to a1ee7568638b4c0d4efdb265d426f66c742a28bf
 # 
 #   patch arch/i386/mm/ioremap.c
 #    from 36cf45785c144745cd133e9344bec486fb44324b
-#      to a83cf5a7f52887d55bd7221d3adeb626db6e5e03
+#      to 2e72484510aab8619b9e8b039aece4d0d592a66a
 # 
 #   patch drivers/block/Kconfig
 #    from 3046b8060d3e917d6e657916e98a0a2265c2381b
@@ -127,7 +130,7 @@
 # 
 #   patch drivers/input/keyboard/atkbd.c
 #    from 2bdcb74c237869911bb782524e6d9c2c8cde0185
-#      to ea5f7c6d717ece6960a478345873e96ed15ee6bc
+#      to be75858f53d40ce020c31733ea2857f11146e27a
 # 
 #   patch drivers/input/mouse/Kconfig
 #    from 3305a6e0af365100eaa273b5f7e822a97a9d66a6
@@ -175,7 +178,7 @@
 # 
 #   patch include/asm-i386/io.h
 #    from 03c1630d5e76a7e846951d5af455ce750d53eed7
-#      to e1050c9cced5ec4d8dfe592631ccc5f6df877d53
+#      to e9f2a3f97c10c182661f79d400461d76920f8673
 # 
 #   patch include/asm-i386/mach-default/irq_vectors.h
 #    from a8627a99795c7a601d5b8929aafcbfa66f2115f0
@@ -187,7 +190,7 @@
 # 
 #   patch include/asm-i386/mc146818rtc.h
 #    from 45c8b4f96c42fd656166150e64c073bf50781554
-#      to 85ff4c98ed7d9a0aeae28c5190a15ebe33692bf2
+#      to 067dcdd226226f9969141476741f7c90b0415a05
 # 
 #   patch include/asm-i386/mmzone.h
 #    from ba5f72830001becf0d0c9578a7f120b40a7be513
@@ -225,21 +228,17 @@
 #    from d6a0ab425ee2c409d6e7961d686fcc639fae0c5f
 #      to 5e7ab35d3f41a1b3e72747c3b1d8f6bdbe9149fd
 # 
-#   patch init/main.c
-#    from 145db53be1c5b9bde37eeb46c157f9121096ad43
-#      to 1d19e1f28819566b0d7f53269a6064915f0de213
-# 
 #   patch kernel/Makefile
 #    from a3e8d06b20cc3ad83e12a056ee1c9bf06f3c1628
 #      to 7785c076f61863f6ba1428c83c923eb496c87a4c
 # 
 #   patch kernel/panic.c
 #    from c5f6871e7e2d9865af5684e6f9cff422e96ad9e7
-#      to 9f2cb88f53c6c4b3f914a1fbbacd308a0fb87c61
+#      to 0851395f60d87afcf3db6a4bd30655a82f26d327
 # 
 #   patch kernel/printk.c
 #    from 1544fa71899d3329ced3957e96126c9e24e1b24d
-#      to 337db51aae83bf2ce448e9d33cead2681e37d886
+#      to 5118d42fe121109877a81f266f0117ac29de9354
 # 
 --- arch/i386/kernel/cooperative.c
 +++ arch/i386/kernel/cooperative.c
@@ -249,7 +248,7 @@
 +#include <linux/interrupt.h>
 +#include <linux/mm.h>
 +
-+#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
 +#include <asm/smp.h>
 +#include <asm/desc.h>
 +#include <asm/mmu_context.h>
@@ -460,7 +459,7 @@
 +#include <linux/slab.h>
 +#include <linux/bio.h>
 +#include <linux/blkdev.h>
-+#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
 +#include <linux/file.h>
 +#include <linux/ioctl.h>
 +
@@ -827,7 +826,7 @@
 +#include <linux/init.h>
 +#include <linux/serio.h>
 +#include <linux/sched.h>
-+#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
 +
 +#include <asm/io.h>
 +
@@ -982,7 +981,7 @@
 +#include <linux/skbuff.h>
 +#include <linux/ethtool.h>
 +
-+#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
 +#include <asm/irq.h>
 +
 +struct conet_priv {
@@ -1303,7 +1302,7 @@
 +#include <linux/selection.h>
 +#include <linux/init.h>
 +
-+#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
 +
 +/*
 + *  Interface used by the world
@@ -1761,7 +1760,17 @@
 +MODULE_LICENSE("GPL");
 --- include/asm-i386/cooperative.h
 +++ include/asm-i386/cooperative.h
-@@ -0,0 +1,181 @@
+@@ -0,0 +1,191 @@
++/*
++ *  linux/include/asm/cooperative.h
++ *
++ *  Copyright (C) 2004 Dan Aloni
++ *
++ *  This file defines the lower level interfaces between the Cooperative Linux 
++ *  kernel and the host OS driver. It's for both external inclusion from the 
++ *  and internal inclusion in the kernel sources.
++ */
++
 +#ifndef __LINUX_ASM_COOPERATIVE_H__
 +#define __LINUX_ASM_COOPERATIVE_H__
 +
@@ -1945,7 +1954,17 @@
 +#endif
 --- include/linux/cooperative.h
 +++ include/linux/cooperative.h
-@@ -0,0 +1,328 @@
+@@ -0,0 +1,304 @@
++/*
++ *  linux/include/linux/cooperative.h
++ *
++ *  Copyright (C) 2004 Dan Aloni
++ *
++ *  This file defines the interfaces between the Cooperative Linux kernel
++ *  and the host OS driver. It's for both external inclusion from the 
++ *  and internal inclusion in the kernel sources.
++ */
++
 +#ifndef __LINUX_COOPERATIVE_H__
 +#define __LINUX_COOPERATIVE_H__
 +
@@ -1956,8 +1975,6 @@
 +#endif
 +#endif
 +
-+extern void co_debug(const char *fmt, ...);
-+
 +#include <asm/cooperative.h>
 +
 +#define CO_LINUX_API_VERSION    2
@@ -1965,8 +1982,6 @@
 +#pragma pack(0)
 +
 +#define CO_BOOTPARAM_STRING_LENGTH 0x100
-+
-+extern char co_boot_parameters[CO_BOOTPARAM_STRING_LENGTH];
 +
 +typedef enum {
 +	CO_OPERATION_EMPTY=0,
@@ -2183,36 +2198,6 @@
 +	unsigned long pid;
 +} __attribute__((packed)) co_trace_point_info_t;
 +
-+extern void co_printk(char *line);
-+extern void co_callback(void);
-+extern void co_switch_wrapper(void);
-+extern void co_idle_processor(void);
-+extern void co_terminate(co_termination_reason_t reason);
-+extern void co_start_kernel(void);
-+
-+extern void co_send_message(co_module_t from, 
-+			    co_module_t to,
-+			    co_priority_t priority,
-+			    co_message_type_t type,
-+			    unsigned long size,
-+			    char *data);
-+extern co_message_t *co_send_message_save(unsigned long *flags);
-+extern co_message_t *co_get_message_save(unsigned long *flags);
-+extern void co_send_message_restore(unsigned long flags);
-+
-+extern void co_handle_device_interrupt(co_linux_message_t *message);
-+extern void co_queue_message(co_linux_message_t *message);
-+extern int co_get_message(co_linux_message_t **message, co_device_t device);
-+extern void co_free_message(co_linux_message_t *message);
-+
-+extern unsigned long co_core_end;
-+extern unsigned long co_memory_size;
-+extern void *co_initrd;
-+extern unsigned long co_initrd_size;
-+
-+extern unsigned long co_get_host_time(void);
-+extern void handle_keyboard_event(unsigned char scancode);
-+
 +typedef enum {
 +	CO_BLOCK_OPEN=0,
 +	CO_BLOCK_STAT,
@@ -2274,6 +2259,65 @@
 +#pragma pack()
 +
 +#endif
+--- include/linux/cooperative_internal.h
++++ include/linux/cooperative_internal.h
+@@ -0,0 +1,56 @@
++/*
++ *  linux/include/linux/cooperative.h
++ *
++ *  Copyright (C) 2004 Dan Aloni
++ *
++ *  This header gathers the functions and variables in Cooperative Mode 
++ *  when CONFIG_COOPERATIVE is defined.
++ */
++#ifndef __LINUX_COOPERATIVE_LINUX_H__
++#define __LINUX_COOPERATIVE_LINUX_H__
++
++#include <linux/config.h>
++#include <linux/cooperative.h>
++
++#ifdef CONFIG_COOPERATIVE
++
++extern void co_debug(const char *fmt, ...);
++extern void co_printk(char *line);
++extern void co_callback(void);
++extern void co_switch_wrapper(void);
++extern void co_idle_processor(void);
++extern void co_terminate(co_termination_reason_t reason);
++extern void co_start_kernel(void);
++extern void co_send_message(co_module_t from, 
++			    co_module_t to,
++			    co_priority_t priority,
++			    co_message_type_t type,
++			    unsigned long size,
++			    char *data);
++extern unsigned long co_get_host_time(void);
++extern co_message_t *co_send_message_save(unsigned long *flags);
++extern co_message_t *co_get_message_save(unsigned long *flags);
++extern void co_send_message_restore(unsigned long flags);
++
++extern void co_handle_device_interrupt(co_linux_message_t *message);
++extern void co_queue_message(co_linux_message_t *message);
++extern int co_get_message(co_linux_message_t **message, co_device_t device);
++extern void co_free_message(co_linux_message_t *message);
++
++extern char co_boot_parameters[CO_BOOTPARAM_STRING_LENGTH];
++extern unsigned long co_core_end;
++extern unsigned long co_memory_size;
++extern void *co_initrd;
++extern unsigned long co_initrd_size;
++
++#define cooperative_mode_enabled()     1
++
++#else
++
++#define co_printk(line)                do {} while (0)
++#define co_terminate(reason)           do {} while (0)
++#define cooperative_mode_enabled()     0
++
++#endif
++
++#endif
 --- kernel/cooperative.c
 +++ kernel/cooperative.c
 @@ -0,0 +1,346 @@
@@ -2291,7 +2335,7 @@
 +#include <linux/interrupt.h>
 +#include <linux/mm.h>
 +#include <linux/slab.h>
-+#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
 +
 +CO_TRACE_STOP;
 +
@@ -2714,17 +2758,27 @@
  obj-$(CONFIG_X86_TRAMPOLINE)	+= trampoline.o
 --- arch/i386/kernel/cpu/common.c
 +++ arch/i386/kernel/cpu/common.c
-@@ -565,11 +565,13 @@
+@@ -1,7 +1,8 @@
+ #include <linux/init.h>
+ #include <linux/string.h>
+ #include <linux/delay.h>
+ #include <linux/smp.h>
++#include <linux/cooperative_internal.h>
+ #include <asm/semaphore.h>
+ #include <asm/processor.h>
+ #include <asm/i387.h>
+@@ -565,11 +566,13 @@
  
  	/* Clear all 6 debug registers: */
  
-+#ifndef CONFIG_COOPERATIVE
++	if (!cooperative_mode_enabled()) {
  #define CD(register) __asm__("movl %0,%%db" #register ::"r"(0) );
  
- 	CD(0); CD(1); CD(2); CD(3); /* no db4 and db5 */; CD(6); CD(7);
+-	CD(0); CD(1); CD(2); CD(3); /* no db4 and db5 */; CD(6); CD(7);
++		CD(0); CD(1); CD(2); CD(3); /* no db4 and db5 */; CD(6); CD(7);
  
  #undef CD
-+#endif
++	}
  
  	/*
  	 * Force FPU initialization:
@@ -2756,30 +2810,22 @@
  #include <asm/user.h>
  #include <asm/ptrace.h>
  #include <asm/uaccess.h>
-+#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
  
  #ifdef CONFIG_MATH_EMULATION
  #define HAVE_HWFP (boot_cpu_data.hard_math)
-@@ -37,7 +38,18 @@
+@@ -37,6 +38,10 @@
  		if (mask == 0) mask = 0x0000ffbf;
  	} 
  	mxcsr_feature_mask &= mask;
-+#ifndef CONFIG_COOPERATIVE
++
++	if (cooperative_mode_enabled()) 
++		return;
++
  	stts();
-+#else
-+#if (0)
-+	clear_in_cr4(X86_CR4_PVI);
-+	clear_in_cr4(X86_CR4_DE);
-+	clear_in_cr4(X86_CR4_MCE);
-+	clear_in_cr4(X86_CR4_PGE);
-+	flush_tlb_all();
-+	clear_in_cr4(XF86_CR4_OSXMMEXCPT);
-+#endif
-+#endif
  }
  
- /*
-@@ -328,6 +339,8 @@
+@@ -328,6 +332,8 @@
  	return 1;
  }
  
@@ -2821,7 +2867,7 @@
  #include <asm/i8259.h>
  
  #include <linux/irq.h>
-+#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
  
  #include <io_ports.h>
  
@@ -2905,7 +2951,7 @@
  /*
   * This is the 'legacy' 8259A Programmable Interrupt Controller,
   * present in the majority of PC/AT boxes.
-@@ -407,6 +485,63 @@
+@@ -407,6 +485,65 @@
  
  device_initcall(init_timer_sysfs);
  
@@ -2964,170 +3010,146 @@
 +	
 +}
 +
++#else
++#define init_COPIC_irqs() do {} while (0);
 +#endif
 +
  void __init init_IRQ(void)
  {
  	int i;
-@@ -414,6 +471,7 @@
+@@ -414,6 +473,22 @@
  	/* all the set up before the call gates are initialised */
  	pre_intr_init_hook();
  
-+#ifndef CONFIG_COOPERATIVE
++	if (cooperative_mode_enabled()) {
++		printk("Setting proxy interrupt vectors\n");
++
++		init_COPIC_irqs();
++
++		for (i = 0; i < (NR_VECTORS - FIRST_EXTERNAL_VECTOR); i++) {
++			int vector = FIRST_EXTERNAL_VECTOR + i;
++			if (i >= NR_IRQS)
++				break;
++			if (vector != SYSCALL_VECTOR)
++				set_intr_gate(vector, proxy_interrupt[i]);
++		}
++		
++		return;
++	}
++
  	/*
  	 * Cover the whole vector space, no vector can escape
  	 * us. (some of these will be overridden and become
-@@ -446,4 +447,21 @@
- 		setup_irq(FPU_IRQ, &fpu_irq);
- 
- 	irq_ctx_init(smp_processor_id());
-+
-+#else
-+	printk("Setting proxy interrupt vectors\n");
-+
-+#ifdef CONFIG_X86_UP_COPIC
-+	init_COPIC_irqs();
-+#endif
-+
-+	for (i = 0; i < (NR_VECTORS - FIRST_EXTERNAL_VECTOR); i++) {
-+		int vector = FIRST_EXTERNAL_VECTOR + i;
-+		if (i >= NR_IRQS)
-+			break;
-+		if (vector != SYSCALL_VECTOR)
-+			set_intr_gate(vector, proxy_interrupt[i]);
-+	}
-+
-+#endif
- }
 --- arch/i386/kernel/ioport.c
 +++ arch/i386/kernel/ioport.c
-@@ -56,6 +56,7 @@
-  */
- asmlinkage long sys_ioperm(unsigned long from, unsigned long num, int turn_on)
- {
-+#ifndef CONFIG_COOPERATIVE
- 	struct thread_struct * t = &current->thread;
+@@ -15,6 +15,7 @@
+ #include <linux/stddef.h>
+ #include <linux/slab.h>
+ #include <linux/thread_info.h>
++#include <linux/cooperative_internal.h>
+ 
+ /* Set EXTENT bits starting at BASE in BITMAP to value TURN_ON. */
+ static void set_bitmap(unsigned long *bitmap, unsigned int base, unsigned int extent, int new_value)
+@@ -60,6 +61,9 @@
  	struct tss_struct * tss;
  	unsigned long *bitmap;
-@@ -92,6 +93,9 @@
- 	}
- 	put_cpu();
- 	return 0;
-+#else
-+	return -EPERM;	
-+#endif
- }
  
- /*
-@@ -107,6 +110,7 @@
- 
- asmlinkage long sys_iopl(unsigned long unused)
- {
-+#ifndef CONFIG_COOPERATIVE
- 	volatile struct pt_regs * regs = (struct pt_regs *) &unused;
++	if (cooperative_mode_enabled())
++		return -EPERM;	
++
+ 	if ((from + num <= from) || (from + num > IO_BITMAP_BITS))
+ 		return -EINVAL;
+ 	if (turn_on && !capable(CAP_SYS_RAWIO))
+@@ -111,6 +114,9 @@
  	unsigned int level = regs->ebx;
  	unsigned int old = (regs->eflags >> 12) & 3;
-@@ -122,4 +123,7 @@
- 	/* Make sure we return the long way (not sysenter) */
- 	set_thread_flag(TIF_IRET);
- 	return 0;
-+#else
-+	return -EPERM;	
-+#endif
- }
+ 
++	if (cooperative_mode_enabled())
++		return -EPERM;	
++
+ 	if (level > 3)
+ 		return -EINVAL;
+ 	/* Trying to gain more privileges? */
 --- arch/i386/kernel/process.c
 +++ arch/i386/kernel/process.c
 @@ -52,6 +52,7 @@
  
  #include <linux/irq.h>
  #include <linux/err.h>
-+#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
  
  asmlinkage void ret_from_fork(void) __asm__("ret_from_fork");
  
-@@ -141,6 +142,9 @@
- {
- 	/* endless idle loop with no priority at all */
- 	while (1) {
-+#ifdef CONFIG_COOPERATIVE
-+		co_idle_processor();
-+#else
+@@ -144,6 +145,9 @@
  		while (!need_resched()) {
  			void (*idle)(void) = pm_idle;
  
-@@ -150,6 +153,7 @@
- 			irq_stat[smp_processor_id()].idle_timestamp = jiffies;
- 			idle();
- 		}
-+#endif
- 		schedule();
- 	}
- }
++			if (cooperative_mode_enabled())
++				idle = co_idle_processor;
++
+ 			if (!idle)
+ 				idle = default_idle;
+ 
 --- arch/i386/kernel/reboot.c
 +++ arch/i386/kernel/reboot.c
-@@ -137,6 +137,7 @@
-  */
- void machine_real_restart(unsigned char *code, int length)
+@@ -12,6 +12,7 @@
+ #include <asm/uaccess.h>
+ #include <asm/apic.h>
+ #include "mach_reboot.h"
++#include <linux/cooperative_internal.h>
+ 
+ /*
+  * Power off function, if any
+@@ -139,6 +140,11 @@
  {
-+#ifndef CONFIG_COOPERATIVE	
  	unsigned long flags;
  
++	if (cooperative_mode_enabled()) {
++		co_terminate(CO_TERMINATE_REBOOT);
++		return;
++	}
++
  	local_irq_disable();
-@@ -215,10 +216,14 @@
- 	__asm__ __volatile__ ("ljmp $0x0008,%0"
- 				:
- 				: "i" ((void *) (0x1000 - sizeof (real_mode_switch) - 100)));
-+#else
-+	co_terminate(CO_TERMINATE_REBOOT);
-+#endif
- }
  
- void machine_restart(char * __unused)
- {
-+#ifndef CONFIG_COOPERATIVE
- #ifdef CONFIG_SMP
- 	int cpuid;
- 	
-@@ -283,22 +287,32 @@
- 		efi.reset_system(EFI_RESET_WARM, EFI_SUCCESS, 0, 0);
- 
- 	machine_real_restart(jump_to_bios, sizeof(jump_to_bios));
-+#else
-+	co_terminate(CO_TERMINATE_REBOOT);
-+#endif
- }
- 
- EXPORT_SYMBOL(machine_restart);
+ 	/* Write zero to CMOS register number 0x0f, which the BIOS POST
+@@ -260,6 +265,11 @@
+ 		local_irq_enable();
+ 	}
+ #endif
++	if (cooperative_mode_enabled()) {
++		co_terminate(CO_TERMINATE_REBOOT);
++		return;
++	}
++
+ #ifdef CONFIG_X86_IO_APIC
+ 	disable_IO_APIC();
+ #endif
+@@ -289,12 +294,18 @@
  
  void machine_halt(void)
  {
-+#ifdef CONFIG_COOPERATIVE
 +	co_terminate(CO_TERMINATE_HALT);
-+#endif
  }
  
  EXPORT_SYMBOL(machine_halt);
  
  void machine_power_off(void)
  {
-+#ifndef CONFIG_COOPERATIVE	
++	if (cooperative_mode_enabled()) {
++		co_terminate(CO_TERMINATE_POWEROFF);
++		return;
++	}
++
  	if (efi_enabled)
  		efi.reset_system(EFI_RESET_SHUTDOWN, EFI_SUCCESS, 0, 0);
  	if (pm_power_off)
- 		pm_power_off();
-+#else
-+	co_terminate(CO_TERMINATE_POWEROFF);
-+#endif
- }
- 
- EXPORT_SYMBOL(machine_power_off);
 --- arch/i386/kernel/setup.c
 +++ arch/i386/kernel/setup.c
 @@ -39,6 +39,7 @@
  #include <linux/efi.h>
  #include <linux/init.h>
  #include <linux/edd.h>
-+#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
  #include <video/edid.h>
  #include <asm/e820.h>
  #include <asm/mpspec.h>
@@ -3135,35 +3157,41 @@
  	int len = 0;
  	int userdef = 0;
  
-+#ifdef CONFIG_COOPERATIVE
-+	/*
-+	 * Better to have 'root=/dev/cobd0' here.
-+	 */
-+	from = co_boot_parameters;
-+	snprintf(saved_command_line, COMMAND_LINE_SIZE, "%s", 
-+	         co_boot_parameters);
-+#else
- 	/* Save unparsed command line copy for /proc/cmdline */
- 	saved_command_line[COMMAND_LINE_SIZE-1] = '\0';
-+#endif
+-	/* Save unparsed command line copy for /proc/cmdline */
+-	saved_command_line[COMMAND_LINE_SIZE-1] = '\0';
++	if (cooperative_mode_enabled()) {
++		/*
++		 * Better to have 'root=/dev/cobd0' here.
++		 */
++		from = co_boot_parameters;
++		snprintf(saved_command_line, COMMAND_LINE_SIZE, "%s", 
++			 co_boot_parameters);
++	} else {
++		/* Save unparsed command line copy for /proc/cmdline */
++		saved_command_line[COMMAND_LINE_SIZE-1] = '\0';
++	}
  
  	for (;;) {
  		/*
-@@ -818,9 +827,13 @@
+@@ -818,10 +827,14 @@
  	 */
  	start_pfn = PFN_UP(init_pg_tables_end);
  
-+#ifdef CONFIG_COOPERATIVE
-+	max_low_pfn = max_pfn = co_memory_size / PAGE_SIZE;
-+#else
- 	find_max_pfn();
+-	find_max_pfn();
++	if (cooperative_mode_enabled()) {
++	     max_low_pfn = max_pfn = co_memory_size / PAGE_SIZE;
++	} else {
++	     find_max_pfn();
++	     
++	     max_low_pfn = find_max_low_pfn();
++	}
  
- 	max_low_pfn = find_max_low_pfn();
-+#endif
- 
+-	max_low_pfn = find_max_low_pfn();
+-
  #ifdef CONFIG_HIGHMEM
  	highstart_pfn = highend_pfn = max_pfn;
-@@ -837,8 +841,17 @@
+ 	if (max_pfn > max_low_pfn) {
+@@ -837,30 +841,40 @@
  	 */
  	bootmap_size = init_bootmem(start_pfn, max_low_pfn);
  
@@ -3176,25 +3204,65 @@
 +		free_bootmem(__pa(bootmem_end), physical_end - bootmem_end);
 +	}
  
-+#ifndef CONFIG_COOPERATIVE
-+	register_bootmem_low_pages(max_low_pfn); 
-+
+-	/*
+-	 * Reserve the bootmem bitmap itself as well. We do this in two
+-	 * steps (first step was init_bootmem()) because this catches
+-	 * the (very unlikely) case of us accidentally initializing the
+-	 * bootmem allocator with an invalid RAM area.
+-	 */
+-	reserve_bootmem(HIGH_MEMORY, (PFN_PHYS(start_pfn) +
+-			 bootmap_size + PAGE_SIZE-1) - (HIGH_MEMORY));
++	if (!cooperative_mode_enabled()) {
++		register_bootmem_low_pages(max_low_pfn); 
++		
++		/*
++		 * Reserve the bootmem bitmap itself as well. We do this in two
++		 * steps (first step was init_bootmem()) because this catches
++		 * the (very unlikely) case of us accidentally initializing the
++		 * bootmem allocator with an invalid RAM area.
++		 */
++		reserve_bootmem(HIGH_MEMORY, (PFN_PHYS(start_pfn) +
++				 bootmap_size + PAGE_SIZE-1) - (HIGH_MEMORY));
++	
++		/*
++		 * reserve physical page 0 - it's a special BIOS page on many boxes,
++		 * enabling clean reboots, SMP operation, laptop functions.
++		 */
++		reserve_bootmem(0, PAGE_SIZE);
++	
++	    /* could be an AMD 768MPX chipset. Reserve a page  before VGA to prevent
++	       PCI prefetch into it (errata #56). Usually the page is reserved anyways,
++	       unless you have no PS/2 mouse plugged in. */
++		if (boot_cpu_data.x86_vendor == X86_VENDOR_AMD &&
++		    boot_cpu_data.x86 == 6)
++		     reserve_bootmem(0xa0000 - 4096, 4096);
++	}
+ 
+-	/*
+-	 * reserve physical page 0 - it's a special BIOS page on many boxes,
+-	 * enabling clean reboots, SMP operation, laptop functions.
+-	 */
+-	reserve_bootmem(0, PAGE_SIZE);
+-
+-    /* could be an AMD 768MPX chipset. Reserve a page  before VGA to prevent
+-       PCI prefetch into it (errata #56). Usually the page is reserved anyways,
+-       unless you have no PS/2 mouse plugged in. */
+-	if (boot_cpu_data.x86_vendor == X86_VENDOR_AMD &&
+-	    boot_cpu_data.x86 == 6)
+-	     reserve_bootmem(0xa0000 - 4096, 4096);
+-
+ #ifdef CONFIG_SMP
  	/*
- 	 * Reserve the bootmem bitmap itself as well. We do this in two
- 	 * steps (first step was init_bootmem()) because this catches
-@@ -881,8 +890,11 @@
- 	 */
- 	find_smp_config();
+ 	 * But first pinch a few for the stack/trampoline stuff
+@@ -883,6 +893,7 @@
  #endif
-+#endif
  
  #ifdef CONFIG_BLK_DEV_INITRD
 +#ifndef CONFIG_COOPERATIVE
-+
  	if (LOADER_TYPE && INITRD_START) {
  		if (INITRD_START + INITRD_SIZE <= (max_low_pfn << PAGE_SHIFT)) {
  			reserve_bootmem(INITRD_START, INITRD_SIZE);
-@@ -898,7 +901,18 @@
+@@ -898,7 +899,18 @@
  			initrd_start = 0;
  		}
  	}
@@ -3213,18 +3281,7 @@
  	return max_low_pfn;
  }
  #else
-@@ -1082,8 +1093,9 @@
-  */
- void __init setup_arch(char **cmdline_p)
- {
-+#ifndef CONFIG_COOPERATIVE
- 	unsigned long max_low_pfn;
--
-+#endif
- 	memcpy(&boot_cpu_data, &new_cpu_data, sizeof(new_cpu_data));
- 	pre_setup_arch_hook();
- 	early_cpu_init();
-@@ -1100,6 +1101,7 @@
+@@ -1100,6 +1111,7 @@
  		efi_enabled = 1;
  #endif
  
@@ -3232,30 +3289,38 @@
   	ROOT_DEV = old_decode_dev(ORIG_ROOT_DEV);
   	drive_info = DRIVE_INFO;
   	screen_info = SCREEN_INFO;
-@@ -1123,8 +1124,10 @@
+@@ -1123,8 +1124,9 @@
  	ARCH_SETUP
  	if (efi_enabled)
  		efi_init();
-+#ifndef CONFIG_COOPERATIVE	
- 	else
+-	else
++	else if (!cooperative_mode_enabled()) {
  		setup_memory_region();
-+#endif
++	}
  
  	copy_edd();
  
-@@ -1167,6 +1169,7 @@
+@@ -1166,9 +1167,10 @@
+ 	}
  #endif
  
++	if (!cooperative_mode_enabled()) {
++	     dmi_scan_machine();
++	}
  
-+#ifndef CONFIG_COOPERATIVE	
- 	dmi_scan_machine();
- 
+-	dmi_scan_machine();
+-
  #ifdef CONFIG_X86_GENERICARCH
-@@ -1186,8 +1187,12 @@
+ 	generic_apic_probe(*cmdline_p);
+ #endif	
+@@ -1185,9 +1186,14 @@
+ 		get_smp_config();
  #endif
  
- 	register_memory(max_low_pfn);
-+#endif	
+-	register_memory(max_low_pfn);
++	if (!cooperative_mode_enabled()) {
++	     register_memory(max_low_pfn);
++	}
  
  #ifdef CONFIG_VT
 +#ifdef CONFIG_COOPERATIVE_CONSOLE
@@ -3264,7 +3329,7 @@
  #if defined(CONFIG_VGA_CONSOLE)
  	if (!efi_enabled || (efi_mem_type(0xa0000) != EFI_CONVENTIONAL_MEMORY))
  		conswitchp = &vga_con;
-@@ -1195,6 +1199,7 @@
+@@ -1195,6 +1200,7 @@
  	conswitchp = &dummy_con;
  #endif
  #endif
@@ -3274,19 +3339,24 @@
  #include "setup_arch_post.h"
 --- arch/i386/kernel/sysenter.c
 +++ arch/i386/kernel/sysenter.c
-@@ -47,7 +47,11 @@
+@@ -13,6 +13,7 @@
+ #include <linux/gfp.h>
+ #include <linux/string.h>
+ #include <linux/elf.h>
++#include <linux/cooperative_internal.h>
+ 
+ #include <asm/cpufeature.h>
+ #include <asm/msr.h>
+@@ -47,7 +48,7 @@
  
  	__set_fixmap(FIX_VSYSCALL, __pa(page), PAGE_READONLY);
  
-+#ifndef CONFIG_COOPERATIVE
- 	if (!boot_cpu_has(X86_FEATURE_SEP)) {
-+#else
-+	{
-+#endif
+-	if (!boot_cpu_has(X86_FEATURE_SEP)) {
++	if (cooperative_mode_enabled() || !boot_cpu_has(X86_FEATURE_SEP)) {
  		memcpy((void *) page,
  		       &vsyscall_int80_start,
  		       &vsyscall_int80_end - &vsyscall_int80_start);
-@@ -59,6 +63,7 @@
+@@ -59,6 +59,7 @@
  	       &vsyscall_sysenter_end - &vsyscall_sysenter_start);
  
  	on_each_cpu(enable_sep_cpu, NULL, 1, 1);
@@ -3296,61 +3366,44 @@
  
 --- arch/i386/kernel/time.c
 +++ arch/i386/kernel/time.c
-@@ -172,6 +172,7 @@
+@@ -45,6 +45,7 @@
+ #include <linux/sysdev.h>
+ #include <linux/bcd.h>
+ #include <linux/efi.h>
++#include <linux/cooperative_internal.h>
  
- static int set_rtc_mmss(unsigned long nowtime)
+ #include <asm/io.h>
+ #include <asm/smp.h>
+@@ -174,6 +175,9 @@
  {
-+#ifndef CONFIG_COOPERATIVE	
  	int retval;
  
++	if (cooperative_mode_enabled())
++		return -1;
++
  	/* gets recalled with irq locally disabled */
-@@ -183,6 +184,12 @@
- 	spin_unlock(&rtc_lock);
- 
- 	return retval;
-+#else
-+	/*
-+	 * Don't let Linux change the system time of the host machine.
-+	 */
-+	return -1;
-+#endif
- }
- 
- /* last time the cmos clock got updated */
-@@ -226,6 +232,7 @@
- 
- 	do_timer_interrupt_hook(regs);
- 
-+#ifndef CONFIG_COOPERATIVE	
- 	/*
- 	 * If we have an externally synchronized Linux clock, then update
+ 	spin_lock(&rtc_lock);
+ 	if (efi_enabled)
+@@ -231,7 +234,8 @@
  	 * CMOS clock accordingly every ~11 minutes. Set_rtc_mmss() has to be
-@@ -248,6 +249,7 @@
- 		else
- 			last_rtc_update = xtime.tv_sec - 600; /* do it again in 60 s */
- 	}
-+#endif	
- 
- #ifdef CONFIG_MCA
- 	if( MCA_bus ) {
-@@ -293,6 +294,7 @@
- /* not static: needed by APM */
- unsigned long get_cmos_time(void)
+ 	 * called as close as possible to 500 ms before the new second starts.
+ 	 */
+-	if ((time_status & STA_UNSYNC) == 0 &&
++	if (!cooperative_mode_enabled() &&
++	    (time_status & STA_UNSYNC) == 0 &&
+ 	    xtime.tv_sec > last_rtc_update + 660 &&
+ 	    (xtime.tv_nsec / 1000)
+ 			>= USEC_AFTER - ((unsigned) TICK_SIZE) / 2 &&
+@@ -295,6 +296,9 @@
  {
-+#ifndef CONFIG_COOPERATIVE	
  	unsigned long retval;
  
++	if (cooperative_mode_enabled())
++		return co_get_host_time();
++
  	spin_lock(&rtc_lock);
-@@ -305,6 +306,9 @@
- 	spin_unlock(&rtc_lock);
  
- 	return retval;
-+#else
-+	return co_get_host_time();
-+#endif
- }
- 
- static long clock_cmos_diff;
+ 	if (efi_enabled)
 --- arch/i386/kernel/timers/timer.c
 +++ arch/i386/kernel/timers/timer.c
 @@ -13,6 +13,7 @@
@@ -3396,7 +3449,7 @@
  #include <linux/slab.h>
  #include <linux/proc_fs.h>
  #include <linux/efi.h>
-+#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
  
  #include <asm/processor.h>
  #include <asm/system.h>
@@ -3409,43 +3462,79 @@
  		if (page_table != pte_offset_kernel(pmd, 0))
  			BUG();	
  
-@@ -293,6 +293,7 @@
+@@ -293,20 +293,22 @@
  		set_pgd(pgd_base + i, __pgd(__pa(empty_zero_page) | _PAGE_PRESENT));
  #endif
  
-+#ifndef CONFIG_COOPERATIVE	
- 	/* Enable PSE if available */
- 	if (cpu_has_pse) {
- 		set_in_cr4(X86_CR4_PSE);
-@@ -306,6 +307,7 @@
+-	/* Enable PSE if available */
+-	if (cpu_has_pse) {
+-		set_in_cr4(X86_CR4_PSE);
++	if (!cooperative_mode_enabled()) {
++		/* Enable PSE if available */
++		if (cpu_has_pse) {
++			set_in_cr4(X86_CR4_PSE);
++		}
++	
++		/* Enable PGE if available */
++		if (cpu_has_pge) {
++			set_in_cr4(X86_CR4_PGE);
++			__PAGE_KERNEL |= _PAGE_GLOBAL;
++		}
++	
++		kernel_physical_mapping_init(pgd_base);
++		remap_numa_kva();
+ 	}
  
- 	kernel_physical_mapping_init(pgd_base);
- 	remap_numa_kva();
-+#endif
- 
+-	/* Enable PGE if available */
+-	if (cpu_has_pge) {
+-		set_in_cr4(X86_CR4_PGE);
+-		__PAGE_KERNEL |= _PAGE_GLOBAL;
+-	}
+-
+-	kernel_physical_mapping_init(pgd_base);
+-	remap_numa_kva();
+-
  	/*
  	 * Fixed mappings, only the page table structure has to be
-@@ -373,6 +374,7 @@
+ 	 * created - mappings will be set by set_fixmap():
+@@ -373,19 +375,26 @@
  	unsigned long zones_size[MAX_NR_ZONES] = {0, 0, 0};
  	unsigned int max_dma, high, low;
  	
-+#ifndef CONFIG_COOPERATIVE	
- 	max_dma = virt_to_phys((char *)MAX_DMA_ADDRESS) >> PAGE_SHIFT;
- 	low = max_low_pfn;
- 	high = highend_pfn;
-@@ -386,6 +387,11 @@
- 		zones_size[ZONE_HIGHMEM] = high - low;
+-	max_dma = virt_to_phys((char *)MAX_DMA_ADDRESS) >> PAGE_SHIFT;
+-	low = max_low_pfn;
+-	high = highend_pfn;
+-	
+-	if (low < max_dma)
+-		zones_size[ZONE_DMA] = low;
+-	else {
+-		zones_size[ZONE_DMA] = max_dma;
+-		zones_size[ZONE_NORMAL] = low - max_dma;
++	if (!cooperative_mode_enabled()) {
++		max_dma = virt_to_phys((char *)MAX_DMA_ADDRESS) >> PAGE_SHIFT;
++		low = max_low_pfn;
++		high = highend_pfn;
++		
++		if (low < max_dma)
++			zones_size[ZONE_DMA] = low;
++		else {
++			zones_size[ZONE_DMA] = max_dma;
++			zones_size[ZONE_NORMAL] = low - max_dma;
+ #ifdef CONFIG_HIGHMEM
+-		zones_size[ZONE_HIGHMEM] = high - low;
++			zones_size[ZONE_HIGHMEM] = high - low;
  #endif
++		}
++	} else {
++		zones_size[ZONE_DMA] = 0;
++		zones_size[ZONE_NORMAL] = max_low_pfn;
++		zones_size[ZONE_HIGHMEM] = 0;
  	}
-+#else
-+	zones_size[ZONE_DMA] = 0;
-+	zones_size[ZONE_NORMAL] = max_low_pfn;
-+	zones_size[ZONE_HIGHMEM] = 0;
-+#endif
++
  	free_area_init(zones_size);	
  }
  #else
-@@ -474,7 +479,6 @@
+@@ -474,7 +481,6 @@
  	if (!mem_map)
  		BUG();
  #endif
@@ -3457,37 +3546,41 @@
  	if (!cpu_has_pae)
  		panic("cannot execute a PAE-enabled kernel on a PAE-less CPU!");
  #endif
-+#ifndef CONFIG_COOPERATIVE
- 	if (boot_cpu_data.wp_works_ok < 0)
- 		test_wp_bit();
-+#endif
+-	if (boot_cpu_data.wp_works_ok < 0)
+-		test_wp_bit();
++	if (!cooperative_mode_enabled()) {
++		if (boot_cpu_data.wp_works_ok < 0)
++			test_wp_bit();
++	}
  
  	/*
  	 * Subtle. SMP is doing it's boot stuff late (because it has to
-@@ -539,9 +541,11 @@
- 	 * protected-mode entry to work. We zap these entries only after
- 	 * the WP-bit has been tested.
- 	 */
-+#ifndef  CONFIG_COOPERATIVE
- #ifndef CONFIG_SMP
- 	zap_low_mappings();
- #endif
-+#endif
- }
- 
- kmem_cache_t *pgd_cache;
 --- arch/i386/mm/ioremap.c
 +++ arch/i386/mm/ioremap.c
-@@ -190,6 +190,9 @@
- 
+@@ -11,6 +11,7 @@
+ #include <linux/vmalloc.h>
+ #include <linux/init.h>
+ #include <linux/slab.h>
++#include <linux/cooperative_internal.h>
+ #include <asm/io.h>
+ #include <asm/pgalloc.h>
+ #include <asm/fixmap.h>
+@@ -191,7 +192,14 @@
  void *ioremap_nocache (unsigned long phys_addr, unsigned long size)
  {
-+#ifdef CONFIG_COOPERATIVE
-+	panic("ioremap_nocache %ld:%ld\n", phys_addr, size);
-+#endif
  	unsigned long last_addr;
- 	void *p = __ioremap(phys_addr, size, _PAGE_PCD);
+-	void *p = __ioremap(phys_addr, size, _PAGE_PCD);
++	void *p;
++
++	if (cooperative_mode_enabled()) {
++		panic("ioremap_nocache %ld:%ld\n", phys_addr, size);
++		return NULL;
++	}
++
++	p = __ioremap(phys_addr, size, _PAGE_PCD);
  	if (!p) 
+ 		return p; 
+ 
 --- drivers/block/Kconfig
 +++ drivers/block/Kconfig
 @@ -339,6 +339,15 @@
@@ -3540,23 +3633,24 @@
  	  Say Y here if you want to use a standard AT or PS/2 keyboard. Usually
 --- drivers/input/keyboard/atkbd.c
 +++ drivers/input/keyboard/atkbd.c
-@@ -514,6 +514,7 @@
+@@ -26,6 +26,7 @@
+ #include <linux/input.h>
+ #include <linux/serio.h>
+ #include <linux/workqueue.h>
++#include <linux/cooperative_internal.h>
  
- static int atkbd_probe(struct atkbd *atkbd)
+ MODULE_AUTHOR("Vojtech Pavlik <vojtech@suse.cz>");
+ MODULE_DESCRIPTION("AT and PS/2 keyboard driver");
+@@ -516,6 +517,9 @@
  {
-+#ifndef CONFIG_COOPERATIVE
  	unsigned char param[2];
  
++	if (cooperative_mode_enabled())
++		return 0;
++
  /*
-@@ -557,7 +558,7 @@
- 		printk(KERN_ERR "atkbd.c: controllers. Use i8042.direct=1 to disable translation.\n");
- 		return -1;
- 	}
--
-+#endif
- 	return 0;
- }
- 
+  * Some systems, where the bit-twiddling when testing the io-lines of the
+  * controller may confuse the keyboard need a full reset of the keyboard. On
 --- drivers/input/mouse/Kconfig
 +++ drivers/input/mouse/Kconfig
 @@ -14,7 +14,7 @@
@@ -3831,24 +3925,7 @@
  
 --- include/asm-i386/io.h
 +++ include/asm-i386/io.h
-@@ -1,7 +1,8 @@
- #ifndef _ASM_IO_H
- #define _ASM_IO_H
- 
- #include <linux/config.h>
-+#include <linux/cooperative.h>
- 
- /*
-  * This file contains the definitions for the x86 IO instructions
-@@ -44,6 +45,7 @@
- #ifdef __KERNEL__
- 
- #include <linux/vmalloc.h>
-+#include <linux/cooperative.h>
- 
- /**
-  *	virt_to_phys	-	map virtual addresses to physical
-@@ -102,6 +103,9 @@
+@@ -102,6 +102,9 @@
  
  static inline void * ioremap (unsigned long offset, unsigned long size)
  {
@@ -3911,7 +3988,7 @@
  
 +#else
 +#define CMOS_READ(addr) (0)
-+#define CMOS_WRITE(val, addr) do{}while(0)
++#define CMOS_WRITE(val, addr) do {} while(0)
 +#endif
 +
  #define RTC_IRQ 8
@@ -4114,32 +4191,6 @@
  
  #define SCSI_DISK8_MAJOR	128
  #define SCSI_DISK9_MAJOR	129
---- init/main.c
-+++ init/main.c
-@@ -61,6 +61,8 @@
- #include <asm/smp.h>
- #endif
- 
-+#include <linux/cooperative.h>
-+
- /*
-  * Versions of gcc older than that listed below may actually compile
-  * and link okay, but the end product can have subtle run time bugs.
-@@ -308,7 +310,14 @@
- #ifdef CONFIG_X86_LOCAL_APIC
- static void __init smp_init(void)
- {
-+#ifdef CONFIG_COOPERATIVE
-+	/*
-+	 * It doesn't work yet because I haven't implemented the
-+	 * timer interrupt yet
-+	 */
-+#else
- 	APIC_init_uniprocessor();
-+#endif
- }
- #else
- #define smp_init()	do { } while (0)
 --- kernel/Makefile
 +++ kernel/Makefile
 @@ -23,6 +23,7 @@
@@ -4156,7 +4207,7 @@
  #include <linux/syscalls.h>
  #include <linux/interrupt.h>
  #include <linux/nmi.h>
-+#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
  
  int panic_timeout;
  int panic_on_oops;
@@ -4164,9 +4215,9 @@
  		sys_sync();
  	bust_spinlocks(0);
  
-+#ifdef CONFIG_COOPERATIVE
-+	co_terminate(CO_TERMINATE_PANIC);
-+#endif
++	if (cooperative_mode_enabled()) {
++		co_terminate(CO_TERMINATE_PANIC);
++	}
 +
  #ifdef CONFIG_SMP
  	smp_send_stop();
@@ -4177,18 +4228,17 @@
  
  #include <asm/uaccess.h>
  
-+#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
 +
  #define __LOG_BUF_LEN	(1 << CONFIG_LOG_BUF_SHIFT)
  
  /* printk's without a loglevel use this.. */
-@@ -524,6 +526,9 @@
- 	va_start(args, fmt);
+@@ -525,6 +527,8 @@
  	printed_len = vscnprintf(printk_buf, sizeof(printk_buf), fmt, args);
  	va_end(args);
-+#ifdef CONFIG_COOPERATIVE
-+	co_printk(printk_buf);
-+#endif
  
++	co_printk(printk_buf);
++
  	/*
  	 * Copy the output into log_buf.  If the caller didn't provide
+ 	 * appropriate log level tags, we insert them here
