@@ -115,6 +115,12 @@ typedef struct co_config {
 	 * ram.
 	 */ 
 	unsigned long ram_size;
+
+	/*
+	 * The pathname of the initrd file.
+	 */
+	bool_t initrd_enabled;
+	co_pathname_t initrd_path;
 } co_config_t;
 
 #endif

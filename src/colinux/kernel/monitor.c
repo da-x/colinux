@@ -170,7 +170,7 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 	if (!CO_OK(rc)) {
 		co_debug("monitor: error getting self_map pfn (%x)\n", rc);
 		goto out_error;
-	}	
+	}
 
 	self_map_page_offset = ((CO_VPTR_SELF_MAP >> PGDIR_SHIFT) * sizeof(linux_pte_t));
 	co_debug_ulong(self_map_page_offset);
@@ -207,10 +207,6 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 
 out_error:
 	return rc;
-}
-
-static void colinux_free(co_monitor_t *cmon)
-{
 }
 
 bool_t co_monitor_device_request(co_monitor_t *cmon, co_device_t device, unsigned long *params)
@@ -725,12 +721,6 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 
 	co_debug("monitor: after adjustments: %d MB\n", cmon->memory_size);
 
-	/*
-	 * FIXME: Currently the number of bootmem pages is hardcored, but we can easily
-	 * modify this to depend on the amount of pseudo physical RAM, which
-	 * is approximately sizeof(struct page)*(pseudo physical pages) plus
-	 * more smaller structures. 
-	 */
 	cmon->memory_size <<= 20; /* Megify */
 
 	cmon->physical_frames = cmon->memory_size >> PAGE_SHIFT;
@@ -801,6 +791,43 @@ co_rc_t co_monitor_load_section(co_monitor_t *cmon, co_monitor_ioctl_load_sectio
 	return rc;
 }
 
+co_rc_t co_monitor_load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_t *params)
+{
+	co_rc_t rc = CO_RC(OK);
+	unsigned long address, pages;
+
+	if (cmon->state != CO_MONITOR_STATE_INITIALIZED)
+		return CO_RC(ERROR);
+
+	pages = ((params->size + PAGE_SIZE) >> PAGE_SHIFT);
+
+        /*
+	 * Put initrd at the end of the address space.
+	 */
+	address = __PAGE_OFFSET + cmon->memory_size - (pages << PAGE_SHIFT);
+	
+	co_debug("monitor: initrd address: %x (0x%x pages)\n", address, pages);
+
+	if (address <= cmon->core_end + 0x100000) {
+		co_debug("monitor: initrd is too close to the kernel code, not enough memory)\n");
+
+		/* We are too close to the kernel code, not enough memory */
+		return CO_RC(ERROR);
+	}
+
+	rc = co_monitor_copy_and_create_pfns(cmon, address, params->size, params->buf);
+
+	if (!CO_OK(rc)) {
+		co_debug("monitor: initrd copy failed (%x)\n", rc);
+		return rc;
+	}
+
+	cmon->initrd_address = address;
+	cmon->initrd_size = params->size;
+
+	return rc;
+}
+
 co_rc_t co_monitor_destroy(co_monitor_t *cmon)
 {
 	co_manager_t *manager;
@@ -810,10 +837,8 @@ co_rc_t co_monitor_destroy(co_monitor_t *cmon)
 
 	manager = cmon->manager;
 
-	if (cmon->state >= CO_MONITOR_STATE_RUNNING) {
+	if (cmon->state >= CO_MONITOR_STATE_RUNNING)
                 co_os_timer_deactivate(cmon->timer);
-		colinux_free(cmon);
-	}
 
 	co_monitor_unregister_and_free_block_devices(cmon);
 	free_pseudo_physical_memory(cmon);
@@ -851,8 +876,10 @@ co_rc_t co_monitor_start(co_monitor_t *cmon)
 	co_passage_page->operation = CO_OPERATION_START;
 	co_passage_page->params[0] = cmon->core_end;
 	co_passage_page->params[1] = cmon->memory_size;
+	co_passage_page->params[2] = cmon->initrd_address;
+	co_passage_page->params[3] = cmon->initrd_size;
 
-	memcpy(&co_passage_page->params[2], cmon->config.boot_parameters_line, 
+	memcpy(&co_passage_page->params[10], cmon->config.boot_parameters_line, 
 	       sizeof(cmon->config.boot_parameters_line));
 
 	cmon->state = CO_MONITOR_STATE_RUNNING;
@@ -916,6 +943,9 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 	}
 	case CO_MONITOR_IOCTL_LOAD_SECTION: {
 		return co_monitor_load_section(cmon, (co_monitor_ioctl_load_section_t *)io_buffer);
+	}
+	case CO_MONITOR_IOCTL_LOAD_INITRD: {
+		return co_monitor_load_initrd(cmon, (co_monitor_ioctl_load_initrd_t *)io_buffer);
 	}
 	case CO_MONITOR_IOCTL_START: {
 		return co_monitor_start(cmon);

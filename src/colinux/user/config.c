@@ -124,6 +124,32 @@ co_rc_t co_load_config_boot_params(co_config_t *out_config, mxml_node_t *node)
 	return CO_RC(OK);
 }
 
+co_rc_t co_load_config_initrd(co_config_t *out_config, mxml_element_t *element)
+{
+	int i;
+	char *path = "";
+
+	for (i=0; i < element->num_attrs; i++) {
+		mxml_attr_t *attr = &element->attrs[i];
+                                                     
+		if (strcmp(attr->name, "path") == 0)  
+			path = attr->value;
+	}
+
+	if (path == NULL) {
+		co_debug("config: invalid initrd element: bad path\n");
+		return CO_RC(ERROR);
+	}
+
+	out_config->initrd_enabled = PTRUE;
+
+	snprintf(out_config->initrd_path, sizeof(out_config->initrd_path),
+		 "%s", path);
+
+	return CO_RC(OK);
+}
+
+
 static bool_t char_is_digit(char ch)
 {
 	return (ch >= '0'  &&  ch <= '9');
@@ -259,6 +285,8 @@ co_rc_t co_load_config(char *text, co_config_t *out_config)
 	char *name;
 	co_rc_t rc = CO_RC(OK);
 
+	out_config->initrd_enabled = PFALSE;
+
 	tree = mxmlLoadString(NULL, text, NULL);
 	if (tree == NULL) {
 		co_debug("config: error parsing config XML. Please check XML's validity\n");
@@ -283,6 +311,8 @@ co_rc_t co_load_config(char *text, co_config_t *out_config)
 				rc = co_load_config_boot_params(out_config, walk->child);
 			} else if (strcmp(name, "image") == 0) {
 				rc = co_load_config_image(out_config, &walk->value.element);
+			} else if (strcmp(name, "initrd") == 0) {
+				rc = co_load_config_initrd(out_config, &walk->value.element);
 			} else if (strcmp(name, "memory") == 0) {
 				rc = co_load_config_memory(out_config, &walk->value.element);
 			} else if (strcmp(name, "network") == 0) {

@@ -214,6 +214,12 @@ void co_daemon_prepare_net_macs(co_daemon_t *daemon)
 
 			/*
 			 * Pick a MAC address based on device index.
+			 *
+			 * TODO: Add the standard random MAC address 
+			 * strategy for virtual devices, which
+			 * suggests that the 32 LSBs should be 
+			 * randomized somehow.
+			 *
 			 */
 
 			net_dev->mac_address[0] = 0;
@@ -224,6 +230,30 @@ void co_daemon_prepare_net_macs(co_daemon_t *daemon)
 			net_dev->mac_address[5] = '0' + i;
 		}
 	}
+}
+
+co_rc_t co_load_initrd(co_daemon_t *daemon)
+{
+	co_rc_t rc = CO_RC(OK);
+	char *initrd;
+	unsigned long initrd_size; 
+
+	if (!daemon->config.initrd_enabled)
+		return rc;
+
+	debug(daemon, "reading initrd from (%s)\n", daemon->config.initrd_path);
+
+	rc = co_os_file_load(&daemon->config.initrd_path, &initrd, &initrd_size);
+	if (!CO_OK(rc))
+		return rc;
+
+	debug(daemon, "initrd size: %d bytes\n", initrd_size);
+
+	rc = co_user_monitor_load_initrd(daemon->monitor, initrd, initrd_size);
+
+	co_os_free(initrd);
+
+	return rc;
 }
 
 co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
@@ -274,6 +304,10 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 	create_params.config = daemon->config;
 
 	rc = co_user_monitor_create(&daemon->monitor, &create_params);
+	if (!CO_OK(rc))
+		goto out;
+
+	rc = co_load_initrd(daemon);
 
 out:
 	return rc;

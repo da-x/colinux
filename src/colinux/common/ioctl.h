@@ -46,6 +46,7 @@ typedef enum {
 	CO_MONITOR_IOCTL_START,
 	CO_MONITOR_IOCTL_RUN,
 	CO_MONITOR_IOCTL_STATUS,
+	CO_MONITOR_IOCTL_LOAD_INITRD, 
 } co_monitor_ioctl_op_t;
 
 /* interface for CO_MANAGER_IOCTL_MONITOR: */
@@ -82,6 +83,13 @@ typedef struct {
 	unsigned long index;
 	unsigned char buf[0];
 } co_monitor_ioctl_load_section_t;
+
+/* interface for CO_MONITOR_IOCTL_LOAD_INITRD: */
+typedef struct {
+	co_manager_ioctl_monitor_t pc;
+	unsigned long size;
+	unsigned char buf[0];
+} co_monitor_ioctl_load_initrd_t;
 
 /* interface for CO_MONITOR_IOCTL_RUN: */
 typedef struct {

@@ -112,6 +112,31 @@ co_rc_t co_user_monitor_load_section(co_user_monitor_t *umon,
 	return rc;
 }
 
+co_rc_t co_user_monitor_load_initrd(co_user_monitor_t *umon, 
+				    void *initrd, unsigned long initrd_size)
+{
+	co_monitor_ioctl_load_initrd_t *params_copy = NULL;
+	unsigned long alloc_size = 0;
+	co_rc_t rc;
+
+	alloc_size = sizeof(*params_copy) + initrd_size;
+    
+	params_copy = (co_monitor_ioctl_load_section_t *)co_os_malloc(alloc_size);
+	if (!params_copy)
+		return CO_RC(OUT_OF_MEMORY);
+
+	params_copy->size = initrd_size;
+	memcpy(params_copy->buf, initrd, initrd_size);
+
+	rc = co_manager_io_monitor_unisize(umon->handle, 
+					   CO_MONITOR_IOCTL_LOAD_INITRD, 
+					   &params_copy->pc, alloc_size);
+	
+	co_os_free(params_copy);
+
+	return rc;
+}
+
 co_rc_t co_user_monitor_run(co_user_monitor_t *umon, co_monitor_ioctl_run_t *params,
 			    unsigned long in_size, unsigned long out_size)
 {

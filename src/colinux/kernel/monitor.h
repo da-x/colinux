@@ -136,6 +136,12 @@ typedef struct co_monitor {
 	co_message_switch_t message_switch;
 	co_queue_t user_message_queue;
 	co_queue_t linux_message_queue;
+
+        /*
+	 * initrd
+	 */
+	unsigned long initrd_address;
+	unsigned long initrd_size;
 } co_monitor_t;
 
 extern co_rc_t co_monitor_create(struct co_manager *manager, co_manager_ioctl_create_t *params, 
