@@ -148,7 +148,8 @@ compile_modules()
 	cd "$TOPDIR"
 	cd "$COLINUX_TARGET_KERNEL_PATH"
 	echo "Making Modules $KERNEL_VERSION"
-	make INSTALL_MOD_PATH=`pwd`/_install modules modules_install >>$COLINUX_BUILD_LOG 2>&1
+	make INSTALL_MOD_PATH=$COLINUX_TARGET_KERNEL_PATH/_install \
+	    modules modules_install >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "Kernel $KERNEL_VERSION make modules failed"
 	cd "$TOPDIR"
 }
@@ -161,7 +162,8 @@ install_modules()
 	cd $COLINUX_TARGET_KERNEL_PATH/_install
 	echo "Installing Modules $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
 	mkdir -p "$COLINUX_INSTALL_DIR"
-	tar cfz $COLINUX_INSTALL_DIR/modules-$COMPLETE_KERNEL_NAME.tar.gz lib/modules/$COMPLETE_KERNEL_NAME
+	tar cfz $COLINUX_INSTALL_DIR/modules-$COMPLETE_KERNEL_NAME.tar.gz \
+	    lib/modules/$COMPLETE_KERNEL_NAME
 	if test $? -ne 0; then
 	        echo "Kernel $COMPLETE_KERNEL_NAME modules install failed"
 	        exit 1
@@ -171,9 +173,11 @@ install_modules()
 
 build_kernel()
 {
-	# Full user control for compile (for kernel developers)
-	if [ "$1" != "--no-download" -a "$COLINUX_KERNEL_UNTAR" != "no" ]; then
-          download_files
+	# Full user control for compile (kernel developers)
+	if [ "$1" != "--no-download" -a "$COLINUX_KERNEL_UNTAR" != "no" \
+	     -o ! -f $COLINUX_TARGET_KERNEL_PATH/include/linux/cooperative.h ]; then
+
+	  download_files
 	  # Only Download? Than ready.
 	  test "$1" = "--download-only" && exit 0
 

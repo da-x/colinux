@@ -85,10 +85,11 @@ To compile source for a Windows target, the compiler must be self compiled
 for this target. You can not download a binary of this compiler!
 
 This need a Compiler devel-libs and a lot of tools:
-    gnu/gcc 3.1.1
+    gnu/gcc 3.3.1
     patch-2.5.9
-    bison-1.75-109   need by binutils (yacc 91.7.30 have a error YYEMPTY)
     texinfo-4.5      need by binutils
+    bison-1.75       need by binutils (yacc 91.7.30 have a error YYEMPTY)
+    flex-2.5.4       need by binutils (arlex.l: Permission denied)
     wget-1.8.2       to download source files
     ... and many more ...
 
@@ -340,7 +341,7 @@ Store patch/linux-private.patch, before call bin/build-kernel.sh or make.
 
 To create private configfile, you should diff colinux config with your config
 and store this in file patch/linux-private.patch.
-Run this steps if you have patched colinux kernel in download directory:
+Run this steps, if you have patched colinux kernel in download directory:
  # cd coLinuxDownloadPath/linux-2.6.8.1
  # make menuconfig
  ... configure your kernel and save file .config ...
@@ -354,19 +355,18 @@ Run this steps if you have patched colinux kernel in download directory:
 To create private pathfile for kernel source, you should diff colinux
 kernel with your kernel source and configuration.
 "KPRIVATE" is your kernel, configured and also patched for colinux.
-Please remember: Your private kernel tree should start one directory up,
+Please remember: Your private kernel tree should start one directory up
 from source (patch will be call with -p1)!
- # KVERSION=linux-2.6.8.1
- # KPRIVATE=linux-2.6.8.1-private
+ # VANILLA=linux-2.6.8.1
+ # PRIVATE=/home/$USER/src/linux-2.6.8.1-private
  # cd /tmp
- # bunzip2 -dc linux-$KVERSION.bz2 | tar x
- # cd $KVERSION
- # patch -p1 < coLinuxDevelPath/patch/linux
- # cp coLinuxDevelPath/conf/linux-config .config
- ... here you can make menuconfig for aditional configuration ...
+ # tar xfj $VANILLA.bz2
+ # cd $VANILLA
+ # patch -p1 < DevelPath/patch/linux
+ # cd $PRIVATE
+ ... here you can "make menuconfig" for aditional configuration ...
  # cd ..
  # wget http://www.moses.uklinux.net/patches/dontdiff
- # diff -urN -X dontdiff $KVERSION $KPRIVATE > linux-private.patch
- # diff -urN $KVERSION/.config $KPRIVATE/.config >> linux-private.patch
- # rm -f dontdiff
-
+ # diff -Nur -X dontdiff /tmp/$VANILLA $PRIVATE > linux-private.patch
+ # diff -Nu DevelPath/conf/linux-config $PRIVATE/.config >> linux-private.patch
+ # rm -rf dontdiff /tmp/$VANILLA

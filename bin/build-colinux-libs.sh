@@ -84,7 +84,15 @@ configure_fltk()
 {
 	cd "$SRCDIR/$FLTK"
 	echo "Configuring FLTK"
-	./configure --host=$TARGET >>$COLINUX_BUILD_LOG 2>&1
+	# Using of --host=$TARGET ist old!
+	# Plesae beleve host=i386, also your host is mostly i686!
+	# "i386..." is a pseudonym to enable "cross-compiling",
+	# because target is diffent with "i686..."
+	# Configure for cross compiling. Host Linux
+	./configure \
+	 --prefix=$PREFIX \
+	 --build=$TARGET \
+	 --host=i386-linux-linux-gnu
 	test $? -ne 0 && error_exit 1 "FLTK configure failed"
 	echo "Making FLTK"
 	make -C src >>$COLINUX_BUILD_LOG 2>&1
