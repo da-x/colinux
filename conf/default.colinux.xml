@@ -24,7 +24,7 @@
     <bootparams>root=/dev/cobd0</bootparams>
 
     <!-- Initial RamDISK (initrd) support -->
-    <initrd path="intrd.gz" />
+    <initrd path="initrd.gz" />
     
     <!-- image allows you to specify the kernel to boot -->
     <image path="vmlinux" />

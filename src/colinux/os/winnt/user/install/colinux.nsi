@@ -177,7 +177,7 @@ Section "coLinux Virtual Ethernet Driver (TAP-Win32)" SeccoLinuxNet
   SetOutPath "$INSTDIR\netdriver"
   File "premaid\netdriver\OemWin2k.inf"
   File "premaid\netdriver\tap0801co.sys"
-  File "premaid\netdriver\devcon.exe"
+  File "premaid\netdriver\tapcontrol.exe"
 
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
@@ -320,40 +320,40 @@ Section -post
   IntCmp $R0 ${SF_SELECTED} "" notap notap
     ; TAP install/update was selected.
     ; Should we install or update?
-    ; If devcon error occurred, $5 will
+    ; If tapcontrol error occurred, $5 will
     ; be nonzero.
     IntOp $5 0 & 0
-    nsExec::ExecToStack '"$INSTDIR\netdriver\devcon.exe" hwids TAP0801co'
+    nsExec::ExecToStack '"$INSTDIR\netdriver\tapcontrol.exe" hwids TAP0801co'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
-    DetailPrint "devcon hwids returned: $R0"
+    DetailPrint "tapcontrol hwids returned: $R0"
 
-    ; If devcon output string contains "TAP" we assume
+    ; If tapcontrol output string contains "TAP" we assume
     ; that TAP device has been previously installed,
     ; therefore we will update, not install.
     Push "TAP"
     Call StrStr
     Pop $R0
 
-    IntCmp $5 0 +1 devcon_check_error devcon_check_error
+    IntCmp $5 0 +1 tapcontrol_check_error tapcontrol_check_error
     IntCmp $R0 -1 tapinstall
 
  ;tapupdate:
     DetailPrint "TAP-Win32 UPDATE"
-    nsExec::ExecToLog '"$INSTDIR\netdriver\devcon.exe" update "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
+    nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" update "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
-    DetailPrint "devcon update returned: $R0"
-    Goto devcon_check_error
+    DetailPrint "tapcontrol update returned: $R0"
+    Goto tapcontrol_check_error
 
  tapinstall:
     DetailPrint "TAP-Win32 INSTALL"
-    nsExec::ExecToLog '"$INSTDIR\netdriver\devcon.exe" install "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
+    nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" install "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
-    DetailPrint "devcon install returned: $R0"
+    DetailPrint "tapcontrol install returned: $R0"
 
- devcon_check_error:
+ tapcontrol_check_error:
     IntCmp $5 +1 notap
     MessageBox MB_OK "An error occurred installing the TAP-Win32 device driver."
 
@@ -398,9 +398,9 @@ Section "Uninstall"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux"
 
   DetailPrint "TAP-Win32 REMOVE"
-  nsExec::ExecToLog '"$INSTDIR\netdriver\devcon.exe" remove TAP0801co'
+  nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" remove TAP0801co'
   Pop $R0 # return value/error/timeout
-  DetailPrint "devcon remove returned: $R0"
+  DetailPrint "tapcontrol remove returned: $R0"
 
   nsExec::ExecToStack '"$INSTDIR\colinux-daemon.exe" --remove-driver'
   Pop $R0 # return value/error/timeout
@@ -421,7 +421,7 @@ Section "Uninstall"
 
   Delete "$INSTDIR\netdriver\OemWin2k.inf"
   Delete "$INSTDIR\netdriver\tap0801co.sys"
-  Delete "$INSTDIR\netdriver\devcon.exe"
+  Delete "$INSTDIR\netdriver\tapcontrol.exe"
   
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
