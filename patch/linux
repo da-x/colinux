@@ -22,7 +22,7 @@ diff -urN a/Makefile b/Makefile
  PATCHLEVEL = 6
  SUBLEVEL = 8
 -EXTRAVERSION = .1
-+EXTRAVERSION = .1-co-0.6.2-pre4
++EXTRAVERSION = .1-co-0.6.2-pre5
  NAME=Zonked Quokka
  
  # *DOCUMENTATION*
