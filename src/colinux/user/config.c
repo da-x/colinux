@@ -19,6 +19,70 @@
 
 #include "daemon.h"
 
+static co_rc_t co_load_config_cofs(co_config_t *out_config, mxml_element_t *element)
+{
+    int i;
+    long index = -1;
+    char *path = "";
+    co_cofsdev_desc_t *cofs;
+    char *enabled = NULL;
+    char *type = NULL;
+    
+    for (i=0; i < element->num_attrs; i++) {
+        mxml_attr_t *attr = &element->attrs[i];
+        
+        if (strcmp(attr->name, "index") == 0)
+            index = atoi(attr->value);
+        
+        if (strcmp(attr->name, "path") == 0)
+            path = attr->value;
+        
+        if (strcmp(attr->name, "enabled") == 0)
+            enabled = attr->value;
+        
+        if (strcmp(attr->name, "type") == 0)
+            type = attr->value;
+    }
+    
+    if (index < 0) {
+        co_debug("config: invalid cofs element: bad index\n");
+        return CO_RC(ERROR);
+    }
+    
+    if (index >= CO_MODULE_MAX_COFS) {
+        co_debug("config: invalid cofs element: bad index\n");
+        return CO_RC(ERROR);
+    }
+    
+    if (path == NULL) {
+        co_debug("config: invalid cofs element: bad path\n");
+        return CO_RC(ERROR);
+    }
+    
+    if (type == NULL) {
+        co_debug("cofing: invalid cofs element: no type\n");
+        return CO_RC(ERROR);
+    }
+    
+    cofs = &out_config->cofs_devs[index];
+    
+    if        ( strcmp(type, "flat") == 0 ) {
+        cofs->type = CO_COFS_TYPE_FLAT;
+    } else if ( strcmp(type, "meta") == 0 ) {
+        cofs->type = CO_COFS_TYPE_UNIX_METADATA;
+    } else {
+        co_debug("cofing: invalid cofs element: bad type\n");
+        return CO_RC(ERROR);
+    }
+    
+    snprintf(cofs->pathname, sizeof(cofs->pathname), "%s", path);
+    cofs->enabled = enabled ? (strcmp(enabled, "true") == 0) : 0;
+    
+    co_terminal_print("mapping cofs%d to %s\n", index, cofs->pathname);
+    
+    return CO_RC(OK);
+}
+
 co_rc_t co_load_config_blockdev(co_config_t *out_config, mxml_element_t *element)
 {
 	int i;
@@ -330,7 +394,9 @@ co_rc_t co_load_config(char *text, co_config_t *out_config)
 				rc = co_load_config_memory(out_config, &walk->value.element);
 			} else if (strcmp(name, "network") == 0) {
 				rc = co_load_config_network(out_config, &walk->value.element);
-			}
+			} else if (strcmp(name, "cofs_device") == 0) {
+				rc = co_load_config_cofs(out_config, &walk->value.element);
+            }
 
 			if (!CO_OK(rc))
 				break;
