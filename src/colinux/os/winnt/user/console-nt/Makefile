@@ -25,8 +25,7 @@ $(LOCAL_EXE) : \
 	$(LOCAL_OBJS) \
 	$(BUILD_ROOT)/colinux/common/common.a \
 
-	$(GPP) $^ -o $@ -luser32 -lgdi32 -lkernel32 \
-        -lole32 -luuid -lgdi32 -lmxml # -Wl,--subsystem,windows
+	$(GPP) $^ -o $@ $(USER_DEFAULT_LIBS) 
 
 CLEAN_FILES := $(CLEAN_FILES) \
 	$(LOCAL_OBJS) $(LOCAL_EXE)

@@ -25,7 +25,7 @@ $(LOCAL_EXE) : \
 	$(BUILD_ROOT)/colinux/user/user.a \
 	$(BUILD_ROOT)/colinux/common/common.a
 
-	$(CC) $^ -o $@ -luser32 -lgdi32 -lkernel32 -lmxml
+	$(CC) $^ -o $@ -lmxml $(USER_DEFAULT_LIBS)
 
 CLEAN_FILES := $(CLEAN_FILES) \
 	$(LOCAL_OBJS) $(LOCAL_EXE)

@@ -37,5 +37,3 @@ see, it uses two block devices, one as a root filesystem and another
 as a swap device. Note the above configuration file is for a coLinux
 that runs under Windows, and that these pathnames of these files are 
 absolute under the convention of pathnames used by the Windows kernel.
-
-

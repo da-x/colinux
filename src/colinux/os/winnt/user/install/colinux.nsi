@@ -139,12 +139,6 @@ Section "coLinux" SeccoLinux
   CopyFiles /SILENT "$INSTDIR\default.coLinux.xml" "$INSTDIR\default.coLinux.xml.old"
   File "..\..\..\..\..\..\conf\default.coLinux.xml"
 
-  ; Is the cygwin dll in our path ?
-  SearchPath $R0 "cygwin1.dll"
-  StrCmp $R0 "" 0 CygwinNotNeeded
-  File "premaid\cygwin1.dll"
-  CygwinNotNeeded:
-
 
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
@@ -386,7 +380,6 @@ Section "Uninstall"
   Delete "$INSTDIR\coLinux-daemon.exe"
   Delete "$INSTDIR\coLinux-net-daemon.exe"
   Delete "$INSTDIR\coLinux-bridged-net-daemon.exe"
-  Delete "$INSTDIR\cygwin1.dll"
   Delete "$INSTDIR\packet.dll"
   Delete "$INSTDIR\wpcap.dll"
   Delete "$INSTDIR\linux.sys"

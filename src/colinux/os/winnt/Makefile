@@ -7,7 +7,7 @@ BUILD_PATH := $(BUILD_PATH)/current
 #-----------------------------------------------------------------
 
 ifeq ($(COLINUX_ARCH),i386)
-CROSS_TARGET=i686-pc-cygwin-
+CROSS_TARGET=i686-pc-mingw32-
 else
 $(error Other Windows architectures not supported yet!)
 endif
@@ -24,6 +24,10 @@ CC=$(CROSS_TARGET)gcc
 endif
 GPP=$(CROSS_TARGET)g++
 LD=$(CROSS_TARGET)ld
+
+USER_DEFAULT_LIBS = \
+     -mno-cygwin -luser32 -lgdi32 -lws2_32 \
+     -lkernel32 -lole32 -luuid -lgdi32 -lmsvcrt -lcrtdll 
 
 #-----------------------------------------------------------------
 include $(call BUILD_SUBDIRS, build kernel user)

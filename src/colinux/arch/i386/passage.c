@@ -32,7 +32,7 @@
 
 #include "cpuid.h"
 
-#ifdef __CYGWIN__
+#ifdef __MINGW32__
 #define SYMBOL_PREFIX "_"
 #else
 #define SYMBOL_PREFIX ""

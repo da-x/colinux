@@ -73,7 +73,7 @@ co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 
 		if (CO_OK(rc))
 			request->disk_size = fdev->dev.size;
-		
+
 		return rc;
 	}    
 	default:

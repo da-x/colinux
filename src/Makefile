@@ -81,7 +81,7 @@ CO_INCLUDES=-I$(BUILD_ROOT) -I$(BUILD_ROOT)/../../linux/include
 
 HOST_API_CFLAGS=-DCO_HOST_API
 
-AR=i686-pc-cygwin-ar
+AR=$(CROSS_TARGET)ar
 
 TOOL_USER_CC=$(CC) $(USER_CFLAGS) $(CO_INCLUDES) -c $< -o $@ 
 TOOL_USER_GPP=$(GPP) $(USER_CFLAGS) $(CO_INCLUDES) -c $< -o $@ 

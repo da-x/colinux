@@ -33,6 +33,7 @@ console_widget_t::console_widget_t(int x, int y, int w, int h, const char* label
 	letter_y = font_size;
 	cursor_blink_interval = 0.1;
 	cursor_blink_state = 1;
+	console = 0;
 
 	Fl::add_timeout(cursor_blink_interval, (Fl_Timeout_Handler)(console_widget_t::static_blink_handler), this);
 }

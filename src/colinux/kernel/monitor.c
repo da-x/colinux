@@ -409,7 +409,6 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 		co_rc_t rc;
 
 		message = (co_message_t *)(&co_passage_page->params[1]);
-		co_debug("%d,%d\n", message->from, message->to);
 
 #if (0)
 		if (message->to != 3)
