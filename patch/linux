@@ -129,8 +129,8 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/Makefile linux/arch/i386/kernel
  ifdef CONFIG_PCI
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/kernel/cooperative.c
 --- linux/arch/i386/kernel/cooperative.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/arch/i386/kernel/cooperative.c	2004-04-16 21:04:03.000000000 +0300
-@@ -0,0 +1,175 @@
++++ linux/arch/i386/kernel/cooperative.c	2004-04-20 15:10:47.000000000 +0300
+@@ -0,0 +1,181 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -201,12 +201,16 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/k
 +	switch (message->device) {
 +	case CO_DEVICE_TIMER: {
 +		co_linux_message_idle_t data = *(co_linux_message_idle_t *)message->data;
-+	
++		unsigned long flags;
++
++		local_irq_save(flags);
++		
 +		if (data.tick_count > HZ) {
 +			xtime.tv_sec += data.tick_count / HZ;
 +			data.tick_count -= ((data.tick_count / HZ) * HZ);
 +		}
-+
++		
++		
 +		while (data.tick_count > 0) {
 +			struct pt_regs regs = {0, };
 +			regs.orig_eax = TIMER_IRQ;
@@ -214,6 +218,8 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/cooperative.c linux/arch/i386/k
 +
 +			data.tick_count--;
 +		}
++
++		local_irq_restore(flags);
 +		break;
 +	}
 +	case CO_DEVICE_KEYBOARD: {
@@ -860,8 +866,63 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/
  /*
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/time.c
 --- linux/arch/i386/kernel/time.c	2004-04-20 08:04:01.000000000 +0300
-+++ linux/arch/i386/kernel/time.c	2004-04-14 16:42:13.000000000 +0300
-@@ -121,6 +121,8 @@
++++ linux/arch/i386/kernel/time.c	2004-04-21 15:20:55.000000000 +0300
+@@ -84,8 +84,23 @@
+ 
+ spinlock_t rtc_lock = SPIN_LOCK_UNLOCKED;
+ 
++static inline unsigned long long rdtsc_u64(void)
++{
++	register unsigned long eax, edx;
++
++	rdtsc(eax,edx);
++
++	return ((((unsigned long long)edx) << 32) | eax);
++}
++
++#ifdef CONFIG_COOPERATIVE
++static unsigned long long co_last_interrupt_time;
++static unsigned long co_tsc_per_5_ticks;
++#endif
++
+ static inline unsigned long do_fast_gettimeoffset(void)
+ {
++#ifndef CONFIG_COOPERATIVE
+ 	register unsigned long eax, edx;
+ 
+ 	/* Read the Time Stamp Counter */
+@@ -111,6 +126,30 @@
+ 
+ 	/* our adjusted time offset in microseconds */
+ 	return delay_at_last_interrupt + edx;
++#else
++	union { 
++		unsigned long long ll_var;
++		struct { unsigned long low, high; };
++	} differential;
++	unsigned long edx;
++	unsigned long ret = 0;
++
++	differential.ll_var = rdtsc_u64() - co_last_interrupt_time;
++	if (differential.high)
++		return 0;
++	
++	if (co_tsc_per_5_ticks == 0)
++		return 0;
++
++	differential.ll_var *= 50000;
++
++	__asm__("divl %2"
++		:"=a" (ret), "=d" (edx)
++		:"r" (co_tsc_per_5_ticks),
++		 "0" (differential.low), "1" (differential.high));
++
++	return ret;
++#endif
+ }
+ 
+ #define TICK_SIZE tick
+@@ -121,6 +160,8 @@
  
  extern spinlock_t i8259A_lock;
  
@@ -870,7 +931,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/t
  #ifndef CONFIG_X86_TSC
  
  /* This function must be called with interrupts disabled 
-@@ -254,6 +256,15 @@
+@@ -254,6 +295,15 @@
  	return count;
  }
  
@@ -886,7 +947,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/t
  static unsigned long (*do_gettimeoffset)(void) = do_slow_gettimeoffset;
  
  
-@@ -502,6 +513,7 @@
+@@ -502,6 +552,7 @@
   */
  static int set_rtc_mmss(unsigned long nowtime)
  {
@@ -894,7 +955,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/t
  	int retval = 0;
  	int real_seconds, real_minutes, cmos_minutes;
  	unsigned char save_control, save_freq_select;
-@@ -554,8 +566,13 @@
+@@ -554,8 +605,13 @@
  	CMOS_WRITE(save_control, RTC_CONTROL);
  	CMOS_WRITE(save_freq_select, RTC_FREQ_SELECT);
  	spin_unlock(&rtc_lock);
@@ -902,14 +963,51 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/t
  	return retval;
 +#else
 +	/*
-+	 * Don't let Linux change the system of the host machine.
++	 * Don't let Linux change the system time of the host machine.
 +	 */
 +	return -1;
 +#endif
  }
  
  /* last time the cmos clock got updated */
-@@ -716,6 +733,7 @@
+@@ -603,6 +659,7 @@
+ 		smp_local_timer_interrupt(regs);
+ #endif
+ 
++#ifndef CONFIG_COOPERATIVE
+ 	/*
+ 	 * If we have an externally synchronized Linux clock, then update
+ 	 * CMOS clock accordingly every ~11 minutes. Set_rtc_mmss() has to be
+@@ -617,6 +674,7 @@
+ 		else
+ 			last_rtc_update = xtime.tv_sec - 600; /* do it again in 60 s */
+ 	}
++#endif
+ 	    
+ #ifdef CONFIG_MCA
+ 	if( MCA_bus ) {
+@@ -655,6 +713,7 @@
+ 	 */
+ 	write_lock(&xtime_lock);
+ 
++#ifndef CONFIG_COOPERATIVE
+ 	if(use_cyclone)
+ 		mark_timeoffset_cyclone();
+ 	else if (use_tsc) {
+@@ -706,7 +765,11 @@
+ 		count = ((LATCH-1) - count) * TICK_SIZE;
+ 		delay_at_last_interrupt = (count + LATCH/2) / LATCH;
+ 	}
+-
++#else
++	if (use_tsc) {
++		co_last_interrupt_time = rdtsc_u64();
++	}
++#endif
+ 	do_timer_interrupt(irq, NULL, regs);
+ 
+ 	write_unlock(&xtime_lock);
+@@ -716,6 +779,7 @@
  /* not static: needed by APM */
  unsigned long get_cmos_time(void)
  {
@@ -917,7 +1015,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/t
  	unsigned int year, mon, day, hour, min, sec;
  	int i;
  
-@@ -753,6 +771,9 @@
+@@ -753,6 +817,9 @@
  	if ((year += 1900) < 1970)
  		year += 100;
  	return mktime(year, mon, day, hour, min, sec);
@@ -927,34 +1025,18 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/t
  }
  
  static struct irqaction irq0  = { timer_interrupt, SA_INTERRUPT, 0, "timer", NULL, NULL};
-@@ -771,6 +792,7 @@
+@@ -818,6 +885,10 @@
+ 		if (endlow <= CALIBRATE_TIME)
+ 			goto bad_ctc;
  
- static unsigned long __init calibrate_tsc(void)
- {
-+#ifndef CONFIG_COOPERATIVE_NOT
-        /* Set the Gate high, disable speaker */
- 	outb((inb(0x61) & ~0x02) | 0x01, 0x61);
- 
-@@ -832,6 +854,18 @@
- 	 */
- bad_ctc:
- 	return 0;
-+#else
-+	unsigned long time;
-+	unsigned long flags;
-+
-+	local_irq_save(flags);
-+	co_passage_page->operation = CO_OPERATION_GET_HIGH_PREC_QUOTIENT;
-+	co_switch_wrapper();
-+	time = co_passage_page->params[0];
-+	local_irq_restore(flags);
-+
-+	return time;
++#ifdef CONFIG_COOPERATIVE
++		co_tsc_per_5_ticks = endlow;
 +#endif
- }
- 
- void __init time_init(void)
-@@ -870,7 +904,14 @@
++
+ 		__asm__("divl %2"
+ 			:"=a" (endlow), "=d" (endhigh)
+ 			:"r" (endlow), "0" (0), "1" (CALIBRATE_TIME));
+@@ -870,7 +941,13 @@
  
   	if(use_cyclone)
  		init_cyclone_clock();
@@ -965,7 +1047,6 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/t
 +	 * We pretty much depend on this at the moment...
 +	 */
 +	set_bit(X86_FEATURE_TSC, &boot_cpu_data.x86_capability);
-+	printk("CPU_HAS_TSC: %d", cpu_has_tsc);
 +#endif		
  	if (cpu_has_tsc) {
  		unsigned long tsc_quotient = calibrate_tsc();
@@ -1268,8 +1349,8 @@ diff -X bin/dontdiff -urN linux/drivers/block/Makefile linux/drivers/block/Makef
  
 diff -X bin/dontdiff -urN linux/drivers/block/cobd.c linux/drivers/block/cobd.c
 --- linux/drivers/block/cobd.c	1970-01-01 02:00:00.000000000 +0200
-+++ linux/drivers/block/cobd.c	2004-04-18 09:36:07.000000000 +0300
-@@ -0,0 +1,315 @@
++++ linux/drivers/block/cobd.c	2004-04-20 14:18:01.000000000 +0300
+@@ -0,0 +1,335 @@
 +/*
 + *  Copyright (C) 2003 Dan Aloni <da-x@gmx.net>
 + *
@@ -1344,7 +1425,6 @@ diff -X bin/dontdiff -urN linux/drivers/block/cobd.c linux/drivers/block/cobd.c
 +		     unsigned int cmd, unsigned long arg)
 +{
 +	int err;
-+	unsigned long size;
 +	int dev;
 +
 +	dev = MINOR(inode->i_rdev);
@@ -1352,6 +1432,8 @@ diff -X bin/dontdiff -urN linux/drivers/block/cobd.c linux/drivers/block/cobd.c
 +	switch(cmd) {
 +
 +	case BLKGETSIZE: {
++		unsigned long size;
++		
 +		/* Return the device size, expressed in sectors */
 +		if (!arg) 
 +			return -EINVAL; /* NULL pointer: not valid */
@@ -1362,6 +1444,25 @@ diff -X bin/dontdiff -urN linux/drivers/block/cobd.c linux/drivers/block/cobd.c
 +
 +		size = (cobd_sizes[dev]) * (1024 / cobd_hardsects[dev]);
 +		if (copy_to_user((unsigned long *) arg, &size, sizeof (unsigned long)))
++			return -EFAULT;
++
++		return 0;
++	}
++
++	case BLKGETSIZE64: {
++		unsigned long long size;
++
++		/* Return the device size, expressed in sectors */
++		if (!arg) 
++			return -EINVAL; /* NULL pointer: not valid */
++
++		err = !access_ok (VERIFY_WRITE, arg, sizeof(unsigned long long));
++		if (err) 
++			return -EFAULT;
++
++		size = cobd_sizes[dev];
++		size = size * 1024;
++		if (copy_to_user((unsigned long long *) arg, &size, sizeof (unsigned long long)))
 +			return -EFAULT;
 +
 +		return 0;
@@ -3778,7 +3879,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm
 +#endif
 diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dma.h
 --- linux/include/asm-i386/dma.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/dma.h	2004-04-18 09:27:08.000000000 +0300
++++ linux/include/asm-i386/dma.h	2004-04-21 18:36:58.000000000 +0300
 @@ -268,6 +268,8 @@
   *
   * Assumes DMA flip-flop is clear.
@@ -3799,7 +3900,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dm
  extern int request_dma(unsigned int dmanr, const char * device_id);	/* reserve a DMA channel */
 diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.h
 --- linux/include/asm-i386/io.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/io.h	2004-04-18 09:27:08.000000000 +0300
++++ linux/include/asm-i386/io.h	2004-04-21 18:36:55.000000000 +0300
 @@ -2,6 +2,7 @@
  #define _ASM_IO_H
  
@@ -3869,7 +3970,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.
  #endif
 diff -X bin/dontdiff -urN linux/include/asm-i386/irq.h linux/include/asm-i386/irq.h
 --- linux/include/asm-i386/irq.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/irq.h	2004-04-17 21:25:58.000000000 +0300
++++ linux/include/asm-i386/irq.h	2004-04-21 18:36:43.000000000 +0300
 @@ -14,6 +14,10 @@
  
  #define TIMER_IRQ 0
@@ -3892,7 +3993,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/irq.h linux/include/asm-i386/ir
  #define NR_IRQS 16
 diff -X bin/dontdiff -urN linux/include/asm-i386/mc146818rtc.h linux/include/asm-i386/mc146818rtc.h
 --- linux/include/asm-i386/mc146818rtc.h	2001-11-22 21:46:58.000000000 +0200
-+++ linux/include/asm-i386/mc146818rtc.h	2004-04-18 09:27:45.000000000 +0300
++++ linux/include/asm-i386/mc146818rtc.h	2004-04-21 18:38:32.000000000 +0300
 @@ -4,6 +4,7 @@
  #ifndef _ASM_MC146818RTC_H
  #define _ASM_MC146818RTC_H
@@ -3923,7 +4024,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/mc146818rtc.h linux/include/asm
  #endif /* _ASM_MC146818RTC_H */
 diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/page.h
 --- linux/include/asm-i386/page.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/page.h	2004-04-17 21:25:58.000000000 +0300
++++ linux/include/asm-i386/page.h	2004-04-21 18:36:43.000000000 +0300
 @@ -1,6 +1,10 @@
  #ifndef _I386_PAGE_H
  #define _I386_PAGE_H
@@ -3998,7 +4099,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/p
  #define VM_DATA_DEFAULT_FLAGS	(VM_READ | VM_WRITE | VM_EXEC | \
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgalloc.h linux/include/asm-i386/pgalloc.h
 --- linux/include/asm-i386/pgalloc.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/pgalloc.h	2004-04-17 21:25:58.000000000 +0300
++++ linux/include/asm-i386/pgalloc.h	2004-04-21 18:36:43.000000000 +0300
 @@ -11,8 +11,13 @@
  #define pte_quicklist (current_cpu_data.pte_quick)
  #define pgtable_cache_size (current_cpu_data.pgtable_cache_sz)
@@ -4016,7 +4117,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgalloc.h linux/include/asm-i38
   * Allocate and free page tables.
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable-2level.h linux/include/asm-i386/pgtable-2level.h
 --- linux/include/asm-i386/pgtable-2level.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/pgtable-2level.h	2004-04-17 21:25:58.000000000 +0300
++++ linux/include/asm-i386/pgtable-2level.h	2004-04-21 18:36:43.000000000 +0300
 @@ -58,8 +58,14 @@
  }
  #define ptep_get_and_clear(xp)	__pte(xchg(&(xp)->pte_low, 0))
@@ -4035,7 +4136,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable-2level.h linux/include/
  #endif /* _I386_PGTABLE_2LEVEL_H */
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable.h linux/include/asm-i386/pgtable.h
 --- linux/include/asm-i386/pgtable.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/pgtable.h	2004-04-17 21:25:58.000000000 +0300
++++ linux/include/asm-i386/pgtable.h	2004-04-21 18:36:43.000000000 +0300
 @@ -320,8 +320,13 @@
  
  #define page_pte(page) page_pte_prot(page, __pgprot(0))
@@ -4053,7 +4154,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable.h linux/include/asm-i38
  #define pgd_index(address) ((address >> PGDIR_SHIFT) & (PTRS_PER_PGD-1))
 diff -X bin/dontdiff -urN linux/include/asm-i386/processor.h linux/include/asm-i386/processor.h
 --- linux/include/asm-i386/processor.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/processor.h	2004-04-17 21:25:58.000000000 +0300
++++ linux/include/asm-i386/processor.h	2004-04-21 18:36:43.000000000 +0300
 @@ -181,8 +181,18 @@
  #define X86_CR4_OSFXSR		0x0200	/* enable fast FPU save and restore */
  #define X86_CR4_OSXMMEXCPT	0x0400	/* enable unmasked SSE exceptions */
@@ -4076,7 +4177,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/processor.h linux/include/asm-i
   * Save the cr4 feature set we're using (ie
 diff -X bin/dontdiff -urN linux/include/asm-i386/system.h linux/include/asm-i386/system.h
 --- linux/include/asm-i386/system.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/asm-i386/system.h	2004-04-17 21:25:58.000000000 +0300
++++ linux/include/asm-i386/system.h	2004-04-21 18:36:43.000000000 +0300
 @@ -12,7 +12,15 @@
  struct task_struct;	/* one of the stranger aspects of C forward declarations.. */
  extern void FASTCALL(__switch_to(struct task_struct *prev, struct task_struct *next));
@@ -4095,7 +4196,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/system.h linux/include/asm-i386
  		     "pushl %%edi\n\t"					\
 diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/console.h
 --- linux/include/linux/console.h	2004-04-20 08:04:01.000000000 +0300
-+++ linux/include/linux/console.h	2004-04-17 21:25:58.000000000 +0300
++++ linux/include/linux/console.h	2004-04-21 18:36:43.000000000 +0300
 @@ -55,6 +55,7 @@
  extern const struct consw dummy_con;	/* dummy console buffer */
  extern const struct consw fb_con;	/* frame buffer based console */
@@ -4106,7 +4207,7 @@ diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/cons
  
 diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/cooperative.h
 --- linux/include/linux/cooperative.h	1970-01-01 02:00:00.000000000 +0200
-+++ linux/include/linux/cooperative.h	2004-04-18 09:18:16.000000000 +0300
++++ linux/include/linux/cooperative.h	2004-04-21 17:51:30.000000000 +0300
 @@ -0,0 +1,315 @@
 +#ifndef __LINUX_COOPERATIVE_H__
 +#define __LINUX_COOPERATIVE_H__
@@ -4398,8 +4499,8 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +		struct {
 +			unsigned long long offset;
 +			unsigned long long size;
-+			vm_ptr_t address;
 +			unsigned long long disk_size;
++			vm_ptr_t address;
 +		};
 +		struct {
 +			char alias[20];
@@ -4832,831 +4933,3 @@ diff -X bin/dontdiff -urN linux/mm/vmalloc.c linux/mm/vmalloc.c
  		set_pte(pte, mk_pte(page, prot));
  		address += PAGE_SIZE;
  		pte++;
-diff -X bin/dontdiff -urN linux/rdev linux/rdev
---- linux/rdev	1970-01-01 02:00:00.000000000 +0200
-+++ linux/rdev	2004-04-17 23:35:31.000000000 +0300
-@@ -0,0 +1,824 @@
-+./fs/stat.c:	tmp.st_rdev = kdev_t_to_nr(inode->i_rdev);
-+./fs/stat.c:	tmp.st_rdev = kdev_t_to_nr(inode->i_rdev);
-+./fs/stat.c:	tmp.st_rdev = kdev_t_to_nr(inode->i_rdev);
-+./fs/quota.c:	dev = nd.dentry->d_inode->i_rdev;
-+./fs/hfsplus/inode.c:			HFSPLUS_I(inode).dev = kdev_t_to_nr(inode->i_rdev);
-+./fs/block_dev.c:	if (iblock >= max_block(inode->i_rdev))
-+./fs/block_dev.c:	bh->b_dev = inode->i_rdev;
-+./fs/block_dev.c:	err = sync_buffers(inode->i_rdev, 1);
-+./fs/block_dev.c:			inode->i_rdev = kdev;
-+./fs/block_dev.c:	bdev = bdget(kdev_t_to_nr(inode->i_rdev));
-+./fs/block_dev.c:	 * examine anything in 'inode' argument except ->i_rdev.
-+./fs/jfs/jfs_imap.c:		ip->i_rdev = to_kdev_t(le32_to_cpu(dip->di_rdev));
-+./fs/jfs/jfs_imap.c:		dip->di_rdev = cpu_to_le32(kdev_t_to_nr(ip->i_rdev));
-+./fs/jfs/inode.c:				   kdev_t_to_nr(inode->i_rdev));
-+./fs/minix/inode.c:		raw_inode->i_zone[0] = kdev_t_to_nr(inode->i_rdev);
-+./fs/minix/inode.c:		raw_inode->i_zone[0] = kdev_t_to_nr(inode->i_rdev);
-+./fs/isofs/inode.c:			/* XXX - parse_rock_ridge_inode() had already set i_rdev. */
-+./fs/isofs/inode.c:					   kdev_t_to_nr(inode->i_rdev));
-+./fs/isofs/rock.c:	    inode->i_rdev = MKDEV(low >> 8, low & 0xff);
-+./fs/isofs/rock.c:	    inode->i_rdev = MKDEV(high, low);
-+./fs/isofs/rock.c:	inode->i_rdev = reloc->i_rdev;
-+./fs/devices.c:	filp->f_op = get_chrfops(MAJOR(inode->i_rdev), MINOR(inode->i_rdev));
-+./fs/devices.c:		inode->i_rdev = to_kdev_t(rdev);
-+./fs/devices.c:		inode->i_rdev = to_kdev_t(rdev);
-+./fs/nfs/inode.c:	inode->i_rdev = 0;
-+./fs/nfs/inode.c: 	inode->i_rdev = 0;
-+./fs/nfs/inode.c: 		inode->i_rdev = to_kdev_t(fattr->rdev);
-+./fs/ext2/inode.c:		raw_inode->i_block[0] = cpu_to_le32(kdev_t_to_nr(inode->i_rdev));
-+./fs/umsdos/dir.c:	inode->i_rdev = to_kdev_t (entry->rdev);
-+./fs/umsdos/inode.c:					kdev_t_to_nr(inode->i_rdev));
-+./fs/hpfs/inode.c:			int d = kdev_t_to_nr(i->i_rdev);
-+./fs/sysv/inode.c:			cpu_to_fs32(sb, kdev_t_to_nr(inode->i_rdev));
-+./fs/smbfs/inode.c:	fattr->f_rdev	= inode->i_rdev;
-+./fs/smbfs/inode.c:	inode->i_rdev	= fattr->f_rdev;
-+./fs/ncpfs/inode.c:	inode->i_rdev = 0;
-+./fs/ufs/inode.c:		ufs_inode->ui_u2.ui_addr.ui_db[0] = cpu_to_fs32(sb, kdev_t_to_nr(inode->i_rdev));
-+./fs/nfsd/nfsxdr.c:		*p++ = htonl((u32) inode->i_rdev);
-+./fs/nfsd/nfsproc.c:					attr->ia_size = inode->i_rdev;
-+./fs/nfsd/nfsproc.c:		    (is_borc && inode->i_rdev != rdev)))
-+./fs/nfsd/nfs3xdr.c:	*p++ = htonl((u32) MAJOR(inode->i_rdev));
-+./fs/nfsd/nfs3xdr.c:	*p++ = htonl((u32) MINOR(inode->i_rdev));
-+./fs/coda/psdev.c:	idx = MINOR(inode->i_rdev);
-+./fs/coda/inode.c:	   MAJOR(inode->i_rdev) != CODA_PSDEV_MAJOR) {
-+./fs/coda/inode.c:	idx = MINOR(inode->i_rdev);
-+./fs/hfs/inode.c:		inode->i_rdev = 0;
-+./fs/udf/inode.c:		dsea->majorDeviceIdent = kdev_t_to_nr(inode->i_rdev) >> 8;
-+./fs/udf/inode.c:		dsea->minorDeviceIdent = kdev_t_to_nr(inode->i_rdev) & 0xFF;
-+./fs/devfs/base.c:    inode->i_rdev = NODEV;
-+./fs/devfs/base.c:	inode->i_rdev = mk_kdev (de->u.fcb.u.device.major,
-+./fs/devfs/base.c:	inode->i_cdev = cdget ( kdev_t_to_nr (inode->i_rdev) );
-+./fs/devfs/base.c:	inode->i_rdev = mk_kdev (de->u.fcb.u.device.major,
-+./fs/jffs/inode-v23.c:	inode->i_rdev = 0;
-+./fs/jffs/inode-v23.c:		   added to the inode's i_rdev member.  */
-+./fs/autofs4/inode.c:	inode->i_rdev = 0;
-+./fs/ramfs/inode.c:		inode->i_rdev = NODEV;
-+./fs/reiserfs/inode.c:        set_sd_v2_rdev(sd_v2, inode->i_rdev );
-+./fs/reiserfs/inode.c:        set_sd_v1_rdev(sd_v1, inode->i_rdev );
-+./fs/freevxfs/vxfs_inode.c:		init_special_inode(ip, ip->i_mode, vip->vii_rdev);
-+./fs/jffs2/gc.c:		dev =  (MAJOR(to_kdev_t(inode->i_rdev)) << 8) | 
-+./fs/jffs2/gc.c:			MINOR(to_kdev_t(inode->i_rdev));
-+./fs/jffs2/file.c:		dev =  (MAJOR(to_kdev_t(dentry->d_inode->i_rdev)) << 8) | 
-+./fs/jffs2/file.c:			MINOR(to_kdev_t(dentry->d_inode->i_rdev));
-+./fs/intermezzo/vfs.c:        rb->rb_rdev = (__u32)inode->i_rdev;
-+./fs/ext3/inode.c:			cpu_to_le32(kdev_t_to_nr(inode->i_rdev));
-+./fs/xfs/linux/xfs_iops.c:			ip->i_rdev = to_kdev_t(rdev);
-+./fs/xfs/linux/xfs_super.c:					kdev_t_to_nr(inode->i_rdev));
-+./fs/xfs/linux/xfs_super.c:		inode->i_rdev = NODEV;
-+./fs/xfs/linux/xfs_super.c:		inode->i_rdev = XFS_DEV_TO_KDEVT(dev);
-+./fs/xfs/linux/xfs_super.c:	*bdevp = bdget(kdev_t_to_nr(nd.dentry->d_inode->i_rdev));
-+./init/main.o.ppc.c.trace.c:        kdev_t i_rdev;
-+./init/do_mounts.o.ppc.c:        kdev_t i_rdev;
-+./mm/shmem.c:		inode->i_rdev = NODEV;
-+./mm/filemap.c:		if (is_read_only(inode->i_rdev)) {
-+./mm/swapfile.c:		kdev_t dev = swap_inode->i_rdev;
-+./net/netlink/netlink_dev.c:	struct socket *sock = netlink_user[MINOR(file->f_dentry->d_inode->i_rdev)];
-+./net/netlink/netlink_dev.c:	struct socket *sock = netlink_user[MINOR(inode->i_rdev)];
-+./net/netlink/netlink_dev.c:	struct socket *sock = netlink_user[MINOR(inode->i_rdev)];
-+./net/netlink/netlink_dev.c:	unsigned int minor = MINOR(inode->i_rdev);
-+./net/netlink/netlink_dev.c:	unsigned int minor = MINOR(inode->i_rdev);
-+./net/netlink/netlink_dev.c:	unsigned int minor = MINOR(inode->i_rdev);
-+./drivers/net/wan/cosa.c:	if ((n=MINOR(file->f_dentry->d_inode->i_rdev)>>CARD_MINOR_BITS)
-+./drivers/net/wan/cosa.c:	if ((n=MINOR(file->f_dentry->d_inode->i_rdev)
-+./drivers/net/wan/cosa.c:        int port = MINOR(inode->i_rdev);
-+./drivers/net/wan/8253x/8253xchr.c:	line = MINOR(inodep->i_rdev);	/* let's find which physical device to use */
-+./drivers/block/umem.c:static int mm_revalidate(kdev_t i_rdev)
-+./drivers/block/umem.c:	int card_number = DEVICE_NR(i_rdev);
-+./drivers/block/umem.c:	int part1 = (DEVICE_NR(i_rdev) << MM_SHIFT) + 1;
-+./drivers/block/umem.c:	printk(KERN_INFO "mm partition check: (%d)\n", DEVICE_NR(i_rdev));
-+./drivers/block/umem.c:	if (!i || !i->i_rdev)
-+./drivers/block/umem.c:	minor       = MINOR(i->i_rdev);
-+./drivers/block/umem.c:		copy_to_user((long *)arg, &read_ahead[MAJOR(i->i_rdev)],sizeof(long));
-+./drivers/block/umem.c:		read_ahead[MAJOR(i->i_rdev)] = arg;
-+./drivers/block/umem.c:		return (mm_revalidate(i->i_rdev));
-+./drivers/block/umem.c:		return blk_ioctl(i->i_rdev, cmd, arg);
-+./drivers/block/umem.c:static int mm_check_change(kdev_t i_rdev)
-+./drivers/block/umem.c:	int card_number = DEVICE_NR(i_rdev);
-+./drivers/block/umem.c:	num = DEVICE_NR(i->i_rdev);
-+./drivers/block/umem.c:	num = DEVICE_NR(i->i_rdev);
-+./drivers/block/umem.c:		invalidate_device(i->i_rdev, 1);
-+./drivers/block/cciss.c: 	int ctlr = map_major_to_ctlr[MAJOR(inode->i_rdev)];
-+./drivers/block/cciss.c:	int dsk  = MINOR(inode->i_rdev) >> NWD_SHIFT;
-+./drivers/block/cciss.c:	printk(KERN_DEBUG "cciss_open %x (%x:%x)\n", inode->i_rdev, ctlr, dsk);
-+./drivers/block/cciss.c:	if (hba[ctlr]->sizes[MINOR(inode->i_rdev)] == 0) { /* not online? */
-+./drivers/block/cciss.c:		if (MINOR(inode->i_rdev) != 0) {	 /* not node 0? */
-+./drivers/block/cciss.c:			if (MINOR(inode->i_rdev) & 0x0f) {
-+./drivers/block/cciss.c:			} else if (hba[ctlr]->drv[MINOR(inode->i_rdev)
-+./drivers/block/cciss.c:	int ctlr = map_major_to_ctlr[MAJOR(inode->i_rdev)];
-+./drivers/block/cciss.c:	int dsk  = MINOR(inode->i_rdev) >> NWD_SHIFT;
-+./drivers/block/cciss.c:	printk(KERN_DEBUG "cciss_release %x (%x:%x)\n", inode->i_rdev, ctlr, dsk);
-+./drivers/block/cciss.c:	/* fsync_dev(inode->i_rdev); */
-+./drivers/block/cciss.c:	int ctlr = map_major_to_ctlr[MAJOR(inode->i_rdev)];
-+./drivers/block/cciss.c:	int dsk  = MINOR(inode->i_rdev) >> NWD_SHIFT;
-+./drivers/block/cciss.c:			hba[ctlr]->hd[MINOR(inode->i_rdev)].start_sect;
-+./drivers/block/cciss.c:		hba[ctlr]->hd[MINOR(inode->i_rdev)].start_sect;
-+./drivers/block/cciss.c:		return revalidate_logvol(inode->i_rdev, 1);
-+./drivers/block/cciss.c:		return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/block/swim3.c:	int devnum = MINOR(inode->i_rdev);
-+./drivers/block/swim3.c:	int devnum = MINOR(inode->i_rdev);
-+./drivers/block/swim3.c:		check_disk_change(inode->i_rdev);
-+./drivers/block/swim3.c:	int devnum = MINOR(inode->i_rdev);
-+./drivers/block/nbd.c:	dev = MINOR(inode->i_rdev);
-+./drivers/block/nbd.c:	dev = MINOR(inode->i_rdev);
-+./drivers/block/nbd.c:	dev = MINOR(inode->i_rdev);
-+./drivers/block/loop.c:		lo_device = inode->i_rdev;
-+./drivers/block/loop.c:	if (MAJOR(inode->i_rdev) != MAJOR_NR) {
-+./drivers/block/loop.c:	dev = MINOR(inode->i_rdev);
-+./drivers/block/loop.c:		err = loop_set_fd(lo, file, inode->i_rdev, arg);
-+./drivers/block/loop.c:		err = blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/block/loop.c:	if (MAJOR(inode->i_rdev) != MAJOR_NR) {
-+./drivers/block/loop.c:	dev = MINOR(inode->i_rdev);
-+./drivers/block/loop.c:	if (MAJOR(inode->i_rdev) != MAJOR_NR) {
-+./drivers/block/loop.c:	dev = MINOR(inode->i_rdev);
-+./drivers/block/floppy.c:	device = inode->i_rdev;
-+./drivers/block/floppy.c:	int drive = DRIVE(inode->i_rdev);
-+./drivers/block/floppy.c:	drive = DRIVE(inode->i_rdev);
-+./drivers/block/floppy.c:	if (TYPE(inode->i_rdev) >= NUMBER(floppy_type))
-+./drivers/block/floppy.c:	if (UDRS->fd_ref && old_dev != MINOR(inode->i_rdev))
-+./drivers/block/floppy.c:	UDRS->fd_device = MINOR(inode->i_rdev);
-+./drivers/block/floppy.c:	if (old_dev != -1 && old_dev != MINOR(inode->i_rdev)) {
-+./drivers/block/floppy.c:		check_disk_change(inode->i_rdev);
-+./drivers/block/cpqarray.c:	int ctlr = MAJOR(inode->i_rdev) - MAJOR_NR;
-+./drivers/block/cpqarray.c:	int dsk  = MINOR(inode->i_rdev) >> NWD_SHIFT;
-+./drivers/block/cpqarray.c:	DBGINFO(printk("ida_open %x (%x:%x)\n", inode->i_rdev, ctlr, dsk) );
-+./drivers/block/cpqarray.c:	if (hba[ctlr]->sizes[MINOR(inode->i_rdev)] == 0) {
-+./drivers/block/cpqarray.c:		if (MINOR(inode->i_rdev) != 0)
-+./drivers/block/cpqarray.c:	int ctlr = MAJOR(inode->i_rdev) - MAJOR_NR;
-+./drivers/block/cpqarray.c:	int dsk  = MINOR(inode->i_rdev) >> NWD_SHIFT;
-+./drivers/block/cpqarray.c:	DBGINFO(printk("ida_release %x (%x:%x)\n", inode->i_rdev, ctlr, dsk) );
-+./drivers/block/cpqarray.c:	int ctlr = MAJOR(inode->i_rdev) - MAJOR_NR;
-+./drivers/block/cpqarray.c:	int dsk  = MINOR(inode->i_rdev) >> NWD_SHIFT;
-+./drivers/block/cpqarray.c:		hba[ctlr]->hd[MINOR(inode->i_rdev)].start_sect;
-+./drivers/block/cpqarray.c:			hba[ctlr]->hd[MINOR(inode->i_rdev)].start_sect;
-+./drivers/block/cpqarray.c:		return revalidate_logvol(inode->i_rdev, 1);
-+./drivers/block/cpqarray.c:		return revalidate_allvol(inode->i_rdev);
-+./drivers/block/cpqarray.c:		return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/block/amiflop.c:	int drive = inode->i_rdev & 3;
-+./drivers/block/amiflop.c:		fsync_dev(inode->i_rdev);
-+./drivers/block/amiflop.c:		invalidate_device(inode->i_rdev, 0);
-+./drivers/block/amiflop.c:	drive = MINOR(inode->i_rdev) & 3;
-+./drivers/block/amiflop.c:		if (old_dev != inode->i_rdev)
-+./drivers/block/amiflop.c:		check_disk_change(inode->i_rdev);
-+./drivers/block/amiflop.c:	fd_device[drive] = inode->i_rdev;
-+./drivers/block/amiflop.c:	if (old_dev && old_dev != inode->i_rdev)
-+./drivers/block/amiflop.c:	system=(inode->i_rdev & 4)>>2;
-+./drivers/block/amiflop.c:	floppy_sizes[MINOR(inode->i_rdev)] = unit[drive].blocks >> 1;
-+./drivers/block/amiflop.c:	int drive = MINOR(inode->i_rdev) & 3;
-+./drivers/block/xd.c:	int dev = DEVICE_NR(inode->i_rdev);
-+./drivers/block/xd.c:	if ((!inode) || !(inode->i_rdev))
-+./drivers/block/xd.c: 	dev = DEVICE_NR(inode->i_rdev);
-+./drivers/block/xd.c:			g.start = xd_struct[MINOR(inode->i_rdev)].start_sect;
-+./drivers/block/xd.c:			return xd_reread_partitions(inode->i_rdev);
-+./drivers/block/xd.c:			return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/block/xd.c:	int target = DEVICE_NR(inode->i_rdev);
-+./drivers/block/rd.c:	if (!inode || !inode->i_rdev) 	
-+./drivers/block/rd.c:	minor = MINOR(inode->i_rdev);
-+./drivers/block/rd.c:			invalidate_buffers(inode->i_rdev);
-+./drivers/block/rd.c:			error = blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/block/rd.c:	int unit = DEVICE_NR(inode->i_rdev);
-+./drivers/block/rd.c:		rd_bdev[unit] = bdget(kdev_t_to_nr(inode->i_rdev));
-+./drivers/block/ps2esdi.c:	int dev = DEVICE_NR(inode->i_rdev);
-+./drivers/block/ps2esdi.c:	int dev = DEVICE_NR(inode->i_rdev);
-+./drivers/block/ps2esdi.c:	int dev = DEVICE_NR(inode->i_rdev), err;
-+./drivers/block/ps2esdi.c:				put_user(ps2esdi[MINOR(inode->i_rdev)].start_sect,
-+./drivers/block/ps2esdi.c:			return (ps2esdi_reread_partitions(inode->i_rdev));
-+./drivers/block/ps2esdi.c:			return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/block/ataflop.c:	device = inode->i_rdev;
-+./drivers/block/ataflop.c:	drive = MINOR(inode->i_rdev) & 3;
-+./drivers/block/ataflop.c:	type  = MINOR(inode->i_rdev) >> 2;
-+./drivers/block/ataflop.c:	if (fd_ref[drive] && old_dev != MINOR(inode->i_rdev))
-+./drivers/block/ataflop.c:	fd_device[drive] = MINOR(inode->i_rdev);
-+./drivers/block/ataflop.c:	if (old_dev && old_dev != MINOR(inode->i_rdev))
-+./drivers/block/ataflop.c:		check_disk_change(inode->i_rdev);
-+./drivers/block/ataflop.c:	int drive = MINOR(inode->i_rdev) & 3;
-+./drivers/block/acsi_slm.c:	length = slm_getstats( (char *)page, MINOR(node->i_rdev) );
-+./drivers/block/acsi_slm.c:	int		device = MINOR( node->i_rdev );
-+./drivers/block/acsi_slm.c:{	int		device = MINOR( inode->i_rdev ), err;
-+./drivers/block/acsi_slm.c:	device = MINOR(inode->i_rdev);
-+./drivers/block/acsi_slm.c:	device = MINOR(inode->i_rdev);
-+./drivers/block/acsi.c:	dev = DEVICE_NR(MINOR(inode->i_rdev));
-+./drivers/block/acsi.c:		put_user( acsi_part[MINOR(inode->i_rdev)].start_sect, &geo->start );
-+./drivers/block/acsi.c:		return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/block/acsi.c:		return revalidate_acsidisk(inode->i_rdev, 1);
-+./drivers/block/acsi.c:	device = DEVICE_NR(MINOR(inode->i_rdev));
-+./drivers/block/acsi.c:		check_disk_change( inode->i_rdev );
-+./drivers/block/acsi.c:		check_disk_change( inode->i_rdev );
-+./drivers/block/acsi.c:	int device = DEVICE_NR(MINOR(inode->i_rdev));
-+./drivers/block/DAC960.c:  int ControllerNumber = DAC960_ControllerNumber(Inode->i_rdev);
-+./drivers/block/DAC960.c:  int LogicalDriveNumber = DAC960_LogicalDriveNumber(Inode->i_rdev);
-+./drivers/block/DAC960.c:  if (Controller->GenericDiskInfo.sizes[MINOR(Inode->i_rdev)] == 0)
-+./drivers/block/DAC960.c:  int ControllerNumber = DAC960_ControllerNumber(Inode->i_rdev);
-+./drivers/block/DAC960.c:  int LogicalDriveNumber = DAC960_LogicalDriveNumber(Inode->i_rdev);
-+./drivers/block/DAC960.c:  int ControllerNumber = DAC960_ControllerNumber(Inode->i_rdev);
-+./drivers/block/DAC960.c:  int LogicalDriveNumber = DAC960_LogicalDriveNumber(Inode->i_rdev);
-+./drivers/block/DAC960.c:	Controller->GenericDiskInfo.part[MINOR(Inode->i_rdev)].start_sect;
-+./drivers/block/DAC960.c:      return put_user(Controller->GenericDiskInfo.part[MINOR(Inode->i_rdev)]
-+./drivers/block/DAC960.c:				       .part[MINOR(Inode->i_rdev)]
-+./drivers/block/DAC960.c:      return blk_ioctl(Inode->i_rdev, Request, Argument);
-+./drivers/block/z2ram.c:    device = DEVICE_NR( inode->i_rdev );
-+./drivers/block/swim_iop.c:	int devnum = MINOR(inode->i_rdev);
-+./drivers/block/swim_iop.c:	int devnum = MINOR(inode->i_rdev);
-+./drivers/block/swim_iop.c:		check_disk_change(inode->i_rdev);
-+./drivers/block/swim_iop.c:	int devnum = MINOR(inode->i_rdev);
-+./drivers/block/paride/pf.c:{       int	unit = DEVICE_NR(inode->i_rdev);
-+./drivers/block/paride/pf.c:        if ((!inode) || (!inode->i_rdev)) return -EINVAL;
-+./drivers/block/paride/pf.c:        unit = DEVICE_NR(inode->i_rdev);
-+./drivers/block/paride/pf.c:		return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/block/paride/pf.c:        devp = inode->i_rdev;
-+./drivers/block/paride/pd.c:{       int unit = DEVICE_NR(inode->i_rdev);
-+./drivers/block/paride/pd.c:        if ((!inode) || (!inode->i_rdev)) return -EINVAL;
-+./drivers/block/paride/pd.c:        dev = MINOR(inode->i_rdev);
-+./drivers/block/paride/pd.c:	unit = DEVICE_NR(inode->i_rdev);
-+./drivers/block/paride/pd.c:                return pd_revalidate(inode->i_rdev);
-+./drivers/block/paride/pd.c:		return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/block/paride/pd.c:        devp = inode->i_rdev;
-+./drivers/block/paride/pt.c:{       int	unit = DEVICE_NR(inode->i_rdev);
-+./drivers/block/paride/pt.c:	if (!(MINOR(inode->i_rdev) & 128))
-+./drivers/block/paride/pt.c:        if (!inode || !inode->i_rdev)
-+./drivers/block/paride/pt.c:        unit = DEVICE_NR(inode->i_rdev);
-+./drivers/block/paride/pt.c:        int	unit = DEVICE_NR(inode->i_rdev);
-+./drivers/block/paride/pt.c:	int	unit = DEVICE_NR(ino->i_rdev);
-+./drivers/block/paride/pt.c:        int unit = DEVICE_NR(ino->i_rdev);
-+./drivers/block/paride/pg.c:{       int	unit = DEVICE_NR(inode->i_rdev);
-+./drivers/block/paride/pg.c:	int	unit = DEVICE_NR(inode->i_rdev);
-+./drivers/block/paride/pg.c:	int                     unit = DEVICE_NR(ino->i_rdev);
-+./drivers/block/paride/pg.c:	int			unit = DEVICE_NR(ino->i_rdev);
-+./drivers/block/cobd.c:	dev = MINOR(inode->i_rdev);
-+./drivers/block/cobd.c:		return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/block/cobd.c:	int dev = MINOR(inode->i_rdev);
-+./drivers/block/cobd.c:	co_passage_page->params[1] = DEVICE_NR(inode->i_rdev);
-+./drivers/block/cobd.c:	co_passage_page->params[1] = DEVICE_NR(inode->i_rdev);
-+./drivers/char/tty_io.c:		if (filp->f_dentry->d_inode->i_rdev == CONSOLE_DEV ||
-+./drivers/char/tty_io.c:		    filp->f_dentry->d_inode->i_rdev == SYSCONS_DEV) {
-+./drivers/char/tty_io.c:	if (tty_paranoia_check(tty, inode->i_rdev, "tty_read"))
-+./drivers/char/tty_io.c:	if ((inode->i_rdev != CONSOLE_DEV) && /* don't stop on /dev/console */
-+./drivers/char/tty_io.c:	is_console = (inode->i_rdev == SYSCONS_DEV ||
-+./drivers/char/tty_io.c:		      inode->i_rdev == CONSOLE_DEV);
-+./drivers/char/tty_io.c:	if (tty_paranoia_check(tty, inode->i_rdev, "tty_write"))
-+./drivers/char/tty_io.c:	if (tty_paranoia_check(tty, filp->f_dentry->d_inode->i_rdev, "release_dev"))
-+./drivers/char/tty_io.c:	device = inode->i_rdev;
-+./drivers/char/tty_io.c:	if (tty_paranoia_check(tty, filp->f_dentry->d_inode->i_rdev, "tty_poll"))
-+./drivers/char/tty_io.c:	if (tty_paranoia_check(tty, filp->f_dentry->d_inode->i_rdev, "tty_fasync"))
-+./drivers/char/tty_io.c:	if (inode->i_rdev == SYSCONS_DEV ||
-+./drivers/char/tty_io.c:	    inode->i_rdev == CONSOLE_DEV) {
-+./drivers/char/tty_io.c:	if (tty_paranoia_check(tty, inode->i_rdev, "tty_ioctl"))
-+./drivers/char/sbc60xxwdt.c:	switch(MINOR(inode->i_rdev)) 
-+./drivers/char/sbc60xxwdt.c:	if(MINOR(inode->i_rdev) == WATCHDOG_MINOR) 
-+./drivers/char/pcwd.c:	switch (MINOR (ino->i_rdev)) {
-+./drivers/char/pcwd.c:	switch (MINOR (ino->i_rdev)) {
-+./drivers/char/mem.c:	switch (MINOR(inode->i_rdev)) {
-+./drivers/char/ip2main.c:	unsigned int minor = MINOR( pInode->i_rdev );
-+./drivers/char/ip2main.c:	unsigned int minor = MINOR( pFile->f_dentry->d_inode->i_rdev );
-+./drivers/char/ip2main.c:	unsigned int iplminor = MINOR(pInode->i_rdev);
-+./drivers/char/ip2main.c:	unsigned int iplminor = MINOR(pInode->i_rdev);
-+./drivers/char/wdt_pci.c:	switch(MINOR(file->f_dentry->d_inode->i_rdev))
-+./drivers/char/wdt_pci.c:	switch(MINOR(inode->i_rdev))
-+./drivers/char/wdt_pci.c:	if (MINOR(inode->i_rdev)==WATCHDOG_MINOR) {
-+./drivers/char/n_tty.c:	if (file->f_dentry->d_inode->i_rdev != CONSOLE_DEV &&
-+./drivers/char/n_tty.c:	    file->f_dentry->d_inode->i_rdev != SYSCONS_DEV &&
-+./drivers/char/n_tty.c:	    file->f_dentry->d_inode->i_rdev != CONSOLE_DEV &&
-+./drivers/char/n_tty.c:	    file->f_dentry->d_inode->i_rdev != SYSCONS_DEV) {
-+./drivers/char/misc.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/char/ite_gpio.c:	unsigned int minor = MINOR(inode->i_rdev); 
-+./drivers/char/au1000_usbraw.c:	portNumber = MINOR(inode->i_rdev);
-+./drivers/char/tipar.c:	unsigned int minor = minor(inode->i_rdev) - TIPAR_MINOR;
-+./drivers/char/tipar.c:	unsigned int minor = minor(inode->i_rdev) - TIPAR_MINOR;
-+./drivers/char/tipar.c:	    minor(file->f_dentry->d_inode->i_rdev) - TIPAR_MINOR;
-+./drivers/char/tipar.c:	    minor(file->f_dentry->d_inode->i_rdev) - TIPAR_MINOR;
-+./drivers/char/scx200_gpio.c:	unsigned m = minor(file->f_dentry->d_inode->i_rdev);
-+./drivers/char/scx200_gpio.c:	unsigned m = minor(file->f_dentry->d_inode->i_rdev);
-+./drivers/char/scx200_gpio.c:	unsigned m = minor(inode->i_rdev);
-+./drivers/char/raw.c:	minor = MINOR(inode->i_rdev);
-+./drivers/char/raw.c:	minor = MINOR(inode->i_rdev);
-+./drivers/char/raw.c:	int minor = minor(inode->i_rdev), err; 
-+./drivers/char/raw.c:	minor = MINOR(filp->f_dentry->d_inode->i_rdev);
-+./drivers/char/ipmi/ipmi_watchdog.c:        switch (minor(ino->i_rdev))
-+./drivers/char/ipmi/ipmi_watchdog.c:	if (minor(ino->i_rdev)==WATCHDOG_MINOR)
-+./drivers/char/ipmi/ipmi_devintf.c:	int                      if_num = minor(inode->i_rdev);
-+./drivers/char/wdt.c:	switch(MINOR(file->f_dentry->d_inode->i_rdev))
-+./drivers/char/wdt.c:	switch(MINOR(inode->i_rdev))
-+./drivers/char/wdt.c:	if(MINOR(inode->i_rdev)==WATCHDOG_MINOR)
-+./drivers/char/w83877f_wdt.c:	switch(MINOR(inode->i_rdev)) 
-+./drivers/char/w83877f_wdt.c:	if(MINOR(inode->i_rdev) == WATCHDOG_MINOR) 
-+./drivers/char/tpqic02.c:	kdev_t dev = filp->f_dentry->d_inode->i_rdev;
-+./drivers/char/tpqic02.c:	kdev_t dev = filp->f_dentry->d_inode->i_rdev;
-+./drivers/char/tpqic02.c:	kdev_t dev = inode->i_rdev;
-+./drivers/char/tpqic02.c:	kdev_t dev = inode->i_rdev;
-+./drivers/char/tpqic02.c:	int dev_maj = MAJOR(inode->i_rdev);
-+./drivers/char/stallion.c:	brdnr = MINOR(ip->i_rdev);
-+./drivers/char/sc520_wdt.c:	switch(MINOR(inode->i_rdev)) 
-+./drivers/char/sc520_wdt.c:	if(MINOR(inode->i_rdev) == WATCHDOG_MINOR) 
-+./drivers/char/machzwd.c:	switch(MINOR(inode->i_rdev)){
-+./drivers/char/machzwd.c:	if(MINOR(inode->i_rdev) == WATCHDOG_MINOR){
-+./drivers/char/ib700wdt.c:	switch (MINOR(inode->i_rdev)) {
-+./drivers/char/ib700wdt.c:	if (MINOR(inode->i_rdev) == WATCHDOG_MINOR) {
-+./drivers/char/acquirewdt.c:	switch(MINOR(inode->i_rdev))
-+./drivers/char/acquirewdt.c:	if(MINOR(inode->i_rdev)==WATCHDOG_MINOR)
-+./drivers/char/ppdev.c:	unsigned int minor = MINOR (file->f_dentry->d_inode->i_rdev);
-+./drivers/char/ppdev.c:	unsigned int minor = MINOR (file->f_dentry->d_inode->i_rdev);
-+./drivers/char/ppdev.c:	unsigned int minor = MINOR(inode->i_rdev);
-+./drivers/char/ppdev.c:	unsigned int minor = MINOR (inode->i_rdev);
-+./drivers/char/ppdev.c:	unsigned int minor = MINOR (inode->i_rdev);
-+./drivers/char/lp.c:	unsigned int minor = MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/char/lp.c:	unsigned int minor=MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/char/lp.c:	unsigned int minor = MINOR(inode->i_rdev);
-+./drivers/char/lp.c:	unsigned int minor = MINOR(inode->i_rdev);
-+./drivers/char/lp.c:	unsigned int minor = MINOR(inode->i_rdev);
-+./drivers/char/istallion.c:	brdnr = MINOR(fp->f_dentry->d_inode->i_rdev);
-+./drivers/char/istallion.c:	brdnr = MINOR(fp->f_dentry->d_inode->i_rdev);
-+./drivers/char/istallion.c:	brdnr = MINOR(ip->i_rdev);
-+./drivers/char/busmouse.c:	mousedev = DEV_TO_MOUSE(inode->i_rdev);
-+./drivers/char/vc_screen.c:	int currcons = MINOR(inode->i_rdev) & 127;
-+./drivers/char/vc_screen.c:	if (MINOR(inode->i_rdev) & 128)
-+./drivers/char/vc_screen.c:	unsigned int currcons = MINOR(inode->i_rdev);
-+./drivers/char/vc_screen.c:	unsigned int currcons = MINOR(inode->i_rdev);
-+./drivers/char/vc_screen.c:	unsigned int currcons = (MINOR(inode->i_rdev) & 127);
-+./drivers/char/ftape/zftape/zftape-init.c:	TRACE(ft_t_flow, "called for minor %d", MINOR(ino->i_rdev));
-+./drivers/char/ftape/zftape/zftape-init.c:	if ((MINOR(ino->i_rdev) & ~(ZFT_MINOR_OP_MASK | FTAPE_NO_REWIND))
-+./drivers/char/ftape/zftape/zftape-init.c:	result = _zft_open(MINOR(ino->i_rdev), filep->f_flags & O_ACCMODE);
-+./drivers/char/ftape/zftape/zftape-init.c:	if (!busy_flag || MINOR(ino->i_rdev) != zft_unit) {
-+./drivers/char/ftape/zftape/zftape-init.c:	if (!busy_flag || MINOR(ino->i_rdev) != zft_unit || ft_failure) {
-+./drivers/char/ftape/zftape/zftape-init.c:	    MINOR(filep->f_dentry->d_inode->i_rdev) != zft_unit || 
-+./drivers/char/ftape/zftape/zftape-init.c:	if (!busy_flag || MINOR(ino->i_rdev) != zft_unit || ft_failure) {
-+./drivers/char/ftape/zftape/zftape-init.c:	if (!busy_flag || MINOR(ino->i_rdev) != zft_unit || ft_failure) {
-+./drivers/char/dsp56k.c:	int dev = MINOR(inode->i_rdev) & 0x0f;
-+./drivers/char/dsp56k.c:	int dev = MINOR(inode->i_rdev) & 0x0f;
-+./drivers/char/dsp56k.c:	int dev = MINOR(inode->i_rdev) & 0x0f;
-+./drivers/char/dsp56k.c:	int dev = MINOR(file->f_dentry->d_inode->i_rdev) & 0x0f;
-+./drivers/char/dsp56k.c:	int dev = MINOR(inode->i_rdev) & 0x0f;
-+./drivers/char/dsp56k.c:	int dev = MINOR(inode->i_rdev) & 0x0f;
-+./drivers/char/dtlk.c:	unsigned int minor = MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/char/dtlk.c:	if (MINOR(file->f_dentry->d_inode->i_rdev) != DTLK_MINOR)
-+./drivers/char/dtlk.c:	switch (MINOR(inode->i_rdev)) {
-+./drivers/char/dtlk.c:	switch (MINOR(inode->i_rdev)) {
-+./drivers/char/agp/agpgart_fe.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/char/drm-4.0/ffb_drv.c:	minor = MINOR(inode->i_rdev);
-+./drivers/char/drm-4.0/ffb_drv.c:	minor = MINOR(filp->f_dentry->d_inode->i_rdev);
-+./drivers/char/drm-4.0/fops.c:	kdev_t	     minor = MINOR(inode->i_rdev);
-+./drivers/char/mpc8xx_wdt.c:	switch (MINOR(inode->i_rdev)) {
-+./drivers/scsi/sg.c:    kdev_t i_rdev;      /* holds device major+minor number */
-+./drivers/scsi/sg.c:    int dev = MINOR(inode->i_rdev);
-+./drivers/scsi/sg.c:    SCSI_LOG_TIMEOUT(3, printk("sg_release: dev=%d\n", MINOR(sdp->i_rdev)));
-+./drivers/scsi/sg.c:                               MINOR(sdp->i_rdev), (int)count));
-+./drivers/scsi/sg.c:                               MINOR(sdp->i_rdev), (int)count));
-+./drivers/scsi/sg.c:    SRpnt->sr_request.rq_dev = sdp->i_rdev;
-+./drivers/scsi/sg.c:                               MINOR(sdp->i_rdev), (int)cmd_in));
-+./drivers/scsi/sg.c:                        MINOR(sdp->i_rdev), (int)res));
-+./drivers/scsi/sg.c:                               MINOR(sdp->i_rdev), mode));
-+./drivers/scsi/sg.c:    sdp->i_rdev = MKDEV(SCSI_GENERIC_MAJOR, k);
-+./drivers/scsi/sg.c:	    dev = MINOR(sdp->i_rdev);
-+./drivers/scsi/megaraid.c:	if (!inode || !(dev = inode->i_rdev))
-+./drivers/scsi/3w-xxxx.c:	TW_Device_Extension *tw_dev = tw_device_extension_list[MINOR(inode->i_rdev)];
-+./drivers/scsi/3w-xxxx.c:	minor_number = MINOR(inode->i_rdev);
-+./drivers/scsi/st.c:	int mode = TAPE_MODE(inode->i_rdev);
-+./drivers/scsi/st.c:	int dev = TAPE_NR(inode->i_rdev);
-+./drivers/scsi/st.c:	STp->rew_at_close = STp->autorew_dev = (MINOR(inode->i_rdev) & 0x80) == 0;
-+./drivers/scsi/st.c:	kdev_t devt = inode->i_rdev;
-+./drivers/scsi/st.c:	kdev_t devt = inode->i_rdev;
-+./drivers/scsi/st.c:	int dev = TAPE_NR(inode->i_rdev);
-+./drivers/scsi/st.c:	int dev = TAPE_NR(inode->i_rdev);
-+./drivers/scsi/st.c:	int dev = TAPE_NR(inode->i_rdev);
-+./drivers/scsi/sd.c:	kdev_t dev = inode->i_rdev;
-+./drivers/scsi/sd.c:				    inode->i_rdev)].part[MINOR(
-+./drivers/scsi/sd.c:				    inode->i_rdev)].start_sect, &loc->start))
-+./drivers/scsi/sd.c:				    inode->i_rdev)].part[MINOR(
-+./drivers/scsi/sd.c:				    inode->i_rdev)].start_sect, &loc->start))
-+./drivers/scsi/sd.c:			return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/scsi/sd.c:	target = DEVICE_NR(inode->i_rdev);
-+./drivers/scsi/sd.c:		check_disk_change(inode->i_rdev);
-+./drivers/scsi/sd.c:	if (sd_sizes[SD_PARTITION(inode->i_rdev)] == 0) {
-+./drivers/scsi/sd.c:	target = DEVICE_NR(inode->i_rdev);
-+./drivers/scsi/dpt_i2o.c:	minor = MINOR(inode->i_rdev);
-+./drivers/scsi/dpt_i2o.c:	minor = MINOR(inode->i_rdev);
-+./drivers/scsi/dpt_i2o.c:	minor = MINOR(inode->i_rdev);
-+./drivers/scsi/osst.c:	int dev = TAPE_NR(inode->i_rdev);
-+./drivers/scsi/osst.c:	int dev = TAPE_NR(inode->i_rdev);
-+./drivers/scsi/osst.c:	int dev = TAPE_NR(inode->i_rdev);
-+./drivers/scsi/osst.c:	int mode = TAPE_MODE(inode->i_rdev);
-+./drivers/scsi/osst.c:	STp->rew_at_close = (MINOR(inode->i_rdev) & 0x80) == 0;
-+./drivers/scsi/osst.c:	STp->raw = (MINOR(inode->i_rdev) & 0x40) != 0;
-+./drivers/scsi/osst.c:	kdev_t devt = inode->i_rdev;
-+./drivers/scsi/osst.c:	kdev_t devt = inode->i_rdev;
-+./drivers/scsi/osst.c:	int dev = TAPE_NR(inode->i_rdev);
-+./drivers/scsi/aacraid/linit.c:	unsigned minor_number = MINOR(inode->i_rdev);
-+./drivers/scsi/aacraid/linit.c:	struct aac_dev *dev = aac_devices[MINOR(inode->i_rdev)];
-+./drivers/sound/ymfpci.c:	minor = MINOR(inode->i_rdev);
-+./drivers/sound/ymfpci.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/i810_audio.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/cmpci.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/cmpci.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/cmpci.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/cmpci.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/ali5455.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/ad1889.c:	if (MINOR(inode->i_rdev) != 3)
-+./drivers/sound/ad1889.c:	if (ad1889_dev->ac97_codec->dev_mixer != MINOR(inode->i_rdev))
-+./drivers/sound/ac97_plugin_wm97xx.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/via82cxxx_audio.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/via82cxxx_audio.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/trident.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/trident.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/swarm_cs4297a.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/swarm_cs4297a.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/nec_vrc5477.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/nec_vrc5477.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/maestro3.c:    int minor = MINOR(inode->i_rdev);
-+./drivers/sound/maestro3.c:    int minor = MINOR(inode->i_rdev);
-+./drivers/sound/ite8172.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/ite8172.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/hal2.c:	struct hal2_card *hal2 = hal2_mixer_find_card(minor(inode->i_rdev));
-+./drivers/sound/hal2.c:	struct hal2_card *hal2 = hal2_dsp_find_card(minor(inode->i_rdev));
-+./drivers/sound/esssolo1.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/esssolo1.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/esssolo1.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/esssolo1.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/es1371.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/es1371.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/es1371.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/es1371.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/cs46xx.c:        int minor = MINOR(inode->i_rdev);
-+./drivers/sound/cs46xx.c:        int minor = MINOR(inode->i_rdev);
-+./drivers/sound/cs46xx.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/cs46xx.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/au1000.c:	int             minor = MINOR(inode->i_rdev);
-+./drivers/sound/sonicvibes.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/sonicvibes.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/sonicvibes.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/sonicvibes.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/maestro.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/maestro.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/es1370.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/es1370.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/es1370.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/es1370.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/btaudio.c:	int minor = minor(inode->i_rdev);
-+./drivers/sound/btaudio.c:	int minor = minor(inode->i_rdev);
-+./drivers/sound/btaudio.c:	int minor = minor(inode->i_rdev);
-+./drivers/sound/vwsnd.c:	dev_t minor = MINOR(inode->i_rdev);
-+./drivers/sound/vwsnd.c:		if (devc->mixer_minor == MINOR(inode->i_rdev))
-+./drivers/sound/rme96xx.c:	int minor = MINOR(in->i_rdev);
-+./drivers/sound/rme96xx.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/msnd_pinnacle.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/msnd_pinnacle.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/msnd_pinnacle.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/msnd_pinnacle.c:	int minor = MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/sound/msnd_pinnacle.c:	int minor = MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/sound/soundcard.c:	int dev = MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/sound/soundcard.c:	int dev = MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/sound/soundcard.c:	int dev = MINOR(inode->i_rdev);
-+./drivers/sound/soundcard.c:	int dev = MINOR(inode->i_rdev);
-+./drivers/sound/soundcard.c:	int dev = MINOR(inode->i_rdev);
-+./drivers/sound/soundcard.c:	int dev = MINOR(inode->i_rdev);
-+./drivers/sound/soundcard.c:	int dev = MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/sound/sound_core.c:	int unit=MINOR(inode->i_rdev);
-+./drivers/sound/cs4281/cs4281m.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/cs4281/cs4281m.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/cs4281/cs4281m.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/emu10k1/mixer.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/emu10k1/audio.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/emu10k1/midi.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sound/dmasound/dmasound_core.c:	dmasound.minDev = MINOR(inode->i_rdev) & 0x0f;
-+./drivers/cdrom/cdrom.c:	kdev_t dev = ip->i_rdev;
-+./drivers/cdrom/cdrom.c:	kdev_t dev = ip->i_rdev;
-+./drivers/cdrom/cdrom.c:	kdev_t dev = ip->i_rdev;
-+./drivers/cdrom/aztcd.c:	printk("inode: %p, inode->i_rdev: %x    file: %p\n", inode,
-+./drivers/cdrom/aztcd.c:	       inode->i_rdev, file);
-+./drivers/cdrom/optcd.c:	DEBUG((DEBUG_VFS, "inode: %p, inode -> i_rdev: 0x%x, file: %p\n",
-+./drivers/cdrom/optcd.c:		ip, ip -> i_rdev, fp));
-+./drivers/cdrom/sonycd535.c:	dev = MINOR(inode->i_rdev) >> 6;
-+./drivers/cdrom/sonycd535.c:		check_disk_change(inode->i_rdev);
-+./drivers/isdn/isdn_ppp.c:				MINOR(file->f_dentry->d_inode->i_rdev));
-+./drivers/isdn/isdn_common.c:	uint minor = MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/isdn/isdn_common.c:	uint minor = MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/isdn/isdn_common.c:	unsigned int minor = MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/isdn/isdn_common.c:	uint minor = MINOR(inode->i_rdev);
-+./drivers/isdn/isdn_common.c:	uint minor = MINOR(ino->i_rdev);
-+./drivers/isdn/isdn_common.c:	uint minor = MINOR(ino->i_rdev);
-+./drivers/isdn/avmb1/capi.c:	cdev->minor = MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/isdn/avmb1/capi.c:	if ((mp = capiminor_find(MINOR(file->f_dentry->d_inode->i_rdev))) == 0)
-+./drivers/isdn/avmb1/capi.c:	if ((mp = capiminor_find(MINOR(file->f_dentry->d_inode->i_rdev))) == 0)
-+./drivers/sbus/char/cpwatchdog.c:	switch(MINOR(inode->i_rdev))
-+./drivers/sbus/char/display7seg.c:	if (D7S_MINOR != MINOR(inode->i_rdev))
-+./drivers/sbus/char/display7seg.c:	if (D7S_MINOR != MINOR(inode->i_rdev))
-+./drivers/sbus/char/display7seg.c:	if (D7S_MINOR != MINOR(inode->i_rdev))
-+./drivers/sbus/char/bpp.c:      unsigned minor = MINOR(inode->i_rdev);
-+./drivers/sbus/char/bpp.c:      unsigned minor = MINOR(inode->i_rdev);
-+./drivers/sbus/char/bpp.c:      const unsigned minor = MINOR(f->f_dentry->d_inode->i_rdev);
-+./drivers/sbus/char/bpp.c:      const unsigned minor = MINOR(f->f_dentry->d_inode->i_rdev);
-+./drivers/sbus/char/bpp.c:      unsigned minor = MINOR(inode->i_rdev);
-+./drivers/sbus/char/vfc_dev.c:	dev = vfc_get_dev_ptr(MINOR(inode->i_rdev));
-+./drivers/sbus/char/vfc_dev.c:	dev = vfc_get_dev_ptr(MINOR(inode->i_rdev));
-+./drivers/sbus/char/vfc_dev.c:	dev = vfc_get_dev_ptr(MINOR(inode->i_rdev));
-+./drivers/sbus/char/vfc_dev.c:		ret = vfc_debug(vfc_get_dev_ptr(MINOR(inode->i_rdev)),
-+./drivers/sbus/char/vfc_dev.c:	dev = vfc_get_dev_ptr(MINOR(inode->i_rdev));
-+./drivers/sbus/char/jsflash.c:	if ((dev = MINOR(inode->i_rdev)) >= JSF_MAX) return -ENODEV;
-+./drivers/sbus/char/jsflash.c:		return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/sbus/char/jsflash.c:	dev = MINOR(inode->i_rdev);
-+./drivers/sbus/char/jsflash.c:	dev = MINOR(inode->i_rdev);
-+./drivers/sbus/audio/amd7930.c:	switch(MINOR(inode->i_rdev) & 0xf) {
-+./drivers/sbus/audio/audio.c:        struct sparcaudio_driver *drv = drivers[(MINOR(inode->i_rdev) >>
-+./drivers/sbus/audio/audio.c:        struct sparcaudio_driver *drv = drivers[(MINOR(inode->i_rdev) >>
-+./drivers/sbus/audio/audio.c:        struct sparcaudio_driver *drv = drivers[(MINOR(inode->i_rdev) >>
-+./drivers/sbus/audio/audio.c:        struct sparcaudio_driver *drv = drivers[(MINOR(inode->i_rdev) >>
-+./drivers/sbus/audio/audio.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/sbus/audio/audio.c:        int minor = MINOR(inode->i_rdev);
-+./drivers/sbus/audio/audio.c:        struct sparcaudio_driver *drv = drivers[(MINOR(inode->i_rdev) >>
-+./drivers/ide/ide.c:int ide_revalidate_disk (kdev_t i_rdev)
-+./drivers/ide/ide.c:	if ((drive = ide_info_ptr(i_rdev, 0)) == NULL)
-+./drivers/ide/ide.c:	major = MAJOR(i_rdev);
-+./drivers/ide/ide.c:	if ((drive = ide_info_ptr(inode->i_rdev, force)) == NULL)
-+./drivers/ide/ide.c:	if ((drive = ide_info_ptr(inode->i_rdev, 1)) != NULL) {
-+./drivers/ide/ide.c:	if (!inode || !(dev = inode->i_rdev))
-+./drivers/ide/ide.c:	if ((drive = ide_info_ptr(inode->i_rdev, force)) == NULL)
-+./drivers/ide/ide.c:			if ((MINOR(inode->i_rdev) & PARTN_MASK))
-+./drivers/ide/ide.c:			if (put_user((unsigned)drive->part[MINOR(inode->i_rdev)&PARTN_MASK].start_sect,
-+./drivers/ide/ide.c:			if (put_user((unsigned)drive->part[MINOR(inode->i_rdev)&PARTN_MASK].start_sect,
-+./drivers/ide/ide.c:			if (put_user((unsigned)drive->part[MINOR(inode->i_rdev)&PARTN_MASK].start_sect,
-+./drivers/ide/ide.c:			return put_user(drive->part[MINOR(inode->i_rdev)&PARTN_MASK].nr_sects, (unsigned long *) arg);
-+./drivers/ide/ide.c:			return put_user((u64)drive->part[MINOR(inode->i_rdev)&PARTN_MASK].nr_sects << 9, (u64 *) arg);
-+./drivers/ide/ide.c:			return ide_revalidate_disk(inode->i_rdev);
-+./drivers/ide/ide.c:			if (MINOR(inode->i_rdev) & PARTN_MASK)
-+./drivers/ide/ide.c:				return ide_revalidate_disk(inode->i_rdev);
-+./drivers/ide/ide.c:			return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/ide/ide.c:static int ide_check_media_change (kdev_t i_rdev)
-+./drivers/ide/ide.c:	if ((drive = ide_info_ptr(i_rdev, 0)) == NULL)
-+./drivers/ide/ide-tape.c:static ide_drive_t *get_drive_ptr (kdev_t i_rdev)
-+./drivers/ide/ide-tape.c:	unsigned int i = MINOR(i_rdev) & ~0xc0;
-+./drivers/ide/ide-tape.c:	ide_drive_t *drive = get_drive_ptr(inode->i_rdev);
-+./drivers/ide/ide-tape.c:	ide_drive_t *drive = get_drive_ptr(inode->i_rdev);
-+./drivers/ide/ide-tape.c:	ide_drive_t *drive = get_drive_ptr(inode->i_rdev);
-+./drivers/ide/ide-tape.c:	unsigned int minor = MINOR(inode->i_rdev);
-+./drivers/ide/ide-tape.c:	if ((drive = get_drive_ptr(inode->i_rdev)) == NULL)
-+./drivers/ide/ide-tape.c:	ide_drive_t *drive = get_drive_ptr(inode->i_rdev);
-+./drivers/ide/ide-tape.c:	unsigned int minor = MINOR(inode->i_rdev);
-+./drivers/ide/ide-tape.c:	ide_drive_t *drive = get_drive_ptr(inode->i_rdev);
-+./drivers/ide/ide-tape.c:	unsigned int minor = MINOR(inode->i_rdev);
-+./drivers/ide/ide-io.c:ide_drive_t *ide_info_ptr (kdev_t i_rdev, int force)
-+./drivers/ide/ide-io.c:	int		major = MAJOR(i_rdev);
-+./drivers/ide/ide-io.c:			unsigned unit = DEVICE_NR(i_rdev);
-+./drivers/ide/ide-geometry.c:int ide_xlate_1024 (kdev_t i_rdev, int xparm, int ptheads, const char *msg)
-+./drivers/ide/ide-geometry.c:	drive = ide_info_ptr(i_rdev, 0);
-+./drivers/ide/ide-disk.c:		check_disk_change(inode->i_rdev);
-+./drivers/ide/ide-floppy.c:		check_disk_change(inode->i_rdev);
-+./drivers/ide/raid/silraid.c:	if (!inode || !inode->i_rdev) 
-+./drivers/ide/raid/silraid.c:	minor = MINOR(inode->i_rdev)>>SHIFT;
-+./drivers/ide/raid/silraid.c:			sectors = ataraid_gendisk.part[MINOR(inode->i_rdev)].nr_sects;
-+./drivers/ide/raid/silraid.c:			if (MINOR(inode->i_rdev)&15)
-+./drivers/ide/raid/silraid.c:			if (put_user((unsigned)ataraid_gendisk.part[MINOR(inode->i_rdev)].start_sect,
-+./drivers/ide/raid/silraid.c:			if (put_user((unsigned)ataraid_gendisk.part[MINOR(inode->i_rdev)].start_sect,
-+./drivers/ide/raid/silraid.c:			return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/ide/raid/pdcraid.c:	if (!inode || !inode->i_rdev) 
-+./drivers/ide/raid/pdcraid.c:	minor = MINOR(inode->i_rdev)>>SHIFT;
-+./drivers/ide/raid/pdcraid.c:			sectors = ataraid_gendisk.part[MINOR(inode->i_rdev)].nr_sects;
-+./drivers/ide/raid/pdcraid.c:			if (MINOR(inode->i_rdev)&15)
-+./drivers/ide/raid/pdcraid.c:			if (put_user((unsigned)ataraid_gendisk.part[MINOR(inode->i_rdev)].start_sect,
-+./drivers/ide/raid/pdcraid.c:			if (put_user((unsigned)ataraid_gendisk.part[MINOR(inode->i_rdev)].start_sect,
-+./drivers/ide/raid/pdcraid.c:			return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/ide/raid/hptraid.c:	if (!inode || !inode->i_rdev) 	
-+./drivers/ide/raid/hptraid.c:	minor = MINOR(inode->i_rdev)>>SHIFT;
-+./drivers/ide/raid/hptraid.c:			sectors = ataraid_gendisk.part[MINOR(inode->i_rdev)].nr_sects;
-+./drivers/ide/raid/hptraid.c:			if (MINOR(inode->i_rdev)&15)
-+./drivers/ide/raid/hptraid.c:			if (put_user((unsigned)ataraid_gendisk.part[MINOR(inode->i_rdev)].start_sect,
-+./drivers/ide/raid/hptraid.c:			if (put_user((unsigned)ataraid_gendisk.part[MINOR(inode->i_rdev)].start_sect,
-+./drivers/ide/raid/hptraid.c:			return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/ide/raid/ataraid.c:	minor = MINOR(inode->i_rdev)>>SHIFT;
-+./drivers/ide/raid/ataraid.c:	minor = MINOR(inode->i_rdev)>>SHIFT;
-+./drivers/ide/raid/ataraid.c:	minor = MINOR(inode->i_rdev)>>SHIFT;
-+./drivers/ide/raid/medley.c:	int devminor = (inode->i_rdev >> SHIFT) & MAJOR_MASK;
-+./drivers/ide/raid/medley.c:	minor = MINOR(inode->i_rdev) >> SHIFT;
-+./drivers/ide/raid/medley.c:		    ataraid_gendisk.part[MINOR(inode->i_rdev)].nr_sects;
-+./drivers/ide/raid/medley.c:		if (MINOR(inode->i_rdev) & 15)
-+./drivers/ide/raid/medley.c:			     part[MINOR(inode->i_rdev)].start_sect,
-+./drivers/ide/raid/medley.c:			     part[MINOR(inode->i_rdev)].start_sect,
-+./drivers/ide/raid/medley.c:		return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/ide/raid/medley.c:	int device = ((inode->i_rdev >> SHIFT) & MAJOR_MASK) -
-+./drivers/ide/raid/medley.c:	int device = ((inode->i_rdev >> SHIFT) & MAJOR_MASK) -
-+./drivers/ide/legacy/hd.c:	if ((!inode) || !(inode->i_rdev))
-+./drivers/ide/legacy/hd.c:	dev = DEVICE_NR(inode->i_rdev);
-+./drivers/ide/legacy/hd.c:			g.start = hd[MINOR(inode->i_rdev)].start_sect;
-+./drivers/ide/legacy/hd.c:			return put_user(hd[MINOR(inode->i_rdev)].nr_sects, 
-+./drivers/ide/legacy/hd.c:			return put_user((u64)hd[MINOR(inode->i_rdev)].nr_sects << 9, 
-+./drivers/ide/legacy/hd.c:			return revalidate_hddisk(inode->i_rdev, 1);
-+./drivers/ide/legacy/hd.c:			return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/ide/legacy/hd.c:	target =  DEVICE_NR(inode->i_rdev);
-+./drivers/ide/legacy/hd.c:        int target =  DEVICE_NR(inode->i_rdev);
-+./drivers/video/fbmem.c:	int fbidx = GET_FB_IDX(inode->i_rdev);
-+./drivers/video/fbmem.c:	int fbidx = GET_FB_IDX(inode->i_rdev);
-+./drivers/video/fbmem.c:	int fbidx = GET_FB_IDX(inode->i_rdev);
-+./drivers/video/fbmem.c:	int fbidx = GET_FB_IDX(file->f_dentry->d_inode->i_rdev);
-+./drivers/video/fbmem.c:	int fbidx = GET_FB_IDX(inode->i_rdev);
-+./drivers/video/fbmem.c:	int fbidx = GET_FB_IDX(inode->i_rdev);
-+./drivers/macintosh/adb.c:	if (MINOR(inode->i_rdev) > 0 || adb_controller == NULL)
-+./drivers/acorn/block/fd1772.c:	device = inode->i_rdev;
-+./drivers/acorn/block/fd1772.c:	drive = MINOR(inode->i_rdev) & 3;
-+./drivers/acorn/block/fd1772.c:	if ((MINOR(inode->i_rdev) >> 2) > NUM_DISK_TYPES)
-+./drivers/acorn/block/fd1772.c:		if (old_dev != inode->i_rdev)
-+./drivers/acorn/block/fd1772.c:	fd_device[drive] = inode->i_rdev;
-+./drivers/acorn/block/fd1772.c:	if (old_dev && old_dev != inode->i_rdev)
-+./drivers/acorn/block/fd1772.c:		check_disk_change(inode->i_rdev);
-+./drivers/acorn/block/fd1772.c:	int drive = MINOR(inode->i_rdev) & 3;
-+./drivers/acorn/block/mfmhd.c:	if (!inode || !(dev = inode->i_rdev))
-+./drivers/acorn/block/mfmhd.c:	device = DEVICE_NR(MINOR(inode->i_rdev)), err;
-+./drivers/acorn/block/mfmhd.c:	int dev = DEVICE_NR(MINOR(inode->i_rdev));
-+./drivers/acorn/block/mfmhd.c:	mfm_info[DEVICE_NR(MINOR(inode->i_rdev))].access_count--;
-+./drivers/usb/usb.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/usb/usb-skeleton.c:	subminor = MINOR (inode->i_rdev) - USB_SKEL_MINOR_BASE;
-+./drivers/usb/gadget/file_storage.c:		kdev_t		dev = inode->i_rdev;
-+./drivers/usb/brlvger.c:	int devnum = MINOR (inode->i_rdev);
-+./drivers/usb/audio.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/usb/audio.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/usb/hiddev.c:	int i = MINOR(inode->i_rdev) - HIDDEV_MINOR_BASE;
-+./drivers/usb/usb-midi.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/usb/tiglusb.c:	int devnum = minor (inode->i_rdev);
-+./drivers/usb/auerchar.c:	int dtindex = MINOR(inode->i_rdev) - AUER_MINOR_BASE;
-+./drivers/usb/printer.c:	int minor = MINOR(inode->i_rdev) - USBLP_MINOR_BASE;
-+./drivers/usb/dabusb.c:	int devnum = MINOR (inode->i_rdev);
-+./drivers/usb/dc2xx.c:	subminor = MINOR (inode->i_rdev) - USB_CAMERA_MINOR_BASE;
-+./drivers/pcmcia/ds.c:    socket_t i = MINOR(inode->i_rdev);
-+./drivers/pcmcia/ds.c:    socket_t i = MINOR(inode->i_rdev);
-+./drivers/pcmcia/ds.c:    socket_t i = MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/pcmcia/ds.c:    socket_t i = MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/pcmcia/ds.c:    socket_t i = MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/pcmcia/ds.c:    socket_t i = MINOR(inode->i_rdev);
-+./drivers/i2c/i2c-dev.c:	printk(KERN_DEBUG "i2c-dev.o: i2c-%d reading %d bytes.\n",MINOR(inode->i_rdev),
-+./drivers/i2c/i2c-dev.c:	printk(KERN_DEBUG "i2c-dev.o: i2c-%d writing %d bytes.\n",MINOR(inode->i_rdev),
-+./drivers/i2c/i2c-dev.c:	       MINOR(inode->i_rdev),cmd, arg);
-+./drivers/i2c/i2c-dev.c:	unsigned int minor = MINOR(inode->i_rdev);
-+./drivers/i2c/i2c-dev.c:	unsigned int minor = MINOR(inode->i_rdev);
-+./drivers/telephony/ixj.c:		printk(KERN_INFO "Closing board %d\n", NUM(inode->i_rdev));
-+./drivers/telephony/ixj.c:	IXJ * j = get_ixj(NUM(file_p->f_dentry->d_inode->i_rdev));
-+./drivers/telephony/ixj.c:	IXJ *j = get_ixj(NUM(file_p->f_dentry->d_inode->i_rdev));
-+./drivers/telephony/ixj.c:	IXJ *j = get_ixj(NUM(file_p->f_dentry->d_inode->i_rdev));
-+./drivers/telephony/ixj.c:	IXJ *j = get_ixj(NUM(file_p->f_dentry->d_inode->i_rdev));
-+./drivers/telephony/ixj.c:	unsigned int minor = MINOR(inode->i_rdev);
-+./drivers/telephony/ixj.c:	int board = NUM(inode->i_rdev);
-+./drivers/telephony/ixj.c:	IXJ *j = get_ixj(NUM(inode->i_rdev));
-+./drivers/telephony/ixj.c:	IXJ *j = get_ixj(NUM(file_p->f_dentry->d_inode->i_rdev));
-+./drivers/telephony/phonedev.c:	unsigned int minor = MINOR(inode->i_rdev);
-+./drivers/ieee1394/pcilynx.c:        int cid = MINOR(inode->i_rdev);
-+./drivers/ieee1394/ieee1394_core.c:	blocknum = (MINOR(inode->i_rdev) >> 4) & 0xF;
-+./drivers/s390/block/dasd.c:	dasd_device_t *device = dasd_device_from_kdev (inp->i_rdev);
-+./drivers/s390/block/dasd.c:                         MAJOR (inp->i_rdev), 
-+./drivers/s390/block/dasd.c:                         MINOR (inp->i_rdev));
-+./drivers/s390/block/dasd.c:                        [MINOR (inp->i_rdev)] << 1;
-+./drivers/s390/block/dasd.c:                        [MINOR (inp->i_rdev)];
-+./drivers/s390/block/dasd.c:                rc = dasd_fillgeo (inp->i_rdev, &geo);
-+./drivers/s390/block/dasd.c:                int partn = MINOR (inp->i_rdev) &
-+./drivers/s390/block/dasd.c:				rc = blk_ioctl (inp->i_rdev, no, data);
-+./drivers/s390/block/dasd.c:                if (inp->i_rdev != device->kdev)
-+./drivers/s390/block/dasd.c:		return blk_ioctl (inp->i_rdev, no, data);
-+./drivers/s390/block/dasd.c:	if ((!inp) || !(inp->i_rdev)) {
-+./drivers/s390/block/dasd.c:	if ((!inp) || !(inp->i_rdev)) {
-+./drivers/s390/block/dasd.c:                         MAJOR (inp->i_rdev), 
-+./drivers/s390/block/dasd.c:                         MINOR (inp->i_rdev));
-+./drivers/s390/block/dasd.c:	device = dasd_device_from_kdev (inp->i_rdev);
-+./drivers/s390/block/dasd.c:                         MAJOR (inp->i_rdev), 
-+./drivers/s390/block/dasd.c:                         MINOR (inp->i_rdev));
-+./drivers/s390/block/dasd.c:	if ((!inp) || !(inp->i_rdev)) {
-+./drivers/s390/block/dasd.c:	device = dasd_device_from_kdev (inp->i_rdev);
-+./drivers/s390/block/dasd.c:                         MAJOR (inp->i_rdev), 
-+./drivers/s390/block/dasd.c:                         MINOR (inp->i_rdev));
-+./drivers/s390/block/dasd.c:                invalidate_buffers (inp->i_rdev);
-+./drivers/s390/block/xpram.c:	int num = MINOR(inode->i_rdev);
-+./drivers/s390/block/xpram.c:	Xpram_Dev *dev = xpram_devices + MINOR(inode->i_rdev);
-+./drivers/s390/block/xpram.c:	PRINT_DEBUG("calling xpram_release for device %d (size %dkB, usage: %d)\n",MINOR(inode->i_rdev) ,dev->size,atomic_read(&(dev->usage)));
-+./drivers/s390/block/xpram.c:		return put_user( 1024* xpram_sizes[MINOR(inode->i_rdev)]
-+./drivers/s390/block/xpram.c:		return put_user( (u64)(1024* xpram_sizes[MINOR(inode->i_rdev)]
-+./drivers/s390/block/xpram.c:		fsync_dev(inode->i_rdev);
-+./drivers/s390/block/xpram.c:		if ( capable(CAP_SYS_ADMIN) )invalidate_buffers(inode->i_rdev);
-+./drivers/s390/block/xpram.c:		put_user(read_ahead[MAJOR(inode->i_rdev)], (long *)arg);
-+./drivers/s390/block/xpram.c:		read_ahead[MAJOR(inode->i_rdev)] = arg;
-+./drivers/s390/block/xpram.c:		RO_IOCTLS(inode->i_rdev, arg); /* the default RO operations 
-+./drivers/s390/char/tapeblock.c:    while ((ti != NULL) && (ti->blk_minor != MINOR (inode->i_rdev)))
-+./drivers/s390/char/tapeblock.c:	dev = MKDEV (tapeblock_major, MINOR (inode->i_rdev));	/* Get the device */
-+./drivers/s390/char/tapeblock.c:	while ((ti != NULL) && (ti->blk_minor != MINOR (inode->i_rdev)))
-+./drivers/s390/char/tapeblock.c:	invalidate_buffers(inode->i_rdev);
-+./drivers/s390/char/tapechar.c:	       (ti->rew_minor != MINOR (inode->i_rdev)) &&
-+./drivers/s390/char/tapechar.c:	       (ti->nor_minor != MINOR (inode->i_rdev)))
-+./drivers/s390/char/tapechar.c:	       (ti->rew_minor != MINOR (inode->i_rdev)) &&
-+./drivers/s390/char/tapechar.c:	       (ti->nor_minor != MINOR (inode->i_rdev)))
-+./drivers/s390/char/tapechar.c:	dev = MKDEV (tape_major, MINOR (inode->i_rdev));	/* Get the device */
-+./drivers/s390/char/tapechar.c:	if (ti->rew_minor == MINOR (inode->i_rdev))
-+./drivers/s390/char/tapechar.c:	while ((ti != NULL) && (ti->rew_minor != MINOR (inode->i_rdev)) && (ti->nor_minor != MINOR (inode->i_rdev)))
-+./drivers/s390/char/tapechar.c:	if (ti->rew_minor == MINOR (inode->i_rdev)) {
-+./drivers/media/video/videodev.c:	return video_device[minor(file->f_dentry->d_inode->i_rdev)];
-+./drivers/media/video/videodev.c:	unsigned int minor = minor(inode->i_rdev);
-+./drivers/media/video/tvmixer.c:# define iminor(inode) minor(inode->i_rdev)
-+./drivers/mtd/nftlcore.c:	nftl = NFTLs[MINOR(inode->i_rdev) >> NFTL_PARTN_BITS];
-+./drivers/mtd/nftlcore.c:		g.start = part_table[MINOR(inode->i_rdev)].start_sect;
-+./drivers/mtd/nftlcore.c:		return put_user(part_table[MINOR(inode->i_rdev)].nr_sects,
-+./drivers/mtd/nftlcore.c:		return put_user((u64)part_table[MINOR(inode->i_rdev)].nr_sects << 9,
-+./drivers/mtd/nftlcore.c:		fsync_dev(inode->i_rdev);
-+./drivers/mtd/nftlcore.c:		invalidate_buffers(inode->i_rdev);
-+./drivers/mtd/nftlcore.c:		resetup_one_dev(&nftl_gendisk, MINOR(inode->i_rdev) >> NFTL_PARTN_BITS);
-+./drivers/mtd/nftlcore.c:		grok_partitions(&nftl_gendisk, MINOR(inode->i_rdev) >> NFTL_PARTN_BITS,
-+./drivers/mtd/nftlcore.c:	RO_IOCTLS(inode->i_rdev, arg);  /* ref. linux/blk.h */
-+./drivers/mtd/nftlcore.c:		return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/mtd/nftlcore.c:	int nftlnum = MINOR(ip->i_rdev) >> NFTL_PARTN_BITS;
-+./drivers/mtd/nftlcore.c:		      nftlnum, ip->i_rdev, ip, fp);
-+./drivers/mtd/nftlcore.c:	thisNFTL = NFTLs[MINOR(inode->i_rdev) / 16];
-+./drivers/mtd/mtdchar.c:	int minor = minor(inode->i_rdev);
-+./drivers/mtd/mtdblock_ro.c:	dev = MINOR(inode->i_rdev);
-+./drivers/mtd/mtdblock_ro.c:	dev = MINOR(inode->i_rdev);
-+./drivers/mtd/mtdblock_ro.c:	mtd = __get_mtd_device(NULL, MINOR(inode->i_rdev));
-+./drivers/mtd/mtdblock_ro.c:		fsync_dev(inode->i_rdev);
-+./drivers/mtd/mtdblock_ro.c:		invalidate_buffers(inode->i_rdev);
-+./drivers/mtd/mtdblock.c:	dev = MINOR(inode->i_rdev);
-+./drivers/mtd/mtdblock.c:	set_device_ro (inode->i_rdev, !(mtdblk->mtd->flags & MTD_WRITEABLE));
-+./drivers/mtd/mtdblock.c:	dev = MINOR(inode->i_rdev);
-+./drivers/mtd/mtdblock.c:	mtdblk = mtdblks[MINOR(inode->i_rdev)];
-+./drivers/mtd/mtdblock.c:		fsync_dev(inode->i_rdev);
-+./drivers/mtd/mtdblock.c:		invalidate_buffers(inode->i_rdev);
-+./drivers/mtd/ftl.c:    int minor = MINOR(inode->i_rdev);
-+./drivers/mtd/ftl.c:    int minor = MINOR(inode->i_rdev);
-+./drivers/mtd/ftl.c:    int ret = 0, minor = MINOR(inode->i_rdev);
-+./drivers/mtd/ftl.c:	fsync_dev(inode->i_rdev);
-+./drivers/mtd/ftl.c:	invalidate_buffers(inode->i_rdev);
-+./drivers/mtd/ftl.c:    RO_IOCTLS(inode->i_rdev, arg);
-+./drivers/mtd/ftl.c:	ret = blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/mtd/devices/blkmtd.c:	kdev = inode->i_rdev;
-+./drivers/input/mousedev.c:	int i = MINOR(inode->i_rdev) - MOUSEDEV_MINOR_BASE;
-+./drivers/input/joydev.c:	int i = MINOR(inode->i_rdev) - JOYDEV_MINOR_BASE;
-+./drivers/input/input.c:	struct input_handler *handler = input_table[MINOR(inode->i_rdev) >> 5];
-+./drivers/input/evdev.c:	int i = MINOR(inode->i_rdev) - EVDEV_MINOR_BASE;
-+./drivers/md/lvm.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/md/lvm.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/md/lvm.c:	      MINOR(inode->i_rdev), VG_CHR(MINOR(inode->i_rdev)));
-+./drivers/md/lvm.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/md/lvm.c:	kdev_t dev = inode->i_rdev;
-+./drivers/md/lvm.c:	int minor = MINOR(inode->i_rdev);
-+./drivers/md/lvm.c:	bh.b_dev = bh.b_rdev = inode->i_rdev;
-+./drivers/md/md.c:	dev = inode->i_rdev;
-+./drivers/md/md.c:	mddev_t *mddev = kdev_to_mddev(inode->i_rdev);
-+./drivers/md/md.c:	mddev_t *mddev = kdev_to_mddev(inode->i_rdev);
-+./drivers/message/i2o/i2o_block.c:	minor = MINOR(inode->i_rdev);
-+./drivers/message/i2o/i2o_block.c:			return do_i2ob_revalidate(inode->i_rdev,1);
-+./drivers/message/i2o/i2o_block.c:			return blk_ioctl(inode->i_rdev, cmd, arg);
-+./drivers/message/i2o/i2o_block.c:	minor = MINOR(inode->i_rdev);
-+./drivers/message/i2o/i2o_block.c:	minor = MINOR(inode->i_rdev);
-+./drivers/hotplug/pci_hotplug_core.c:		inode->i_rdev = NODEV;
-+./arch/x86_64/kernel/msr.c:  int cpu = MINOR(file->f_dentry->d_inode->i_rdev);
-+./arch/x86_64/kernel/msr.c:  int cpu = MINOR(file->f_dentry->d_inode->i_rdev);
-+./arch/x86_64/kernel/msr.c:  int cpu = MINOR(file->f_dentry->d_inode->i_rdev);
-+./arch/x86_64/kernel/cpuid.c:  int cpu = MINOR(file->f_dentry->d_inode->i_rdev);
-+./arch/x86_64/kernel/cpuid.c:  int cpu = MINOR(file->f_dentry->d_inode->i_rdev);
-+./arch/x86_64/ia32/ia32_ioctl.c:	if (tty_paranoia_check(tty, inode->i_rdev, "tty_ioctl"))
-+./arch/ppc64/kernel/sys_ppc32.c:	rdev = inode->i_rdev;
-+./arch/ppc64/kernel/sys_ppc32.c:	tmp.st_rdev = kdev_t_to_nr(inode->i_rdev);
-+./arch/ppc64/kernel/ioctl32.c:	if (tty_paranoia_check(tty, inode->i_rdev, "tty_ioctl"))
-+./arch/i386/kernel/cpuid.c:  int cpu = MINOR(file->f_dentry->d_inode->i_rdev);
-+./arch/i386/kernel/cpuid.c:  int cpu = MINOR(file->f_dentry->d_inode->i_rdev);
-+./arch/i386/kernel/msr.c:  int cpu = MINOR(file->f_dentry->d_inode->i_rdev);
-+./arch/i386/kernel/msr.c:  int cpu = MINOR(file->f_dentry->d_inode->i_rdev);
-+./arch/i386/kernel/msr.c:  int cpu = MINOR(file->f_dentry->d_inode->i_rdev);
-+./arch/sparc/kernel/sys_sunos.c:		if(MAJOR(file->f_dentry->d_inode->i_rdev) == MEM_MAJOR &&
-+./arch/sparc/kernel/sys_sunos.c:		   MINOR(file->f_dentry->d_inode->i_rdev) == 5) {
-+./arch/mips/sibyte/sb1250/bcm1250_tbprof.c:	minor = MINOR(inode->i_rdev);
-+./arch/mips/sibyte/sb1250/bcm1250_tbprof.c:	minor = MINOR(inode->i_rdev);
-+./arch/m68k/atari/stram.c:	swap_inode.i_rdev = p->swap_device;
-+./arch/m68k/atari/stram.c:	if (MINOR(inode->i_rdev) != STRAM_MINOR)
-+./arch/m68k/atari/joystick.c:    int minor = DEVICE_NR(inode->i_rdev);
-+./arch/m68k/atari/joystick.c:    int minor = DEVICE_NR(inode->i_rdev);
-+./arch/m68k/atari/joystick.c:    if (!DIGITAL_JOY(inode->i_rdev) || minor > 1)
-+./arch/m68k/atari/joystick.c:    int minor = DEVICE_NR(inode->i_rdev);
-+./arch/m68k/atari/joystick.c:    int minor = DEVICE_NR(file->f_dentry->d_inode->i_rdev);
-+./arch/sparc64/kernel/sys_sunos32.c:		if(MAJOR(inode->i_rdev)==MEM_MAJOR && MINOR(inode->i_rdev)==5) {
-+./arch/sparc64/kernel/sys_sparc32.c:	rdev = inode->i_rdev;
-+./arch/sparc64/kernel/ioctl32.c:	if (tty_paranoia_check(tty, inode->i_rdev, "tty_ioctl"))
-+./arch/sparc64/solaris/misc.c:			if(MAJOR(inode->i_rdev) == MEM_MAJOR &&
-+./arch/sparc64/solaris/misc.c:			   MINOR(inode->i_rdev) == 5) {
-+./arch/sparc64/solaris/timod.c:		(MAJOR(ino->i_rdev) != 30 || MINOR(ino->i_rdev) != 1))
-+./arch/sparc64/solaris/socksys.c:	family = ((MINOR(inode->i_rdev) >> 4) & 0xf);
-+./arch/sparc64/solaris/socksys.c:		protocol = af_inet_protocols[MINOR(inode->i_rdev) & 0xf];
-+./arch/sparc64/solaris/socksys.c:	filp->f_dentry->d_inode->i_rdev = inode->i_rdev;
-+./arch/ia64/kernel/sys_ia64.c:	tmp.st_rdev = kdev_t_to_nr(inode->i_rdev);
-+./arch/ia64/sn/io/hwgfs/ramfs.c:		inode->i_rdev = NODEV;
-+./arch/mips64/kernel/linux32.c:	tmp.st_rdev = kdev_t_to_nr(inode->i_rdev);
-+./arch/mips64/kernel/ioctl32.c:	if (tty_paranoia_check(tty, inode->i_rdev, "tty_ioctl"))
-+./arch/parisc/kernel/ioctl32.c:	if (tty_paranoia_check(tty, inode->i_rdev, "tty_ioctl"))
-+./arch/parisc/kernel/sys_parisc32.c:	tmp.st_rdev = kdev_t_to_nr(inode->i_rdev);
-+./arch/parisc/hpux/fs.c:	tmp.st_rdev = kdev_t_to_nr(inode->i_rdev);
-+./arch/cris/drivers/sync_serial.c:	int dev = MINOR(inode->i_rdev);
-+./arch/cris/drivers/sync_serial.c:	int dev = MINOR(inode->i_rdev);
-+./arch/cris/drivers/sync_serial.c:	int dev = MINOR(file->f_dentry->d_inode->i_rdev);
-+./arch/cris/drivers/sync_serial.c:	int dev = MINOR(file->f_dentry->d_inode->i_rdev);
-+./arch/cris/drivers/sync_serial.c:	int dev = MINOR(file->f_dentry->d_inode->i_rdev);
-+./arch/cris/drivers/sync_serial.c:	int dev = MINOR(file->f_dentry->d_inode->i_rdev);
-+./arch/cris/drivers/gpio.c:	int p = MINOR(inode->i_rdev);
-+./arch/cris/drivers/eeprom.c:  if(MINOR(inode->i_rdev) != EEPROM_MINOR_NR)
-+./arch/cris/drivers/eeprom.c:  if(MAJOR(inode->i_rdev) != EEPROM_MAJOR_NR)
-+./arch/s390x/kernel/linux32.c:	rdev = inode->i_rdev;
-+./fs/jfs/jfs_dinode.h:#define di_rdev		u._file._u2._special._u._rdev
-+./fs/freevxfs/vxfs_inode.h:#define vdi_rdev	vdi_ftarea.rdev
-+./fs/freevxfs/vxfs_inode.h:#define vii_rdev	vdi_ftarea.rdev
-+./include/linux/ide.h:extern ide_drive_t *ide_info_ptr(kdev_t i_rdev, int force);
-+./include/linux/fs.h:	kdev_t			i_rdev;
-+./include/linux/kdev_t.h:- storing it in ROOT_DEV, inode->i_dev, inode->i_rdev, sb->s_dev,
-+./include/linux/cramfs_fs.h:	/* SIZE for device files is i_rdev */
-+./include/linux/nfsd/nfsfh.h:	kdev_t			fh_post_rdev;	/* i_rdev */
-+./include/linux/nfsd/nfsfh.h:	fhp->fh_post_rdev       = inode->i_rdev;
-+./drivers/char/drm/drm_stub.h:	int                    minor = minor(inode->i_rdev);
-+./drivers/char/drm/drm_fops.h:	int	     minor = minor(inode->i_rdev);
-+./drivers/char/drm/drm_drv.h:		if (minor(inode->i_rdev) == DRM(minor)[i]) {
-+./drivers/usb/scanner.h:#define USB_SCN_MINOR(X) MINOR((X)->i_rdev) - SCN_BASE_MNR
-+./drivers/ieee1394/ieee1394_core.h:	unsigned char minor = MINOR(file->f_dentry->d_inode->i_rdev);
-+./drivers/s390/char/tubio.h:	unsigned int minor = MINOR(ip->i_rdev);

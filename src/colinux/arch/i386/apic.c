@@ -31,7 +31,5 @@ co_rc_t co_manager_arch_init_apic(co_archdep_manager_t manager)
 	 * The SMP problem could be unrelated to APIC.
 	 */
 
-	
-
 	return CO_RC(OK);
 }

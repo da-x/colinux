@@ -123,14 +123,14 @@ asm(""							\
 
 
 #define PASSAGE_CODE_WRAP_SWITCH(_inner_)				\
+/* read return address and state pointers  */				\
+    "    movl 16(%esp), %ebx" /* return addr */ "\n"			\
+    "    movl 24(%esp), %ebp" /* current */     "\n"			\
+    "    movl 28(%esp), %ecx" /* other */       "\n"			\
+									\
 /* save flags, disable interrupts */					\
     "    pushfl"                             "\n"			\
     "    cli"                                "\n"			\
-									\
-/* read return address and state pointers  */				\
-    "    movl 20(%esp), %ebx" /* return addr */ "\n"			\
-    "    movl 28(%esp), %ebp" /* current */     "\n"			\
-    "    movl 32(%esp), %ecx" /* other */       "\n"			\
 									\
 /* save and switch from old esp */					\
     "    movl %esp, "CO_ARCH_STATE_STACK_ESP"(%ebp)"   "\n"		\
@@ -143,7 +143,7 @@ asm(""							\
 /* save return address */						\
     "    movl %ebx, "CO_ARCH_STATE_STACK_RETURN_EIP"(%ebp)"   "\n"	\
 									\
-/* save %cs for iret */							\
+/* save %cs */							        \  
     "    movl %cs, %ebx"                     "\n"			\
     "    movl %ebx, "CO_ARCH_STATE_STACK_CS"(%ebp)"      "\n"		\
 									\
@@ -162,21 +162,16 @@ asm(""							\
 									\
 /* switch to old ESP */							\
     "    lss "CO_ARCH_STATE_STACK_ESP"(%ebp), %esp"   "\n"		\
-                                                        \
-/*
- * The trick below creates an interrupt call stack frame, in order
- * to restore the other state's CS. The other's FLAGS is already on the
- * stack at that point. The two 'pushl's add the CS and EIP, so that
- * stack layout is as required from a same-level interrupt return:
- * FLAGS-CS-EIP.
- */ \
-    "    call 1f"                            "\n"       \
-    "1:  popl %eax"                          "\n"       \
-    "    addl $2f-1b,%eax"                   "\n"       \
-    "    pushl 0x04(%ebp)"  /* cs */         "\n"       \
-    "    pushl %eax"        /* eip (2:) */   "\n"       \
-    "    iret"                               "\n"       \
-    "2:  "                                   "\n"       \
+									\
+    "    call 1f"                            "\n"			\
+    "1:  popl %eax"                          "\n"			\
+    "    addl $2f-1b,%eax"                   "\n"			\
+    "    movl 0x04(%ebp), %ebx"              "\n"			\
+    "    movw %bx, -2(%eax)"                 "\n"			\
+    "    movl %eax, -6(%eax)"                "\n"			\
+    "    jmp 3f"                            "\n"			\
+    "3:  ljmp $0,$0"                         "\n"			\
+    "2:  popfl"                              "\n"
 
 #define PASSAGE_PAGE_PRESERVATION_FXSAVE(_inner_)		\
     "    fxsave "CO_ARCH_STATE_STACK_FXSTATE"(%ebp)"  "\n"	\

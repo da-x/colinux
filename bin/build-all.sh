@@ -10,4 +10,5 @@
 #
 
 ./build-cross.sh &&
-./build-colinux-libs.sh
+./build-colinux-libs.sh &&
+./build-colinux.sh

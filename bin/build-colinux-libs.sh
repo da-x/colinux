@@ -15,6 +15,12 @@ MXML_ARCHIVE=$MXML.tar.gz
 W32API_SRC=$W32API
 W32API_SRC_ARCHIVE=$W32API-src.tar.gz
 
+WINPCAP_SRC=wpdpack
+WINPCAP_URL=http://winpcap.polito.it/install/bin
+WINPCAP_SRC_ARCHIVE="$WINPCAP_SRC"_3_0.zip
+
+PATH="$PREFIX/$TARGET/bin:$PATH"
+
 download_files()
 {
 	mkdir -p "$SRCDIR"
@@ -22,6 +28,7 @@ download_files()
 	download_file "$FLTK_ARCHIVE" "$FLTK_URL"
 	download_file "$MXML_ARCHIVE" "$MXML_URL"
 	download_file "$W32API_SRC_ARCHIVE" "$MINGW_URL"
+	download_file "$WINPCAP_SRC_ARCHIVE" "$WINPCAP_URL"
 }
 
 #
@@ -158,11 +165,6 @@ configure_w32api_src()
 {
 	cd "$SRCDIR/$W32API_SRC"
 	echo "Configuring w32api source"
-	if [ "${CC}x" != "$TARGET-gccx" ]; then
-		echo "Warning: CC is set, may cause problems with make/build"
-		echo " of w32api source, unsetting."
-		unset CC
-	fi
 	./configure --host=i686-pc-mingw32 --prefix=$PREFIX/$TARGET &> configure.log
 	if test $? -ne 0; then
 	        echo "w32api source configure failed"
@@ -197,6 +199,39 @@ build_w32api_src()
 	install_w32api_src
 }
 
+# WinPCAP
+
+extract_winpcap_src()
+{
+	cd "$SRCDIR"
+	rm -rf "$WINPCAP_SRC"
+	echo "Extracting winpcap source"
+	unzip "$WINPCAP_SRC_ARCHIVE"
+}
+
+install_winpcap_src()
+{
+	cd "$SRCDIR/$WINPCAP_SRC"
+	echo "Installing $WINPCAP_SRC"
+	cp Include/PCAP.H "$PREFIX/$TARGET/include/pcap.h"
+	cp Include/pcap-stdinc.h "$PREFIX/$TARGET/include"
+	cp Include/bittypes.h "$PREFIX/$TARGET/include"
+	cp Include/ip6_misc.h "$PREFIX/$TARGET/include"
+#	mkdir "$PREFIX/$TARGET/include/net"
+	cp Include/NET/*.h "$PREFIX/$TARGET/include/net"
+	cp Lib/libwpcap.a "$PREFIX/$TARGET/lib"
+	if test $? -ne 0; then
+	        echo "winpcap install failed"
+	        exit 1
+	fi
+}
+
+build_winpcap_src()
+{
+	extract_winpcap_src
+	install_winpcap_src
+}
+
 # ALL
 
 build_colinux_libs()
@@ -205,6 +240,7 @@ build_colinux_libs()
 	build_fltk
 	build_mxml
 	build_w32api_src
+	build_winpcap_src
 }
 
 build_colinux_libs

@@ -27,6 +27,8 @@ extern "C" {
 #include <colinux/os/user/daemon.h>
 }
 
+#include "main.h"
+
 static void console_window_cb(Fl_Widget *widget, void* v) 
 {
 	((console_window_t *)v)->finish();
@@ -89,15 +91,20 @@ console_main_window_t::console_main_window_t(console_window_t *console)
 
 int console_main_window_t::handle(int event)
 {
+	unsigned long last_focus = keyboard_focus;
+
 	switch (event) {
 	case FL_FOCUS:
 		keyboard_focus = 1;
-		return 1;
+		break;
 
 	case FL_UNFOCUS:
 		keyboard_focus = 0;
 		break;
 	}
+
+	if (last_focus != keyboard_focus)
+		co_user_console_keyboard_focus_change(keyboard_focus);
 
 	return Fl_Double_Window::handle(event);
 }
@@ -485,7 +492,7 @@ void console_window_t::handle_scancode(co_scan_code_t sc)
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return;
 		
-	if (!window || !window->keyboard_focus)
+	if (!window)
 		return;
 
 	struct {

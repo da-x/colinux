@@ -29,6 +29,8 @@
     * Fixed virtual console switching (alt-f1, alt-f2, etc.) so it will
       save/redraw the screen like it should.
     * FLTK: The cursor is visible again.
+    * If keyboard focus is taken away from the consoles, it will release
+      any pressed key in the VM.
 	
 * Version 0.6.0 AKA "Getting even"
   * Ballard, Jonathan H.:  

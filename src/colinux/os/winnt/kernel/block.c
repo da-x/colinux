@@ -191,7 +191,7 @@ static co_rc_t co_os_file_block_detect_size(HANDLE handle, unsigned long long *o
 
 	LARGE_INTEGER scan_bit;
 	LARGE_INTEGER build_size;
-	unsigned long test_buffer_size_max = 0x1000;
+	unsigned long test_buffer_size_max = 0x4000;
 	unsigned long test_buffer_size = 0x100;
 	char *test_buffer;
 
