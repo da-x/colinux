@@ -508,8 +508,23 @@ void console_widget_NT_t::ProcessKeyEvent( KEY_EVENT_RECORD& ker )
 		// Signal Win key pressed/released
 		if ( released )	vkey_state[255] &= ~1;
 		else			vkey_state[255] |=  1;
+		break;
+
+	
+	case VK_DELETE:
+		if (!released &&
+                    ((flags & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED)) &&
+                     (flags & (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED)) &&
+		     (flags & (SHIFT_PRESSED))))
+		{
+			window->send_ctrl_alt_del();
+			return;
+		}
+		break;
+
 	case VK_APPS:	// Window Context Menu
 		return;		// Let windows process this keys
+
 	case VK_MENU:
 		// Check if Win+LeftAlt (detach from colinux)
 		if ( (vkey_state[255] & 1) && !released )
