@@ -45,6 +45,5 @@ void co_debug_(const char *module, int level, const char *filename,
 	va_end(ap);
 }
 
-
 CO_TRACE_CONTINUE;
 

@@ -17,13 +17,15 @@
 
 struct co_manager;
 
-#define CO_DEBUG_SECTION_BUFFER_START_SIZE     (0x10000)
+#define CO_DEBUG_SECTION_BUFFER_MAX_SIZE     (0x10000)
+#define CO_DEBUG_SECTION_BUFFER_START_SIZE   (0x1000)
 
 typedef struct co_debug_section {
 	co_list_t node;
 	char *buffer;
-	unsigned long buffer_size;
-	unsigned long filled;
+	long buffer_size;
+	long peak_size;
+	long filled;
 	co_os_mutex_t mutex;
 	int refcount;
 	bool_t folded;
@@ -36,6 +38,9 @@ typedef struct co_manager_debug {
 	co_debug_section_t *section;
 	co_os_wait_t read_wait;
 	bool_t freeing;
+	int sections_count;
+	long sections_total_size;
+	long sections_total_filled;
 } co_manager_debug_t;
 
 struct co_manager_per_fd_state;

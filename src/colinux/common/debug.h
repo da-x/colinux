@@ -33,6 +33,7 @@
 #include <stdarg.h>
 
 extern void co_debug_(const char *module, int level, const char *filename, int line, const char *fmt, ...);
+extern void co_debug_system(const char *fmt, ...);
 
 #define _colinux_attr_used __attribute__((__used__))
 
@@ -57,6 +58,7 @@ char _colinux_module[] = str;
 #define DEBUG_PRINT                          do {} while(0)
 #define DEBUG_PRINT_N                        do {} while(0)
 #define co_debug(fmt, ...)                   do {} while(0)
+#define co_debug_system(fmt, ...)            do {} while(0)
 
 /*----------------------------------------------------------------------------*/
 

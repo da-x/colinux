@@ -3378,7 +3378,7 @@ diff -urN a/include/asm-i386/cooperative.h b/include/asm-i386/cooperative.h
 +#endif
 diff -urN a/include/asm-i386/cooperative_internal.h b/include/asm-i386/cooperative_internal.h
 --- a/include/asm-i386/cooperative_internal.h	1970-01-01 02:00:00.000000000 +0200
-+++ b/include/asm-i386/cooperative_internal.h	2004-06-26 15:36:03.000000000 +0300
++++ b/include/asm-i386/cooperative_internal.h	2004-06-27 00:29:36.000000000 +0300
 @@ -0,0 +1,31 @@
 +/*
 + *  linux/include/asm/cooperative_internal.h
@@ -3451,7 +3451,7 @@ diff -urN a/include/asm-i386/fixmap.h b/include/asm-i386/fixmap.h
  
 diff -urN a/include/asm-i386/io.h b/include/asm-i386/io.h
 --- a/include/asm-i386/io.h	2004-06-22 09:23:56.000000000 +0300
-+++ b/include/asm-i386/io.h	2004-06-22 09:20:07.000000000 +0300
++++ b/include/asm-i386/io.h	2004-06-27 00:27:55.000000000 +0300
 @@ -102,6 +102,9 @@
  
  static inline void * ioremap (unsigned long offset, unsigned long size)
@@ -3462,6 +3462,15 @@ diff -urN a/include/asm-i386/io.h b/include/asm-i386/io.h
  	return __ioremap(offset, size, 0);
  }
  
+@@ -277,7 +280,7 @@
+ 
+ #endif /* __KERNEL__ */
+ 
+-#ifdef SLOW_IO_BY_JUMPING
++#if SLOW_IO_BY_JUMPING || CONFIG_COOPERATIVE
+ #define __SLOW_DOWN_IO "jmp 1f; 1: jmp 1f; 1:"
+ #else
+ #define __SLOW_DOWN_IO "outb %%al,$0x80;"
 diff -urN a/include/asm-i386/mach-default/irq_vectors.h b/include/asm-i386/mach-default/irq_vectors.h
 --- a/include/asm-i386/mach-default/irq_vectors.h	2004-06-22 09:23:56.000000000 +0300
 +++ b/include/asm-i386/mach-default/irq_vectors.h	2004-06-22 09:20:07.000000000 +0300
