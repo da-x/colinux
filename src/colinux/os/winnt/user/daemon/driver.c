@@ -127,46 +127,52 @@ co_rc_t co_winnt_remove_driver(void)
 	return CO_RC(OK);
 }	
 
-void co_winnt_status_driver(void) 
+co_rc_t co_winnt_status_driver(int verbose)
 {
 	co_rc_t rc = CO_RC_OK;
 	bool_t installed = PFALSE;
 	co_manager_handle_t handle;
 	co_manager_ioctl_status_t status = {0, };
 
-	co_terminal_print("checking if the driver is installed\n");
+	if (verbose)
+		co_terminal_print("checking if the driver is installed\n");
 
 	rc = co_win32_manager_is_installed(&installed);
 	if (!CO_OK(rc))
-		return;
+		return rc;
 
 	if (!installed) {
 		co_terminal_print("driver not installed\n");
-		return;
+		return CO_RC(ERROR_ACCESSING_DRIVER); /* FIXME: Is this error code correct for this? */
 	}
 
 	handle = co_os_manager_open();
 	if (!handle) {
 		co_terminal_print("couldn't get driver handle\n");
-		return;
+		return CO_RC(ERROR_MONITOR_NOT_LOADED); /* FIXME: Is this error code correct for this? */
 	}		
 	
 	rc = co_manager_status(handle, &status);
 	if (!CO_OK(rc)) {
-		co_terminal_print("couldn't get driver status (rc %x)\n", rc);
+		if (verbose)
+			co_terminal_print("couldn't get driver status (rc %x)\n", rc);
 		co_os_manager_close(handle);
-		return;
+		return rc;
 	}		
 
-	if (status.state >= CO_MANAGER_STATE_INITIALIZED)
-		co_terminal_print("current state: %d (fully initialized)\n", status.state);
-	else
-		co_terminal_print("current state: %d\n", status.state);
+	if (verbose) {
+		if (status.state >= CO_MANAGER_STATE_INITIALIZED)
+			co_terminal_print("current state: %d (fully initialized)\n", status.state);
+		else
+			co_terminal_print("current state: %d\n", status.state);
 
-	co_terminal_print("current number of monitors: %d\n", status.monitors_count);
-	co_terminal_print("current linux api version: %d\n", status.linux_api_version);
-	co_terminal_print("current periphery api version: %d\n", status.periphery_api_version);
+		co_terminal_print("current number of monitors: %d\n", status.monitors_count);
+		co_terminal_print("current linux api version: %d\n", status.linux_api_version);
+		co_terminal_print("current periphery api version: %d\n", status.periphery_api_version);
+	}
 	co_os_manager_close(handle);
+    
+	return rc;
 }
 
 co_rc_t co_winnt_install_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LPCTSTR  DriverName, IN LPCTSTR ServiceExe)

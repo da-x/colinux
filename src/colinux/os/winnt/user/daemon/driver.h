@@ -13,7 +13,7 @@
 
 #include <colinux/common/common.h>
 
-extern void co_winnt_status_driver(void);
+extern co_rc_t co_winnt_status_driver(int verbose);
 
 extern co_rc_t co_winnt_install_driver(void);
 extern co_rc_t co_winnt_initialize_driver(void);

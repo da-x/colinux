@@ -44,7 +44,7 @@ co_rc_t co_launch_process(char *command_line, ...)
 			    &pi);             // Pointer to PROCESS_INFORMATION structure.
 
 	if (!ret) {
-		co_debug("error in execution (%d)\n", GetLastError());
+		co_terminal_print("error in execution '%s' (%d)\n", buf, GetLastError());
 		return CO_RC(ERROR);
 	}
 

@@ -44,13 +44,14 @@ co_rc_t co_load_config_file(co_daemon_t *daemon)
 
 	rc = co_os_file_load(&daemon->config.config_path, &buf, &size);
 	if (!CO_OK(rc)) {
-		co_debug("error loading configuration file\n");
+		co_terminal_print("error loading configuration file '%s'\n",
+				  daemon->config.config_path);
 		return rc;
 	}
 	
 	if (size == 0) {
 		rc = CO_RC_ERROR;
-		co_debug("error, configuration file size is 0\n");
+		co_terminal_print("error, configuration file size is 0\n");
 	} else {
 		buf[size-1] = '\0';
 		rc = co_load_config(buf, &daemon->config);
@@ -453,14 +454,14 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 
 	rc = co_os_file_load(&daemon->config.vmlinux_path, &daemon->buf, &size);
 	if (!CO_OK(rc)) {
-		co_debug("error loading vmlinux file (%s)\n", 
+		co_terminal_print("error loading vmlinux file '%s'\n", 
 		      &daemon->config.vmlinux_path);
 		goto out;
 	}
 
 	rc = co_elf_image_read(&daemon->elf_data, daemon->buf, size);
 	if (!CO_OK(rc)) {
-		co_debug("error reading image (%d bytes)\n", size);
+		co_terminal_print("error reading image (%d bytes)\n", size);
 		goto out_free_vmlinux; 
 	}
 
@@ -468,13 +469,13 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 
 	rc = co_daemon_monitor_create(daemon);
 	if (!CO_OK(rc)) {
-		co_debug("error initializing\n");
+		co_terminal_print("error initializing\n");
 		goto out_free_vmlinux;
 	}
 
 	rc = co_elf_image_load(daemon);
 	if (!CO_OK(rc)) {
-		co_debug("error loading image\n");
+		co_terminal_print("error loading image\n");
 		goto out_destroy;
 	}
 
