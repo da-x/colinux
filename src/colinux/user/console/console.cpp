@@ -67,6 +67,10 @@ static void console_terminate_cb(Fl_Widget *widget, void* v)
 	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->terminate();
 }
 
+static void console_send_ctrl_alt_del_cb(Fl_Widget *widget, void* v) 
+{
+	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del();
+}
 static void console_about_cb(Fl_Widget *widget, void* v) 
 {
 	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->about();
@@ -161,6 +165,7 @@ co_rc_t console_window_t::start()
 		{ "Pause", 0, (Fl_Callback *)console_pause_cb, this,  },
 		{ "Resume", 0, (Fl_Callback *)console_resume_cb, this, },
 		{ "Terminate", 0, (Fl_Callback *)console_terminate_cb, this, },
+		{ "Send Ctrl-Alt-Del", 0, (Fl_Callback *)console_send_ctrl_alt_del_cb, this, },
 		{ 0 },
 
 		{ "Inspect", 0, 0, 0, FL_SUBMENU },
@@ -359,6 +364,29 @@ co_rc_t console_window_t::terminate()
 	co_os_daemon_send_message(daemon_handle, &message.message);
 	
 	return detach();
+}
+
+co_rc_t console_window_t::send_ctrl_alt_del()
+{
+	if (state != CO_CONSOLE_STATE_ATTACHED)
+		return CO_RC(ERROR);
+
+	struct {
+		co_message_t message;
+		co_daemon_console_message_t console;
+	} message;
+		
+	message.message.from = CO_MODULE_CONSOLE;
+	message.message.to = CO_MODULE_DAEMON;
+	message.message.priority = CO_PRIORITY_IMPORTANT;
+	message.message.type = CO_MESSAGE_TYPE_OTHER;
+	message.message.size = sizeof(message) - sizeof(message.message);
+	message.console.type = CO_DAEMON_CONSOLE_MESSAGE_CTRL_ALT_DEL;
+	message.console.size = 0;
+
+	co_os_daemon_send_message(daemon_handle, &message.message);
+
+	return CO_RC(OK);
 }
 
 void console_window_t::finish()

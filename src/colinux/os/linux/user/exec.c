@@ -18,6 +18,7 @@
 co_rc_t co_launch_process(char *command_line, ...)
 {
 	char buf[0x100];
+	char buf2[0x100];
 	va_list ap;
 	int ret;
 	
@@ -25,8 +26,10 @@ co_rc_t co_launch_process(char *command_line, ...)
 	vsnprintf(buf, sizeof(buf), command_line, ap);
 	va_end(ap);
 
-	co_debug("executing: %s\n", buf);
-	ret = system(buf);
+	snprintf(buf2, sizeof(buf2), "%s &", buf);
+
+	co_debug("executing: %s\n", buf2);
+	ret = system(buf2);
 
 	if (ret == -1) {
 		co_debug("error in execution (%d)\n", errno);

@@ -7,8 +7,6 @@ BUILD_PATH := $(BUILD_PATH)/daemon
 #-----------------------------------------------------------------
 
 LOCAL_EXE = $(BUILD_PATH)/colinux-daemon
-USER_CFLAGS += $(CFLAGS) 
-
 LOCAL_OBJS = \
 	main.o \
         debug.o \

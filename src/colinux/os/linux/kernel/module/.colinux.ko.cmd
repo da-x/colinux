@@ -1,1 +1,0 @@
-cmd_/home/karrde/colinux/main/src/colinux/os/current/kernel/module/colinux.ko := ld -m elf_i386 -r -o /home/karrde/colinux/main/src/colinux/os/current/kernel/module/colinux.ko /home/karrde/colinux/main/src/colinux/os/current/kernel/module/colinux.o /home/karrde/colinux/main/src/colinux/os/current/kernel/module/colinux.mod.o

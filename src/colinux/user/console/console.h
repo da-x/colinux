@@ -73,6 +73,7 @@ public:
 	co_rc_t resume();
 	co_rc_t detach();
 	co_rc_t terminate();
+	co_rc_t send_ctrl_alt_del();
 	void idle();
 	void select_monitor();
 

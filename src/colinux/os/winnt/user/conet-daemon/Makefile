@@ -7,8 +7,6 @@ BUILD_PATH := $(BUILD_PATH)/conet-daemon
 #-----------------------------------------------------------------
 
 LOCAL_EXE = $(BUILD_PATH)/colinux-net-daemon.exe
-USER_CFLAGS += $(CFLAGS) 
-
 LOCAL_OBJS = \
 	main.o \
 	tap-win32.o \

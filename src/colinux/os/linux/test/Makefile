@@ -9,8 +9,6 @@ BUILD_PATH := $(BUILD_PATH)/test
 LOCAL_EXE1 = $(BUILD_PATH)/pipe_server
 LOCAL_OBJS1 = pipe_server.o
 
-USER_CFLAGS += $(CFLAGS) 
-
 LOCAL_OBJS1 := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS1))
 LOCAL_OBJS := \
 	$(LOCAL_OBJS1) \

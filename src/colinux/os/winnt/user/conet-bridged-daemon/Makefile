@@ -7,7 +7,6 @@ BUILD_PATH := $(BUILD_PATH)/conet-bridged-daemon
 #-----------------------------------------------------------------
 
 LOCAL_EXE = $(BUILD_PATH)/colinux-bridged-net-daemon.exe
-USER_CFLAGS += $(CFLAGS) 
 
 LOCAL_OBJS = main.o
 

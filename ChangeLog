@@ -3,6 +3,8 @@
   * Windows: Sizes of raw partition devices are now detected properly. This 
     means that the resierfs problems should be over, plus cat /dev/cobd* would
     work for you.
+  * The console can now send Ctrl-Alt-Del.
+  * Updated the cobuild.sh script (gboutwel).
 	
 * Version 0.6.0 AKA "Getting even"
   * Ballard, Jonathan H.:  

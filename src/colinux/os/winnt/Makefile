@@ -12,7 +12,7 @@ else
 $(error Other Windows architectures not supported yet!)
 endif
 
-CFLAGS_WINVER = 0x05000
+CFLAGS_WINVER = 0x0500
 USER_CFLAGS += -DWINVER=$(CFLAGS_WINVER)
 USER_CFLAGS += -DWINVER=$(CFLAGS_WINVER)
 KERNEL_CFLAGS += -DWINVER=$(CFLAGS_WINVER)

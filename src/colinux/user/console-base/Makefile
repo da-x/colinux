@@ -6,9 +6,6 @@ else
 BUILD_PATH := $(BUILD_PATH)/console-base
 #-----------------------------------------------------------------
 
-USER_CFLAGS += $(CFLAGS) 
-# -DDEBUG_CO_RC
-
 LOCAL_OBJS = \
 	widget.o \
 	main.o \

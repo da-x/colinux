@@ -459,13 +459,32 @@ co_rc_t co_daemon_handle_daemon(void *data, co_message_t *message)
 			console = (co_console_t *)co_os_malloc(console_message->console.size);
 			if (console) {
 				memcpy(console, console_message->data, console_message->console.size);
-				co_console_unpickle(console);
-				
+				co_console_unpickle(console);				
 				daemon->console = console;
 			}
+
 		} else if (console_message->console.type == CO_DAEMON_CONSOLE_MESSAGE_TERMINATE) {
 			debug(daemon, "termination requested by console\n");
-			daemon->running = PFALSE;			
+			daemon->running = PFALSE;
+
+		} else if (console_message->console.type == CO_DAEMON_CONSOLE_MESSAGE_CTRL_ALT_DEL) {
+			struct {
+				co_message_t message;
+				co_linux_message_t linux_msg;
+				co_linux_message_power_t data;
+			} message;
+
+			message.message.from = CO_MODULE_DAEMON;
+			message.message.to = CO_MODULE_LINUX;
+			message.message.priority = CO_PRIORITY_IMPORTANT;
+			message.message.type = CO_MESSAGE_TYPE_OTHER;
+			message.message.size = sizeof(message.linux_msg) + sizeof(message.data);
+			message.linux_msg.device = CO_DEVICE_POWER;
+			message.linux_msg.unit = 0;
+			message.linux_msg.size = sizeof(message.data);
+			message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
+			
+			co_message_switch_dup_message(&daemon->message_switch, &message.message);
 		}
 	}
 
@@ -710,7 +729,7 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 		}
 
 		case CO_NETDEV_TYPE_TAP:
-			rc = co_launch_process("colinux-net-daemon");
+			rc = co_launch_process("colinux-net-daemon 0 0");
 			break;
 
 		default:
@@ -835,7 +854,6 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 		rc = co_os_pipe_server_service(ps, daemon->idle ? PTRUE : PFALSE);
 
 		co_daemon_idle(daemon);
-
 		daemon->idle = PFALSE;
 	}
 
