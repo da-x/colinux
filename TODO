@@ -10,6 +10,33 @@
      usefull.
    * (optional) Support kermit or other 'telnet upload' protocol, to 
      upload files from the console.
+   * Console re-attach is not needed, just make the daemon hold the pipe
+     open during the reboot.
+   * Paste clipboard feature is superfluous, as it is already provided in
+     the nt console by the OS.
+   * Focus change handling.
+     If a key is pressed and only released after changing window focus, it
+     will stay pressed forever until it is pressed/released again.
+     This can be solved by handling FOCUS_EVENT in the input loop (just
+     release all pressed keys, like in the FLTK code).
+   * Some more accurate console shortcuts handling.
+     I'm not exactly sure of what needs to be done here, but I think we can
+     solve it by using the modifier flags in the key input record.
+   * Fix: The cursor disapears sometimes (fltk console). 
+   * Fix: The cursor is not positioned well on nt console re-attach. I think
+     this was solved in the fltk console. 
+   * Either support multiple consoles or stop the second from attaching
+     (probably the latter first). Any console can attach now, broking the
+     first one (and all others, off course).
+   * Fix: The daemon aborts when clicking the close button of it's console
+     window, terminating colinux abruptly (no fs synch, so corrupted 
+     devices on reboot). This is easy enough to solve.
+   * Implement backlog in consoles (shift+PgUp). I think it can be easy to
+     do in the NT console, as the OS already gives us a screen buffer.
+   * Implement setfont in the FLTK console (use the kernel fonts). Needs
+     refactoring and maybe some hard work.
+   * Implement mouse copy/paste (we don't need gpm to do that). For full
+     mouse support we need to implement the kernel driver.
 
  * Installer:
    * Instruct the user to install Python for Windows, wxPython, and Python 
@@ -33,7 +60,6 @@
 
  * Miscellaneous enhancements and fixes:
    * Lack of entropy - empty /dev/random
-   * Make it work on PAE setups.
    * Make coLinux work on Windows NT 4 SP*.
    * Address all reported SMP issues.
    * The first search path for files specified in the XML, such as in 
