@@ -8688,7 +8688,7 @@ diff -urN a/kernel/Makefile b/kernel/Makefile
 diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 --- a/kernel/cooperative.c
 +++ b/kernel/cooperative.c
-@@ -0,0 +1,421 @@
+@@ -0,0 +1,422 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -9108,6 +9108,7 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +__initcall(initcall_message_queues);
 +
 +EXPORT_SYMBOL(co_terminate);
++EXPORT_SYMBOL(co_terminate_bug);
 +
 +CO_TRACE_CONTINUE;
 diff -urN a/kernel/panic.c b/kernel/panic.c
