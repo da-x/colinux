@@ -23,6 +23,7 @@ typedef struct co_daemon_start_parameters {
 	co_pathname_t config_path;
 	bool_t launch_console;
 	bool_t show_help;
+	char console[0x20];
 } co_start_parameters_t;
 
 typedef struct co_daemon {

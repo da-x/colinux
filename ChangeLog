@@ -30,6 +30,9 @@
     should now work. I have to enable port I/O in order to for this to work,
     but I plan to disable it in the future. If you compile a new vmlinux
     Make sure that CONFIG_X86_TSC is enabled in your .config file.
+  * New daemon switch -t: Type of console to launch. Default is fltk.
+  * Fixed some console code bug left by Ballard.	 
+  * Added an NSIS installer script.
 
 * Version 0.5.4 AKA "Focal Segmental Glomerulosclerosis" (%gs/%fs) release
   * Fixed an issue with i686-optimized pthread and the preservation of 

@@ -31,6 +31,7 @@ CLEAN_FILES := $(CLEAN_FILES) \
 	$(LOCAL_OBJS) $(BUILD_PATH)/user.o
 
 #-----------------------------------------------------------------
-include $(call BUILD_SUBDIRS, daemon conet-daemon console console-nt conet-bridged-daemon)
+include $(call BUILD_SUBDIRS, daemon conet-daemon console \
+	console-nt conet-bridged-daemon install)
 BUILD_PATH := $(shell dirname $(BUILD_PATH))
 endif

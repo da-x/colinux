@@ -140,10 +140,10 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 	}
 
 	case CO_OPERATION_CONSOLE_CLEAR:{
-		unsigned t = message->clear.top;
-		unsigned l ;
-		unsigned b = message->clear.bottom;
-		unsigned r = message->clear.right;
+		int t = message->clear.top;
+		int b = message->clear.bottom;
+		int r = message->clear.right;
+		int l;
 		co_console_cell_t *cell;
 
 		while(t<=b) {
@@ -159,15 +159,15 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 	}
 
 	case CO_OPERATION_CONSOLE_BMOVE:{
-		unsigned y = message->bmove.row;
-		unsigned x = message->bmove.column;
-		unsigned t = message->bmove.top;
-		unsigned l = message->bmove.left;
-		unsigned b = message->bmove.bottom;
-		unsigned r = message->bmove.right;
+		int y = message->bmove.row;
+		int x = message->bmove.column;
+		int t = message->bmove.top;
+		int l = message->bmove.left;
+		int b = message->bmove.bottom;
+		int r = message->bmove.right;
 
-		if(y<t) {
-			while(t<=b) {
+		if (y < t) {
+			while (t <= b) {
 				memmove(&console->screen[y*console->x+x],
 					&console->screen[t*console->x+l],
 					r-l+1);
@@ -175,8 +175,8 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 				y++;
 			}
 		} else	{
-			y+=b-t;
-			while(t<=b) {
+			y += b-t;
+			while (t <= b) {
 				memmove(&console->screen[y*console->x+x],
 					&console->screen[b*console->x+l],
 					r-l+1);
@@ -184,6 +184,7 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 				y--;
 			}
 		}
+		break;
 	}
 
 	case CO_OPERATION_CONSOLE_STARTUP:

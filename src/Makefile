@@ -83,9 +83,9 @@ HOST_API_CFLAGS=-DCO_HOST_API
 
 AR=i686-pc-cygwin-ar
 
-TOOL_USER_CC=$(CC) $(USER_CFLAGS) $(CO_INCLUDES) -c $^ -o $@ 
-TOOL_USER_GPP=$(GPP) $(USER_CFLAGS) $(CO_INCLUDES) -c $^ -o $@ 
-TOOL_KERNEL_CC=$(CC) $(KERNEL_CFLAGS) $(CO_INCLUDES) -c $^ -o $@ 
+TOOL_USER_CC=$(CC) $(USER_CFLAGS) $(CO_INCLUDES) -c $< -o $@ 
+TOOL_USER_GPP=$(GPP) $(USER_CFLAGS) $(CO_INCLUDES) -c $< -o $@ 
+TOOL_KERNEL_CC=$(CC) $(KERNEL_CFLAGS) $(CO_INCLUDES) -c $< -o $@ 
 TOOL_AR=$(AR) cr $@ $^
 
 TOOL_LD_RELOC=$(LD) -r -o $@ $^

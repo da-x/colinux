@@ -7,6 +7,8 @@ the host operating system. Its command line syntax is as follows:
       -c config.xml  Specify configuration file
                      (default: colinux.default.xml)
       -d             Don't launch and attach a coLinux console on startup
+      -t name        When spawning a console, this is the type of
+                     console (e.g, nt, fltk, etc...)
 
 The daemon spits out the kernel's printk() messages along with its own prints. It
 also optionally launches the virtual VGA console, that can be used to interface

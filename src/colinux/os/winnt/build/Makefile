@@ -65,7 +65,7 @@ colinux: $(LOCAL_FILES)
 driver: $(BUILD_PATH)/driver.o
 
 CLEAN_FILES := $(CLEAN_FILES) \
-	$(LOCAL_TARGETS)
+	$(LOCAL_TARGETS) $(BUILD_PATH)/driver.coff  $(BUILD_PATH)/driver.rc
 
 #-----------------------------------------------------------------
 BUILD_PATH := $(shell dirname $(BUILD_PATH))

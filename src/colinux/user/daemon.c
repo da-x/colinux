@@ -72,6 +72,9 @@ void co_daemon_syntax()
 	co_terminal_print("                     (default: colinux.default.xml)\n");
 	co_terminal_print("      -d             Don't launch and attach a coLinux console on\n");
 	co_terminal_print("                     startup\n");
+	co_terminal_print("      -t name        When spawning a console, this is the type of \n");
+	co_terminal_print("                     console (e.g, nt, fltk, etc...)\n");
+
 }
 
 co_rc_t co_daemon_parse_args(char **args, co_start_parameters_t *start_parameters)
@@ -85,6 +88,7 @@ co_rc_t co_daemon_parse_args(char **args, co_start_parameters_t *start_parameter
 
 	co_snprintf(start_parameters->config_path, sizeof(start_parameters->config_path),
 		    "%s", "default.colinux.xml");
+	co_snprintf(start_parameters->console, sizeof(start_parameters->console), "fltk");
 
 	/* Parse command line */
 	while (*param_scan) {
@@ -103,6 +107,23 @@ co_rc_t co_daemon_parse_args(char **args, co_start_parameters_t *start_parameter
 			co_snprintf(start_parameters->config_path, 
 				    sizeof(start_parameters->config_path), 
 				    "%s", *param_scan);
+		}
+
+		option = "-t";
+
+		if (strcmp(*param_scan, option) == 0) {
+			param_scan++;
+
+			if (!(*param_scan)) {
+				co_terminal_print(
+					"Parameter of command line option %s not specified\n",
+					option);
+				return CO_RC(ERROR);
+			}
+
+			co_snprintf(start_parameters->console, 
+				    sizeof(start_parameters->console), 
+					   "%s", *param_scan);
 		}
 
 		option = "-d";
@@ -771,7 +792,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 
 	if (daemon->start_parameters->launch_console) {
 		debug(daemon, "launching console\n");
-		rc = co_launch_process("colinux-console-fltk -a 0");
+		rc = co_launch_process("colinux-console-%s -a 0", daemon->start_parameters->console);
 		if (!CO_OK(rc)) {
 			co_terminal_print("colinux: error launching console\n");
 			goto out;
