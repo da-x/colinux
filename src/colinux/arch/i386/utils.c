@@ -12,11 +12,16 @@
 
 #include "utils.h"
 
-bool_t co_is_pae_enabled(void)
+unsigned long co_get_cr4(void)
 {
 	unsigned long cr4 = 0;
 	asm("mov %%cr4, %0" : "=r"(cr4));
-	return cr4 & 0x20;
+	return cr4;
+}
+
+bool_t co_is_pae_enabled(void)
+{
+	return co_get_cr4() & 0x20;
 }
 
 unsigned long co_get_cr3(void)
@@ -24,4 +29,56 @@ unsigned long co_get_cr3(void)
 	unsigned long cr3 = 0;
 	asm("mov %%cr3, %0" : "=r"(cr3));
 	return cr3;
+}
+
+unsigned long co_get_dr0(void)
+{
+	unsigned long reg = 0;
+	asm("mov %%dr0, %0" : "=r"(reg));
+	return reg;
+}
+
+unsigned long co_get_dr1(void)
+{
+	unsigned long reg = 0;
+	asm("mov %%dr1, %0" : "=r"(reg));
+	return reg;
+}
+
+unsigned long co_get_dr2(void)
+{
+	unsigned long reg = 0;
+	asm("mov %%dr2, %0" : "=r"(reg));
+	return reg;
+}
+
+unsigned long co_get_dr3(void)
+{
+	unsigned long reg = 0;
+	asm("mov %%dr3, %0" : "=r"(reg));
+	return reg;
+}
+
+unsigned long co_get_dr6(void)
+{
+	unsigned long reg = 0;
+	asm("mov %%dr6, %0" : "=r"(reg));
+	return reg;
+}
+
+unsigned long co_get_dr7(void)
+{
+	unsigned long reg = 0;
+	asm("mov %%dr7, %0" : "=r"(reg));
+	return reg;
+}
+
+void co_fxsave(char *buffer)
+{
+	asm("fxsave (%0) ; fnclex" : : "r"(buffer));
+}
+
+void co_fnsave(char *buffer)
+{
+	asm("fnsave (%0) ; fwait" : : "r"(buffer));
 }

@@ -545,7 +545,6 @@ void (*co_host_switch_wrapper_func)(co_monitor_t *) = co_host_normal_switch_wrap
 co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 {
 	co_arch_passage_page_t *pp = cmon->passage_page;
-	linux_pgd_t pgd;
 	unsigned long caps = 0;
 
 	caps = cmon->manager->archdep->caps[0];
@@ -579,35 +578,24 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	pp->host_state.va = (unsigned long)(&pp->first_page);
 
 	/*
-	 * Optionally this can be rewritten so wouldn't need it at all, and
-	 * start with a completely _clean_ state.
-	 */
-	co_passage_page_func(host_state, host_state);
-
-	co_debug("Passage page dump (Host context)\n");
-	co_passage_page_dump(pp);
-
-	/*
-	 * Link the two states to each other so that the passage code properly
-	 * relocates its EIP inside the temporary passage address space.
-	 */
-	pp->linuxvm_state = pp->host_state;
-
-	/*
 	 * Init the Linux context.
 	 */ 
 	pp->linuxvm_state.temp_cr3 = co_os_virt_to_phys(&pp->guest_normal);
 	normal_temp_address_space_init(&pp->guest_normal, pp->self_physical_address,
 				       (unsigned long)(cmon->passage_page_vaddr));
+
 	pp->linuxvm_state.va = (unsigned long)(cmon->passage_page_vaddr);
+	pp->linuxvm_state.dr0 = co_get_dr0();
+	pp->linuxvm_state.dr1 = co_get_dr1();
+	pp->linuxvm_state.dr2 = co_get_dr2();
+	pp->linuxvm_state.dr3 = co_get_dr3();
+	pp->linuxvm_state.dr6 = co_get_dr6();
+	pp->linuxvm_state.dr7 = co_get_dr7();
 	pp->linuxvm_state.tr = 0;
 	pp->linuxvm_state.ldt = 0;
-	pp->linuxvm_state.cr4 &= ~(CO_ARCH_X86_CR4_PAE | CO_ARCH_X86_CR4_MCE | 
-				   CO_ARCH_X86_CR4_PGE | CO_ARCH_X86_CR4_OSXMMEXCPT);
-	pgd = cmon->pgd;
-	pp->linuxvm_state.cr3 = pgd;
+	pp->linuxvm_state.cr4 = 0;
+	pp->linuxvm_state.cr3 = cmon->pgd;
 	pp->linuxvm_state.gdt.base = (struct x86_dt_entry *)cmon->import.kernel_gdt_table;
-	/* pp->linuxvm_state.gdt.limit = ((__TSS(NR_CPUS)) * 8) - 1; */
 	pp->linuxvm_state.gdt.limit = (8*0x20) - 1;
 	pp->linuxvm_state.idt.table = (struct x86_idt_entry *)cmon->import.kernel_idt_table;
 	pp->linuxvm_state.idt.size = 256*8 - 1;
@@ -621,7 +609,7 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	 * the exit of the passage code.
 	 */
 	pp->linuxvm_state.esp = cmon->import.kernel_init_task_union + 0x2000 - 0x50;
-	pp->linuxvm_state.flags &= ~(1 << 9); /* Turn IF off */
+	pp->linuxvm_state.flags = 0;
 	pp->linuxvm_state.return_eip = cmon->import.kernel_colinux_start;
 
 	pp->linuxvm_state.cs = cmon->arch_info.kernel_cs;
@@ -630,6 +618,11 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	pp->linuxvm_state.fs = cmon->arch_info.kernel_ds;
 	pp->linuxvm_state.gs = cmon->arch_info.kernel_ds;
 	pp->linuxvm_state.ss = cmon->arch_info.kernel_ds;
+
+	if (caps & (1 << CO_ARCH_X86_FEATURE_FXSR))
+		co_fxsave(pp->linuxvm_state.fxstate);
+	else
+		co_fnsave(pp->linuxvm_state.fxstate);
 
 	co_debug("Passage page dump: %x\n", co_monitor_arch_passage_page_init);
 
