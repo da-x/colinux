@@ -46,6 +46,14 @@ typedef enum {
 	CO_MONITOR_CONSOLE_STATE_ATTACHED,
 } co_monitor_console_state_t;
 
+#define CO_MAX_LINUX_MESSAGES    10
+
+typedef struct {
+	co_message_t *message;
+	unsigned long guest_message;
+	unsigned long size;
+} co_sent_message_t;
+
 /*
  * We use the following struct for each coLinux system. 
  */
@@ -124,6 +132,9 @@ typedef struct co_monitor {
          * Timer
          */
         co_os_timer_t timer;
+	co_timestamp_t timestamp;
+	co_timestamp_t timestamp_freq;
+	unsigned long long timestamp_reminder;
 
 	/* 
 	 * Block devices
@@ -136,6 +147,7 @@ typedef struct co_monitor {
 	co_message_switch_t message_switch;
 	co_queue_t user_message_queue;
 	co_queue_t linux_message_queue;
+	unsigned char *io_buffer;
 
         /*
 	 * initrd

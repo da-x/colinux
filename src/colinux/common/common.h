@@ -31,4 +31,23 @@ typedef unsigned long linux_pgd_t;
 #define NULL (void *)0
 #endif
 
+/* 
+ * Following is taken from Linux's ./arch/i386/kernel/smpboot.c 
+*/
+static inline unsigned long long co_div64(unsigned long long a, unsigned long b0)
+{
+        unsigned int a1, a2;
+        unsigned long long res;
+
+        a1 = ((unsigned int*)&a)[0];
+        a2 = ((unsigned int*)&a)[1];
+
+        res = a1/b0 +
+                (unsigned long long)a2 * (unsigned long long)(0xffffffff/b0) +
+                a2 / b0 +
+                (a2 * (0xffffffff % b0)) / b0;
+
+        return res;
+}
+
 #endif

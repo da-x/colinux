@@ -20,6 +20,7 @@
 #include <colinux/os/kernel/misc.h>
 #include <colinux/os/kernel/monitor.h>
 #include <colinux/os/kernel/time.h>
+#include <colinux/os/current/kernel/main.h>
 #include <colinux/arch/passage.h>
 #include <colinux/arch/interrupt.h>
 #include <colinux/arch/mmu.h>
@@ -186,21 +187,47 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 	}	
 
 	passage_page_offset = ((CO_VPTR_PASSAGE_PAGE & ((1 << PGDIR_SHIFT) - 1)) >> CO_ARCH_PAGE_SHIFT) * sizeof(linux_pte_t);
-	co_debug_ulong(passage_page_offset);
-
 	passage_page_pfn = co_os_virt_to_phys(cmon->passage_page) >> CO_ARCH_PAGE_SHIFT;
-	co_debug_ulong(passage_page_pfn);
 
 	rc = co_monitor_create_ptes(
 		cmon, 
 		CO_VPTR_SELF_MAP + passage_page_offset, 
 		sizeof(linux_pte_t), 
 		&passage_page_pfn);
+
+	if (!CO_OK(rc)) {
+		co_debug("error mapping passage page into the self map (%x)\n", rc);
+		goto out_error;
+	}	
+
+	rc = co_monitor_create_ptes(
+		cmon, 
+		CO_VPTR_SELF_MAP, 
+		sizeof(linux_pte_t), 
+		&self_map_pfn);
 	
 	if (!CO_OK(rc)) {
 		co_debug("error initializing self_map (%x)\n", rc);
 		goto out_error;
 	}	
+
+	long io_buffer_page = 0;
+	long io_buffer_num_pages = CO_VPTR_IO_AREA_SIZE >> CO_ARCH_PAGE_SHIFT;
+	long io_buffer_offset = ((CO_VPTR_IO_AREA_START & ((1 << PGDIR_SHIFT) - 1)) >> CO_ARCH_PAGE_SHIFT) 
+		* sizeof(linux_pte_t);
+
+	for (io_buffer_page=0; io_buffer_page < io_buffer_num_pages; io_buffer_page++) {
+		unsigned long io_buffer_pfn = co_os_virt_to_phys(&cmon->io_buffer[CO_ARCH_PAGE_SIZE*io_buffer_page]) >> CO_ARCH_PAGE_SHIFT;
+
+		rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP + io_buffer_offset, 
+					    sizeof(linux_pte_t), &io_buffer_pfn);
+		if (!CO_OK(rc)) {
+			co_debug("error initializing io buffer (%x, %d)\n", rc, io_buffer_page);
+			goto out_error;
+		}	
+		
+		io_buffer_offset += sizeof(linux_pte_t);
+	}
 
 	co_debug("initialization finished\n");
 
@@ -271,40 +298,71 @@ bool_t co_monitor_device_request(co_monitor_t *cmon, co_device_t device, unsigne
 	return PTRUE;
 }
 
-co_rc_t co_monitor_send_messages_to_linux(co_monitor_t *cmon)
-{
-	co_message_queue_item_t *message_item;
-	co_message_t *message;
-	unsigned long total_size;
-	long num_messages;
+static co_rc_t co_monitor_callback_return_messages(co_monitor_t *cmon)
+{	
 	co_rc_t rc;
+	unsigned char *io_buffer, *io_buffer_end;
 
-	co_passage_page->operation = CO_OPERATION_EMPTY;
-	co_passage_page->params[0] = 0;
+	io_buffer = cmon->io_buffer;
+	if (!io_buffer)
+		return CO_RC(ERROR);
+	io_buffer_end = io_buffer + CO_VPTR_IO_AREA_SIZE;
+	
+	co_queue_t *queue = &cmon->linux_message_queue;
+	while (co_queue_size(queue) != 0) 
+	{
+		co_message_queue_item_t *message_item;
+		rc = co_queue_pop_tail(queue, (void **)&message_item);
+		if (!CO_OK(rc))
+			return rc;
+		
+		co_message_t *message = message_item->message;
+		unsigned long size = message->size + sizeof(*message);
+		co_queue_free(queue, message_item);
+		
+		if (io_buffer + size > io_buffer_end) {
+			co_os_free(message);
+			break;
+		}
+		
+		co_memcpy(io_buffer, message, size);
+		io_buffer += size;
+		co_os_free(message);
+	}
 
-	num_messages = co_queue_size(&cmon->linux_message_queue);
-	if (num_messages == 0)
-		return CO_RC(OK);
+	co_passage_page->params[0] = io_buffer - cmon->io_buffer;
 
-	rc = co_queue_pop_tail(&cmon->linux_message_queue, (void **)&message_item);
-	if (!CO_OK(rc))
-		return rc;
+	co_debug_lvl(messages, 12, "sending messages to linux (%d bytes)\n", co_passage_page->params[0]);
 
-	message = message_item->message;
-	total_size = message->size + sizeof(*message);
+	return CO_RC(OK);
+}
 
-	co_debug_lvl(messages, 12, "sending message to linux (size %d, %d left)\n", total_size,
-		     num_messages - 1);
+static co_rc_t co_monitor_callback_return_jiffies(co_monitor_t *cmon)
+{	
+	co_timestamp_t timestamp;
+	long long timestamp_diff;
+	unsigned long jiffies = 0;
 
-	if (total_size > 2000)
-		return CO_RC(OK);
+	co_os_get_timestamp(&timestamp);
 
+	timestamp_diff = cmon->timestamp_reminder;
+	timestamp_diff += 100 * (((long long)timestamp.quad) - ((long long)cmon->timestamp.quad));
+
+	jiffies = co_div64(timestamp_diff, cmon->timestamp_freq.quad);
+	cmon->timestamp_reminder = timestamp_diff - (jiffies * cmon->timestamp_freq.quad);
+	cmon->timestamp = timestamp;
+
+	co_passage_page->params[1] = jiffies;
+
+	return CO_RC(OK);
+}
+
+static co_rc_t co_monitor_callback_return(co_monitor_t *cmon)
+{
 	co_passage_page->operation = CO_OPERATION_MESSAGE_FROM_MONITOR;
-	co_passage_page->params[0] = num_messages - 1;
-	co_memcpy(&co_passage_page->params[1], message, total_size);
 
-	co_queue_free(&cmon->linux_message_queue, message_item);
-	co_os_free(message);
+	co_monitor_callback_return_messages(cmon);
+	co_monitor_callback_return_jiffies(cmon);
 
 	return CO_RC(OK);
 }
@@ -363,9 +421,8 @@ bool_t co_monitor_trace_point(co_monitor_t *cmon)
 {
 	co_trace_point_info_t *info = ((co_trace_point_info_t *)&(co_passage_page->params[0]));
 
-	if (info->index < 3000000) {
+	if (info->index < 3000000)
 		return PTRUE;
-	}
 
 	co_monitor_trace_point_info(cmon, info);
 
@@ -392,17 +449,19 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 	switch (co_passage_page->operation) {
 	case CO_OPERATION_FORWARD_INTERRUPT: 
 	case CO_OPERATION_IDLE: 
-		co_monitor_send_messages_to_linux(cmon);
+		co_monitor_callback_return(cmon);
 		break;
 	}
 
+	co_debug_lvl(context_switch, 14, "switching to linux (%d)\n", co_passage_page->operation);
 	co_host_switch_wrapper(cmon);
-
+	if (co_passage_page->operation == CO_OPERATION_FORWARD_INTERRUPT)
+		co_monitor_arch_real_hardware_interrupt(cmon);
+	
 	switch (co_passage_page->operation) {
 	case CO_OPERATION_FORWARD_INTERRUPT: {
-		co_monitor_arch_real_hardware_interrupt(cmon);
-		if (cmon->timer_interrupt == PFALSE)
-			return PTRUE;
+		co_debug_lvl(context_switch, 15, "switching from linux (CO_OPERATION_FORWARD_INTERRUPT), %d\n",
+			     cmon->timer_interrupt);
 
 		cmon->timer_interrupt = PFALSE;
 		return PFALSE;
@@ -413,6 +472,7 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 			co_daemon_message_t payload;
 		} message;
 		
+		co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_TERMINATE)\n");
 		co_debug("linux terminated (%d)\n", co_passage_page->params[0]);
 		
 		message.message.from = CO_MODULE_MONITOR;
@@ -429,12 +489,10 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 
 		return PFALSE;
 	}
-	case CO_OPERATION_MESSAGE_FROM_MONITOR: {
-		co_monitor_send_messages_to_linux(cmon);
-		return PTRUE;
-	}
 	case CO_OPERATION_IDLE: {
 		co_message_t message;
+
+		co_debug_lvl(context_switch, 15, "switching from linux (CO_OPERATION_IDLE)\n");
 		
 		message.from = CO_MODULE_MONITOR;
 		message.to = CO_MODULE_IDLE;
@@ -461,18 +519,10 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 	case CO_OPERATION_MESSAGE_TO_MONITOR: {
 		co_message_t *message;
 		co_rc_t rc;
+		
+		co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_MESSAGE_TO_MONITOR)\n");
 
 		message = (co_message_t *)(&co_passage_page->params[1]);
-
-#if (0)
-		if (message->to != 3)
-			co_debug("message: %d:%d [%d] <%d> (%d) '%c%c%c'\n", 
-				 message->from, message->to, message->priority,
-				 message->type, message->size, 
-				 message->size >= 1 ? message->data[0] : ' ',
-				 message->size >= 2 ? message->data[1] : ' ',
-				 message->size >= 3 ? message->data[2] : ' ');
-#endif
 
 		rc = co_message_switch_dup_message(&cmon->message_switch, message);
 
@@ -481,15 +531,19 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 	case CO_OPERATION_DEVICE: {
 		unsigned long device = co_passage_page->params[0];
 
+		co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_DEVICE)\n");
+
 		return co_monitor_device_request(cmon, device, &co_passage_page->params[1]);
 	}
 	case CO_OPERATION_GET_TIME: {
+		co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_GET_TIME)\n");
+
 		co_passage_page->params[0] = co_os_get_time();
 
 		return PTRUE;
 	}
 	default:
-		co_debug("operation %d not handled\n", co_passage_page->operation);
+		co_debug_lvl(context_switch, 5, "unknown operation %d not handled\n", co_passage_page->operation);
 		return PFALSE;
 	}
 	
@@ -652,12 +706,15 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	cmon->manager = manager;
 	cmon->state = CO_MONITOR_STATE_INITIALIZED;
 	cmon->console_state = CO_MONITOR_CONSOLE_STATE_DETACHED;
+	cmon->io_buffer = co_os_malloc(CO_VPTR_IO_AREA_SIZE);
+	if (cmon->io_buffer == NULL)
+		goto out_free_monitor;
 
 	co_message_switch_init(&cmon->message_switch, CO_MODULE_KERNEL_SWITCH);
 
 	rc = co_queue_init(&cmon->user_message_queue);
 	if (!CO_OK(rc))
-		goto out_free;
+		goto out_free_buffer;
 
 	rc = co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_PRINTK, &cmon->user_message_queue);
 	if (!CO_OK(rc))
@@ -776,8 +833,11 @@ out_free_linux_message_queue:
 out_free_user_message_queue:
 	co_queue_flush(&cmon->user_message_queue);
 
-out_free:
+out_free_buffer:
 	co_message_switch_free(&cmon->message_switch);
+	co_os_free(cmon->io_buffer);
+
+out_free_monitor:
 	co_os_free(cmon);
 
 out:
@@ -852,6 +912,7 @@ co_rc_t co_monitor_destroy(co_monitor_t *cmon)
 
 	co_monitor_unregister_and_free_block_devices(cmon);
 	free_pseudo_physical_memory(cmon);
+	co_os_free(cmon->io_buffer);
 	co_monitor_os_exit(cmon);
 	co_queue_flush(&cmon->linux_message_queue);
 	co_queue_flush(&cmon->user_message_queue);
@@ -882,6 +943,9 @@ co_rc_t co_monitor_start(co_monitor_t *cmon)
 		return rc;
 	}
 
+	co_os_get_timestamp(&cmon->timestamp);
+	co_os_get_timestamp_freq(&cmon->timestamp_freq);
+
 	co_os_timer_activate(cmon->timer);
 
 	co_passage_page->operation = CO_OPERATION_START;
@@ -898,7 +962,6 @@ co_rc_t co_monitor_start(co_monitor_t *cmon)
 	return CO_RC(OK);
 }
 
-
 co_rc_t co_monitor_run(co_monitor_t *cmon,
 		       co_monitor_ioctl_run_t *params,
 		       unsigned long out_size,
@@ -906,6 +969,10 @@ co_rc_t co_monitor_run(co_monitor_t *cmon,
 {
 	char *params_data;
 	int i;
+
+	co_debug_lvl(context_switch, 13, "running with %d messages\n", params->num_messages);
+
+	co_monitor_os_before_iterations(cmon);
 
 	/* Get messages from userspace */
 	params_data = params->data;
@@ -921,9 +988,7 @@ co_rc_t co_monitor_run(co_monitor_t *cmon,
 	if (cmon->state == CO_MONITOR_STATE_RUNNING) {
 		bool_t ret;
 		do {
-			co_debug_lvl(context_switch, 14, "switching to linux\n");
 			ret = co_monitor_iteration(cmon);
-			co_debug_lvl(context_switch, 14, "back from linux (%d)\n", ret);
 		} while (ret);
 	}
 
@@ -931,7 +996,13 @@ co_rc_t co_monitor_run(co_monitor_t *cmon,
 	*return_size = sizeof(*params);
 	params->num_messages = 0;
 
-	if (co_queue_size(&cmon->user_message_queue) == 0)
+	int num_messages = co_queue_size(&cmon->user_message_queue);
+
+	co_debug_lvl(context_switch, 13, "returns with %d messages\n", num_messages);
+
+	co_monitor_os_after_iterations(cmon);
+
+	if (num_messages == 0)
 		return CO_RC(OK);
 
 	*return_size = 0;

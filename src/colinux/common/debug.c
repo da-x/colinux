@@ -40,9 +40,9 @@ static inline co_debug_tlv_t *tlv_add_const_string(co_debug_type_t type, const c
 static inline co_debug_tlv_t *tlv_add_timestamp(co_debug_tlv_t *sub_tlv)
 {
 	sub_tlv->type = CO_DEBUG_TYPE_TIMESTAMP;
-	sub_tlv->length = sizeof(co_debug_timestamp_t);
-	co_debug_timestamp_t *ts = (co_debug_timestamp_t *)&sub_tlv->value;
-	co_os_get_debug_timestamp(ts);	
+	sub_tlv->length = sizeof(co_timestamp_t);
+	co_timestamp_t *ts = (co_timestamp_t *)&sub_tlv->value;
+	co_os_get_timestamp(ts);	
 	return (co_debug_tlv_t *)&sub_tlv->value[sub_tlv->length];
 }
 
@@ -62,7 +62,7 @@ static inline co_debug_tlv_t *tlv_add_char(co_debug_type_t type, unsigned long d
 	return (co_debug_tlv_t *)&sub_tlv->value[sub_tlv->length];
 }
 
-extern int co_debug_local_index = 0;
+int co_debug_local_index = 0;
 #define X(facility, static_level, default_dynamic_level) .facility##_level=default_dynamic_level,
 co_debug_levels_t co_global_debug_levels = {
 	CO_DEBUG_LIST
@@ -78,7 +78,7 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 	packet_size += sizeof(co_debug_type_t) + strlen(module) + 1;
 	packet_size += sizeof(co_debug_type_t) + strlen(filename) + 1;
 	packet_size += sizeof(co_debug_type_t) + strlen(func) + 1;
-	packet_size += sizeof(co_debug_type_t) + sizeof(co_debug_timestamp_t);
+	packet_size += sizeof(co_debug_type_t) + sizeof(co_timestamp_t);
 	packet_size += sizeof(co_debug_type_t) + sizeof(unsigned long);
 	packet_size += sizeof(co_debug_type_t) + sizeof(unsigned long);
 	packet_size += sizeof(co_debug_type_t) + sizeof(unsigned char);

@@ -6,14 +6,7 @@
 #include "kernel/ddk.h"
 
 typedef struct co_monitor_osdep {
-	KEVENT exclusiveness;
-	KEVENT debugstop;
-
-	KEVENT interrupt_event;
-	KEVENT network_event;
-	KEVENT console_event;
-
-	KEVENT console_detach;
+	co_os_mutex_t mutex;
 } co_monitor_osdep_t;
 
 #endif

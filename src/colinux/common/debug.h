@@ -24,13 +24,13 @@ extern char _colinux_module[0x30];
 char _colinux_module[] = str;
 
 #define CO_DEBUG_LIST \
-	X(misc,           15, 10) \
-	X(network,        15, 10) \
-	X(messages,       15, 10) \
-	X(prints,         15, 10) \
-	X(blockdev,       15, 10) \
-	X(allocations,    15, 10) \
-	X(context_switch, 15, 10) \
+	X(misc,           15, 0) \
+	X(network,        15, 0) \
+	X(messages,       15, 0) \
+	X(prints,         15, 0) \
+	X(blockdev,       15, 0) \
+	X(allocations,    15, 0) \
+	X(context_switch, 15, 0) \
 
 typedef struct {
 #define X(facility, static_level, default_dynamic_level) int facility##_level;
@@ -90,11 +90,6 @@ typedef enum {
 	CO_DEBUG_TYPE_FILE,
 	CO_DEBUG_TYPE_DRIVER_INDEX,
 } co_debug_type_t;
-
-typedef struct {
-	unsigned long low;
-	unsigned long high;
-} co_debug_timestamp_t;
 
 typedef struct {
 	char type;

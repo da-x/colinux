@@ -8,14 +8,10 @@
  *
  */
 
-#ifndef __CO_OS_KERNEL_TIME_H__
-#define __CO_OS_KERNEL_TIME_H__
+#ifndef __CO_LINUX_KERNEL_MAIN_H__
+#define __CO_LINUX_KERNEL_MAIN_H__
 
-/*
- * Obtains the GMT time_t from the host.
- */
-
-extern unsigned long co_os_get_time(void);
+#define co_monitor_os_before_iterations(cmon) do {} while (0)
+#define co_monitor_os_after_iterations(cmon) do {} while (0)
 
 #endif
-

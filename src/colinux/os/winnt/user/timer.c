@@ -79,7 +79,7 @@ void co_os_timer_destroy(co_os_timer_t timer)
 		co_os_free(timer);
 }
 
-void co_os_get_debug_timestamp(co_debug_timestamp_t *dts)
+void co_os_get_timestamp(co_timestamp_t *dts)
 {
 	LARGE_INTEGER PerformanceCounter;
 

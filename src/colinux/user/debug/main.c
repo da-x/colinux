@@ -15,6 +15,7 @@
 #include <ctype.h>
 
 #include <colinux/os/alloc.h>
+#include <colinux/os/timer.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/user/manager.h>
 #include <colinux/user/cmdline.h>
@@ -141,7 +142,7 @@ static void parse_tlv(const co_debug_tlv_t *tlv, const char *block)
 {
 	const co_debug_tlv_t *ptlv;
 	
-	fprintf(output_file, "  <log>\n");
+	fprintf(output_file, "  <log ");
 	ptlv = (const co_debug_tlv_t *)block;
 	while ((char *)ptlv < (char *)&block[tlv->length]) {
 #if (0)
@@ -149,54 +150,62 @@ static void parse_tlv(const co_debug_tlv_t *tlv, const char *block)
 #endif
 		switch (ptlv->type) {
 		case CO_DEBUG_TYPE_TIMESTAMP: {
-			co_debug_timestamp_t *ts = (typeof(ts))(ptlv->value);
-			fprintf(output_file, "    <timestamp>%08u.%-10u</timestamp>\n", 
+			co_timestamp_t *ts = (typeof(ts))(ptlv->value);
+			fprintf(output_file, " timestamp=\"%08u.%-10u\"", 
 				(unsigned int)ts->high, (unsigned int)ts->low);
 			break;
 		}
 		case CO_DEBUG_TYPE_MODULE: {
-			fprintf(output_file, "    <module>%s</module>\n", ptlv->value);
+			fprintf(output_file, " module=\"%s\"", ptlv->value);
 			break;
 		}
 		case CO_DEBUG_TYPE_FILE: {
-			fprintf(output_file, "    <file>%s</file>\n", ptlv->value);
+			fprintf(output_file, " file=\"%s\"", ptlv->value);
 			break;
 		}
 		case CO_DEBUG_TYPE_FUNC: {
-			fprintf(output_file, "    <function>%s</function>\n", ptlv->value);
+			fprintf(output_file, " function=\"%s\"", ptlv->value);
 			break;
 		}
 		case CO_DEBUG_TYPE_FACILITY: {
-			fprintf(output_file, "    <facility>%d</facility>\n", *(char *)ptlv->value);
+			fprintf(output_file, " facility=\"%d\"", *(char *)ptlv->value);
 			break;
 		}
 		case CO_DEBUG_TYPE_LINE: {
-			fprintf(output_file, "    <line>%d</line>\n", *(int *)ptlv->value);
+			fprintf(output_file, " line=\"%d\"", *(int *)ptlv->value);
 			break;
 		}
 		case CO_DEBUG_TYPE_LEVEL: {
-			fprintf(output_file, "    <level>%d</level>\n", *(char *)ptlv->value);
+			fprintf(output_file, " level=\"%d\"", *(char *)ptlv->value);
 			break;
 		}
 		case CO_DEBUG_TYPE_LOCAL_INDEX: {
-			fprintf(output_file, "    <local_index>%d</local_index>\n", *(int *)ptlv->value);
+			fprintf(output_file, " local_index=\"%d\"", *(int *)ptlv->value);
 			break;
 		}
 		case CO_DEBUG_TYPE_DRIVER_INDEX: {
-			fprintf(output_file, "    <driver_index>%d</driver_index>\n", *(int *)ptlv->value);
+			fprintf(output_file, " driver_index=\"%d\"", *(int *)ptlv->value);
 			break;
 		}
+		}
+		ptlv = (co_debug_tlv_t *)&ptlv->value[ptlv->length];
+	}
+	fprintf(output_file, ">\n");
+
+	ptlv = (const co_debug_tlv_t *)block;
+	while ((char *)ptlv < (char *)&block[tlv->length]) {
+		switch (ptlv->type) {
 		case CO_DEBUG_TYPE_STRING: {
-			fprintf(output_file, "    <string>");
+			fprintf(output_file, "<string>");
 			print_xml_text(ptlv->value);
 			fprintf(output_file, "</string>\n");
 			break;
 		}
 		}
-			
 		ptlv = (co_debug_tlv_t *)&ptlv->value[ptlv->length];
 	}
-	fprintf(output_file, "  </log>\n");
+
+	fprintf(output_file, "</log>\n");
 	
 }
 
@@ -403,8 +412,8 @@ static void syntax(void)
 	printf("                      standard output\n");
 	printf("      -s level=num,level2=num2,...\n");
 	printf("                      Change the levels of the given debug facilities\n");
-	printf("      -n [ip-address] Send as UDP packets to [ip-address]:63000\n");
-	printf("                      (requires -d and no -f)\n");
+	printf("      -n [ip-address] Send logs as UDP packets to [ip-address]:63000\n");
+	printf("                      (requires -d)\n");
 	printf("\n");
 }
 

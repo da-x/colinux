@@ -98,6 +98,32 @@ void co_queue_add_tail(co_queue_t *queue, void *ptr)
 	queue->items_count += 1;
 }
 
+co_rc_t co_queue_get_tail(co_queue_t *queue, void **ptr)
+{
+	if (queue->items_count == 0)
+		return CO_RC(ERROR);
+
+	co_list_t *item = queue->head.prev;
+	co_queue_item_t *queue_item = co_list_entry(item, co_queue_item_t, node);
+	*ptr = (void *)(&queue_item->data);
+
+	return CO_RC(OK);
+}
+
+co_rc_t co_queue_get_prev(co_queue_t *queue, void **ptr)
+{
+	co_list_t *node = ((co_list_t *)((char *)(*ptr) - sizeof(co_list_t)));
+	co_list_t *prev = node->prev;
+
+	if (prev == &queue->head)
+		return CO_RC(ERROR);
+		
+	co_queue_item_t *queue_item = co_list_entry(prev, co_queue_item_t, node);
+	*ptr = (void *)(&queue_item->data);
+
+	return CO_RC(OK);
+}
+
 co_rc_t co_queue_pop_tail(co_queue_t *queue, void **ptr)
 {
 	co_list_t *item;

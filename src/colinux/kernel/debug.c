@@ -141,6 +141,7 @@ static co_rc_t append_to_buffer(co_manager_debug_t *debug, co_debug_section_t *s
 static void get_section(struct co_debug_section *section)
 {
 	section->refcount++;
+
 	co_os_mutex_acquire(section->mutex);
 }
 
@@ -158,7 +159,9 @@ static bool_t put_section(co_manager_debug_t *debug,
 		report_status("section release", debug);
 		return PFALSE;
 	}
+
 	co_os_mutex_release(section->mutex);
+
 	return PTRUE;
 }
 

@@ -51,6 +51,16 @@ extern void co_queue_add_head(co_queue_t *queue, void *ptr);
 extern void co_queue_add_tail(co_queue_t *queue, void *ptr);
 
 /**
+ * get the item at the tail but do not remove it.
+ */
+extern co_rc_t co_queue_get_tail(co_queue_t *queue, void **ptr);
+
+/**
+ * get the previous item in the queue (or NULL if we reached the head) 
+ */
+extern co_rc_t co_queue_get_prev(co_queue_t *queue, void **ptr);
+
+/**
  * removes an item from the tail and returns a pointer to it.
  */
 extern co_rc_t co_queue_pop_tail(co_queue_t *queue, void **ptr);

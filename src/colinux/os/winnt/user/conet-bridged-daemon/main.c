@@ -79,6 +79,9 @@ co_win32_overlapped_write_async(co_win32_overlapped_t * overlapped,
 	BOOL result;
 	DWORD error;
 
+	if (size == 0)
+		return CO_RC(OK);
+
 	co_debug_lvl(network, 12, "sending to daemon (0x%x size 0x%x)\n", buffer, size);
 	result = WriteFile(overlapped->handle, buffer, size,
 			   &write_size, &overlapped->write_overlapped);
@@ -96,6 +99,7 @@ co_win32_overlapped_write_async(co_win32_overlapped_t * overlapped,
 			return CO_RC(ERROR);
 		}
 	}
+
 	return CO_RC(OK);
 }
 
@@ -143,6 +147,7 @@ co_win32_pcap_read_received(co_win32_pcap_t * pcap_pkt)
 
 	co_win32_overlapped_write_async(&daemon_overlapped, &message,
 					sizeof (message));
+
 	return CO_RC(OK);
 }
 
@@ -226,7 +231,7 @@ co_win32_overlapped_init(co_win32_overlapped_t * overlapped, HANDLE handle)
 }
 
 /*******************************************************************************
- * The wait loop is run by the parent theread.
+ * The wait loop is run by the parent thread.
  * It handles packets going from the coLinux Daemon to winPCap.
  */
 int
@@ -244,8 +249,7 @@ wait_loop(HANDLE daemon_handle)
 		    WaitForSingleObject(daemon_overlapped.read_event, INFINITE);
 		switch (status) {
 		case WAIT_OBJECT_0:	/* daemon */
-			rc = co_win32_overlapped_read_completed
-			    (&daemon_overlapped);
+			rc = co_win32_overlapped_read_completed(&daemon_overlapped);
 			if (!CO_OK(rc))
 				return 0;
 
@@ -270,7 +274,7 @@ pcap2Daemon(LPVOID lpParam)
 	co_rc_t rc;
 
 	while (1) {
-		// Attempt to receive packet from WPcap.
+		/* Attempt to receive packet from WPcap. */
 		pcap_status = pcap_next_ex(pcap_packet.adhandle,
 					   &pcap_packet.pkt_header,
 					   &pcap_packet.buffer);
@@ -293,7 +297,7 @@ pcap2Daemon(LPVOID lpParam)
 		}
 	}
 
-	// We should never get to here.
+	/* We should never get to here. */
 	co_debug_lvl(network, 5, "unexpected exit of winPCap read loop.\n");
 	ExitProcess(0);
 	return 0;
@@ -648,7 +652,6 @@ conet_bridged_main(int argc, char *argv[])
 	}
 
 	pcap_thread = CreateThread(NULL, 0, pcap2Daemon, NULL, 0, NULL);
-
 	if (pcap_thread == NULL) {
 		co_terminal_print("Failed to spawn pcap_thread\n");
 		goto out;

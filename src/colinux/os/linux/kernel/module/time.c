@@ -12,13 +12,14 @@
 
 #include <colinux/os/kernel/time.h>
 #include <colinux/common/common.h>
+#include <colinux/os/timer.h>
 
 unsigned long co_os_get_time(void)
 {
 	return get_seconds();
 }
 
-void co_os_get_debug_timestamp(co_debug_timestamp_t *dts)
+void co_os_get_timestamp(co_timestamp_t *dts)
 {
 	struct timeval tv;
 

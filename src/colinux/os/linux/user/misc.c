@@ -20,6 +20,7 @@
 #include <arpa/inet.h>
 
 #include <colinux/os/alloc.h>
+#include <colinux/os/timer.h>
 #include <colinux/os/user/misc.h>
 
 void co_terminal_print(const char *format, ...)
@@ -50,7 +51,7 @@ double co_os_timer_highres()
         return ((double)tv.tv_sec) + ((double)tv.tv_usec)/1000000;
 }
 
-void co_os_get_debug_timestamp(co_debug_timestamp_t *dts)
+void co_os_get_timestamp(co_timestamp_t *dts)
 {
 	struct timeval tv;
 

@@ -21,14 +21,13 @@ int co_udp_socket_connect(const char *addr, unsigned short int port)
 {
 	struct sockaddr_in server;
 	int ret, sock;
-	SOCKET wsock ;
 	WSADATA wsaData;
 
 	WSAStartup(MAKEWORD(2,2), &wsaData);
 
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock == -1) {
-		printf("unable to create socket %x\n", wsock);
+		printf("unable to create socket %x\n", sock);
 		return -1;
 	}
 
@@ -51,6 +50,6 @@ int co_udp_socket_send(int sock, const char *buffer, unsigned long size)
 
 void co_udp_socket_close(int sock)
 {
-	close(sock);
+	closesocket(sock);
 }
 

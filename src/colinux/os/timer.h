@@ -23,7 +23,19 @@ extern void co_os_timer_deactivate(co_os_timer_t timer);
 extern void co_os_timer_destroy(co_os_timer_t timer);
 
 extern double co_os_timer_highres(void);
-extern void co_os_get_debug_timestamp(co_debug_timestamp_t *dts);
+
+typedef struct {
+	union {
+		struct {
+			unsigned long low;
+			unsigned long high;
+		};
+		unsigned long long quad;
+	};
+} co_timestamp_t;
+
+extern void co_os_get_timestamp(co_timestamp_t *dts);
+extern void co_os_get_timestamp_freq(co_timestamp_t *dts);
 
 #endif
 

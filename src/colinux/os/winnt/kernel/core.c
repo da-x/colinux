@@ -25,10 +25,24 @@ co_rc_t co_monitor_os_init(co_monitor_t *cmon)
 		return CO_RC(OUT_OF_MEMORY);
 	}
 
+	co_os_mutex_create(&cmon->osdep->mutex);
 	return rc;
+}
+
+void co_monitor_os_before_iterations(co_monitor_t *cmon)
+{
+	co_os_mutex_acquire(cmon->osdep->mutex);
+	co_os_mutex_release(cmon->osdep->mutex);
+}
+
+void co_monitor_os_after_iterations(co_monitor_t *cmon)
+{
+	co_os_mutex_acquire(cmon->osdep->mutex);
+	co_os_mutex_release(cmon->osdep->mutex);
 }
 
 void co_monitor_os_exit(co_monitor_t *cmon)
 {
+	co_os_mutex_destroy(cmon->osdep->mutex);
 	co_os_free(cmon->osdep);
 }
