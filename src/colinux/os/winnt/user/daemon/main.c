@@ -71,8 +71,12 @@ static BOOL WINAPI co_winnt_daemon_ctrl_handler( DWORD dwCtrlType )
 	case CTRL_C_EVENT:
 	case CTRL_BREAK_EVENT:
 		return TRUE;	// Don't let the user kill us that easily ;)
-	case CTRL_CLOSE_EVENT:
 	case CTRL_LOGOFF_EVENT:	
+		// Only shutdown if we are not a service
+		if ( co_running_as_service )
+		    return FALSE;
+		// Shutdown to avoid corrupting the fs
+	case CTRL_CLOSE_EVENT:
 	case CTRL_SHUTDOWN_EVENT:
 		// Shutdown CoLinux "gracefully"
 		co_winnt_daemon_stop( );
