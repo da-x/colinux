@@ -15,14 +15,12 @@
 
 #include "ddk.h"
 
-extern NTSTATUS co_os_open_file(char *pathname, PHANDLE FileHandle,
-				unsigned long open_flags);
+extern co_rc_t co_os_file_open(char *pathname, PHANDLE FileHandle,
+			       unsigned long open_flags);
 
-extern NTSTATUS co_os_create_file(char *pathname, PHANDLE FileHandle, unsigned long open_flags,
-				  unsigned long file_attribute, unsigned long create_disposition,
-				  unsigned long options);
-
-extern NTSTATUS co_os_close_file(PHANDLE FileHandle);
+extern co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned long open_flags,
+				 unsigned long file_attribute, unsigned long create_disposition,
+				 unsigned long options);
 
 extern co_rc_t co_os_file_block_read_write(co_monitor_t *linuxvm,
 					   HANDLE file_handle,
@@ -31,20 +29,6 @@ extern co_rc_t co_os_file_block_read_write(co_monitor_t *linuxvm,
 					   unsigned long size,
 					   bool_t read);
 
-extern NTSTATUS co_os_set_file_information(char *filename,
-					   IO_STATUS_BLOCK *io_status,
-					   VOID *buffer,
-					   ULONG len,
-					   FILE_INFORMATION_CLASS info_class);
-
-typedef void (*co_os_change_file_info_func_t)(void *data, VOID *buffer, ULONG len);
-
-extern NTSTATUS co_os_change_file_information(char *filename,
-					      IO_STATUS_BLOCK *io_status,
-					      VOID *buffer,
-					      ULONG len,
-					      FILE_INFORMATION_CLASS info_class,
-					      co_os_change_file_info_func_t func,
-					      void *data);
+extern co_rc_t co_os_file_close(PHANDLE FileHandle);
 
 #endif

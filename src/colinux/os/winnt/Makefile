@@ -25,7 +25,7 @@ GPP=$(CROSS_TARGET)g++
 LD=$(CROSS_TARGET)ld
 
 USER_DEFAULT_LIBS = \
-     -mno-cygwin -luser32 -lgdi32 -lws2_32 \
+     -mno-cygwin -luser32 -lgdi32 -lws2_32 -lntdll \
      -lkernel32 -lole32 -luuid -lgdi32 -lmsvcrt -lcrtdll -lshlwapi
 
 #-----------------------------------------------------------------

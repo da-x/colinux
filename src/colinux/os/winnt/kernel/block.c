@@ -175,9 +175,9 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 	co_debug("%s: device %s\n", __FUNCTION__, fdev->pathname);
 
 	if (fdev->sysdep == NULL) {
-		status = co_os_open_file(fdev->pathname, &FileHandle, FILE_READ_DATA);
-		if (status != STATUS_SUCCESS)
-			return CO_RC(ERROR);
+		rc = co_os_file_open(fdev->pathname, &FileHandle, FILE_READ_DATA);
+		if (!CO_OK(rc))
+			return rc;
 
 		opened = TRUE;
 	}
@@ -204,7 +204,7 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 	}
 	
 	if (opened)
-		co_os_close_file(FileHandle);
+		co_os_file_close(FileHandle);
 
 	return rc;
 }
@@ -212,11 +212,11 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 co_rc_t co_os_file_block_open(co_monitor_t *linuxvm, co_monitor_file_block_dev_t *fdev)
 {
 	HANDLE FileHandle;
-	NTSTATUS status;
+	co_rc_t rc;
 
-	status = co_os_open_file(fdev->pathname, &FileHandle, FILE_READ_DATA | FILE_WRITE_DATA);
-	if (status != STATUS_SUCCESS)
-		return CO_RC(ERROR);
+	rc = co_os_file_open(fdev->pathname, &FileHandle, FILE_READ_DATA | FILE_WRITE_DATA);
+	if (!CO_OK(rc))
+		return rc;
 
 	fdev->sysdep = (struct co_os_file_block_sysdep *)(FileHandle);
 	return CO_RC(OK);
@@ -228,7 +228,7 @@ co_rc_t co_os_file_block_close(co_monitor_file_block_dev_t *fdev)
 
 	FileHandle = (HANDLE)(fdev->sysdep);
 
-	co_os_close_file(FileHandle);
+	co_os_file_close(FileHandle);
 
 	fdev->sysdep = NULL;
 

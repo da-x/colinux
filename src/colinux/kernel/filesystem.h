@@ -27,19 +27,48 @@ typedef struct co_filesystem_dir_names {
 
 typedef struct co_inode {
 	co_list_t flat_node;
+	co_list_t hash_node;
 	co_list_t node;
 	struct co_inode *parent;
 	co_list_t sub_inodes;
 	char *name;
 	co_filesystem_dir_names_t *names;
+	int number;
 } co_inode_t;
+
+#define CO_FS_HASH_TABLE_SIZE     0x1000
 
 typedef struct co_filesystem {
 	co_list_t list_inodes;
 	co_cofsdev_desc_t *desc;
 	co_inode_t *root;
 	int inodes_count;
+	struct co_filesystem_ops *ops;
+
+	/* Inode hash table */
+	co_list_t inode_hashes[CO_FS_HASH_TABLE_SIZE];
+	int next_inode_num;
 } co_filesystem_t;
+
+struct co_monitor;
+
+typedef struct co_filesystem_ops {
+	co_rc_t (*inode_rename)(co_filesystem_t *filesystem, co_inode_t *dir, co_inode_t *new_dir,
+				char *oldname, char *newname);
+	co_rc_t (*getattr)(co_filesystem_t *fs, co_inode_t *dir, char *name, struct fuse_attr *attr);
+	co_rc_t (*getdir)(co_filesystem_t *fs, co_inode_t *dir, co_filesystem_dir_names_t *names);
+	co_rc_t (*inode_read_write)(struct co_monitor *linuxvm, co_filesystem_t *filesystem, 
+				    co_inode_t *inode, unsigned long long offset, unsigned long size, 
+				    vm_ptr_t src_buffer, bool_t read);
+	co_rc_t (*inode_mknod)(co_filesystem_t *filesystem, co_inode_t *inode, unsigned long mode, 
+			       unsigned long rdev, char *name, int *ino, struct fuse_attr *attr);
+	co_rc_t (*inode_set_attr)(co_filesystem_t *filesystem, co_inode_t *inode,
+				  unsigned long valid, struct fuse_attr *attr);
+	co_rc_t (*inode_mkdir)(co_filesystem_t *filesystem, co_inode_t *inode, 
+			       unsigned long mode, char *name);
+	co_rc_t (*inode_unlink)(co_filesystem_t *filesystem, co_inode_t *inode, char *name);
+	co_rc_t (*inode_rmdir)(co_filesystem_t *filesystem, co_inode_t *inode, char *name);
+} co_filesystem_ops_t;
 
 struct co_monitor;
 extern void co_monitor_file_system(struct co_monitor *cmon, unsigned long unit, 

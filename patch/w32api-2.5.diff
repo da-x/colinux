@@ -1,3 +1,23 @@
+diff -urN -x '*.o' -x '*.a' -x Makefile -x 'config.*' w32api-2.5/include/ddk/winddk.h w32api-2.5-mod/include/ddk/winddk.h
+--- w32api-2.5/include/ddk/winddk.h	2004-02-15 09:32:36.000000000 +0200
++++ w32api-2.5-mod/include/ddk/winddk.h	2004-10-22 19:03:53.000000000 +0200
+@@ -4397,6 +4397,15 @@
+   IN PCWSTR  Path,
+   IN PCWSTR  ValueName);
+ 
++NTOSAPI
++BOOL
++DDKAPI
++RtlDosPathNameToNtPathName_U(
++  IN PCWSTR  DosPathName,
++  OUT PUNICODE_STRING  NtPathName,
++  OUT PCWSTR  *NtFileNamePart,
++  OUT VOID  *DirectoryInfo);
++
+ /*
+  * BOOLEAN
+  * RtlEqualLuid( 
+diff -urN -x '*.o' -x '*.a' -x Makefile -x 'config.*' w32api-2.5/lib/ddk/ntoskrnl.def w32api-2.5-mod/lib/ddk/ntoskrnl.def
 --- w32api-2.5/lib/ddk/ntoskrnl.def	2004-02-15 09:32:37.000000000 +0200
 +++ w32api-2.5-mod/lib/ddk/ntoskrnl.def	2004-10-18 23:54:01.000000000 +0200
 @@ -644,7 +644,7 @@

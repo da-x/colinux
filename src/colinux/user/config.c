@@ -723,7 +723,7 @@ static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_confi
 
 			co_snprintf(cofs->pathname, sizeof(cofs->pathname), "%s", param);
 
-			/* co_canonize_cofs_path(&cobd->pathname); TODO */
+			co_canonize_cobd_path(&cofs->pathname);
 			
 			co_terminal_print("mapping cofs%d to %s\n", index, cofs->pathname);
 		}

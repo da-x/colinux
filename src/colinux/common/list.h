@@ -11,7 +11,7 @@
 #define __COLINUX_LINUX_LIST_H__
 
 /*
- * Took the doubly linked list implementation from the Linux kernel.
+ * Inspiried by the doubly linked list implementation from the Linux kernel.
  */
 
 typedef struct co_list {

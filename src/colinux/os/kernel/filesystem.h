@@ -13,21 +13,27 @@
 #include <colinux/common/common.h>
 #include <colinux/kernel/filesystem.h>
 
-extern co_rc_t co_os_fs_inode_to_path(co_filesystem_t *fs, co_inode_t *dir, co_pathname_t *out_name);
-extern co_rc_t co_os_fs_getdir(co_filesystem_t *fs, co_inode_t *dir, co_filesystem_dir_names_t *names);
-extern co_rc_t co_os_fs_getattr(co_filesystem_t *fs, co_inode_t *dir,  char *name, struct fuse_attr *attr);
-extern co_rc_t co_os_fs_inode_read_write(struct co_monitor *linuxvm, co_filesystem_t *filesystem, 
-					 co_inode_t *inode, unsigned long long offset, unsigned long size,
-					 vm_ptr_t src_buffer, bool_t read);
-extern co_rc_t co_os_fs_inode_mknod(co_filesystem_t *filesystem, co_inode_t *inode, unsigned long mode, 
-				    unsigned long rdev, char *name, int *ino, struct fuse_attr *attr);
-extern co_rc_t co_os_fs_inode_mkdir(co_filesystem_t *filesystem, co_inode_t *inode, unsigned long mode, 
-				    char *name);
-extern co_rc_t co_os_fs_inode_unlink(co_filesystem_t *filesystem, co_inode_t *inode, char *name);
-extern co_rc_t co_os_fs_inode_rmdir(co_filesystem_t *filesystem, co_inode_t *inode, char *name);
-extern co_rc_t co_os_fs_inode_rename(co_filesystem_t *filesystem, co_inode_t *dir, co_inode_t *new_dir,
-				     char *oldname, char *newname);
-extern co_rc_t co_os_fs_inode_set_attr(co_filesystem_t *filesystem, co_inode_t *inode,
-				       unsigned long valid, struct fuse_attr *attr);
+/*
+ * OS-specific pathname helpers.
+ */
+extern co_rc_t co_os_fs_inode_to_path(co_filesystem_t *fs, co_inode_t *dir, 
+				      co_pathname_t *out_name);
+extern int co_os_fs_add_last_component(co_pathname_t *dirname);
+extern co_rc_t co_os_fs_dir_inode_to_path(co_filesystem_t *fs, co_inode_t *dir, 
+					  co_pathname_t *out_name, char *name);
+
+/*
+ * OS-specific operations on files.
+ */
+extern co_rc_t co_os_file_read_write(struct co_monitor *linuxvm, char *filename, unsigned long long offset, 
+				     unsigned long size, vm_ptr_t src_buffer, bool_t read);
+extern co_rc_t co_os_file_set_attr(char *filename, unsigned long valid, struct fuse_attr *attr);
+extern co_rc_t co_os_file_get_attr(char *filename, struct fuse_attr *attr);
+extern co_rc_t co_os_file_unlink(char *filename);
+extern co_rc_t co_os_file_rmdir(char *filename);
+extern co_rc_t co_os_file_mkdir(char *dirname);
+extern co_rc_t co_os_file_rename(char *filename, char *dest_filename);
+extern co_rc_t co_os_file_mknod(char *filename);
+extern co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names);
 
 #endif
