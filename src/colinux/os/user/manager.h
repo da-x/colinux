@@ -28,8 +28,6 @@ extern co_rc_t co_os_manager_ioctl(
 	unsigned long output_buffer_size,
 	unsigned long *output_returned);
 
-extern co_rc_t co_os_manager_remove(void);
-extern co_rc_t co_os_manager_install(void);
 extern co_rc_t co_os_manager_is_installed(bool_t *installed);
 
 

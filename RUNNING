@@ -117,11 +117,13 @@ Linux.
 
 	--install-drvier
 		This command to install the driver portion of Cooperative 
-		Linux.
+		Linux. BIG NOTE: This already happens during the installation 
+                of coLinux, on most cases you don't need to run it at all.
 	
 	--remove-driver
 		This command will remove the driver portion of Cooperative
-		Linux.
+		Linux. BIG NOTE: This already happens during the uninstall
+                of coLinux, on most cases you don't need to run it at all.
 
 
 Common Problems

@@ -5,7 +5,7 @@
  *
  * Service support by Jaroslaw Kowalski <jaak@zd.com.pl>, 2004 (c)
  * Driver service separation by Daniel R. Slater <dan_slater@yahoo.com>, 2004 (c)
- * Driver installation fixes by Gourge Boutwell <gboutwel@praize.com>, 2004 (c)
+ * Driver installation fixes by George Boutwell <gboutwel@praize.com>, 2004 (c)
  * 
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -13,6 +13,7 @@
  */ 
 
 #include <windows.h>
+#include <shlwapi.h>
 
 #include <colinux/common/common.h>
 #include <colinux/common/ioctl.h>
@@ -20,11 +21,28 @@
 #include <colinux/user/manager.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/winnt/kernel/driver.h>
+#include <colinux/os/current/os.h>
 
 #include "main.h"
 #include "cmdline.h"
 #include "misc.h"
 #include "driver.h"
+#include "service.h"
+
+co_rc_t co_win32_manager_is_installed(bool_t installed)
+{
+	co_rc_t rc;
+
+	rc = co_os_manager_is_installed(&installed);
+	if (!CO_OK(rc)) {
+		if (CO_RC_GET_CODE(rc) == CO_RC_ACCESS_DENIED)
+			co_terminal_print("daemon: access defined, not enough privileges\n");
+		else
+			co_terminal_print("daemon: error, unable to determine if driver is installed (rc %x)\n", rc);
+	}
+
+	return rc;
+}
 
 /*
  * This function makes sure the driver is installed and initializes it.
@@ -35,10 +53,9 @@ co_rc_t co_winnt_install_driver(void)
 	bool_t installed = PFALSE;
 	co_manager_handle_t handle;
 
-	rc = co_os_manager_is_installed(&installed);
+	rc = co_win32_manager_is_installed(&installed);
 	if (!CO_OK(rc)) {
-		co_terminal_print("daemon: error, unable to determine if driver is installed (rc %x)\n", rc);
-		return CO_RC(ERROR);
+		return rc;
 	}
 
 	if (installed) {
@@ -46,7 +63,7 @@ co_rc_t co_winnt_install_driver(void)
 		return CO_RC(OK);
 	}
 	
-	rc = co_os_manager_install();
+	rc = co_winnt_driver_install_lowlevel();
 	if (!CO_OK(rc)) {
 		co_terminal_print("daemon: cannot install\n");
 		return CO_RC(ERROR);
@@ -72,7 +89,7 @@ co_rc_t co_winnt_install_driver(void)
  * This function makes sure the driver is initialized and is of the 
  * correct version.
  */
-co_rc_t co_winnt_initialize_driver(void)
+co_rc_t co_winnt_initialize_driver(bool_t lazy_unload)
 {
 	co_rc_t rc = CO_RC_OK;
 	co_manager_ioctl_status_t status = {0, };
@@ -98,7 +115,7 @@ co_rc_t co_winnt_initialize_driver(void)
 	}
 
 	if (status.state == CO_MANAGER_STATE_NOT_INITIALIZED) {
-		rc = co_manager_init(handle, PTRUE); /* lazy unload */
+		rc = co_manager_init(handle, lazy_unload);
 		if (!CO_OK(rc)) {
 			co_terminal_print("daemon: error initializing kernel driver\n");
 			co_os_manager_close(handle);
@@ -119,11 +136,9 @@ co_rc_t co_winnt_remove_driver(void)
 	co_manager_handle_t handle;
 	co_manager_ioctl_status_t status = {0, };
 
-	rc = co_os_manager_is_installed(&installed);
-	if (!CO_OK(rc)) {
-		co_terminal_print("daemon: error, unable to determine if the driver is installed (rc %x)\n", rc);
-		return CO_RC(ERROR);
-	}
+	rc = co_win32_manager_is_installed(&installed);
+	if (!CO_OK(rc))
+		return rc;
 
 	if (!installed) {
 		co_terminal_print("daemon: driver not installed\n");
@@ -133,7 +148,7 @@ co_rc_t co_winnt_remove_driver(void)
 	handle = co_os_manager_open();
 	if (!handle) {
 		co_terminal_print("daemon: couldn't get driver handle, removing anyway\n");
-		co_os_manager_remove();
+		co_winnt_driver_remove_lowlevel();
 		return CO_RC(ERROR);
 	}		
 	
@@ -147,7 +162,7 @@ co_rc_t co_winnt_remove_driver(void)
 		}
 
 		co_os_manager_close(handle);
-		co_os_manager_remove();
+		co_winnt_driver_remove_lowlevel();
 		return CO_RC(ERROR);
 	}		
 
@@ -158,7 +173,7 @@ co_rc_t co_winnt_remove_driver(void)
 	}
 
 	co_os_manager_close(handle);
-	co_os_manager_remove();
+	co_winnt_driver_remove_lowlevel();
 	return CO_RC(OK);
 }	
 
@@ -171,23 +186,23 @@ co_rc_t co_winnt_daemon_main_with_driver(char *argv[])
 	int failures = 0;
 
 	do {
-		rc = co_os_manager_is_installed(&installed);
-		if (!CO_OK(rc)) {
-			co_terminal_print("daemon: error, unable to determine if driver is installed (rc %x)\n", rc);
-			return CO_RC(ERROR);
-		}
+		rc = co_win32_manager_is_installed(&installed);
+		if (!CO_OK(rc))
+			return rc;
 
 		if (installed) {
 			co_terminal_print("daemon: driver is installed\n");
 
-			rc = co_winnt_initialize_driver();
+			rc = co_winnt_initialize_driver(PFALSE);
 			if (!CO_OK(rc)) {
 				if (CO_RC_GET_CODE(rc) == CO_RC_VERSION_MISMATCHED) {
 					co_terminal_print("daemon: trying to remove driver\n");
-					co_os_manager_remove();
+					co_winnt_driver_remove_lowlevel();
 					failures++;
 					continue;
 				}
+				else
+					return rc;
 			} else {
 				handle = co_os_manager_open();
 				if (!handle) {
@@ -196,7 +211,7 @@ co_rc_t co_winnt_daemon_main_with_driver(char *argv[])
 				}
 			}
 		} else {
-			rc = co_os_manager_install();
+			rc = co_winnt_driver_install_lowlevel();
 			if (!CO_OK(rc)) {
 				co_terminal_print("daemon: cannot install driver\n");
 				return CO_RC(ERROR);
@@ -249,7 +264,7 @@ co_rc_t co_winnt_daemon_main_with_driver(char *argv[])
 	{
 		co_os_manager_close(handle);
 		co_terminal_print("daemon: removing driver\n");
-		co_os_manager_remove();
+		co_winnt_driver_remove_lowlevel();
 	}
 
 	if (!CO_OK(run_rc)) {
@@ -268,11 +283,9 @@ void co_winnt_status_driver(void)
 
 	co_terminal_print("daemon: checking if the driver is installed\n");
 
-	rc = co_os_manager_is_installed(&installed);
-	if (!CO_OK(rc)) {
-		co_terminal_print("daemon: unable to determine if driver is installed (rc %x)\n", rc);
-		return;
-	}
+	rc = co_win32_manager_is_installed(&installed);
+	if (!CO_OK(rc))
+		return rc;
 
 	if (!installed) {
 		co_terminal_print("daemon: driver not installed\n");
@@ -295,4 +308,193 @@ void co_winnt_status_driver(void)
 	co_terminal_print("daemon: current number of monitors: %x\n", status.monitors_count);
 	co_terminal_print("daemon: lazy_unload: %d\n", status.lazy_unload);
 	co_os_manager_close(handle);
+}
+
+co_rc_t co_winnt_install_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LPCTSTR  DriverName, IN LPCTSTR ServiceExe)
+{ 
+	SC_HANDLE  schService; 
+ 
+	schService = CreateService (SchSCManager,         
+				    DriverName,           
+				    DriverName,          
+				    SERVICE_ALL_ACCESS,
+				    SERVICE_KERNEL_DRIVER, 
+				    SERVICE_DEMAND_START,    
+				    SERVICE_ERROR_NORMAL, 
+				    ServiceExe,           
+				    NULL,
+				    NULL,
+				    NULL,
+				    NULL,
+				    NULL); 
+ 
+	if (schService == NULL) {
+		co_terminal_print_last_error("daemon");
+		return CO_RC(ERROR_INSTALLING_DRIVER); 
+	}
+
+	/* Possible error: ERROR_SERVICE_EXISTS */
+ 
+	CloseServiceHandle(schService);
+
+	return CO_RC(OK); 
+} 
+ 
+co_rc_t co_winnt_remove_driver_lowlevel(IN SC_HANDLE  SchSCManager, IN LPCTSTR DriverName) 
+{ 
+	SC_HANDLE  schService; 
+	co_rc_t   rc;
+
+	schService = OpenService (SchSCManager, 
+				  DriverName, 
+				  SERVICE_ALL_ACCESS); 
+ 
+	if (schService == NULL)
+		return CO_RC(ERROR); 
+ 
+	if (DeleteService(schService))
+		rc = CO_RC(OK);
+	else
+		rc = CO_RC(ERROR_REMOVING_DRIVER);
+ 
+	CloseServiceHandle(schService); 
+ 
+	return rc; 
+} 
+ 
+co_rc_t co_winnt_start_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LPCTSTR DriverName) 
+{ 
+	SC_HANDLE  schService; 
+	co_rc_t   ret;
+	DWORD      err; 
+    
+	schService = OpenService(SchSCManager, DriverName, SERVICE_ALL_ACCESS); 
+ 
+	if (schService == NULL) { 
+		return CO_RC(ERROR_ACCESSING_DRIVER); 
+	} 
+ 
+	if (StartService(schService, 0, NULL))
+		ret = CO_RC(OK);
+	else
+		ret = CO_RC(ERROR_STARTING_DRIVER);
+
+	if (!ret) {
+		err = GetLastError(); 
+
+#if (0) 
+		if (err == ERROR_SERVICE_ALREADY_RUNNING) 
+			co_winnt_debug("failure: StartService, ERROR_SERVICE_ALREADY_RUNNING\n"); 
+		else 
+			co_winnt_debug("failure: StartService (0x%02x)\n", err);
+#endif
+	} 
+ 
+	CloseServiceHandle(schService); 
+
+	return ret; 
+} 
+ 
+co_rc_t co_winnt_stop_driver_lowlevel(IN SC_HANDLE  SchSCManager, IN LPCTSTR DriverName)
+{ 
+	SC_HANDLE       schService; 
+	SERVICE_STATUS  serviceStatus; 
+	co_rc_t        rc;
+
+	schService = OpenService(SchSCManager, DriverName, SERVICE_ALL_ACCESS); 
+ 
+	if (schService == NULL)
+		return CO_RC(ERROR_ACCESSING_DRIVER); 
+
+	if (ControlService(schService, SERVICE_CONTROL_STOP, &serviceStatus))
+		rc = CO_RC(OK);
+	else {
+		rc = CO_RC(ERROR_STOPPING_DRIVER);
+	}
+
+	CloseServiceHandle(schService); 
+
+	return rc; 
+} 
+
+co_rc_t co_winnt_unload_driver_lowlevel_by_name(char *name) 
+{ 
+	SC_HANDLE   schSCManager; 
+	co_rc_t rc;
+
+	schSCManager = OpenSCManager (NULL,                 // machine (NULL == local) 
+				      NULL,                 // database (NULL == default) 
+				      SC_MANAGER_ALL_ACCESS // access required 
+		); 
+ 
+	co_debug("driver: stopping driver service\n");
+	rc = co_winnt_stop_driver_lowlevel(schSCManager, name);  
+
+	co_debug("driver: removing driver service\n");
+	rc = co_winnt_remove_driver_lowlevel(schSCManager, name);
+	
+	CloseServiceHandle(schSCManager); 
+
+	/*
+	 * Apparently this givens the service manager an opportunity to
+	 * remove the service before we reinstall it.
+	 */
+	Sleep(100);
+			
+	return rc;
+} 
+
+co_rc_t co_winnt_load_driver_lowlevel_by_name(char *name, char *path) 
+{ 
+	SC_HANDLE   schSCManager; 
+	char fullpath[0x100] = {0,};
+	char driverfullpath[0x100] = {0,};
+	co_rc_t rc;
+
+	GetModuleFileName(co_current_win32_instance, fullpath, sizeof(fullpath));
+	PathRemoveFileSpec(fullpath);
+	PathCombine(driverfullpath, fullpath, path);
+
+	co_terminal_print("daemon: loading %s\n", driverfullpath);
+
+	schSCManager = OpenSCManager(NULL,                 // machine (NULL == local) 
+				     NULL,                 // database (NULL == default) 
+				     SC_MANAGER_ALL_ACCESS /* access required */ );
+
+	rc = co_winnt_install_driver_lowlevel(schSCManager, name, driverfullpath);
+	if (!CO_OK(rc)) {
+		CloseServiceHandle(schSCManager);    
+		return rc;
+	}
+
+	rc = co_winnt_start_driver_lowlevel(schSCManager, name); 
+	if (!CO_OK(rc)) {
+		co_winnt_remove_driver_lowlevel(schSCManager, name); 
+		CloseServiceHandle(schSCManager);    
+		return rc;
+	}
+
+#if (0)
+	rc = co_os_check_device(name); 
+	if (!CO_OK(rc)) {
+		co_winnt_stop_driver_lowlevel(schSCManager, name);  
+		co_winnt_remove_driver_lowlevel(schSCManager, name); 
+		CloseServiceHandle(schSCManager);    
+		return rc;
+	}
+#endif
+
+	CloseServiceHandle(schSCManager);    
+
+	return CO_RC(OK);
+} 
+
+co_rc_t co_winnt_driver_remove_lowlevel(void)
+{
+	return co_winnt_unload_driver_lowlevel_by_name(CO_DRIVER_NAME);
+}
+
+co_rc_t co_winnt_driver_install_lowlevel(void)
+{
+	return co_winnt_load_driver_lowlevel_by_name(CO_DRIVER_NAME, COLINUX_DRIVER_FILE);
 }

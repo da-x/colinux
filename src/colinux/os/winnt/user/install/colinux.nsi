@@ -24,7 +24,7 @@
 
   BrandingText "${PUBLISHER}"
 
-  VIAddVersionKey ProductName "coLinux"
+  VIAddVersionKey ProductName "Cooperative Linux"
   VIAddVersionKey CompanyName "${PUBLISHER}"
   VIAddVersionKey ProductVersion "${VERSION}"
   VIAddVersionKey FileVersion "${VERSION}"

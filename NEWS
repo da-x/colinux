@@ -31,6 +31,8 @@
       the string that appears in Network Connections (e.g., 'Local Area 
       Connection') and not the device name assigned by Windows (e.g.,
       'TAP-Win32 Adapter')
+    * The driver is installed from the daemon's installation directory
+      rather than from the current running directory.
   * Linux port:
     * Sending SIGHUP to the daemon causes it to issue Ctrl-Alt-Del on the
       Linux VM.

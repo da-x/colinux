@@ -1,3 +1,38 @@
+Sat May  8 12:36:42 2004  Dan Aloni  <da-x@colinux.org>
+
+	* src/colinux/os/winnt/user/daemon/driver.c (co_win32_manager_is_installed): 
+	Let the user know if there's not enough privileges to access the driver.
+
+Sat May  8 10:44:46 2004  Dan Aloni  <da-x@colinux.org>
+
+	* src/colinux/os/winnt/user/install/colinux.nsi: 
+	Renamed ProductName from coLinux to "Cooperative Linux".
+
+Sat May  8 10:40:58 2004  Dan Aloni  <da-x@colinux.org>
+
+	* src/colinux/user/configurator/configurator.py: 
+	This is a start of a cross-platfrom configuration util.
+
+Sat May  8 10:39:15 2004  Dan Aloni  <da-x@colinux.org>
+
+	* src/colinux/os/winnt/user/daemon/driver.c (co_winnt_load_driver_lowlevel_by_name): 
+	The linux.sys file is installed regardless of the current running 
+	directory of the colinux-daemon. This should address some driver
+	installation problems from scripts the people were getting.
+
+	I've also concentrated the driver installation code into the 
+	daemon's code.
+
+Fri May  7 22:16:04 2004  George Boutwell <gboutwel@praize.com>
+
+	* src/colinux/os/winnt/user/daemon/driver.c: 
+	* src/colinux/os/winnt/user/daemon/service.c: 
+	Support for Event Logging the coLinux terminal prints if running
+	as a service.
+
+	Also fixed running the service after a reboot (the driver wasn't
+	initialized).
+
 Mon Apr 26 08:44:25 2004  Dan Aloni  <da-x@colinux.org>
 
 	* src/colinux/os/winnt/user/daemon/service.c (service_main): 

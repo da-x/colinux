@@ -19,7 +19,7 @@ typedef int bool_t;
 
 #define CO_MAX_MONITORS 16
 
-#define CO_LINUX_PERIPHERY_ABI_VERSION    2
+#define CO_LINUX_PERIPHERY_ABI_VERSION    3
 
 typedef enum {
     CO_RC_OK                         = 0,
@@ -41,6 +41,7 @@ typedef enum {
     CO_RC_MONITOR_NOT_LOADED         = -21,
     CO_RC_BROKEN_PIPE                = -22,
     CO_RC_TIMEOUT                    = -23,
+    CO_RC_ACCESS_DENIED              = -24,
 } co_rc_t;
 
 #include "debug.h"

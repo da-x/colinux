@@ -13,10 +13,14 @@
 
 #include <colinux/common/common.h>
 
+extern void co_winnt_status_driver(void);
+
 extern co_rc_t co_winnt_install_driver(void);
-extern co_rc_t co_winnt_initialize_driver();
+extern co_rc_t co_winnt_initialize_driver(bool_t lazy_unload);
 extern co_rc_t co_winnt_remove_driver(void);
 extern co_rc_t co_winnt_daemon_main_with_driver(char *argv[]);
-extern void co_winnt_status_driver(void);
+
+extern co_rc_t co_winnt_driver_remove_lowlevel(void);
+extern co_rc_t co_winnt_driver_install_lowlevel(void);
 
 #endif

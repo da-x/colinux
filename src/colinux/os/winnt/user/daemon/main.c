@@ -161,7 +161,7 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 
 		co_running_as_service = PTRUE;
 
-		rc = co_winnt_initialize_driver();
+		rc = co_winnt_initialize_driver(PTRUE);
 		if (rc != CO_RC(OK)) {
 			return CO_RC(ERROR);
 		}
@@ -172,12 +172,16 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 	return co_winnt_daemon_main_with_driver(args);
 }
 
+HINSTANCE co_current_win32_instance;
+
 int WINAPI WinMain(HINSTANCE hInstance, 
 		   HINSTANCE hPrevInstance,
 		   LPSTR szCmdLine,
 		   int iCmdShow) 
 {
 	co_rc_t rc;
+
+	co_current_win32_instance = hInstance;
 
 	rc = co_winnt_main(szCmdLine);
 	if (!CO_OK(rc)) 

@@ -73,13 +73,3 @@ co_rc_t co_os_manager_is_installed(bool_t *installed)
 
 	return CO_RC(OK);
 }
-
-co_rc_t co_os_manager_remove(void)
-{
-	return CO_RC(OK);
-}
-
-co_rc_t co_os_manager_install(void)
-{
-	return CO_RC(OK);
-}
