@@ -1,22 +1,19 @@
 The Cooperative Linux Daemon hosts the Linux virtual machine as one process 
 under the host operating system. Its command line syntax is as follows:
 
-  colinux-daemon [-h] [-d] [-t name]
-                  ([-c config.xml]|[configuration and boot parameters])
+  colinux-daemon [-h] [-d] [-t name] [configuration and boot parameter] @params.txt
 
     -h             Show this help text
-    -c config.xml  Specify configuration file
-                   (default: colinux.default.xml)
     -d             Don't launch and attach a coLinux console on
                    startup
+    -k             Suppress kernel messages
     -t name        When spawning a console, this is the type of 
                    console (e.g, nt, fltk, etc...)
+    @params.txt    Take more command line params from the given text file (can be multi-line)
 
-    Configuration and boot parameters:
+  Configuration and boot parameters:
 
-      When specifying kernel=vmlinux (where vmlinux is the kernel image file
-      the -c option is not needed. Instead, you pass all configuration via
-      the command line, for example:
+    For example, a simple network-less setup:
 
        colinux-daemon kernel=vmlinux cobd0=root_fs root=/dev/cobd0 hda1=:cobd0
 
@@ -39,14 +36,6 @@ The following options are specific to Windows NT/XP/2000:
       --install-driver             Install the colinux-driver (linux.sys)
       --remove-driver              Install the colinux-driver (linux.sys)
       --status-driver              Show status about the installed/running driver
-
-It is also possible (and sometimes preferable) to configure coLinux from the 
-command line, i.e, XML config is not needed. This mode and the XML mode are 
-mutual exclusive.
-
-The reason for this feature is an ongoing effort to bring coLinux's
-interfaces to be closer to UML (User Mode Linux) *and* to make it  
-easier to operate for the novice users.
 
 The kernel= option enables this mode. Order of parameters is not
 important when options don't depend on each other.              
@@ -102,10 +91,9 @@ important when options don't depend on each other.
    This syntax reminds a bit of QEMU's syntax (it also has
    hda=).
 
-
      colinux-daemon kernel=vmlinux hda1=root_fs root=/dev/hda1 initrd=initrd.gz
 
-   Upgrade your kernel modules for this snapshot.
+   Upgrades your kernel modules for this snapshot.
 
 
  Options for networking:

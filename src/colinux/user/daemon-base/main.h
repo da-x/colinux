@@ -17,9 +17,11 @@ extern "C" {
 #include <colinux/user/manager.h>
 #include <colinux/user/reactor.h>
 #include <colinux/user/cmdline.h>
+#include <colinux/os/alloc.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/daemon.h>
 #include <colinux/common/console.h>
+#include <colinux/common/libc.h>
 }
 
 class user_daemon_exception_t {
@@ -48,6 +50,7 @@ public:
 	virtual void verify_parameters();
 	virtual void syntax();
 	virtual void prepare_for_loop();
+	virtual void send_to_monitor_raw(co_device_t device, unsigned char *buffer, unsigned long size);
 
 protected:
 	co_reactor_t reactor;

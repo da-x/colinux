@@ -32,31 +32,17 @@
 co_rc_t co_load_config_file(co_daemon_t *daemon)
 {
 	co_rc_t rc;
-	char *buf = NULL;
-	unsigned long size = 0 ;
 
 	if (daemon->start_parameters->cmdline_config) {
 		daemon->config = daemon->start_parameters->config;
 		return CO_RC(OK);
 	}
 
-	co_debug("loading configuration from %s\n", daemon->config.config_path);
+	co_terminal_print_color(CO_TERM_COLOR_YELLOW, "XML configuration files are obsolete. Please pass command line\n");
+	co_terminal_print_color(CO_TERM_COLOR_YELLOW, "options, or use '@' to pass a command-line compatible configuration\n");
+	co_terminal_print_color(CO_TERM_COLOR_YELLOW, "file (e.g. @config.txt)\n\n");
 
-	rc = co_os_file_load(&daemon->config.config_path, &buf, &size);
-	if (!CO_OK(rc)) {
-		co_debug("error loading configuration file\n");
-		return rc;
-	}
-	
-	if (size == 0) {
-		rc = CO_RC_ERROR;
-		co_debug("error, configuration file size is 0\n");
-	} else {
-		buf[size-1] = '\0';
-		rc = co_load_config(buf, &daemon->config);
-	}
-
-	co_os_file_free(buf);
+	rc = CO_RC(ERROR);
 	return rc;
 }
 
@@ -77,17 +63,15 @@ void co_daemon_syntax()
 	co_daemon_print_header();
 	co_terminal_print("syntax: \n");
 	co_terminal_print("\n");
-	co_terminal_print("    colinux-daemon [-h] [-d] [-t name]\n");
-	co_terminal_print("                   ([-c config.xml]|[configuration and boot parameters])\n");
+	co_terminal_print("    colinux-daemon [-h] [-d] [-t name] [configuration and boot parameter] @params.txt\n");
 	co_terminal_print("\n");
 	co_terminal_print("      -h             Show this help text\n");
-	co_terminal_print("      -c config.xml  Specify configuration file\n");
-	co_terminal_print("                     (default: colinux.default.xml)\n");
 	co_terminal_print("      -d             Don't launch and attach a coLinux console on\n");
 	co_terminal_print("                     startup\n");
 	co_terminal_print("      -k             Suppress kernel messages\n");
 	co_terminal_print("      -t name        When spawning a console, this is the type of \n");
 	co_terminal_print("                     console (e.g, nt, fltk, etc...)\n");
+	co_terminal_print("      @params.txt    Take more command line params from the given text file (can be multi-line)\n");
 	co_terminal_print("\n");
 	co_terminal_print("      Configuration and boot parameters:\n");
 	co_terminal_print("\n");
@@ -102,6 +86,8 @@ void co_daemon_syntax()
 	co_terminal_print("          colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1\n");
 	co_terminal_print("\n");
 	co_terminal_print("      Unhandled paramters are forwarded to the kernel's boot parameters string.\n");
+	co_terminal_print("\n");
+	co_terminal_print("     See colinux-daemon's documentation for more options.\n");
 	co_terminal_print("\n");
 }
 

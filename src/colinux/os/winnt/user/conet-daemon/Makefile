@@ -33,7 +33,7 @@ $(LOCAL_EXE) : \
 	$(BUILD_ROOT)/colinux/common/common.a \
 	$(BUILD_ROOT)/colinux/os/current/user/user.a \
 
-	$(GPP) $^ -o $@ -luser32 -lgdi32 -lkernel32 -lmxml
+	$(GPP) $^ -o $@ -luser32 -lgdi32 -lkernel32
 
 CLEAN_FILES := $(CLEAN_FILES) $(LOCAL_TARGETS)
 

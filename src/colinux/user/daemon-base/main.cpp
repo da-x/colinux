@@ -152,6 +152,33 @@ void user_daemon_t::send_to_monitor(co_message_t *message)
 					   message->size + sizeof(*message));
 }
 
+void user_daemon_t::send_to_monitor_raw(co_device_t device, unsigned char *buffer, unsigned long size)
+{
+	struct {
+		co_message_t message;
+		co_linux_message_t msg_linux;
+		char data[];
+	} *message;
+
+	message = (typeof(message))co_os_malloc(sizeof(*message) + size);
+	if (!message)
+		return;
+		
+	message->message.from = (co_module_t)(get_base_module() + param_index);
+	message->message.to = CO_MODULE_LINUX;
+	message->message.priority = CO_PRIORITY_DISCARDABLE;
+	message->message.type = CO_MESSAGE_TYPE_OTHER;
+	message->message.size = sizeof(message->msg_linux) + size;
+	message->msg_linux.device = device;
+	message->msg_linux.unit = (int)param_index;
+	message->msg_linux.size = size;
+	co_memcpy(message->data, buffer, size);
+
+	send_to_monitor(&message->message);
+
+	co_os_free(message);
+}
+
 void user_daemon_t::prepare_for_loop()
 {
 }

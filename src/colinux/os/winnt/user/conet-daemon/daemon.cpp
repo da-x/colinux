@@ -115,23 +115,7 @@ void user_network_tap_daemon_t::prepare_for_loop()
 
 void user_network_tap_daemon_t::received_from_tap(unsigned char *buffer, unsigned long size)
 {
-	struct {
-		co_message_t message;
-		co_linux_message_t msg_linux;
-		char data[0x10000];
-	} message;
-		
-	message.message.from = (co_module_t)(get_base_module() + param_index);
-	message.message.to = CO_MODULE_LINUX;
-	message.message.priority = CO_PRIORITY_DISCARDABLE;
-	message.message.type = CO_MESSAGE_TYPE_OTHER;
-	message.message.size = sizeof(message.msg_linux) + size;
-	message.msg_linux.device = CO_DEVICE_NETWORK;
-	message.msg_linux.unit = (int)param_index;
-	message.msg_linux.size = size;
-	memcpy(message.data, buffer, size);
-
-	send_to_monitor(&message.message);
+	send_to_monitor_raw(CO_DEVICE_NETWORK, buffer, size);
 }
 
 void user_network_tap_daemon_t::received_from_monitor(co_message_t *message)
