@@ -31,7 +31,7 @@ static int co_os_manager_ioctl_buffer(co_linux_io_t *ioctl, char *buffer, struct
 	if (copy_from_user(buffer, ioctl->input_buffer, ioctl->input_buffer_size))
 		return -EFAULT;
 
-	rc = co_manager_ioctl(global_manager, 
+	rc = co_manager_ioctl(co_global_manager, 
 			      ioctl->code, 
 			      buffer, ioctl->input_buffer_size,
 			      ioctl->output_buffer_size, &return_size,
@@ -92,7 +92,7 @@ int co_os_manager_ioctl(struct inode *inode, struct file *file,
 
 int co_os_manager_release(struct inode *inode, struct file *file)
 {
-	co_manager_cleanup(global_manager, &file->private_data);
+	co_manager_cleanup(co_global_manager, &file->private_data);
 
 	module_put(THIS_MODULE);
 

@@ -17,6 +17,7 @@
 
 struct co_manager;
 
+#define CO_DEBUG_MAX_FILL                    (0x100000)
 #define CO_DEBUG_SECTION_BUFFER_MAX_SIZE     (0x10000)
 #define CO_DEBUG_SECTION_BUFFER_START_SIZE   (0x1000)
 
@@ -49,7 +50,7 @@ extern co_rc_t co_debug_init(co_manager_debug_t *manager);
 
 extern co_rc_t co_debug_write(co_manager_debug_t *manager, 
 			      struct co_debug_section **section_ptr,
-			      const char *buf, unsigned long size);
+			      const char *buf, long size);
 
 extern co_rc_t co_debug_write_str(co_manager_debug_t *manager, 
 				  struct co_debug_section **section_ptr,

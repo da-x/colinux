@@ -55,13 +55,13 @@ co_rc_t co_manager_status(co_manager_handle_t handle, co_manager_ioctl_status_t 
 	return rc;
 }
 
-void co_manager_debug(co_manager_handle_t handle, const char *str)
+void co_manager_debug(co_manager_handle_t handle, const char *buf, long size)
 {
 	unsigned long returned = 0;
 	unsigned long ret = 0;
 
 	co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_DEBUG,
-			    (void *)str, strlen(str), &ret, sizeof(ret), &returned);
+			    (void *)buf, size, &ret, sizeof(ret), &returned);
 }
 
 co_rc_t co_manager_debug_reader(co_manager_handle_t handle, co_manager_ioctl_debug_reader_t *debug_reader)

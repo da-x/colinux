@@ -35,7 +35,7 @@ void co_terminal_print(const char *format, ...)
 	while (len > 0  &&  buf[len-1] == '\n')
 		buf[len - 1] = '\0';
 		
-	co_debug_lvl(9, "prints \"%s\"\n", buf);
+	co_debug_lvl(prints, 11, "prints \"%s\"\n", buf);
 }
 
 double co_os_timer_highres()
@@ -45,4 +45,14 @@ double co_os_timer_highres()
         gettimeofday(&tv, NULL);
 
         return ((double)tv.tv_sec) + ((double)tv.tv_usec)/1000000;
+}
+
+void co_os_get_debug_timestamp(co_debug_timestamp_t *dts)
+{
+	struct timeval tv;
+
+	gettimeofday(&tv, NULL);
+
+	dts->high = tv.tv_sec;
+        dts->low = tv.tv_usec;
 }

@@ -19,6 +19,8 @@
 #include "monitor.h"
 #include "pages.h"
 
+co_manager_t *co_global_manager = NULL;
+
 static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 {
 	unsigned long map_size, covered_physical;

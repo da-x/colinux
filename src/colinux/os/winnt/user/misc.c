@@ -37,7 +37,7 @@ void co_terminal_print(const char *format, ...)
 	while (len > 0  &&  buf[len-1] == '\n')
 		buf[len - 1] = '\0';
 		
-	co_debug_lvl(9, "prints \"%s\"\n", buf);
+	co_debug_lvl(prints, 11, "prints \"%s\"\n", buf);
 }
 
 void co_set_terminal_print_hook(co_terminal_print_hook_func_t func)

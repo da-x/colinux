@@ -6,9 +6,9 @@ import sys, os, re
 # GCC wrapper for auto tracing
 #
 # It works using these steps:
-#  * Take a regular GCC command line
-#  * Execute this command line but with a modification that causes
-#    is to output a processed C file instead.
+#  * Takes a regular GCC command line
+#  * Executes this command line but with a modification that causes
+#    it to output a processed C file instead.
 #  * Execute autotrace.py to add traces to the preprocessed output.
 #  * Compile the preprocessed output with the added traces.
 # 
@@ -66,6 +66,6 @@ params.append(trace_file)
 result = reexec(params)
 
 os.unlink(ppc_file)
-#os.unlink(trace_file)
+os.unlink(trace_file)
 
 sys.exit(result)

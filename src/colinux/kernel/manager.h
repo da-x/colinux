@@ -52,6 +52,8 @@ typedef struct co_manager_per_fd_state {
 	co_debug_section_t *debug_section;
 } co_manager_per_fd_state_t;
 
+extern co_manager_t *co_global_manager;
+
 extern co_rc_t co_manager_set_reversed_pfn(co_manager_t *manager, 
 					   co_pfn_t real_pfn, co_pfn_t pseudo_pfn);
 extern co_rc_t co_manager_load(co_manager_t *manager);

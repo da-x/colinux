@@ -79,6 +79,16 @@ void co_os_timer_destroy(co_os_timer_t timer)
 		co_os_free(timer);
 }
 
+void co_os_get_debug_timestamp(co_debug_timestamp_t *dts)
+{
+	LARGE_INTEGER PerformanceCounter;
+
+	QueryPerformanceCounter(&PerformanceCounter);
+
+	dts->high = PerformanceCounter.HighPart;
+	dts->low = PerformanceCounter.LowPart;
+}
+
 double co_os_timer_highres()
 {
 	LARGE_INTEGER lpFrequency;

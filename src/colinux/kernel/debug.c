@@ -149,10 +149,13 @@ static bool_t put_section(co_manager_debug_t *debug,
 
 co_rc_t co_debug_write(co_manager_debug_t *debug, 
 		       struct co_debug_section **section_ptr,
-		       const char *buf, unsigned long size)
+		       const char *buf, long size)
 {
 	co_rc_t rc;
 	co_debug_section_t *section;
+
+	if (debug->sections_total_filled > CO_DEBUG_MAX_FILL)
+		return CO_RC(OK);
 
 	if (debug->freeing)
 		return CO_RC(OK);
@@ -294,7 +297,7 @@ co_rc_t co_debug_init(co_manager_debug_t *debug)
 		goto out;
 	}
 
-	co_debug_write_str(debug, &debug->section, "driver logging started\n");
+	/* co_debug_write_str(debug, &debug->section, "driver logging started\n"); */
 	debug->ready = PTRUE;
 
 out:
@@ -322,3 +325,17 @@ co_rc_t co_debug_free(co_manager_debug_t *debug)
 		
 	return CO_RC(OK);
 }
+
+void co_debug_buf(const char *buf, long size)
+{
+	if (!co_global_manager) {
+		return;
+	}
+
+	if (!co_global_manager->debug.ready) {
+		return;
+	}
+
+	co_debug_write(&co_global_manager->debug, &co_global_manager->debug.section, buf, size);
+}
+

@@ -13,17 +13,13 @@
 
 #include <colinux/common/debug.h>
 
-void co_debug_line(char *line)
+void co_debug_system(const char *fmt, ...)
 {
-	if (!co_global_manager) {
-		DbgPrint("%s", line);
-		return;
-	}
+	char buf[0x100];
+	va_list ap;
 
-	if (!co_global_manager->debug.ready) {
-		DbgPrint("%s", line);
-		return;
-	}
-
-	co_debug_write_str(&co_global_manager->debug, &co_global_manager->debug.section, line);
+	va_start(ap, fmt);
+	co_vsnprintf(buf, sizeof(buf), fmt, ap);
+        DbgPrint("%s", buf);
+	va_end(ap);
 }

@@ -39,23 +39,13 @@ unsigned long co_os_get_time()
 	return CurrentTime.QuadPart;
 }
 
-/*
- * Return 2^32 * (1 / (TSC clocks per usec)) for do_fast_gettimeoffset().
- */
-unsigned long co_os_get_high_prec_quotient()
+void co_os_get_debug_timestamp(co_debug_timestamp_t *dts)
 {
 	LARGE_INTEGER PerformanceFrequency;
-	unsigned long result;
+	LARGE_INTEGER PerformanceCounter;
 
-	/* 
-	 * HECK, it doesn't work, obviously.
-	 */
+	PerformanceCounter = KeQueryPerformanceCounter(&PerformanceFrequency);
 
-	KeQueryPerformanceCounter(&PerformanceFrequency);
-
-	result = (0x100000000LL * 1000000LL) / (PerformanceFrequency.QuadPart);
-
-	co_debug("co_os_get_high_prec_time: %d\n", result);
-
-	return result;
+	dts->high = PerformanceCounter.HighPart;
+	dts->low = PerformanceCounter.LowPart;
 }

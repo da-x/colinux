@@ -12,6 +12,19 @@
 #include <memory.h>
 #include <colinux/os/alloc.h>
 
+#define co_debug_lvl_route(msg, from, to, level, fmt, ...) do {	\
+    co_module_name_t from_str;						\
+    co_module_name_t to_str;						\
+    									\
+    co_debug_lvl(messages, level, msg " %s -> %s: " fmt,		\
+		 co_module_repr(from, &from_str),			\
+		 co_module_repr(to, &to_str),				\
+		 ## __VA_ARGS__);					\
+} while (0);
+
+#define co_debug_lvl_message(message, level, fmt, ...)			\
+	co_debug_lvl_route("route", message->from, message->to, level, fmt, ## __VA_ARGS__)
+
 void co_message_switch_init(co_message_switch_t *ms, co_module_t switch_id)
 {
 	co_list_init(&ms->list);
@@ -33,7 +46,7 @@ co_rc_t co_message_switch_set_rule(co_message_switch_t *ms, co_module_t destinat
 	rule->data = data;
 	rule->func = func;
 
-	co_debug("message_switch: setting callback rule for %s\n", co_module_repr(destination, &destination_str));
+	co_debug_lvl(messages, 5, "setting callback rule for %s\n", co_module_repr(destination, &destination_str));
 
 	co_list_add_head(&rule->node, &ms->list);
 
@@ -43,8 +56,6 @@ co_rc_t co_message_switch_set_rule(co_message_switch_t *ms, co_module_t destinat
 co_rc_t co_message_switch_set_rule_reroute(co_message_switch_t *ms, co_module_t destination, co_module_t new_destination)
 {
 	co_switch_rule_t *rule;
-	co_module_name_t destination_str;
-	co_module_name_t new_destination_str;
 
 	rule = (co_switch_rule_t *)co_os_malloc(sizeof(*rule));
 	if (rule == NULL)
@@ -53,10 +64,8 @@ co_rc_t co_message_switch_set_rule_reroute(co_message_switch_t *ms, co_module_t 
 	rule->type = CO_SWITCH_RULE_TYPE_REROUTE;
 	rule->destination = destination;
 	rule->reroute_destination = new_destination;
-	
-	co_debug("message_switch: setting reroute rule %s -> %s\n",
-		 co_module_repr(destination, &destination_str), 
-		 co_module_repr(new_destination, &new_destination_str));
+
+	co_debug_lvl_route("reroute rule", destination, new_destination, 11, "\n");
 
 	co_list_add_head(&rule->node, &ms->list);
 
@@ -74,6 +83,8 @@ co_rc_t co_message_switch_cb_add_to_queue(void *data, co_message_t *message)
 		co_os_free(message);
 		return rc;
 	}
+
+	co_debug_lvl_message(message, 11, "adding to queue %x\n", queue);
 
 	queue_item->message = message;
 
@@ -129,7 +140,7 @@ co_rc_t co_message_switch_message(co_message_switch_t *ms, co_message_t *message
 
 		/* A message for me */
 		if (message->size != sizeof(co_switch_message_t)) {
-			co_debug("switch_message: bad message size\n");
+			co_debug_lvl_message(message, 4, "bad messasge size (%d != %d)", message->size,  sizeof(co_switch_message_t));
 			goto out_free_error;
 		}
 		
@@ -143,7 +154,7 @@ co_rc_t co_message_switch_message(co_message_switch_t *ms, co_message_t *message
 			rc = co_message_switch_free_rule(ms, switch_message->destination);
 			break;
 		default:
-			co_debug("switch_message: bad message type\n");
+			co_debug_lvl_message(message, 4, "bad switch message type (%d)\n", switch_message->type);
 			goto out_free_error;
 		}
 
@@ -163,8 +174,7 @@ co_rc_t co_message_switch_message(co_message_switch_t *ms, co_message_t *message
 	}
 
 out_free_error:
-	co_debug_lvl(11, "switch_message: freed message %x (%d to %d)\n", 
-		     message, message->from, message->to); 
+	co_debug_lvl_message(message, 11, "freed message\n");
 
 out_free:
 	co_os_free(message);
@@ -182,8 +192,7 @@ co_rc_t co_message_switch_free_rule(co_message_switch_t *ms, co_module_t destina
 	if (!CO_OK(rc))
 		return rc;
 
-	co_debug("message_switch: freeing rule for %s\n", 
-		 co_module_repr(rule->destination, &destination_str));
+	co_debug_lvl(messages, 5, "freeng rule for %s\n", co_module_repr(destination, &destination_str));
 
 	co_list_del(&rule->node);
 	co_os_free(rule);

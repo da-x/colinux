@@ -18,7 +18,12 @@ unsigned long co_os_get_time(void)
 	return get_seconds();
 }
 
-unsigned long co_os_get_high_prec_quotient(void)
+void co_os_get_debug_timestamp(co_debug_timestamp_t *dts)
 {
-	return 0;
+	struct timeval tv;
+
+	do_gettimeofday(&tv);
+
+	dts->high = tv.tv_sec;
+        dts->low = tv.tv_usec;
 }

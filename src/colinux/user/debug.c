@@ -24,10 +24,10 @@ void co_debug_start(void)
 	handle = co_os_manager_open();
 }
 
-void co_debug_line(char *line)
+void co_debug_buf(const char *buf, long size)
 {
 	if (handle != NULL)
-		co_manager_debug(handle, line);
+		co_manager_debug(handle, buf, size);
 }
 
 void co_debug_end(void)

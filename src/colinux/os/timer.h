@@ -23,6 +23,7 @@ extern void co_os_timer_deactivate(co_os_timer_t timer);
 extern void co_os_timer_destroy(co_os_timer_t timer);
 
 extern double co_os_timer_highres(void);
+extern void co_os_get_debug_timestamp(co_debug_timestamp_t *dts);
 
 #endif
 

@@ -12,21 +12,6 @@
 #include "manager.h"
 #include <colinux/kernel/debug.h>
 
-void co_debug_line(char *str)
-{
-	if (!global_manager) {
-		printk("%s", str);
-		return;
-	}
-
-	if (!global_manager->debug.ready) {
-		printk("%s", str);
-		return;
-	}
-
-	co_debug_write_str(&global_manager->debug, &global_manager->debug.section, str);
-}
-
 void co_debug_system(const char *fmt, ...)
 {
 	char buf[0x100];

@@ -21,7 +21,7 @@
  * Configurator:
    * Finish implementation of editing configuration files.
    * On the place block devices are configured, add the ability to 
-     download the images from sourceforge on the.
+     download the images from sourceforge.
    * On the place where network devices are configured, the configurator
      will enumerate either currently installed network adapter and TAP
      devices. More user friendliness could be added there to support the
