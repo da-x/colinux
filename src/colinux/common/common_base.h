@@ -28,6 +28,7 @@ typedef enum {
     CO_RC_VERSION_MISMATCHED         = -3,
     CO_RC_OUT_OF_MEMORY              = -4,
     CO_RC_OUT_OF_PAGES               = -5,
+    CO_RC_NOT_FOUND                  = -6,
     CO_RC_CANT_OPEN_VMLINUX_FILE     = -12,
     CO_RC_CANT_STAT_VMLINUX_FILE     = -13,
     CO_RC_ERROR_READING_VMLINUX_FILE = -14,

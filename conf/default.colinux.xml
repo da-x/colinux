@@ -17,7 +17,7 @@
     <bootparams>root=/dev/cobd0</bootparams>
 
     <!-- image allows you to specify the kernel to boot -->
-    <image path="vmlinux" /><>
+    <image path="vmlinux" />
 
     <!-- this line allows you to specify the amount of memory available 
          to coLinux -->
@@ -25,5 +25,5 @@
 
     <!-- This allows you to modify networking parameters, see the README 
          or website for more information -->
-    <network index="0" type="tap" name="TAP" />
+    <network index="0" type="tap" />
 </colinux>

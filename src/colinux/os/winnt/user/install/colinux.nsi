@@ -136,9 +136,11 @@ Section "coLinux" SeccoLinux
 
   ;Backup config file if present
   IfFileExists "$INSTDIR\default.coLinux.xml" 0 +1
-  CopyFiles /SILENT "$INSTDIR\default.coLinux.xml" "$INSTDIR\default.coLinux.xml.old"
+  CopyFiles /SILENT "$INSTDIR\default.coLinux.xml" "$INSTDIR\default.colinux.xml.old"
   File "..\..\..\..\..\..\conf\default.coLinux.xml"
 
+  Delete "$INSTDIR\packet.dll"
+  Delete "$INSTDIR\wpcap.dll"
 
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
@@ -177,8 +179,6 @@ Section "coLinux Bridged Ethernet (WinPcap)" SeccoLinuxBridgedNet
   ; the uninstall section
 
   SetOutPath "$INSTDIR"
-  File "premaid\packet.dll"
-  File "premaid\wpcap.dll"
   File "..\conet-bridged-daemon\coLinux-bridged-net-daemon.exe"
 
   ;--------------------------------------------------------------/FILES--
@@ -340,9 +340,9 @@ SectionEnd
 ;Post-install section
 
 Section -post
-    nsExec::ExecToStack '"$INSTDIR\colinux-daemon.exe" --remove-service'
-    Pop $R0 # return value/error/timeout
     nsExec::ExecToStack '"$INSTDIR\colinux-daemon.exe" --remove-driver'
+    Pop $R0 # return value/error/timeout
+    nsExec::ExecToStack '"$INSTDIR\colinux-daemon.exe" --install-driver'
     Pop $R0 # return value/error/timeout
 SectionEnd
 
@@ -388,8 +388,6 @@ Section "Uninstall"
   Delete "$INSTDIR\coLinux-daemon.exe"
   Delete "$INSTDIR\coLinux-net-daemon.exe"
   Delete "$INSTDIR\coLinux-bridged-net-daemon.exe"
-  Delete "$INSTDIR\packet.dll"
-  Delete "$INSTDIR\wpcap.dll"
   Delete "$INSTDIR\linux.sys"
   Delete "$INSTDIR\README"
   Delete "$INSTDIR\vmlinux"

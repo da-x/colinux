@@ -10,6 +10,8 @@ KERNEL=linux-$KERNEL_VERSION
 KERNEL_URL=http://www.kernel.org/pub/linux/kernel/$KERNEL_DIR 
 KERNEL_ARCHIVE=$KERNEL.tar.bz2
 
+PATH="PREFIX/$TARGET/bin:$PATH"
+
 download_files()
 {
 	mkdir -p "$SRCDIR"
@@ -77,8 +79,9 @@ configure_kernel()
 install_kernel()
 {
 	cd "$TOPDIR/../../linux"
-	echo "Installing Kernel $KERNEL_VERSION"
-	cp -a vmlinux $PREFIX/$TARGET/bin
+	echo "Installing Kernel $KERNEL_VERSION in $PREFIX/dist"
+	mkdir -p "$PREFIX/dist"
+	cp -a vmlinux $PREFIX/dist
 	
 	# It would be nice to install kernel modules
 	# and then tar them up here.
@@ -106,12 +109,12 @@ configure_colinux_daemons()
 install_colinux_daemons()
 {
 	cd "$TOPDIR/../src"
-	echo "Installing colinux (daemons)"
-	cp -a colinux/os/winnt/user/conet-daemon/colinux-net-daemon.exe "$PREFIX/$TARGET/bin"
-	cp -a colinux/os/winnt/user/console/colinux-console-fltk.exe "$PREFIX/$TARGET/bin"
-	cp -a colinux/os/winnt/user/console-nt/colinux-console-nt.exe "$PREFIX/$TARGET/bin"
-	cp -a colinux/os/winnt/user/daemon/colinux-daemon.exe "$PREFIX/$TARGET/bin"
-	cp -a colinux/os/winnt/build/linux.sys "$PREFIX/$TARGET/bin"
+	echo "Installing colinux (daemons) to $PREFIX/dist"
+	cp -a colinux/os/winnt/user/conet-daemon/colinux-net-daemon.exe "$PREFIX/dist"
+	cp -a colinux/os/winnt/user/console/colinux-console-fltk.exe "$PREFIX/dist"
+	cp -a colinux/os/winnt/user/console-nt/colinux-console-nt.exe "$PREFIX/dist"
+	cp -a colinux/os/winnt/user/daemon/colinux-daemon.exe "$PREFIX/dist"
+	cp -a colinux/os/winnt/build/linux.sys "$PREFIX/dist"
 	cd "$TOPDIR"
 }
 

@@ -215,20 +215,20 @@ int wait_loop(HANDLE daemon_handle, HANDLE tap_handle)
 
 void co_net_syntax()
 {
-	printf("Cooperative Linux Virtual Network Daemon\n");
-	printf("Dan Aloni, 2004 (c)\n");
-	printf("\n");
-	printf("syntax: \n");
-	printf("\n");
-	printf("  colinux-net-daemon -c 0 -i index [-h] [-n 'adapter name']\n");
-	printf("\n");
-	printf("    -h                      Show this help text\n");
-	printf("    -n 'adapter name'       The name of the network adapter to attach to\n");
-	printf("                            Without this option, the daemon tries to\n");
-	printf("                            guess which interface to use\n");
-	printf("    -i index                Network device index number (0 for eth0, 1 for\n");
-	printf("                            eth1, etc.)\n");
-	printf("    -c instance             coLinux instance ID to connect to\n");
+	co_terminal_print("Cooperative Linux Virtual Network Daemon\n");
+	co_terminal_print("Dan Aloni, 2004 (c)\n");
+	co_terminal_print("\n");
+	co_terminal_print("syntax: \n");
+	co_terminal_print("\n");
+	co_terminal_print("  colinux-net-daemon -c 0 -i index [-h] [-n 'adapter name']\n");
+	co_terminal_print("\n");
+	co_terminal_print("    -h                      Show this help text\n");
+	co_terminal_print("    -n 'adapter name'       The name of the network adapter to attach to\n");
+	co_terminal_print("                            Without this option, the daemon tries to\n");
+	co_terminal_print("                            guess which interface to use\n");
+	co_terminal_print("    -i index                Network device index number (0 for eth0, 1 for\n");
+	co_terminal_print("                            eth1, etc.)\n");
+	co_terminal_print("    -c instance             coLinux instance ID to connect to\n");
 }
 
 static co_rc_t 
@@ -249,7 +249,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 		if (strcmp(*param_scan, option) == 0) {
 			param_scan++;
 			if (!(*param_scan)) {
-				printf("Parameter of command line option %s not specified\n", option);
+				co_terminal_print("Parameter of command line option %s not specified\n", option);
 				return CO_RC(ERROR);
 			}
 
@@ -262,7 +262,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 		if (strcmp(*param_scan, option) == 0) {
 			param_scan++;
 			if (!(*param_scan)) {
-				printf("Parameter of command line option %s not specified\n", option);
+				co_terminal_print("Parameter of command line option %s not specified\n", option);
 				return CO_RC(ERROR);
 			}
 
@@ -275,13 +275,13 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 		if (strcmp(*param_scan, option) == 0) {
 			param_scan++;
 			if (!(*param_scan)) {
-				printf("Parameter of command line option %s not specified\n", option);
+				co_terminal_print("Parameter of command line option %s not specified\n", option);
 				return CO_RC(ERROR);
 			}
 
-			co_snprintf(start_parameters->interface_name, 
-				    sizeof(start_parameters->interface_name), 
-				    "%s", *param_scan);
+			snprintf(start_parameters->interface_name, 
+				 sizeof(start_parameters->interface_name), 
+				 "%s", *param_scan);
 
 			start_parameters->name_specified = PTRUE;
 			param_scan++;
@@ -297,23 +297,43 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 	}
 
 	if (start_parameters->index == -1) {
-		printf("Device index not specified\n");
+		co_terminal_print("Device index not specified\n");
 		return CO_RC(ERROR);
 	}
 
 	if ((start_parameters->index < 0) ||
 	    (start_parameters->index >= CO_MODULE_MAX_CONET)) 
 	{
-		printf("Invalid index: %d\n", start_parameters->index);
+		co_terminal_print("Invalid index: %d\n", start_parameters->index);
 		return CO_RC(ERROR);
 	}
 
 	if (start_parameters->instance == -1) {
-		printf("coLinux instance not specificed\n");
+		co_terminal_print("coLinux instance not specificed\n");
 		return CO_RC(ERROR);
 	}
 
 	return CO_RC(OK);	
+}
+
+static void terminal_print_hook_func(char *str)
+{
+	/* Received packet from TAP */
+	struct {
+		co_message_t message;
+		char data[strlen(str)+1];
+	} message;
+	
+	message.message.from = CO_MODULE_CONET0;
+	message.message.to = CO_MODULE_CONSOLE;
+	message.message.priority = CO_PRIORITY_DISCARDABLE;
+	message.message.type = CO_MESSAGE_TYPE_STRING;
+	message.message.size = strlen(str)+1;
+	memcpy(message.data, str, strlen(str)+1);
+
+	if (daemon_overlapped.handle != NULL) {
+		co_win32_overlapped_write_async(&daemon_overlapped, &message, sizeof(message));
+	}
 }
 
 int main(int argc, char *argv[])
@@ -327,29 +347,35 @@ int main(int argc, char *argv[])
 	start_parameters_t start_parameters;
 	char *prefered_name = NULL;
 
+	co_set_terminal_print_hook(terminal_print_hook_func);
+
 	rc = handle_paramters(&start_parameters, argc, argv);
 	if (!CO_OK(rc)) 
 		return -1;
 
 	prefered_name = start_parameters.name_specified ? start_parameters.interface_name : NULL;
 	if (prefered_name == NULL) {
-		co_debug("conet-daemon: auto selecting TAP\n");
+		co_terminal_print("conet-daemon: auto selecting TAP\n");
  	} else {
-		co_debug("conet-daemon: searching TAP \"%s\"\n", prefered_name);
+		co_terminal_print("conet-daemon: searching TAP device named \"%s\"\n", prefered_name);
 	}
 
 	rc = open_tap_win32(&tap_handle, prefered_name);
 	if (!CO_OK(rc)) {
-		co_debug("Error opening TAP Win32\n");
+		if (CO_RC_GET_CODE(rc) == CO_RC_NOT_FOUND) {
+			co_terminal_print("conet-daemon: TAP device not found\n");
+		} else {
+			co_terminal_print("conet-daemon: error opening TAP device (%x)\n", rc);
+		}
 		exit_code = -1;
 		goto out;
 	}
 
-	co_debug("Enabling TAP-Win32...\n");
+	co_terminal_print("conet-daemon: enabling TAP...\n");
 
 	ret = tap_win32_set_status(tap_handle, TRUE);
 	if (!ret) {
-		co_debug("Error enabling TAP Win32\n");
+		co_terminal_print("conet-daemon: error enabling TAP Win32\n");
 		exit_code = -1;
 		goto out_close;
 
@@ -358,7 +384,7 @@ int main(int argc, char *argv[])
 	rc = co_os_open_daemon_pipe(start_parameters.instance, 
 				    CO_MODULE_CONET0 + start_parameters.index, &daemon_handle_);
 	if (!CO_OK(rc)) {
-		co_debug("Error opening a pipe to the daemon\n");
+		co_terminal_print("conet-daemon: Error opening a pipe to the daemon\n");
 		goto out_close;
 	}
 

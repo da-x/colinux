@@ -206,7 +206,8 @@ extract_winpcap_src()
 	cd "$SRCDIR"
 	rm -rf "$WINPCAP_SRC"
 	echo "Extracting winpcap source"
-	unzip "$WINPCAP_SRC_ARCHIVE"
+	unzip "$WINPCAP_SRC_ARCHIVE" 2>&1 > /dev/null
+	cd "$TOPDIR"
 }
 
 install_winpcap_src()
@@ -217,13 +218,16 @@ install_winpcap_src()
 	cp Include/pcap-stdinc.h "$PREFIX/$TARGET/include"
 	cp Include/bittypes.h "$PREFIX/$TARGET/include"
 	cp Include/ip6_misc.h "$PREFIX/$TARGET/include"
-#	mkdir "$PREFIX/$TARGET/include/net"
-	cp Include/NET/*.h "$PREFIX/$TARGET/include/net"
+	if ! test -d "$PREFIX/$TARGET/include/net"; then
+		mkdir "$PREFIX/$TARGET/include/net"
+	fi
+	cp Include/NET/*.h "$PREFIX/$TARGET/include/net/"
 	cp Lib/libwpcap.a "$PREFIX/$TARGET/lib"
 	if test $? -ne 0; then
 	        echo "winpcap install failed"
 	        exit 1
 	fi
+	cd "$TOPDIR"
 }
 
 build_winpcap_src()

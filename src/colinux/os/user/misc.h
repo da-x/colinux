@@ -13,7 +13,10 @@
 
 #include <colinux/common/common.h>
 
+typedef void (*co_terminal_print_hook_func_t)(char *str);
+
 extern co_rc_t co_os_get_physical_ram_size(unsigned long *mem_size);
 extern void co_terminal_print(const char *format, ...);
+extern void co_set_terminal_print_hook(co_terminal_print_hook_func_t func);
 
 #endif

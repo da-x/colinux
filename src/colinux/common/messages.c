@@ -268,3 +268,13 @@ co_rc_t co_message_write_queue(co_queue_t *queue, char *buffer, unsigned long si
 
 	return CO_RC(OK);
 }
+
+void co_get_module_name(co_module_t module, char *buf, unsigned long nbuf)
+{
+	if ((module >= CO_MODULE_CONET0)  &&  (module < CO_MODULE_CONET_END)) {
+		co_snprintf(buf, nbuf, "conet%d", module - CO_MODULE_CONET0);
+		return;
+	}
+
+	co_snprintf(buf, nbuf, "unknown_module(%d)", module);
+}

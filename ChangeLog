@@ -1,3 +1,11 @@
+Mon Apr 26 08:44:25 2004  Dan Aloni  <da-x@colinux.org>
+
+	* src/colinux/os/winnt/user/daemon/service.c (service_main): 
+	Under the NetworkService privileges coLinux can't do its
+	checks inr co_winnt_daemon_main_with_driver(). Changing this
+	to co_winnt_daemon_main() allows the service on Windows XP
+	to work using the NetworkService permissions.
+
 Sun Apr 25 07:44:10 2004  Dan Aloni  <da-x@colinux.org>
 
 	* src/colinux/os/winnt/user/daemon/cmdline.c (co_winnt_daemon_parse_args): 

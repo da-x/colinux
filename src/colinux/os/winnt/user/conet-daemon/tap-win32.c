@@ -206,7 +206,7 @@ co_rc_t get_device_guid(
 			}
 			else {
 				if (is_tap_win32_dev(enum_name)) {
-					co_debug("conet-daemon: scanned device \"%s\"\n", name_data);
+					co_terminal_print("conet-daemon: found TAP device named \"%s\"\n", name_data);
 
 					snprintf(name, name_size, "%s", enum_name);
 					if (actual_name) {
@@ -251,7 +251,7 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 
 	rc = get_device_guid(device_guid, sizeof(device_guid), name_buffer, sizeof(name_buffer));
 	if (!CO_OK(rc))
-		return rc;
+		return CO_RC(NOT_FOUND);
 
 	co_debug("conet-daemon: opening TAP: \"%s\"\n", name_buffer);
 

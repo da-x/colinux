@@ -39,6 +39,8 @@ co_rc_t co_os_get_physical_ram_size(unsigned long *mem_size)
 	return CO_RC(OK);
 }
 
+static co_terminal_print_hook_func_t terminal_print_hook;
+
 void co_terminal_print(const char *format, ...)
 {
 	char buf[0x100];
@@ -49,6 +51,14 @@ void co_terminal_print(const char *format, ...)
 	va_end(ap);
 
 	printf("%s", buf);
+
+	if (terminal_print_hook != NULL)
+		terminal_print_hook(buf);
+}
+
+void co_set_terminal_print_hook(co_terminal_print_hook_func_t func)
+{
+	terminal_print_hook = func;
 }
 
 bool_t co_winnt_get_last_error(char *error_message, int buf_size) 

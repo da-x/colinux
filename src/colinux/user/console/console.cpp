@@ -21,6 +21,7 @@
 #include <FL/Fl_Button.H>
 
 extern "C" {
+#include <colinux/common/messages.h>
 #include <colinux/user/monitor.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/alloc.h>
@@ -508,8 +509,16 @@ void console_window_t::handle_message(co_message_t *message)
 		
 		break;
 	}
-	default:
+	default:{
+		if (message->type == CO_MESSAGE_TYPE_STRING) {
+			char module_name[0x20];
+			co_get_module_name(message->from, module_name, sizeof(module_name));
+
+			((char *)message->data)[message->size - 1] = '\0';
+			log("%s: %s", module_name, message->data);
+		}
 		break;
+		    }
 	}
 }
 

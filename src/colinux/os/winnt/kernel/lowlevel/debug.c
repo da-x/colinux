@@ -36,3 +36,9 @@ void co_debug(const char *format, ...)
 		 (unsigned long)((&format)[12]),
 		 (unsigned long)((&format)[13]));
 }
+
+void co_snprintf(char *buf, int size, const char *format, ...)
+{
+	/* TODO... */
+	buf[0] = '\0';
+}

@@ -169,6 +169,10 @@ final_tweaks()
 	while read file; do
 		strip "$file"
 	done
+	
+	# Installation should have been successful, so clean-up
+	#  after ourselves an little bit.
+	rm -rf *i686-pc-mingw32
 
 	echo "Installation complete!"
 }
