@@ -17,5 +17,10 @@
 
 extern unsigned long co_os_get_time();
 
+/*
+ * Return 2^32 * (1 / (TSC clocks per usec)) for do_fast_gettimeoffset().
+ */
+extern unsigned long co_os_get_high_prec_quotient();
+
 #endif
 

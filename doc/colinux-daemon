@@ -1,0 +1,13 @@
+The Cooperative Linux Daemon hosts the Linux virtual machine as one process under
+the host operating system. Its command line syntax is as follows:
+
+  colinux-daemon [-h] [-c config.xml] [-d]
+
+      -h             Help screen
+      -c config.xml  Specify configuration file
+                     (default: colinux.default.xml)
+      -d             Don't launch and attach a coLinux console on startup
+
+The daemon spits out the kernel's printk() messages along with its own prints. It
+also optionally launches the virtual VGA console, that can be used to interface
+with the virtual machine.

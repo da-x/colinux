@@ -452,7 +452,11 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 
 		return PTRUE;
 	}
+	case CO_OPERATION_GET_HIGH_PREC_QUOTIENT: {
+		co_passage_page->params[0] = co_os_get_high_prec_quotient();
 
+		return PTRUE;
+	}
 	default:
 		co_debug("operation %d not handled\n", co_passage_page->operation);
 		return PFALSE;

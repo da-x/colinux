@@ -811,7 +811,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/setup.c linux/arch/i386/kernel/
  /*
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/time.c
 --- linux/arch/i386/kernel/time.c	2004-03-04 00:28:49.000000000 +0200
-+++ linux/arch/i386/kernel/time.c	2004-03-06 23:10:50.000000000 +0200
++++ linux/arch/i386/kernel/time.c	2004-03-21 20:35:14.000000000 +0200
 @@ -121,6 +121,8 @@
  
  extern spinlock_t i8259A_lock;
@@ -821,7 +821,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/t
  #ifndef CONFIG_X86_TSC
  
  /* This function must be called with interrupts disabled 
-@@ -254,6 +256,18 @@
+@@ -254,6 +256,15 @@
  	return count;
  }
  
@@ -829,9 +829,6 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/t
 +
 +static unsigned long do_slow_gettimeoffset(void)
 +{
-+	/* 
-+	 * coLinux TODO for 0.5.3: Request the time from the host OS.
-+	 */
 +	return 0;
 +}
 +
@@ -840,7 +837,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/t
  static unsigned long (*do_gettimeoffset)(void) = do_slow_gettimeoffset;
  
  
-@@ -502,6 +516,7 @@
+@@ -502,6 +513,7 @@
   */
  static int set_rtc_mmss(unsigned long nowtime)
  {
@@ -848,7 +845,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/t
  	int retval = 0;
  	int real_seconds, real_minutes, cmos_minutes;
  	unsigned char save_control, save_freq_select;
-@@ -554,8 +569,13 @@
+@@ -554,8 +566,13 @@
  	CMOS_WRITE(save_control, RTC_CONTROL);
  	CMOS_WRITE(save_freq_select, RTC_FREQ_SELECT);
  	spin_unlock(&rtc_lock);
@@ -863,7 +860,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/t
  }
  
  /* last time the cmos clock got updated */
-@@ -716,6 +736,7 @@
+@@ -716,6 +733,7 @@
  /* not static: needed by APM */
  unsigned long get_cmos_time(void)
  {
@@ -871,7 +868,7 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/t
  	unsigned int year, mon, day, hour, min, sec;
  	int i;
  
-@@ -753,6 +774,9 @@
+@@ -753,6 +771,9 @@
  	if ((year += 1900) < 1970)
  		year += 100;
  	return mktime(year, mon, day, hour, min, sec);
@@ -881,6 +878,49 @@ diff -X bin/dontdiff -urN linux/arch/i386/kernel/time.c linux/arch/i386/kernel/t
  }
  
  static struct irqaction irq0  = { timer_interrupt, SA_INTERRUPT, 0, "timer", NULL, NULL};
+@@ -771,6 +792,7 @@
+ 
+ static unsigned long __init calibrate_tsc(void)
+ {
++#ifndef CONFIG_COOPERATIVE_NOT
+        /* Set the Gate high, disable speaker */
+ 	outb((inb(0x61) & ~0x02) | 0x01, 0x61);
+ 
+@@ -832,6 +854,18 @@
+ 	 */
+ bad_ctc:
+ 	return 0;
++#else
++	unsigned long time;
++	unsigned long flags;
++
++	local_irq_save(flags);
++	co_passage_page->operation = CO_OPERATION_GET_HIGH_PREC_QUOTIENT;
++	co_switch_wrapper();
++	time = co_passage_page->params[0];
++	local_irq_restore(flags);
++
++	return time;
++#endif
+ }
+ 
+ void __init time_init(void)
+@@ -870,7 +904,14 @@
+ 
+  	if(use_cyclone)
+ 		init_cyclone_clock();
+-		
++
++#ifdef CONFIG_COOPERATIVE
++	/* 
++	 * We pretty much depend on this at the moment...
++	 */
++	set_bit(X86_FEATURE_TSC, &boot_cpu_data.x86_capability);
++	printk("CPU_HAS_TSC: %d", cpu_has_tsc);
++#endif		
+ 	if (cpu_has_tsc) {
+ 		unsigned long tsc_quotient = calibrate_tsc();
+ 		if (tsc_quotient) {
 diff -X bin/dontdiff -urN linux/arch/i386/kernel/traps.c linux/arch/i386/kernel/traps.c
 --- linux/arch/i386/kernel/traps.c	2004-02-02 22:53:38.000000000 +0200
 +++ linux/arch/i386/kernel/traps.c	2004-03-06 23:10:50.000000000 +0200
@@ -3637,7 +3677,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/cooperative.h linux/include/asm
 +#endif
 diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dma.h
 --- linux/include/asm-i386/dma.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/dma.h	2004-03-13 19:31:46.000000000 +0200
++++ linux/include/asm-i386/dma.h	2004-03-21 20:32:54.000000000 +0200
 @@ -268,6 +268,8 @@
   *
   * Assumes DMA flip-flop is clear.
@@ -3658,7 +3698,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/dma.h linux/include/asm-i386/dm
  extern int request_dma(unsigned int dmanr, const char * device_id);	/* reserve a DMA channel */
 diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.h
 --- linux/include/asm-i386/io.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/io.h	2004-03-13 19:30:52.000000000 +0200
++++ linux/include/asm-i386/io.h	2004-03-21 20:32:49.000000000 +0200
 @@ -2,6 +2,7 @@
  #define _ASM_IO_H
  
@@ -3699,7 +3739,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/io.h linux/include/asm-i386/io.
  
  #endif /* __KERNEL__ */
  
-+#ifndef CONFIG_COOPERATIVE
++#ifndef CONFIG_COOPERATIVE_NOT
 +
  #ifdef SLOW_IO_BY_JUMPING
  #define __SLOW_DOWN_IO "\njmp 1f\n1:\tjmp 1f\n1:"
@@ -3751,7 +3791,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/irq.h linux/include/asm-i386/ir
  #define NR_IRQS 16
 diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/page.h
 --- linux/include/asm-i386/page.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/page.h	2004-03-13 12:20:57.000000000 +0200
++++ linux/include/asm-i386/page.h	2004-03-21 19:52:58.000000000 +0200
 @@ -1,6 +1,10 @@
  #ifndef _I386_PAGE_H
  #define _I386_PAGE_H
@@ -3826,7 +3866,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/page.h linux/include/asm-i386/p
  #define VM_DATA_DEFAULT_FLAGS	(VM_READ | VM_WRITE | VM_EXEC | \
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgalloc.h linux/include/asm-i386/pgalloc.h
 --- linux/include/asm-i386/pgalloc.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/pgalloc.h	2004-03-13 12:44:16.000000000 +0200
++++ linux/include/asm-i386/pgalloc.h	2004-03-21 19:52:58.000000000 +0200
 @@ -11,8 +11,13 @@
  #define pte_quicklist (current_cpu_data.pte_quick)
  #define pgtable_cache_size (current_cpu_data.pgtable_cache_sz)
@@ -3863,7 +3903,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable-2level.h linux/include/
  #endif /* _I386_PGTABLE_2LEVEL_H */
 diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable.h linux/include/asm-i386/pgtable.h
 --- linux/include/asm-i386/pgtable.h	2004-02-02 22:53:38.000000000 +0200
-+++ linux/include/asm-i386/pgtable.h	2004-03-13 12:44:16.000000000 +0200
++++ linux/include/asm-i386/pgtable.h	2004-03-21 19:52:58.000000000 +0200
 @@ -320,8 +320,13 @@
  
  #define page_pte(page) page_pte_prot(page, __pgprot(0))
@@ -3881,7 +3921,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/pgtable.h linux/include/asm-i38
  #define pgd_index(address) ((address >> PGDIR_SHIFT) & (PTRS_PER_PGD-1))
 diff -X bin/dontdiff -urN linux/include/asm-i386/processor.h linux/include/asm-i386/processor.h
 --- linux/include/asm-i386/processor.h	2004-03-04 00:28:57.000000000 +0200
-+++ linux/include/asm-i386/processor.h	2004-03-13 12:44:14.000000000 +0200
++++ linux/include/asm-i386/processor.h	2004-03-21 19:52:58.000000000 +0200
 @@ -181,8 +181,18 @@
  #define X86_CR4_OSFXSR		0x0200	/* enable fast FPU save and restore */
  #define X86_CR4_OSXMMEXCPT	0x0400	/* enable unmasked SSE exceptions */
@@ -3923,7 +3963,7 @@ diff -X bin/dontdiff -urN linux/include/asm-i386/system.h linux/include/asm-i386
  		     "pushl %%edi\n\t"					\
 diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/console.h
 --- linux/include/linux/console.h	2004-03-04 00:28:58.000000000 +0200
-+++ linux/include/linux/console.h	2004-03-13 14:13:33.000000000 +0200
++++ linux/include/linux/console.h	2004-03-21 19:53:01.000000000 +0200
 @@ -55,6 +55,7 @@
  extern const struct consw dummy_con;	/* dummy console buffer */
  extern const struct consw fb_con;	/* frame buffer based console */
@@ -3934,8 +3974,8 @@ diff -X bin/dontdiff -urN linux/include/linux/console.h linux/include/linux/cons
  
 diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/cooperative.h
 --- linux/include/linux/cooperative.h	1970-01-01 02:00:00.000000000 +0200
-+++ linux/include/linux/cooperative.h	2004-03-13 16:54:59.000000000 +0200
-@@ -0,0 +1,292 @@
++++ linux/include/linux/cooperative.h	2004-03-21 20:19:38.000000000 +0200
+@@ -0,0 +1,293 @@
 +#ifndef __LINUX_COOPERATIVE_H__
 +#define __LINUX_COOPERATIVE_H__
 +
@@ -3969,6 +4009,7 @@ diff -X bin/dontdiff -urN linux/include/linux/cooperative.h linux/include/linux/
 +	CO_OPERATION_DEVICE,
 +	CO_OPERATION_GET_TIME,
 +	CO_OPERATION_DEBUG_LINE,
++	CO_OPERATION_GET_HIGH_PREC_QUOTIENT,
 +} co_operation_t;
 +
 +#define CO_MODULE_MAX_CONET  16

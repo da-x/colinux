@@ -26,6 +26,10 @@
     Linux's memory. You can see it in action by looking at the Task Manager.
   * NSIS-based installer for the Windows binary distribution (based on 
     work by NEBOR Regis.
+  * gettimeofday() now works. Things that broke because they depended on it
+    should now work. I have to enable port I/O in order to for this to work,
+    but I plan to disable it in the future. If you compile a new vmlinux
+    Make sure that CONFIG_X86_TSC is enabled in your .config file.
 
 * Version 0.5.4 AKA "Focal Segmental Glomerulosclerosis" (%gs/%fs) release
   * Fixed an issue with i686-optimized pthread and the preservation of 
