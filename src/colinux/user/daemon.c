@@ -45,6 +45,7 @@ co_rc_t co_load_config_file(co_daemon_t *daemon)
 	unsigned long size = 0 ;
 
 	co_terminal_print("daemon: loading configuration from %s\n", daemon->config.config_path);
+
 	rc = co_os_file_load(&daemon->config.config_path, &buf, &size);
 	if (!CO_OK(rc)) {
 		debug(daemon, "error loading configuration file\n");
@@ -303,12 +304,9 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 	if (!CO_OK(rc)) 
 		goto out;
 
-	rc = co_daemon_load_symbol(daemon, "init_task_union", &import->kernel_init_task_union);
+	rc = co_daemon_load_symbol(daemon, "init_thread_union", &import->kernel_init_task_union);
 	if (!CO_OK(rc)) {
-		rc = co_daemon_load_symbol(daemon, "init_thread_union", &import->kernel_init_task_union);
-		if (!CO_OK(rc)) {
-			goto out;
-		}
+		goto out;
 	}
 
 	rc = co_daemon_load_symbol(daemon, "colinux_start", &import->kernel_colinux_start);
@@ -323,12 +321,9 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 	if (!CO_OK(rc)) 
 		goto out;
 
-	rc = co_daemon_load_symbol(daemon, "gdt_table", &import->kernel_gdt_table);
-	if (!CO_OK(rc)) {
-		rc = co_daemon_load_symbol(daemon, "cpu_gdt_table", &import->kernel_gdt_table);
-		if (!CO_OK(rc))
-			goto out;
-	}
+	rc = co_daemon_load_symbol(daemon, "cpu_gdt_table", &import->kernel_gdt_table);
+	if (!CO_OK(rc))
+		goto out;
 
 	rc = co_daemon_load_symbol_and_data(daemon, "co_info", &import->kernel_co_info,
 					    &create_params.info, sizeof(create_params.info));

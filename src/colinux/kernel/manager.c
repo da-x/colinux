@@ -69,7 +69,8 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 	}
 
 	manager->reversed_map_pgds_count = 
-		(((unsigned long)(-CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP) / PTRS_PER_PTE) / PTRS_PER_PGD) / sizeof(linux_pgd_t);
+		(((unsigned long)(CO_VPTR_BASE - CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP) 
+		  / PTRS_PER_PTE)  / PTRS_PER_PGD) / sizeof(linux_pgd_t);
 
 	co_debug("manager: using %d table entries for reversed physical mapping\n", manager->reversed_map_pgds_count);
 	manager->reversed_map_pgds = (unsigned long *)(co_os_malloc(manager->reversed_map_pgds_count*sizeof(linux_pgd_t)));
