@@ -16,6 +16,7 @@
 #include <colinux/os/alloc.h>
 #include <colinux/kernel/transfer.h>
 #include <colinux/kernel/fileblock.h>
+#include <colinux/kernel/monitor.h>
 
 NTSTATUS co_os_open_file(char *pathname, PHANDLE FileHandle)
 {    

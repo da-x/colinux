@@ -31,9 +31,9 @@ typedef unsigned long co_pfn_t;
 #define PTRS_PER_PTE    1024
 #define PGDIR_SHIFT     22
 #define PTRS_PER_PGD    1024
-#define PAGE_SHIFT      12
 
-#define CO_ARCH_PAGE_SIZE       (1 << PAGE_SHIFT)
+#define CO_ARCH_PAGE_SHIFT      12
+#define CO_ARCH_PAGE_SIZE       (1 << CO_ARCH_PAGE_SHIFT)
 #define CO_ARCH_PAGE_MASK       (~(CO_ARCH_PAGE_SIZE-1))
 #define CO_ARCH_KERNEL_OFFSET   0xc0000000
 

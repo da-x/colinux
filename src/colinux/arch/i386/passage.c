@@ -439,7 +439,7 @@ void co_monitor_arch_passage_page_temp_pgd_init(co_arch_passage_page_t *pp, unsi
 
 	for (i=0; i < 2; i++) {
 		maps[i].pmd = va[i] >> PMD_SHIFT;
-		maps[i].pte = (va[i] & ~PMD_MASK) >> PAGE_SHIFT;
+		maps[i].pte = (va[i] & ~PMD_MASK) >> CO_ARCH_PAGE_SHIFT;
 		maps[i].paddr = co_os_virt_to_phys(&pp->temp_pte[i]);
 	}
 

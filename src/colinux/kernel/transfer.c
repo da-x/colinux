@@ -169,7 +169,7 @@ co_rc_t co_manager_create_pfns_and_callback_callback(
 	cbdata = (typeof(cbdata))(data);
 	pp_pfns = cbdata->monitor->pp_pfns;
 
-	current_pfn = (offset >> PAGE_SHIFT);
+	current_pfn = (offset >> CO_ARCH_PAGE_SHIFT);
 	pfn_group = current_pfn / PTRS_PER_PTE;
 	current_pfn = current_pfn % PTRS_PER_PTE;
 
@@ -277,7 +277,7 @@ co_manager_create_pfns_create_ptes_callback(
 
 	for (i=0; i < size/sizeof(linux_pte_t); i++) {
 		if (*pfns != 0)
-			*ptes = (*pfns << PAGE_SHIFT) |  
+			*ptes = (*pfns << CO_ARCH_PAGE_SHIFT) |  
 			    _PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED;
 		else
 			*ptes = 0;

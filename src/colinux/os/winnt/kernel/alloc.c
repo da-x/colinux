@@ -48,7 +48,7 @@ co_rc_t co_os_get_page(struct co_manager *manager, co_pfn_t *pfn)
 		
 		memset(page, 0, PAGE_SIZE);
 
-		*pfn = co_os_virt_to_phys(page) >> PAGE_SHIFT;
+		*pfn = co_os_virt_to_phys(page) >> CO_ARCH_PAGE_SHIFT;
 		
 		rc = co_os_get_pfn_ptr(manager, *pfn, &mdl_keeper);
 		if (!CO_OK(rc)) {
@@ -103,7 +103,7 @@ void *co_os_map(struct co_manager *manager, co_pfn_t pfn)
 	PVOID *ret;
 	PHYSICAL_ADDRESS PhysicalAddress;
 
-	PhysicalAddress.QuadPart = pfn << PAGE_SHIFT;
+	PhysicalAddress.QuadPart = pfn << CO_ARCH_PAGE_SHIFT;
 	ret = MmMapIoSpace(PhysicalAddress, PAGE_SIZE, MmCached);
 
 	manager->osdep->pages_mapped++;

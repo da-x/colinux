@@ -102,12 +102,12 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 			}
 
 			rpfn = manager->reversed_map_pfns[reversed_page_count];
-			pte[j] = (rpfn << PAGE_SHIFT) | (_PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED);
+			pte[j] = (rpfn << CO_ARCH_PAGE_SHIFT) | (_PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED);
 			reversed_page_count++;
 		}
 		co_os_unmap(manager, pte, pfn);
 
-		manager->reversed_map_pgds[i] = (pfn << PAGE_SHIFT) | _KERNPG_TABLE; 
+		manager->reversed_map_pgds[i] = (pfn << CO_ARCH_PAGE_SHIFT) | _KERNPG_TABLE; 
 
 		covered_physical += (PTRS_PER_PTE * PTRS_PER_PGD);
 	}
@@ -129,7 +129,7 @@ static void free_reversed_pfns(co_manager_t *manager)
 	if (manager->reversed_map_pgds) {
 		for (i=0; i < manager->reversed_map_pgds_count; i++) {
 			if (manager->reversed_map_pgds[i] != 0) {
-				co_os_put_page(manager, manager->reversed_map_pgds[i] >> PAGE_SHIFT);
+				co_os_put_page(manager, manager->reversed_map_pgds[i] >> CO_ARCH_PAGE_SHIFT);
 			}
 		}
 
@@ -174,7 +174,7 @@ co_rc_t co_manager_init(co_manager_t *manager, void *io_buffer)
 	params = (typeof(params))(io_buffer);
 
 	manager->host_memory_amount = params->physical_memory_size;
-	manager->host_memory_pages = manager->host_memory_amount >> PAGE_SHIFT;
+	manager->host_memory_pages = manager->host_memory_amount >> CO_ARCH_PAGE_SHIFT;
 	manager->lazy_unload = params->lazy_unload;
 
 	co_debug("manager: initialized (%d MB physical RAM)\n", manager->host_memory_amount/(1024*1024));

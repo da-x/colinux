@@ -106,7 +106,7 @@ co_rc_t co_winnt_initialize_driver(bool_t lazy_unload)
 	if (!CO_OK(rc)) {
 		if (CO_RC_GET_CODE(rc) == CO_RC_VERSION_MISMATCHED) {
 			co_ntevent_print("daemon: driver version is %d while expected version %d\n", 
-					 status.periphery_api_version, CO_LINUX_PERIPHERY_ABI_VERSION);
+					 status.periphery_api_version, CO_LINUX_PERIPHERY_API_VERSION);
 		} else {
 			co_ntevent_print("daemon: detected a old buggy driver version\n");
 		}
@@ -157,7 +157,7 @@ co_rc_t co_winnt_remove_driver(void)
 	if (!CO_OK(rc)) {
 		if (CO_RC_GET_CODE(rc) == CO_RC_VERSION_MISMATCHED) {
 			co_ntevent_print("daemon: driver version is %d while expected version %d\n", 
-					 status.periphery_api_version, CO_LINUX_PERIPHERY_ABI_VERSION);
+					 status.periphery_api_version, CO_LINUX_PERIPHERY_API_VERSION);
 		} else {
 			co_ntevent_print("daemon: detected a old buggy driver version\n");
 		}

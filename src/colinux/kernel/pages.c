@@ -36,7 +36,7 @@ co_rc_t co_monitor_get_pfn(co_monitor_t *cmon, vm_ptr_t address, co_pfn_t *pfn)
 {
 	unsigned long current_pfn, pfn_group, pfn_index;
 
-	current_pfn = (address >> PAGE_SHIFT);
+	current_pfn = (address >> CO_ARCH_PAGE_SHIFT);
 	pfn_group = current_pfn / PTRS_PER_PTE;
 	pfn_index = current_pfn % PTRS_PER_PTE;
 

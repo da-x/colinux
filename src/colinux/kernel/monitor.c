@@ -56,7 +56,7 @@ static co_rc_t colinux_get_pfn(co_monitor_t *cmon, vm_ptr_t address, co_pfn_t *p
 {
 	unsigned long current_pfn, pfn_group, pfn_index;
 
-	current_pfn = (address >> PAGE_SHIFT);
+	current_pfn = (address >> CO_ARCH_PAGE_SHIFT);
 	pfn_group = current_pfn / PTRS_PER_PTE;
 	pfn_index = current_pfn % PTRS_PER_PTE;
 
@@ -118,7 +118,7 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 		goto out_error;
 	}	
 	
-	cmon->pgd = swapper_pg_dir_pfn << PAGE_SHIFT;
+	cmon->pgd = swapper_pg_dir_pfn << CO_ARCH_PAGE_SHIFT;
 	co_debug_ulong(cmon->pgd);
 
 	rc = co_monitor_arch_passage_page_alloc(cmon);
@@ -184,10 +184,10 @@ static co_rc_t colinux_init(co_monitor_t *cmon)
 		goto out_error;
 	}	
 
-	passage_page_offset = ((CO_VPTR_PASSAGE_PAGE & ((1 << PGDIR_SHIFT) - 1)) >> PAGE_SHIFT) * sizeof(linux_pte_t);
+	passage_page_offset = ((CO_VPTR_PASSAGE_PAGE & ((1 << PGDIR_SHIFT) - 1)) >> CO_ARCH_PAGE_SHIFT) * sizeof(linux_pte_t);
 	co_debug_ulong(passage_page_offset);
 
-	passage_page_pfn = co_os_virt_to_phys(cmon->passage_page) >> PAGE_SHIFT;
+	passage_page_pfn = co_os_virt_to_phys(cmon->passage_page) >> CO_ARCH_PAGE_SHIFT;
 	co_debug_ulong(passage_page_pfn);
 
 	rc = co_monitor_create_ptes(
@@ -573,7 +573,7 @@ static co_rc_t alloc_pseudo_physical_memory(co_monitor_t *monitor)
 
 	memset(monitor->pp_pfns, 0, sizeof(co_pfn_t *)*PTRS_PER_PGD);
 
-	rc = co_monitor_scan_and_create_pfns(monitor, CO_ARCH_KERNEL_OFFSET, monitor->physical_frames << PAGE_SHIFT);
+	rc = co_monitor_scan_and_create_pfns(monitor, CO_ARCH_KERNEL_OFFSET, monitor->physical_frames << CO_ARCH_PAGE_SHIFT);
 	if (!CO_OK(rc)) {
 		free_pseudo_physical_memory(monitor);
 		return rc;
@@ -682,8 +682,8 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 		goto out_free_linux_message_queue;
 
 	cmon->core_vaddr = import->kernel_start;
-	cmon->core_pages = (import->kernel_end - import->kernel_start + CO_ARCH_PAGE_SIZE - 1) >> PAGE_SHIFT;
-	cmon->core_end = cmon->core_vaddr + (cmon->core_pages << PAGE_SHIFT);
+	cmon->core_pages = (import->kernel_end - import->kernel_start + CO_ARCH_PAGE_SIZE - 1) >> CO_ARCH_PAGE_SHIFT;
+	cmon->core_end = cmon->core_vaddr + (cmon->core_pages << CO_ARCH_PAGE_SHIFT);
 	cmon->import = params->import;
 	cmon->config = params->config;
 	cmon->info = params->info;
@@ -723,7 +723,7 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 
 	cmon->memory_size <<= 20; /* Megify */
 
-	cmon->physical_frames = cmon->memory_size >> PAGE_SHIFT;
+	cmon->physical_frames = cmon->memory_size >> CO_ARCH_PAGE_SHIFT;
 	cmon->end_physical = CO_ARCH_KERNEL_OFFSET + cmon->memory_size;
 	cmon->passage_page_vaddr = CO_VPTR_PASSAGE_PAGE;
 
@@ -799,12 +799,12 @@ co_rc_t co_monitor_load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_
 	if (cmon->state != CO_MONITOR_STATE_INITIALIZED)
 		return CO_RC(ERROR);
 
-	pages = ((params->size + CO_ARCH_PAGE_SIZE) >> PAGE_SHIFT);
+	pages = ((params->size + CO_ARCH_PAGE_SIZE) >> CO_ARCH_PAGE_SHIFT);
 
         /*
 	 * Put initrd at the end of the address space.
 	 */
-	address = CO_ARCH_KERNEL_OFFSET + cmon->memory_size - (pages << PAGE_SHIFT);
+	address = CO_ARCH_KERNEL_OFFSET + cmon->memory_size - (pages << CO_ARCH_PAGE_SHIFT);
 	
 	co_debug("monitor: initrd address: %x (0x%x pages)\n", address, pages);
 
