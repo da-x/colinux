@@ -18,6 +18,8 @@
 #include "tap-win32.h"
 #include "../daemon.h"
 
+COLINUX_DEFINE_MODULE("colinux-net-daemon");
+
 /*******************************************************************************
  * Type Declarations
  */

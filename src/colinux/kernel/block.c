@@ -7,6 +7,8 @@
  * the root directory.
  */
 
+#include <colinux/common/libc.h>
+
 #include "block.h"
 #include "monitor.h"
 
@@ -83,7 +85,7 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned long index,
 			return CO_RC(ERROR);
 		}
 
-		memcpy(request->alias, dev->conf->alias, sizeof(dev->conf->alias));
+		co_memcpy(request->alias, dev->conf->alias, sizeof(dev->conf->alias));
 		return rc;
 	}
 	default:

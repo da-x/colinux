@@ -7,6 +7,7 @@
  * the root directory.
  */
 
+#include <colinux/common/libc.h>
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/os/kernel/monitor.h>
 #include <colinux/os/kernel/manager.h>
@@ -23,7 +24,7 @@ co_rc_t co_manager_load(co_manager_t *manager)
 
 	co_debug("manager: loaded to host kernel\n");
 
-	memset(manager, 0, sizeof(*manager));
+	co_memset(manager, 0, sizeof(*manager));
 
 	manager->state = CO_MANAGER_STATE_NOT_INITIALIZED;
 
@@ -46,18 +47,18 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 	co_rc_t rc = CO_RC(OK);
 	int i, j;
 
-	co_debug("manager: allocating reversed physical mapping\n");
+	co_debug("allocating reversed physical mapping\n");
 	manager->reversed_page_count = manager->host_memory_pages / PTRS_PER_PTE;
 	map_size = sizeof(co_pfn_t) * manager->reversed_page_count;
 
-	co_debug("manager: allocating top level pages map (%d bytes)\n", map_size);
+	co_debug("allocating top level pages map (%d bytes)\n", map_size);
 	manager->reversed_map_pfns = (co_pfn_t *)co_os_malloc(map_size);
 	if (manager->reversed_map_pfns == NULL)
 		return CO_RC(ERROR);
 
-	memset(manager->reversed_map_pfns, 0, map_size);
+	co_memset(manager->reversed_map_pfns, 0, map_size);
 	
-	co_debug("manager: allocating %d top level pages\n", manager->reversed_page_count);
+	co_debug("allocating %d top level pages\n", manager->reversed_page_count);
 	for (i=0; i < manager->reversed_page_count; i++) {
 		co_pfn_t pfn;
 
@@ -72,7 +73,7 @@ static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
 		(((unsigned long)(CO_VPTR_BASE - CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP) 
 		  / PTRS_PER_PTE)  / PTRS_PER_PGD) / sizeof(linux_pgd_t);
 
-	co_debug("manager: using %d table entries for reversed physical mapping\n", manager->reversed_map_pgds_count);
+	co_debug("using %d table entries for reversed physical mapping\n", manager->reversed_map_pgds_count);
 	manager->reversed_map_pgds = (unsigned long *)(co_os_malloc(manager->reversed_map_pgds_count*sizeof(linux_pgd_t)));
 	if (!manager->reversed_map_pgds) {
 		if (!CO_OK(rc)) /* TODO: handle error */
@@ -160,7 +161,7 @@ co_rc_t co_manager_set_reversed_pfn(co_manager_t *manager, co_pfn_t real_pfn, co
 
 void co_manager_unload(co_manager_t *manager)
 {
-	co_debug("manager: unloaded from host kernel\n");
+	co_debug("unloaded from host kernel\n");
 
 	free_reversed_pfns(manager);
 	co_os_manager_free(manager->osdep);
@@ -178,7 +179,7 @@ co_rc_t co_manager_init(co_manager_t *manager, void *io_buffer)
 	manager->host_memory_pages = manager->host_memory_amount >> CO_ARCH_PAGE_SHIFT;
 	manager->lazy_unload = params->lazy_unload;
 
-	co_debug("manager: initialized (%d MB physical RAM)\n", manager->host_memory_amount/(1024*1024));
+	co_debug("initialized (%d MB physical RAM)\n", manager->host_memory_amount/(1024*1024));
 
 	rc = alloc_reversed_pfns(manager);
 
@@ -193,7 +194,7 @@ co_rc_t co_manager_cleanup(co_manager_t *manager, void **private_data)
 
 	cmon = (typeof(cmon))(*private_data);
 	if (cmon != NULL) {
-		co_debug("manager: process exited abnormally, destroying attached monitor\n");
+		co_debug("process exited abnormally, destroying attached monitor\n");
 
 		co_monitor_destroy(cmon);
 
@@ -236,7 +237,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 		if (ioctl == CO_MANAGER_IOCTL_INIT) {
 			return co_manager_init(manager, io_buffer);
 		} else {
-			co_debug("manager: invalid ioctl when not initialized\n");
+			co_debug("invalid ioctl when not initialized\n");
 			return CO_RC_ERROR;
 		}
 
@@ -261,14 +262,14 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 		*return_size = sizeof(*params);
 
 		if (in_size < sizeof(*params)) {
-			co_debug("manager: monitor ioctl too small! (%d < %d)\n", in_size, sizeof(*params));
+			co_debug("monitor ioctl too small! (%d < %d)\n", in_size, sizeof(*params));
 			params->rc = CO_RC(MONITOR_NOT_LOADED);
 			break;
 		}
 		
 		cmon = (typeof(cmon))(*private_data);
 		if (!cmon) {
-			co_debug("manager: no monitor is attached\n");
+			co_debug("no monitor is attached\n");
 			params->rc = CO_RC(MONITOR_NOT_LOADED);
 			break;
 		}

@@ -23,6 +23,7 @@ $(LOCAL_EXE) : \
 	$(BUILD_ROOT)/colinux/user/user.a \
 	$(BUILD_ROOT)/colinux/os/current/user/user.a \
 	$(BUILD_ROOT)/colinux/common/common.a \
+	$(BUILD_ROOT)/colinux/os/current/user/debug.o \
 
 	$(CC) $^ -o $@ -lmxml
 

@@ -12,6 +12,7 @@
 
 #include <colinux/os/alloc.h>
 #include <colinux/os/user/misc.h>
+#include <colinux/common/libc.h>
 
 struct co_command_line_params {
 	int argc;
@@ -30,7 +31,7 @@ co_rc_t co_cmdline_params_alloc(char **argv, int argc, co_command_line_params_t 
 	argv_size = (sizeof(char *))*(argc+1); /* To avoid allocations */
 	cmdline->argv = (char **)malloc(argv_size);
 	cmdline->argc = argc;
-	memcpy(cmdline->argv, argv, (sizeof(char*))*argc);
+	co_memcpy(cmdline->argv, argv, (sizeof(char*))*argc);
 
 	*cmdline_out = cmdline;
 

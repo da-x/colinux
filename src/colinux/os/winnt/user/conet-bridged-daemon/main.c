@@ -20,14 +20,7 @@
 #include "../daemon.h"
 #include "pcap-registry.h"
 
-/*
- * IMPORTANT NOTE:
- *
- * This is work-in-progress. This daemon is currently hardcoded
- * to work against coLinux0. Expect changes.
- *
- */
- 
+COLINUX_DEFINE_MODULE("colinux-bridged-net-daemon");
 
 /*******************************************************************************
  * Defines
@@ -381,7 +374,7 @@ pcap_init()
 		goto pcap_out;
 	}
 
-	co_debug("bridged-net-daemon: Looking for interface \"%s\"\n", daemon_parameters->interface_name);
+	co_debug("Looking for interface \"%s\"\n", daemon_parameters->interface_name);
 
 	device = alldevs;
 	char name_data[256];

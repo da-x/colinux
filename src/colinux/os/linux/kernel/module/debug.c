@@ -12,17 +12,7 @@
 
 #include <colinux/common/debug.h>
 
-void co_vdebug(const char *format, va_list ap)
+void co_debug_line(char *str)
 {
-	char buf[0x100];
-	vsnprintf(buf, sizeof(buf), format, ap);
-	printk("%s", buf);
-}
-
-void co_debug(const char *format, ...)
-{
-	va_list ap;
-	va_start(ap, format);
-	co_vdebug(format, ap);
-	va_end(ap);
+	printk("%s", str);
 }

@@ -13,10 +13,6 @@
 #include <colinux/os/alloc.h>
 #include <colinux/os/timer.h>
 
-/*
- * Temporary stubs 
- */
-
 struct co_os_timer {
 	struct timer_list timer;
 	long msec;

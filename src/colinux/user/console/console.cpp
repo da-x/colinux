@@ -511,11 +511,10 @@ void console_window_t::handle_message(co_message_t *message)
 	}
 	default:{
 		if (message->type == CO_MESSAGE_TYPE_STRING) {
-			char module_name[0x20];
-			co_get_module_name(message->from, module_name, sizeof(module_name));
+			co_module_name_t module_name;
 
 			((char *)message->data)[message->size - 1] = '\0';
-			log("%s: %s", module_name, message->data);
+			log("%s: %s", co_module_repr(message->from, &module_name), message->data);
 		}
 		break;
 		    }

@@ -24,6 +24,8 @@
 
 #include "tap.h"
 
+COLINUX_DEFINE_MODULE("colinux-net-daemon");
+
 /*
  * IMPORTANT NOTE:
  *

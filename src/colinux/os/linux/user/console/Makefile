@@ -23,7 +23,8 @@ $(LOCAL_EXE) : \
 	$(LOCAL_OBJS) \
 	$(BUILD_ROOT)/colinux/os/current/user/user.a \
 	$(BUILD_ROOT)/colinux/user/user.a \
-	$(BUILD_ROOT)/colinux/common/common.a
+	$(BUILD_ROOT)/colinux/common/common.a \
+	$(BUILD_ROOT)/colinux/os/current/user/debug.o \
 
 	$(GPP) $^ -o $@ -L/usr/X11R6/lib -lX11 -lfltk -lmxml 
 

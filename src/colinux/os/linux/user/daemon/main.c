@@ -21,6 +21,8 @@
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/pipe.h>
 
+COLINUX_DEFINE_MODULE("colinux-daemon");
+
 static co_daemon_t *colinux_daemon = NULL;
 
 void sighup_handler(int sig)

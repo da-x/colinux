@@ -10,9 +10,9 @@
 #ifndef __COLINUX_DEBUG_H__
 #define __COLINUX_DEBUG_H__
 
-#define CO_DEBUG
+#ifdef COLINUX_DEBUG
 
-#ifdef CO_DEBUG
+/*-------------------------------- Debug Mode --------------------------------*/
 
 #define DEBUG_FUNC co_debug
 #define DEBUG_PRINT(format, params...) do {				\
@@ -30,21 +30,39 @@
      _condition_;                               \
 })
 
+#include <stdarg.h>
+
+extern void co_debug_(const char *module, int level, const char *filename, int line, const char *fmt, ...);
+
+#define _colinux_attr_used __attribute__((__used__))
+
+static char _colinux_attr_used colinux_file_id[] = __FILE__;
+static char _colinux_attr_used *colinux_file_id_ptr = (char *)&colinux_file_id;
+extern char _colinux_module[0x30];
+
+#define COLINUX_DEFINE_MODULE(str) \
+char _colinux_module[] = str;
+
+#define co_debug_lvl(level, fmt, ...) \
+	co_debug_(_colinux_module, level, colinux_file_id_ptr, __LINE__, fmt, ## __VA_ARGS__)
+
+#define co_debug(fmt, ...) co_debug_lvl(10, fmt, ## __VA_ARGS__)
+
 #else
 
-#define KASSERT(condition)   do {} while(0)
-#define KVERIFY(condition)   condition
-#define DEBUG_PRINT          do {} while(0)
-#define DEBUG_PRINT_N        do {} while(0)
+/*------------------------------ Production Mode -----------------------------*/
+
+#define KASSERT(condition)                   do {} while(0)
+#define KVERIFY(condition)                   condition
+#define DEBUG_PRINT                          do {} while(0)
+#define DEBUG_PRINT_N                        do {} while(0)
+#define co_debug(fmt, ...)                   do {} while(0)
+
+/*----------------------------------------------------------------------------*/
 
 #endif
 
-#include <stdarg.h>
-
-extern void co_debug(const char *fmt, ...);
-extern void co_vdebug(const char *format, va_list ap);
 extern void co_debug_line(char *line);
-extern void co_snprintf(char *buf, int size, const char *format, ...);
 
 #define co_debug_ulong(name) \
 	co_debug("%s: 0x%x\n", #name, name)

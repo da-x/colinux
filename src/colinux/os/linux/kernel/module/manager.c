@@ -41,7 +41,6 @@ int co_os_manager_ioctl(struct inode *inode, struct file *file,
 		buffer_size = ioctl.output_buffer_size;
 
 	if (buffer_size > 0x400000) {
-		co_debug("code %x\n", ioctl.code);
 		return -EIO;
 	}
 
@@ -116,6 +115,7 @@ co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
 		rc = CO_RC(ERROR);
 		goto error;
 	}
+	dep->proc_root->owner = THIS_MODULE;
 
 	dep->proc_ioctl = create_proc_entry("ioctl",  S_IFREG|S_IRUSR|S_IWUSR, dep->proc_root);
 	if (!dep->proc_ioctl) {
@@ -124,11 +124,13 @@ co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
 	}
 
 	dep->proc_ioctl->proc_fops = &manager_fileops;
+	dep->proc_ioctl->owner = THIS_MODULE;
 
 	return rc;
 
 error_root:
 	remove_proc_entry("colinux", &proc_root);
+
 error:
 	co_os_free(dep);
 	return rc;

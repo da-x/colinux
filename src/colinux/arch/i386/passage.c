@@ -13,6 +13,7 @@
  * two operating systems.
  */ 
 
+#include <colinux/common/libc.h>
 #include <colinux/common/common.h>
 #include <colinux/kernel/monitor.h>
 #include <colinux/arch/passage.h>
@@ -45,7 +46,7 @@ static inline unsigned long _name_##_size()		\
 							\
 static inline void memcpy_##_name_(void *dest)		\
 {							\
-	memcpy(dest, &_name_, _name_##_size());		\
+	co_memcpy(dest, &_name_, _name_##_size());	\
 }							\
 							\
 asm(""							\
@@ -405,7 +406,7 @@ co_rc_t co_monitor_arch_passage_page_alloc(co_monitor_t *cmon)
 
 	cmon->passage_page = co_os_alloc_pages(sizeof(co_arch_passage_page_t)/PAGE_SIZE);
 	if (cmon->passage_page != NULL) {
-		memset(cmon->passage_page, 0, sizeof(co_arch_passage_page_t));
+		co_memset(cmon->passage_page, 0, sizeof(co_arch_passage_page_t));
 
 		rc = CO_RC(OK);
 	}
@@ -418,6 +419,37 @@ co_rc_t co_monitor_arch_passage_page_alloc(co_monitor_t *cmon)
 void co_monitor_arch_passage_page_free(co_monitor_t *cmon)
 {
 	co_os_free_pages(cmon->passage_page, sizeof(co_arch_passage_page_t)/PAGE_SIZE);
+}
+
+static inline void co_passage_page_dump_state(co_arch_state_stack_t *state)
+{
+	co_debug("cs: %04x   ds: %04x   es: %04x   fs: %04x   gs: %04x   ss: %04x\n",
+		 state->cs, state->ds, state->es, state->fs, state->gs, state->ss);
+
+	co_debug("cr0: %08x   cr2: %08x   cr3: %08x   cr4: %08x\n",
+		 state->cr0, state->cr2, state->cr3, state->cr4);
+
+	co_debug("dr0: %08x   dr1: %08x  dr2: %08x  dr3: %08x  dr6: %08x  dr7: %08x\n",
+		 state->dr0, state->dr1, state->dr2, state->dr3, state->dr6, state->dr7);
+
+	co_debug("gdt: %08x:%04x   idt:%08x:%04x   ldt:%04x  tr:%04x\n",
+		 state->gdt.base, state->gdt.limit,  state->idt.table, state->idt.size,
+		 state->ldt, state->tr);
+
+	co_debug("return_eip: %08x   flags: %08x   esp: %8x\n",
+		 state->return_eip, state->flags, state->esp);
+
+	co_debug("other_map: %08x   relocate_eip: %08x\n",
+		 state->other_map, state->relocate_eip);
+}
+
+static inline void co_passage_page_dump(co_arch_passage_page_t *page)
+{
+	co_debug("Host state\n");
+	co_passage_page_dump_state(&page->host_state);
+
+	co_debug("Linux state\n");
+	co_passage_page_dump_state(&page->linuxvm_state);
 }
 
 /*
@@ -556,7 +588,6 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	pp->linuxvm_state.ss = cmon->arch_info.kernel_ds;
 
 	co_debug("Passage page dump: %x\n", co_monitor_arch_passage_page_init);
-	co_debug("COUNTER: %d\n", pp->pad[0x20f]);
 
 	co_passage_page_dump(pp);
 

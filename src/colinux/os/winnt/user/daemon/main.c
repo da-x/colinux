@@ -30,6 +30,7 @@
 #include "service.h"
 #include "driver.h"
 
+COLINUX_DEFINE_MODULE("colinux-daemon");
 
 static co_daemon_t *g_daemon = NULL;
 bool_t co_running_as_service = PFALSE;

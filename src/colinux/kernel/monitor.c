@@ -15,6 +15,7 @@
  */
 
 #include <colinux/common/debug.h>
+#include <colinux/common/libc.h>
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/os/kernel/misc.h>
 #include <colinux/os/kernel/monitor.h>
@@ -244,7 +245,7 @@ bool_t co_monitor_device_request(co_monitor_t *cmon, co_device_t device, unsigne
 			if (dev->enabled == PFALSE)
 				break;
 
-			memcpy(network->mac_address, dev->mac_address, sizeof(network->mac_address));
+			co_memcpy(network->mac_address, dev->mac_address, sizeof(network->mac_address));
 			break;
 		}
 		default:
@@ -287,7 +288,7 @@ co_rc_t co_monitor_send_messages_to_linux(co_monitor_t *cmon)
 
 	co_passage_page->operation = CO_OPERATION_MESSAGE_FROM_MONITOR;
 	co_passage_page->params[0] = num_messages - 1;
-	memcpy(&co_passage_page->params[1], message, total_size);
+	co_memcpy(&co_passage_page->params[1], message, total_size);
 
 	co_queue_free(&cmon->linux_message_queue, message_item);
 	co_os_free(message);
@@ -315,7 +316,7 @@ void co_monitor_debug_line(co_monitor_t *cmon, const char *text)
 	message->message.type = CO_MESSAGE_TYPE_STRING;
 	message->message.size = size;
 	message->payload.type = CO_MONITOR_MESSAGE_TYPE_DEBUG_LINE;
-	memcpy(message->data, text, strlen(text)+1);
+	co_memcpy(message->data, text, strlen(text)+1);
 
 	co_message_switch_message(&cmon->message_switch, &message->message);
 }
@@ -513,12 +514,12 @@ co_rc_t co_monitor_load_configuration(co_monitor_t *cmon)
 		dev->dev.conf = conf_dev;
 		rc = co_monitor_file_block_init(dev, &conf_dev->pathname);
 		if (CO_OK(rc)) {
-			co_debug("cobd%d: enabled", i);
+			co_debug("cobd%d: enabled\n", i);
 			co_monitor_block_register_device(cmon, i, (co_block_dev_t *)dev);
 			dev->dev.free = co_monitor_free_file_blockdevice;
 		} else {
 			co_monitor_free(cmon, dev);
-			co_debug("cobd%d: cannot enable (%x)\n", i, rc);
+			co_debug("cobd%d: cannot enable %d (%x)\n", i, rc);
 			goto out;
 		}
 	}
@@ -572,7 +573,7 @@ static co_rc_t alloc_pseudo_physical_memory(co_monitor_t *monitor)
 	if (!CO_OK(rc))
 		return rc;
 
-	memset(monitor->pp_pfns, 0, sizeof(co_pfn_t *)*PTRS_PER_PGD);
+	co_memset(monitor->pp_pfns, 0, sizeof(co_pfn_t *)*PTRS_PER_PGD);
 
 	rc = co_monitor_scan_and_create_pfns(monitor, CO_ARCH_KERNEL_OFFSET, monitor->physical_frames << CO_ARCH_PAGE_SHIFT);
 	if (!CO_OK(rc)) {
@@ -639,7 +640,7 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 		goto out;
 	}
 
-	memset(cmon, 0, sizeof(*cmon));
+	co_memset(cmon, 0, sizeof(*cmon));
 	cmon->manager = manager;
 	cmon->state = CO_MONITOR_STATE_INITIALIZED;
 	cmon->console_state = CO_MONITOR_CONSOLE_STATE_DETACHED;
@@ -880,7 +881,7 @@ co_rc_t co_monitor_start(co_monitor_t *cmon)
 	co_passage_page->params[2] = cmon->initrd_address;
 	co_passage_page->params[3] = cmon->initrd_size;
 
-	memcpy(&co_passage_page->params[10], cmon->config.boot_parameters_line, 
+	co_memcpy(&co_passage_page->params[10], cmon->config.boot_parameters_line, 
 	       sizeof(cmon->config.boot_parameters_line));
 
 	cmon->state = CO_MONITOR_STATE_RUNNING;

@@ -146,7 +146,7 @@ co_rc_t co_os_file_block_open(struct co_monitor *linuxvm, co_monitor_file_block_
 	struct inode *inode = NULL;
 	co_rc_t rc = CO_RC(OK);
 
-	co_debug("colinux: opening %s\n", fdev->pathname);
+	co_debug("opening %s\n", fdev->pathname);
 
 	filp = filp_open(fdev->pathname, O_RDWR | O_LARGEFILE, 0);
         if (IS_ERR(filp))
@@ -177,7 +177,7 @@ co_rc_t co_os_file_block_close(co_monitor_file_block_dev_t *fdev)
 {
 	struct file *filp;
 
-	co_debug("colinux: closing %s\n", fdev->pathname);
+	co_debug("closing %s\n", fdev->pathname);
 
 	filp = (struct file *)(fdev->sysdep);
 	filp_close(filp, NULL);

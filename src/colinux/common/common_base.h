@@ -83,4 +83,9 @@ typedef char co_pathname_t[0x100];
  */
 #define CO_MAX_CORE_SECTIONS                        0x100
 
+#include <stdarg.h>
+
+extern int co_snprintf(char *str, long n, const char *format, ...);
+extern int co_vsnprintf(char *str, long nmax, const char *format, va_list ap);
+
 #endif

@@ -94,8 +94,8 @@ void co_os_manager_free(co_osdep_manager_t osdep)
 
 	co_os_free_pfn_tracker(&osdep->map_root, MDL_MAPPING_LEVELS, &pages, &lists);
 
-	co_debug("manager: peak allocation: %d mdls, %d aux\n", osdep->mdls_peak_allocation, osdep->auxiliary_peak_allocation);
-	co_debug("manager: freed: %d pages, %d lists\n", pages, lists);
+	co_debug("peak allocation: %d mdls, %d aux\n", osdep->mdls_peak_allocation, osdep->auxiliary_peak_allocation);
+	co_debug("freed: %d pages, %d lists\n", pages, lists);
 
 	co_os_free(osdep);
 }

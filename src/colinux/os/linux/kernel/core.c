@@ -11,6 +11,8 @@
 #include <colinux/kernel/monitor.h>
 #include <colinux/os/kernel/alloc.h>
 
+COLINUX_DEFINE_MODULE("colinux-driver");
+
 co_rc_t co_monitor_os_init(co_monitor_t *cmon)
 {
 	co_rc_t rc = CO_RC_OK;
@@ -23,3 +25,4 @@ co_rc_t co_monitor_os_init(co_monitor_t *cmon)
 void co_monitor_os_exit(co_monitor_t *cmon)
 {
 }
+

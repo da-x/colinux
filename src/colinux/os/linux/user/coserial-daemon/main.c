@@ -29,6 +29,8 @@
 #include "../daemon.h"
 #include "../unix.h"
 
+COLINUX_DEFINE_MODULE("colinux-serial-daemon");
+
 static co_rc_t poll_init_socket(struct pollfd *pfd, int fd)
 {
 	pfd->fd = fd;

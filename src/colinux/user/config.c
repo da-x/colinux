@@ -10,6 +10,7 @@
 #include <string.h>
 #include <mxml.h>
 
+#include <colinux/common/libc.h>
 #include <colinux/common/config.h>
 #include "macaddress.h"
 
@@ -100,7 +101,7 @@ co_rc_t co_load_config_boot_params(co_config_t *out_config, mxml_node_t *node)
 	param_line = out_config->boot_parameters_line;
 	param_line_size_left = sizeof(out_config->boot_parameters_line);
 
-	bzero(param_line, param_line_size_left);
+	co_bzero(param_line, param_line_size_left);
 
 	text_node = node;
 	index = 0;

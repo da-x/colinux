@@ -12,6 +12,8 @@ LOCAL_OBJS = \
 	debug.o \
 	messages.o \
 	version.o \
+	libc.o \
+	snprintf.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

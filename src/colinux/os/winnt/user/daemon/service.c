@@ -263,7 +263,7 @@ void co_ntevent_print(const char *format, ...)
 	va_list ap;
 
 	va_start(ap, format);
-	vsnprintf(buf, sizeof(buf), format, ap);
+	co_vsnprintf(buf, sizeof(buf), format, ap);
 	va_end(ap);
 
 	co_terminal_print("%s", buf);

@@ -331,10 +331,10 @@ co_rc_t co_winnt_unload_driver_lowlevel_by_name(char *name)
 				      SC_MANAGER_ALL_ACCESS // access required 
 		); 
  
-	co_debug("driver: stopping driver service\n");
+	co_debug("stopping driver service\n");
 	rc = co_winnt_stop_driver_lowlevel(schSCManager, name);  
 
-	co_debug("driver: removing driver service\n");
+	co_debug("removing driver service\n");
 	rc = co_winnt_remove_driver_lowlevel(schSCManager, name);
 	
 	CloseServiceHandle(schSCManager); 

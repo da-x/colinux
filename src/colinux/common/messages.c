@@ -1,7 +1,7 @@
 /*
  * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@colinux.org>, 2003 (c)
+ * Dan Aloni <da-x@colinux.org>, 2003-2004 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -22,6 +22,7 @@ co_rc_t co_message_switch_set_rule(co_message_switch_t *ms, co_module_t destinat
 				   co_switch_rule_func_t func, void *data)
 {
 	co_switch_rule_t *rule;
+	co_module_name_t destination_str;
 
 	rule = (co_switch_rule_t *)co_os_malloc(sizeof(*rule));
 	if (rule == NULL)
@@ -32,7 +33,7 @@ co_rc_t co_message_switch_set_rule(co_message_switch_t *ms, co_module_t destinat
 	rule->data = data;
 	rule->func = func;
 
-	co_debug("co_message_switch: setting callback rule for %d\n", destination);
+	co_debug("message_switch: setting callback rule for %s\n", co_module_repr(destination, &destination_str));
 
 	co_list_add_head(&rule->node, &ms->list);
 
@@ -42,6 +43,8 @@ co_rc_t co_message_switch_set_rule(co_message_switch_t *ms, co_module_t destinat
 co_rc_t co_message_switch_set_rule_reroute(co_message_switch_t *ms, co_module_t destination, co_module_t new_destination)
 {
 	co_switch_rule_t *rule;
+	co_module_name_t destination_str;
+	co_module_name_t new_destination_str;
 
 	rule = (co_switch_rule_t *)co_os_malloc(sizeof(*rule));
 	if (rule == NULL)
@@ -50,8 +53,10 @@ co_rc_t co_message_switch_set_rule_reroute(co_message_switch_t *ms, co_module_t 
 	rule->type = CO_SWITCH_RULE_TYPE_REROUTE;
 	rule->destination = destination;
 	rule->reroute_destination = new_destination;
-
-	co_debug("co_message_switch: setting reroute rule %d -> %d\n", destination, new_destination);
+	
+	co_debug("message_switch: setting reroute rule %s -> %s\n",
+		 co_module_repr(destination, &destination_str), 
+		 co_module_repr(new_destination, &new_destination_str));
 
 	co_list_add_head(&rule->node, &ms->list);
 
@@ -158,8 +163,8 @@ co_rc_t co_message_switch_message(co_message_switch_t *ms, co_message_t *message
 	}
 
 out_free_error:
-	co_debug("switch_message: freed message %x (%d to %d)\n", 
-		 message, message->from, message->to);
+	co_debug_lvl(11, "switch_message: freed message %x (%d to %d)\n", 
+		     message, message->from, message->to); 
 
 out_free:
 	co_os_free(message);
@@ -170,13 +175,15 @@ out_free:
 co_rc_t co_message_switch_free_rule(co_message_switch_t *ms, co_module_t destination)
 {
 	co_switch_rule_t *rule = NULL;
+	co_module_name_t destination_str;
 	co_rc_t rc;
 
 	rc = co_message_switch_get_rule(ms, destination, &rule);
 	if (!CO_OK(rc))
 		return rc;
 
-	co_debug("co_message_switch: freeing rule for %d\n", rule->destination);
+	co_debug("message_switch: freeing rule for %s\n", 
+		 co_module_repr(rule->destination, &destination_str));
 
 	co_list_del(&rule->node);
 	co_os_free(rule);
@@ -269,12 +276,29 @@ co_rc_t co_message_write_queue(co_queue_t *queue, char *buffer, unsigned long si
 	return CO_RC(OK);
 }
 
-void co_get_module_name(co_module_t module, char *buf, unsigned long nbuf)
+char *co_module_repr(co_module_t module, co_module_name_t *str)
 {
-	if ((module >= CO_MODULE_CONET0)  &&  (module < CO_MODULE_CONET_END)) {
-		co_snprintf(buf, nbuf, "conet%d", module - CO_MODULE_CONET0);
-		return;
+	switch (module) {
+	case CO_MODULE_LINUX: co_snprintf((char *)str, sizeof(*str), "monitor"); break;
+	case CO_MODULE_MONITOR: co_snprintf((char *)str, sizeof(*str), "monitor"); break;
+	case CO_MODULE_DAEMON: co_snprintf((char *)str, sizeof(*str), "daemon"); break;
+	case CO_MODULE_IDLE: co_snprintf((char *)str, sizeof(*str), "idle"); break;
+	case CO_MODULE_KERNEL_SWITCH: co_snprintf((char *)str, sizeof(*str), "kernel"); break;
+	case CO_MODULE_USER_SWITCH: co_snprintf((char *)str, sizeof(*str), "user"); break;
+	case CO_MODULE_CONSOLE: co_snprintf((char *)str, sizeof(*str), "console"); break;
+	case CO_MODULE_PRINTK: co_snprintf((char *)str, sizeof(*str), "printk"); break;
+	case CO_MODULE_CONET0...CO_MODULE_CONET_END - 1:
+		co_snprintf((char *)str, sizeof(*str), "net%d", module - CO_MODULE_CONET0); 
+		break;
+	case CO_MODULE_COBD0...CO_MODULE_COBD_END - 1:
+		co_snprintf((char *)str, sizeof(*str), "cobd%d", module - CO_MODULE_COBD0); 
+		break;
+	case CO_MODULE_SERIAL0...CO_MODULE_SERIAL_END - 1:
+		co_snprintf((char *)str, sizeof(*str), "serial%d", module - CO_MODULE_SERIAL0); 
+		break;
+	default:
+		co_snprintf((char *)str, sizeof(*str), "unknown<%d>", module);
 	}
 
-	co_snprintf(buf, nbuf, "unknown_module(%d)", module);
+	return (char *)str;
 }

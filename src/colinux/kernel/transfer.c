@@ -11,6 +11,7 @@
 #include "monitor.h"
 #include "pages.h"
 
+#include <colinux/common/libc.h>
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/kernel/transfer.h>
 #include <colinux/kernel/manager.h>
@@ -79,9 +80,9 @@ static co_rc_t co_monitor_transfer_memcpy(co_monitor_t *cmon, void *host_data, v
 	unsigned char **host = (unsigned char **)host_data;
 
 	if (dir == CO_MONITOR_TRANSFER_FROM_HOST)
-		memcpy(linuxvm, *host, size);
+		co_memcpy(linuxvm, *host, size);
 	else
-		memcpy(*host, linuxvm, size);
+		co_memcpy(*host, linuxvm, size);
 
 	(*host) += size;
 
@@ -178,7 +179,7 @@ co_rc_t co_manager_create_pfns_and_callback_callback(
 		if (!pp_pfns[pfn_group])
 			return CO_RC(ERROR);
 
-		memset(pp_pfns[pfn_group], 0, sizeof(co_pfn_t)*PTRS_PER_PTE);
+		co_memset(pp_pfns[pfn_group], 0, sizeof(co_pfn_t)*PTRS_PER_PTE);
 	}
 		
 	real_pfn = pp_pfns[pfn_group][current_pfn];
@@ -222,7 +223,7 @@ co_manager_create_pfns_copy_callback(
 	unsigned long size
 	)
 {
-	memcpy(mapped_ptr, *data, size);
+	co_memcpy(mapped_ptr, *data, size);
 	((char *)(*data)) += size;
 	return CO_RC(OK);
 }

@@ -16,6 +16,8 @@ extern "C" {
 
 #include <colinux/user/console-base/main.h>
 
+COLINUX_DEFINE_MODULE("colinux-console-nt");
+
 #if 0
 static HHOOK current_hook;
 static LRESULT CALLBACK

@@ -15,14 +15,14 @@
 
 co_rc_t co_manager_arch_init_apic(co_archdep_manager_t manager)
 {	
-	co_debug("manager: arch APIC initialization\n");
+	co_debug("arch APIC initialization\n");
 
 	if (!(manager->caps & X86_FEATURE_APIC)) {
-		co_debug("manager: no APIC support\n");
+		co_debug("no APIC support\n");
 		return CO_RC(ERROR);
 	}
 
-	co_debug("manager: found APIC support\n");
+	co_debug("found APIC support\n");
 
 
 

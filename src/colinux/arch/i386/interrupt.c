@@ -17,7 +17,7 @@ static void call_intr(void *func)
 		"    pushfl"             /* flags */     "\n" 
 		"    pushl %%cs"         /* cs */        "\n" 
 		"    pushl %%eax"        /* eip (2:) */  "\n" 
-		"    jmp %0"             /* jmp func */  "\n" 
+		"    jmp *%0"            /* jmp func */  "\n" 
 		"2:  sti"                                "\n" 
 		: : "m"(func): "eax");
 }

@@ -20,6 +20,8 @@ extern "C" {
 
 #include <stdio.h>
 
+COLINUX_DEFINE_MODULE("colinux-fltk-console");
+
 /* 
  * Stolen WINE goodies...
  *

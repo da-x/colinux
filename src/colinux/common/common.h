@@ -21,15 +21,11 @@
  * happening by defining common types for both compilation modes.
  */
 
-#ifdef CO_KERNEL
 typedef unsigned long linux_pte_t;
 typedef unsigned long linux_pmd_t;
 typedef unsigned long linux_pgd_t;
-#endif
 
 #include <linux/cooperative.h>
-
-#include "debug.h"
 
 #ifndef NULL
 #define NULL (void *)0

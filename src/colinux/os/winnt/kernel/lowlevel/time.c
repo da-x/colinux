@@ -10,6 +10,7 @@
 
 #include "../ddk.h"
 
+#include <colinux/common/common.h>
 #include <colinux/os/kernel/time.h>
 
 unsigned long co_os_get_time()
