@@ -36,6 +36,7 @@ co_rc_t co_os_userspace_map(void *address, unsigned long pages, void **user_addr
 {
 	struct file *filp;
 	unsigned long pa;
+	void *result;
 
 	filp = filp_open("/dev/kmem", O_RDWR | O_LARGEFILE, 0);
 	if (!filp)
@@ -47,7 +48,7 @@ co_rc_t co_os_userspace_map(void *address, unsigned long pages, void **user_addr
 		return CO_RC(ERROR);
 	}
 
-	void *result = (void *)do_mmap_pgoff(filp, 0, pages << PAGE_SHIFT, 
+	result = (void *)do_mmap_pgoff(filp, 0, pages << PAGE_SHIFT, 
 					     PROT_EXEC | PROT_READ | PROT_WRITE, 
 					     MAP_PRIVATE, pa >> PAGE_SHIFT);
 	if (IS_ERR(result)) {
