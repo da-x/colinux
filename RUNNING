@@ -10,25 +10,30 @@ WARNING:
 (e.g, stable setups), it is still meant for testing purposes only. 
 This means that running it may crash the host (Windows or Linux system).
 
-PLEASE REPORT and read about problems on the colinux-devel@sourceforge.net 
+KNOWN ISSUES:
+
+  Any known issues for an release can be found on the Wiki 
+(http://wiki.colinux.org/cgi-bin/FrontPage)
+
+  PLEASE REPORT and read about problems on the colinux-devel@sourceforge.net 
 mailing list or file an Bug report at 
 http://www.sourceforge.net/projects/colinux
 
 NOTES ON UPGRADING:
 
- 1) If upgrading, please backup or copy your current default.colinux.XMfile
-      before installing!
+ 1. XML config files have been removed.  Use the command-line 
+    syntax in a name=value per line plain text file instead:
 
- 2) If you are upgrading from 0.6.1 to 0.6.2 the kernel version has 
-changed (2.4.x in 0.6.1 and 2.6.x in 0.6.2), make sure you get 
-module-init-tools if you want to work with modules in this new version. 
-See other 2.6 upgrade resources for information about other changes.
+	kernel=vlinux
+	mem=32
+	cobd0=fs\root_fs
+	cobd1=fs\swap_fs
+	eth0=tuntap
+	root=/dev/cobd/0
+	ro
 
- 3) Gentoo users need to be careful, Gentoo tends to use devfs when 
-upgrading to 0.6.2 and so block device names change from cobdX to cobd/X 
-and render the image unbootable.  For more details and solutions see the
-2.6 related information on the Wiki (http://wiki.colinux.org)
-
+ 2. If upgrading from 0.6.1, see README.txt for 0.6.2 or Wiki for 
+    information about other issues when upgrading.
 
 RUNNING:
 
@@ -48,7 +53,8 @@ anything.
 	then be either shared or bridged with a physical network connection. 
 	Note that this requires Internet Connection Sharing or Bridging 
 	(Windows XP or higher) or a 3rd party Internet connection 
-        sharing application. See the Wiki at wiki.colinux.org for more 
+        sharing application. See the Wiki at 
+	http://wiki.colinux.org/cgi-bin/FrontPage for more 
         information/help. The TAP method autmatically chooses the TAP 
         first TAP adapter it finds, if this is not correct for you, you 
         can specify the specific adapter by name (name="TAP1"). 
@@ -59,7 +65,7 @@ anything.
 	that type="bridged" and the 'name' parameter needs to be set to a 
 	substring of the network connection name that you will be bridging 
 	with (e.g. name="Local Area Connection"). See the Wiki at 
-	http://wiki.colinux.org for more information/help.
+	http://wiki.colinux.org/cgi-bin/FrontPage for more information/help.
 
 4. Choose whether to download a root file system from the Cooperative Linux 
    sourceforge page. The installer will try to download directly in 
@@ -75,9 +81,10 @@ anything.
    (or the bzip utilities in Cygwin, etc). The image MUST be extracted from 
    the .bz2 archive before use!
 
-5. Edit the XML file to point to whatever root file system you downloaded. 
+5. Edit the config file to point to whatever root file system you 
+downloaded. 
    
-6. The installation directory should include vmlinux, default.config.xml, the 
+6. The installation directory should include vmlinux, default.conf, the 
    supplied linux.sys driver, executables and dlls, and probably the root 
    filesystem image. Be sure to review the XML file for any additional 
    configuration that may be needed.
@@ -87,7 +94,7 @@ anything.
    in the XML config file..
 
 	a. Running as an service.  
-		colinux-daemon.exe -c config.xml --install-service "Cooperative Linux"
+		colinux-daemon.exe @default.conf --install-service "Cooperative Linux"
 		Also, to remove the service:
 		colinux-daemon.exe --remove-service "Cooopeative Linux".
 	   Then go to the Service Manager and start the "Cooperative Linux" 
@@ -97,7 +104,7 @@ anything.
 	   	colinux-console-fltk.exe OR
 		colinux-console-nt.exe		
 	b. As an regular application. 
-		colinux-daemon.exe -c config.xml
+		colinux-daemon.exe @default.conf
            See colinux-daemon --help for details about possible 
 	   command-line arguments.
    
@@ -109,8 +116,8 @@ Post Installation
 
 You may wish to set up some post installation parameters, including increasing
 the amount of memory allocated to Cooperative Linux, or adding a swap 
-partition. See the Wiki at wiki.colinux.org for additional help on these 
-tasks.
+partition. See the Wiki at http://wiki.colinux.org/cgi-bin/FrontPage for 
+additional help on these tasks.
 
 
 Command Line Parameters
@@ -123,8 +130,13 @@ Linux.
 		Allows you to specify the instance of Coooperative Linux
 		that you will be connecting to.
 
-	-c filename.XML
-		Allows you to choose a specific XML configuration file to use.
+	@filename
+		Allows you to choose a specific configuration file to 
+                use, can have multilple @filename on the command-line,
+                last on the command-line take precedence and overrides
+                prior.
+
+	-k suppresses Kernel messages (good for debugging other daemons)
 
 	-t consoletype
 		Allows you to specify either the FLTK (default) or NT (-t nt) 
@@ -203,6 +215,12 @@ Common Problems
 		Generally this means that the root filesystem image is 
 		missing, or was specified incorrectly.
 
+  Additional problems not know at time of release are typically 
+documented on the Wiki (http://wiki.colinux.org/cgi-bin/FrontPage), look 
+there for known problems.  If your problem isn't listed, report on the 
+colinux-devel@sourceforge.net mailing list or file an Bug report at 
+http://www.sourceforge.net/projects/colinux
+
 Developing, Helping out the Project
 -----------------------------------
 
@@ -232,7 +250,8 @@ http://www.sourceforge.net/project/colinux
 	WIKI
 		The community has contributed wonderful and helpful 
                 information on numerous topics, which is available at
-                http://wiki.colinux.org (You can contribute here too!)
+                http://wiki.colinux.org/cgi-bin/FrontPage (You can 
+		contribute here too!)
 	
 	Mailing Lists
 		Visit the colinux.org website and choose from the available 
