@@ -144,7 +144,7 @@ typedef struct co_monitor {
 	co_queue_t linux_message_queue;
 	co_os_mutex_t linux_message_queue_mutex;
 
-	unsigned char *io_buffer;
+	co_io_buffer_t *io_buffer;
 	co_monitor_user_kernel_shared_t *shared;
 	void *shared_user_address;
 	void *shared_handle;

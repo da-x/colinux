@@ -257,14 +257,20 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 	co_rc_t rc;
 	unsigned char *io_buffer, *io_buffer_end;
 	co_queue_t *queue;
-	io_buffer = cmon->io_buffer;
-	if (!io_buffer)
+
+	if (!cmon->io_buffer)
 		return CO_RC(ERROR);
 
-	io_buffer_end = io_buffer + CO_VPTR_IO_AREA_SIZE;
+	if (cmon->io_buffer->messages_waiting)
+		return CO_RC(OK);
+
+	io_buffer = cmon->io_buffer->buffer;
+	io_buffer_end = io_buffer + CO_VPTR_IO_AREA_SIZE - sizeof(co_io_buffer_t);
 
 	co_os_mutex_acquire(cmon->linux_message_queue_mutex);
 	
+	cmon->io_buffer->messages_waiting = 0;
+
 	queue = &cmon->linux_message_queue;
 	while (co_queue_size(queue) != 0)
 	{
@@ -286,6 +292,8 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 		rc = co_queue_pop_tail(queue, (void **)&message_item);
 		if (!CO_OK(rc))
 			return rc;
+
+		cmon->io_buffer->messages_waiting += 1;
 		co_queue_free(queue, message_item);
 		co_memcpy(io_buffer, message, size);
 		io_buffer += size;
@@ -294,7 +302,7 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 
 	co_os_mutex_release(cmon->linux_message_queue_mutex);
 
-	co_passage_page->params[0] = io_buffer - cmon->io_buffer;
+	co_passage_page->params[0] = io_buffer - (unsigned char *)&cmon->io_buffer->buffer;
 
 	co_debug_lvl(messages, 12, "sending messages to linux (%d bytes)\n", co_passage_page->params[0]);
 
@@ -420,6 +428,8 @@ co_rc_t co_monitor_message_from_user(co_monitor_t *monitor, co_manager_open_desc
 		rc = co_message_dup_to_queue(message, &monitor->linux_message_queue);
 		co_os_mutex_release(monitor->linux_message_queue_mutex);
 		co_os_wait_wakeup(monitor->idle_wait);
+	} else {
+		rc = CO_RC(ERROR);
 	}
 
 	return rc;
@@ -485,9 +495,11 @@ static bool_t iteration(co_monitor_t *cmon)
 		
 		co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_MESSAGE_TO_MONITOR)\n");
 
-		message = (co_message_t *)cmon->io_buffer;
+		message = (co_message_t *)cmon->io_buffer->buffer;
 		if (message  &&  message->to < CO_MONITOR_MODULES_COUNT)
 			incoming_message(cmon, message);
+
+		cmon->io_buffer->messages_waiting = 0;
 
 		return PTRUE;
 	}
@@ -822,9 +834,10 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 
 	params->id = cmon->id;
 
-	cmon->io_buffer = co_os_malloc(CO_VPTR_IO_AREA_SIZE);
+	cmon->io_buffer = (co_io_buffer_t *)(co_os_malloc(CO_VPTR_IO_AREA_SIZE));
 	if (cmon->io_buffer == NULL)
 		goto out_free_wait;
+	co_memset(cmon->io_buffer, 0, CO_VPTR_IO_AREA_SIZE);
 
 	rc = alloc_shared_page(cmon);
 	if (!CO_OK(rc))
@@ -1084,6 +1097,7 @@ static co_rc_t co_monitor_user_reset(co_monitor_t *monitor)
 	}
 	co_os_mutex_release(monitor->manager->lock);
 
+	co_memset(monitor->io_buffer, 0, CO_VPTR_IO_AREA_SIZE);
 	monitor->state = CO_MONITOR_STATE_INITIALIZED;
 	monitor->termination_reason = CO_TERMINATE_END;
 

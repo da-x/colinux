@@ -2576,6 +2576,67 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +}
 +
 +module_init(cocd_init);
+diff -urN a/drivers/char/mem.c b/drivers/char/mem.c
+--- a/drivers/char/mem.c
++++ b/drivers/char/mem.c
+@@ -23,6 +23,7 @@
+ #include <linux/devfs_fs_kernel.h>
+ #include <linux/ptrace.h>
+ #include <linux/device.h>
++#include <linux/cooperative_internal.h>
+ 
+ #include <asm/uaccess.h>
+ #include <asm/io.h>
+@@ -154,6 +155,11 @@
+ 	unsigned long p = *ppos;
+ 	ssize_t read;
+ 
++	if (cooperative_mode_enabled()) {
++		/* Reading kmem is bad news in cooperative */
++		return -ENOMEM;
++	}
++
+ 	if (!valid_phys_addr_range(p, &count))
+ 		return -EFAULT;
+ 	read = 0;
+@@ -185,6 +191,11 @@
+ {
+ 	unsigned long p = *ppos;
+ 
++	if (cooperative_mode_enabled()) {
++		/* Writing kmem is bad news in cooperative */
++		return -ENOMEM;
++	}
++
+ 	if (!valid_phys_addr_range(p, &count))
+ 		return -EFAULT;
+ 	return do_write_mem(__va(p), p, buf, count, ppos);
+@@ -224,7 +235,12 @@
+ 	ssize_t read = 0;
+ 	ssize_t virtr = 0;
+ 	char * kbuf; /* k-addr because vread() takes vmlist_lock rwlock */
+-		
++
++	if (cooperative_mode_enabled()) {
++		/* Reading kmem is bad news in cooperative */
++		return -ENOMEM;
++	}
++
+ 	if (p < (unsigned long) high_memory) {
+ 		read = count;
+ 		if (count > (unsigned long) high_memory - p)
+@@ -289,6 +305,11 @@
+ 	ssize_t written;
+ 	char * kbuf; /* k-addr because vwrite() takes vmlist_lock rwlock */
+ 
++	if (cooperative_mode_enabled()) {
++		/* Writing kmem is bad news in cooperative */
++		return -ENOMEM;
++	}
++
+ 	if (p < (unsigned long) high_memory) {
+ 
+ 		wrote = count;
 diff -urN a/drivers/input/keyboard/Kconfig b/drivers/input/keyboard/Kconfig
 --- a/drivers/input/keyboard/Kconfig
 +++ b/drivers/input/keyboard/Kconfig
@@ -3404,7 +3465,7 @@ diff -urN a/drivers/video/console/Makefile b/drivers/video/console/Makefile
 diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 --- a/drivers/video/console/cocon.c
 +++ b/drivers/video/console/cocon.c
-@@ -0,0 +1,464 @@
+@@ -0,0 +1,503 @@
 +/*
 + *  linux/drivers/video/cocon.c -- Cooperative Linux console VGA driver
 + *
@@ -3461,14 +3522,16 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	co_message_t *co_message;
 +
 +	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
-+	message->type = CO_OPERATION_CONSOLE_STARTUP;
-+	co_send_message_restore(flags);
++	if (co_message) {
++		message = (co_console_message_t *)co_message->data;
++		co_message->from = CO_MODULE_LINUX;
++		co_message->to = CO_MODULE_CONSOLE;
++		co_message->priority = CO_PRIORITY_DISCARDABLE;
++		co_message->type = CO_MESSAGE_TYPE_STRING;
++		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++		message->type = CO_OPERATION_CONSOLE_STARTUP;
++		co_send_message_restore(flags);
++	}
 +
 +	return "CoCON";
 +}
@@ -3488,6 +3551,9 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	c->vc_origin = 0;
 +
 +	co_message = co_send_message_save(&flags);
++	if (!co_message)
++		return;
++
 +	message = (co_console_message_t *)co_message->data;
 +	co_message->from = CO_MODULE_LINUX;
 +	co_message->to = CO_MODULE_CONSOLE;
@@ -3505,6 +3571,9 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	co_message_t *co_message;
 +
 +	co_message = co_send_message_save(&flags);
++	if (!co_message)
++		return;
++
 +	message = (co_console_message_t *)co_message->data;
 +	co_message->from = CO_MODULE_LINUX;
 +	co_message->to = CO_MODULE_CONSOLE;
@@ -3523,6 +3592,9 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	co_message_t *co_message;
 +
 +	co_message = co_send_message_save(&flags);
++	if (!co_message)
++		return;
++
 +	message = (co_console_message_t *)co_message->data;
 +	co_message->from = CO_MODULE_LINUX;
 +	co_message->to = CO_MODULE_CONSOLE;
@@ -3545,6 +3617,9 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	co_console_message_t *message;
 +
 +	co_message = co_send_message_save(&flags);
++	if (!co_message)
++		return;
++
 +	message = (co_console_message_t *)co_message->data;
 +	co_message->from = CO_MODULE_LINUX;
 +	co_message->to = CO_MODULE_CONSOLE;
@@ -3570,6 +3645,9 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +		return;
 +
 +	co_message = co_send_message_save(&flags);
++	if (!co_message)
++		return;
++
 +	message = (co_console_message_t *)co_message->data;
 +	co_message->from = CO_MODULE_LINUX;
 +	co_message->to = CO_MODULE_CONSOLE;
@@ -3611,17 +3689,19 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	unsigned long x = (unsigned long)(p - c->vc_origin);  // UPDATE: vc_origin = 0; but not yet
 +
 +	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->invert + 1)) - ((char *)message);
-+	message->type = CO_OPERATION_CONSOLE_INVERT_REGION;
-+	message->invert.y = ((unsigned)x)/c->vc_cols;
-+	message->invert.x = ((unsigned)x)-(message->invert.y);
-+	message->invert.count = count;
-+	co_send_message_restore(flags);
++	if (co_message) {
++		message = (co_console_message_t *)co_message->data;
++		co_message->from = CO_MODULE_LINUX;
++		co_message->to = CO_MODULE_CONSOLE;
++		co_message->priority = CO_PRIORITY_DISCARDABLE;
++		co_message->type = CO_MESSAGE_TYPE_STRING;
++		co_message->size = ((char *)(&message->invert + 1)) - ((char *)message);
++		message->type = CO_OPERATION_CONSOLE_INVERT_REGION;
++		message->invert.y = ((unsigned)x)/c->vc_cols;
++		message->invert.x = ((unsigned)x)-(message->invert.y);
++		message->invert.count = count;
++		co_send_message_restore(flags);
++	}
 +
 +	while (count--) {
 +		u16 a = scr_readw(p);
@@ -3638,6 +3718,9 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	co_message_t *co_message;
 +
 +	co_message = co_send_message_save(&flags);
++	if (!co_message)
++		return;
++
 +	message = (co_console_message_t *)co_message->data;
 +	co_message->from = CO_MODULE_LINUX;
 +	co_message->to = CO_MODULE_CONSOLE;
@@ -3690,14 +3773,16 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	co_message_t *co_message;
 +
 +	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
-+	message->type = CO_OPERATION_CONSOLE_SWITCH;
-+	co_send_message_restore(flags);
++	if (co_message) {
++		message = (co_console_message_t *)co_message->data;
++		co_message->from = CO_MODULE_LINUX;
++		co_message->to = CO_MODULE_CONSOLE;
++		co_message->priority = CO_PRIORITY_DISCARDABLE;
++		co_message->type = CO_MESSAGE_TYPE_STRING;
++		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++		message->type = CO_OPERATION_CONSOLE_SWITCH;
++		co_send_message_restore(flags);
++	}
 +
 +	return 1;	/* Redrawing not needed */
 +}
@@ -3709,14 +3794,16 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	co_message_t *co_message;
 +
 +	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
-+	message->type = CO_OPERATION_CONSOLE_SET_PALETTE;
-+	co_send_message_restore(flags);
++	if (co_message) {
++		message = (co_console_message_t *)co_message->data;
++		co_message->from = CO_MODULE_LINUX;
++		co_message->to = CO_MODULE_CONSOLE;
++		co_message->priority = CO_PRIORITY_DISCARDABLE;
++		co_message->type = CO_MESSAGE_TYPE_STRING;
++		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++		message->type = CO_OPERATION_CONSOLE_SET_PALETTE;
++		co_send_message_restore(flags);
++	}
 +
 +	return 1;
 +}
@@ -3728,14 +3815,16 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	co_message_t *co_message;
 +
 +	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
-+	message->type = CO_OPERATION_CONSOLE_BLANK;
-+	co_send_message_restore(flags);
++	if (co_message) {
++		message = (co_console_message_t *)co_message->data;
++		co_message->from = CO_MODULE_LINUX;
++		co_message->to = CO_MODULE_CONSOLE;
++		co_message->priority = CO_PRIORITY_DISCARDABLE;
++		co_message->type = CO_MESSAGE_TYPE_STRING;
++		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++		message->type = CO_OPERATION_CONSOLE_BLANK;
++		co_send_message_restore(flags);
++	}
 +
 +	return 1;
 +}
@@ -3748,14 +3837,16 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	co_message_t *co_message;
 +
 +	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
-+	message->type = CO_OPERATION_CONSOLE_SCROLLDELTA;
-+	co_send_message_restore(flags);
++	if (co_message) {
++		message = (co_console_message_t *)co_message->data;
++		co_message->from = CO_MODULE_LINUX;
++		co_message->to = CO_MODULE_CONSOLE;
++		co_message->priority = CO_PRIORITY_DISCARDABLE;
++		co_message->type = CO_MESSAGE_TYPE_STRING;
++		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++		message->type = CO_OPERATION_CONSOLE_SCROLLDELTA;
++		co_send_message_restore(flags);
++	}
 +
 +	return 1;
 +}
@@ -3767,14 +3858,16 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	co_message_t *co_message;
 +
 +	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
-+	message->type = CO_OPERATION_CONSOLE_SET_ORIGIN;
-+	co_send_message_restore(flags);
++	if (co_message) {
++		message = (co_console_message_t *)co_message->data;
++		co_message->from = CO_MODULE_LINUX;
++		co_message->to = CO_MODULE_CONSOLE;
++		co_message->priority = CO_PRIORITY_DISCARDABLE;
++		co_message->type = CO_MESSAGE_TYPE_STRING;
++		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++		message->type = CO_OPERATION_CONSOLE_SET_ORIGIN;
++		co_send_message_restore(flags);
++	}
 +
 +	return 1;
 +}
@@ -3786,14 +3879,16 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	co_message_t *co_message;
 +
 +	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
-+	message->type = CO_OPERATION_CONSOLE_SAVE_SCREEN;
-+	co_send_message_restore(flags);
++	if (co_message) {
++		message = (co_console_message_t *)co_message->data;
++		co_message->from = CO_MODULE_LINUX;
++		co_message->to = CO_MODULE_CONSOLE;
++		co_message->priority = CO_PRIORITY_DISCARDABLE;
++		co_message->type = CO_MESSAGE_TYPE_STRING;
++		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++		message->type = CO_OPERATION_CONSOLE_SAVE_SCREEN;
++		co_send_message_restore(flags);
++	}
 +}
 +
 +static int cocon_scroll(struct vc_data *c, int t, int b, int dir, int lines)
@@ -3803,20 +3898,22 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	co_message_t *co_message;
 +
 +	co_message = co_send_message_save(&flags);
-+	message = (co_console_message_t *)co_message->data;
-+	co_message->from = CO_MODULE_LINUX;
-+	co_message->to = CO_MODULE_CONSOLE;
-+	co_message->priority = CO_PRIORITY_DISCARDABLE;
-+	co_message->type = CO_MESSAGE_TYPE_STRING;
-+	co_message->size = ((char *)(&message->scroll + 1)) - ((char *)message);
-+	if (dir == SM_UP)
-+		message->type = CO_OPERATION_CONSOLE_SCROLL_UP;
-+	else
-+		message->type = CO_OPERATION_CONSOLE_SCROLL_DOWN;
-+	message->scroll.top = t;
-+	message->scroll.bottom = b-1;
-+	message->scroll.lines = lines;
-+	co_send_message_restore(flags);
++	if (co_message) {
++		message = (co_console_message_t *)co_message->data;
++		co_message->from = CO_MODULE_LINUX;
++		co_message->to = CO_MODULE_CONSOLE;
++		co_message->priority = CO_PRIORITY_DISCARDABLE;
++		co_message->type = CO_MESSAGE_TYPE_STRING;
++		co_message->size = ((char *)(&message->scroll + 1)) - ((char *)message);
++		if (dir == SM_UP)
++			message->type = CO_OPERATION_CONSOLE_SCROLL_UP;
++		else
++			message->type = CO_OPERATION_CONSOLE_SCROLL_DOWN;
++		message->scroll.top = t;
++		message->scroll.bottom = b-1;
++		message->scroll.lines = lines;
++		co_send_message_restore(flags);
++	}
 +
 +	return 0;
 +}
@@ -3828,6 +3925,9 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 +	co_message_t *co_message;
 +
 +	co_message = co_send_message_save(&flags);
++	if (!co_message)
++		return;
++
 +	message = (co_console_message_t *)co_message->data;
 +	co_message->from = CO_MODULE_LINUX;
 +	co_message->to = CO_MODULE_CONSOLE;
@@ -7832,7 +7932,7 @@ diff -urN a/include/linux/console.h b/include/linux/console.h
 diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 --- a/include/linux/cooperative.h
 +++ b/include/linux/cooperative.h
-@@ -0,0 +1,324 @@
+@@ -0,0 +1,329 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -7855,7 +7955,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +
 +#include <asm/cooperative.h>
 +
-+#define CO_LINUX_API_VERSION    8
++#define CO_LINUX_API_VERSION    9
 +
 +#pragma pack(0)
 +
@@ -8084,6 +8184,11 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +		co_cursor_pos_t cursor;
 +	};
 +} __attribute__((packed)) co_console_message_t;
++
++typedef struct {
++	unsigned long messages_waiting;
++	char buffer[];
++} co_io_buffer_t;
 +
 +typedef struct {	
 +	unsigned long index;
@@ -8431,7 +8536,7 @@ diff -urN a/include/linux/cooperative_fs.h b/include/linux/cooperative_fs.h
 diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_internal.h
 --- a/include/linux/cooperative_internal.h
 +++ b/include/linux/cooperative_internal.h
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,81 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -8501,6 +8606,7 @@ diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_int
 +extern void *co_initrd;
 +extern unsigned long co_initrd_size;
 +
++#define co_io_buffer ((co_io_buffer_t *)CO_VPTR_IO_AREA_START)
 +#define cooperative_mode_enabled()     1
 +
 +#else
@@ -8559,7 +8665,7 @@ diff -urN a/kernel/Makefile b/kernel/Makefile
 diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 --- a/kernel/cooperative.c
 +++ b/kernel/cooperative.c
-@@ -0,0 +1,354 @@
+@@ -0,0 +1,369 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -8618,10 +8724,17 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +
 +co_message_t *co_send_message_save(unsigned long *flags)
 +{
-+	co_passage_page_assert_valid();	
++	co_passage_page_assert_valid();
 +	co_passage_page_acquire(flags);
++
++	if (co_io_buffer->messages_waiting) {
++		co_passage_page_release(*flags);
++		return NULL;
++	}
++
 +	co_passage_page->operation = CO_OPERATION_MESSAGE_TO_MONITOR;
-+	return ((co_message_t *)CO_VPTR_IO_AREA_START);
++	co_io_buffer->messages_waiting = 1;
++	return ((co_message_t *)co_io_buffer->buffer);
 +}
 +
 +void co_send_message_restore(unsigned long flags)
@@ -8632,17 +8745,23 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +
 +void co_send_message_s(co_message_t *message, const char *data)
 +{
-+	if ((sizeof(co_message_t) + message->size) > CO_VPTR_IO_AREA_SIZE)
++	if ((sizeof(co_message_t) + message->size) > CO_VPTR_IO_AREA_SIZE - sizeof(co_io_buffer_t))
 +		return;
 +	
 +	if (co_passage_page_held())
 +		return;
 +	
 +	unsigned long flags;
-+	co_message_t *buffer = ((co_message_t *)CO_VPTR_IO_AREA_START);
++	co_message_t *buffer = (co_message_t *)co_io_buffer->buffer;
 +	
 +	co_passage_page_acquire(&flags);
++	if (co_io_buffer->messages_waiting) {
++		co_passage_page_release(flags);
++		return;
++	}
++
 +	co_passage_page->operation = CO_OPERATION_MESSAGE_TO_MONITOR;
++	co_io_buffer->messages_waiting = 1;
 +	*buffer = *message;
 +	memcpy(buffer->data, data, message->size);
 +	co_switch_wrapper();
@@ -8691,8 +8810,9 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +	unsigned long new_jiffies = co_passage_page->params[1];
 +
 +	if (co_messages_active  &&  io_size > 0) {
-+		unsigned char *io_buffer = (char *)CO_VPTR_IO_AREA_START;
++		unsigned char *io_buffer = co_io_buffer->buffer;
 +		unsigned char *io_buffer_end = io_buffer + io_size;
++
 +		if (!(io_size > CO_VPTR_IO_AREA_SIZE)) {
 +			while (io_buffer < io_buffer_end) {
 +				co_message_t *message = (co_message_t *)io_buffer;
@@ -8704,6 +8824,7 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +		}
 +	}
 +
++	co_io_buffer->messages_waiting = 0;
 +	co_passage_page_release(flags);
 +
 +	co_handle_jiffies(new_jiffies);
