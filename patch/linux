@@ -1,9 +1,9 @@
 diff -urN a/CREDITS b/CREDITS
 --- a/CREDITS
 +++ b/CREDITS
-@@ -54,6 +54,12 @@
- S: CH-1015 Lausanne
- S: Switzerland
+@@ -52,6 +52,12 @@
+ S: Buenos Aires
+ S: Argentina
  
 +A: Dan Aloni
 +E: da-x@colinux.org
@@ -17,7 +17,7 @@ diff -urN a/CREDITS b/CREDITS
 diff -urN a/Makefile b/Makefile
 --- a/Makefile
 +++ b/Makefile
-@@ -314,6 +314,11 @@
+@@ -319,6 +319,11 @@
  AS		= $(CROSS_COMPILE)as
  LD		= $(CROSS_COMPILE)ld
  CC		= $(CROSS_COMPILE)gcc
@@ -32,7 +32,7 @@ diff -urN a/Makefile b/Makefile
 diff -urN a/arch/i386/Kconfig b/arch/i386/Kconfig
 --- a/arch/i386/Kconfig
 +++ b/arch/i386/Kconfig
-@@ -204,6 +204,7 @@
+@@ -205,6 +205,7 @@
  
  config M586TSC
  	bool "Pentium-Classic"
@@ -40,7 +40,7 @@ diff -urN a/arch/i386/Kconfig b/arch/i386/Kconfig
  	help
  	  Select this for a Pentium Classic processor with the RDTSC (Read
  	  Time Stamp Counter) instruction for benchmarking.
-@@ -537,6 +538,10 @@
+@@ -543,6 +544,10 @@
  	  If you have a system with several CPUs, you do not need to say Y
  	  here: the IO-APIC will be used automatically.
  
@@ -51,16 +51,16 @@ diff -urN a/arch/i386/Kconfig b/arch/i386/Kconfig
  config X86_LOCAL_APIC
  	bool
  	depends on !SMP && X86_UP_APIC
-@@ -549,7 +554,7 @@
+@@ -555,7 +560,7 @@
  
  config X86_TSC
  	bool
--	depends on (MWINCHIP3D || MWINCHIP2 || MCRUSOE || MCYRIXIII || MK7 || MK6 || MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M686 || M586MMX || M586TSC || MK8 || MVIAC3_2) && !X86_NUMAQ
-+	depends on (MWINCHIP3D || MWINCHIP2 || MCRUSOE || MCYRIXIII || MK7 || MK6 || MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M686 || M586MMX || M586TSC || MK8 || MVIAC3_2) && !X86_NUMAQ && !COOPERATIVE
+-	depends on (MWINCHIP3D || MWINCHIP2 || MCRUSOE || MEFFICEON || MCYRIXIII || MK7 || MK6 || MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M686 || M586MMX || M586TSC || MK8 || MVIAC3_2) && !X86_NUMAQ
++ 	depends on (MWINCHIP3D || MWINCHIP2 || MCRUSOE || MEFFICEON || MCYRIXIII || MK7 || MK6 || MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M686 || M586MMX || M586TSC || MK8 || MVIAC3_2) && !X86_NUMAQ && !COOPERATIVE
  	default y
  
  config X86_MCE
-@@ -876,6 +881,10 @@
+@@ -882,6 +887,10 @@
  
  source kernel/power/Kconfig
  
@@ -210,7 +210,7 @@ diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 +	while (count > 0) {
 +		local_irq_save(flags);
 +		regs.orig_eax = TIMER_IRQ;
-+		do_IRQ(regs);
++		do_IRQ(&regs);
 +		local_irq_restore(flags);
 +
 +		count--;
@@ -243,7 +243,7 @@ diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 +
 +		local_irq_save(flags);
 +		regs.orig_eax = KEYBOARD_IRQ;
-+		do_IRQ(regs);
++		do_IRQ(&regs);
 +		local_irq_restore(flags);
 +		break;
 +	}
@@ -253,7 +253,7 @@ diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 +
 +		local_irq_save(flags);
 +		regs.orig_eax = NETWORK_IRQ;
-+		do_IRQ(regs);
++		do_IRQ(&regs);
 +		local_irq_restore(flags);
 +		break;
 +	}
@@ -455,7 +455,7 @@ diff -urN a/arch/i386/kernel/cpu/common.c b/arch/i386/kernel/cpu/common.c
 diff -urN a/arch/i386/kernel/entry.S b/arch/i386/kernel/entry.S
 --- a/arch/i386/kernel/entry.S
 +++ b/arch/i386/kernel/entry.S
-@@ -192,7 +192,7 @@
+@@ -158,7 +158,7 @@
  	ALIGN
  ret_from_exception:
  	preempt_stop
@@ -748,7 +748,7 @@ diff -urN a/arch/i386/kernel/process.c b/arch/i386/kernel/process.c
  
  asmlinkage void ret_from_fork(void) __asm__("ret_from_fork");
  
-@@ -142,21 +143,24 @@
+@@ -147,21 +148,24 @@
  	/* endless idle loop with no priority at all */
  	while (1) {
  		while (!need_resched()) {
@@ -805,19 +805,22 @@ diff -urN a/arch/i386/kernel/reboot.c b/arch/i386/kernel/reboot.c
  	local_irq_disable();
  
  	/* Write zero to CMOS register number 0x0f, which the BIOS POST
-@@ -338,6 +344,11 @@
- 		local_irq_enable();
- 	}
- #endif
+@@ -332,8 +338,13 @@
+ 	 */
+ 	smp_send_stop();
+ #endif /* CONFIG_SMP */
+-
++ 
+ 	lapic_shutdown();
++ 
 +	if (cooperative_mode_enabled()) {
 +		co_terminate(CO_TERMINATE_REBOOT);
 +		return;
 +	}
-+
+ 
  #ifdef CONFIG_X86_IO_APIC
  	disable_IO_APIC();
- #endif
-@@ -367,12 +378,18 @@
+@@ -364,12 +375,18 @@
  
  void machine_halt(void)
  {
@@ -833,9 +836,9 @@ diff -urN a/arch/i386/kernel/reboot.c b/arch/i386/kernel/reboot.c
 +		return;
 +	}
 +
+ 	lapic_shutdown();
+ 
  	if (efi_enabled)
- 		efi.reset_system(EFI_RESET_SHUTDOWN, EFI_SUCCESS, 0, NULL);
- 	if (pm_power_off)
 diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
 --- a/arch/i386/kernel/setup.c
 +++ b/arch/i386/kernel/setup.c
@@ -1144,17 +1147,17 @@ diff -urN a/arch/i386/kernel/timers/timer.c b/arch/i386/kernel/timers/timer.c
 @@ -13,6 +13,9 @@
  #endif
  /* list of timers, ordered by preference, NULL terminated */
- static struct timer_opts* timers[] = {
+ static struct init_timer_opts* __initdata timers[] = {
 +#ifdef CONFIG_COOPERATIVE
-+	&timer_cooperative,
++	&timer_cooperative_init,
 +#endif
  #ifdef CONFIG_X86_CYCLONE_TIMER
- 	&timer_cyclone,
+ 	&timer_cyclone_init,
  #endif
 diff -urN a/arch/i386/kernel/timers/timer_cooperative.c b/arch/i386/kernel/timers/timer_cooperative.c
 --- a/arch/i386/kernel/timers/timer_cooperative.c
 +++ b/arch/i386/kernel/timers/timer_cooperative.c
-@@ -0,0 +1,136 @@
+@@ -0,0 +1,140 @@
 +/*
 + *  Cooperative mode timer.
 + *
@@ -1285,11 +1288,15 @@ diff -urN a/arch/i386/kernel/timers/timer_cooperative.c b/arch/i386/kernel/timer
 +/* tsc timer_opts struct */
 +struct timer_opts timer_cooperative = {
 +	.name = 		"cooperative",
-+	.init =			init_cooperative_timer,
 +	.mark_offset =		mark_offset_cooperative,
 +	.get_offset =		get_offset_cooperative,
 +	.monotonic_clock =	monotonic_clock_cooperative,
 +	.delay = 		delay_cooperative,
++};
++
++struct init_timer_opts __initdata timer_cooperative_init = {
++	.init =	init_cooperative_timer,
++	.opts = &timer_cooperative,
 +};
 diff -urN a/arch/i386/kernel/timers/timer_cyclone.c b/arch/i386/kernel/timers/timer_cyclone.c
 --- a/arch/i386/kernel/timers/timer_cyclone.c
@@ -1318,7 +1325,7 @@ diff -urN a/arch/i386/kernel/timers/timer_hpet.c b/arch/i386/kernel/timers/timer
 diff -urN a/arch/i386/kernel/timers/timer_none.c b/arch/i386/kernel/timers/timer_none.c
 --- a/arch/i386/kernel/timers/timer_none.c
 +++ b/arch/i386/kernel/timers/timer_none.c
-@@ -11,7 +11,7 @@
+@@ -6,7 +6,7 @@
  	/* nothing needed */
  }
  
@@ -1376,7 +1383,7 @@ diff -urN a/arch/i386/kernel/traps.c b/arch/i386/kernel/traps.c
  #include <linux/irq.h>
  #include <linux/module.h>
  
-@@ -406,6 +409,12 @@
+@@ -382,6 +385,12 @@
  	}
  
  	kernel_trap: {
@@ -1389,7 +1396,7 @@ diff -urN a/arch/i386/kernel/traps.c b/arch/i386/kernel/traps.c
  		if (!fixup_exception(regs))
  			die(str, regs, error_code);
  		return;
-@@ -703,9 +712,15 @@
+@@ -683,9 +692,15 @@
  	unsigned int condition;
  	struct task_struct *tsk = current;
  	siginfo_t info;
@@ -1598,7 +1605,7 @@ diff -urN a/arch/i386/mm/ioremap.c b/arch/i386/mm/ioremap.c
 diff -urN a/drivers/block/Kconfig b/drivers/block/Kconfig
 --- a/drivers/block/Kconfig
 +++ b/drivers/block/Kconfig
-@@ -348,6 +348,15 @@
+@@ -358,6 +358,15 @@
  	  "real" root file system, etc. See <file:Documentation/initrd.txt>
  	  for details.
  
@@ -1611,9 +1618,9 @@ diff -urN a/drivers/block/Kconfig b/drivers/block/Kconfig
 +
 +	  If unsure, say Y.
 +
- config LBD
- 	bool "Support for Large Block Devices"
- 	depends on X86 || MIPS32 || PPC32 || ARCH_S390_31 || SUPERH
+ config INITRAMFS_SOURCE
+ 	string "Source directory of cpio_list"
+ 	default ""
 diff -urN a/drivers/block/Makefile b/drivers/block/Makefile
 --- a/drivers/block/Makefile
 +++ b/drivers/block/Makefile
@@ -2183,7 +2190,7 @@ diff -urN a/drivers/char/Makefile b/drivers/char/Makefile
 diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 --- a/drivers/char/cocd.c
 +++ b/drivers/char/cocd.c
-@@ -0,0 +1,296 @@
+@@ -0,0 +1,276 @@
 +/*
 + *  Copyright (C) 2004 Dan Aloni <da-x@colinux.org>
 + *
@@ -2229,14 +2236,10 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +
 +	down(&cocd_sem);
 +
-+	MOD_INC_USE_COUNT;
-+
 +	cocd = (struct cocd_tty *)tty->driver_data;
 +	if (!cocd) {
 +		cocd = kmalloc(sizeof(*cocd), GFP_KERNEL);
 +		if (!cocd) {
-+			MOD_DEC_USE_COUNT;
-+
 +			up(&cocd_sem);
 +			return -ENOMEM;
 +		}
@@ -2280,8 +2283,6 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +		kfree(cocd);
 +
 +out:
-+	MOD_DEC_USE_COUNT;
-+
 +	up(&cocd_sem);
 +}
 +
@@ -2329,25 +2330,14 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +	}
 +}
 +
-+int cocd_write(struct tty_struct * tty, int from_user,
++int cocd_write(struct tty_struct * tty,
 +	       const unsigned char *buf, int count)
 +{
-+	char *allocated_kbuf = NULL;
 +	const char *kbuf = NULL;
 +	const char *kbuf_scan = NULL;
 +	int count_left;
 +
-+	if (from_user) {
-+		allocated_kbuf = kmalloc(count, GFP_KERNEL);
-+		if (copy_from_user(allocated_kbuf, buf, count)) {
-+			kfree(allocated_kbuf);
-+			return -EFAULT;
-+		}
-+		kbuf = allocated_kbuf;
-+	} else {
-+		kbuf = buf;
-+	}
-+
++	kbuf = buf;
 +	kbuf_scan = kbuf;
 +	count_left = count;
 +
@@ -2366,9 +2356,6 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +		count_left -= count_partial;
 +		kbuf_scan += count_partial;
 +	}
-+
-+	if (from_user)
-+		kfree(allocated_kbuf);
 +
 +	return count;
 +}
@@ -2714,8 +2701,8 @@ diff -urN a/drivers/input/serio/Kconfig b/drivers/input/serio/Kconfig
  	tristate "i8042 PC Keyboard controller" if EMBEDDED || !X86
  	default y
  	select SERIO
--	depends on !PARISC && (!ARM || ARCH_SHARK || FOOTBRIDGE_HOST)
-+ 	depends on !PARISC && (!ARM || ARCH_SHARK || FOOTBRIDGE_HOST) && !COOPERATIVE
+-	depends on !PARISC && (!ARM || ARCH_SHARK || FOOTBRIDGE_HOST) && !M68K
++	depends on !PARISC && (!ARM || ARCH_SHARK || FOOTBRIDGE_HOST) && !M68K && !COOPERATIVE
  	---help---
  	  i8042 is the chip over which the standard AT keyboard and PS/2
  	  mouse are connected to the computer. If you use these devices,
@@ -2952,7 +2939,7 @@ diff -urN a/drivers/net/Makefile b/drivers/net/Makefile
 diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 --- a/drivers/net/conet.c
 +++ b/drivers/net/conet.c
-@@ -0,0 +1,309 @@
+@@ -0,0 +1,305 @@
 +/*
 + *  Copyright (C) 2003-2004 Dan Aloni <da-x@gmx.net>
 + *  Copyright (C) 2004 Pat Erley
@@ -3016,8 +3003,6 @@ diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 +	if (priv->enabled)
 +		return 0;
 +
-+	MOD_INC_USE_COUNT;
-+
 +	conet_get_mac(priv->unit, dev->dev_addr);
 +
 +	priv->enabled = 1;
@@ -3034,8 +3019,6 @@ diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 +	priv->enabled = 0;
 +
 +	netif_stop_queue(dev); /* can't transmit any more */
-+
-+	MOD_DEC_USE_COUNT;
 +
 +	return 0;
 +}
@@ -3307,8 +3290,8 @@ diff -urN a/drivers/video/console/Makefile b/drivers/video/console/Makefile
  obj-$(CONFIG_VGA_CONSOLE)         += vgacon.o
 +obj-$(CONFIG_COOPERATIVE_CONSOLE) += cocon.o
  obj-$(CONFIG_MDA_CONSOLE)         += mdacon.o
- obj-$(CONFIG_FRAMEBUFFER_CONSOLE) += fbcon.o font.o
- 
+ obj-$(CONFIG_FRAMEBUFFER_CONSOLE) += fbcon.o bitblit.o font.o
+ obj-$(CONFIG_FB_TILEBLITTING)     += tileblit.o
 diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 --- a/drivers/video/console/cocon.c
 +++ b/drivers/video/console/cocon.c
@@ -3780,7 +3763,7 @@ diff -urN a/drivers/video/console/cocon.c b/drivers/video/console/cocon.c
 diff -urN a/fs/Kconfig b/fs/Kconfig
 --- a/fs/Kconfig
 +++ b/fs/Kconfig
-@@ -1716,6 +1716,18 @@
+@@ -1758,6 +1758,18 @@
  
  source "fs/ncpfs/Kconfig"
  
@@ -3802,7 +3785,7 @@ diff -urN a/fs/Kconfig b/fs/Kconfig
 diff -urN a/fs/Makefile b/fs/Makefile
 --- a/fs/Makefile
 +++ b/fs/Makefile
-@@ -93,3 +93,5 @@
+@@ -94,3 +94,5 @@
  obj-$(CONFIG_BEFS_FS)		+= befs/
  obj-$(CONFIG_HOSTFS)		+= hostfs/
  obj-$(CONFIG_HPPFS)		+= hppfs/
@@ -5136,7 +5119,7 @@ diff -urN a/fs/cofusefs/dir.c b/fs/cofusefs/dir.c
 +	if(!(fc->flags & FUSE_ALLOW_OTHER) && current->fsuid != fc->uid)
 +		return -EACCES;
 +	else if(fc->flags & FUSE_DEFAULT_PERMISSIONS) {
-+		int err = vfs_permission(inode, mask);
++		int err = generic_permission(inode, mask, NULL);
 +
 +		/* If permission is denied, try to refresh file
 +		   attributes.  This is also needed, because the root
@@ -5145,7 +5128,7 @@ diff -urN a/fs/cofusefs/dir.c b/fs/cofusefs/dir.c
 +		if(err == -EACCES) {
 +		 	err = fuse_do_getattr(inode);
 +			if(!err)
-+			 	err = vfs_permission(inode, mask);
++			 	err = generic_permission(inode, mask, NULL);
 +		}
 +
 +		/* FIXME: Need some mechanism to revoke permissions:
@@ -7380,7 +7363,7 @@ diff -urN a/include/asm-i386/cooperative.h b/include/asm-i386/cooperative.h
 diff -urN a/include/asm-i386/cooperative_internal.h b/include/asm-i386/cooperative_internal.h
 --- a/include/asm-i386/cooperative_internal.h
 +++ b/include/asm-i386/cooperative_internal.h
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,33 @@
 +/*
 + *  linux/include/asm/cooperative_internal.h
 + *
@@ -7397,6 +7380,8 @@ diff -urN a/include/asm-i386/cooperative_internal.h b/include/asm-i386/cooperati
 +
 +extern void co_kernel_breakpoint(struct pt_regs * regs);
 +extern int co_kernel_debug(struct pt_regs * regs, long error_code, unsigned int condition);
++
++fastcall unsigned int do_IRQ(struct pt_regs *regs);
 +
 +#else
 +
@@ -7463,7 +7448,7 @@ diff -urN a/include/asm-i386/io.h b/include/asm-i386/io.h
  extern void iounmap(volatile void __iomem *addr);
  
  /*
-@@ -308,7 +311,7 @@
+@@ -280,7 +283,7 @@
  
  #endif /* __KERNEL__ */
  
@@ -7691,7 +7676,7 @@ diff -urN a/include/asm-i386/pgtable.h b/include/asm-i386/pgtable.h
 diff -urN a/include/asm-i386/processor.h b/include/asm-i386/processor.h
 --- a/include/asm-i386/processor.h
 +++ b/include/asm-i386/processor.h
-@@ -181,8 +181,7 @@
+@@ -182,8 +182,7 @@
  }
  
  #define load_cr3(pgdir) \
@@ -7705,20 +7690,20 @@ diff -urN a/include/asm-i386/timer.h b/include/asm-i386/timer.h
 --- a/include/asm-i386/timer.h
 +++ b/include/asm-i386/timer.h
 @@ -19,7 +19,7 @@
+ struct timer_opts {
  	char* name;
- 	int (*init)(char *override);
  	void (*mark_offset)(void);
 -	unsigned long (*get_offset)(void);
 +	long (*get_offset)(void);
  	unsigned long long (*monotonic_clock)(void);
  	void (*delay)(unsigned long);
  };
-@@ -44,6 +44,9 @@
+@@ -50,6 +50,9 @@
  #ifdef CONFIG_X86_CYCLONE_TIMER
- extern struct timer_opts timer_cyclone;
+ extern struct init_timer_opts timer_cyclone_init;
  #endif
 +#ifdef CONFIG_COOPERATIVE
-+extern struct timer_opts timer_cooperative;
++extern struct init_timer_opts timer_cooperative_init;
 +#endif
  
  extern unsigned long calibrate_tsc(void);
@@ -8436,7 +8421,7 @@ diff -urN a/init/do_mounts.c b/init/do_mounts.c
 diff -urN a/init/main.c b/init/main.c
 --- a/init/main.c
 +++ b/init/main.c
-@@ -528,6 +528,7 @@
+@@ -537,6 +537,7 @@
  		panic(panic_later, panic_param);
  	profile_init();
  	local_irq_enable();
@@ -8447,10 +8432,10 @@ diff -urN a/init/main.c b/init/main.c
 diff -urN a/kernel/Makefile b/kernel/Makefile
 --- a/kernel/Makefile
 +++ b/kernel/Makefile
-@@ -24,6 +24,7 @@
- obj-$(CONFIG_AUDIT) += audit.o
- obj-$(CONFIG_AUDITSYSCALL) += auditsc.o
+@@ -26,6 +26,7 @@
  obj-$(CONFIG_KPROBES) += kprobes.o
+ obj-$(CONFIG_SYSFS) += ksysfs.o
+ obj-$(CONFIG_GENERIC_HARDIRQS) += irq/
 +obj-$(CONFIG_COOPERATIVE) += cooperative.o
  
  ifneq ($(CONFIG_IA64),y)
@@ -8784,15 +8769,15 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 diff -urN a/kernel/panic.c b/kernel/panic.c
 --- a/kernel/panic.c
 +++ b/kernel/panic.c
-@@ -19,6 +19,7 @@
- #include <linux/syscalls.h>
+@@ -18,6 +18,7 @@
+ #include <linux/sysrq.h>
  #include <linux/interrupt.h>
  #include <linux/nmi.h>
 +#include <linux/cooperative_internal.h>
  
  int panic_timeout;
  int panic_on_oops;
-@@ -62,6 +63,10 @@
+@@ -71,6 +72,10 @@
  	printk(KERN_EMERG "Kernel panic - not syncing: %s\n",buf);
  	bust_spinlocks(0);
  
@@ -8806,7 +8791,7 @@ diff -urN a/kernel/panic.c b/kernel/panic.c
 diff -urN a/kernel/printk.c b/kernel/printk.c
 --- a/kernel/printk.c
 +++ b/kernel/printk.c
-@@ -33,6 +33,8 @@
+@@ -34,6 +34,8 @@
  
  #include <asm/uaccess.h>
  
@@ -8815,7 +8800,7 @@ diff -urN a/kernel/printk.c b/kernel/printk.c
  #define __LOG_BUF_LEN	(1 << CONFIG_LOG_BUF_SHIFT)
  
  /* printk's without a loglevel use this.. */
-@@ -536,6 +538,8 @@
+@@ -538,6 +540,8 @@
  	/* Emit the output into the temporary buffer */
  	printed_len = vscnprintf(printk_buf, sizeof(printk_buf), fmt, args);
  
@@ -8829,3 +8814,6 @@ diff -urN a/localversion b/localversion
 +++ b/localversion
 @@ -0,0 +1 @@
 +-co-0.6.2-pre7
+diff -urN a/scripts/kconfig/libkconfig.so b/scripts/kconfig/libkconfig.so
+--- a/scripts/kconfig/libkconfig.so
++++ b/scripts/kconfig/libkconfig.so
