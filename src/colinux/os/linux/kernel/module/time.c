@@ -28,8 +28,6 @@ void co_os_get_timestamp(co_timestamp_t *dts)
 	dts->quad = tv.tv_sec;
 	dts->quad *= 1000000;
         dts->quad += tv.tv_usec;
-
-	printk("%d,%d\n", tv.tv_sec, tv.tv_usec);
 }
 
 void co_os_get_timestamp_freq(co_timestamp_t *dts)

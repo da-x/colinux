@@ -16,9 +16,10 @@
     deamon named colinux-debug-deamon, which collects debug messages
     from all the coLinux components. This also changes the way things
     are printed when you run the daemon (it is now easier to see
-    what belongs to what).
-  * An API version number was added to make sure that use you the
-    right vmlinux and userspace executables with the right coLinux 
+    what belongs to what). All debug messages are off by default,
+    so things my go a little faster.
+  * An API version number was added to make sure that you use the
+    right vmlinux and user-space executables with the right coLinux 
     driver (otherwise it can cause crashes if the APIs changes).
   * Bug fix: A tiny memory leak when coLinux is shutting down.
   * Bug fix: Proper reference counting of the driver in the Linux
@@ -30,6 +31,11 @@
     XML and expect coLinux to mount it, even when passed with root=.
     NOTE: The cobdX device and its alias are mutual exclusive, which
     means that you can't mount both of them at the same time. 
+  * Bug fix: Proper floating point state preservation in the Linux
+    guest. coLinux now passes the flops20 test program.
+  * Implemented a new timer for the Linux guest, this should fix
+    time-going-back issues.
+  * Improved message passing, which may boost networking a bit.
   
 * Version 0.6.1 
   * Multiple virtual NICs are supported (eth1, eth2, etc...).
