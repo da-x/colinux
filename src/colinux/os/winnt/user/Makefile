@@ -14,6 +14,7 @@ LOCAL_OBJS = \
 	misc.o \
 	osdep.o \
 	poll.o \
+	timer.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

@@ -15,8 +15,9 @@
 #include <colinux/common/import.h>
 #include <colinux/common/ioctl.h>
 #include <colinux/common/console.h>
+#include <colinux/common/messages.h>
 #include <colinux/os/kernel/mutex.h>
-#include <colinux/os/kernel/timer.h>
+#include <colinux/os/timer.h>
 
 struct co_monitor_device;
 struct co_monitor;
@@ -34,12 +35,9 @@ typedef struct co_monitor_device {
 } co_monitor_device_t;
 
 typedef enum {
-	CO_MONITOR_STATE_START,
 	CO_MONITOR_STATE_INITIALIZED,
 	CO_MONITOR_STATE_RUNNING,
-	CO_MONITOR_STATE_AWAITING_TERMINATION,
-	CO_MONITOR_STATE_UNLOADING,
-	CO_MONITOR_STATE_DOWN,
+	CO_MONITOR_STATE_TERMINATED,
 } co_monitor_state_t;
 
 typedef enum {
@@ -160,6 +158,7 @@ typedef struct co_monitor {
 	 * Devices
 	 */
 	co_monitor_device_t devices[CO_DEVICES_TOTAL];
+	bool_t timer_interrupt;
 
 	/*
 	 * Timer
@@ -178,12 +177,19 @@ typedef struct co_monitor {
 	co_queue_t console_queue;
 	co_console_t *console;
 	unsigned long console_poll_cancel;
+
+	co_message_switch_t message_switch;
+	co_queue_t user_message_queue;
+	co_queue_t linux_message_queue;
 } co_monitor_t;
 
-extern co_rc_t co_monitor_init(co_monitor_t *cmon, co_manager_ioctl_create_t *params);
-extern co_rc_t co_monitor_load_section(co_monitor_t *cmon, co_monitor_ioctl_load_section_t *params);
-extern co_rc_t co_monitor_run(co_monitor_t *cmon);
-extern co_rc_t co_monitor_terminate(co_monitor_t *cmon);
+extern co_rc_t co_monitor_create(struct co_manager *manager, co_manager_ioctl_create_t *params, 
+				 co_monitor_t **cmon_out);
+extern co_rc_t co_monitor_destroy(co_monitor_t *cmon);
+
+extern co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buffer,
+				unsigned long in_size, unsigned long out_size, 
+				unsigned long *return_size, void **private_data);
 
 extern co_rc_t co_monitor_alloc_pages(co_monitor_t *cmon, unsigned long pages, void **address);
 extern co_rc_t co_monitor_free_pages(co_monitor_t *cmon, unsigned long pages, void *address);

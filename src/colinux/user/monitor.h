@@ -31,7 +31,9 @@ extern co_rc_t co_user_monitor_any(co_user_monitor_t *monitor, co_monitor_ioctl_
 
 extern co_rc_t co_user_monitor_load_section(co_user_monitor_t *umon, 
 					    co_monitor_ioctl_load_section_t *params);
-extern co_rc_t co_user_monitor_run(co_user_monitor_t *umon);
+extern co_rc_t co_user_monitor_run(co_user_monitor_t *umon, co_monitor_ioctl_run_t *params,
+				   unsigned long in_size, unsigned long out_size);
+extern co_rc_t co_user_monitor_start(co_user_monitor_t *umon);
 
 extern co_rc_t co_user_monitor_get_console(co_user_monitor_t *umon, co_console_t **console);
 extern co_rc_t co_user_monitor_console_messages(co_user_monitor_t *umon, 

@@ -1,7 +1,7 @@
 /*
  * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@gmx.net>, 2003 (c)
+ * Dan Aloni <da-x@gmx.net>, 2003-2004 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
@@ -11,8 +11,9 @@
 #include <asm/pgtable.h>
 
 #include <memory.h>
+
 /*
- * The main monitor code.
+ * Monitor
  *
  * FIXME: It should be architecture independant, but I am not sure if it
  * currently achieves that goal. Maybe with a few fixes...
@@ -90,22 +91,6 @@ void co_monitor_free_kernel_image(co_monitor_t *cmon)
 		co_monitor_free_pages(cmon, cmon->core_pages, cmon->core_image);
 		cmon->core_image = NULL;
 	}
-}
-
-co_rc_t co_monitor_load_section(co_monitor_t *cmon, co_monitor_ioctl_load_section_t *params)
-{
-	unsigned long load_size;
-	unsigned char *load_address;
-
-	load_address = ((unsigned char *)cmon->core_image) + params->address - cmon->core_vaddr;
-	load_size = params->size;
-
-	if (params->user_ptr)
-		memcpy(load_address, params->buf, load_size);
-	else
-		memset(load_address, 0, load_size);
-
-	return CO_RC(OK);
 }
 
 co_rc_t co_monitor_colinux_context_alloc_maps(co_monitor_t *cmon)
@@ -487,15 +472,16 @@ co_rc_t co_monitor_colinux_context_init(co_monitor_t *cmon)
 
 	/* Error path */
 out_error:
+
 	co_monitor_free_pages(cmon, cmon->bootmem_pages, cmon->bootmem);
-
 out_after_free_bootmem:
+
 	co_monitor_colinux_context_free_maps(cmon);
-
 out_after_free_maps:
-	co_monitor_arch_passage_page_free(cmon);
 
+	co_monitor_arch_passage_page_free(cmon);
 out_after_free_passage_page:		
+
 	return rc;
 }
 
@@ -506,8 +492,6 @@ void co_monitor_colinux_context_free(co_monitor_t *cmon)
 	co_monitor_colinux_context_free_maps(cmon);
 	co_monitor_arch_passage_page_free(cmon);
 	co_monitor_free_pages(cmon, cmon->bootmem_pages, cmon->bootmem);
-
-	co_monitor_free_kernel_image(cmon);
 }
 
 bool_t co_monitor_device_request(co_monitor_t *cmon, co_device_t device, unsigned long *params)
@@ -530,27 +514,46 @@ bool_t co_monitor_device_request(co_monitor_t *cmon, co_device_t device, unsigne
 		return PTRUE;
 	}
 
-	case CO_DEVICE_CONSOLE: {
-		co_monitor_console_send_near(cmon, params);
-		break;
-	}
-
-	case CO_DEVICE_NETWORK: {
-		co_monitor_device_t *mon_device;
-
-		mon_device = co_monitor_get_device(cmon, device);
-
-		co_monitor_network_send_near(cmon, mon_device, params);
-
-		co_monitor_put_device(cmon, mon_device);
-
-		break;
-	}
 	default:
 		break;
 	}	
 
 	return PTRUE;
+}
+
+co_rc_t co_monitor_send_messages_to_linux(co_monitor_t *cmon)
+{
+	co_message_queue_item_t *message_item;
+	co_message_t *message;
+	unsigned long total_size;
+	long num_messages;
+	co_rc_t rc;
+
+	co_passage_page->operation = CO_OPERATION_EMPTY;
+	co_passage_page->params[0] = 0;
+
+	num_messages = co_queue_size(&cmon->linux_message_queue);
+	if (num_messages == 0)
+		return CO_RC(OK);
+
+	rc = co_queue_pop_tail(&cmon->linux_message_queue, (void **)&message_item);
+	if (!CO_OK(rc))
+		return rc;
+
+	message = message_item->message;
+	total_size = message->size + sizeof(*message);
+
+	if (total_size > 2000)
+		return CO_RC(OK);
+
+	co_passage_page->operation = CO_OPERATION_MESSAGE_FROM_MONITOR;
+	co_passage_page->params[0] = num_messages - 1;
+	memcpy(&co_passage_page->params[1], message, total_size);
+
+	co_queue_free(&cmon->linux_message_queue, message_item);
+	co_os_free(message);
+
+	return CO_RC(OK);
 }
 
 bool_t co_monitor_iteration(co_monitor_t *cmon)
@@ -560,52 +563,76 @@ bool_t co_monitor_iteration(co_monitor_t *cmon)
 	switch (co_passage_page->operation) {
 	case CO_OPERATION_FORWARD_INTERRUPT: {
 		co_monitor_arch_real_hardware_interrupt(cmon);
-		co_monitor_check_devices(cmon);
-		return PTRUE;
-	}
-	case CO_OPERATION_IDLE: {
-		co_monitor_os_idle(cmon);
-		co_monitor_check_devices(cmon);
-		return PTRUE;
-	}
-	case CO_OPERATION_MORE_DATA: {
-		co_monitor_check_devices(cmon);
-		return PTRUE;
-	}
-	case CO_OPERATION_TERMINATE:
-		co_debug("Linux terminated (%d)\n", co_passage_page->params[0]);
+		if (cmon->timer_interrupt) {
+			struct {
+				co_message_t message;
+				co_linux_message_t linux;
+			} message;
+
+			cmon->timer_interrupt = PFALSE;
+
+			message.message.from = CO_MODULE_MONITOR;
+			message.message.to = CO_MODULE_LINUX;
+			message.message.priority = CO_PRIORITY_DISCARDABLE;
+			message.message.type = CO_MESSAGE_TYPE_OTHER;
+			message.message.size = sizeof(message.linux);
+			message.linux.device = CO_DEVICE_TIMER;
+			message.linux.unit = 0;
+			message.linux.size = 0;
+
+			co_message_switch_dup_message(&cmon->message_switch, &message.message);
+		}
+
+		co_monitor_send_messages_to_linux(cmon);
 		return PFALSE;
-
-	case CO_OPERATION_DEBUG_LINE: {
-		char *p = (char *)&co_passage_page->params[0];
-		p[0x200] = '\0';
-		co_debug_line(p);
-
-		break;
 	}
+	case CO_OPERATION_TERMINATE: {
+		struct {
+			co_message_t message;
+			co_daemon_message_t payload;
+		} message;
+		
+		co_debug("Linux terminated (%d)\n", co_passage_page->params[0]);
+		message.message.from = CO_MODULE_MONITOR;
+		message.message.to = CO_MODULE_DAEMON;
+		message.message.priority = CO_PRIORITY_IMPORTANT;
+		message.message.type = CO_MESSAGE_TYPE_OTHER;
+		message.message.size = sizeof(message.payload);
+		message.payload.type = CO_MONITOR_MESSAGE_TYPE_TERMINATED;
+		message.payload.terminated.reason = co_passage_page->params[0];
+
+		co_message_switch_dup_message(&cmon->message_switch, &message.message);
+
+		cmon->state = CO_MONITOR_STATE_TERMINATED;
+		return PFALSE;
+	}
+	case CO_OPERATION_MESSAGE_FROM_MONITOR: {
+		co_monitor_send_messages_to_linux(cmon);
+		return PTRUE;
+	}
+	case CO_OPERATION_MESSAGE_TO_MONITOR: {
+		co_message_t *message, *copy;
+		co_rc_t rc;
+
+		message = (co_message_t *)(&co_passage_page->params[1]);
+
 #if (0)
-        /*
-	 * Once upon a time, all of coLinux's pseudo physical memory wasn't
-	 * all allocated from the start. So instead, I modified __alloc_pages()
-	 * and __free_pages() to call these interfaces below accordingly. 
-	 *
-	 * We can use this method sometime again in the future because it can 
-	 * potentially save some run-time memory, but on the long run, the 
-	 * entire coLinux's RAM is going to be used anyway for cache, so we 
-	 * aren't saving much memory with this method anyway.
-	 */ 
-	case CO_OPERATION_ALLOC_PAGE: {
-		unsigned long colx_vaddr = co_passage_page->params[0];
-		unsigned long num = 1 << co_passage_page->params[1];
-
-		return co_monitor_alloc_and_map(cmon, colx_vaddr, num);
-	}
-	case CO_OPERATION_FREE_PAGE: {
-		unsigned long colx_vaddr = co_passage_page->params[0];
-
-		return co_monitor_unmap_and_free(cmon, colx_vaddr);
-	}
+		co_debug("Message: %d:%d [%d] <%d> (%d) '%c%c%c'\n", 
+			 message->from, message->to, message->priority,
+			 message->type, message->size, 
+			 message->size >= 1 ? message->data[0] : ' ',
+			 message->size >= 2 ? message->data[1] : ' ',
+			 message->size >= 3 ? message->data[2] : ' ');
 #endif
+
+		rc = co_message_dup(message, &copy);
+		if (!CO_OK(rc))
+			return PFALSE;
+
+		rc = co_message_switch_message(&cmon->message_switch, copy);
+		
+		return PFALSE;
+	}
 	case CO_OPERATION_DEVICE: {
 		unsigned long device = co_passage_page->params[0];
 
@@ -660,24 +687,63 @@ out:
 	return rc;
 }
 
-
 void co_monitor_timer_cb(void *data)
 {
 	co_monitor_t *cmon = (co_monitor_t *)data;
 
-	co_monitor_signal_device(cmon, CO_DEVICE_TIMER);
+	cmon->timer_interrupt = PTRUE;
 }
 
-co_rc_t co_monitor_init(co_monitor_t *cmon, co_manager_ioctl_create_t *params)
+co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *params, co_monitor_t **cmon_out)
 {
-	co_rc_t rc = CO_RC_OK;
 	co_symbols_import_t *import = &params->import;
- 
-	if (cmon->state != CO_MONITOR_STATE_START) {
-		co_debug("Tried to init cmon during an invalid state (%d)\n",
-			 cmon->state);
-		return CO_RC(ERROR);
+	co_monitor_t *cmon;
+	unsigned long pages;
+	co_rc_t rc = CO_RC_OK;
+
+	manager->monitors_count++;
+
+	pages = (sizeof(*cmon) + PAGE_SIZE - 1)/PAGE_SIZE;
+	cmon = co_os_alloc_pages(pages);
+	if (!cmon) {
+		rc = CO_RC(OUT_OF_MEMORY);
+		goto out;
 	}
+
+	memset(cmon, 0, pages * PAGE_SIZE);
+	cmon->manager = manager;
+	cmon->state = CO_MONITOR_STATE_INITIALIZED;
+	cmon->console_state = CO_MONITOR_CONSOLE_STATE_DETACHED;
+	co_message_switch_init(&cmon->message_switch);
+
+	rc = co_console_create(80, 25, 25, &cmon->console);
+	if (!CO_OK(rc))
+		goto out_free;
+
+	rc = co_queue_init(&cmon->console_queue);
+	if (!CO_OK(rc))
+		goto out_free_console;
+
+	rc = co_queue_init(&cmon->user_message_queue);
+	if (!CO_OK(rc))
+		goto out_free_console_queue;
+
+	co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_PRINTK, &cmon->user_message_queue);
+	co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_DAEMON, &cmon->user_message_queue);
+
+	rc = co_queue_init(&cmon->linux_message_queue);
+	if (!CO_OK(rc))
+		goto out_free_user_message_queue;
+
+	co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_LINUX, &cmon->linux_message_queue);
+
+	rc = co_os_mutex_create(&cmon->console_mutex);
+	if (!CO_OK(rc))
+		goto out_free_linux_message_queue;
+	
+	rc = co_monitor_os_init(cmon);
+	if (!CO_OK(rc))
+		goto out_free_console_mutex;
 
 	cmon->core_vaddr = import->kernel_start;
 	cmon->core_pages = (import->kernel_end - import->kernel_start + 
@@ -685,7 +751,7 @@ co_rc_t co_monitor_init(co_monitor_t *cmon, co_manager_ioctl_create_t *params)
 
 	rc = co_monitor_alloc_pages(cmon, cmon->core_pages, &cmon->core_image);
 	if (!CO_OK(rc))
-		goto out_error;
+		goto out_free_os_dep;
 	
 	cmon->core_end = cmon->core_vaddr + (cmon->core_pages << PAGE_SHIFT);
 	cmon->import = params->import;
@@ -737,7 +803,9 @@ co_rc_t co_monitor_init(co_monitor_t *cmon, co_manager_ioctl_create_t *params)
 
 	cmon->state = CO_MONITOR_STATE_INITIALIZED;
 
-	return rc;
+	*cmon_out = cmon;
+
+	return CO_RC(OK);
 
 /* error path */
 out_unregister_block_devs:
@@ -749,44 +817,108 @@ out_destroy_timer:
 out_free_image:
 	co_monitor_free_kernel_image(cmon);
 
-out_error:
-	while (1) {};
+out_free_os_dep:
+	co_monitor_os_exit(cmon);
+
+out_free_console_mutex:
+	co_os_mutex_destroy(cmon->console_mutex);
+
+out_free_linux_message_queue:
+	co_queue_flush(&cmon->linux_message_queue);
+
+out_free_user_message_queue:
+	co_queue_flush(&cmon->user_message_queue);
+
+out_free_console_queue:
+	co_queue_flush(&cmon->console_queue);
+
+out_free_console:
+	co_console_destroy(cmon->console);
+
+out_free:
+	co_os_free_pages(cmon, pages);
+
+out:
+	manager->monitors_count--;
 	return rc;
 }
 
-co_rc_t co_monitor_unload(co_monitor_t *cmon)
+co_rc_t co_monitor_load_section(co_monitor_t *cmon, co_monitor_ioctl_load_section_t *params)
 {
-	co_rc_t rc = CO_RC_OK;
+	unsigned long load_size;
+	unsigned char *load_address;
+
+	if (cmon->state != CO_MONITOR_STATE_INITIALIZED)
+		return CO_RC(ERROR);
+
+	load_address = ((unsigned char *)cmon->core_image) + params->address - cmon->core_vaddr;
+	load_size = params->size;
+
+	if (params->user_ptr)
+		memcpy(load_address, params->buf, load_size);
+	else
+		memset(load_address, 0, load_size);
+
+	return CO_RC(OK);
+}
+
+
+co_rc_t co_monitor_destroy(co_monitor_t *cmon)
+{
+	unsigned long pages;
+	co_manager_t *manager;
+
+	co_debug("Monitor destroy\n");
 
 	co_debug("cmon before free: %d kb, %d blocks\n", 
-		    (cmon->allocated_pages_num << PAGE_SHIFT) >> 10,
-		    cmon->blocks_allocated);
+		 (cmon->allocated_pages_num << PAGE_SHIFT) >> 10,
+		 cmon->blocks_allocated);
 
-	co_monitor_colinux_context_free(cmon);
+	pages = (sizeof(*cmon) + PAGE_SIZE - 1)/PAGE_SIZE;
+
+	manager = cmon->manager;
+
+	if (cmon->state >= CO_MONITOR_STATE_RUNNING) {
+		co_os_timer_deactivate(cmon->timer);
+		co_monitor_colinux_context_free(cmon);
+	}
+
 	co_monitor_unregister_and_free_block_devices(cmon);
 	co_monitor_cleanup_devices(cmon);
-	co_os_timer_destroy(cmon->timer);
+	co_monitor_free_kernel_image(cmon);
+	co_monitor_os_exit(cmon);
+	co_os_mutex_destroy(cmon->console_mutex);
+	co_queue_flush(&cmon->linux_message_queue);
+	co_queue_flush(&cmon->user_message_queue);
+	co_queue_flush(&cmon->console_queue);
+	co_console_destroy(cmon->console);
 
 	co_debug("cmon after free: %d kb, %d blocks\n", 
-		    (cmon->allocated_pages_num << PAGE_SHIFT) >> 10,
-		    cmon->blocks_allocated);
-	
-	return rc;
+		 (cmon->allocated_pages_num << PAGE_SHIFT) >> 10,
+		 cmon->blocks_allocated);
+
+	co_os_free_pages(cmon, pages);
+
+	manager->monitors_count--;
+
+	return CO_RC_OK;
 }
 
-co_rc_t co_monitor_run(co_monitor_t *cmon)
+co_rc_t co_monitor_start(co_monitor_t *cmon)
 {
 	co_rc_t rc;
 
+	if (cmon->state != CO_MONITOR_STATE_INITIALIZED) {
+		co_debug("Invalid state\n");
+		return CO_RC(ERROR);
+	}
+		
 	rc = co_monitor_colinux_context_init(cmon);
 	if (!CO_OK(rc)) {
 		co_debug("Error initializing coLinux context (%d)\n", rc);
 		return rc;
 	}
 
-	cmon->state = CO_MONITOR_STATE_RUNNING;	
-
-	/* Be ready to receive timer devices for the coLinux machine */
 	co_os_timer_activate(cmon->timer);
 
 	co_passage_page->operation = CO_OPERATION_START;
@@ -795,28 +927,108 @@ co_rc_t co_monitor_run(co_monitor_t *cmon)
 	co_passage_page->params[2] = cmon->memory_size;
 	co_passage_page->params[3] = cmon->pa_maps_size;
 
-	while (co_monitor_iteration(cmon));
-
-	co_os_timer_deactivate(cmon->timer);
-
-	cmon->state = CO_MONITOR_STATE_AWAITING_TERMINATION;
-
-	if (cmon->console_state == CO_MONITOR_CONSOLE_STATE_ATTACHED)
-		co_monitor_os_wait_console_detach(cmon);
-
-	cmon->state = CO_MONITOR_STATE_UNLOADING;	
-
-	co_monitor_unload(cmon);
-
-	cmon->state = CO_MONITOR_STATE_DOWN;
+	cmon->state = CO_MONITOR_STATE_RUNNING;
 
 	return CO_RC(OK);
 }
 
-co_rc_t co_monitor_terminate(co_monitor_t *cmon)
+
+co_rc_t co_monitor_run(co_monitor_t *cmon,
+		       co_monitor_ioctl_run_t *params,
+		       unsigned long out_size,
+		       unsigned long *return_size)
 {
-	co_debug("Terminating coLinux\n");
-	
-	return co_monitor_signal_device(cmon, CO_DEVICE_POWER);
+	unsigned long queue_items, size_left;
+	co_rc_t rc = CO_RC_OK;
+	char *params_data;
+	int i;
+
+	/* Get messages from userspace */
+	params_data = params->data;
+	for (i=0; i < params->num_messages; i++) {
+		co_message_t *message = (typeof(message))params_data, *copy;
+
+		rc = co_message_dup(message, &copy);
+		if (CO_OK(rc))
+			co_message_switch_message(&cmon->message_switch, copy);
+		
+		params_data += message->size + sizeof(*message);
+	}
+
+	if (cmon->state == CO_MONITOR_STATE_RUNNING) {
+		/* Switch back and forth from Linux */
+
+		while (co_monitor_iteration(cmon));
+	}
+
+	/* Flush messages to userspace */
+	*return_size = sizeof(*params);
+	params->num_messages = 0;
+
+	if (co_queue_size(&cmon->user_message_queue) == 0)
+		return CO_RC(OK);
+		
+	params_data = params->data;
+	size_left = out_size - sizeof(*params);
+
+	queue_items = co_queue_size(&cmon->user_message_queue);
+	while (queue_items > 0) {
+		co_message_queue_item_t *message_item;
+		unsigned long total_size;
+		co_message_t *message;
+			
+		rc = co_queue_pop_tail(&cmon->user_message_queue, (void **)&message_item);
+		if (!CO_OK(rc))
+			break;
+
+		message = message_item->message;
+		total_size = message->size + sizeof(*message);
+
+		if (total_size > size_left) {
+			co_queue_add_tail(&cmon->user_message_queue, message_item);
+			break;
+		}				
+			
+		memcpy(params_data, message, total_size);
+
+		queue_items -= 1;
+		size_left -= total_size;
+		params_data += total_size;
+		params->num_messages += 1;
+
+		co_queue_free(&cmon->user_message_queue, message_item);
+		co_os_free(message);
+	}
+
+	*return_size = (char *)params_data - (char *)params;
+
+	return CO_RC(OK);
 }
 
+co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buffer,
+			 unsigned long in_size, unsigned long out_size, 
+			 unsigned long *return_size, void **private_data)
+{
+	co_rc_t rc = CO_RC_ERROR;
+
+	switch (io_buffer->op) {
+	case CO_MONITOR_IOCTL_DESTROY: {
+		co_monitor_destroy(cmon);
+		*private_data = NULL;
+		return CO_RC_OK;
+	}
+	case CO_MONITOR_IOCTL_LOAD_SECTION: {
+		return co_monitor_load_section(cmon, (co_monitor_ioctl_load_section_t *)io_buffer);
+	}
+	case CO_MONITOR_IOCTL_START: {
+		return co_monitor_start(cmon);
+	}
+	case CO_MONITOR_IOCTL_RUN: {
+		return co_monitor_run(cmon, (co_monitor_ioctl_run_t *)io_buffer, out_size, return_size);
+	}
+	default:
+		return rc;
+	}
+
+	return rc;
+}

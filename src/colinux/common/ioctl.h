@@ -33,7 +33,6 @@ typedef struct {
 /* interface for CO_MANAGER_IOCTL_CREATE: */
 typedef struct {
 	co_rc_t rc;
-	co_id_t new_id;
 	co_symbols_import_t import;
 	co_config_t config;
 } co_manager_ioctl_create_t;
@@ -44,6 +43,7 @@ typedef struct {
 typedef enum {
 	CO_MONITOR_IOCTL_DESTROY,
 	CO_MONITOR_IOCTL_LOAD_SECTION, 
+	CO_MONITOR_IOCTL_START,
 	CO_MONITOR_IOCTL_RUN,
 
 	CO_MONITOR_IOCTL_ATTACH_CONSOLE, 
@@ -69,7 +69,6 @@ typedef enum {
 /* interface for CO_MANAGER_IOCTL_MONITOR: */
 typedef struct {
 	co_rc_t rc;
-	co_id_t id;
 	co_monitor_ioctl_op_t op;
 	char extra_data[];
 } co_manager_ioctl_monitor_t;
@@ -105,6 +104,26 @@ typedef struct {
 	unsigned long num_messages;
 	char data[];
 } co_monitor_ioctl_console_messages_t;
+
+/* interface for CO_MONITOR_IOCTL_RUN: */
+typedef struct {
+	co_manager_ioctl_monitor_t pc;
+	unsigned long num_messages;
+	char data[];
+} co_monitor_ioctl_run_t;
+
+typedef enum {
+	CO_MONITOR_MESSAGE_TYPE_TERMINATED,
+} co_monitor_message_type_t;
+
+typedef struct {
+	co_monitor_message_type_t type;
+	union {
+		struct {
+			co_termination_reason_t reason;
+		} terminated;
+	};
+} co_daemon_message_t;
 
 typedef enum {
 	CO_MONITOR_IOCTL_CONSOLE_MESSAGE_NORMAL,

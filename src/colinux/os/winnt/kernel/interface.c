@@ -57,6 +57,17 @@ co_manager_dispatch(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 	outputBufferLength = irpStack->Parameters.DeviceIoControl.OutputBufferLength;
 
 	switch (irpStack->MajorFunction) {
+	case IRP_MJ_CREATE: 
+		irpStack->FileObject->FsContext = NULL;
+		break;
+
+	case IRP_MJ_CLOSE: 
+		break;
+
+	case IRP_MJ_CLEANUP: {
+		co_manager_cleanup(&irpStack->FileObject->FsContext);
+		break;
+	}
     
 	case IRP_MJ_DEVICE_CONTROL: 
 		ioControlCode = irpStack->Parameters.DeviceIoControl.IoControlCode;
@@ -81,12 +92,14 @@ co_manager_dispatch(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 		rc = co_manager_ioctl(co_manager, ioctl, ioBuffer, 
 				      inputBufferLength,
 				      outputBufferLength,
-				      &Irp->IoStatus.Information);
+				      &Irp->IoStatus.Information,
+				      (void **)&irpStack->FileObject->FsContext);
 
 		if (!CO_OK(rc))
 			Irp->IoStatus.Status = STATUS_INVALID_PARAMETER; 
 
 		break;
+
 	}
 
 	ntStatus = Irp->IoStatus.Status;
@@ -153,6 +166,7 @@ DriverEntry(
 
 	DriverObject->MajorFunction[IRP_MJ_CREATE]         =
 	DriverObject->MajorFunction[IRP_MJ_CLOSE]          =
+	DriverObject->MajorFunction[IRP_MJ_CLEANUP]        =
 	DriverObject->MajorFunction[IRP_MJ_DEVICE_CONTROL] = co_manager_dispatch;
 	DriverObject->DriverUnload                         = co_manager_unload;
 

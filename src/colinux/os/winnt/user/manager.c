@@ -5,7 +5,6 @@
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
- *
  */ 
 
 #include <windows.h>
@@ -137,7 +136,7 @@ coui_remove_driver(
 	else
 		rc = CO_RC(ERROR_REMOVING_DRIVER);
  
-	CloseServiceHandle (schService); 
+	CloseServiceHandle(schService); 
  
 	return rc; 
 } 
@@ -165,15 +164,16 @@ co_rc_t coui_start_driver(
 
 	if (!ret) {
 		err = GetLastError(); 
+
 #if (0) 
 		if (err == ERROR_SERVICE_ALREADY_RUNNING) 
-			coui_debug ("failure: StartService, ERROR_SERVICE_ALREADY_RUNNING\n"); 
+			coui_debug("failure: StartService, ERROR_SERVICE_ALREADY_RUNNING\n"); 
 		else 
-			coui_debug ("failure: StartService (0x%02x)\n", err);
+			coui_debug("failure: StartService (0x%02x)\n", err);
 #endif
 	} 
  
-	CloseServiceHandle (schService); 
+	CloseServiceHandle(schService); 
 
 	return ret; 
 } 
@@ -215,7 +215,7 @@ co_rc_t coui_check_driver(IN LPCTSTR DriverName, bool_t *installed)
 
 	schService = OpenService(schSCManager, DriverName, SERVICE_ALL_ACCESS); 
 	if (schService != NULL) {
-		CloseServiceHandle(schSCManager); 
+		CloseServiceHandle(schService); 
 
 		*installed = PTRUE;
 	}
@@ -278,7 +278,11 @@ co_rc_t coui_unload_driver_by_name(char *name)
 	
 	CloseServiceHandle(schSCManager); 
 
-	Sleep(1); /* A hack that gives run time for the removal of the driver */
+	/*
+	 * Apparently this givens the service manager an opportunity to
+	 * remove the service before we reinstall it.
+	 */
+	Sleep(100);
 			
 	return rc;
 } 

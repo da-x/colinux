@@ -27,6 +27,7 @@ typedef struct co_daemon {
 	co_config_t config;
 	co_elf_data_t elf_data;
 	co_user_monitor_t *monitor;
+	bool_t running;
 	char *buf;
 } co_daemon_t;
 

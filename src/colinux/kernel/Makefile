@@ -18,7 +18,6 @@ LOCAL_OBJS = \
 	network.o \
 	transfer.o \
 	manager.o \
-	ioctl.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

@@ -14,13 +14,13 @@
 #include <colinux/common/ioctl.h>
 #include <colinux/os/user/manager.h>
 
-extern co_rc_t co_manager_io_monitor(co_manager_handle_t handle, co_id_t id, 
-					co_monitor_ioctl_op_t op,
-					co_manager_ioctl_monitor_t *ioctl,
-					unsigned long in_size,
-					unsigned long out_size);
+extern co_rc_t co_manager_io_monitor(co_manager_handle_t handle, 
+				     co_monitor_ioctl_op_t op,
+				     co_manager_ioctl_monitor_t *ioctl,
+				     unsigned long in_size,
+				     unsigned long out_size);
 
-extern co_rc_t co_manager_io_monitor_unisize(co_manager_handle_t handle, co_id_t id, 
+extern co_rc_t co_manager_io_monitor_unisize(co_manager_handle_t handle, 
 					     co_monitor_ioctl_op_t op,
 					     co_manager_ioctl_monitor_t *ioctl,
 					     unsigned long size);

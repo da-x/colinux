@@ -10,6 +10,7 @@ LOCAL_OBJS = \
 	queue.o \
 	console.o \
 	debug.o \
+	messages.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

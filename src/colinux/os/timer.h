@@ -8,8 +8,8 @@
  *
  */
 
-#ifndef __CO_OS_TIMER_H__
-#define __CO_OS_TIMER_H__
+#ifndef __CO_OS_KERNEL_TIMER_H__
+#define __CO_OS_KERNEL_TIMER_H__
 
 #include <colinux/common/common.h>
 

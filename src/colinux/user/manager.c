@@ -12,7 +12,7 @@
 
 #include "manager.h"
 
-co_rc_t co_manager_io_monitor(co_manager_handle_t handle, co_id_t id, 
+co_rc_t co_manager_io_monitor(co_manager_handle_t handle, 
 			       co_monitor_ioctl_op_t op,
 			       co_manager_ioctl_monitor_t *ioctl,
 			       unsigned long in_size,
@@ -21,7 +21,6 @@ co_rc_t co_manager_io_monitor(co_manager_handle_t handle, co_id_t id,
 	unsigned long returned = 0;
 	co_rc_t rc;
 
-	ioctl->id = id;
 	ioctl->op = op;
 	ioctl->rc = CO_RC_OK;
 	
@@ -31,12 +30,12 @@ co_rc_t co_manager_io_monitor(co_manager_handle_t handle, co_id_t id,
 	return ioctl->rc;
 }
 
-co_rc_t co_manager_io_monitor_unisize(co_manager_handle_t handle, co_id_t id, 
+co_rc_t co_manager_io_monitor_unisize(co_manager_handle_t handle,
 				      co_monitor_ioctl_op_t op,
 				      co_manager_ioctl_monitor_t *ioctl,
 				      unsigned long size)
 {
-	return co_manager_io_monitor(handle, id, op, ioctl, size, size);
+	return co_manager_io_monitor(handle, op, ioctl, size, size);
 }
 
 co_rc_t co_manager_init(co_manager_handle_t handle)

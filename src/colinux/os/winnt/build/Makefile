@@ -6,6 +6,7 @@ all: parts
 
 include $(BUILD_ROOT)/Makefile
 else
+
 BUILD_PATH := $(BUILD_PATH)/build
 #-----------------------------------------------------------------
 

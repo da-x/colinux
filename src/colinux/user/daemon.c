@@ -11,6 +11,7 @@
 #include <colinux/os/user/file.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/alloc.h>
+#include <colinux/os/timer.h>
 
 #include <memory.h>
 
@@ -66,8 +67,7 @@ co_rc_t co_daemon_parse_args(char **args, co_start_parameters_t *start_parameter
 	start_parameters->launch_console = PTRUE;
 	start_parameters->show_help = PFALSE;
 
-	snprintf(start_parameters->config_path, 
-		 sizeof(start_parameters->config_path), "%s", "default.colinux.xml");
+	snprintf(start_parameters->config_path, sizeof(start_parameters->config_path), "%s", "default.colinux.xml");
 
 	/* Parse command line */
 	while (*param_scan) {
@@ -265,11 +265,81 @@ out:
 	return rc;
 }
 
+co_rc_t co_daemon_handle_message(co_daemon_t *daemon, co_message_t *message)
+{
+	switch (message->to) {
+		case CO_MODULE_PRINTK: {
+			if (message->type == CO_MESSAGE_TYPE_STRING) {
+				char *string_start = message->data;
+
+				if (string_start[0] == '<'  &&  
+				    string_start[1] >= '0'  &&  string_start[1] <= '9'  &&
+				    string_start[2] == '>')
+				{
+					string_start += 3;
+				}
+				co_debug("%s", string_start);
+				return CO_RC(OK);
+			}
+			break;
+		}
+		case CO_MODULE_DAEMON: {
+			struct {
+				co_message_t message;
+				co_daemon_message_t payload;
+			} *daemon_message;
+
+			daemon_message = (typeof(daemon_message))(message);
+			if (daemon_message->payload.type == CO_MONITOR_MESSAGE_TYPE_TERMINATED) {
+				co_debug("Monitor terminated, reason %d\n", daemon_message->payload.terminated.reason);
+				daemon->running = PFALSE;
+			}
+
+			return CO_RC(OK);
+		}
+	default:
+		break;
+	}
+
+	co_debug("Unprocessed message: %d:%d [%d] <%d> (%d)\n", 
+		 message->from, message->to, message->priority,
+		 message->type, message->size);
+
+	return CO_RC(OK);
+}
+
 co_rc_t co_daemon_run(co_daemon_t *daemon)
 {
-	co_debug("Monitor is running\n");
+	co_rc_t rc;
 
-	return co_user_monitor_run(daemon->monitor);
+	rc = co_user_monitor_start(daemon->monitor);
+	if (!CO_OK(rc))
+		return rc;
+
+	daemon->running = PTRUE;
+	while (daemon->running) {
+		co_monitor_ioctl_run_t *params;
+		char buf[0x10000];
+		char *param_data;
+		int i;
+		
+		params = (typeof(params))buf;
+		params->num_messages = 0;
+
+		rc = co_user_monitor_run(daemon->monitor, buf, sizeof(*params), sizeof(buf));
+
+		param_data = params->data;
+
+		for (i=0; i < params->num_messages; i++) {
+			co_message_t *message = (typeof(message))param_data;
+			
+			co_daemon_handle_message(daemon, message);
+			
+			param_data += message->size + sizeof(*message);
+		}
+	}
+
+	return rc;
 }
 
 void co_daemon_end_monitor(co_daemon_t *daemon)

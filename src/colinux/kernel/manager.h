@@ -27,12 +27,12 @@ typedef struct co_manager {
 	int monitors_count;
 } co_manager_t;
 
-extern co_rc_t co_manager_create_monitor(co_manager_t *manager, struct co_monitor **cmon);
-extern void co_manager_destroy_monitor(struct co_monitor *cmon);
-extern co_rc_t co_manager_get_monitor(co_manager_t *manager, co_id_t id, struct co_monitor **cmon);
-extern void co_manager_put_monitor(struct co_monitor *cmon);
+
 extern co_rc_t co_manager_ioctl(co_manager_t *manager, co_monitor_ioctl_op_t ioctl, 
 				void *io_buffer, unsigned long in_size,
-				unsigned long out_size, unsigned long *return_size);
+				unsigned long out_size, unsigned long *return_size,
+				void **private_data);
+
+extern co_rc_t co_manager_cleanup(void **private_data);
 
 #endif

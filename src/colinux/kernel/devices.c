@@ -32,7 +32,7 @@ void co_monitor_check_devices(co_monitor_t *cmon)
 		}
 
 		if (CO_OK(rc)) {
-			co_passage_page->operation = CO_OPERATION_BACKWARD_INTERRUPT;
+ 			/* co_passage_page->operation = CO_OPERATION_BACKWARD_INTERRUPT; */
 			co_passage_page->params[0] = device_id;
 			co_passage_page->params[1] = device->state;
 			
@@ -77,6 +77,7 @@ co_rc_t co_monitor_cleanup_devices(co_monitor_t *cmon)
 co_rc_t co_monitor_signal_device(co_monitor_t *cmon, co_device_t device)
 {
 	cmon->devices[device].state = 1;
+
  	co_monitor_os_wakeup(cmon);
 
 	return CO_RC(OK);
