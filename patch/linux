@@ -7832,7 +7832,7 @@ diff -urN a/include/linux/console.h b/include/linux/console.h
 diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 --- a/include/linux/cooperative.h
 +++ b/include/linux/cooperative.h
-@@ -0,0 +1,322 @@
+@@ -0,0 +1,324 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -7904,6 +7904,8 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +	
 +	CO_MODULE_SERIAL0,
 +	CO_MODULE_SERIAL_END=CO_MODULE_SERIAL0+CO_MODULE_MAX_SERIAL-1,
++
++	CO_MODULES_MAX,
 +} co_module_t;
 +
 +typedef enum {

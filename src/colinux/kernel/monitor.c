@@ -987,8 +987,6 @@ static co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
 	co_debug("after free: %d blocks\n", cmon->blocks_allocated);
 	co_os_free(cmon);
 
-	co_debug_system("%s\n", __FUNCTION__);
-
 	return CO_RC_OK;
 }
 
@@ -1013,8 +1011,6 @@ co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monit
 	co_manager_t *manager;
 	int new_count;
 	bool_t destroy = PFALSE;
-
-	co_debug_system("%s\n", __FUNCTION__);
 
 	manager = cmon->manager;
 

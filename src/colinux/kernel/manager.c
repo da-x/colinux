@@ -191,8 +191,6 @@ co_rc_t co_manager_open(co_manager_t *manager, co_manager_open_desc_t *opened_ou
 
 	*opened_out = opened;
 
-	co_debug_system("%s: %x\n", __FUNCTION__, opened);
-
 	return CO_RC(OK);
 }
 
@@ -219,8 +217,6 @@ static co_rc_t co_manager_close_(co_manager_t *manager, co_manager_open_desc_t o
 	co_os_mutex_destroy(opened->lock);
 	co_queue_flush(&opened->out_queue);
 	co_os_free(opened);
-
-	co_debug_system("%s: %x\n", __FUNCTION__, opened);
 
 	return CO_RC(OK);
 }
@@ -390,8 +386,6 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 		if (!CO_OK(rc)) {
 			opened->monitor = NULL;
 		}
-
-		co_debug_system("ATTACH: %d %x\n", params->id, opened->monitor);
 
 		if (opened->monitor) {
 			int index;
