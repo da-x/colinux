@@ -4610,7 +4610,7 @@ diff -urN a/fs/cofusefs/dev.c b/fs/cofusefs/dev.c
 +int request_send_nonblock(struct fuse_conn *fc, struct fuse_in *in,
 +			  struct fuse_out *out, fuse_reqend_t end, void *data)
 +{
-+	printk("cofuse: request_send_nonblock %d\n", in->h.opcode);
++	/* printk("cofuse: request_send_nonblock %d\n", in->h.opcode); */
 +	request_send(fc, in, out);
 +	end(fc, in, out, data);
 +	return 0;
