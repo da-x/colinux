@@ -86,8 +86,10 @@ co_rc_t co_manager_attach(co_manager_handle_t handle, co_manager_ioctl_attach_t 
 
 	rc = co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_ATTACH,
 				 params, sizeof(*params), params, sizeof(*params), &returned);
+	if (!CO_OK(rc))
+		return rc;
 
-	return rc;
+	return params->rc;
 }
 
 
@@ -99,7 +101,10 @@ co_rc_t co_manager_debug_reader(co_manager_handle_t handle, co_manager_ioctl_deb
 	rc = co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_DEBUG_READER,
 				 debug_reader, sizeof(*debug_reader), debug_reader, sizeof(*debug_reader), &returned);
 
-	return rc;
+	if (!CO_OK(rc))
+		return rc;
+
+	return debug_reader->rc;
 }
 
 

@@ -15,9 +15,11 @@
 #include <stdarg.h>
 
 #include "console.h"
+#include "main.h"
 
 extern "C" {
 #include <colinux/user/monitor.h>
+#include <colinux/user/cmdline.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/alloc.h>
 }
@@ -34,37 +36,69 @@ console_window_t::console_window_t()
 
 console_window_t::~console_window_t()
 {
+	if (widget) {
+		delete widget;
+		widget = NULL;
+	}
+}
+
+const char *console_window_t::get_name()
+{
+	return "colinux-console";
+}
+
+void console_window_t::syntax()
+{
+	co_terminal_print("\n");
+	co_terminal_print("syntax: \n");
+	co_terminal_print("\n");
+	co_terminal_print("    %s [-a id]\n", get_name());
+	co_terminal_print("\n");
+	co_terminal_print("      -a id      Specifies the ID of the coLinux instance to connect.\n");
+	co_terminal_print("                 The ID is the PID (process ID) of the colinux-daemon\n");
+	co_terminal_print("                 processes for that running instance\n");
+	co_terminal_print("\n");
 }
 
 co_rc_t console_window_t::parse_args(int argc, char **argv)
 {
-	char ** param_scan = argv;
+	bool_t instance_specified;
+	co_command_line_params_t cmdline;
+	co_rc_t rc;
 
-	/* Parse command line */
-	while (argc > 0) {
-		const char * option;
-
-		option = "-a";
-
-		if (strcmp(*param_scan, option) == 0) {
-			param_scan++;
-			argc--;
-
-			if (argc <= 0) {
-				co_terminal_print
-				    ("Parameter of command line option %s not specified\n",
-				     option);
-				return CO_RC(ERROR);
-			}
-
-			start_parameters.attach_id = atoi(*param_scan);
-		}
-
-		param_scan++;
-		argc--;
+	/* Default settings */
+	
+	rc = co_cmdline_params_alloc(&argv[1], argc-1, &cmdline);
+	if (!CO_OK(rc)) {
+		co_terminal_print("console: error parsing arguments\n");
+		goto out_clean;
 	}
 
-	return CO_RC(OK);
+	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-a", &instance_specified, 
+							  (int *)&start_parameters.attach_id);
+
+	if (!CO_OK(rc)) {
+		syntax();
+		goto out;
+	}
+
+	rc = co_cmdline_params_check_for_no_unparsed_parameters(cmdline, PTRUE);
+	if (!CO_OK(rc)) {
+		syntax();
+		goto out;
+	}
+
+	if (!instance_specified) {
+		co_terminal_print("console: error, coLinux instance ID must be specified\n");
+		syntax();
+		return CO_RC(ERROR);
+	}
+
+out:
+	co_cmdline_params_free(cmdline);
+
+out_clean:
+	return rc;
 }
 
 co_rc_t console_window_t::send_ctrl_alt_del()
@@ -110,13 +144,12 @@ co_rc_t console_window_t::start()
 
 	log("Coopeartive Linux console started\n");
 
-	if (start_parameters.attach_id != CO_INVALID_ID)
+	if (start_parameters.attach_id != CO_INVALID_ID) {
 		instance_id = start_parameters.attach_id;
+	}
 
 	return attach();
 }
-
-static console_window_t *g_console;
 
 co_rc_t console_window_t::message_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
 {
@@ -130,7 +163,7 @@ co_rc_t console_window_t::message_receive(co_reactor_user_t user, unsigned char 
 		message_size = message->size + sizeof(*message);
 		size_left -= message_size;
 		if (size_left >= 0) {
-			g_console->event(message);
+			global_window->event(message);
 		}
 		position += message_size;
 	}
@@ -148,20 +181,18 @@ co_rc_t console_window_t::attach()
 	if (attached)
 		return CO_RC(ERROR);
 
-	g_console = this;
-
 	rc = co_user_monitor_open(reactor, message_receive,
 				  instance_id, modules, 
 				  sizeof(modules)/sizeof(co_module_t),
 				  &message_monitor);
 	if (!CO_OK(rc)) {
-		log("Monitor%d: Error connecting\n", instance_id);
+		log("Monitor%d: Error connecting to instance\n", instance_id);
 		return rc;
 	}
 
 	rc = co_user_monitor_get_console(message_monitor, &get_console);
 	if (!CO_OK(rc)) {
-		log("Monitor%d: Error getting console\n");
+		log("Monitor%d: Error getting console\n", instance_id);
 		return rc;
 	}
 
@@ -257,13 +288,12 @@ void console_window_t::log(const char *format, ...) const
 	vsnprintf(buf, sizeof (buf), format, ap);
 	va_end(ap);
 
-	co_debug("Console: %s\n", buf);
+	co_terminal_print("console: %s", buf);
 }
 
 co_rc_t console_window_t::loop(void)
 {
-	co_rc_t
-	    rc;
+	co_rc_t rc;
 
 	rc = widget->loop();
 	if (!(CO_OK(rc) && widget))

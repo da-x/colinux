@@ -29,7 +29,7 @@ typedef struct co_console_start_parameters {
 class console_window_t {
 public:
 	console_window_t();
-	~console_window_t();
+	virtual ~console_window_t();
 
 	co_rc_t parse_args(int argc, char **argv);
 	co_rc_t start();
@@ -41,6 +41,9 @@ public:
 
 	void handle_scancode(const co_scan_code_t sc) const;
 	co_rc_t send_ctrl_alt_del();
+	void syntax();
+
+	virtual const char *get_name();
 
 	void log(const char *format, ...) const;
 	bool_t is_attached() { return attached ; };

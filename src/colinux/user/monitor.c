@@ -95,6 +95,7 @@ co_rc_t co_user_monitor_open(co_reactor_t reactor, co_reactor_user_receive_func_
 	params.num_modules = num_modules;
 
 	rc = co_manager_attach(handle, &params);
+
 	if (!CO_OK(rc)) {
 		co_os_manager_close(handle);
 		co_os_free(mon);

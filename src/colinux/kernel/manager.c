@@ -409,6 +409,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 			co_os_mutex_release(cmon->connected_modules_write_lock);
 		}
 
+		*return_size = sizeof(*params);
 		params->rc = rc;
 		break;
 	}

@@ -19,7 +19,7 @@ extern "C" {
 }
 
 class console_widget_NT_t:public console_widget_t {
-      public:
+public:
 	console_widget_NT_t();
 	~console_widget_NT_t();
 
@@ -31,7 +31,7 @@ class console_widget_NT_t:public console_widget_t {
 	co_rc_t title(const char *);
 	void update();
 
-      protected:
+protected:
 	HANDLE buffer;
 	CHAR_INFO blank;
 	SMALL_RECT region;
@@ -41,45 +41,62 @@ class console_widget_NT_t:public console_widget_t {
 	HANDLE output;
 	CONSOLE_CURSOR_INFO cursor;
 
-	void ProcessKeyEvent( KEY_EVENT_RECORD& ker );
-	void ProcessFocusEvent( FOCUS_EVENT_RECORD& fer );
+	HWND saved_hwnd;
+        DWORD saved_mode;
+	HANDLE saved_output;
+        HANDLE saved_input;
+	CONSOLE_CURSOR_INFO saved_cursor;
+        bool allocated_console;
+
+	void init_new_console();
+	void restore_console();
+
+	void process_key_event(KEY_EVENT_RECORD& ker);
+	void process_focus_event(FOCUS_EVENT_RECORD& fer);
 
 	co_rc_t op_scroll_up(
-			const co_console_unit &topRow,
-			const co_console_unit &bottomRow,
-			const co_console_unit &lines);
+		const co_console_unit &topRow,
+		const co_console_unit &bottomRow,
+		const co_console_unit &lines);
+
 	co_rc_t op_scroll_down(
-			const co_console_unit &topRow,
-			const co_console_unit &bottomRow,
-			const co_console_unit &lines);
+		const co_console_unit &topRow,
+		const co_console_unit &bottomRow,
+		const co_console_unit &lines);
+
 	co_rc_t op_putcs(
-			const co_console_unit &Y,
-			const co_console_unit &X,
-			const co_console_character *data,
-			const co_console_unit &length);
+		const co_console_unit &Y,
+		const co_console_unit &X,
+		const co_console_character *data,
+		const co_console_unit &length);
+
 	co_rc_t op_putc(
-			const co_console_unit &Y,
-			const co_console_unit &X,
-			const co_console_character &charattr);
+		const co_console_unit &Y,
+		const co_console_unit &X,
+		const co_console_character &charattr);
+
 	co_rc_t op_cursor(
-			const co_cursor_pos_t &position);
+		const co_cursor_pos_t &position);
+
 	co_rc_t op_clear(
-			const co_console_unit &T,
-			const co_console_unit &L,
-			const co_console_unit &B,
-			const co_console_unit &R,
-			const co_console_character charattr);
+		const co_console_unit &T,
+		const co_console_unit &L,
+		const co_console_unit &B,
+		const co_console_unit &R,
+		const co_console_character charattr);
+
 	co_rc_t op_bmove(
-			const co_console_unit &Y,
-			const co_console_unit &X,
-			const co_console_unit &T,
-			const co_console_unit &L,
-			const co_console_unit &B,
-			const co_console_unit &R);
+		const co_console_unit &Y,
+		const co_console_unit &X,
+		const co_console_unit &T,
+		const co_console_unit &L,
+		const co_console_unit &B,
+		const co_console_unit &R);
+
 	co_rc_t op_invert(
-			const co_console_unit &Y,
-			const co_console_unit &X,
-			const co_console_unit &C);
+		const co_console_unit &Y,
+		const co_console_unit &X,
+		const co_console_unit &C);
 };
 
 #endif

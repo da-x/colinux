@@ -11,6 +11,7 @@ LOCAL_EXE = $(BUILD_PATH)/colinux-console-nt.exe
 LOCAL_OBJS = \
 	head.o \
 	widget.o \
+	console.o \
 
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 

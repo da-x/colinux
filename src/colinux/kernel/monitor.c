@@ -641,7 +641,6 @@ static co_rc_t alloc_pp_ram_mapping(co_monitor_t *monitor)
 				partial_page_table_size);
 		}
 	}
-
 	
 	if (!CO_OK(rc)) {
 		free_pseudo_physical_memory(monitor);

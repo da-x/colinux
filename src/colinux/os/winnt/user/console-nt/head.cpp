@@ -12,33 +12,24 @@
 
 extern "C" {
 #include <colinux/common/debug.h>
+#include <colinux/os/user/misc.h>
 }
 
 #include <colinux/user/console-base/main.h>
+#include "console.h"
 
 COLINUX_DEFINE_MODULE("colinux-console-nt");
 
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
-	CONSOLE_CURSOR_INFO cursor;
-        bool allocatedConsole = false;
-	HANDLE output;
-        HANDLE input;
-        DWORD mode;
 	int status;
-	HWND hwnd;
 
-	if ((hwnd = GetConsoleWindow())==(HWND)0) {
-		AllocConsole();
-		allocatedConsole = true;
-		hwnd = GetConsoleWindow();
+	global_window = new console_window_NT_t;
+
+	if (!global_window) {
+		co_terminal_print("Unable to create console window");
+		return -1; 
 	}
-
-	input = GetStdHandle(STD_INPUT_HANDLE);
-	output = GetStdHandle(STD_OUTPUT_HANDLE);
-	GetConsoleCursorInfo(output, &cursor);
-	GetConsoleMode(input, &mode);
 
 	try {
 		status = co_user_console_main(argc, argv);
@@ -47,16 +38,7 @@ main(int argc, char **argv)
 		status = -1;
 	}
 
-	if (allocatedConsole) {
-		FreeConsole();
-		return status;
-	}
-
-	FlushConsoleInputBuffer(input);
-	SetConsoleMode(input, mode);
-	SetStdHandle(STD_INPUT_HANDLE, input);
-	SetStdHandle(STD_OUTPUT_HANDLE, output);
-	SetConsoleCursorInfo(output, &cursor);
+	delete global_window;
 
 	return status;
 }
