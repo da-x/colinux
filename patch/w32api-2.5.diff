@@ -1,6 +1,5 @@
-diff -urN w32api-2.5/lib/ddk/ntoskrnl.def w32api-2.5-build/lib/ddk/ntoskrnl.def
 --- w32api-2.5/lib/ddk/ntoskrnl.def	2004-02-15 09:32:37.000000000 +0200
-+++ w32api-2.5/lib/ddk/ntoskrnl.def	2004-04-11 11:32:41.000000000 +0300
++++ w32api-2.5-mod/lib/ddk/ntoskrnl.def	2004-10-18 23:54:01.000000000 +0200
 @@ -644,7 +644,7 @@
  MmAllocateContiguousMemorySpecifyCache@20
  MmAllocateMappingAddress@8
@@ -19,3 +18,12 @@ diff -urN w32api-2.5/lib/ddk/ntoskrnl.def w32api-2.5-build/lib/ddk/ntoskrnl.def
  MmMapLockedPages@8
  MmMapLockedPagesSpecifyCache@24
  MmMapLockedPagesWithReservedMapping@16
+@@ -1316,7 +1316,7 @@
+ ;ZwQueryBootOptions
+ ZwQueryDefaultLocale@8
+ ZwQueryDefaultUILanguage@4
+-;ZwQueryDirectoryFile
++ZwQueryDirectoryFile@44
+ ZwQueryDirectoryObject@28
+ ;ZwQueryEaFile
+ ;ZwQueryFullAttributesFile
