@@ -36,6 +36,9 @@ kernel_module: $(BUILD_PATH)/module/colinux.ko
 
 LOCAL_TARGETS := $(BUILD_PATH)/prelinked_driver.o
 
+INSTALL_FILES := $(INSTALL_FILES) \
+	$(BUILD_PATH)/module/colinux.ko
+
 CLEAN_FILES := $(CLEAN_FILES) \
 	$(LOCAL_OBJS) $(LOCAL_TARGETS) \
 	$(BUILD_PATH)/module/{*.o,.*.ko.cmd,.*.o.cmd,*.ko,*.mod.c,.tmp_versions/*}

@@ -7,6 +7,8 @@ Table of Contents
   2. Cooperative Linux kernel (the vmlinux file)
   3. Host Operating system support code, i.e, the daemon, console, 
      and kernel driver
+  4. configure - make - make install
+  5. Private kernel config or patches
 
 =================================================================
 
@@ -87,6 +89,7 @@ This need a Compiler devel-libs and a lot of tools:
     patch-2.5.9
     bison-1.75-109   need by binutils (yacc 91.7.30 have a error YYEMPTY)
     texinfo-4.5      need by binutils
+    wget-1.8.2       to download source files
     ... and many more ...
 
 Creat a new directory, extract colinux source in this directory, make scripts
@@ -136,6 +139,16 @@ After Download a new version of colinux source, should only extract source
 at same top level directory and run the last scripts build-kernel.sh and
 build-colinux.sh. In some cases must also compile the libs.
 The cross compiler mostly you never need compile again.
+
+The duing of build-all.sh is controlled by md5sum of some sources and some
+target files. Md5sum is updated after complety build step and put as file
+.build-*.md5 in 'downlod' directory.
+
+Call as 'build-all.sh --rebuild-all' will ignore md5sum and builds all
+cross tools, cross compiler, libraries and target files again.
+
+Single script can also use to recompile one step. Such you can rebuild
+the win32k-api and fltk library. Call 'cd bin ; ./build-colinux-libs.sh'
 
 
 3.2.3 Source tree sample for a mingw build process
@@ -235,3 +248,125 @@ of the driver is more simple.
     
 PATH=.:$PATH is needed if the executables aren't installed in your e.g 
 /usr/local/bin or elsewhere in $PATH.
+
+
+4. configure - make - make install
+----------------------------------
+
+4.1 configure
+
+Call './configure' in toplevel directory will create one toplevel Makefile and
+the file bin/user-build.cfg with absolute paths of your installation.
+Default target is winnt. Mostly directories can overwrite by options.
+Please call './configure --help' for list of actual options.
+
+Sample for WinNT as host (default):
+  ./configure --target=i686-pc-mingw32 \
+        --downloaddir=/home/$USER/src/colinux-devel/download \
+        --prefix=/home/$USER/src/colinux-devel/mingw32
+
+For Linux as Host must use the option '--target=i686-pc-linux'. Host kernel
+directories will automatic detect. You can overwrite with --hostkerneldir.
+
+Sample for Linux as host:
+  ./configure --target=i686-pc-linux \
+        --downloaddir=/home/$USER/src/colinux-devel/download \
+        --targetkerneldir=/home/$USER/src/colinux-devel/download/linux-2.6.8.1
+        --hostkerneldir=/usr/src/linux
+
+
+4.2 make download
+
+'make download' is optional. I's download all missing source files.
+
+
+4.3 make
+
+Call 'make' in toplevel directory (not in src/) to build all cross tools, cross
+compiler, libraries and target. Makefile is only a wrapper for bin/build-*.sh
+sripts. Settings in bin/user-build.cfg must congruent with settings in toplevel
+Makefile.
+
+Missing source files will be download with wget.
+
+To control the 'out of date' this Makefile use not timestamps. Monotone checkout
+or download can not handle timestamp. So we use md5sum to check new sources,
+patches or configuration. Every compile step update the md5sum file at the end.
+
+
+4.4 make install
+
+'make install' will install executables on dist directory.
+
+
+4.5 make clean
+
+This cleans only the source tree of colinux daemons. The cross tools and
+libraries are untouched. Please call this, if you switch between targets winnt
+and linux.
+
+
+4.6 make disclean
+
+This remove also control files for md5sum, toplevel Makefile and user-build.cfg.
+After this step you must './configure' again. Next 'make' will also rebuild the
+cross tools and libraries.
+
+
+4.7 Comments about configure system
+
+This script is not the same as in some other software projects. This script do
+not detect of all needed tools and host environment. It do only create a simple
+Makefile to have fun for "standard" linux projects. It should help some newbies
+to compile colinux.
+
+Actual version of configure provided only targets i686-pc-mingw32 or
+i686-pc-linux. No other strings supported. (Sorry, configure is very simple.)
+
+
+5. Private kernel config or patches
+-----------------------------------
+
+patch/linux-private.patch
+This file will be patch after extract kernel and patch maintainer kernel,
+before kernel will be configure.
+You can put something changes on .config file or kernel sources in this file.
+
+Store patch/linux-private.patch, before call bin/build-kernel.sh or make.
+
+
+5.1 Private kernel config only
+------------------------------
+
+To create private configfile, you should diff colinux config with your config
+and store this in file patch/linux-private.patch.
+Run this steps if you have patched colinux kernel in download directory:
+ # cd coLinuxDownloadPath/linux-2.6.8.1
+ # make menuconfig
+ ... configure your kernel and save file .config ...
+ # cd ..
+ # diff -urN coLinuxDevelPath/patch/linux linux-2.6.8.1/.config > linux-private.patch
+
+
+5.2 Private kernel patches and config
+-------------------------------------
+
+To create private pathfile for kernel source, you should diff colinux
+kernel with your kernel source and configuration.
+"KPRIVATE" is your kernel, configured and also patched for colinux.
+Please remember: Your private kernel tree should start one directory up,
+from source (patch will be call with -p1)!
+ # KVERSION=linux-2.6.8.1
+ # KPRIVATE=linux-2.6.8.1-private
+ # cd /tmp
+ # bunzip2 -dc linux-$KVERSION.bz2 | tar x
+ # cd $KVERSION
+ # patch -p1 < coLinuxDevelPath/patch/linux
+ # cp coLinuxDevelPath/conf/linux-config .config
+ ... here you can make menuconfig for aditional configuration ...
+ # cd ..
+ # wget http://www.moses.uklinux.net/patches/dontdiff
+ # diff -urN -X dontdiff $KVERSION $KPRIVATE > linux-private.patch
+ # diff -urN $KVERSION/.config $KPRIVATE/.config >> linux-private.patch
+ # rm -f dontdiff
+

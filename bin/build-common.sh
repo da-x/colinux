@@ -8,13 +8,14 @@
 #
 # Updated by Sam Lantinga <slouken@libsdl.org>
 
-# Create User-Config, if missing it. But do not overwrite it.
-if [ ! -f user-build.cfg -a -f sample.user-build.cfg ] ; then
-	cp -a sample.user-build.cfg user-build.cfg
+# Use User config, if exist
+if [ -f user-build.cfg ] ; then
+	# Users directories
+	source user-build.cfg
+else
+	# fall back to default config
+	source sample.user-build.cfg
 fi
-
-# Users directories
-source ./user-build.cfg
 
 # what flavor are we building?
 TARGET=i686-pc-mingw32
@@ -53,6 +54,17 @@ if [ "$KERNEL_VERSION" = "" ] ; then
     exit -1
 fi
 
+# Default logfile of building (Append), can overwrite in user-build.cfg
+if [ "$COLINUX_BUILD_LOG" = "" ] ; then
+    COLINUX_BUILD_LOG="$TOPDIR/build-colinux-$$.log"
+fi
+
+# Default install directory
+if [ "$COLINUX_INSTALL_DIR" = "" ] ; then
+    echo "Please specify the $""COLINUX_INSTALL_DIR in user-build.cfg (e.g, /home/$USER/colinux/dist)"
+    exit -1
+fi
+
 # These are the files from the SDL website
 # need install directory first on the path so gcc can find binutils
 
@@ -81,6 +93,23 @@ download_file()
 		echo "Found $1 in the srcdir $SRCDIR"
 	fi
   	cd "$TOPDIR"
+}
+
+#
+# Show errors from actual logfile, than exit build process
+# Arg1: Errorlevel
+# Arg2: Error message
+#
+
+error_exit()
+{
+	# Show errors in log file with tail or less
+	tail -n 20 $COLINUX_BUILD_LOG
+	# less $COLINUX_BUILD_LOG
+
+	echo "$2"
+	echo "  - log available: $COLINUX_BUILD_LOG"
+	exit $1
 }
 
 W32API=w32api-3.1

@@ -2,8 +2,6 @@
 
 source ./build-common.sh
 
-# See ./commom.sh
-
 FLTK=fltk-1.1.4
 FLTK_URL=http://heanet.dl.sourceforge.net/sourceforge/fltk 
 FLTK_ARCHIVE=$FLTK-source.tar.bz2
@@ -22,6 +20,8 @@ WINPCAP_SRC_ARCHIVE="$WINPCAP_SRC"_3_0.zip
 
 PATH="$PREFIX/$TARGET/bin:$PATH"
 
+CHECKSUM_FILE=$SRCDIR/.build-colinux-libs.md5
+
 download_files()
 {
 	mkdir -p "$SRCDIR"
@@ -32,12 +32,31 @@ download_files()
 	download_file "$WINPCAP_SRC_ARCHIVE" "$WINPCAP_URL"
 }
 
-check_isinstalled()
+check_md5sums()
 {
-	if [ -f $PREFIX/$TARGET/lib/libfltk.a -a -f $PREFIX/$TARGET/lib/libmxml.a ] ; then
-		echo "Skip libfltk.a,libmxml.a, already installed on $PREFIX/$TARGET/lib"
+	echo "Check md5sum"
+	cd "$TOPDIR/.."
+	if md5sum --check $CHECKSUM_FILE >>$COLINUX_BUILD_LOG 2>&1 ; then
+		echo "Skip libfltk.a,libmxml.a,libwin32k.a"
+		echo " - already installed on $PREFIX/$TARGET/lib"
 		exit 0
 	fi
+	cd "$TOPDIR"
+}
+
+create_md5sums()
+{
+	echo "Create md5sum"
+	cd "$TOPDIR/.."
+	md5sum --binary \
+	    patch/$FLTK-win32.diff \
+	    patch/$W32API_SRC.diff \
+	    $PREFIX/$TARGET/lib/libfltk.a \
+	    $PREFIX/$TARGET/lib/libmxml.a \
+	    $PREFIX/$TARGET/lib/libwin32k.a \
+	    > $CHECKSUM_FILE
+	test $? -ne 0 && error_exit 1 "can not create md5sum"
+	cd "$TOPDIR"
 }
 
 #
@@ -49,7 +68,7 @@ extract_fltk()
 	cd "$SRCDIR"
 	rm -rf "$FLTK"
 	echo "Extracting FLTK"
-	bzip2 -dc "$SRCDIR/$FLTK_ARCHIVE" | tar xf -
+	bzip2 -dc "$SRCDIR/$FLTK_ARCHIVE" | tar x
 	cd "$TOPDIR"
 }
 
@@ -57,10 +76,7 @@ patch_fltk()
 {
 	cd "$SRCDIR/$FLTK"
 	patch -p1 < "$TOPDIR/../patch/$FLTK-win32.diff"
-	if test $? -ne 0; then
-	        echo "FLTK patch failed"
-	        exit 1
-	fi
+	test $? -ne 0 && error_exit 1 "FLTK patch failed"
 	cd "$TOPDIR"
 }
 
@@ -68,17 +84,11 @@ configure_fltk()
 {
 	cd "$SRCDIR/$FLTK"
 	echo "Configuring FLTK"
-	./configure --host=i686-pc-mingw32 &> configure.log
-	if test $? -ne 0; then
-	        echo "FLTK configure failed"
-	        exit 1
-	fi
+	./configure --host=$TARGET >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "FLTK configure failed"
 	echo "Making FLTK"
-	make -C src &> make.log
-	if test $? -ne 0; then
-	        echo "FLTK make failed"
-	        exit 1
-	fi
+	make -C src >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "FLTK make failed"
 	cd "$TOPDIR"
 }
 
@@ -108,7 +118,7 @@ extract_mxml()
 	cd "$SRCDIR"
 	rm -rf "$MXML"
 	echo "Extracting MXML"
-	gzip -dc "$SRCDIR/$MXML_ARCHIVE" | tar xf -
+	gzip -dc "$SRCDIR/$MXML_ARCHIVE" | tar x
 	cd "$TOPDIR"
 }
 
@@ -116,17 +126,11 @@ configure_mxml()
 {
 	cd "$SRCDIR/$MXML"
 	echo "Configuring MXML"
-	./configure --host=i686-pc-mingw32 &> configure.log
-	if test $? -ne 0; then
-	        echo "MXML configure failed"
-	        exit 1
-	fi
+	./configure --host=$TARGET >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "MXML configure failed"
 	echo "Making MXML"
-	make libmxml.a &> make.log
-	if test $? -ne 0; then
-	        echo "MXML make failed"
-	        exit 1
-	fi
+	make libmxml.a >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "MXML make failed"
 	cd "$TOPDIR"
 }
 
@@ -152,21 +156,19 @@ build_mxml()
 
 extract_w32api_src()
 {
+	echo "Extracting w32api source"
 	cd "$SRCDIR"
 	rm -rf "$W32API_SRC"
-	echo "Extracting w32api source"
-	gzip -dc "$SRCDIR/$W32API_SRC_ARCHIVE" | tar xf -
+	gzip -dc "$SRCDIR/$W32API_SRC_ARCHIVE" | tar x
 	cd "$TOPDIR"
 }
 
 patch_w32api_src()
 {
+	echo "Patching w32api - $TOPDIR/../patch/$W32API_SRC.diff"
 	cd "$SRCDIR/$W32API_SRC"
 	patch -p1 < "$TOPDIR/../patch/$W32API_SRC.diff"
-	if test $? -ne 0; then
-	        echo "w32api source patch failed"
-	        exit 1
-	fi
+	test $? -ne 0 && error_exit 1 "w32api source patch failed"
 	cd "$TOPDIR"
 }
 
@@ -174,17 +176,12 @@ configure_w32api_src()
 {
 	cd "$SRCDIR/$W32API_SRC"
 	echo "Configuring w32api source"
-	./configure --host=i686-pc-mingw32 --prefix=$PREFIX/$TARGET &> configure.log
-	if test $? -ne 0; then
-	        echo "w32api source configure failed"
-	        exit 1
-	fi
+	./configure --host=$TARGET --prefix=$PREFIX/$TARGET \
+		CC=$TARGET-gcc >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "w32api source configure failed"
 	echo "Making w32api source"
-	make &> make.log
-	if test $? -ne 0; then
-	        echo "w32api source make failed"
-	        exit 1
-	fi
+	make >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "w32api source make failed"
 	cd "$TOPDIR"
 }
 
@@ -192,11 +189,8 @@ install_w32api_src()
 {
 	cd "$SRCDIR/$W32API_SRC"
 	echo "Installing $W32API_SRC"
-	make install &> configure.log
-	if test $? -ne 0; then
-	        echo "w32api make install failed"
-	        exit 1
-	fi
+	make install >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "w32api make install failed"
 	cd "$TOPDIR"
 }
 
@@ -215,7 +209,7 @@ extract_winpcap_src()
 	cd "$SRCDIR"
 	rm -rf "$WINPCAP_SRC"
 	echo "Extracting winpcap source"
-	unzip "$WINPCAP_SRC_ARCHIVE" 2>&1 > /dev/null
+	unzip "$WINPCAP_SRC_ARCHIVE" >>$COLINUX_BUILD_LOG 2>&1
 	cd "$TOPDIR"
 }
 
@@ -252,11 +246,16 @@ build_colinux_libs()
         download_files
 	# Only Download? Than ready.
 	test "$1" = "--download-only" && exit 0
-	check_isinstalled
+
+	# do not check files, if rebuild forced
+	test "$1" = "--rebuild-all" || check_md5sums
+
 	build_fltk
 	build_mxml
 	build_w32api_src
 	build_winpcap_src
+
+	create_md5sums
 }
 
 build_colinux_libs $1

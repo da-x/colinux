@@ -9,7 +9,4 @@
 # - Henry Nestler <henry@bigfoot.de>
 #
 
-./build-cross.sh	--download-only &&
-./build-colinux-libs.sh	--download-only &&
-./build-kernel.sh	--download-only &&
-./build-colinux.sh	--download-only
+./build-all.sh --download-only

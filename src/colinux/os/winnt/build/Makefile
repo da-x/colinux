@@ -46,23 +46,29 @@ $(DRIVER_TARGET): $(BUILD_PATH)/driver.o $(BUILD_PATH)/driver.base.exp
         -o $@ $(word 1,$^) -lntoskrnl -lhal -lgcc
 
 LOCAL_TARGET += $(DRIVER_TARGET)
+LOCAL_FILES_PATH = $(BUILD_ROOT)/colinux/os/current/user
 LOCAL_FILES = \
-	$(BUILD_ROOT)/colinux/os/current/user/daemon/colinux-daemon.exe \
-	$(BUILD_ROOT)/colinux/os/current/user/console/colinux-console-fltk.exe \
-	$(BUILD_ROOT)/colinux/os/current/user/debug/colinux-debug-daemon.exe \
-	$(BUILD_ROOT)/colinux/os/current/user/console-nt/colinux-console-nt.exe \
-	$(BUILD_ROOT)/colinux/os/current/user/coserial-daemon/colinux-serial-daemon.exe \
-	$(BUILD_ROOT)/colinux/os/current/user/conet-daemon/colinux-net-daemon.exe \
-	$(BUILD_ROOT)/colinux/os/current/user/conet-slirp-daemon/colinux-slirp-net-daemon.exe \
+	$(LOCAL_FILES_PATH)/daemon/colinux-daemon.exe \
+	$(LOCAL_FILES_PATH)/console/colinux-console-fltk.exe \
+	$(LOCAL_FILES_PATH)/debug/colinux-debug-daemon.exe \
+	$(LOCAL_FILES_PATH)/console-nt/colinux-console-nt.exe \
+	$(LOCAL_FILES_PATH)/coserial-daemon/colinux-serial-daemon.exe \
+	$(LOCAL_FILES_PATH)/conet-daemon/colinux-net-daemon.exe \
+	$(LOCAL_FILES_PATH)/conet-bridged-daemon/colinux-bridged-net-daemon.exe \
+	$(LOCAL_FILES_PATH)/conet-slirp-daemon/colinux-slirp-net-daemon.exe \
 	$(DRIVER_TARGET) \
 
 LOCAL_TARGETS := $(LOCAL_TARGET) $(BUILD_PATH)/driver.o
 
-bridged_net_daemon: $(BUILD_ROOT)/colinux/os/current/user/conet-bridged-daemon/colinux-bridged-net-daemon.exe
+bridged_net_daemon:
+	@echo "bridged_net_daemon is included in build all, no need extra make"
 
 colinux: $(BUILD_ROOT)/colinux/common/version.h $(LOCAL_FILES)
 
 driver: $(BUILD_PATH)/driver.o
+
+INSTALL_FILES := $(INSTALL_FILES) \
+	$(LOCAL_FILES)
 
 CLEAN_FILES := $(CLEAN_FILES) \
 	$(LOCAL_TARGETS) $(BUILD_PATH)/driver.coff  $(BUILD_PATH)/driver.rc

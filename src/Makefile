@@ -86,6 +86,7 @@ CO_INCLUDES=-I$(BUILD_ROOT) -I$(COLINUX_TARGET_KERNEL_PATH)/include
 HOST_API_CFLAGS=-DCO_HOST_API
 
 AR=$(CROSS_TARGET)ar
+STRIP=$(CROSS_TARGET)strip
 
 TARGET_FLAGS = TARGETFLAGS_$(subst /,_,$(BUILD_PATH))
 
@@ -103,6 +104,10 @@ BUILD_PATH=$(BUILD_ROOT)
 FILES_LIST_FILE = ./colinux/common/files_list.txt
 
 include $(BUILD_PATH)/colinux/Makefile
+
+# Copy file into install directory and strip debug information form distribution executable
+install:
+	@$(foreach file,$(INSTALL_FILES), echo install $(file); $(STRIP) $(file) -o $(COLINUX_INSTALL_DIR)/$(notdir $(file)); )
 
 $(shell python ../bin/file_id.py update $(FILES_LIST_FILE) $(filter %.o,$(CLEAN_FILES)))
 

@@ -2,9 +2,7 @@
 
 source ./build-common.sh
 
-# See ./commom.sh
 # Updated by Sam Lantinga <slouken@libsdl.org>
-
 # These are the files from the current MingW release
 
 GCC=gcc-3.3.1-20030804-1
@@ -17,6 +15,8 @@ MINGW=mingw-runtime-3.3
 MINGW_ARCHIVE=$MINGW.tar.gz
 W32API_ARCHIVE=$W32API.tar.gz
 
+CHECKSUM_FILE=$SRCDIR/.build-cross.md5
+
 download_files()
 {
 	mkdir -p "$SRCDIR"
@@ -28,21 +28,41 @@ download_files()
 	download_file "$W32API_ARCHIVE" "$MINGW_URL"
 }
 
-check_isinstalled()
+check_md5sums()
 {
-	if [ -f $PREFIX/bin/$TARGET-gcc ] ; then
-		echo "Skip $TARGET-gcc, already installed on $PREFIX/bin"
+	echo "Check md5sum"
+	if md5sum --check $CHECKSUM_FILE >>$COLINUX_BUILD_LOG 2>&1 ; then
+		echo "Skip $TARGET-windres,$TARGET-ar,$TARGET-gcc"
+		echo " - already installed on $PREFIX/bin"
 		exit 0
 	fi
 }
+
+create_md5sums()
+{
+	echo "Create md5sum"
+	md5sum --binary \
+	    $GCC_PATCH \
+	    $PREFIX/bin/$TARGET-windres \
+	    $PREFIX/bin/$TARGET-ar \
+	    $PREFIX/bin/$TARGET-gcc \
+	    $PREFIX/$TARGET/bin/gcc \
+	    $PREFIX/$TARGET/bin/strip \
+	    > $CHECKSUM_FILE
+	test $? -ne 0 && error_exit 1 "can not create md5sum"
+	if [ "$GCC_PATCH" != "" ]; then
+		md5sum --binary $SRCDIR/$GCC_PATCH >> $CHECKSUM_FILE
+	fi
+}
+
 
 install_libs()
 {
 	echo "Installing cross libs and includes"
 	mkdir -p "$PREFIX/$TARGET"
 	cd "$PREFIX/$TARGET"
-	gzip -dc "$SRCDIR/$MINGW_ARCHIVE" | tar xf -
-	gzip -dc "$SRCDIR/$W32API_ARCHIVE" | tar xf -
+	gzip -dc "$SRCDIR/$MINGW_ARCHIVE" | tar x
+	gzip -dc "$SRCDIR/$W32API_ARCHIVE" | tar x
 	cd "$TOPDIR"
 }
 
@@ -51,7 +71,7 @@ extract_binutils()
 	cd "$SRCDIR"
 	rm -rf "$BINUTILS"
 	echo "Extracting binutils"
-	gzip -dc "$SRCDIR/$BINUTILS_ARCHIVE" | tar xf -
+	gzip -dc "$SRCDIR/$BINUTILS_ARCHIVE" | tar x
 	cd "$TOPDIR"
 }
 
@@ -70,11 +90,8 @@ build_binutils()
 {
 	cd "$TOPDIR/binutils-$TARGET"
 	echo "Building binutils"
-	make &> make.log
-	if test $? -ne 0; then
-		echo "make failed - log available: binutils-$TARGET/make.log"
-		exit 1
-	fi
+	make >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "make binutils failed"
 	cd "$TOPDIR"
 }
 
@@ -82,11 +99,8 @@ install_binutils()
 {
 	cd "$TOPDIR/binutils-$TARGET"
 	echo "Installing binutils"
-	make install &> make-install.log
-	if test $? -ne 0; then
-		echo "install failed - log available: binutils-$TARGET/make-install.log"
-		exit 1
-	fi
+	make install >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "install binutils failed"
 	cd "$TOPDIR"
 }
 
@@ -95,8 +109,8 @@ extract_gcc()
 	cd "$SRCDIR"
 	rm -rf "$GCC"
 	echo "Extracting gcc"
-	gzip -dc "$SRCDIR/$GCC_ARCHIVE1" | tar xf -
-	gzip -dc "$SRCDIR/$GCC_ARCHIVE2" | tar xf -
+	gzip -dc "$SRCDIR/$GCC_ARCHIVE1" | tar x
+	gzip -dc "$SRCDIR/$GCC_ARCHIVE2" | tar x
 	cd "$TOPDIR"
 }
 
@@ -121,7 +135,8 @@ configure_gcc()
 		--prefix="$PREFIX" --target=$TARGET \
 		--with-headers="$PREFIX/$TARGET/include" \
 		--with-gnu-as --with-gnu-ld \
-		--without-newlib --disable-multilib &> configure.log
+		--without-newlib --disable-multilib >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "configure gcc failed"
 	cd "$TOPDIR"
 }
 
@@ -129,11 +144,8 @@ build_gcc()
 {
 	cd "$TOPDIR/gcc-$TARGET"
 	echo "Building gcc"
-	make LANGUAGES="c c++" &> make.log
-	if test $? -ne 0; then
-		echo "make failed - log available: gcc-$TARGET/make.log"
-		exit 1
-	fi
+	make LANGUAGES="c c++" >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "make gcc failed"
 	cd "$TOPDIR"
 }
 
@@ -141,11 +153,8 @@ install_gcc()
 {
 	cd "$TOPDIR/gcc-$TARGET"
 	echo "Installing gcc"
-	make LANGUAGES="c c++" install &> make-install.log
-	if test $? -ne 0; then
-		echo "install failed - log available: gcc-$TARGET/make-install.log"
-		exit 1
-	fi
+	make LANGUAGES="c c++" install >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "install gcc failed"
 	cd "$TOPDIR"
 }
 
@@ -191,7 +200,9 @@ build_cross()
 	# Only Download? Than ready.
 	test "$1" = "--download-only" && exit 0
 
-	check_isinstalled
+	# do not check files, if rebuild forced
+	test "$1" = "--rebuild-all" || check_md5sums
+
         install_libs
 
         extract_binutils
@@ -206,6 +217,7 @@ build_cross()
         install_gcc
 
         final_tweaks
+	create_md5sums
 }
 
 build_cross $1
