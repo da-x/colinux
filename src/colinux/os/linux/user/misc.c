@@ -93,8 +93,3 @@ void co_udp_socket_close(int sock)
 {
 	close(sock);
 }
-
-co_rc_t co_canonize_cobd_path(co_pathname_t *pathname)
-{
-	return CO_RC(OK);
-}
