@@ -6153,7 +6153,7 @@ diff -urN a/fs/cofusefs/file.c b/fs/cofusefs/file.c
 diff -urN a/fs/cofusefs/fuse_i.h b/fs/cofusefs/fuse_i.h
 --- a/fs/cofusefs/fuse_i.h
 +++ b/fs/cofusefs/fuse_i.h
-@@ -0,0 +1,291 @@
+@@ -0,0 +1,297 @@
 +/*
 +    COFUSE: Filesystem in an host of Cooperative Linux
 +    Copyright (C) 2004 Dan Aloni <da-x@colinux.org>
@@ -6234,6 +6234,8 @@ diff -urN a/fs/cofusefs/fuse_i.h b/fs/cofusefs/fuse_i.h
 +	/** Is the new (synchronous) release not supported by
 +	    userspace? */
 +	unsigned int oldrelease;
++
++	char opt_pathname[0x80];
 +
 +#ifndef CONFIG_COOPERATIVE	
 +	/** Readers of the connection are waiting on this */
@@ -6442,13 +6444,17 @@ diff -urN a/fs/cofusefs/fuse_i.h b/fs/cofusefs/fuse_i.h
 +/** Data passed to mount */
 +struct cofuse_mount_data {
 +	struct fuse_mount_data *fuse;
-+
-+	char name[0x10];
++	int uid;
++	int gid;
++	unsigned long file_mode;
++	unsigned long dir_mode;
++	unsigned long flags;
++	char name[0x80];
 +};
 diff -urN a/fs/cofusefs/inode.c b/fs/cofusefs/inode.c
 --- a/fs/cofusefs/inode.c
 +++ b/fs/cofusefs/inode.c
-@@ -0,0 +1,383 @@
+@@ -0,0 +1,544 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001	Miklos Szeredi (miklos@szeredi.hu)
@@ -6617,7 +6623,7 @@ diff -urN a/fs/cofusefs/inode.c b/fs/cofusefs/inode.c
 +
 +#else
 +
-+static int _atoi(const char *s)
++static int _atoi(const char *s, const char **out)
 +{
 +	/* lib/spprintf.h */
 +
@@ -6626,22 +6632,30 @@ diff -urN a/fs/cofusefs/inode.c b/fs/cofusefs/inode.c
 +        while (isdigit(*s))
 +                i = i*10 + *(s++) - '0';
 +
++	*out = s;
++
 +        return i;	
 +}
 +
 +static struct fuse_conn *co_get_conn(struct cofuse_mount_data *d)
 +{
 +	int index;
++	int ret;
++	unsigned long flags;
 +	struct fuse_conn *conn = NULL;
++	const char *name, *next;
 +
 +	if (d == NULL) {
 +		printk("cofuse_read_super: Bad mount data\n");
 +		return NULL;
 +	}
 +
-+	/* TODO: make cofs%d mountable instead of %d */
-+	index = _atoi(d->name);
++	name = d->name;
 +
++	if (strncmp("cofs", name, 4) == 0)
++		name += 4;
++
++	index = _atoi(name, &next);
 +	if (index < 0  || index >= CO_MODULE_MAX_COFS) {
 +		printk("cofuse_read_super: Invalid index %d\n", index);
 +		return NULL;
@@ -6656,7 +6670,31 @@ diff -urN a/fs/cofusefs/inode.c b/fs/cofusefs/inode.c
 +
 +	memset(conn, 0, sizeof(*conn));
 +
++	if (*next == ':') {
++		snprintf(conn->opt_pathname, sizeof(conn->opt_pathname), "%s", next+1);
++	}
++
 +	conn->cofs_unit = index;
++
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_FILESYSTEM;
++	co_passage_page->params[1] = conn->cofs_unit;
++	co_passage_page->params[2] = FUSE_MOUNT;
++	co_passage_page->params[5] = d->uid;
++	co_passage_page->params[6] = d->gid;
++	co_passage_page->params[7] = d->dir_mode;
++	co_passage_page->params[8] = d->file_mode;
++	memcpy(&co_passage_page->params[30], conn->opt_pathname, strlen(conn->opt_pathname) + 1);
++	co_switch_wrapper();
++	ret = co_passage_page->params[4];
++	co_passage_page_release(flags);
++	
++	if (ret) {
++		kfree(conn);
++		conn = NULL;
++	}
 +
 +	return conn; 
 +}
@@ -6767,6 +6805,125 @@ diff -urN a/fs/cofusefs/inode.c b/fs/cofusefs/inode.c
 +	return 0;
 +}
 +
++#ifdef CONFIG_COOPERATIVE
++/*
++ * cofuse_getopt and cofuse_parse_options were
++ * addopted from smb
++ */ 
++
++struct option {
++	const char *name;
++	unsigned long flag;
++	int val;
++};
++
++/**
++ *      cofuse_getopt - option parser
++ *      based on smb_getopt from fs/smbfs
++ *
++ *      @caller: name of the caller, for error messages
++ *      @options: the options string
++ *      @opts: an array of &struct option entries controlling parser operations
++ *      @optopt: output; will contain the current option
++ *      @optarg: output; will contain the value (if one exists)
++ *      @flag: output; may be NULL; should point to a long for or'ing flags
++ *      @value: output; may be NULL; will be overwritten with the integer value
++ *              of the current argument.
++ *
++ *      Helper to parse options on the format used by mount ("a=b,c=d,e,f").
++ *      Returns opts->val if a matching entry in the 'opts' array is found,
++ *      0 when no more tokens are found, -1 if an error is encountered.
++ */
++static int cofuse_getopt(char *caller, char **options, struct option *opts,
++			 char **optopt, char **optarg, unsigned long *flag,
++			 unsigned long *value)
++{
++        char *token;
++        char *val;
++        int i;
++
++        do {
++                if ((token = strsep(options, ",")) == NULL)
++                        return 0;
++        } while (*token == '\0');
++        *optopt = token;
++
++        *optarg = NULL;
++        if ((val = strchr (token, '=')) != NULL) {
++                *val++ = 0;
++                if (value)
++                        *value = simple_strtoul(val, NULL, 0);
++                *optarg = val;
++        }
++
++        for (i = 0; opts[i].name != NULL; i++) {
++                if (!strcmp(opts[i].name, token)) {
++                        if (!opts[i].flag && (!val || !*val)) {
++                                printk("%s: the %s option requires an argument\n",
++                                       caller, token);
++                                return -1;
++                        }
++
++                        if (flag && opts[i].flag)
++                                *flag |= opts[i].flag;
++
++                        return opts[i].val;
++                }
++        }
++        printk("%s: Unrecognized mount option %s\n", caller, token);
++        return -1;
++}
++
++static struct option opts[] = {
++	{ "uid",	0, 'u' },
++	{ "gid",	0, 'g' },
++	{ "file_mode",	0, 'f' },
++	{ "dir_mode",	0, 'd' },
++	{ NULL,		0, 0}
++};
++
++/*
++ * parse_options - based on parse_options from fs/smbfs
++ */
++static int parse_options(struct cofuse_mount_data *mnt, char *options)
++{
++        int c;
++        unsigned long flags;
++        unsigned long value;
++        char *optarg;
++        char *optopt;
++
++        flags = 0;
++        while ((c = cofuse_getopt("cofuse", &options, opts,
++				  &optopt, &optarg, &flags, &value)) > 0)
++	{
++                switch (c) {
++                case 1:
++                        /* got a "flag" option */
++                        break;
++                case 'u':
++                        mnt->uid = value;
++                        break;
++                case 'g':
++                        mnt->gid = value;
++                        break;
++                case 'f':
++                        mnt->file_mode = (value & S_IRWXUGO) | S_IFREG;
++                        break;
++                case 'd':
++                        mnt->dir_mode = (value & S_IRWXUGO) | S_IFDIR;
++                        break;
++                default:
++                        printk("cofs: Unrecognized mount option %s\n", optopt);
++                        return -1;
++                }
++        }
++
++        mnt->flags = flags;
++        return c;
++}
++#endif
++
 +#ifdef KERNEL_2_6
 +static struct super_block *fuse_get_sb(struct file_system_type *fs_type,
 +				       int flags, const char *dev_name,
@@ -6775,13 +6932,23 @@ diff -urN a/fs/cofusefs/inode.c b/fs/cofusefs/inode.c
 +#ifdef CONFIG_COOPERATIVE
 +	struct cofuse_mount_data co_md = {0, };
 +	struct fuse_mount_data md = {0, };
++	int ret;
 +
-+	md.uid = current->uid;
-+	md.flags = FUSE_ALLOW_OTHER;
++	co_md.uid = current->uid;
++	co_md.gid = current->gid;
++	co_md.dir_mode = FUSE_S_IRWXU | FUSE_S_IRGRP | FUSE_S_IXGRP | 
++		FUSE_S_IROTH | FUSE_S_IXOTH | S_IFDIR;
++	co_md.file_mode = FUSE_S_IRWXU | FUSE_S_IRGRP | FUSE_S_IXGRP | 
++		FUSE_S_IROTH | FUSE_S_IXOTH | S_IFREG;
++
++	ret = parse_options(&co_md, raw_data);
++	if (ret == -1)
++		return ERR_PTR(-EINVAL);
++
 +	md.rootmode = S_IFDIR | S_IRWXU | S_IRUGO | S_IXUGO;
 +
 +	co_md.fuse = &md;
-+	snprintf(co_md.name, 10, "%s", dev_name);
++	snprintf(co_md.name, sizeof(co_md.name), "%s", dev_name);
 +
 +	return get_sb_nodev(fs_type, flags, &co_md, fuse_read_super);
 +#else
@@ -7819,7 +7986,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 diff -urN a/include/linux/cooperative_fs.h b/include/linux/cooperative_fs.h
 --- a/include/linux/cooperative_fs.h
 +++ b/include/linux/cooperative_fs.h
-@@ -0,0 +1,265 @@
+@@ -0,0 +1,267 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
@@ -7930,6 +8097,8 @@ diff -urN a/include/linux/cooperative_fs.h b/include/linux/cooperative_fs.h
 +	FUSE_DIR_OPEN    = 22, 
 +	FUSE_DIR_READ    = 23, 
 +	FUSE_DIR_RELEASE = 24, 
++
++	FUSE_MOUNT       = 25,
 +};
 +
 +/* Conservative buffer size for the client */

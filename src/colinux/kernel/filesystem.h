@@ -41,8 +41,13 @@ typedef struct co_inode {
 typedef struct co_filesystem {
 	co_list_t list_inodes;
 	co_cofsdev_desc_t *desc;
+	co_pathname_t base_path;
 	co_inode_t *root;
 	int inodes_count;
+	int uid;
+	int gid;
+	int dir_mode;
+	int file_mode;
 	struct co_filesystem_ops *ops;
 
 	/* Inode hash table */

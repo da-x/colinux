@@ -29,9 +29,6 @@ static co_inode_t *ino_num_to_inode(int ino, co_filesystem_t *filesystem)
 	inode = NULL;
 
 out:
-	if (inode == NULL)
-		co_debug_lvl(filesystem, 10, "inode %d to inode struct %x\n", ino, inode);
-
 	return inode;
 }
 
@@ -45,6 +42,11 @@ static co_inode_t *alloc_inode(co_filesystem_t *filesystem, co_inode_t *parent, 
 
 	co_memset(inode, 0, sizeof(*inode));
 
+	do {
+		inode->number = filesystem->next_inode_num;
+		filesystem->next_inode_num++;
+	} while (ino_num_to_inode(inode->number, filesystem) != NULL);
+
 	if (parent) {
 		co_list_add_tail(&inode->node, &parent->sub_inodes);
 		inode->parent = parent;
@@ -54,6 +56,7 @@ static co_inode_t *alloc_inode(co_filesystem_t *filesystem, co_inode_t *parent, 
 		int len = co_strlen(name);
 		char *dup = co_os_malloc(len + 1);
 		if (!dup) {
+			co_list_del(&inode->node);
 			co_os_free(inode);
 			return NULL;
 		}
@@ -61,14 +64,11 @@ static co_inode_t *alloc_inode(co_filesystem_t *filesystem, co_inode_t *parent, 
 		inode->name = dup;
 	}
 
-	inode->number = filesystem->next_inode_num;
-
 	co_list_init(&inode->sub_inodes);
 	co_list_add_tail(&inode->flat_node, &filesystem->list_inodes);
 	co_list_add_tail(&inode->hash_node, &filesystem->inode_hashes[inode->number % CO_FS_HASH_TABLE_SIZE]);
 
 	filesystem->inodes_count++;
-	filesystem->next_inode_num++;
 	co_debug_lvl(filesystem, 10, "inode [%d] allocated %x child '%s' of %x\n", 
 		     filesystem->inodes_count, inode, name ? name : "<root>", parent);
 	
@@ -210,10 +210,10 @@ static co_rc_t inode_mknod(co_filesystem_t *filesystem, co_inode_t *dir, unsigne
 	co_rc_t rc;
 
 	attr->size = 0;
-	attr->mode = FUSE_S_IFREG | FUSE_S_IRWXU | FUSE_S_IRGRP | FUSE_S_IROTH;
+	attr->mode = filesystem->file_mode;
 	attr->nlink = 1;
-	attr->uid = 0;
-	attr->gid = 0;
+	attr->uid = filesystem->uid;
+	attr->gid = filesystem->gid;
 	attr->rdev = 0;
 	attr->_dummy = 0;
 	attr->blocks = 0;
@@ -390,6 +390,7 @@ co_rc_t co_monitor_file_system_init(co_monitor_t *cmon, unsigned long unit,
 	filesystem->next_inode_num = 1;
 
 	co_list_init(&filesystem->list_inodes);
+	co_memcpy(&filesystem->base_path, &desc->pathname, sizeof(co_pathname_t));
 	filesystem->desc = desc;
 	filesystem->ops = &flat_mode; /* The only supported mode at the moment */
 	filesystem->root = alloc_inode(filesystem, NULL, NULL);
@@ -419,7 +420,6 @@ void co_monitor_file_system_free(co_monitor_t *cmon, int unit)
 
 	co_os_free(filesystem);
 	cmon->filesystems[unit] = NULL;
-	
 }
 
 static co_rc_t inode_get_attr(co_filesystem_t *filesystem, co_inode_t *inode, 
@@ -469,6 +469,27 @@ static int translate_code(co_rc_t value)
 	return 0;
 }
 
+static co_rc_t fs_mount(co_filesystem_t *filesystem, const char *pathname,
+			int uid, int gid, unsigned long dir_mode, 
+			unsigned long file_mode)
+{	
+	co_cofsdev_desc_t *desc;
+	co_rc_t rc;
+
+	desc = filesystem->desc;
+
+	filesystem->uid = uid;
+	filesystem->gid = gid;
+	filesystem->dir_mode = dir_mode;
+	filesystem->file_mode = file_mode;
+
+	co_memcpy(&filesystem->base_path, &desc->pathname, sizeof(co_pathname_t));
+
+	rc = co_os_fs_dir_join_unix_path(&filesystem->base_path, pathname);
+
+	return rc;
+}
+
 void co_monitor_file_system(co_monitor_t *cmon, unsigned long unit, 
 			    enum fuse_opcode opcode, unsigned long *params)
 {
@@ -478,13 +499,28 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned long unit,
 	int result = 0;
 
 	filesystem = cmon->filesystems[unit];
-	if (!filesystem)
-		return;
+	if (!filesystem) {
+		result = -ENODEV;
+		goto out;
+	}
+
+	if (opcode == FUSE_MOUNT) {
+		result = fs_mount(filesystem, (char*)(&co_passage_page->params[30]),
+				  co_passage_page->params[5],
+				  co_passage_page->params[6],
+				  co_passage_page->params[7],
+				  co_passage_page->params[8]);
+		result = translate_code(result);
+		goto out;
+	}
 
 	ino = params[0];
 	inode = ino_num_to_inode(ino, filesystem);
 
 	switch (opcode) {
+	case FUSE_MOUNT:
+		break;
+
 	case FUSE_READLINK:
 	case FUSE_SYMLINK:
 	case FUSE_LINK:
@@ -604,9 +640,13 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned long unit,
 
 	case FUSE_GETDIR:
 		break;
+	default:
+		break;
 	}	
 
+out:
 	co_passage_page->params[4] = result;
+	co_debug_system("code %d, return %x\n", opcode, result);
 }
 
 void co_monitor_unregister_filesystems(co_monitor_t *cmon)
@@ -632,7 +672,7 @@ static co_rc_t flat_mode_getattr(co_filesystem_t *fs, co_inode_t *dir,
 	if (!CO_OK(rc))
 		return rc;
 
-	return co_os_file_get_attr(filename, attr);
+	return co_os_fs_get_attr(fs, filename, attr);
 }
 
 static co_rc_t flat_mode_getdir(co_filesystem_t *fs, co_inode_t *dir, co_filesystem_dir_names_t *names)
