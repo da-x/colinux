@@ -70,7 +70,8 @@ configure_kernel()
 		echo "   run build again."
 	        exit 1
 	fi
-	echo "Making Kernel $KERNEL_VERSION"
+
+	echo "Dep Kernel $KERNEL_VERSION"
 	make dep &> make-dep.log
 	if test $? -ne 0; then
 		tail make-dep.log
@@ -78,6 +79,14 @@ configure_kernel()
 	        echo "   - log available: $COLINUX_TARGET_KERNEL_PATH/make-dep.log"
 	        exit 1
 	fi
+	cd "$TOPDIR"
+}
+
+compile_kernel()
+{
+	cd "$TOPDIR"
+	cd "$COLINUX_TARGET_KERNEL_PATH"
+	echo "Making Kernel $KERNEL_VERSION"
 	make vmlinux &> make.log
 	if test $? -ne 0; then
 		tail make.log
@@ -92,13 +101,17 @@ install_kernel()
 {
 	cd "$TOPDIR"
 	cd "$COLINUX_TARGET_KERNEL_PATH"
-	echo "Installing Kernel $KERNEL_VERSION in $PREFIX/dist"
-	mkdir -p "$PREFIX/dist"
-	cp -a vmlinux $PREFIX/dist
+	echo "Installing Kernel $KERNEL_VERSION in $INSTALL_DIR"
+	mkdir -p "$INSTALL_DIR"
+	cp -a vmlinux $INSTALL_DIR
 	cd "$TOPDIR"
 }
 
-build_modules()
+#
+# Modules
+#
+
+compile_modules()
 {
 	cd "$TOPDIR"
 	cd "$COLINUX_TARGET_KERNEL_PATH"
@@ -113,15 +126,17 @@ build_modules()
 	cd "$TOPDIR"
 }
 
+# Create compressed tar archive with path for extracting direct on the
+# root of fs, lib/modules with full version of kernel and colinux.
 install_modules()
 {
 	cd "$TOPDIR"
 	CO_VERSION=`cat ../src/colinux/VERSION`
-	cd "$COLINUX_TARGET_KERNEL_PATH"
-	echo "Installing Modules $KERNEL_VERSION in $PREFIX/dist"
-	mkdir -p "$PREFIX/dist"
-	cd _install/lib/modules
-	tar cfz $PREFIX/dist/modules-$KERNEL_VERSION-co-$CO_VERSION.tar.gz $KERNEL_VERSION-co-$CO_VERSION
+	NAME=$KERNEL_VERSION-co-$CO_VERSION
+	cd $COLINUX_TARGET_KERNEL_PATH/_install
+	echo "Installing Modules $KERNEL_VERSION in $INSTALL_DIR"
+	mkdir -p "$INSTALL_DIR"
+	tar cfz $INSTALL_DIR/modules-$NAME.tar.gz lib/modules/$NAME
 	if test $? -ne 0; then
 	        echo "Kernel $KERNEL_VERSION-co-$CO_VERSION modules install failed"
 	        exit 1
@@ -135,14 +150,17 @@ build_kernel()
 	# Only Download? Than ready.
 	test "$1" = "--download-only" && exit 0
 
-	# Build and install Kernel vmlinux
+	# Extract, patch and configure Kernel
 	extract_kernel
 	patch_kernel
 	configure_kernel
+
+	# Build and install Kernel vmlinux
+	compile_kernel
 	install_kernel
 
 	# Build and install Modules
-	build_modules
+	compile_modules
 	install_modules
 }
 

@@ -217,7 +217,7 @@ co_rc_t co_os_pipe_get_colinux_pipe_path(co_id_t instance, char *out_path, int s
 	if (home == NULL)
 		home = "/tmp";
 
-	snprintf(out_path, size, "%s/.colinux.%d.pipe", home, instance);
+	snprintf(out_path, size, "%s/.colinux.%d.pipe", home, (int) instance);
 
 	return CO_RC(OK);
 }
