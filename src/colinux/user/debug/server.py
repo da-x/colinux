@@ -11,3 +11,4 @@ while 1:
     if len(data) == 0:
 	break    
     log.write(data)
+2

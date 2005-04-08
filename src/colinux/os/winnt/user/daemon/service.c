@@ -70,12 +70,32 @@ void co_winnt_set_service_restart_options(SC_HANDLE schService)
 	}
 }
 
-co_rc_t co_winnt_daemon_install_as_service(const char *service_name, co_start_parameters_t *start_parameters) 
+void patch_command_line_for_service(char *destbuf, char *srcbuf)
+{
+	// replace any instance of --install-service with --run-service
+
+	while (*srcbuf)
+	{
+		if (0 == strncmp(srcbuf, "--install-service", 17))
+		{
+			srcbuf += 17;
+			strcpy(destbuf, "--run-service");
+			destbuf = destbuf + strlen(destbuf);
+			continue;
+		} 
+
+		*destbuf++ = *srcbuf++;
+	}
+	*destbuf = 0;
+}
+
+co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char *original_commandline) 
 {
 	SC_HANDLE schService;
 	SC_HANDLE schSCManager;
 	char exe_name[512];
 	char command[1024];
+	char patched_commandline[1024];
 	char error_message[1024];
 	char *service_user_name = NULL;
 
@@ -91,7 +111,9 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, co_start_pa
 		return CO_RC(ERROR);
 	}
 
-	co_snprintf(command, sizeof(command), "\"%s\" --run-service \"%s\" -d -c \"%s\"", exe_name, service_name, start_parameters->config_path);
+	patch_command_line_for_service(patched_commandline, original_commandline);
+
+	co_snprintf(command, sizeof(command), "\"%s\" %s", exe_name, patched_commandline);
 	co_ntevent_print("daemon: service command line: %s\n", command);
 
 #if (0)

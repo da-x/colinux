@@ -400,7 +400,7 @@ static void syntax(void)
 	printf("colinux-debug-daemon\n");
 	printf("syntax: \n");
 	printf("\n");
-	printf("    colinux-debug-daemon [-h] [-c config.xml] [-d]\n");
+	printf("    colinux-debug-daemon [-h] [-p] [-d] [-s levels] [-f filename]\n");
 	printf("\n");
 	printf("      -d              Download debug information on the fly\n");
 	printf("      -p              Parse the debug information and output an XML\n");

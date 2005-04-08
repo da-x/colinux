@@ -174,18 +174,18 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 		return rc;
 	}
 
+	rc = co_winnt_daemon_parse_args(cmdline, &winnt_parameters);
+	if (!CO_OK(rc)) {
+		co_terminal_print("daemon: error parsing parameters\n");
+		co_winnt_help();
+		return CO_RC(ERROR);
+	}
+
 	rc = co_daemon_parse_args(cmdline, &start_parameters);
 	if (!CO_OK(rc) || start_parameters.show_help){
 		if (!CO_OK(rc)) {
 			co_terminal_print("daemon: error parsing parameters\n");
 		}
-		co_winnt_help();
-		return CO_RC(ERROR);
-	}
-
-	rc = co_winnt_daemon_parse_args(cmdline, &winnt_parameters);
-	if (!CO_OK(rc)) {
-		co_terminal_print("daemon: error parsing parameters\n");
 		co_winnt_help();
 		return CO_RC(ERROR);
 	}
@@ -216,7 +216,7 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 			co_terminal_print("daemon: config not specified\n");
 			return CO_RC(ERROR);
 		}
-		return co_winnt_daemon_install_as_service(winnt_parameters.service_name, &start_parameters);
+		return co_winnt_daemon_install_as_service(winnt_parameters.service_name, szCmdLine);
 	}
 
 	if (winnt_parameters.remove_service) {
@@ -231,6 +231,11 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 		co_running_as_service = PTRUE;
 
 		co_terminal_print("colinux: running as service '%s'\n", winnt_parameters.service_name);
+		if (start_parameters.launch_console)
+		{
+			co_terminal_print("colinux: not spawning a console, because we're running as service.\n");
+			start_parameters.launch_console = PFALSE;
+		}
 
 		return co_winnt_daemon_initialize_service(&start_parameters, winnt_parameters.service_name);
 	}
