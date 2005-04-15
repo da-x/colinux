@@ -9162,11 +9162,18 @@ diff -urN a/kernel/printk.c b/kernel/printk.c
 diff -urN a/kernel/sched.c b/kernel/sched.c
 --- a/kernel/sched.c
 +++ b/kernel/sched.c
-@@ -2309,6 +2309,16 @@
+@@ -2309,6 +2309,7 @@
  
  	total = cputime_add(p->utime, p->stime);
  	secs = cputime_to_secs(total);
 +
+ 	if (unlikely(secs >= p->signal->rlim[RLIMIT_CPU].rlim_cur)) {
+ 		/* Send SIGXCPU every second. */
+ 		tmp = cputime_sub(total, cputime);
+@@ -2333,6 +2334,15 @@
+ 
+ 	p->utime = cputime_add(p->utime, cputime);
+ 
 +#ifdef CONFIG_COOPERATIVE
 +	/* FIXME: figure out why account_user_time() is called when it shouldn't */
 +	if (!p->signal) {
@@ -9176,9 +9183,9 @@ diff -urN a/kernel/sched.c b/kernel/sched.c
 +	}
 +#endif
 +
- 	if (unlikely(secs >= p->signal->rlim[RLIMIT_CPU].rlim_cur)) {
- 		/* Send SIGXCPU every second. */
- 		tmp = cputime_sub(total, cputime);
+ 	/* Check for signals (SIGVTALRM, SIGPROF, SIGXCPU & SIGKILL). */
+ 	check_rlimit(p, cputime);
+ 	account_it_virt(p, cputime);
 diff -urN a/localversion-cooperative b/localversion-cooperative
 --- a/localversion-cooperative
 +++ b/localversion-cooperative
@@ -9270,13 +9277,46 @@ diff -urN a/mm/page_alloc.c b/mm/page_alloc.c
  	coalesced = base + page_idx;
  	set_page_order(coalesced, order);
  	list_add(&coalesced->lru, &zone->free_area[order].free_list);
-@@ -603,9 +606,16 @@
+@@ -599,13 +602,49 @@
+ 	free_hot_cold_page(page, 1);
+ }
+ 
++static int co_persistent_alloc_pages(unsigned long address, int order)
++{
++	int result, retries_left;
++	
++	retries_left = 10;
++	
++	while (retries_left > 0) {
++		result = co_alloc_pages(address, order);
++		if (result) {
++			unsigned long cache_size;
++			/* 
++			 * Whoops, we have allocated too much of the
++			 * host OS's memory, time to free some cache.
++			 * cache.
++			 */
++			cache_size = get_page_cache_size()-total_swapcache_pages;
++			cache_size /= 2;
++			if (cache_size < ((1 << order)*2))
++				cache_size = (1 << order)*2;
++			shrink_all_memory(cache_size);
++		} else
++			return 0;
++		retries_left--;
++	}
++
++	return result;
++	
++}
++
+ static inline void prep_zero_page(struct page *page, int order, int gfp_flags)
  {
  	int i;
  
 +	if (cooperative_mode_enabled()) {
 +		int result;
-+		result = co_alloc_pages((unsigned long)page_address(page), 1 << order);
++		result = co_persistent_alloc_pages((unsigned long)page_address(page), 1 << order);
 +		BUG_ON(result != 0);
 +	}
 +
@@ -9287,35 +9327,13 @@ diff -urN a/mm/page_alloc.c b/mm/page_alloc.c
  }
  
  /*
-@@ -852,6 +862,37 @@
+@@ -852,6 +891,15 @@
  	return NULL;
  got_pg:
  	zone_statistics(zonelist, z);
 +
 +	if (cooperative_mode_enabled()) {
-+		int result, retries_left;
-+
-+		retries_left = 10;
-+
-+		while (retries_left > 0) {
-+			result = co_alloc_pages((unsigned long)page_address(page), 1 << order);
-+			if (result) {
-+				unsigned long cache_size;
-+				/* 
-+				 * Whoops, we have allocated too much of the
-+				 * host OS's memory, time to free some cache.
-+				 * cache.
-+				 */
-+				cache_size = get_page_cache_size()-total_swapcache_pages;
-+				cache_size /= 2;
-+				if (cache_size < ((1 << order)*2))
-+					cache_size = (1 << order)*2;
-+				shrink_all_memory(cache_size);
-+			} else
-+				break;
-+			retries_left--;
-+		}
-+
++		int result = co_persistent_alloc_pages((unsigned long)page_address(page), 1 << order);
 +		if (result) {
 +			__free_pages(page, order);
 +			return NULL;
