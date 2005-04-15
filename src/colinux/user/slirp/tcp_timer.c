@@ -36,11 +36,6 @@
 
 #include "slirp.h"
 
-#if COLINUX_ARCH != winnt
-#define max(x,y) ((x) > (y) ? (x) : (y))
-#define min(x,y) ((x) < (y) ? (x) : (y))
-#endif
-
 int	tcp_keepidle = TCPTV_KEEP_IDLE;
 int	tcp_keepintvl = TCPTV_KEEPINTVL;
 int	tcp_maxidle;
@@ -159,9 +154,8 @@ tcp_timers(tp, timer)
 		if (tp->t_state != TCPS_TIME_WAIT &&
 		    tp->t_idle <= tcp_maxidle)
 			tp->t_timer[TCPT_2MSL] = tcp_keepintvl;
-		else{
+		else
 			tp = tcp_close(tp);
-		}
 		break;
 
 	/*

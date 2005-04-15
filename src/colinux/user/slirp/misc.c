@@ -6,6 +6,7 @@
  */
 
 #define WANT_SYS_IOCTL_H
+
 #include "slirp.h"
 
 u_int curtime, time_fasttimo, last_slowtimo, detach_time;
@@ -212,10 +213,23 @@ strerror(error)
 #endif
 
 
-#if 0
+#ifdef _WIN32
+
 int
-openpty(amaster, aslave)
-	int *amaster, *aslave;
+fork_exec(so, ex, do_pty)
+	struct socket *so;
+	char *ex;
+	int do_pty;
+{
+    /* not implemented */
+    return 0;
+}
+
+#else
+
+int
+slirp_openpty(amaster, aslave)
+     int *amaster, *aslave;
 {
 	register int master, slave;
 
@@ -301,7 +315,9 @@ fork_exec(so, ex, do_pty)
 	int opt;
         int master;
 	char *argv[256];
+#if 0
 	char buff[256];
+#endif
 	/* don't want to clobber the original */
 	char *bptr;
 	char *curarg;
@@ -313,7 +329,7 @@ fork_exec(so, ex, do_pty)
 	DEBUG_ARG("do_pty = %lx", (long)do_pty);
 	
 	if (do_pty == 2) {
-		if (openpty(&master, &s) == -1) {
+		if (slirp_openpty(&master, &s) == -1) {
 			lprint("Error: openpty failed: %s\n", strerror(errno));
 			return 0;
 		}
@@ -326,7 +342,7 @@ fork_exec(so, ex, do_pty)
 		    bind(s, (struct sockaddr *)&addr, addrlen) < 0 ||
 		    listen(s, 1) < 0) {
 			lprint("Error: inet socket: %s\n", strerror(errno));
-			close(s);
+			closesocket(s);
 			
 			return 0;
 		}
@@ -360,6 +376,7 @@ fork_exec(so, ex, do_pty)
 			connect(s, (struct sockaddr *)&addr, addrlen);
 		}
 		
+#if 0
 		if (x_port >= 0) {
 #ifdef HAVE_SETENV
 			sprintf(buff, "%s:%d.%d", inet_ntoa(our_addr), x_port, x_screen);
@@ -369,7 +386,7 @@ fork_exec(so, ex, do_pty)
 			putenv(buff);
 #endif
 		}
-	
+#endif	
 		dup2(s, 0);
 		dup2(s, 1);
 		dup2(s, 2);
@@ -421,7 +438,7 @@ fork_exec(so, ex, do_pty)
 		 	 * of connect() fail in the child process
 		 	 */
 			so->s = accept(s, (struct sockaddr *)&addr, &addrlen);
-			close(s);
+			closesocket(s);
 			opt = 1;
 			setsockopt(so->s,SOL_SOCKET,SO_REUSEADDR,(char *)&opt,sizeof(int));
 			opt = 1;
@@ -801,14 +818,10 @@ void
 fd_nonblock(fd)
 	int fd;
 {
-#if COLINUX_ARCH == win32
-	int opt = 1;
-	ioctlsocket(fd, FIONBIO, (u_long FAR*)&opt);
-#else
 #ifdef FIONBIO
 	int opt = 1;
 	
-	ioctl(fd, FIONBIO, &opt);
+	ioctlsocket(fd, FIONBIO, &opt);
 #else
 	int opt;
 	
@@ -816,28 +829,22 @@ fd_nonblock(fd)
 	opt |= O_NONBLOCK;
 	fcntl(fd, F_SETFL, opt);
 #endif
-#endif
 }
 
 void
 fd_block(fd)
 	int fd;
 {
-#if COLINUX_ARCH == win32
-	int opt = 0;
-	ioctlsocket(fd, FIONBIO, (u_long FAR*)&opt);
-#else
 #ifdef FIONBIO
 	int opt = 0;
 	
-	ioctl(fd, FIONBIO, &opt);
+	ioctlsocket(fd, FIONBIO, &opt);
 #else
 	int opt;
 	
 	opt = fcntl(fd, F_GETFL, 0);
 	opt &= ~O_NONBLOCK;
 	fcntl(fd, F_SETFL, opt);
-#endif
 #endif
 }
 
@@ -875,7 +882,7 @@ rsh_exec(so,ns, user, host, args)
           return 0;
         }
 #else
-        if (openpty(&fd0[0], &fd0[1]) == -1) {
+        if (slirp_openpty(&fd0[0], &fd0[1]) == -1) {
           close(fd[0]);
           close(fd[1]);
           lprint("Error: openpty failed: %s\n", strerror(errno));

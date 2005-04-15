@@ -129,15 +129,16 @@ static void bootp_reply(struct bootp_t *bp)
     struct bootp_t *rbp;
     struct sockaddr_in saddr, daddr;
     struct in_addr dns_addr;
-    int reply_type = 0;
     int dhcp_msg_type, val;
-    int no_address_assigned;
     uint8_t *q;
 
     /* extract exact DHCP msg type */
     dhcp_decode(bp->bp_vend, DHCP_OPT_LEN, &dhcp_msg_type);
     dprintf("bootp packet op=%d msgtype=%d\n", bp->bp_op, dhcp_msg_type);
     
+    if (dhcp_msg_type == 0)
+        dhcp_msg_type = DHCPREQUEST; /* Force reply for old BOOTP clients */
+        
     if (dhcp_msg_type != DHCPDISCOVER && 
         dhcp_msg_type != DHCPREQUEST)
         return;
@@ -151,8 +152,8 @@ static void bootp_reply(struct bootp_t *bp)
     m->m_data += sizeof(struct udpiphdr);
     memset(rbp, 0, sizeof(struct bootp_t));
 
-    no_address_assigned = 0;
     if (dhcp_msg_type == DHCPDISCOVER) {
+    new_addr:
         bc = get_new_addr(&daddr.sin_addr);
         if (!bc) {
             dprintf("no address left\n");
@@ -162,12 +163,12 @@ static void bootp_reply(struct bootp_t *bp)
     } else {
         bc = find_addr(&daddr.sin_addr, bp->bp_hwaddr);
         if (!bc) {
-            dprintf("no address assigned\n");
-            dprintf("sending NAK\n");
-	    no_address_assigned = 1;
+            /* if never assigned, behaves as if it was already
+               assigned (windows fix because it remembers its address) */
+            goto new_addr;
         }
     }
-    dprintf("offered addr=%08x\n", (unsigned int)ntohl(daddr.sin_addr.s_addr));
+    dprintf("offered addr=%08x\n", ntohl(daddr.sin_addr.s_addr));
 
     saddr.sin_addr.s_addr = htonl(ntohl(special_addr.s_addr) | CTL_ALIAS);
     saddr.sin_port = htons(BOOTP_SERVER);
@@ -180,7 +181,8 @@ static void bootp_reply(struct bootp_t *bp)
     rbp->bp_hlen = 6;
     memcpy(rbp->bp_hwaddr, bp->bp_hwaddr, 6);
 
-    rbp->bp_yiaddr = daddr.sin_addr; /* IP address */
+    rbp->bp_yiaddr = daddr.sin_addr; /* Client IP address */
+    rbp->bp_siaddr = saddr.sin_addr; /* Server IP address */
 
     q = rbp->bp_vend;
     memcpy(q, rfc1533_cookie, 4);
@@ -189,20 +191,15 @@ static void bootp_reply(struct bootp_t *bp)
     if (dhcp_msg_type == DHCPDISCOVER) {
         *q++ = RFC2132_MSG_TYPE;
         *q++ = 1;
-        *q++ = reply_type = DHCPOFFER;
+        *q++ = DHCPOFFER;
     } else if (dhcp_msg_type == DHCPREQUEST) {
         *q++ = RFC2132_MSG_TYPE;
         *q++ = 1;
-	if (no_address_assigned)
-		reply_type = DHCPNAK;
-	else
-		reply_type = DHCPACK;
-        *q++ = reply_type;
-    } 
+        *q++ = DHCPACK;
+    }
         
-    if ((reply_type != DHCPNAK) && 
-	(dhcp_msg_type == DHCPDISCOVER ||
-	 dhcp_msg_type == DHCPREQUEST)) {
+    if (dhcp_msg_type == DHCPDISCOVER ||
+        dhcp_msg_type == DHCPREQUEST) {
         *q++ = RFC2132_SRV_ID;
         *q++ = 4;
         memcpy(q, &saddr.sin_addr, 4);

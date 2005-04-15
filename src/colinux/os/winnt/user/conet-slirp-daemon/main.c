@@ -224,7 +224,7 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-	WSAStartup(MAKEWORD(2, 2), &wsad);
+	WSAStartup(MAKEWORD(2, 0), &wsad);
 
 	slirp_init();
 

@@ -71,7 +71,6 @@
 #define DHCPOFFER		2
 #define DHCPREQUEST		3
 #define DHCPACK			5
-#define DHCPNAK	         	6
 
 #define RFC1533_VENDOR_MAJOR	0
 #define RFC1533_VENDOR_MINOR	0

@@ -153,6 +153,14 @@ udp_input(m, iphlen)
             goto bad;
         }
 
+        /*
+         *  handle TFTP
+         */
+        if (ntohs(uh->uh_dport) == TFTP_SERVER) {
+            tftp_input(m);
+            goto bad;
+        }
+
 	/*
 	 * Locate pcb for datagram.
 	 */
@@ -223,8 +231,8 @@ udp_input(m, iphlen)
 	  m->m_len += iphlen;
 	  m->m_data -= iphlen;
 	  *ip=save_ip;
-	  DEBUG_MISC((dfd,"udp tx errno = %d-%s\n",errno,strerror(socket_errno)));
-	  icmp_error(m, ICMP_UNREACH,ICMP_UNREACH_NET, 0,strerror(socket_errno));  
+	  DEBUG_MISC((dfd,"udp tx errno = %d-%s\n",errno,strerror(errno)));
+	  icmp_error(m, ICMP_UNREACH,ICMP_UNREACH_NET, 0,strerror(errno));  
 	}
 
 	m_free(so->so_m);   /* used for ICMP if error on sorecvfrom */
@@ -317,7 +325,7 @@ udp_attach(so)
      struct socket *so;
 {
   struct sockaddr_in addr;
-
+	
   if((so->s = socket(AF_INET,SOCK_DGRAM,0)) != -1) {
     /*
      * Here, we bind() the socket.  Although not really needed
@@ -328,10 +336,14 @@ udp_attach(so)
     addr.sin_port = 0;
     addr.sin_addr.s_addr = INADDR_ANY;
     if(bind(so->s, (struct sockaddr *)&addr, sizeof(addr))<0) {
-      int lasterrno=socket_errno;
-      socketclose(so->s);
+      int lasterrno=errno;
+      closesocket(so->s);
       so->s=-1;
+#ifdef _WIN32
+      WSASetLastError(lasterrno);
+#else
       errno=lasterrno;
+#endif
     } else {
       /* success, insert in queue */
       so->so_expire = curtime + SO_EXPIRE;
@@ -345,7 +357,7 @@ void
 udp_detach(so)
 	struct socket *so;
 {
-	socketclose(so->s);
+	closesocket(so->s);
 	/* if (so->so_m) m_free(so->so_m);    done by sofree */
 
 	sofree(so);
@@ -527,7 +539,7 @@ struct cu_header {
 			addr.sin_port = htons(518);
 			sendto(s, (char *)nmsg, sizeof(*nmsg), 0,
 				(struct sockaddr *) &addr, sizeof(addr));
-			socketclose(s) ;
+			closesocket(s) ;
 
 			omsg->type = nmsg->type = ANNOUNCE; 
 			OTOSIN(omsg, ctl_addr)->sin_port = temp_port;
@@ -558,7 +570,7 @@ struct cu_header {
 			addr.sin_port = htons(518);
 			sendto(s, (char *)nmsg, sizeof(*nmsg), 0,
 				(struct sockaddr *)&addr, sizeof(addr));
-			socketclose(s);
+			closesocket(s);
 			
 			OTOSIN(omsg, ctl_addr)->sin_port = temp_port;
 			OTOSIN(nmsg, ctl_addr)->sin_port = temp_port;

@@ -62,9 +62,15 @@
 
 /* Define if you have sys/ioctl.h */
 #undef HAVE_SYS_IOCTL_H
+#ifndef _WIN32
+#define HAVE_SYS_IOCTL_H
+#endif
 
 /* Define if you have sys/filio.h */
 #undef HAVE_SYS_FILIO_H
+#ifdef __APPLE__
+#define HAVE_SYS_FILIO_H
+#endif
 
 /* Define if you have strerror */
 #define HAVE_STRERROR
@@ -86,12 +92,13 @@
 #undef BAD_SPRINTF
 
 /* Define if you have readv */
-#if COLINUX_ARCH != winnt
 #undef HAVE_READV
-#endif
 
 /* Define if iovec needs to be declared */
 #undef DECLARE_IOVEC
+#ifdef _WIN32
+#define DECLARE_IOVEC
+#endif
 
 /* Define if a declaration of sprintf/fprintf is needed */
 #undef DECLARE_SPRINTF
@@ -100,7 +107,8 @@
 #undef HAVE_SYS_WAIT_H
 
 /* Define if you have sys/select.h */
-#if COLINUX_ARCH != winnt
+#undef HAVE_SYS_SELECT_H
+#ifndef _WIN32
 #define HAVE_SYS_SELECT_H
 #endif
 
@@ -108,7 +116,10 @@
 #define HAVE_STRING_H
 
 /* Define if you have arpa/inet.h */
+#undef HAVE_ARPA_INET_H
+#ifndef _WIN32
 #define HAVE_ARPA_INET_H
+#endif
 
 /* Define if you have sys/signal.h */
 #undef HAVE_SYS_SIGNAL_H
@@ -148,7 +159,10 @@
 #undef HAVE_SRANDOM
 
 /* Define if you have inet_aton */
+#undef HAVE_INET_ATON
+#ifndef _WIN32
 #define HAVE_INET_ATON
+#endif
 
 /* Define if you have setenv */
 #undef HAVE_SETENV
@@ -165,19 +179,12 @@
 /* Define if you have memmove */
 #define HAVE_MEMMOVE
 
-#if COLINUX_ARCH != winnt
-/* Define if you have <termios.h> */
-#undef HAVE_TERMIOS_H
-#else
-#endif
-
 /* Define if you have gethostid */
 #undef HAVE_GETHOSTID
 
 /* Define if you DON'T have unix-domain sockets */
-#if COLINUX_ARCH != winnt
 #undef NO_UNIX_SOCKETS
-#else
+#ifdef _WIN32
 #define NO_UNIX_SOCKETS
 #endif
 

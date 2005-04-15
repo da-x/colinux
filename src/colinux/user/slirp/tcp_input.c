@@ -47,11 +47,6 @@
 
 struct socket tcb;
 
-#if COLINUX_ARCH != winnt
-#define min(x,y) ((x) < (y) ? (x) : (y))
-#define max(x,y) ((x) > (y) ? (x) : (y))
-#endif
-
 int	tcprexmtthresh = 3;
 struct	socket *tcp_last_so = &tcb;
 
@@ -663,10 +658,11 @@ findso:
 	      if(lastbyte==CTL_CMD || lastbyte==CTL_EXEC) {
 		/* Command or exec adress */
 		so->so_state |= SS_CTL;
-	      } else {
+	      } else 
+#endif
+              {
 		/* May be an add exec */
 		struct ex_list *ex_ptr;
-
 		for(ex_ptr = exec_list; ex_ptr; ex_ptr = ex_ptr->ex_next) {
 		  if(ex_ptr->ex_fport == so->so_fport && 
 		     lastbyte == ex_ptr->ex_addr) {
@@ -676,7 +672,6 @@ findso:
 		}
 	      }
 	      if(so->so_state & SS_CTL) goto cont_input;
-#endif
 	    }
 	    /* CTL_ALIAS: Do nothing, tcp_fconnect will be called on it */
 	  }
@@ -686,16 +681,16 @@ findso:
 	    goto cont_input;
 	  }
 	  
-	  if(tcp_fconnect(so) == -1 && socket_errno != CONNECT_UNBLOCKED) {
+	  if((tcp_fconnect(so) == -1) && (errno != EINPROGRESS) && (errno != EWOULDBLOCK)) {
 	    u_char code=ICMP_UNREACH_NET;
 	    DEBUG_MISC((dfd," tcp fconnect errno = %d-%s\n",
-			socket_errno,strerror(errno)));
-	    if(socket_errno == ECONNREFUSED) {
+			errno,strerror(errno)));
+	    if(errno == ECONNREFUSED) {
 	      /* ACK the SYN, send RST to refuse the connection */
 	      tcp_respond(tp, ti, m, ti->ti_seq+1, (tcp_seq)0,
 			  TH_RST|TH_ACK); 
 	    } else {
-	      if(socket_errno == EHOSTUNREACH) code=ICMP_UNREACH_HOST;
+	      if(errno == EHOSTUNREACH) code=ICMP_UNREACH_HOST;
 	      HTONL(ti->ti_seq);             /* restore tcp header */
 	      HTONL(ti->ti_ack);
 	      HTONS(ti->ti_win);

@@ -44,11 +44,6 @@
 
 #include "slirp.h"
 
-#if COLINUX_ARCH != winnt
-#define max(x,y) ((x) > (y) ? (x) : (y))
-#define min(x,y) ((x) < (y) ? (x) : (y))
-#endif
-
 /*
  * Since this is only used in "stats socket", we give meaning
  * names instead of the REAL names
