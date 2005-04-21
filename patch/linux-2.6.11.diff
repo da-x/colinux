@@ -7713,7 +7713,7 @@ diff -urN a/include/asm-i386/io.h b/include/asm-i386/io.h
  #endif /* __KERNEL__ */
  
 -#ifdef SLOW_IO_BY_JUMPING
-+#if SLOW_IO_BY_JUMPING || CONFIG_COOPERATIVE
++#if defined(SLOW_IO_BY_JUMPING) || defined(CONFIG_COOPERATIVE)
  #define __SLOW_DOWN_IO "jmp 1f; 1: jmp 1f; 1:"
  #else
  #define __SLOW_DOWN_IO "outb %%al,$0x80;"
@@ -9226,6 +9226,20 @@ diff -urN a/mm/bootmem.c b/mm/bootmem.c
  	memset(ret, 0, size);
  	return ret;
  }
+diff -urN a/mm/filemap.c b/mm/filemap.c
+--- a/mm/filemap.c
++++ b/mm/filemap.c
+@@ -1958,7 +1958,9 @@
+ 		 * same page as we're writing to, without it being marked
+ 		 * up-to-date.
+ 		 */
+-		fault_in_pages_readable(buf, bytes);
++		if (access_ok(VERIFY_READ, buf, bytes)) {
++			fault_in_pages_readable(buf, bytes);
++		}
+ 
+ 		page = __grab_cache_page(mapping,index,&cached_page,&lru_pvec);
+ 		if (!page) {
 diff -urN a/mm/page_alloc.c b/mm/page_alloc.c
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
