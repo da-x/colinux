@@ -442,6 +442,17 @@ static bool_t co_terminate(co_monitor_t *cmon)
 		
 	co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_TERMINATE)\n");
 	co_debug("linux terminated (%d)\n", co_passage_page->params[0]);
+
+	/* Prints kernel BUG */
+	if (co_passage_page->params[0] == CO_TERMINATE_BUG)
+	{
+	    char file_name [co_passage_page->params[3]+1];
+	    
+	    strncpy (file_name, &co_passage_page->params[4], co_passage_page->params[3]);
+	    file_name [co_passage_page->params[3]] = 0;
+	    co_debug("%s(%d): Kernel BUG %d\n",
+	       file_name, co_passage_page->params[2], co_passage_page->params[1]);
+	}
 		
 	message.message.from = CO_MODULE_MONITOR;
 	message.message.to = CO_MODULE_DAEMON;
