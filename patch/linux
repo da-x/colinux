@@ -7713,7 +7713,7 @@ diff -urN a/include/asm-i386/io.h b/include/asm-i386/io.h
  #endif /* __KERNEL__ */
  
 -#ifdef SLOW_IO_BY_JUMPING
-+#if SLOW_IO_BY_JUMPING || CONFIG_COOPERATIVE
++#if defined(SLOW_IO_BY_JUMPING) || defined(CONFIG_COOPERATIVE)
  #define __SLOW_DOWN_IO "jmp 1f; 1: jmp 1f; 1:"
  #else
  #define __SLOW_DOWN_IO "outb %%al,$0x80;"
