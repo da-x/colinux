@@ -1,6 +1,6 @@
 #!/bin/sh
 
-source ./build-common.sh
+. ./build-common.sh
 
 PATH="$PREFIX/$TARGET/bin:$PATH"
 

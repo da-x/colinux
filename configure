@@ -11,7 +11,7 @@
 #	./configure --help
 
 # Some defaults from config file (Kernel version and dir, binutil version)
-cd bin; source build-common.sh; cd ..
+cd bin; . ./build-common.sh; cd ..
 
 # Some default values
 target=i686-pc-mingw32
@@ -627,7 +627,7 @@ kernel:
 
 # Download only all missing sources (for cross compile)
 download:
-	@cd bin && source build-common.sh --download-all
+	@cd bin && . ./build-common.sh --download-all
 
 EOF
   ;;

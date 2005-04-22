@@ -10,7 +10,7 @@
 #
 # This file will source from toplevel Makefile.
 # For backwards, can source from command line for sample:
-#  source build-common.sh --build-all
+#  . ./build-common.sh --build-all
 #
 # Options MUST ones of (and only ones):
 #  --build-all		Build all, without checking old targed files.
@@ -35,10 +35,10 @@
 # Use User config, if exist
 if [ -f user-build.cfg ] ; then
 	# Users directories
-	source user-build.cfg
+	. ./user-build.cfg
 else
 	# fall back to default config
-	source sample.user-build.cfg
+	. ./sample.user-build.cfg
 fi
 
 # what flavor are we building?

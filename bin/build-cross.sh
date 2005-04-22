@@ -1,6 +1,6 @@
 #!/bin/sh
 
-source ./build-common.sh
+. ./build-common.sh
 
 download_files()
 {
@@ -66,7 +66,9 @@ configure_binutils()
 	mkdir "binutils-$TARGET"
 	cd "binutils-$TARGET"
 	echo "Configuring binutils"
-	"$SRCDIR/$BINUTILS/configure" --prefix="$PREFIX" --target=$TARGET &> configure.log
+	"$SRCDIR/$BINUTILS/configure" --prefix="$PREFIX" --target=$TARGET \
+	 >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "configure binutils failed"
 	cd "$TOPDIR"
 }
 

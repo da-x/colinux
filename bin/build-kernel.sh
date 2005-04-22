@@ -10,7 +10,7 @@
 #			Disable md5sum. untar and patch source.
 #			Overwrite all old source!
 
-source ./build-common.sh
+. ./build-common.sh
 
 # Developer private patchfile. Used after maintainer patch,
 # use also for manipulate .config. Sored in directory patch/.

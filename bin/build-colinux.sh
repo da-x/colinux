@@ -1,6 +1,6 @@
 #!/bin/sh
 
-source ./build-common.sh
+. ./build-common.sh
 
 # See ./commom.sh (using cross tools for target, such strip
 PATH="$PREFIX/$TARGET/bin:$PATH"
