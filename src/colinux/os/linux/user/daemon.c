@@ -119,14 +119,16 @@ co_os_daemon_message_get(co_daemon_handle_t handle,
 }
 
 co_rc_t
-co_os_daemon_message_receive(co_daemon_handle_t handle, co_message_t *message)
+co_os_daemon_message_receive(co_daemon_handle_t handle, co_message_t **ppMessage, unsigned long timeout_unused)
 {
+	co_message_t *message = *ppMessage;
 	return co_os_frame_send(handle->sock, (char *)message, message->size + sizeof(*message));
 }
 
-void
+co_rc_t
 co_os_daemon_pipe_close(co_daemon_handle_t handle)
 {
 	close(handle->sock);
 	co_os_free(handle);
+	return CO_RC(OK);
 }
