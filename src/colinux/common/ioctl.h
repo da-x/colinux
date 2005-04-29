@@ -27,6 +27,7 @@ typedef enum {
 	CO_MANAGER_IOCTL_DEBUG_LEVELS,
 	CO_MANAGER_IOCTL_INFO,
 	CO_MANAGER_IOCTL_ATTACH,
+	CO_MANAGER_IOCTL_MONITOR_LIST,
 } co_manager_ioctl_t;
 
 /*
@@ -108,6 +109,13 @@ typedef struct {
 	co_debug_levels_t levels;
 	bool_t modify;
 } co_manager_ioctl_debug_levels_t;
+
+/* interface for CO_MANAGER_IOCTL_MONITOR_LIST: */
+typedef struct {
+	co_rc_t       rc;
+	unsigned long count;
+	co_id_t       ids[CO_MAX_MONITORS];
+} co_manager_ioctl_monitor_list_t;
 
 /*
  * Monitor ioctl()s

@@ -42,4 +42,6 @@ extern co_rc_t co_manager_debug_levels(co_manager_handle_t handle,
 
 extern co_rc_t co_manager_attach(co_manager_handle_t handle, co_manager_ioctl_attach_t *params);
 
+co_rc_t co_manager_monitor_list( co_manager_handle_t handle, co_manager_ioctl_monitor_list_t *list );
+
 #endif

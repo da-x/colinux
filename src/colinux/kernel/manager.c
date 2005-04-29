@@ -372,6 +372,29 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 		*return_size = sizeof(*params);
 		break;
 	}
+	case CO_MANAGER_IOCTL_MONITOR_LIST: {
+		co_manager_ioctl_monitor_list_t *params = (typeof(params))(io_buffer);
+		co_monitor_t *monitor = NULL;
+		co_rc_t rc = CO_RC(OK);
+		int i = 0;
+
+		co_os_mutex_acquire(manager->lock);
+		co_list_each_entry(monitor, &manager->monitors, node) {
+			if (i >= CO_MAX_MONITORS) {
+				/* We don't enforce a limit on create, so just
+				 * break from the loop and return the first ones
+				 */
+				break;
+			}
+			params->ids[i++] = monitor->id;
+		}
+		co_os_mutex_release(manager->lock);
+		params->count = i;
+
+		params->rc = rc;
+		*return_size = sizeof(*params);
+		break;
+	}
 	case CO_MANAGER_IOCTL_ATTACH: {
 		co_manager_ioctl_attach_t *params = (typeof(params))(io_buffer);
 		co_monitor_t *monitor = NULL;

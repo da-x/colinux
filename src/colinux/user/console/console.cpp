@@ -114,7 +114,7 @@ console_window_t::console_window_t()
 	co_rc_t rc;
 
 	/* Default settings */
-	start_parameters.attach_id = 0; 
+	start_parameters.attach_id = CO_INVALID_ID;
 	attached_id = CO_INVALID_ID;
 	state =	CO_CONSOLE_STATE_DETACHED;
 	window = 0;
@@ -156,6 +156,31 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 	}
 
 	return CO_RC(OK);
+}
+
+/**
+ * Returns PID of first monitor.
+ *
+ * If none found, returns CO_INVALID_ID.
+ *
+ * TODO: Find first monitor not already attached.
+ */
+static co_id_t find_first_monitor(void)
+{
+	co_manager_handle_t handle;
+	co_manager_ioctl_monitor_list_t	list;
+	co_rc_t	rc;
+
+	handle = co_os_manager_open();
+	if (handle == NULL)
+		return CO_INVALID_ID;
+
+	rc = co_manager_monitor_list(handle, &list);
+	co_os_manager_close(handle);
+	if (!CO_OK(rc) || list.count == 0)
+		return CO_INVALID_ID;
+
+	return list.ids[0];
 }
 
 co_rc_t console_window_t::start()
@@ -233,13 +258,16 @@ co_rc_t console_window_t::start()
 	if (start_parameters.attach_id != CO_INVALID_ID)
 		attached_id = start_parameters.attach_id;
 
+	if (attached_id == CO_INVALID_ID)
+		attached_id = find_first_monitor();
+
 	if (attached_id != CO_INVALID_ID)
-		return attach();
-	
+		attach(); /* Ignore errors, as we can attach latter */
+
 	return CO_RC(OK);
 }
 
-static console_window_t *g_console;
+console_window_t *g_console;
 
 co_rc_t console_window_t::message_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
 {

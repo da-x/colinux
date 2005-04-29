@@ -118,3 +118,20 @@ co_rc_t co_manager_debug_levels(co_manager_handle_t handle, co_manager_ioctl_deb
 
 	return rc;
 }
+
+/**
+ * Ask manager for the list of monitors running.
+ *
+ * The driver will fill the array with the PIDs of the registered
+ * monitors.
+ */
+co_rc_t co_manager_monitor_list(co_manager_handle_t handle, co_manager_ioctl_monitor_list_t *list)
+{
+	co_rc_t rc;
+	unsigned long returned = 0;
+
+	rc = co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_MONITOR_LIST,
+ 				 list, sizeof(*list), list, sizeof(*list), &returned);
+
+	return rc;
+}

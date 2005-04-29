@@ -70,9 +70,9 @@ void co_winnt_set_service_restart_options(SC_HANDLE schService)
 	}
 }
 
-void patch_command_line_for_service(char *destbuf, char *srcbuf)
+void patch_command_line_for_service(char *destbuf, const char *srcbuf)
 {
-	// replace any instance of --install-service with --run-service
+	/* replace any instance of --install-service with --run-service */
 
 	while (*srcbuf)
 	{
@@ -117,7 +117,7 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char 
 	co_ntevent_print("daemon: service command line: %s\n", command);
 
 #if (0)
-	/* broken somwhow for recent TAP driver */
+	/* broken somehow for recent TAP driver */
 	if (co_winnt_is_winxp_or_better())
 		service_user_name = "NT AUTHORITY\\NetworkService";
 #endif
