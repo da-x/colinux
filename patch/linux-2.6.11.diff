@@ -2032,8 +2032,8 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +	{"sdl", &cobd_aliases_major_sd, 0xb0, 0x10, },
 +	{"sdm", &cobd_aliases_major_sd, 0xc0, 0x10, },
 +	{"sdn", &cobd_aliases_major_sd, 0xd0, 0x10, },
-+	{"sdp", &cobd_aliases_major_sd, 0xe0, 0x10, },
-+	{"sdq", &cobd_aliases_major_sd, 0xf0, 0x10, },
++	{"sdo", &cobd_aliases_major_sd, 0xe0, 0x10, },
++	{"sdp", &cobd_aliases_major_sd, 0xf0, 0x10, },
 +	{NULL, },
 +};
 +
@@ -3306,7 +3306,7 @@ diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 +
 +		message = (co_linux_message_t *)&node_message->msg.data;
 +		if (message->unit < 0  ||  message->unit >= CO_MODULE_MAX_CONET) {
-+			printk("conet interrupt: buggy network reception: %x\n", message->unit);
++			printk("conet interrupt: buggy network reception: %lx\n", message->unit);
 +			return IRQ_HANDLED;
 +		}
 +
