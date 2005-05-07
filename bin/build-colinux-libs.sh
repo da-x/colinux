@@ -1,6 +1,6 @@
 #!/bin/sh
 
-source build-common.sh
+. ./build-common.sh
 
 PATH="$PREFIX/$TARGET/bin:$PATH"
 
@@ -21,22 +21,31 @@ check_md5sums()
 {
 	echo -n "Check libs: "
 	cd "$TOPDIR"
-	if md5sum -c $W32LIBS_CHECKSUM >/dev/null 2>&1
+
+	if [ -f $PREFIX/$TARGET/lib/libfltk.a -a \
+	     -f $PREFIX/$TARGET/lib/libmxml.a -a \
+	     -f $PREFIX/$TARGET/lib/libwin32k.a ]
 	then
-	    # Check versions
-	    if [ "`cat $VERSION_CACHE/.fltk.version 2>/dev/null`" = "$FLTK_VERSION" -a \
-		 "`cat $VERSION_CACHE/.mxml.version 2>/dev/null`" = "$MXML_VERSION" -a \
-		 "`cat $VERSION_CACHE/.w32api.version 2>/dev/null`" = "$W32API_VERSION" -a \
-		 "`cat $VERSION_CACHE/.winpcap.version 2>/dev/null`" = "$WINPCAP_VERSION" ]
+
+	    if md5sum -c $W32LIBS_CHECKSUM >/dev/null 2>&1
 	    then
-		echo "Skip w32api.h, libfltk.a, libmxml.a, libwin32k.a"
-		echo " - already installed on $PREFIX/$TARGET/lib"
-		exit 0
+		# Check versions
+		if [ "`cat $VERSION_CACHE/.fltk.version 2>/dev/null`" = "$FLTK_VERSION" -a \
+		     "`cat $VERSION_CACHE/.mxml.version 2>/dev/null`" = "$MXML_VERSION" -a \
+		     "`cat $VERSION_CACHE/.w32api.version 2>/dev/null`" = "$W32API_VERSION" -a \
+		     "`cat $VERSION_CACHE/.winpcap.version 2>/dev/null`" = "$WINPCAP_VERSION" ]
+		then
+		    echo "Skip w32api.h, libfltk.a, libmxml.a, libwin32k.a"
+		    echo " - already installed on $PREFIX/$TARGET/lib"
+		    exit 0
+		else
+		    echo "Version don't match"
+		fi
 	    else
-		echo "Version don't match"
+		echo "MD5sum don't match, rebuilding"
 	    fi
 	else
-	    echo "MD5sum don't match, rebuilding"
+	    echo "missing, rebuilding"
 	fi
 }
 
@@ -56,9 +65,6 @@ create_md5sums()
 	    patch/$FLTK-win32.diff \
 	    $W32API_PATCH \
 	    $PREFIX/$TARGET/include/w32api.h \
-	    $PREFIX/$TARGET/lib/libfltk.a \
-	    $PREFIX/$TARGET/lib/libmxml.a \
-	    $PREFIX/$TARGET/lib/libwin32k.a \
 	    $VERSION_CACHE/.fltk.version \
 	    $VERSION_CACHE/.mxml.version \
 	    $VERSION_CACHE/.w32api.version \

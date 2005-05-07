@@ -151,7 +151,7 @@ The cross compiler mostly you never need compile again.
 
 The work of build-all.sh is controlled by md5sum of some sources and some
 target files. Md5sum is updated after complety build step and put as file
-.build-*.md5 in 'downlod' directory.
+.build-*.md5 in 'BUILD' directory.
 
 Call as 'build-all.sh --rebuild-all' will ignore md5sum and builds all
 cross tools, cross compiler, libraries and target files again.
@@ -204,6 +204,7 @@ Source tree after building cross compiler and colinux binaries:
     |              +-- modules
     |                  +-- 2.6.11-co-0.7.1/
     |                      +-- kernel/
+    |                      |   +-- ... Some modules.ko ...
     |                      +-- modules.dep
     +-- download/				$SOURCE_DIR
     |   ... Source files ...			(source store here)
@@ -273,15 +274,15 @@ PATH=.:$PATH is needed if the executables aren't installed in your e.g
 /usr/local/bin or elsewhere in $PATH.
 
 
-4. configure - make - make install
-----------------------------------
+4. configure - make - make installer
+------------------------------------
 
 4.1 configure
 
-Call './configure' in toplevel directory will create one toplevel Makefile and
-the file bin/user-build.cfg with absolute paths of your installation.
+Call './configure' in toplevel directory will create one toplevel Makefile
+and the file bin/user-build.cfg with absolute paths of your installation.
 Default target is winnt. Mostly directories can overwrite by options.
-Please call './configure --help' for list of actual options.
+Please run './configure --help' for list of options.
 
 Sample for WinNT as host (default):
   ./configure --target=i686-pc-mingw32 \
