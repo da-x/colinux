@@ -227,6 +227,37 @@ co_rc_t console_window_t::start()
 	menu_item_deactivate(console_detach_cb);
 	menu_item_deactivate(console_attach_cb);
 
+	// Default Font is "Terminal" with size 18
+	// Sample for WinNT environment:
+	// set COLINUX_CONSOLE_FONT=Lucida Console:12
+	// Change only font size:
+	// set COLINUX_CONSOLE_FONT=:12
+	char * env_font = getenv ("COLINUX_CONSOLE_FONT");
+	if (env_font) {
+		char *p = strchr (env_font, ':');
+		if (p) {
+			int size = atoi (p+1);
+			if (size >= 4 && size <= 24) {
+				// Set size
+				widget->set_font_size(size);
+			}
+			*p = 0; // End for Fontname
+		}
+		
+		// Set new font style
+		if (strlen (env_font)) {
+			// Remember: env_font need a static buffer!
+			Fl::set_font(FL_SCREEN, env_font);
+
+			// Now check font width
+			fl_font(FL_SCREEN, 18); // Use default Hight for test here
+			if ((int)fl_width('i') != (int)fl_width('W')) {
+				log("%s: is not fixed font. Using 'Terminal'\n", env_font);
+				Fl::set_font(FL_SCREEN, "Terminal"); // Restore standard font
+			}
+		}
+	}
+
 	log("Cooperative Linux console started\n");
 	
 	if (start_parameters.attach_id != CO_INVALID_ID)
