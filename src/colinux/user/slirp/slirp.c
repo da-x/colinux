@@ -20,37 +20,59 @@ int do_slowtimo;
 int link_up;
 struct timeval tt;
 FILE *lfd;
+struct ex_list *exec_list;
 
 /* XXX: suppress those select globals */
 fd_set *global_readfds, *global_writefds, *global_xfds;
 
 #ifdef _WIN32
 
-#include <iphlpapi.h>
-
 static int get_dns_addr(struct in_addr *pdns_addr)
 {
-	FIXED_INFO *info;
-	ULONG len;
-	int ret;
-	
-	info = (FIXED_INFO *)malloc(sizeof(FIXED_INFO));
-	len = sizeof( FIXED_INFO );
-	ret = GetNetworkParams(info, &len);
+    FIXED_INFO *FixedInfo=NULL;
+    ULONG    BufLen;
+    DWORD    ret;
+    IP_ADDR_STRING *pIPAddr;
+    struct in_addr tmp_addr;
+    
+    FixedInfo = (FIXED_INFO *)GlobalAlloc(GPTR, sizeof(FIXED_INFO));
+    BufLen = sizeof(FIXED_INFO);
    
-	if (ret == ERROR_BUFFER_OVERFLOW) {
-		free(info);
-		info = malloc(len);
-	}
-
-	ret = GetNetworkParams(info, &len);
-	if (ret)
-		return ret;
-
-	printf("DNS: %s\n", info->DnsServerList.IpAddress.String);
-	inet_aton(info->DnsServerList.IpAddress.String, pdns_addr);
+    if (ERROR_BUFFER_OVERFLOW == GetNetworkParams(FixedInfo, &BufLen)) {
+        if (FixedInfo) {
+            GlobalFree(FixedInfo);
+            FixedInfo = NULL;
+        }
+        FixedInfo = GlobalAlloc(GPTR, BufLen);
+    }
 	
-	return 0;
+    if ((ret = GetNetworkParams(FixedInfo, &BufLen)) != ERROR_SUCCESS) {
+        printf("GetNetworkParams failed. ret = %08x\n", (u_int)ret );
+        if (FixedInfo) {
+            GlobalFree(FixedInfo);
+            FixedInfo = NULL;
+        }
+        return -1;
+    }
+     
+    pIPAddr = &(FixedInfo->DnsServerList);
+    inet_aton(pIPAddr->IpAddress.String, &tmp_addr);
+    *pdns_addr = tmp_addr;
+#if 0
+    printf( "DNS Servers:\n" );
+    printf( "DNS Addr:%s\n", pIPAddr->IpAddress.String );
+    
+    pIPAddr = FixedInfo -> DnsServerList.Next;
+    while ( pIPAddr ) {
+            printf( "DNS Addr:%s\n", pIPAddr ->IpAddress.String );
+            pIPAddr = pIPAddr ->Next;
+    }
+#endif
+    if (FixedInfo) {
+        GlobalFree(FixedInfo);
+        FixedInfo = NULL;
+    }
+    return 0;
 }
 
 #else
@@ -94,10 +116,25 @@ static int get_dns_addr(struct in_addr *pdns_addr)
 
 #endif
 
+#ifdef _WIN32
+void slirp_cleanup(void)
+{
+    WSACleanup();
+}
+#endif
+
 void slirp_init(void)
 {
     //    debug_init("/tmp/slirp.log", DEBUG_DEFAULT);
     
+#ifdef _WIN32
+    {
+        WSADATA Data;
+        WSAStartup(MAKEWORD(2,0), &Data);
+	atexit(slirp_cleanup);
+    }
+#endif
+
     link_up = 1;
 
     if_init();
@@ -125,6 +162,16 @@ void slirp_init(void)
 /*
  * curtime kept to an accuracy of 1ms
  */
+#ifdef _WIN32
+static void updtime(void)
+{
+    struct _timeb tb;
+
+    _ftime(&tb);
+    curtime = (u_int)tb.time * (u_int)1000;
+    curtime += (u_int)tb.millitm;
+}
+#else
 static void updtime(void)
 {
 	gettimeofday(&tt, 0);
@@ -135,6 +182,7 @@ static void updtime(void)
 	if ((tt.tv_usec % 1000) >= 500)
 	   curtime++;
 }
+#endif
 
 void slirp_select_fill(int *pnfds, 
                        fd_set *readfds, fd_set *writefds, fd_set *xfds)
@@ -366,11 +414,11 @@ void slirp_select_poll(fd_set *readfds, fd_set *writefds, fd_set *xfds)
 			    /* Connected */
 			    so->so_state &= ~SS_ISFCONNECTING;
 			    
-			    ret = socket_write(so->s, (void *)&ret, 0);
+			    ret = send(so->s, &ret, 0, 0);
 			    if (ret < 0) {
 			      /* XXXXX Must fix, zero bytes is a NOP */
-			      if (socket_errno == EAGAIN || socket_errno == EWOULDBLOCK ||
-				  socket_errno == EINPROGRESS || socket_errno == ENOTCONN)
+			      if (errno == EAGAIN || errno == EWOULDBLOCK ||
+				  errno == EINPROGRESS || errno == ENOTCONN)
 				continue;
 			      
 			      /* else failed */
@@ -399,12 +447,12 @@ void slirp_select_poll(fd_set *readfds, fd_set *writefds, fd_set *xfds)
 	 	 	 */
 #ifdef PROBE_CONN
 			if (so->so_state & SS_ISFCONNECTING) {
-			  ret = socket_read(so->s, (char *)&ret, 0);
+			  ret = recv(so->s, (char *)&ret, 0,0);
 			  
 			  if (ret < 0) {
 			    /* XXX */
-			    if (socket_errno == EAGAIN || socket_errno == EWOULDBLOCK ||
-				socket_errno == EINPROGRESS || socket_errno == ENOTCONN)
+			    if (errno == EAGAIN || errno == EWOULDBLOCK ||
+				errno == EINPROGRESS || errno == ENOTCONN)
 			      continue; /* Still connecting, continue */
 			    
 			    /* else failed */
@@ -412,11 +460,11 @@ void slirp_select_poll(fd_set *readfds, fd_set *writefds, fd_set *xfds)
 			    
 			    /* tcp_input will take care of it */
 			  } else {
-			    ret = socket_write(so->s, &ret, 0);
+			    ret = send(so->s, &ret, 0,0);
 			    if (ret < 0) {
 			      /* XXX */
-			      if (socket_errno == EAGAIN || socket_errno == EWOULDBLOCK ||
-				  socket_errno == EINPROGRESS || socket_errno == ENOTCONN)
+			      if (errno == EAGAIN || errno == EWOULDBLOCK ||
+				  errno == EINPROGRESS || errno == ENOTCONN)
 				continue;
 			      /* else failed */
 			      so->so_state = SS_NOFDREF;
@@ -448,6 +496,15 @@ void slirp_select_poll(fd_set *readfds, fd_set *writefds, fd_set *xfds)
 	 */
 	if (if_queued && link_up)
 	   if_start();
+
+	/* clear global file descriptor sets.
+	 * these reside on the stack in vl.c
+	 * so they're unusable if we're not in
+	 * slirp_select_fill or slirp_select_poll.
+	 */
+	 global_readfds = NULL;
+	 global_writefds = NULL;
+	 global_xfds = NULL;
 }
 
 #define ETH_ALEN 6
@@ -491,13 +548,20 @@ void arp_input(const uint8_t *pkt, int pkt_len)
     struct ethhdr *reh = (struct ethhdr *)arp_reply;
     struct arphdr *rah = (struct arphdr *)(arp_reply + ETH_HLEN);
     int ar_op;
+    struct ex_list *ex_ptr;
 
     ar_op = ntohs(ah->ar_op);
     switch(ar_op) {
     case ARPOP_REQUEST:
-        if (!memcmp(ah->ar_tip, &special_addr, 3) &&
-            (ah->ar_tip[3] == CTL_DNS || ah->ar_tip[3] == CTL_ALIAS)) {
-
+        if (!memcmp(ah->ar_tip, &special_addr, 3)) {
+            if (ah->ar_tip[3] == CTL_DNS || ah->ar_tip[3] == CTL_ALIAS) 
+                goto arp_ok;
+            for (ex_ptr = exec_list; ex_ptr; ex_ptr = ex_ptr->ex_next) {
+                if (ex_ptr->ex_addr == ah->ar_tip[3])
+                    goto arp_ok;
+            }
+            return;
+        arp_ok:
             /* XXX: make an ARP request to have the client address */
             memcpy(client_ethaddr, eh->h_source, ETH_ALEN);
 
@@ -565,8 +629,31 @@ void if_encap(const uint8_t *ip_data, int ip_data_len)
 
     memcpy(eh->h_dest, client_ethaddr, ETH_ALEN);
     memcpy(eh->h_source, special_ethaddr, ETH_ALEN - 1);
+    /* XXX: not correct */
     eh->h_source[5] = CTL_ALIAS;
     eh->h_proto = htons(ETH_P_IP);
     memcpy(buf + sizeof(struct ethhdr), ip_data, ip_data_len);
     slirp_output(buf, ip_data_len + ETH_HLEN);
+}
+
+int slirp_redir(int is_udp, int host_port, 
+                struct in_addr guest_addr, int guest_port)
+{
+    if (is_udp) {
+        if (!udp_listen(htons(host_port), guest_addr.s_addr, 
+                        htons(guest_port), 0))
+            return -1;
+    } else {
+        if (!solisten(htons(host_port), guest_addr.s_addr, 
+                      htons(guest_port), 0))
+            return -1;
+    }
+    return 0;
+}
+
+int slirp_add_exec(int do_pty, const char *args, int addr_low_byte, 
+                  int guest_port)
+{
+    return add_exec(&exec_list, do_pty, (char *)args, 
+                    addr_low_byte, htons(guest_port));
 }

@@ -152,10 +152,10 @@ soread(so)
 	nn = readv(so->s, (struct iovec *)iov, n);
 	DEBUG_MISC((dfd, " ... read nn = %d bytes\n", nn));
 #else
-	nn = socket_read(so->s, iov[0].iov_base, iov[0].iov_len);
+	nn = recv(so->s, iov[0].iov_base, iov[0].iov_len,0);
 #endif	
 	if (nn <= 0) {
-		if (nn < 0 && (socket_errno == EINTR || socket_errno == EAGAIN))
+		if (nn < 0 && (errno == EINTR || errno == EAGAIN))
 			return 0;
 		else {
 			DEBUG_MISC((dfd, " --- soread() disconnected, nn = %d, errno = %d-%s\n", nn, errno,strerror(errno)));
@@ -174,9 +174,14 @@ soread(so)
 	 * might not be any more data (since the socket is non-blocking),
 	 * a close will be detected on next iteration.
 	 * A return of -1 wont (shouldn't) happen, since it didn't happen above
+	 *
+	 * Dan Aloni says: actually it can return -1 here...
 	 */
-	if (n == 2 && nn == iov[0].iov_len)
-	   nn += socket_read(so->s, iov[1].iov_base, iov[1].iov_len);
+	if (n == 2 && nn == iov[0].iov_len) {
+	   int ret = recv(so->s, iov[1].iov_base, iov[1].iov_len,0);
+	   if (ret >= 0)
+		   nn += ret;
+	}
 	
 	DEBUG_MISC((dfd, " ... read nn = %d bytes\n", nn));
 #endif
@@ -333,10 +338,10 @@ sowrite(so)
 	
 	DEBUG_MISC((dfd, "  ... wrote nn = %d bytes\n", nn));
 #else
-	nn = socket_write(so->s, iov[0].iov_base, iov[0].iov_len);
+	nn = send(so->s, iov[0].iov_base, iov[0].iov_len,0);
 #endif
 	/* This should never happen, but people tell me it does *shrug* */
-	if (nn < 0 && (socket_errno == EAGAIN || socket_errno == EINTR))
+	if (nn < 0 && (errno == EAGAIN || errno == EINTR))
 		return 0;
 	
 	if (nn <= 0) {
@@ -349,7 +354,7 @@ sowrite(so)
 	
 #ifndef HAVE_READV
 	if (n == 2 && nn == iov[0].iov_len)
-	   nn += socket_write(so->s, iov[1].iov_base, iov[1].iov_len);
+	   nn += send(so->s, iov[1].iov_base, iov[1].iov_len,0);
         DEBUG_MISC((dfd, "  ... wrote nn = %d bytes\n", nn));
 #endif
 	
@@ -393,12 +398,12 @@ sorecvfrom(so)
 	  if(len == -1 || len == 0) {
 	    u_char code=ICMP_UNREACH_PORT;
 
-	    if(socket_errno == EHOSTUNREACH) code=ICMP_UNREACH_HOST;
-	    else if(socket_errno == ENETUNREACH) code=ICMP_UNREACH_NET;
+	    if(errno == EHOSTUNREACH) code=ICMP_UNREACH_HOST;
+	    else if(errno == ENETUNREACH) code=ICMP_UNREACH_NET;
 	    
 	    DEBUG_MISC((dfd," udp icmp rx errno = %d-%s\n",
-			errno,strerror(socket_errno)));
-	    icmp_error(so->so_m, ICMP_UNREACH,code, 0,strerror(socket_errno));
+			errno,strerror(errno)));
+	    icmp_error(so->so_m, ICMP_UNREACH,code, 0,strerror(errno));
 	  } else {
 	    icmp_reflect(so->so_m);
 	    so->so_m = 0; /* Don't m_free() it again! */
@@ -418,11 +423,7 @@ sorecvfrom(so)
 	   */
 	  len = M_FREEROOM(m);
 	  /* if (so->so_fport != htons(53)) { */
-#if COLINUX_ARCH == win32
-	  ioctlsocket(so->s, FIONREAD, (u_long *)&n);
-#else
-	  ioctl(so->s, FIONREAD, &n);
-#endif
+	  ioctlsocket(so->s, FIONREAD, &n);
 	  
 	  if (n > len) {
 	    n = (m->m_data - m->m_dat) + m->m_len + n + 1;
@@ -434,15 +435,15 @@ sorecvfrom(so)
 	  m->m_len = recvfrom(so->s, m->m_data, len, 0,
 			      (struct sockaddr *)&addr, &addrlen);
 	  DEBUG_MISC((dfd, " did recvfrom %d, errno = %d-%s\n", 
-		      m->m_len, errno,strerror(socket_errno)));
+		      m->m_len, errno,strerror(errno)));
 	  if(m->m_len<0) {
 	    u_char code=ICMP_UNREACH_PORT;
 
-	    if(socket_errno == EHOSTUNREACH) code=ICMP_UNREACH_HOST;
-	    else if(socket_errno == ENETUNREACH) code=ICMP_UNREACH_NET;
+	    if(errno == EHOSTUNREACH) code=ICMP_UNREACH_HOST;
+	    else if(errno == ENETUNREACH) code=ICMP_UNREACH_NET;
 	    
 	    DEBUG_MISC((dfd," rx error, tx icmp ICMP_UNREACH:%i\n", code));
-	    icmp_error(so->so_m, ICMP_UNREACH,code, 0,strerror(socket_errno));
+	    icmp_error(so->so_m, ICMP_UNREACH,code, 0,strerror(errno));
 	    m_free(m);
 	  } else {
 	  /*
@@ -571,12 +572,16 @@ solisten(port, laddr, lport, flags)
 	if (((s = socket(AF_INET,SOCK_STREAM,0)) < 0) ||
 	    (bind(s,(struct sockaddr *)&addr, sizeof(addr)) < 0) ||
 	    (listen(s,1) < 0)) {
-		int tmperrno = socket_errno; /* Don't clobber the real reason we failed */
+		int tmperrno = errno; /* Don't clobber the real reason we failed */
 		
-		socketclose(s);
+		close(s);
 		sofree(so);
 		/* Restore the real errno */
+#ifdef _WIN32
+		WSASetLastError(tmperrno);
+#else
 		errno = tmperrno;
+#endif
 		return NULL;
 	}
 	setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(char *)&opt,sizeof(int));
@@ -647,7 +652,9 @@ sofcantrcvmore(so)
 {
 	if ((so->so_state & SS_NOFDREF) == 0) {
 		shutdown(so->s,0);
-		FD_CLR(so->s, global_writefds);
+		if(global_writefds) {
+		  FD_CLR(so->s,global_writefds);
+		}
 	}
 	so->so_state &= ~(SS_ISFCONNECTING);
 	if (so->so_state & SS_FCANTSENDMORE)
@@ -661,9 +668,13 @@ sofcantsendmore(so)
 	struct socket *so;
 {
 	if ((so->so_state & SS_NOFDREF) == 0) {
-		shutdown(so->s,1);           /* send FIN to fhost */
-		FD_CLR(so->s, global_readfds);
-		FD_CLR(so->s, global_xfds);
+            shutdown(so->s,1);           /* send FIN to fhost */
+            if (global_readfds) {
+                FD_CLR(so->s,global_readfds);
+            }
+            if (global_xfds) {
+                FD_CLR(so->s,global_xfds);
+            }
 	}
 	so->so_state &= ~(SS_ISFCONNECTING);
 	if (so->so_state & SS_FCANTRCVMORE)

@@ -11,10 +11,6 @@
 
 #define TOWRITEMAX 512
 
-#if COLINUX_ARCH != winnt
-#define min(x,y) ((x) < (y) ? (x) : (y))
-#endif
-
 extern struct timeval tt;
 extern int link_up;
 extern int slirp_socket;

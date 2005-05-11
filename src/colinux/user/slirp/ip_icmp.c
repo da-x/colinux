@@ -120,12 +120,10 @@ icmp_input(m, hlen)
     } else {
       struct socket *so;
       struct sockaddr_in addr;
-      int sent;
-
       if ((so = socreate()) == NULL) goto freeit;
       if(udp_attach(so) == -1) {
 	DEBUG_MISC((dfd,"icmp_input udp_attach errno = %d-%s\n", 
-		    errno,strerror(socket_errno)));
+		    errno,strerror(errno)));
 	sofree(so);
 	m_free(m);
 	goto end_error;
@@ -155,13 +153,12 @@ icmp_input(m, hlen)
       } else {
 	addr.sin_addr = so->so_faddr;
       }
-      sent = sendto(so->s, icmp_ping_msg, strlen(icmp_ping_msg), 0,
-		    (struct sockaddr *)&addr, sizeof(addr));
       addr.sin_port = so->so_fport;
-      if(sent == -1) {
+      if(sendto(so->s, icmp_ping_msg, strlen(icmp_ping_msg), 0,
+		(struct sockaddr *)&addr, sizeof(addr)) == -1) {
 	DEBUG_MISC((dfd,"icmp_input udp sendto tx errno = %d-%s\n",
-		    errno,strerror(socket_errno)));
-	icmp_error(m, ICMP_UNREACH,ICMP_UNREACH_NET, 0,strerror(socket_errno)); 
+		    errno,strerror(errno)));
+	icmp_error(m, ICMP_UNREACH,ICMP_UNREACH_NET, 0,strerror(errno)); 
 	udp_detach(so);
       }
     } /* if ip->ip_dst.s_addr == our_addr.s_addr */

@@ -3,15 +3,38 @@
 
 #define CONFIG_QEMU
 
-//#define DEBUG 1
+#define DEBUG 1
 
 #ifndef CONFIG_QEMU
 #include "version.h"
 #endif
-#ifndef COLINUX
 #include "config.h"
-#endif
 #include "slirp_config.h"
+
+#ifdef _WIN32
+# include <inttypes.h>
+
+typedef uint8_t u_int8_t;
+typedef uint16_t u_int16_t;
+typedef uint32_t u_int32_t;
+typedef uint64_t u_int64_t;
+typedef char *caddr_t;
+
+# include <winsock2.h>
+# include <sys/timeb.h>
+# include <iphlpapi.h>
+
+# define EWOULDBLOCK WSAEWOULDBLOCK
+# define EINPROGRESS WSAEINPROGRESS
+# define ENOTCONN WSAENOTCONN
+# define EHOSTUNREACH WSAEHOSTUNREACH
+# define ENETUNREACH WSAENETUNREACH
+# define ECONNREFUSED WSAECONNREFUSED
+#else
+# define ioctlsocket ioctl
+# define closesocket(s) close(s)
+# define O_BINARY 0
+#endif
 
 #include <sys/types.h>
 #ifdef HAVE_SYS_BITYPES_H
@@ -19,50 +42,6 @@
 #endif
 
 #include <sys/time.h>
-
-#if COLINUX_ARCH == winnt
-#include <bittypes.h>
-#include <stdint.h>
-#include <winsock2.h>
-typedef char *caddr_t;
-
-#define EINPROGRESS     WSAEINPROGRESS
-#define ECONNREFUSED    WSAECONNREFUSED
-#define EHOSTUNREACH    WSAEHOSTUNREACH
-#define ENETUNREACH     WSAENETUNREACH
-#define EWOULDBLOCK     WSAEWOULDBLOCK
-#define ENOTCONN        WSAENOTCONN
-
-#define CONNECT_UNBLOCKED EWOULDBLOCK
-
-struct iovec {
-	void *iov_base;
-	size_t iov_len;
-};
-
-#include <sys/time.h>
-#include <time.h>
-
-extern int co_gettimeofday(struct timeval *tv, int val);
-extern void co_inet_aton(char* string, struct in_addr *out);
-extern int co_ioctl(int d, int request, ...);
-
-#define gettimeofday co_gettimeofday
-#define inet_aton co_inet_aton
-#define ioctl co_ioctl
-
-#define socket_errno WSAGetLastError()
-#define socketclose closesocket
-#define socket_write(_s_, _block_, _size_) send(_s_, _block_, _size_, 0)
-#define socket_read(_s_, _block_, _size_) recv(_s_, _block_, _size_, 0)
-
-#else
-#define socket_errno errno
-#define socketclose close
-#define socket_write write
-#define socket_read read
-#define CONNECT_UNBLOCKED EINPROGRESS
-#endif
 
 #ifdef NEED_TYPEDEFS
 typedef char int8_t;
@@ -125,7 +104,7 @@ typedef unsigned char u_int8_t;
 # include <strings.h>
 #endif
 
-#if COLINUX_ARCH != winnt
+#ifndef _WIN32
 #include <sys/uio.h>
 #endif
 
@@ -137,7 +116,7 @@ typedef unsigned char u_int8_t;
 #endif
 #endif
 
-#if COLINUX_ARCH != winnt
+#ifndef _WIN32
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #endif
@@ -169,29 +148,13 @@ int inet_aton _P((const char *cp, struct in_addr *ia));
 #ifdef HAVE_SYS_SIGNAL_H
 # include <sys/signal.h>
 #endif
-#if COLINUX_ARCH != winnt
+#ifndef _WIN32
 #include <sys/socket.h>
 #endif
 
-#if defined(WANT_SYS_IOCTL_H) && defined(HAVE_SYS_IOCTL_H)
+#if defined(HAVE_SYS_IOCTL_H)
 # include <sys/ioctl.h>
-#else
-# define WANT_SYS_TERMIOS_H
 #endif
-
-#if COLINUX_ARCH != winnt
-#ifdef WANT_SYS_TERMIOS_H
-# ifndef INCLUDED_TERMIOS_H
-#  ifdef HAVE_TERMIOS_H
-#   include <termios.h>
-#  else
-#   include <termio.h>
-#  endif
-#  define INCLUDED_TERMIOS_H
-# endif
-#endif
-#endif
-
 
 #ifdef HAVE_SYS_SELECT_H
 # include <sys/select.h>
@@ -248,6 +211,7 @@ int inet_aton _P((const char *cp, struct in_addr *ia));
 #endif
 
 #include "bootp.h"
+#include "tftp.h"
 #include "libslirp.h"
 
 extern struct ttys *ttys_unit[MAX_INTERFACES];
@@ -300,8 +264,7 @@ extern int do_echo;
  inline void remque_32 _P((void *));
 #endif
 
-#if COLINUX_ARCH != winnt
-#include <pwd.h>
+#ifndef _WIN32
 #include <netdb.h>
 #endif
 
@@ -360,6 +323,16 @@ struct tcpcb *tcp_drop(struct tcpcb *tp, int err);
 #else
 #define MIN_MRU 128
 #define MAX_MRU 16384
+#endif
+
+#ifndef _WIN32
+#define min(x,y) ((x) < (y) ? (x) : (y))
+#define max(x,y) ((x) > (y) ? (x) : (y))
+#endif
+
+#ifdef _WIN32
+#undef errno
+#define errno (WSAGetLastError())
 #endif
 
 #endif

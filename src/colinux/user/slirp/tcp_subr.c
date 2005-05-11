@@ -250,7 +250,7 @@ struct tcpcb *tcp_drop(struct tcpcb *tp, int err)
 
 	DEBUG_CALL("tcp_drop");
 	DEBUG_ARG("tp = %lx", (long)tp);
-	DEBUG_ARG("errno = %d", socket_errno);
+	DEBUG_ARG("errno = %d", errno);
 	
 	if (TCPS_HAVERCVDSYN(tp->t_state)) {
 		tp->t_state = TCPS_CLOSED;
@@ -301,7 +301,7 @@ tcp_close(tp)
 	/* clobber input socket cache if we're closing the cached connection */
 	if (so == tcp_last_so)
 		tcp_last_so = &tcb;
-	socketclose(so->s);
+	closesocket(so->s);
 	sbfree(&so->so_rcv);
 	sbfree(&so->so_snd);
 	sofree(so);
@@ -477,7 +477,7 @@ tcp_connect(inso)
 	} else {
 		if ((so = socreate()) == NULL) {
 			/* If it failed, get rid of the pending connection */
-			close(accept(inso->s,(struct sockaddr *)&addr,&addrlen));
+			closesocket(accept(inso->s,(struct sockaddr *)&addr,&addrlen));
 			return;
 		}
 		if (tcp_attach(so) < 0) {
@@ -508,7 +508,7 @@ tcp_connect(inso)
 	
 	/* Close the accept() socket, set right state */
 	if (inso->so_state & SS_FACCEPTONCE) {
-		socketclose(so->s); /* If we only accept once, close the accept() socket */
+		closesocket(so->s); /* If we only accept once, close the accept() socket */
 		so->so_state = SS_NOFDREF; /* Don't select it yet, even though we have an FD */
 					   /* if it's not FACCEPTONCE, it's already NOFDREF */
 	}
@@ -1249,16 +1249,16 @@ int
 tcp_ctl(so)
 	struct socket *so;
 {
-#if 0
 	struct sbuf *sb = &so->so_snd;
 	int command;
  	struct ex_list *ex_ptr;
 	int do_pty;
-	struct socket *tmpso;
+        //	struct socket *tmpso;
 	
 	DEBUG_CALL("tcp_ctl");
 	DEBUG_ARG("so = %lx", (long )so);
 	
+#if 0
 	/*
 	 * Check if they're authorised
 	 */
@@ -1267,7 +1267,7 @@ tcp_ctl(so)
 		sb->sb_wptr += sb->sb_cc;
 		return 0;
 	}
-	
+#endif	
 	command = (ntohl(so->so_faddr.s_addr) & 0xff);
 	
 	switch(command) {
@@ -1300,6 +1300,7 @@ tcp_ctl(so)
 		DEBUG_MISC((dfd, " executing %s \n",ex_ptr->ex_exec));
 		return(fork_exec(so, ex_ptr->ex_exec, do_pty));
 		
+#if 0
 	case CTL_CMD:
 	   for (tmpso = tcb.so_next; tmpso != &tcb; tmpso = tmpso->so_next) {
 	     if (tmpso->so_emu == EMU_CTL && 
@@ -1318,8 +1319,6 @@ tcp_ctl(so)
 	   sb->sb_wptr += sb->sb_cc;
 	   do_echo=-1;
 	   return(2);
-	}
-#else
-        return 0;
 #endif
+	}
 }
