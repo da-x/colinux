@@ -24,6 +24,8 @@
 #include "time.h"
 #include "fileio.h"
 
+#define FILE_SHARE_DIRECTORY (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+
 co_rc_t co_winnt_utf8_to_unicode(const char *src, UNICODE_STRING *unicode_str)
 {
 	co_rc_t rc;
@@ -95,14 +97,15 @@ co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned long open
 			      &IoStatusBlock,
 			      NULL,
 			      file_attribute,
-			      0,
+			      (open_flags == FILE_LIST_DIRECTORY) ?
+				 FILE_SHARE_DIRECTORY : 0,
 			      create_disposition,
 			      options | FILE_SYNCHRONOUS_IO_NONALERT,
 			      NULL,
 			      0);
 
 	if (status != STATUS_SUCCESS)
-		co_debug("ZwOpenFile() returned error: %x\n", status);
+		co_debug("ZwOpenFile('%s') returned error: %x\n", pathname, status);
 
 	co_winnt_free_unicode(&unipath);
 
@@ -376,7 +379,7 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
                                    OBJ_CASE_INSENSITIVE, NULL, NULL);
  
         status = ZwCreateFile(&handle, FILE_LIST_DIRECTORY,
-			      &attributes, &io_status, NULL, 0, FILE_SHARE_READ | FILE_SHARE_WRITE /* TODO: add | FILE_SHARE_DELETE */, 
+			      &attributes, &io_status, NULL, 0, FILE_SHARE_DIRECTORY, 
 			      FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT | FILE_DIRECTORY_FILE, 
 			      NULL, 0);
 
@@ -517,11 +520,10 @@ co_rc_t co_os_file_mkdir(char *dirname)
 	co_rc_t rc;
 
 	rc = co_os_file_create(dirname, &handle, FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES,
-				   FILE_ATTRIBUTE_DIRECTORY, FILE_CREATE, FILE_DIRECTORY_FILE);
-
+				FILE_ATTRIBUTE_DIRECTORY, FILE_CREATE, FILE_DIRECTORY_FILE);
 	if (CO_OK(rc)) {
 		co_os_file_close(handle);
-	}	
+	}
 
 	return rc;
 }
@@ -531,7 +533,7 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	NTSTATUS status;
 	IO_STATUS_BLOCK io_status;
 	FILE_RENAME_INFORMATION *rename_info;
-	HANDLE handle = 0;
+	HANDLE handle;
 	int block_size;
 	int char_count;
 	co_rc_t rc;
@@ -552,7 +554,7 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 
 	rc = co_utf8_mbstowcs(rename_info->FileName, dest_filename, char_count + 1);
 	if (!CO_OK(rc))
-		goto error;
+		goto error2;
 	
 	co_debug_lvl(filesystem, 10, "rename of '%s' to '%s'\n", filename, dest_filename);
 
@@ -560,10 +562,11 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 				      FileRenameInformation);
 	rc = status_convert(status);
 
+error2:
+	co_os_file_close(handle);
+
 error:
 	co_os_free(rename_info);
-	if (handle)
-		co_os_file_close(handle);
 	return rc;
 }
 
@@ -607,7 +610,7 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 				   OBJ_CASE_INSENSITIVE, NULL, NULL);
 
 	status = ZwCreateFile(&handle, FILE_LIST_DIRECTORY,
-			      &attributes, &io_status, NULL, 0, FILE_SHARE_READ | FILE_SHARE_WRITE /* TODO: add | FILE_SHARE_DELETE */, 
+			      &attributes, &io_status, NULL, 0, FILE_SHARE_DIRECTORY, 
 			      FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT | FILE_DIRECTORY_FILE, 
 			      NULL, 0);
 	
@@ -682,19 +685,20 @@ error:
 co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *statfs)
 {
 	FILE_FS_FULL_SIZE_INFORMATION fsi;
-	HANDLE handle = 0;
+	HANDLE handle;
 	NTSTATUS status;
 	IO_STATUS_BLOCK io_status;
 	co_pathname_t pathname;
 	co_rc_t rc;
 	int len;
+	int loop = 2;
 	
 	memcpy(&pathname, &filesystem->base_path, sizeof(co_pathname_t));
 
 	len = strlen(pathname);
 	do {
 		rc = co_os_file_create(pathname, &handle, 
-				       FILE_LIST_DIRECTORY, FILE_SHARE_READ | FILE_SHARE_WRITE,
+				       FILE_LIST_DIRECTORY, 0,
 				       FILE_OPEN, FILE_DIRECTORY_FILE | FILE_OPEN_FOR_FREE_SPACE_QUERY);
 		
 		if (CO_OK(rc)) 
@@ -704,8 +708,8 @@ co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *
 			len--;
 
 		pathname[len] = '\0';
-	} while (len > 0);
-	
+	} while (len > 0  &&  --loop);
+
 	if (!CO_OK(rc))
 		return rc;
 
