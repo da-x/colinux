@@ -14,7 +14,7 @@ LOCAL_OBJS = \
 LOCAL_OBJS := $(addprefix $(BUILD_PATH)/,$(LOCAL_OBJS))
 
 $(LOCAL_OBJS) : %.o : %.c
-	$(SLIRP_TOOL_USER_CC)
+	$(TOOL_USER_CC)
 
 $(BUILD_PATH)/slirp.a : $(LOCAL_OBJS)
 	$(TOOL_AR)
