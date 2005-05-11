@@ -1463,23 +1463,6 @@ diff -urN a/arch/i386/kernel/traps.c b/arch/i386/kernel/traps.c
  	if (notify_die(DIE_DEBUG, "debug", regs, condition, error_code,
  					SIGTRAP) == NOTIFY_STOP)
  		return;
-diff -urN a/arch/i386/kernel/vmlinux.lds.S b/arch/i386/kernel/vmlinux.lds.S
---- a/arch/i386/kernel/vmlinux.lds.S
-+++ b/arch/i386/kernel/vmlinux.lds.S
-@@ -14,11 +14,12 @@
- {
-   . = __PAGE_OFFSET + 0x100000;
-   /* read-only */
-+  _kernel_start = .		; 
-   _text = .;			/* Text and read-only data */
-   .text : {
- 	*(.text)
- 	SCHED_TEXT
--	LOCK_TEXT
-+ 	LOCK_TEXT
- 	*(.fixup)
- 	*(.gnu.warning)
- 	} = 0x9090
 diff -urN a/arch/i386/mm/fault.c b/arch/i386/mm/fault.c
 --- a/arch/i386/mm/fault.c
 +++ b/arch/i386/mm/fault.c
@@ -9162,28 +9145,29 @@ diff -urN a/kernel/printk.c b/kernel/printk.c
 diff -urN a/kernel/sched.c b/kernel/sched.c
 --- a/kernel/sched.c
 +++ b/kernel/sched.c
-@@ -2309,6 +2309,16 @@
+@@ -2309,6 +2309,7 @@
  
  	total = cputime_add(p->utime, p->stime);
  	secs = cputime_to_secs(total);
 +
-+#ifdef CONFIG_COOPERATIVE
-+	/* FIXME: figure out why account_user_time() is called when it shouldn't */
-+	if (!p->signal) {
-+		printk(KERN_ERR "%s:%d: check_rlimit: p->signal=NULL p=%p pid=%d exit_code=%X exit_signal=%X\n",
-+		       __FILE__, __LINE__, p, p->pid, p->exit_code, p->exit_signal);
-+		return;
-+	}
-+#endif
-+
  	if (unlikely(secs >= p->signal->rlim[RLIMIT_CPU].rlim_cur)) {
  		/* Send SIGXCPU every second. */
  		tmp = cputime_sub(total, cputime);
-diff -urN a/localversion-cooperative b/localversion-cooperative
---- a/localversion-cooperative
-+++ b/localversion-cooperative
-@@ -0,0 +1 @@
-+-co-
+@@ -2334,9 +2335,11 @@
+ 	p->utime = cputime_add(p->utime, cputime);
+ 
+ 	/* Check for signals (SIGVTALRM, SIGPROF, SIGXCPU & SIGKILL). */
+-	check_rlimit(p, cputime);
+-	account_it_virt(p, cputime);
+-	account_it_prof(p, cputime);
++	if (likely(p->signal && p->exit_state < EXIT_ZOMBIE)) {
++		check_rlimit(p, cputime);
++		account_it_virt(p, cputime);
++		account_it_prof(p, cputime);
++	}
+ 
+ 	/* Add user time to cpustat. */
+ 	tmp = cputime_to_cputime64(cputime);
 diff -urN a/mm/bootmem.c b/mm/bootmem.c
 --- a/mm/bootmem.c
 +++ b/mm/bootmem.c
@@ -9219,6 +9203,20 @@ diff -urN a/mm/bootmem.c b/mm/bootmem.c
  	memset(ret, 0, size);
  	return ret;
  }
+diff -urN a/mm/filemap.c b/mm/filemap.c
+--- a/mm/filemap.c
++++ b/mm/filemap.c
+@@ -1958,7 +1958,9 @@
+ 		 * same page as we're writing to, without it being marked
+ 		 * up-to-date.
+ 		 */
+-		fault_in_pages_readable(buf, bytes);
++		if (access_ok(VERIFY_READ, buf, bytes)) {
++			fault_in_pages_readable(buf, bytes);
++		}
+ 
+ 		page = __grab_cache_page(mapping,index,&cached_page,&lru_pvec);
+ 		if (!page) {
 diff -urN a/mm/page_alloc.c b/mm/page_alloc.c
 --- a/mm/page_alloc.c
 +++ b/mm/page_alloc.c
