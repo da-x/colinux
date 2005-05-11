@@ -446,12 +446,17 @@ static bool_t co_terminate(co_monitor_t *cmon)
 	/* Prints kernel BUG */
 	if (co_passage_page->params[0] == CO_TERMINATE_BUG)
 	{
-	    char file_name [co_passage_page->params[3]+1];
-	    
-	    strncpy (file_name, &co_passage_page->params[4], co_passage_page->params[3]);
-	    file_name [co_passage_page->params[3]] = 0;
-	    co_debug("%s(%d): Kernel BUG %d\n",
-	       file_name, co_passage_page->params[2], co_passage_page->params[1]);
+		unsigned int len = co_passage_page->params[3];
+		
+		if (len > 255)
+			len = 255; /* sanity */
+
+		char file_name [len+1]; /* Buffer on stack */
+			
+		co_memcpy (file_name, &co_passage_page->params[4], len);
+		file_name [len] = 0;
+		co_debug("%s(%d): Kernel BUG %d\n",
+			file_name, co_passage_page->params[2], co_passage_page->params[1]);
 	}
 		
 	message.message.from = CO_MODULE_MONITOR;
@@ -615,6 +620,19 @@ static bool_t iteration(co_monitor_t *cmon)
 		co_os_get_timestamp_freq((co_timestamp_t *)&co_passage_page->params[2]);
 		return PTRUE;
 	}
+	case CO_OPERATION_PRINTK: {
+		unsigned long size = co_passage_page->params[0];
+		if (size > 255) 
+			size = 255; /* sanity */
+
+		char bf [size+1]; /* Buffer on stack */
+
+		co_memcpy (bf, &co_passage_page->params[1], size);
+		bf [size] = 0;
+		co_debug("%s", bf);
+		return PFALSE;
+	}
+
 
 	default:
 		co_debug_lvl(context_switch, 5, "unknown operation %d not handled\n", co_passage_page->operation);
@@ -874,13 +892,20 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 
 	if (cmon->memory_size < 8)
 		cmon->memory_size = 8;
-	else if (cmon->memory_size > 512)
-		cmon->memory_size = 512;
+	else if (cmon->memory_size > 1000)		/* 1000 = 1024 - 8*4 */
+		cmon->memory_size = 1000;		/* 24 MB = 8 Pages a 4 K reserved */
 
 	co_debug("after adjustments: %d MB\n", cmon->memory_size);
 
 	cmon->memory_size <<= 20; /* Megify */
 	
+/* +++ HN +++ */
+	co_debug("HostMem amount: %u Bytes (%d MB)\n", cmon->manager->hostmem_amount, cmon->manager->hostmem_amount >> 20);
+	co_debug("HostMem usage limit: %u Bytes (%d MB)\n", cmon->manager->hostmem_usage_limit, cmon->manager->hostmem_usage_limit >> 20);
+	co_debug("HostMem used: %u Bytes (%d MB)\n", cmon->manager->hostmem_used, cmon->manager->hostmem_used >> 20);
+	co_debug("LinuxMem size: %u Bytes (%d MB)\n", cmon->memory_size, cmon->memory_size >> 20);
+/* --- HN --- */
+
 	if (cmon->manager->hostmem_used + cmon->memory_size > cmon->manager->hostmem_usage_limit) {
 		rc = CO_RC(HOSTMEM_USE_LIMIT_REACHED);
 		params->actual_memsize_used = cmon->memory_size;
@@ -892,6 +917,19 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	cmon->physical_frames = cmon->memory_size >> CO_ARCH_PAGE_SHIFT;
 	cmon->end_physical = CO_ARCH_KERNEL_OFFSET + cmon->memory_size;
 	cmon->passage_page_vaddr = CO_VPTR_PASSAGE_PAGE;
+
+/* +++ HN +++ */
+	co_debug("Mem physical frames: %Xh %d\n", cmon->physical_frames, cmon->physical_frames);
+	co_debug("Mem physical end: %Xh\n", cmon->end_physical);
+	if ((cmon->physical_frames << CO_ARCH_PAGE_SHIFT) != cmon->memory_size) {
+		co_debug("Mem baundary error: %Xh %u : %Xh %u : %Xh %u\n",
+		    cmon->physical_frames, cmon->physical_frames,
+		    CO_ARCH_PAGE_SHIFT, CO_ARCH_PAGE_SHIFT,
+		    cmon->memory_size, cmon->memory_size);
+		rc = CO_RC(ERROR);
+		goto out_revert_used_mem;
+	}
+/* --- HN --- */
 
 	rc = alloc_pp_ram_mapping(cmon);
         if (!CO_OK(rc)) {
