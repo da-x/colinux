@@ -1463,6 +1463,17 @@ diff -urN a/arch/i386/kernel/traps.c b/arch/i386/kernel/traps.c
  	if (notify_die(DIE_DEBUG, "debug", regs, condition, error_code,
  					SIGTRAP) == NOTIFY_STOP)
  		return;
+diff -urN a/arch/i386/kernel/vmlinux.lds.S b/arch/i386/kernel/vmlinux.lds.S
+--- a/arch/i386/kernel/vmlinux.lds.S
++++ b/arch/i386/kernel/vmlinux.lds.S
+@@ -14,6 +14,7 @@
+ {
+   . = __PAGE_OFFSET + 0x100000;
+   /* read-only */
++  _kernel_start = .		;
+   _text = .;			/* Text and read-only data */
+   .text : {
+ 	*(.text)
 diff -urN a/arch/i386/mm/fault.c b/arch/i386/mm/fault.c
 --- a/arch/i386/mm/fault.c
 +++ b/arch/i386/mm/fault.c
