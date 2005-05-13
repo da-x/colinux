@@ -3300,7 +3300,7 @@ diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 +
 +		message = (co_linux_message_t *)&node_message->msg.data;
 +		if (message->unit < 0  ||  message->unit >= CO_MODULE_MAX_CONET) {
-+			printk("conet interrupt: buggy network reception: %x\n", message->unit);
++			printk("conet interrupt: buggy network reception: %lx\n", message->unit);
 +			return IRQ_HANDLED;
 +		}
 +

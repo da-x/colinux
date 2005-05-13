@@ -565,8 +565,6 @@ void console_window_t::handle_scancode(co_scan_code_t sc)
 		co_scan_code_t		code;
 	} message;
 		
-	printf("handling\n");
-
 	message.message.from = CO_MODULE_CONSOLE;
 	message.message.to = CO_MODULE_LINUX;
 	message.message.priority = CO_PRIORITY_DISCARDABLE;

@@ -92,9 +92,16 @@ co_os_daemon_get_message_ready(co_daemon_handle_t handle,
 }
 
 co_rc_t
-co_os_daemon_message_get(co_daemon_handle_t handle,
-			 co_message_t **message_out, 
-			 unsigned long timeout)
+co_os_daemon_message_deallocate(co_daemon_handle_t, co_message_t *message)
+{
+	co_os_free(message);
+	return CO_RC(OK);
+}
+
+co_rc_t
+co_os_daemon_message_recieve(co_daemon_handle_t handle,
+			     co_message_t **message_out, 
+			     unsigned long timeout)
 {
 	unsigned long size;
 	co_message_t *message = NULL;
@@ -119,9 +126,8 @@ co_os_daemon_message_get(co_daemon_handle_t handle,
 }
 
 co_rc_t
-co_os_daemon_message_receive(co_daemon_handle_t handle, co_message_t **ppMessage, unsigned long timeout_unused)
+co_os_daemon_message_send(co_daemon_handle_t handle, co_message_t *message)
 {
-	co_message_t *message = *ppMessage;
 	return co_os_frame_send(handle->sock, (char *)message, message->size + sizeof(*message));
 }
 

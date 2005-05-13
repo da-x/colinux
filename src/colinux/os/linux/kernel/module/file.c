@@ -120,8 +120,8 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 
 	filp = filp_open(fdev->pathname, O_RDONLY | O_LARGEFILE, 0);
         if (IS_ERR(filp)) {
-		co_terminal_print("error opening file '%s' (errno=%d)\n",
-		    (fdev->pathname) ? fdev->pathname : "(NULL)", -(long)filp);
+		co_debug("error opening file '%s' (errno=%d)\n",
+		         (fdev->pathname) ? fdev->pathname : "(NULL)", -(long)filp);
 		return CO_RC(ERROR);
 	}
 

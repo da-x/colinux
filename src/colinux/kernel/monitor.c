@@ -200,8 +200,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 	long io_buffer_num_pages = CO_VPTR_IO_AREA_SIZE >> CO_ARCH_PAGE_SHIFT;
 	long io_buffer_offset = ((CO_VPTR_IO_AREA_START & ((1 << PGDIR_SHIFT) - 1)) >> CO_ARCH_PAGE_SHIFT) 
 		* sizeof(linux_pte_t);
-	unsigned long io_buffer_host_address = (unsigned 
-long)(cmon->io_buffer);
+	unsigned long io_buffer_host_address = (unsigned long)(cmon->io_buffer);
 
 	for (io_buffer_page=0; io_buffer_page < io_buffer_num_pages; io_buffer_page++) {
 		unsigned long io_buffer_pfn = co_os_virt_to_phys((void *)io_buffer_host_address) >> CO_ARCH_PAGE_SHIFT;
@@ -899,13 +898,6 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 
 	cmon->memory_size <<= 20; /* Megify */
 	
-/* +++ HN +++ */
-	co_debug("HostMem amount: %u Bytes (%d MB)\n", cmon->manager->hostmem_amount, cmon->manager->hostmem_amount >> 20);
-	co_debug("HostMem usage limit: %u Bytes (%d MB)\n", cmon->manager->hostmem_usage_limit, cmon->manager->hostmem_usage_limit >> 20);
-	co_debug("HostMem used: %u Bytes (%d MB)\n", cmon->manager->hostmem_used, cmon->manager->hostmem_used >> 20);
-	co_debug("LinuxMem size: %u Bytes (%d MB)\n", cmon->memory_size, cmon->memory_size >> 20);
-/* --- HN --- */
-
 	if (cmon->manager->hostmem_used + cmon->memory_size > cmon->manager->hostmem_usage_limit) {
 		rc = CO_RC(HOSTMEM_USE_LIMIT_REACHED);
 		params->actual_memsize_used = cmon->memory_size;
@@ -917,19 +909,6 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	cmon->physical_frames = cmon->memory_size >> CO_ARCH_PAGE_SHIFT;
 	cmon->end_physical = CO_ARCH_KERNEL_OFFSET + cmon->memory_size;
 	cmon->passage_page_vaddr = CO_VPTR_PASSAGE_PAGE;
-
-/* +++ HN +++ */
-	co_debug("Mem physical frames: %Xh %d\n", cmon->physical_frames, cmon->physical_frames);
-	co_debug("Mem physical end: %Xh\n", cmon->end_physical);
-	if ((cmon->physical_frames << CO_ARCH_PAGE_SHIFT) != cmon->memory_size) {
-		co_debug("Mem baundary error: %Xh %u : %Xh %u : %Xh %u\n",
-		    cmon->physical_frames, cmon->physical_frames,
-		    CO_ARCH_PAGE_SHIFT, CO_ARCH_PAGE_SHIFT,
-		    cmon->memory_size, cmon->memory_size);
-		rc = CO_RC(ERROR);
-		goto out_revert_used_mem;
-	}
-/* --- HN --- */
 
 	rc = alloc_pp_ram_mapping(cmon);
         if (!CO_OK(rc)) {
