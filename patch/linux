@@ -1466,14 +1466,20 @@ diff -urN a/arch/i386/kernel/traps.c b/arch/i386/kernel/traps.c
 diff -urN a/arch/i386/kernel/vmlinux.lds.S b/arch/i386/kernel/vmlinux.lds.S
 --- a/arch/i386/kernel/vmlinux.lds.S
 +++ b/arch/i386/kernel/vmlinux.lds.S
-@@ -14,6 +14,7 @@
+@@ -14,11 +14,12 @@
  {
    . = __PAGE_OFFSET + 0x100000;
    /* read-only */
-+  _kernel_start = .		;
++  _kernel_start = .		; 
    _text = .;			/* Text and read-only data */
    .text : {
  	*(.text)
+ 	SCHED_TEXT
+-	LOCK_TEXT
++ 	LOCK_TEXT
+ 	*(.fixup)
+ 	*(.gnu.warning)
+ 	} = 0x9090
 diff -urN a/arch/i386/mm/fault.c b/arch/i386/mm/fault.c
 --- a/arch/i386/mm/fault.c
 +++ b/arch/i386/mm/fault.c
@@ -2026,8 +2032,8 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +	{"sdl", &cobd_aliases_major_sd, 0xb0, 0x10, },
 +	{"sdm", &cobd_aliases_major_sd, 0xc0, 0x10, },
 +	{"sdn", &cobd_aliases_major_sd, 0xd0, 0x10, },
-+	{"sdp", &cobd_aliases_major_sd, 0xe0, 0x10, },
-+	{"sdq", &cobd_aliases_major_sd, 0xf0, 0x10, },
++	{"sdo", &cobd_aliases_major_sd, 0xe0, 0x10, },
++	{"sdp", &cobd_aliases_major_sd, 0xf0, 0x10, },
 +	{NULL, },
 +};
 +
@@ -9279,13 +9285,46 @@ diff -urN a/mm/page_alloc.c b/mm/page_alloc.c
  	coalesced = base + page_idx;
  	set_page_order(coalesced, order);
  	list_add(&coalesced->lru, &zone->free_area[order].free_list);
-@@ -603,9 +606,16 @@
+@@ -599,13 +602,49 @@
+ 	free_hot_cold_page(page, 1);
+ }
+ 
++static int co_persistent_alloc_pages(unsigned long address, int order)
++{
++	int result, retries_left;
++	
++	retries_left = 10;
++	
++	while (retries_left > 0) {
++		result = co_alloc_pages(address, order);
++		if (result) {
++			unsigned long cache_size;
++			/* 
++			 * Whoops, we have allocated too much of the
++			 * host OS's memory, time to free some cache.
++			 * cache.
++			 */
++			cache_size = get_page_cache_size()-total_swapcache_pages;
++			cache_size /= 2;
++			if (cache_size < ((1 << order)*2))
++				cache_size = (1 << order)*2;
++			shrink_all_memory(cache_size);
++		} else
++			return 0;
++		retries_left--;
++	}
++
++	return result;
++	
++}
++
+ static inline void prep_zero_page(struct page *page, int order, int gfp_flags)
  {
  	int i;
  
 +	if (cooperative_mode_enabled()) {
 +		int result;
-+		result = co_alloc_pages((unsigned long)page_address(page), 1 << order);
++		result = co_persistent_alloc_pages((unsigned long)page_address(page), 1 << order);
 +		BUG_ON(result != 0);
 +	}
 +
@@ -9296,35 +9335,13 @@ diff -urN a/mm/page_alloc.c b/mm/page_alloc.c
  }
  
  /*
-@@ -852,6 +862,37 @@
+@@ -852,6 +891,15 @@
  	return NULL;
  got_pg:
  	zone_statistics(zonelist, z);
 +
 +	if (cooperative_mode_enabled()) {
-+		int result, retries_left;
-+
-+		retries_left = 10;
-+
-+		while (retries_left > 0) {
-+			result = co_alloc_pages((unsigned long)page_address(page), 1 << order);
-+			if (result) {
-+				unsigned long cache_size;
-+				/* 
-+				 * Whoops, we have allocated too much of the
-+				 * host OS's memory, time to free some cache.
-+				 * cache.
-+				 */
-+				cache_size = get_page_cache_size()-total_swapcache_pages;
-+				cache_size /= 2;
-+				if (cache_size < ((1 << order)*2))
-+					cache_size = (1 << order)*2;
-+				shrink_all_memory(cache_size);
-+			} else
-+				break;
-+			retries_left--;
-+		}
-+
++		int result = co_persistent_alloc_pages((unsigned long)page_address(page), 1 << order);
 +		if (result) {
 +			__free_pages(page, order);
 +			return NULL;
