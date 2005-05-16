@@ -15,8 +15,6 @@
 #include <colinux/os/alloc.h>
 #include <colinux/common/messages.h>
 
-static unsigned totalloc;
-
 /*
  * Maximum/Minimum memory size of packet allocation heap.
  */
@@ -101,7 +99,6 @@ packet_allocate(co_daemon_handle_t daemon, size_t size)
 			}
 			*shadow = packet->next;
 			HeapFree(daemon->heap, HEAP_NO_SERIALIZE, packet);
-			totalloc--;
 			packet = *shadow;
 			continue;
 		}
@@ -112,7 +109,6 @@ packet_allocate(co_daemon_handle_t daemon, size_t size)
 
 	if(!(packet = HeapAlloc(daemon->heap, HEAP_NO_SERIALIZE, sizeof(packet_t)+size)))
 		return NULL;
-	totalloc++;
 	packet->next = 0;
 	packet->free = 0;
 	packet->size = size;
@@ -478,10 +474,6 @@ co_os_daemon_pipe_open(co_id_t linux_id, co_module_t module_id,
 
 	if (handle == INVALID_HANDLE_VALUE)
 		goto co_os_open_daemon_pipe_error;
-
-	/* Set read by single Message for XP. NT2000 it's default */
-        if (!SetNamedPipeHandleState(handle, &lpMode, 0, 0))
-                co_debug_lvl(pipe,10,"error %x SetNamedPipeHandleState", GetLastError());
 
 	/* Identify ourselves to the daemon */
 	if (!WriteFile(handle, &module_id, sizeof (module_id), &written, NULL)) {
