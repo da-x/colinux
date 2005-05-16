@@ -621,15 +621,24 @@ static bool_t iteration(co_monitor_t *cmon)
 	}
 	case CO_OPERATION_PRINTK: {
 		unsigned long size = co_passage_page->params[0];
-		if (size > 255) 
-			size = 255; /* sanity */
+		if (size > 200) 
+			size = 200; /* sanity, see co_terminal_printv */
 
-		char bf [size+1]; /* Buffer on stack */
+		char *ptr = (char *)&co_passage_page->params[1];
+		co_message_t co_message;
 
-		co_memcpy (bf, &co_passage_page->params[1], size);
-		bf [size] = 0;
-		co_debug("%s", bf);
-		return PFALSE;
+		co_message = co_os_malloc(1 + size + sizeof(*co_message));
+		if (co_message) {
+			co_message->form = CO_MODULE_LINUX;
+			co_message->to = CO_MODULE_PRINTK;
+			co_message->priority = CO_PRIORITY_DISCARDABLE;
+			co_message->type = CO_MESSAGE_TYPE_STRING;
+			co_message->size = size + 1;
+			co_memcpy(co_message->data, ptr, size);
+			*(char *)(co_message->data + size) = 0;
+			co_message_switch_message(&cmon->message_switch, co_message);
+		}
+		return PTRUE;
 	}
 
 
