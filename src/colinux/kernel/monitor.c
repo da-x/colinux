@@ -625,11 +625,11 @@ static bool_t iteration(co_monitor_t *cmon)
 			size = 200; /* sanity, see co_terminal_printv */
 
 		char *ptr = (char *)&co_passage_page->params[1];
-		co_message_t co_message;
+		co_message_t *co_message;
 
 		co_message = co_os_malloc(1 + size + sizeof(*co_message));
 		if (co_message) {
-			co_message->form = CO_MODULE_LINUX;
+			co_message->from = CO_MODULE_LINUX;
 			co_message->to = CO_MODULE_PRINTK;
 			co_message->priority = CO_PRIORITY_DISCARDABLE;
 			co_message->type = CO_MESSAGE_TYPE_STRING;
