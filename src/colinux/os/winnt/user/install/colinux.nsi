@@ -374,15 +374,12 @@ Function StartDlImageFunc
 FunctionEnd
 
 Function WinpcapRedir
+  SectionGetFlags ${SeccoLinuxBridgedNet} $R0
+  IntOp $R0 $R0 & ${SF_SELECTED}
+  IntCmp $R0 ${SF_SELECTED} "" WinpcapEnd WinpcapEnd
   !insertmacro MUI_HEADER_TEXT "Get WinPCAP" "Install Bridged Ethernet WinPCAP dependency"
   !insertmacro MUI_INSTALLOPTIONS_DISPLAY "WinpcapRedir.ini"
-
-  ;SectionGetFlags ${SeccoLinuxBridgedNet} $R0
-  ;IntOp $R0 $R0 & ${SF_SELECTED}
-  ;IntCmp $R0 ${SF_SELECTED} "" WinpcapEnd WinpcapEnd
-  ;!insertmacro MUI_HEADER_TEXT "Get WinPCAP" "Install Bridged Ethernet WinPCAP dependency"
-  ;!insertmacro MUI_INSTALLOPTIONS_DISPLAY "WinpcapRedir.ini"
-  ;WinpcapEnd:
+  WinpcapEnd:
 FunctionEnd
 
 ;--------------------
