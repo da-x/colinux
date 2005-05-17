@@ -45,14 +45,42 @@ int co_strlen(const char *s)
 	return strlen(s);
 }
 
+/* copied from Linux's string lib */
+static int internal_strcmp(const char * cs,const char * ct)
+{
+	register signed char __res;
+
+	while (1) {
+		if ((__res = *cs - *ct++) != 0 || !*cs++)
+			break;
+	}
+
+	return __res;
+}
+
 int co_strcmp(const char *s1, const char *s2)
 {
-	return strcmp(s1, s2);
+	return internal_strcmp(s1, s2);
 }
+
+/* copied from Linux's string lib */
+static int internal_strncmp(const char * cs,const char * ct,size_t count)
+{
+	register signed char __res = 0;
+
+	while (count) {
+		if ((__res = *cs - *ct++) != 0 || !*cs++)
+			break;
+		count--;
+	}
+
+	return __res;
+}
+
 
 int co_strncmp(const char *s1, const char *s2, int n)
 {
-	return strncmp(s1, s2, n);
+	return internal_strncmp(s1, s2, n);
 }
 
 #endif

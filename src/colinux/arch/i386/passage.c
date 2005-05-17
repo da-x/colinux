@@ -556,8 +556,8 @@ static void short_temp_address_space_init(co_arch_passage_page_normal_address_sp
 	} maps[2];
 
 	for (i=0; i < 2; i++) {
-		maps[i].pmd = va[i] >> PMD_SHIFT;
-		maps[i].pte = (va[i] & ~PMD_MASK) >> CO_ARCH_PAGE_SHIFT;
+		maps[i].pmd = va[i] >> CO_ARCH_PMD_SHIFT;
+		maps[i].pte = (va[i] & ~CO_ARCH_PMD_MASK) >> CO_ARCH_PAGE_SHIFT;
 		maps[i].paddr = co_os_virt_to_phys(&pp->pte[i]);
 	}
 	/*

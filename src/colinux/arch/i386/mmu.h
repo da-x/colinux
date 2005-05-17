@@ -14,9 +14,7 @@
 
 typedef unsigned long co_pfn_t;
 
-#define PMD_SHIFT 22
 #define PMD_MASK        (~(PMD_SIZE-1))
-#define PMD_SIZE        (1UL << PMD_SHIFT)
 #define _KERNPG_TABLE   (_PAGE_PRESENT | _PAGE_RW | _PAGE_ACCESSED | _PAGE_DIRTY)
 
 #define _PAGE_PRESENT   0x001
