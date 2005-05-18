@@ -92,14 +92,14 @@ co_os_daemon_get_message_ready(co_daemon_handle_t handle,
 }
 
 co_rc_t
-co_os_daemon_message_deallocate(co_daemon_handle_t, co_message_t *message)
+co_os_daemon_message_deallocate(co_daemon_handle_t daemon, co_message_t *message)
 {
 	co_os_free(message);
 	return CO_RC(OK);
 }
 
 co_rc_t
-co_os_daemon_message_recieve(co_daemon_handle_t handle,
+co_os_daemon_message_receive(co_daemon_handle_t handle,
 			     co_message_t **message_out, 
 			     unsigned long timeout)
 {
