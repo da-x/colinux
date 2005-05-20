@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# Build libraries for cross platform mingw32
+
 . ./build-common.sh
 
 PATH="$PREFIX/$TARGET/bin:$PATH"

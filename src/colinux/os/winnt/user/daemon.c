@@ -452,7 +452,6 @@ co_os_daemon_pipe_open(co_id_t linux_id, co_module_t module_id,
 	char pathname[0x100];
 	co_daemon_handle_t daemon = 0;
 	co_module_name_t module_name;
-        long lpMode = PIPE_READMODE_MESSAGE;
 
 	snprintf(pathname, sizeof (pathname), "\\\\.\\pipe\\coLinux%d",
 		 (int) linux_id);

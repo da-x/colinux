@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# Build the cross platform for mingw32
+
 . ./build-common.sh
 
 download_files()

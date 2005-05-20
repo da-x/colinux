@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# Build the target kernel
 #
 # Options (only ones of):
 #  --download-only	Download all source files, no compile
