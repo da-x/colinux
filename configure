@@ -363,13 +363,11 @@ if [ "$target_os" = "linux" ] ; then
   echo " HOST_PATCHLEVEL=$HOST_PATCHLEVEL"
   HOST_SUBLEVEL=`grep "^SUBLEVEL = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
   echo " HOST_SUBLEVEL=$HOST_SUBLEVEL"
-  HOST_EXTRAVERSION=`grep "^EXTRAVERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/.\2/'`
-  if [ -n "$HOST_EXTRAVERSION" ] ; then
-    echo " HOST_EXTRAVERSION=$HOST_EXTRAVERSION"
-  fi
+  HOST_EXTRAVERSION=`grep "^EXTRAVERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9\.]*\)\(.*\)$/\2/'`
+  test -n "$HOST_EXTRAVERSION" && echo " HOST_EXTRAVERSION=$HOST_EXTRAVERSION"
 
   # Hostkernel must be >= 2.6 (compile external module)
-  if [ "$HOST_VERSION.$HOST_PATCHLEVEL" != "2.6" ] ; then
+  if [ "$HOST_VERSION" != "2" -o "$HOST_PATCHLEVEL" -lt 6 ] ; then
     { echo "configure: error: host kernel $HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL is to old! Need 2.6.x" 1>&2; exit 1; }
   fi
 
