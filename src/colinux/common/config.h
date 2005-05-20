@@ -44,6 +44,7 @@ typedef enum {
 } co_netdev_type_t;
 
 #define CO_NETDEV_DESC_STR_SIZE 0x40
+#define CO_NETDEV_REDIRDIR_STR_SIZE 0xFF
 
 /*
  * Per network device configuration
@@ -72,6 +73,9 @@ typedef struct co_netdev_desc {
 	 */
 	bool_t manual_mac_address;
 	unsigned char mac_address[6];
+
+	/* Slirp Parameters */
+	char redir[CO_NETDEV_REDIRDIR_STR_SIZE];
 } co_netdev_desc_t;
 
 typedef enum {

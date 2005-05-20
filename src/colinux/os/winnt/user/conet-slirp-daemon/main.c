@@ -19,6 +19,7 @@
 #include <colinux/user/reactor.h>
 #include <colinux/user/monitor.h>
 #include <colinux/user/slirp/libslirp.h>
+#include <colinux/user/slirp/ctl.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/current/user/reactor.h>
 
@@ -140,6 +141,7 @@ void co_net_syntax()
 	co_terminal_print("    -i index                Network device index number (0 for eth0, 1 for\n");
 	co_terminal_print("                            eth1, etc.)\n");
 	co_terminal_print("    -c instance             coLinux instance ID to connect to\n");
+	co_terminal_print("    -r tcp|udp:hport:cport  port redirection.\n");
 }
 
 static co_rc_t 
@@ -147,6 +149,20 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 {
 	char **param_scan = argv;
 	const char *option;
+#define REDIRSIZE 256
+	char redirbuf[REDIRSIZE];
+	char *redircursor=redirbuf;
+	char *redirproto;
+	char *redirhostport;
+	char *redirclientport;
+
+	struct in_addr guest_addr;
+
+	if (!inet_aton(CTL_LOCAL, &guest_addr))
+	{
+		co_terminal_print("conet-slirp-daemon: slirp redir setup guest_addr failed.\n");
+		exit(1);
+	}
 
 	/* Default settings */
 	start_parameters->index = -1;
@@ -185,6 +201,40 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 			start_parameters->show_help = PTRUE;
 		}
 
+		option = "-r";
+		if (strcmp(*param_scan, option) == 0) {
+			param_scan++;
+			memset(redirbuf,'\0', REDIRSIZE);
+			if (!(*param_scan)) {
+				co_terminal_print("conet-slirp-daemon: parameter of command line option %s not specified. Fallback to \"tcp:22:22\" \n", option);
+				strcpy(redirbuf,"tcp:22:22");
+			}
+			else
+			{
+				sscanf(*param_scan, "%s", redirbuf);
+				param_scan++;
+			}
+
+			redirproto=redirbuf;
+			redirproto[strlen("tcp")]='\0';
+			redirhostport=redirproto+strlen("tcp")+1;
+			redircursor=redirhostport;
+			while(*redircursor!=':' && redircursor<(redirbuf+REDIRSIZE))
+			{
+				redircursor++;
+			}
+			if(redircursor<(redirbuf+REDIRSIZE))
+			{
+				*redircursor='\0';
+				redircursor++;
+			}
+			redirclientport=redircursor;
+
+			if (slirp_redir(strcmp(redirproto,"udp") == 0 ? 1 : 0, atol(redirhostport), guest_addr, atol(redirclientport)) < 0) {
+				co_terminal_print("conet-slirp-daemon: slirp redir %d failed.\n",atol(redirclientport));
+			}
+			continue;
+		}
 		param_scan++;
 	}
 
@@ -218,6 +268,8 @@ int main(int argc, char *argv[])
 
 	co_debug_start();
 
+	slirp_init();
+
 	rc = handle_paramters(&start_parameters, argc, argv);
 	if (!CO_OK(rc)) {
 		exit_code = -1;
@@ -225,8 +277,6 @@ int main(int argc, char *argv[])
 	}
 
 	WSAStartup(MAKEWORD(2, 0), &wsad);
-
-	slirp_init();
 
 	co_terminal_print("conet-slirp-daemon: slirp initialized\n");
 

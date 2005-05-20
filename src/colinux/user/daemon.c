@@ -570,7 +570,7 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 		}
 
 		case CO_NETDEV_TYPE_SLIRP: {
-			rc = co_launch_process("colinux-slirp-net-daemon -c %d -i %d", daemon->id, i);
+			rc = co_launch_process("colinux-slirp-net-daemon -c %d -i %d %s", daemon->id, i, net_dev->redir);
 			break;
 		}
 

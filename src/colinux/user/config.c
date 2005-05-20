@@ -296,17 +296,50 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 	return CO_RC(OK);
 }
 
+static co_rc_t parse_redir(char *configline, char *commandline)
+{
+	char *cursor;
+	*commandline='\0';
+	char oldchar='/';
+
+	while(oldchar=='/' && *configline!='\0')
+	{ 
+		oldchar='\0';
+		cursor=configline;
+		while(*cursor!='\0' && *cursor!='/' && cursor < &configline[CO_NETDEV_REDIRDIR_STR_SIZE])
+		{
+			cursor++;
+		}
+		if(cursor < &configline[CO_NETDEV_REDIRDIR_STR_SIZE])
+		{
+			oldchar=*cursor;
+			*cursor='\0';
+			strcat(commandline, "-r "); 
+			strcat(commandline, configline); 
+			strcat(commandline, " "); 
+			configline=cursor+1;
+		}
+		else
+		{
+			co_terminal_print("parse error in redir\n");
+			return CO_RC(ERROR);
+		}
+	}
+	return CO_RC(OK);
+}
+
 static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, const char *param)
 {
 	char mac_address[40] = {0, };
+	char configline[CO_NETDEV_REDIRDIR_STR_SIZE] = {0, };
 
 	char *array[3] = {
-		conf->net_devs[index].desc,
 		mac_address,
+	        configline,
 	};
 	int sizes[3] = {
-		sizeof(conf->net_devs[index].desc),
 		sizeof(mac_address),
+		sizeof(configline),
 	};
 
 	split_comma_separated(param, array, sizes, 3);
@@ -314,7 +347,13 @@ static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, 
 	conf->net_devs[index].type = CO_NETDEV_TYPE_SLIRP;
 	conf->net_devs[index].enabled = PTRUE;
 
+	*(conf->net_devs[index].redir)='\0';
+	parse_redir(configline,conf->net_devs[index].redir);
+
 	co_terminal_print("configured Slirp as eth%d\n", index);
+
+	if (strlen(conf->net_devs[index].redir) > 0)
+		co_terminal_print("redirections %s\n", conf->net_devs[index].redir);
 
 	return CO_RC(OK);
 }
