@@ -116,3 +116,8 @@ important when options don't depend on each other.
      eth0=pcap-bridge,"Local Area Network"
 
    Uses PCAP bridging. 
+
+     eth0=slirp,"",tcp:22:22/tcp:80:80
+
+   Uses SLiRP networking, with port 22 and port 80 on host being 
+redirected to colinux guest)
