@@ -1,9 +1,6 @@
  * Consoles:
    * If the console crashes, we need to recover somehow.
    * Make the consoles scrollable/resizable.
-   * Address the font size portability issues with FLTK. Windows XP
-     and Windows 2000 seem to choose different font sizes for the
-     same font size in FLTK.
    * Add select, copy and paste to and from console and to and from
      host-environment (not so much mouse but using keys). Is now
      overcome by using SSH + putty, but that makes the console less
@@ -28,9 +25,6 @@
    * Either support multiple consoles or stop the second from attaching
      (probably the latter first). Any console can attach now, broking the
      first one (and all others, off course).
-   * Fix: The daemon aborts when clicking the close button of it's console
-     window, terminating colinux abruptly (no fs synch, so corrupted 
-     devices on reboot). This is easy enough to solve.
    * Implement backlog in consoles (shift+PgUp). I think it can be easy to
      do in the NT console, as the OS already gives us a screen buffer.
    * Implement setfont in the FLTK console (use the kernel fonts). Needs
@@ -60,6 +54,8 @@
 
  * Miscellaneous enhancements and fixes:
    * Lack of entropy - empty /dev/random
+   * Lack of /dev/rtc - compiles and loads but doesn't work (ie 
+incorrect clock information).
    * Make coLinux work on Windows NT 4 SP*.
    * Address all reported SMP issues.
    * The first search path for files specified in the XML, such as in 

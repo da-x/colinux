@@ -1,4 +1,4 @@
-Cooperative Linux 0.6.2 README
+Cooperative Linux 0.6.3 README
 ----------------------------------------------------------------------------
 
   Instructions for running Cooperative Linux for Windows (see source for 
@@ -24,13 +24,13 @@ NOTES ON UPGRADING:
  1) If upgrading, please backup or copy your current default.colinux.XMfile
       before installing!
 
- 2) If you are upgrading from 0.6.1 to 0.6.2 the kernel version has 
-changed (2.4.x in 0.6.1 and 2.6.x in 0.6.2), make sure you get 
+ 2) If you are upgrading from 0.6.1 to 0.6.3 the kernel version has 
+changed (2.4.x in 0.6.1 and 2.6.x in 0.6.3), make sure you get 
 module-init-tools if you want to work with modules in this new version. 
 See other 2.6 upgrade resources for information about other changes.
 
  3) Gentoo users need to be careful, Gentoo tends to use devfs when 
-upgrading to 0.6.2 and so block device names change from cobdX to cobd/X 
+upgrading to 0.6.3 and so block device names change from cobdX to cobd/X 
 and render the image unbootable.  For more details and solutions see the
 2.6 related information on the Wiki 
 (http://wiki.colinux.org/cgi-bin/FrontPage)
@@ -193,6 +193,14 @@ command-line, in this "mode" the command-line arguments are:
 	ethX=tap | pcap-bridge,<network connection name>,<MAC> 
 		Use any number of these to specify network interfaces,
 		<network connection name & <MAC> are optional.
+
+	OR
+
+	ethX=slirp,<MAC>
+		Use any number of these to specify network interfaces,
+		<MAC> is optional.  Slirp is a special easy to use 
+                very unintrusive networking option that uses an 
+                daemon to use host network instead of installing drivers.
 		
 	root=<root device>
 		This is the device (as coLinux gues sees it) to the root
