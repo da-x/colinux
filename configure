@@ -102,7 +102,7 @@ Sample for WinNT as host (default):
 Sample for Linux as host:
   ./configure --target=i686-pc-linux \\
 	--downloaddir=$SOURCE_DIR \\
-	--targetkerneldir=$SOURCE_DIR/linux-$KERNEL_VERSION
+	--targetkerneldir=$SOURCE_DIR/linux-$KERNEL_VERSION \\
 	--hostkerneldir=/usr/src/`uname -r`
 
 EOF
@@ -316,15 +316,15 @@ if [ "$target_os" = "linux" ] ; then
   echo " HOST_PATCHLEVEL=$HOST_PATCHLEVEL"
   HOST_SUBLEVEL=`grep "^SUBLEVEL = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
   echo " HOST_SUBLEVEL=$HOST_SUBLEVEL"
-  HOST_EXTRAVERSION=`grep "^EXTRAVERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
+  HOST_EXTRAVERSION=`grep "^EXTRAVERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9\.]*\)\(.*\)$/\2/'`
   test -z "$HOST_EXTRAVERSION" || echo " HOST_EXTRAVERSION=$HOST_EXTRAVERSION"
 
   # Hostkernel must be >= 2.6 (compile external module)
-  if [ "$HOST_VERSION.$HOST_PATCHLEVEL" != "2.6" ] ; then
+  if [ "$HOST_VERSION" != "2" -o "$HOST_PATCHLEVEL" -lt "6" ] ; then
     { echo "configure: error: host kernel $HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL is to old! Need 2.6.x" 1>&2; exit 1; }
   fi
 
-  if [ "$HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL" != "$target_kernel_version" ] ; then
+  if [ "$HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL$HOST_EXTRAVERSION" != "`uname -r`" ] ; then
     echo -e "\n WARNING! Running kernel is not same as host kernel - You can not run colinux on this machine!\n"
   fi
 
@@ -559,7 +559,7 @@ test "$no_create" = yes && { echo "nothing created!" 1>&2; exit 1; }
 
 # Create log-Directory
 logfile_dir=`dirname $logfile`
-test -d $logfile_dir || mkdir -p $logfile_dir
+mkdir -p $logfile_dir
 
 # Create Distdir
 test -d $distdir || mkdir -p $distdir
