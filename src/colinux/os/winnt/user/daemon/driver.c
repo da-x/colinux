@@ -5,7 +5,7 @@
  *
  * Service support by Jaroslaw Kowalski <jaak@zd.com.pl>, 2004 (c)
  * Driver service separation by Daniel R. Slater <dan_slater@yahoo.com>, 2004 (c)
- * Driver installation fixes by George Boutwell <gboutwel@praize.com>, 2004 (c)
+ * Driver installation fixes by George Boutwell <george.boutwell@gmail.com>, 2004 (c)
  * 
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
