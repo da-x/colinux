@@ -18,29 +18,23 @@ PATH="$PREFIX/$TARGET/bin:$PATH"
 export COLINUX_TARGET_KERNEL_PATH
 export COLINUX_INSTALL_DIR
 
-compile_colinux_daemons()
-{
-	echo "Compiling colinux (daemons)"
-	cd "$TOPDIR/../src"
-	make colinux || { echo "colinux make failed"; exit 1; }
-	cd "$TOPDIR"
-}
+# nothing to do for download
+test "$1" = "--download-only" && exit 0
 
-install_colinux_daemons()
-{
-	echo "Installing colinux (daemons) to $COLINUX_INSTALL_DIR/"
-	cd "$TOPDIR/../src"
-	make install || { echo "colinux install failed"; exit 1; }
-	cd $TOPDIR
-}
+cd "$TOPDIR/../src"
 
-build_colinux_daemons()
-{
-	# nothing to do for download
-	test "$1" = "--download-only" && exit 0
-	compile_colinux_daemons
-	install_colinux_daemons
-}
+echo "Compiling colinux (daemons)"
+make colinux || { echo "colinux make failed"; exit 1; }
 
-# ALL
-build_colinux_daemons $1
+echo "(Pre)Installing colinux (daemons) to $COLINUX_INSTALL_DIR/"
+make install || { echo "colinux (pre)install failed"; exit 1; }
+
+# Uncomment if you have WINE installed with NullSoft Installer 
+#  System v2.05 or later and would like an Windows based Installer
+#  created.
+# echo "Create installer"
+# make installer || { echo "colinux installer failed"; exit 1; }
+
+cd $TOPDIR
+
+exit 0

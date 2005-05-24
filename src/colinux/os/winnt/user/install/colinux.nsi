@@ -133,28 +133,28 @@ Section "coLinux" SeccoLinux
   ; the uninstall section
 
   SetOutPath "$INSTDIR"
-  File "..\console\coLinux-console-fltk.exe"
-  File "..\console-nt\coLinux-console-nt.exe"
-  File "..\conet-daemon\coLinux-net-daemon.exe"
-  File "..\conet-slirp-daemon\coLinux-slirp-net-daemon.exe"
-  File "..\daemon\coLinux-daemon.exe"
-  File /oname=README.txt "..\..\..\..\..\..\RUNNING"
-  File /oname=news.txt "..\..\..\..\..\..\NEWS" 
-  File /oname=cofs.txt  "..\..\..\..\..\..\doc\cofs"
-  File /oname=colinux-daemon.txt "..\..\..\..\..\..\doc\colinux-daemon"
+  File "${DISTDIR}\colinux-console-fltk.exe"
+  File "${DISTDIR}\colinux-console-nt.exe"
+  File "${DISTDIR}\colinux-net-daemon.exe"
+  File "${DISTDIR}\colinux-slirp-net-daemon.exe"
+  File "${DISTDIR}\colinux-daemon.exe"
+  File "${DISTDIR}\README.txt"
+  File "${DISTDIR}\news.txt"
+  File "${DISTDIR}\cofs.txt"
+  File "${DISTDIR}\colinux-daemon.txt"
   
   ;Enable when working correctly
-  ;File "..\debug\coLinux-serial-daemon.exe"
-  File "..\..\build\linux.sys"
-  File "premaid\vmlinux"
-  File "premaid\vmlinux-modules.tar.gz"
+  ;File "${DISTDIR}\colinux-serial-daemon.exe"
+  File "${DISTDIR}\linux.sys"
+  File "${DISTDIR}\vmlinux"
+  File /oname=vmlinux-modules.tar.gz "${DISTDIR}\modules-${KERNEL_VERSION}-co-${PRE_VERSION}.tar.gz"
   ; initrd replaces vmlinux-modules.tar.gz as preferred way to ship modules.
   File "premaid\initrd.gz"
 
   ;Backup config file if present
   IfFileExists "$INSTDIR\default.colinux.xml" 0 +1
   CopyFiles /SILENT "$INSTDIR\default.colinux.xml" "$INSTDIR\default.colinux.xml.old"
-  File "..\..\..\..\..\..\conf\default.colinux.xml"
+  File "${DISTDIR}\default.colinux.xml"
 
   ; Remove kludge from older installations	
   Delete "$INSTDIR\packet.dll"
@@ -197,7 +197,7 @@ Section "coLinux Bridged Ethernet (WinPcap)" SeccoLinuxBridgedNet
   ; the uninstall section
 
   SetOutPath "$INSTDIR"
-  File "..\conet-bridged-daemon\coLinux-bridged-net-daemon.exe"
+  File "${DISTDIR}\coLinux-bridged-net-daemon.exe"
 
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------

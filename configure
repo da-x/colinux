@@ -320,7 +320,7 @@ if [ "$target_os" = "linux" ] ; then
   test -z "$HOST_EXTRAVERSION" || echo " HOST_EXTRAVERSION=$HOST_EXTRAVERSION"
 
   # Hostkernel must be >= 2.6 (compile external module)
-  if [ "$HOST_VERSION" != "2" -o "$HOST_PATCHLEVEL" -lt "6" ] ; then
+  if [ "$HOST_VERSION" != "2" -o "$HOST_PATCHLEVEL" -lt 6 ] ; then
     { echo "configure: error: host kernel $HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL is to old! Need 2.6.x" 1>&2; exit 1; }
   fi
 
@@ -492,11 +492,6 @@ check_exec_tool "patch" "patch --version" ""
 check_exec_tool "make" "make --version" ""
 check_exec_tool "gcc host" "gcc -dumpversion" "$GCC_NEEDED" || gcc_helper
 
-# FIXME: How can get path for X11? Or how can disable X11 for configure FLTK?
-# for FLTK (winnt and linux)
-#check_exec_tool "xorg x11 lib" "xcursor-config --version" ""
-#check_exec_tool "xorg x11 devel" "xft-config --version" ""
-
 case $colinux_os in
   linux) # for Linux as host
     check_exec_tool "gcc g++" "g++ --version" "3.x.x"
@@ -513,6 +508,7 @@ case $colinux_os in
     check_exec_tool "texinfo" "texindex --version" ""
     check_exec_tool "flex" "flex --version" ""
     check_exec_tool "gettext" "gettext --version" ""
+    check_exec_tool "unix2dos" "unix2dos --version" ""
   ;;
 esac
 
@@ -634,7 +630,7 @@ EOF
 esac
 
     cat >> $makefileout << EOF
-.PHONY: colinux install clean help distclean
+.PHONY: colinux install installer clean help distclean
 # Compile daemons
 colinux:
 	@cd src && make colinux
@@ -642,6 +638,10 @@ colinux:
 # Install daemons
 install:
 	@cd src && make install
+
+# Create win installer
+installer: install
+	@cd src && make installer
 
 clean:
 	@cd src && make clean
@@ -658,7 +658,8 @@ help:
 	@echo  '* libs		- Build and install libs: fltk,win32api'
 	@echo  '* kernel	- Build and install colinux kernel vmlinux and modules'
 	@echo  '* colinux	- Build colinux daemons'
-	@echo  '  install	- Install colinux daemons'
+	@echo  '  install	- Install colinux daemons into directory'
+	@echo  '  installer	- Create windows installer (need wine)'
 	@echo  ''
 	@echo  'Cleaning colinux build (daemons only, no cross compiler, no libs):'
 	@echo  '  clean		- remove most generated files but keep the config and distry files'
