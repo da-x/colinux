@@ -27,19 +27,24 @@ $(BUILD_PATH)/coLinux.exe: \
 
 # Convert files into win-lite CR+LF and store in distdir
 $(COLINUX_INSTALL_DIR)/README.txt: $(BUILD_ROOT)/../RUNNING
-	unix2dos -n $^ $@
+	cp $^ $@
+	unix2dos $@
 
 $(COLINUX_INSTALL_DIR)/news.txt: $(BUILD_ROOT)/../NEWS
-	unix2dos -n $^ $@
+	cp $^ $@
+	unix2dos $@
 
 $(COLINUX_INSTALL_DIR)/cofs.txt: $(BUILD_ROOT)/../doc/cofs
-	unix2dos -n $^ $@
+	cp $^ $@
+	unix2dos $@
 
 $(COLINUX_INSTALL_DIR)/colinux-daemon.txt: $(BUILD_ROOT)/../doc/colinux-daemon
-	unix2dos -n $^ $@
+	cp $^ $@
+	unix2dos $@
 
 $(COLINUX_INSTALL_DIR)/default.colinux.xml: $(BUILD_ROOT)/../conf/default.colinux.xml
-	unix2dos -n $^ $@
+	cp $^ $@
+	unix2dos $@
 
 # Grep kernel version, coLinux version, distdir
 $(BUILD_PATH)/colinux_def.inc: \
