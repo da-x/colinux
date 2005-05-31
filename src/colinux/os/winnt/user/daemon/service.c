@@ -176,7 +176,7 @@ void co_winnt_sc_report_status(DWORD dwCurrentState, DWORD dwWin32ExitCode, DWOR
 	if (dwCurrentState == SERVICE_START_PENDING)
 		ssStatus.dwControlsAccepted = 0;
 	else
-		ssStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP;
+		ssStatus.dwControlsAccepted = SERVICE_ACCEPT_STOP | SERVICE_ACCEPT_SHUTDOWN;
 
 	ssStatus.dwCurrentState = dwCurrentState;
 	ssStatus.dwWin32ExitCode = dwWin32ExitCode;
@@ -195,6 +195,9 @@ void WINAPI co_winnt_service_control_callback(DWORD dwCtrlCode)
 	switch(dwCtrlCode)
 	{
 		case SERVICE_CONTROL_STOP:
+		case SERVICE_CONTROL_SHUTDOWN:
+			co_ntevent_print("daemon: service control %s.\n",
+				(dwCtrlCode == SERVICE_CONTROL_STOP) ? "STOP" : "SHUTDOWN");
 			co_winnt_sc_report_status(SERVICE_STOP_PENDING, NO_ERROR, 0);
 			co_winnt_daemon_stop();
 			return;
@@ -233,7 +236,9 @@ void WINAPI service_main(int _argc, char **_argv)
 		ssStatus.dwServiceSpecificExitCode = 0;
 
 		co_winnt_sc_report_status(SERVICE_RUNNING, NO_ERROR, 3000);
+		co_ntevent_print("daemon: service running.\n");
 		co_winnt_daemon_main(daemon_start_parameters);
+		co_ntevent_print("daemon: service stopped.\n");
 		co_winnt_sc_report_status(SERVICE_STOPPED, 0, 0);
 	}
 }
