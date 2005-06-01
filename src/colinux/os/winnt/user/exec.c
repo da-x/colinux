@@ -13,6 +13,7 @@
 #include <stdio.h>
 
 #include <colinux/os/user/exec.h>
+#include <colinux/os/user/misc.h>
 
 co_rc_t co_launch_process(char *command_line, ...)
 {
@@ -44,7 +45,7 @@ co_rc_t co_launch_process(char *command_line, ...)
 			    &pi);             // Pointer to PROCESS_INFORMATION structure.
 
 	if (!ret) {
-		co_debug("error in execution '%s' (%d)\n", buf, GetLastError());
+		co_terminal_print("error in execution '%s' (%d)\n", buf, GetLastError());
 		return CO_RC(ERROR);
 	}
 

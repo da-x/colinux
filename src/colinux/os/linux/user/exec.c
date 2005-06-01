@@ -14,6 +14,7 @@
 #include <errno.h>
 
 #include <colinux/os/user/exec.h>
+#include <colinux/os/user/misc.h>
 
 co_rc_t co_launch_process(char *command_line, ...)
 {
