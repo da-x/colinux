@@ -272,7 +272,7 @@ directories will automatic detect. You can overwrite with --hostkerneldir.
 Sample for Linux as host:
   ./configure --target=i686-pc-linux \
         --downloaddir=/home/$USER/src/colinux-devel/download \
-        --targetkerneldir=/home/$USER/src/colinux-devel/download/linux-2.6.10
+        --targetkerneldir=/home/$USER/src/colinux-devel/download/linux-2.6.10 \
         --hostkerneldir=/usr/src/linux
 
 
@@ -297,24 +297,32 @@ patches or configuration. Every compile step update the md5sum file at the end.
 
 4.4 make install
 
-'make install' will install executables on dist directory.
+'make install' will install striped executables in dist directory.
 
 
-4.5 make clean
+4.5 make installer
+
+Files from "make install" are used to build installer, this appears
+as $(DISTDIR) in the NSI file.  Some files are needed to be located
+in premaid sub-directory of the installer, or an installer failes 
+to build.
+
+
+4.6 make clean
 
 This cleans only the source tree of colinux daemons. The cross tools and
 libraries are untouched. Please call this, if you switch between targets winnt
 and linux.
 
 
-4.6 make disclean
+4.7 make disclean
 
 This remove also control files for md5sum, toplevel Makefile and user-build.cfg.
 After this step you must './configure' again. Next 'make' will also rebuild the
 cross tools and libraries.
 
 
-4.7 Comments about configure system
+4.8 Comments about configure system
 
 This script is not the same as in some other software projects. This script do
 not detect of all needed tools and host environment. It do only create a simple
@@ -334,6 +342,12 @@ before kernel will be configure.
 You can put something changes on .config file or kernel sources in this file.
 
 Store patch/linux-private.patch, before call bin/build-kernel.sh or make.
+
+An other option is COLINUX_KERNEL_UNTAR in bin/user-build.cfg.
+This will protect all your changes to kernel source or kernel config in 
+kernel tree. Build scripts leave kernel source untouched, if set to 
+"no". If you set to "yes", it deletes the kernel source tree, untars and 
+patches the kernel tree, before building.
 
 
 5.1 Private kernel config only

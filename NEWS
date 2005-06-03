@@ -1,4 +1,6 @@
 * Version 0.6.3
+  * Fixes issue with Services being killed during Windows Shutdown, 
+    instead of Windows waiting for the Service to shutdown properly.
   * Fixes for memory size that are not a multiple of 4 (caused crashes).
   * Improved console i/o peroformance (especially on XP)
   * Resolved SF Bug# 1117510 - README file lacks information.

@@ -14,7 +14,7 @@
 . ./build-common.sh
 
 # Developer private patchfile. Used after maintainer patch,
-# use also for manipulate .config. Sored in directory patch/.
+# use also for manipulate .config, stored in directory patch/.
 PRIVATE_PATCH=linux-private.patch
 
 CO_VERSION=`cat ../src/colinux/VERSION`

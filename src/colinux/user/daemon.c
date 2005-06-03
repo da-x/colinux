@@ -305,8 +305,11 @@ co_rc_t co_load_initrd(co_daemon_t *daemon)
 	co_debug("reading initrd from (%s)\n", daemon->config.initrd_path);
 
 	rc = co_os_file_load(&daemon->config.initrd_path, &initrd, &initrd_size);
-	if (!CO_OK(rc))
+	if (!CO_OK(rc)) {
+		co_terminal_print("error loading initrd file '%s'\n",
+				  daemon->config.initrd_path);
 		return rc;
+	}
 
 	co_debug("initrd size: %d bytes\n", initrd_size);
 

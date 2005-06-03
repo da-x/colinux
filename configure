@@ -558,7 +558,7 @@ logfile_dir=`dirname $logfile`
 mkdir -p $logfile_dir
 
 # Create Distdir
-test -d $distdir || mkdir -p $distdir
+mkdir -p $distdir
 
 # Backup old makefile
 test -f $makefileout -a ! -f $makefileout.old && mv $makefileout $makefileout.old
@@ -683,7 +683,8 @@ test -f $configfile -a ! -f $configfile.old && mv $configfile $configfile.old
 
 echo "Create $configfile"
     cat > $configfile << EOF
-# $configfile
+# File: $configfile
+#
 # Configfile for coLinux $colinux_version, kernel $target_kernel_version
 # created by configure at `date`
 
@@ -722,7 +723,7 @@ COLINUX_BUILD_LOG="$logfile"
 
 # Overwrite kerneltree before rebuild? yes/no
 # yes: Build script will overwrite kerneltree and config (default)
-# no: Build script leave kernel source untouched. User can make some patches and config
+# no: Build script leave kernel source untouched. User changed source and config
 #
 COLINUX_KERNEL_UNTAR="$kernel_untar"
 
