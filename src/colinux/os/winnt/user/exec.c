@@ -30,7 +30,7 @@ co_rc_t co_launch_process(char *command_line, ...)
 	vsnprintf(buf, sizeof(buf), command_line, ap);
 	va_end(ap);
 
-	co_terminal_print("executing: %s\n", buf);
+	co_debug("executing: %s\n", buf);
 
 	ret = CreateProcess(NULL,
 			    buf,              // Command line. 
@@ -44,7 +44,7 @@ co_rc_t co_launch_process(char *command_line, ...)
 			    &pi);             // Pointer to PROCESS_INFORMATION structure.
 
 	if (!ret) {
-		co_terminal_print("error in execution (%d)\n", GetLastError());
+		co_debug("error in execution (%d)\n", GetLastError());
 		return CO_RC(ERROR);
 	}
 

@@ -474,6 +474,23 @@ out:
 
 void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon)
 {
+	struct {
+		co_message_t message;
+		co_linux_message_t linux_msg;
+		co_linux_message_power_t data;
+	} message;
+
+	message.message.from = CO_MODULE_DAEMON;
+	message.message.to = CO_MODULE_LINUX;
+	message.message.priority = CO_PRIORITY_IMPORTANT;
+	message.message.type = CO_MESSAGE_TYPE_OTHER;
+	message.message.size = sizeof(message.linux_msg) + sizeof(message.data);
+	message.linux_msg.device = CO_DEVICE_POWER;
+	message.linux_msg.unit = 0;
+	message.linux_msg.size = sizeof(message.data);
+	message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
+
+	co_user_monitor_message_send(daemon->message_monitor, &message.message);
 }
 
 co_rc_t co_daemon_handle_printk(co_daemon_t *daemon, co_message_t *message)
@@ -616,7 +633,6 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 {
 	co_rc_t rc;
 	co_reactor_t reactor;
-	co_user_monitor_t *message_monitor;
 	co_module_t modules[] = {CO_MODULE_PRINTK, };
 	bool_t restarting = PFALSE;
 
@@ -628,12 +644,12 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 
 	rc = co_user_monitor_open(reactor, message_receive,
 				  daemon->id, modules, sizeof(modules)/sizeof(co_module_t),
-				  &message_monitor);
+				  &daemon->message_monitor);
 
 	if (!CO_OK(rc))
 		goto out;
 
-	message_monitor->reactor_user->private_data = (void *)daemon;
+	daemon->message_monitor->reactor_user->private_data = (void *)daemon;
 
 	if (daemon->start_parameters->launch_console) {
 		co_terminal_print("colinux: launching console\n");
@@ -711,7 +727,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 		}
 	} while (restarting);
 
-	co_user_monitor_close(message_monitor);
+	co_user_monitor_close(daemon->message_monitor);
 
 out:
 	co_reactor_destroy(reactor);
