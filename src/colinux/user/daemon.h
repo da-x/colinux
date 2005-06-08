@@ -44,6 +44,7 @@ typedef struct co_daemon {
 	char *buf;
 	bool_t send_ctrl_alt_del;
 	co_monitor_user_kernel_shared_t *shared;
+	bool_t next_reboot_will_shutdown;
 } co_daemon_t;
 
 typedef enum {

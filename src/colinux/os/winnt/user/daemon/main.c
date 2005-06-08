@@ -47,6 +47,7 @@ static bool_t stoped = PFALSE;
 void co_winnt_daemon_stop(void)
 {
 	if (g_daemon != NULL) {
+		g_daemon->next_reboot_will_shutdown = PTRUE;
 		co_daemon_send_ctrl_alt_del(g_daemon);
 		stoped = PTRUE;
 	}
@@ -242,7 +243,8 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 
 	if (!start_parameters.config_specified){
 		if (!start_parameters.cmdline_config) {
-			co_winnt_help();
+			co_daemon_syntax();
+			co_winnt_daemon_syntax();
 		}
 		return CO_RC(ERROR);
 	}

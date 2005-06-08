@@ -668,6 +668,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 
 	co_terminal_print("colinux: booting\n");
 
+	daemon->next_reboot_will_shutdown = PFALSE;
 	do {
 		restarting = PFALSE;
 
@@ -701,6 +702,11 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 
 			switch (reason) {
 			case CO_TERMINATE_REBOOT:
+				if (daemon->next_reboot_will_shutdown) {
+					co_terminal_print("colinux: shutting down after reboot.\n");
+					break;
+				}
+
 				co_terminal_print("colinux: rebooted.\n");
 				rc = co_daemon_restart(daemon);
 				if (CO_OK(rc))
