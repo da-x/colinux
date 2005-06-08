@@ -1,0 +1,277 @@
+Cooperative Linux README
+----------------------------------------------------------------------------
+
+  Instructions for running Cooperative Linux for Windows (see source for 
+how to build and run coLinux for Linux)
+
+WARNING: 
+
+  Although Cooperative Linux may be actually useful on some setups
+(e.g, stable setups), it is still meant for testing purposes only. 
+This means that running it may crash the host (Windows or Linux system).
+
+KNOWN ISSUES:
+
+  Any known issues for an release can be found on the Wiki 
+(http://wiki.colinux.org/cgi-bin/FrontPage)
+
+  PLEASE REPORT and read about problems on the colinux-devel@sourceforge.net 
+mailing list or file an Bug report at 
+http://www.sourceforge.net/projects/colinux
+
+NOTES ON UPGRADING:
+
+ 1. XML config files have been removed.  Use the command-line 
+    syntax in a name=value per line plain text file instead:
+
+	kernel=vlinux
+	mem=32
+	cobd0=fs\root_fs
+	cobd1=fs\swap_fs
+	eth0=tuntap
+	root=/dev/cobd/0
+	ro
+
+ 2. If upgrading from 0.6.1, see README.txt for 0.6.2 or Wiki for 
+    information about other issues when upgrading.
+
+RUNNING:
+
+To run Cooperative Linux, please follow these instructions before trying to run 
+anything.
+
+1. Run the downloaded installer file to begin the installation. 
+   
+2. Choose an installation directory. It is better to choose c:\coLinux because
+   this way you don't need to edit the configuration XML since the pathnames
+   of block devices files are currently aboslute. However, note that any 
+   directory should be acceptable.
+
+3. Choose networking method(s) to install. Currently there are two choices:
+
+	a. TAP driver - This method installs a virtual network adapter that can 
+	then be either shared or bridged with a physical network connection. 
+	Note that this requires Internet Connection Sharing or Bridging 
+	(Windows XP or higher) or a 3rd party Internet connection 
+        sharing application. See the Wiki at 
+	http://wiki.colinux.org/cgi-bin/FrontPage for more 
+        information/help. The TAP method autmatically chooses the TAP 
+        first TAP adapter it finds, if this is not correct for you, you 
+        can specify the specific adapter by name (name="TAP1"). 
+
+  	b. Bridging - This method allows the Cooperative Linux network 
+	interface to directly interoperate with one of your built in networking 
+	interfaces. You'll need to edit the configuration XML file to reflect 
+	that type="bridged" and the 'name' parameter needs to be set to a 
+	substring of the network connection name that you will be bridging 
+	with (e.g. name="Local Area Connection"). See the Wiki at 
+	http://wiki.colinux.org/cgi-bin/FrontPage for more information/help.
+
+4. Choose whether to download a root file system from the Cooperative Linux 
+   sourceforge page. The installer will try to download directly in 
+   the next step but if you experience any issues you can visit the
+   Sourceforge page directly at:
+
+   http://sourceforge.net/project/showfiles.php?group_id=98788&package_id=108058
+
+   NOTE ABOUT DISK SPACE: Each image extracts to over 1GB (or more), so make 
+   sure you have enough space there before you start downloading/extracting 
+   it. If you are manually downloading, put the extracted file in the 
+   installation directory. To unzip .bz2 files, you can use Winzip or 7-Zip 
+   (or the bzip utilities in Cygwin, etc). The image MUST be extracted from 
+   the .bz2 archive before use!
+
+5. Edit the config file to point to whatever root file system you 
+downloaded. 
+   
+6. The installation directory should include vmlinux, default.conf, the 
+   supplied linux.sys driver, executables and dlls, and probably the root 
+   filesystem image. Be sure to review the XML file for any additional 
+   configuration that may be needed.
+
+7. Run coLinux. The current directory should be the installation directory, 
+   if not, then you man need to change paths (especially for vmlinux)
+   in the XML config file..
+
+	a. Running as an service.  
+		colinux-daemon.exe @default.conf --install-service "Cooperative Linux"
+		Also, to remove the service:
+		colinux-daemon.exe --remove-service "Cooopeative Linux".
+	   Then go to the Service Manager and start the "Cooperative Linux" 
+	   service,
+	   OR net start "Cooperative Linux"
+	   Last, got to the installation directory and double-click on
+	   	colinux-console-fltk.exe OR
+		colinux-console-nt.exe		
+	b. As an regular application. 
+		colinux-daemon.exe @default.conf
+           See colinux-daemon --help for details about possible 
+	   command-line arguments.
+   
+   The console window opens and you would see a Linux machine booting in 
+   that window.
+
+Post Installation
+-----------------
+
+You may wish to set up some post installation parameters, including increasing
+the amount of memory allocated to Cooperative Linux, or adding a swap 
+partition. See the Wiki at http://wiki.colinux.org/cgi-bin/FrontPage for 
+additional help on these tasks.
+
+
+Command Line Parameters
+------------------------
+
+The following command line paramaters may be useful in operating Cooperative 
+Linux.
+
+	-a #
+		Allows you to specify the instance of Coooperative Linux
+		that you will be connecting to.
+
+	@filename
+		Allows you to choose a specific configuration file to 
+                use, can have multilple @filename on the command-line,
+                last on the command-line take precedence and overrides
+                prior.
+
+	-k suppresses Kernel messages (good for debugging other daemons)
+
+	-t consoletype
+		Allows you to specify either the FLTK (default) or NT (-t nt) 
+		console to use on startup. 
+
+	--install-service servicename
+		Allows you to install Cooperative Linux as a service. Also 
+		use the -c parameter to specify your configuration file when 
+		doing this. <servicename> is whatever you want it to be called.
+
+	--remove-service servicename
+		Allows you to remove the Cooperative Linux service. 
+
+	--install-drvier
+		This command to install the driver portion of Cooperative 
+		Linux. BIG NOTE: This already happens during the installation 
+                of coLinux, on most cases you don't need to run it at all.
+	
+	--remove-driver
+		This command will remove the driver portion of Cooperative
+		Linux. BIG NOTE: This already happens during the uninstall
+                of coLinux, on most cases you don't need to run it at all.
+
+OR
+
+	If the first command-line argument on the command line is 
+kernel= you will be able to give all the configuration on the 
+command-line, in this "mode" the command-line arguments are:
+
+	kernel=<path to vmlinux file>
+		This specifies the path to the vmlinux file, typically
+                kernel=vmlinux works.
+
+	initrd=<path to initrd file>
+		This specifies the path to the initrd file, typeically
+ 		initrd=initrd.gz
+
+	mem=<mem size>
+		This specifies the memory size, assumes MB is the the
+		unit type, so 64 is same as 64MB. Default if you leave
+		this parameter out is 1/4 of your RAM if your RAM is >= 
+		128, otherwise it's 16.  Default value is generally ok.
+
+	cobdX=<path to image file>
+		Use any number of these to specify the block device's
+                image files
+
+	alias=<path to image file> | :cobdX
+		Use any number of these to specify an alias (hda1, etc)
+                for an block device's image file.  <path to image file 
+                can be to an partition using standard 
+                \HardDiskX\PartitionY format.
+
+	cofsX=<path to windows directory>
+		Use any number of these to specify a Cooperative 
+		Host filesystem device (mount Host directory to coLinux
+		local mount point). There are some limitations in it's
+		use currently (namely non-ASCII files).
+
+	ethX=tap | pcap-bridge,<network connection name>,<MAC> 
+		Use any number of these to specify network interfaces,
+		<network connection name & <MAC> are optional.
+        OR
+
+	ethX=slirp,<MAC>,<redirections>
+		Use any number of these to specify network interfaces,
+		<MAC> and <redirections> are options.  <redirections> 
+		take the form tcp|upd:guest_port:host_port, multiple 
+                redirections are seperated by /, ie tcp:22:22/tcp:80:80
+		
+	root=<root device>
+		This is the device (as coLinux gues sees it) to the root
+		device.
+
+	ANY additional parameters are passed to the coLinux kernel as is 
+(unmodified).
+
+
+Common Problems
+---------------
+
+	"Unable to mount root fs"
+		Generally this means that the root filesystem image is 
+		missing, or was specified incorrectly.
+
+  Additional problems not know at time of release are typically 
+documented on the Wiki (http://wiki.colinux.org/cgi-bin/FrontPage), look 
+there for known problems.  If your problem isn't listed, report on the 
+colinux-devel@sourceforge.net mailing list or file an Bug report at 
+http://www.sourceforge.net/projects/colinux
+
+Developing, Helping out the Project
+-----------------------------------
+
+   Check out the source code, and or the Home page 
+(http://www.colinux.org) for more on developing coLinux and/or helping 
+the project out.  Also, subscribing to the Mailing List is helpful.
+
+
+Getting Help
+------------
+
+The following resources are available if you need help getting going, or find 
+bugs, etc.
+
+	IRC
+		The official IRC location is at server irc.oftc.net, 
+ 		channel #colinux.
+
+	WEB
+		The official website, containing downloads, documentation, 
+		FAQ, WIKI, etc., is at http://www.colinux.org
+
+	Project Web-site
+		Source Forge Project website is at 
+http://www.sourceforge.net/project/colinux
+	
+	WIKI
+		The community has contributed wonderful and helpful 
+                information on numerous topics, which is available at
+                http://wiki.colinux.org/cgi-bin/FrontPage (You can 
+		contribute here too!)
+	
+	Mailing Lists
+		Visit the colinux.org website and choose from the available 
+		mailing lists (user and devel) to join, view archives, etc.
+
+
+
+-
+Dan Aloni
+da-x@gmx.net
+
+Richard Goodwin (readme portions)
+colinux@newdiversions.com
+
+George P Boutwell (readme updates, fixes, etc)
+gboutwel@praize.com

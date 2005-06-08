@@ -1,0 +1,252 @@
+* Version 0.6.2
+  * The entire configuration can be passed on the command line instead
+    of using an XML file (working towards UML compatibility). Read
+    doc/colinux-daemon. 
+  * Linux patch ported to Linux 2.6.8. Linux 2.4.x will not be
+    officially supported anymore. (Dan Aloni and George Boutwell).
+    If you use an old root file image you might need to fix it, 
+    read about moving to 2.6.x in the Wiki site 
+    (http://www.colinux.org/wiki/)
+  * Implemented a Cooperative file system driver in Linux, that
+    makes it possible to mount host OS directories in Linux, similar 
+    to UML's hostfs. It lets you access your C:\ without using
+    Samba or other network file systems. Read doc/cofs.
+  * coLinux should now work under PAE setups and AMD64 setups that 
+    enable the NX bit (specifically, Windows XP SP2).
+  * The slirp network daemon was added. This network daemon provides
+    easy-to-set-up outbound network communication from coLinux 
+    without using the TAP driver or PCAP library.
+  * initrd support was added (teesoft2004 at yahoo.com.cn).
+    To activate it you can specify e.g. <initrd path="..." /> in the
+    configuration, or initrd=filename in the command line.
+  * Bug fix: Reception and delivery of network packets bigger than
+    2kb.
+  * Bug fix: Consoles and/or other daemons fail to connect to 
+    colinux-daemon on startup (this is Windows only).
+  * Bug fix: Stop reboots where different gcc compiler versions are 
+    used to compile linux.sys & vmlinux, with an error/warning 
+    (George Boutwell).
+  * Bug fix: Proper floating point state preservation in the Linux
+    guest. coLinux now passes the flops20 test program.
+  * Bug fix: A tiny memory leak when coLinux is shutting down.
+  * Bug fix: Proper reference counting of the driver in the Linux
+    port.
+  * Bug fix: The network driver (conet) now verifies checksums (as
+  * Changed PCAP handling to use Connection Name instead of 
+    Adapter/Device/Driver name. Name is now uniform between PCAP & 
+    TAP and multiple devices of the same/make/model should be able 
+    to be connected to. (George Boutwell)
+  * Support AltGr for both FLTK & NT consoles. (Sascha Kettler)
+  * Added a coserial deamon (only Linux for now), that allows one 
+    to open a serial terminal to the guest machine. (You can run
+    /sbin/mgetty ttyS0, etc.)
+  * Improved debugging - we now have a debug messages "collector"
+    deamon named colinux-debug-deamon, which collects debug messages
+    from all the coLinux components. This also changes the way things
+    are printed when you run the daemon (it is now easier to see
+    what belongs to what). All debug messages are off by default,
+    so things may go a little faster.
+  * An API version number was added to make sure that you use the
+    right vmlinux and user-space executables with the right coLinux 
+    driver (previously it caused crashes if the APIs changed).
+  * Added block device aliasing, e.g alias="hda2". You can specify
+    such an alias in the <block_device> element in the configuration 
+    XML and expect coLinux to mount it, even when passed with root=.
+    NOTE: The cobdX device and its alias are mutual exclusive, which
+    means that you can't mount both of them at the same time. 
+  * Implemented a new timer for the Linux guest, this should fix
+    time-going-back issues.
+  * Improved message passing, which may boost networking a bit.
+  * Win32-TAP driver upgraded to version 8.1. This version doesn't 
+    bring any changes to the actual driver code. However it was 
+    released in order to notify the other projects that bundle the 
+    TAP driver along with their software, to modify the name 
+    identifer of the driver so that multiple TAP driver users can 
+    coexist (e.g, OpenVPN with coLinux). Therefore, coLinux now 
+    installs its TAP driver as TAPxxxxco (where xxxx is the 
+    driver version).
+    After installing it, you will notice " (coLinux)" appended to
+    the device name in the Network Connections manager. The old
+    driver will remain until it is uninstalled.
+  * If the MAC address is unspecified, a random MAC is choosed 
+    using the familiar TAP prefix (00:FF:XX:XX:XX:XX).
+  * Enhanced coLinux keyboard handling support (sends raw scan codes
+    from Windows to linux) (Nuno Lucas).
+  * Change memory allocation so that the RAM for the VM is not
+    allocated on startup, but on-demand. This means the coLinux
+    loads faster and less prune to memory allocation failures
+    in the host.
+
+* Version 0.6.1 
+  * Multiple virtual NICs are supported (eth1, eth2, etc...).
+  * Some small bugfixes.	 
+  * Added the ability to send Ctrl-Alt-Del to the Linux machine.
+  * Linux patch updated to 2.4.26	
+  * Linux port (for systems running kernel 2.6.x)
+  * Fixed a crash that could happen on swapoff().
+  * Initmem is freed (no more 'missing implementation')
+  * The number of maximum cobd block devices was increased to 32.
+  * The daemon process is pinned to the first processor until
+    we get the SMP stability issue fixed.
+  * Time is not going backward for gettimeofday() users anymore.
+  * Support for running more than one instance of coLinux is now functional.	 
+  * No port I/O allowed from userspace: the guest Linux can't change the host's 
+    clock, and it also fixed crashes that were caused by trying to run X.
+  * Windows: 
+    * Sizes of raw partition devices are now detected properly. This 
+      means that the resierfs problems should be over, plus cat /dev/cobd* 
+      would work for you.
+    * Suspension of the host machine won't cause colinux-daemon problems like 
+      memory leaks.
+    * The daemon can install itself as a service (Jaroslaw Kowalski). 
+      Stopping the service sends Ctrl-Alt-Del to let the Linux VM
+      shutdown cleanly.
+    * The daemon can install the linux.sys driver separately from its run,
+      which can allow you to run coLinux as any user that have access to
+      the installed driver (Daniel R. Slater).	 
+    * coLinux now builds using MingW32 and no longer depends on cygwin1.dll.
+    * Added scripts for building the MingW32 cross compiler on Linux,
+      plus scripts that download, compile, and install the libraries
+      coLinux depends on.
+    * The name of the TAP device to use can be specified with the
+      'name' attribute in the XML. NOTICE: The name is matched against
+      the string that appears in Network Connections (e.g., 'Local Area 
+      Connection') and not the device name assigned by Windows (e.g.,
+      'TAP-Win32 Adapter')
+    * The driver is installed from the daemon's installation directory
+      rather than from the current running directory.
+  * Linux port:
+    * Sending SIGHUP to the daemon causes it to issue Ctrl-Alt-Del on the
+      Linux VM.
+  * Consoles: 
+    * Fixed a bug in the clear operation: let it clear with the right video 
+      erase character so that ncurses apps would appear properly.
+    * Fixed virtual console switching (alt-f1, alt-f2, etc.) so it will
+      save/redraw the screen like it should.
+    * FLTK: The cursor is visible again.
+    * If keyboard focus is taken away from the consoles, it will release
+      any pressed key in the VM.
+	
+* Version 0.6.0 AKA "Getting even"
+  * Ballard, Jonathan H.:  
+    * fixed implicit declarations
+    * added co_os_realloc()
+    * fixed overflow with the XML memory config
+    * reimplemented os/winnt/user/daemon.c.
+      A threaded implementation with with message queue,
+      wait state, and error recovery.
+    * merged the NT-native console. 
+    * console updates and improvements (cocon, console-nt)
+    * update FLTK/console clearscreen (20040305)
+    * enabled console-nt exit (20040305)
+  * Added more checks to the XML parsing.
+  * Made the context switch code more sensitive about the processor's 
+    capabilities, running coLinux on old AMD processors will hopefully not 
+    cause a reboot anymore.
+  * Linux patch upgraded to 2.4.25.
+  * Hopefully fixed the %fs/%gs issue for good.
+  * vmlinux can now be bigger while not causing the host to boot, this means
+    that you can compile more stuff not as modules.
+  * Reimplemented the method in which coLinux allocates memory in the host
+    kernel. It now allocates memory from the unmapped free page pool, which  
+    means you can use more than 256MB of RAM, unlike the previous method. 
+    Note that the first coLinux boot may be a little slower since Windows is 
+    freeing cache and swapping out stuff in order to provide accommodation for 
+    Linux's memory. You can see it in action by looking at the Task Manager.
+  * NSIS-based installer for the Windows binary distribution (based on 
+    work by NEBOR Regis.
+  * gettimeofday() now works. Things that broke because they depended on it
+    should now work. I have to enable port I/O in order to for this to work,
+    but I plan to disable it in the future. If you compile a new vmlinux
+    Make sure that CONFIG_X86_TSC is enabled in your .config file.
+  * New daemon switch -t: Type of console to launch. Default is fltk.
+  * Added an NSIS installer script.
+
+* Version 0.5.4 AKA "Focal Segmental Glomerulosclerosis" (%gs/%fs) release
+  * Fixed an issue with i686-optimized pthread and the preservation of 
+    %gs and %fs. The crashes that were caused by the i686 Gentoo image 
+    should now disappear. 
+    WINE would also work now ;)
+  * cobd: Fixed accessing large block devices (1GB >). cobd0 was passing 
+    wrong information to userspace.
+  * conet: Statistics are now gathered (patch by Pat Erley)
+  * Tuned the time conversion between Windows and Linux. The machine is 
+    now initialized with the right date, not 4 days backwards.
+  * Applied a configuration parsing fix (patch by Ballard Jonathan)
+  * Some improvements of the switch code. We now preserve more registers,
+    (MMX/SSE/SSE2/FP), and coLinux now has its own GDT. These changes 
+    should assure stability on more systems and processors.
+    This fix also appears to solve the problem where processes were stuck
+    on nanosleep() calls.
+  * conet-pcap: pcap-based daemon (contributed by Alejandro R. Sedeno). 
+  * Network configuration is now handled in the coLinux configuration XML.
+    For backward compatibility, add:
+    <network index="0" name="TAP" type="tap"></network>
+	
+    If you want to use pcap (i.e, bridged Ethernet), add:
+    <network index="0" name="XXXX" type="bridged"></network>
+    (Where XXXX is a substring of your network adapter's name)
+      
+    Optional attributes: mac="XX:XX:XX:XX:XX:XX" - specifies the MAC
+    address of the interface in the Linux side. Recommended on bridged
+    networking setups, where more than one Windows machine will be 
+    running coLinux on the same subnet.
+
+    I also prepared the ground for supporting more than one network device
+    (i.e, eth1, eth2, etc.), but it is not yet completed.
+  * linux: avoid more I/O in time.c.
+
+* Version 0.5.3 AKA "Valentine release"
+  * Virtual CMOS system time is now passed to Linux, you no longer
+    need to update the time using ntp on boot. Note that the virtual CMOS
+    time is GMT, so the coLinux machine needs to set its own timezone.
+  * cobd's devfs support was added to the Linux patch. Gentoo would work 
+    now (based on a patch from Pat Erley). 
+    A Gentoo root filesystem was created and released by Pat Erley.
+  * Fixed an unwanted termination that was discovered when devfs was compiled
+    in to the kernel.
+  * Fixed an issue with mxml and the passage of boot parameters.
+  * colinux-console: Fixed the CPU utilization issue.
+  * colinux-console: Escape doesn't close the window now.
+  * coLinux RAM is configurable, using a memory element in the XML under
+    <colinux>, like: <memory size="64"></memory>. Minimum is 8MB, maximum 
+    is 192MB. 
+    WARNING: high values might destabilize Windows, because the memory is
+    allocated from the non-cached pool which has a maximum of 256MB 
+    system-wide, meaning there's less left for Windows drivers and 
+    subsystems.
+  * bin/cobuild.sh: Thomas Fritzsche contributed this script which
+    automates the creation of a cross compilation cygwin environment 
+    on Linux.
+	
+* Version 0.5.3-pre2
+  * Fixed the reported (and unreported) network bugs. 
+  * Worked out some scheduling issue.
+
+* Version 0.5.3-pre1 AKA "flamed chicken"
+  * Fixed a BSOD bug (thanks Richard Goodwin for the memory dump stacks)
+  * No longer depending on the Microsoft DDK for the build (review doc/building),
+    (thanks Nir Perry for the encourgement)
+  * The daemon launches the console by default when it is launched (can be turned
+    off with '-d', see '-h').
+  * The daemon is killable just like a normal Windows process. Doing so stops the
+    Linux machines cleanly (from Windows' standpoint), so feel free to close the
+    window, end the task, CTRL-C, etc.
+  * It no longer depends on the Microsoft DDK for the build.
+  * An almost complete rewrite - we now use message passing instead of hardwired 
+    ioctls(). Only the daemon communicates with the driver. The console and the
+    network daemon communicate with the daemon using a named pipe.
+  * Fixed the block device bug that fsck triggered (thanks Daniel Glockner)
+  * Hopefully addressed the network corruption issue (thanks Daniel Glockner again)
+  * Boot parameters are now passed to the kernel. Make sure you update your 
+    XMLs with 'root=/dev/cobd0' if you still want to boot from the first 
+    block device. 
+  * The conet daemon is a separate process (shouldn't affect you).
+	
+* Version 0.5.2
+  * Added some missing files to the build tree
+  * doc/cygwin-cross-build - How to build a cygwin cross compilation tools
+    on Linux.
+  * Made the daemon more proofed to mistakes. It's logic about loading/
+    unloading the driver is much more sane now.
+  * Added a cursor support to the console.

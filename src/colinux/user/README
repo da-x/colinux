@@ -1,0 +1,7 @@
+The code in this directory is the OS independant userspace code.
+
+It contains code that is responsible for:
+ * Parsing and loading the vmlinux file
+ * Communicating with the OS independant kernel code driver.
+ * Managing the config file and XML.
+ * Maintaining a link with the kernel driver.

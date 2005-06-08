@@ -1,0 +1,11 @@
+The configuration util is currently a work in progress.
+
+In order to run the coLinux configurator, you need to install python
+2.3. Windows users can use the installer from www.python.org. 
+
+    http://www.python.org/ftp/python/2.3.3/Python-2.3.3.exe
+    
+The configuration util also depends on wxpython which can be obtained 
+from http://www.wxpython.org:
+
+    http://prdownloads.sourceforge.net/wxpython/wxPythonWIN32-2.5.1.5-Py23.exe
