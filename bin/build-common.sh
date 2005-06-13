@@ -93,9 +93,9 @@ MXML_URL=http://www.easysw.com/~mike/mxml/swfiles
 MXML=mxml-$MXML_VERSION
 MXML_ARCHIVE=$MXML.tar.gz
 
-WINPCAP_SRC=wpdpack
+WINPCAP_SRC=WpdPack
 WINPCAP_URL=http://winpcap.polito.it/install/bin
-WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_3_0.zip
+WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_3_1_beta4.zip
 
 
 # (from sample.user-build.cfg) #

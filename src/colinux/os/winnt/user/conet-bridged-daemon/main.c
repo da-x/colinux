@@ -277,7 +277,7 @@ pcap2Daemon(LPVOID lpParam)
 		/* Attempt to receive packet from WPcap. */
 		pcap_status = pcap_next_ex(pcap_packet.adhandle,
 					   &pcap_packet.pkt_header,
-					   &pcap_packet.buffer);
+					   (const u_char **)&pcap_packet.buffer);
 		switch (pcap_status) {
 		case 1:	/* Packet read */
 			rc = co_win32_pcap_read_received(&pcap_packet);
@@ -575,7 +575,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 				return CO_RC(ERROR);
 			}
 
-			sscanf(*param_scan, "%d", &start_parameters->instance);
+			sscanf(*param_scan, "%d", (int *)&start_parameters->instance);
 			param_scan++;
 			continue;
 		}

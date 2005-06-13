@@ -85,6 +85,20 @@ patch_kernel()
 	test $? -ne 0 && error_exit 1 "$KERNEL_VERSION patch failed"
 	# Copy coLinux Version into kernel localversion
 	echo "-co-$CO_VERSION" > localversion-cooperative
+
+	# A minor hack for now.  Allowing linux config to be 'version specific' 
+	#  in the future, but keeping backwards compatability.
+	cp "$TOPDIR/../conf/linux-config" "$TOPDIR/../conf/linux-$KERNEL_VERSION-config"
+	cp "$TOPDIR/../conf/linux-$KERNEL_VERSION-config" .config
+
+	# Last chance to add private things, such local config
+	# user patches, alphabetically sort by name
+	ls -1 $TOPDIR/../patch/linux-*.patch 2>/dev/null | \
+	while read name; do
+		echo "reading $name"
+		patch -p1 < $name
+		test $? -ne 0 && error_exit 1 "$name patch failed"
+	done
 	cd "$TOPDIR"
 }
 
@@ -92,22 +106,9 @@ configure_kernel()
 {
 	cd "$TOPDIR"
 	cd "$COLINUX_TARGET_KERNEL_PATH"
-	# A minor hack for now.  Allowing linux config to be 'version specific' 
-	#  in the future, but keeping backwards compatability.
-	cp "$TOPDIR/../conf/linux-config" "$TOPDIR/../conf/linux-$KERNEL_VERSION-config"
-	cp "$TOPDIR/../conf/linux-$KERNEL_VERSION-config" .config
-
-	# Last chance to add private things, such local config
-	if [ -f $TOPDIR/../patch/$PRIVATE_PATCH ]; then
-		echo "Private patch $PRIVATE_PATCH"
-		patch -p1 < "$TOPDIR/../patch/$PRIVATE_PATCH"
-	        test $? -ne 0 && error_exit 1 "patch/$PRIVATE_PATCH patch failed"
-	fi
-
 	echo "Configuring Kernel $KERNEL_VERSION"
 	make silentoldconfig >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "Kernel $KERNEL_VERSION config failed (check 'make oldconfig' on kerneltree)"
-
 	cd "$TOPDIR"
 }
 
