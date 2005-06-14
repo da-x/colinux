@@ -73,22 +73,19 @@ configure_fltk()
 	cd "$SRCDIR/$FLTK"
 	echo "Configuring FLTK"
 
-	# X11 is installed for Target? Use, if exist. (Fake for X11-less compiling)
-	if [ -f $PREFIX/include/X11/X.h -a -f $PREFIX/lib/X11/libX11.a ]; then
-	    prefix_x11="--x-includes=$PREFIX/include --x-libraries=$PREFIX/lib"
-	fi
-
 	# Using of --host=$TARGET ist old!
-	# Plesae beleve host=i386, also your host is mostly i686!
+	# Please beleve host=i386, also your host is mostly i686!
 	# "i386..." is a pseudonym to enable "cross-compiling",
 	# because target is diffent with "i686..."
-	# Configure for cross compiling. Host Linux
+
+	# Configure for cross compiling without X11.
 	./configure \
 	 --prefix=$PREFIX \
 	 --build=$TARGET \
-	 $prefix_x11 \
-	 --host=i386-linux-linux-gnu
+	 --host=i386-linux-linux-gnu \
+	 --without-x >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "FLTK configure failed"
+
 	echo "Making FLTK"
 	make -C src >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "FLTK make failed"

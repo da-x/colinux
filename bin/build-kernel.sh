@@ -97,7 +97,7 @@ patch_kernel()
 	while read name; do
 		echo "reading $name"
 		patch -p1 < $name
-		test $? -ne 0 && error_exit 1 "$name patch failed"
+		test $? -ne 0 && { echo "$name patch failed"; exit 1; }
 	done
 	cd "$TOPDIR"
 }
