@@ -1,92 +1,157 @@
 /*
  * This source code is a part of coLinux source package.
  *
+ * Nuno Lucas <lucas@xpto.ath.cx> 2005 (c)
  * Dan Aloni <da-x@gmx.net>, 2003 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
  */ 
-
-#include <stdio.h>
-#include <string.h>
-
 #include "select_monitor.h"
 #include "console.h"
 
-static void console_select_monitor(Fl_Widget *widget, select_monitor_widget_t *window)
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+
+
+/**
+ * Class constructor.
+ */
+select_monitor_window::select_monitor_window( int w, int h )
+    : super_( w,h, "Select monitor..." )
+    , id_map_count_( 0 )
 {
-	window->on_button(widget);
+    ctl_browser_ = new Fl_Hold_Browser( 0,0, w,h-20 );
+    ctl_browser_->when( FL_WHEN_RELEASE_ALWAYS );
+    ctl_browser_->callback( on_sel_change, this );
+
+    btn_select_  = new Fl_Return_Button( 0,h-20, w/2,20, "Select" );
+    btn_select_->callback( on_button, this );
+
+    btn_cancel_ = new Fl_Button( w/2,h-20, w/2,20, "Cancel" );
+    btn_cancel_->callback( on_button, this );
+
+    resizable( ctl_browser_ );
+
+    end( );
 }
 
-void select_monitor_widget_t::on_button(Fl_Widget *widget)
+/**
+ * Called after user selects, cancels or close window.
+ *
+ * Informs the main application we are done and pass the selected ID.
+ */
+void select_monitor_window::on_button( Fl_Widget* w, void* v )
 {
-	if (widget == select_button) {
-		int selection = browser->value();
-		if (selection != 0) {
-			co_id_t id = id_map[selection-1];
-			console->attach_anyhow(id);
-			delete this;
-		}
-	} else if (widget == cancel_button) {
-		delete this;
-	}
+    self_t * this_ = reinterpret_cast<self_t *>( v );
+
+    if ( w == this_->btn_select_ )
+    {
+        int selection = this_->ctl_browser_->value( );
+        if ( selection > 0 && selection <= this_->id_map_count_ )
+        {
+            // Post to the main thread message queue
+            typedef console_main_window::tm_data_t tm_data_t;
+            tm_data_t* data
+                = new tm_data_t( console_main_window::TMSG_MONITOR_SELECT,
+                                this_->id_map_[selection-1] );
+            Fl::awake( data );
+        }
+    }
+
+    // Nothing more to do, destroy window
+    delete this_;
 }
 
-void select_monitor_widget_t::populate(console_window_t *console_window)
+/**
+ * Called after selection changes.
+ *
+ * Enable/disable "Select" button if no selection.
+ */
+void select_monitor_window::on_sel_change( Fl_Widget*, void* v )
 {
-	label("Select a running coLinux");
-
-	console = console_window;
-
-	browser = new Fl_Hold_Browser(0, 0, 400, 200);
-	Fl_Button *button;
-
-	button = new Fl_Button(0, 200, 200, 20);
-	button->label("Select");
-	button->when(FL_WHEN_RELEASE);
-	button->callback((Fl_Callback *)console_select_monitor, this);
-	select_button = button;
-
-	button = new Fl_Button(200, 200, 200, 20);
-	button->label("Cancel");
-	button->when(FL_WHEN_RELEASE);
-	button->callback((Fl_Callback *)console_select_monitor, this);
-	cancel_button = button;
-
-	resizable(browser);
-
-	end();
-
-	load_monitors_list();
-	show();
+    self_t * this_ = reinterpret_cast<self_t *>( v );
+    int selection = this_->ctl_browser_->value( );
+    if ( selection > 0 && selection <= this_->id_map_count_ )
+        this_->btn_select_->activate( );
+    else
+        this_->btn_select_->deactivate( );
 }
 
-void select_monitor_widget_t::load_monitors_list()
+/**
+ * Populate selection box and show window.
+ *
+ * If no instances running, display a warning box and returns false.
+ */
+bool select_monitor_window::start( )
 {
-	co_manager_handle_t handle;
-	co_manager_ioctl_monitor_list_t	list;
-	co_rc_t	rc;
+    // Any error message is displayed by load_monitors_list()
+    if ( !load_monitors_list() )
+        return false;
 
-	memset(id_map, 0, sizeof(id_map));
-	id_map_count = 0;
-	browser->clear();
+    // No instances running, quit
+    if ( id_map_count_ == 0 )
+    {
+        Fl::error(  "No coLinux instances running!\n"
+                    "Start a new one first." );
+        return false;
+    }
 
-	handle = co_os_manager_open();
-	if (handle == NULL)
-		return;
+    // Select first item
+    ctl_browser_->value( 1 );
 
-	rc = co_manager_monitor_list(handle, &list);
-	co_os_manager_close(handle);
-	if (!CO_OK(rc))
-		return;
+    // Ok, show window and return true to signal success
+    show();
 
-	for (unsigned i = 0; i < list.count; ++i) {
-		char buf[32];
-		id_map[i] = list.ids[i];
-		snprintf( buf, sizeof(buf), "Monitor%d (pid=%d)\t", i, id_map[i]);
-		browser->add(buf);
-	}
-	
-	id_map_count = list.count;
+    return true;
+}
+
+/**
+ * Fetch monitor list from the driver.
+ *
+ * Returns false on error.
+ */
+bool select_monitor_window::load_monitors_list( )
+{
+    co_manager_handle_t             handle;
+    co_manager_ioctl_monitor_list_t list;
+    co_rc_t                         rc;
+
+    memset( id_map_, 0, sizeof(id_map_) );
+    id_map_count_ = 0;
+    ctl_browser_->clear( );
+
+    handle = co_os_manager_open( );
+    if ( handle == NULL )
+    {
+        Fl::error(  "Failed to open coLinux manager!\n"
+                    "Check the driver is installed." );
+        return false;
+    }
+
+    // :FIXME: Check API version
+
+    rc = co_manager_monitor_list( handle, &list );
+    co_os_manager_close( handle );
+    if ( !CO_OK(rc) )
+    {
+        Fl::error(  "Failed to get monitor list!\n"
+                    "Check your colinux version." );
+        return false;
+    }
+
+    assert( list.count <= CO_MAX_MONITORS );
+
+    for ( unsigned i = 0; i < list.count; ++i )
+    {
+        char buf[32];
+        id_map_[i] = list.ids[i];
+        snprintf( buf, sizeof(buf), "Monitor %d (pid=%d)\t", i, id_map_[i] );
+        ctl_browser_->add( buf );
+    }
+    id_map_count_ = list.count;
+
+    return true;
 }

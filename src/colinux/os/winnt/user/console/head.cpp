@@ -1,204 +1,80 @@
 /*
  * This source code is a part of coLinux source package.
  *
+ * Nuno Lucas <lucas@xpto.ath.cx>, 2005 (c)
  * Dan Aloni <da-x@gmx.net>, 2003-2004 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
  */ 
+#include <colinux/user/console/input.h>
+#include <FL/x.H>
 
-#include <windows.h>
-
-extern "C" {
-	#include <colinux/common/debug.h>
-	#include "../osdep.h"
-}
-
-#include <colinux/user/console/main.h>
-
-COLINUX_DEFINE_MODULE("colinux-console-fltk");
-
-
-/*
- * Storage of current keyboard state.
- * For every virtual key (256), it is 0 (for released) or the scancode
- * of the key pressed (with 0xE0 in high byte if extended).
+/**
+ * Called to handle FLTK key events.
+ *
+ * Returns non-zero if event was handled, zero if not.
  */
-static WORD vkey_state[256];
-
-/*
- * Handler of hook for keyboard events
- */
-static HHOOK current_hook;
-
-
-static void handle_scancode( WORD code )
+int console_input::handle_key_event( )
 {
-	co_scan_code_t sc;
-	sc.down = 1;	/* to work with old kernels that don't ignore this field */
-	/* send e0 if extended key */
-	if ( code & 0xE000 )
-	{
-		sc.code = 0xE0;
-		co_user_console_handle_scancode( sc );
-	}
-	sc.code = code & 0xFF;
-	co_user_console_handle_scancode( sc );
-}
+    if ( is_paused() )
+        return 0;
 
-/*
- * First attempt to make the console copy/paste text.
- * This needs more work to get right, but at least it's a start ;)
- */
-static int PasteClipboardIntoColinux( )
-{
-	static char kpad_code[10]
-		= {	0x52,				// 0
-			0x4F, 0x50, 0x51,	// 1, 2, 3
-			0x4B, 0x4C, 0x4D,	// 4, 5, 6
-			0x47, 0x48, 0x49	// 7, 8, 9
-		};
-	// Lock clipboard for inspection -- TODO: try again on failure
-	if ( ! ::OpenClipboard(NULL) )
-	{
-		co_debug( "OpenClipboard() error %d !", ::GetLastError() );
-		return -1;
-	}
-	HANDLE h = ::GetClipboardData( CF_TEXT );
-	if ( h == NULL )
-	{
-		::CloseClipboard( );
-		return 0;	// Empty (for text)
-	}
-	unsigned char* s = (unsigned char *) ::GlobalLock( h );
-	if ( s == NULL )
-	{
-		::CloseClipboard( );
-		return 0;
-	}
-	/* Fake keyboard input */
-	for ( ; *s != '\0'; ++s )
-	{
-		if ( *s == '\n' )
-			continue;	// ignore '\n'
-		// Convert to decimal digits
-		int d1 = *s / 100;
-		int d2 = (*s % 100) / 10;
-		int d3 = (*s % 100) % 10;
-		// Send Alt + NumPad digits
-		handle_scancode( 0x0038 );					// press ALT
-		handle_scancode( kpad_code[d1] );			// press digit 1
-		handle_scancode( kpad_code[d1] | 0x80 );	// release digit 1
-		handle_scancode( kpad_code[d2] );			// press digit 2
-		handle_scancode( kpad_code[d2] | 0x80 );	// release digit 2
-		handle_scancode( kpad_code[d3] );			// press digit 3
-		handle_scancode( kpad_code[d3] | 0x80 );	// release digit 3
-		handle_scancode( 0x00B8 );					// release ALT
-	}
-	::GlobalUnlock( h );
-	::CloseClipboard( );
-	return 0;
-}
+    // Get WIN32 event
+    MSG msg = fl_msg;
+    // MSDN says to only use the low word. Lets play safe...
+    msg.message &= 0xFFFF;
 
+    // Make sure it's a keyboard message
+    if ( msg.message < WM_KEYFIRST || msg.message > WM_KEYLAST )
+        return 0;
 
-static LRESULT CALLBACK keyboard_hook(
-    int nCode,
-    WPARAM wParam,
-    LPARAM lParam
-)
-{
-	/* MSDN says we MUST to pass along the hook chain if nCode < 0 */
-	if ( nCode < 0 )
-		return CallNextHookEx( current_hook, nCode, wParam, lParam );
+    WORD     flags  = msg.lParam >> 16;     // ignore the repeat count
+    bool     is_up  = flags & KF_UP;        // key released
+    unsigned code   = flags & 0x1FF;        // scancode & bit 16 set if extended
 
-	const BYTE vkey     = wParam & 0xFF;
-	const WORD flags    = lParam >> 16;	/* ignore the repeat count */
-	const bool released = flags & KF_UP;
-	WORD       code     = flags & 0xFF;
+    // Special key processing
+    switch ( code )
+    {
+    case 0x138: // Right Alt
+        // If Control pressed, it's AltGr (received as Control+RightAlt)
+        if ( !is_up && is_down(0x01D) )
+        {
+            // Release the Control key (linux knows that AltGr is RightAlt)
+            send_scancode( 0x09D );
+        }
+        break;
+    case 0x145: // NumLock
+        // Windows says it's an extended key, but in effect is a single byte
+        code = 0x45;
+        break;
+    case 0x45:  // Pause (1st code)
+        // Ignore and wait for the second code (0xC5)
+        return 1;
+    case 0xC5:  // Pause (2nd code)
+        // Send special scan code - 0x245 - so handler nows what it is
+        send_scancode( 0x245 );
+        return 1;
+    case 0x54:  // SysRq
+        // Windows only sends the released SysRq. Fake it.
+        send_scancode( 0x54 );  // Down
+        send_scancode( 0xD4 );  // Up
+        return 1;
+    case 0x137: // PrintScreen
+        // Windows only sends the key up event. Fake it.
+        send_scancode( 0x12A ); send_scancode( 0x137 ); // E0 2A E0 37
+        send_scancode( 0x1AA ); send_scancode( 0x1B7 ); // E0 AA E0 B7
+        return 1;
+    }
 
-	/* Special key processing */
-	switch ( vkey )
-	{
-	case VK_LWIN:
-	case VK_RWIN:
-		// special handling of the Win+V key (paste into colinux)
-		if ( released )	vkey_state[255] &= ~1;
-		else			vkey_state[255] |=  1;
-		// let Windows process it, for now
-	case VK_APPS:
-		return CallNextHookEx(current_hook, nCode, wParam, lParam);
-	case VK_MENU:	/* Check if AltGr (received as Control+RightAlt) */
-		if ( (flags & KF_EXTENDED) && !released )
-		{	/* Release Control key */
-			handle_scancode( 0x009D );
-			vkey_state[VK_CONTROL] = 0;
-		}
-		break;
-	case 'V':
-		if ( !released && (vkey_state[255] & 1) )
-		{
-			PasteClipboardIntoColinux( );
-			return 1;	/* key processed */
-		}
-		break;
-	}
+    // Normal key processing
+    if ( is_up )
+        code |= 0x80;   // setup scan code for key release
 
-	/* Normal key processing */
-	if ( flags & KF_EXTENDED )
-		code |= 0xE000; /* extended scan-code code */
-	if ( released )
-	{	/* key was released */
-		code |= 0x80;
-		if ( vkey_state[vkey] == 0 )
-			return 1;	/* ignore release of not pressed keys */
-		vkey_state[vkey] = 0;
-	}
-	else
-	{	/* Key pressed */
-		vkey_state[vkey] = code | 0x80;
-	}
+    // Send key scancode
+    send_scancode( code );
 
-	/* Send key scancode */
-	handle_scancode( code );
-
-	/* Let colinux handle all our keys */
-	return 1;
-}
-
-void co_user_console_keyboard_focus_change( unsigned long keyboard_focus )
-{
-	if ( keyboard_focus == 0 )
-	{
-		/*
-		 * Lost keyboard focus. Release all pressed keys.
-		 */
-		for ( int i = 0; i < 255; ++i )
-			if ( vkey_state[i] )
-			{
-				handle_scancode( vkey_state[i] );
-				vkey_state[i] = 0;
-			}
-		vkey_state[255] = 0;
-	}
-}
-
-int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR cmdLine, int )
-{
-	// Initialize keyboard hook
-	memset( vkey_state, 0, sizeof(vkey_state) );
-	current_hook = SetWindowsHookEx(WH_KEYBOARD,
-					keyboard_hook,
-					NULL,
-					GetCurrentThreadId());
-
-	// "Normalize" arguments
-	// NOTE: I choosed to ignore parsing errors here as they should
-	//       be caught later
-	int argc = 0;
-	char **argv = NULL;
-	co_os_parse_args( cmdLine, &argc, &argv );
-
-	// Run main console procedure
-	return co_user_console_main(argc, argv);
+    // Let colinux handle all our keys
+    return 1;
 }
