@@ -100,7 +100,7 @@ configure_fltk()
 	echo "Configuring FLTK"
 	cd "$BUILD_DIR/$FLTK"
 
-	# Using of --host=$TARGET ist old!
+	# Using of --host=$TARGET is old!
 	# Please beleve host=i386, also your host is mostly i686!
 	# "i386..." is a pseudonym to enable "cross-compiling",
 	# because target is diffent with "i686..."
@@ -122,8 +122,8 @@ install_fltk()
 {
 	echo "Installing FLTK"
 	cd "$BUILD_DIR/$FLTK"
-	cp lib/*.a $PREFIX/$TARGET/lib
-	cp -a FL $PREFIX/$TARGET/include/
+	make -C src install || exit 1
+	make -C FL install || exit 1
 }
 
 build_fltk()

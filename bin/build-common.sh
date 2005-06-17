@@ -84,7 +84,7 @@ W32API_PATCH=patch/$W32API_SRC.diff
 
 
 # (from build-colinux-libs.sh) #
-FLTK_VERSION="1.1.4"
+FLTK_VERSION="1.1.6"
 FLTK_URL=http://heanet.dl.sourceforge.net/sourceforge/fltk 
 FLTK=fltk-$FLTK_VERSION
 FLTK_ARCHIVE=$FLTK-source.tar.bz2
