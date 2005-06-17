@@ -32,10 +32,9 @@ def generate_options(compiler_def_type, libs=None, lflags=None):
     )
 
 user_dep = [Input('../user/user-all.a')]
-user_res = [Input('../user/daemon/res/daemon.res')]
 
 targets['colinux-daemon.exe'] = Target(
-    inputs = user_res + [
+    inputs = [
         Input('../user/daemon/daemon.o'),
     ] + user_dep,
     tool = Compiler(),
@@ -43,7 +42,7 @@ targets['colinux-daemon.exe'] = Target(
 )
 
 targets['colinux-net-daemon.exe'] = Target(
-    inputs = user_res + [
+    inputs = [
        Input('../user/conet-daemon/build.o'),
        Input('../../../user/daemon-base/build.o'),
     ] + user_dep,
@@ -52,7 +51,7 @@ targets['colinux-net-daemon.exe'] = Target(
 )
 
 targets['colinux-bridged-net-daemon.exe'] = Target(
-    inputs = user_res + [
+    inputs = [
        Input('../user/conet-bridged-daemon/build.o'),
        Input('../../../user/daemon-base/build.o'),
     ] + user_dep,
@@ -61,7 +60,7 @@ targets['colinux-bridged-net-daemon.exe'] = Target(
 )
 
 targets['colinux-slirp-net-daemon.exe'] = Target(
-    inputs = user_res + [
+    inputs = [
        Input('../user/conet-slirp-daemon/build.o'),
        Input('../../../user/slirp/build.o'),
        Input('../../../user/daemon-base/build.o'),
@@ -71,7 +70,7 @@ targets['colinux-slirp-net-daemon.exe'] = Target(
 )
 
 targets['colinux-serial-daemon.exe'] = Target(
-    inputs = user_res + [
+    inputs = [
        Input('../user/coserial-daemon/build.o'),
        Input('../../../user/daemon-base/build.o'),
     ] + user_dep,
@@ -79,8 +78,10 @@ targets['colinux-serial-daemon.exe'] = Target(
     mono_options = generate_options('g++'),
 )
 
+console_res = [Input('../user/console/res/console.res')]
+
 targets['colinux-console-fltk.exe'] = Target(
-    inputs = user_res + [
+    inputs = console_res + [
        Input('../user/console/build.o'),
        Input('../../../user/console/build.o'),
     ] + user_dep,
@@ -89,7 +90,7 @@ targets['colinux-console-fltk.exe'] = Target(
 )
 
 targets['colinux-debug-daemon.exe'] = Target(
-    inputs = user_res + [
+    inputs = [
        Input('../user/debug/build.o'),
        Input('../../../user/debug/build.o'),
     ] + user_dep,
