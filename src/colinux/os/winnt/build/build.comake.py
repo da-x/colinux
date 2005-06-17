@@ -4,7 +4,6 @@ targets['executables'] = Target(
     Input('colinux-net-daemon.exe'),
     Input('colinux-console-fltk.exe'),
     Input('colinux-debug-daemon.exe'),
-#    Input('colinux-console-nt.exe'),
     Input('colinux-bridged-net-daemon.exe'),
     Input('colinux-slirp-net-daemon.exe'),
     Input('colinux-serial-daemon.exe'),
@@ -27,8 +26,8 @@ def generate_options(compiler_def_type, libs=None, lflags=None):
         compiler_flags = [ '-mno-cygwin' ],
 	linker_flags = lflags,
         compiler_libs = libs + [
-            'user32', 'gdi32', 'ws2_32', 'ntdll', 'kernel32', 'ole32', 'uuid', 'gdi32',
-            'msvcrt', 'crtdll', 'shlwapi', 
+            'user32', 'gdi32', 'ws2_32', 'ntdll', 'kernel32', 'ole32', 'uuid',
+	    'gdi32', 'msvcrt', 'crtdll', 'shlwapi',
         ]),
     )
 
@@ -87,15 +86,6 @@ targets['colinux-console-fltk.exe'] = Target(
     ] + user_dep,
     tool = Compiler(),    
     mono_options = generate_options('g++', libs=['fltk'], lflags=['-mwindows']),
-)
-
-targets['colinux-console-nt.exe'] = Target(
-    inputs = user_res + [
-       Input('../user/console-nt/build.o'),
-       Input('../../../user/console-base/build.o'),
-    ] + user_dep,
-    tool = Compiler(),    
-    mono_options = generate_options('g++'),
 )
 
 targets['colinux-debug-daemon.exe'] = Target(
