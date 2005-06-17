@@ -35,10 +35,6 @@ static char MOTD_HELP[]
         "Command line arguments supported:\n"
         "  --help               Show this text\n"
         "  --instance-id <id>   Attach to instance ID\n"
-        "  --font-name <name>   Name of the font to use\n"
-        "  --font-size <size>   Set font size [18]\n"
-//      "  --columns <cols>     Set columns number [80]\n"
-//      "  --lines <lines>      Set lines number [25]\n"
     ;
 
 /**
@@ -53,10 +49,6 @@ int parse_args( int argc, char** args, console_parameters_t& params )
 {
     /* Set default parameter values */
     params.instance_id      = CO_INVALID_ID;
-    params.font_name        = NULL;
-    params.font_size        = 0;
-    params.columns          = 80;
-    params.lines            = 25;
     params.motd             = NULL;
 
     /* Check for no parameters */
@@ -78,30 +70,6 @@ int parse_args( int argc, char** args, console_parameters_t& params )
                 return i;
             params.instance_id = atoi( args[++i] );
         }
-        else if ( !strcmp(args[i],"--font-name") )
-        {
-            if ( i + 1 == argc )
-                return i;
-            params.font_name = args[++i];
-        }
-        else if ( !strcmp(args[i],"--font-size") )
-        {
-            if ( i + 1 == argc )
-                return i;
-            params.font_size = atoi( args[++i] );
-        }
-//      else if ( !strcmp(args[i],"--columns") )
-//      {
-//          if ( i + 1 == argc )
-//              return i;
-//          params.columns = atoi( args[++i] );
-//      }
-//      else if ( !strcmp(args[i],"--lines") )
-//      {
-//          if ( i + 1 == argc )
-//              return i;
-//          params.lines = atoi( args[++i] );
-//      }
         else
         {
             co_debug( "Invalid parameter '%s'...\n", args[i] );
@@ -135,10 +103,9 @@ int main( int argc, char **argv )
     // window in the program. This makes sure we can use Xdbe on servers
     // where double buffering does not exist for every visual (I suppose
     // this is ignored on Windows).
-    // Should this be moved into the linux OS init code?
     Fl::visual( FL_DOUBLE | FL_INDEX );
 
-    // This needs to be in the heap (it deletes himself)
+    // Create main window object
     console_main_window * app_window = new console_main_window( );
 
     // Parse user arguments
@@ -152,9 +119,10 @@ int main( int argc, char **argv )
         params.motd = err_msg;
     }
 
-    // Setup window and show it
+    // Setup main window
     app_window->start( params );
-    app_window->show( );
+    // Show window (need to pass args, or will use a 'non-native' scheme)
+    app_window->show( argc, argv );
 
     // Enter main window loop
     return Fl::run( );

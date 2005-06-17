@@ -19,15 +19,10 @@ extern "C" {
 /**
  * Console startup parameters
  *
- * columns & lines need a kernel patch before they can work.
  */
 struct console_parameters_t
 {
     co_id_t     instance_id;    // colinux instance id to attach to
-    const char* font_name;      // Name of the font to use
-    int         font_size;      // Size of the font to use
-    int         columns;        // Number of columns
-    int         lines;          // Number of lines
     char  *     motd;           // Message of the day
 };
 

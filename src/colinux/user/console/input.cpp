@@ -21,7 +21,10 @@
  */
 console_input::console_input( )
     : monitor_( NULL )
+    , pressed_( 0 )
 {
+    // Fill key state array with zeros
+    memset( kstate_, 0, sizeof(kstate_) );
     // Set last mouse event abs_x to -1 to signal no events were sent
     last_mouse_.abs_x = unsigned(-1);
 }

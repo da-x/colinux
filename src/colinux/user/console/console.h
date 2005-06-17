@@ -20,12 +20,13 @@ extern "C" {
 }
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Button.H>
+#include <FL/Fl_Scroll.H>
 #include <FL/Fl_Menu_Bar.H>
 #include <FL/Fl_Preferences.H>
 #include <FL/Fl_Double_Window.H>
 
 
-class console_widget;
+class console_fb_view;
 class console_log_window;
 struct console_parameters_t;
 
@@ -88,10 +89,6 @@ private:
     // Load/Save preferences
     void load_preferences( );
     void save_preferences( );
-    // Set console font by font id
-    void set_console_font( Fl_Font font, int size );
-    // Set console font by face name
-    void set_console_font( const char* face, int size );
 
     // Find first active monitor
     co_id_t find_first_monitor( );
@@ -101,9 +98,9 @@ private:
     Fl_Menu_Item& get_menu_item( Fl_Callback* handler, int id = 0 );
     // Enable/Disable menu item state, by callback routine
     void set_menu_state( Fl_Callback* handler, bool enabled );
-    // Calculate mouse position inside console
-    void calc_mouse_position( co_mouse_data_t& md ) const;
 
+    // Handle mouse events and send it to the colinux instance
+    void handle_mouse_event( );
     // Handle the copy from console event
     int handle_mark_event( int event );
     void end_mark_mode( );
@@ -134,14 +131,16 @@ private:
     co_id_t                 attached_id_;       // Current attached monitor
     co_reactor_t            reactor_;           // colinux message engine
     co_user_monitor_t   *   monitor_;           // colinux instance monitor
-    Fl_Preferences          prefs_;             // Program preferences
     bool                    fullscreen_mode_;   // true if fullscreen on
     console_input           input_;             // Console input handler
     bool                    mark_mode_;         // True when in "Mark" mode
 
+    Fl_Preferences          prefs_;             // Application preferences
+
     // Child windows
     Fl_Menu_Bar         *   menu_;
-    console_widget      *   wConsole_;
+    Fl_Scroll           *   wScroll_;
+    console_fb_view     *   wTerminal_;
     console_log_window  *   wLog_;
     Fl_Group            *   wStatus_;
     Fl_Box              *   status_line_;

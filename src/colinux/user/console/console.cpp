@@ -12,7 +12,7 @@
 #include "main.h"
 #include "about.h"
 #include "input.h"
-#include "widget.h"
+#include "fb_view.h"
 #include "options.h"
 #include "log_window.h"
 #include "select_monitor.h"
@@ -44,7 +44,7 @@ void console_main_window::unimplemented( Fl_Widget* w, void* )
 /**
  * Window menu items.
  *
- * This is static so we can use it directly.
+ * This is static so it can be auto-magically initialized.
  * The extra spaces in the labels make the menu a bit less ugly. ;-)
  */
 Fl_Menu_Item console_main_window::menu_items_[]
@@ -55,7 +55,7 @@ Fl_Menu_Item console_main_window::menu_items_[]
             { 0 },
         { "Edit", 0,0,0, FL_SUBMENU },
             { " Mark " , 0, on_mark },
-            { " Paste ", 0, unimplemented },
+            { " Paste ", 0, on_paste },
             { 0 },
         { "Monitor", 0,0,0, FL_SUBMENU },
             { " Select... "  , 0, on_select     , 0, FL_MENU_DIVIDER },
@@ -86,6 +86,8 @@ Fl_Menu_Item console_main_window::menu_items_[]
  * Static pointer to the instantiated window.
  *
  * Used by the static handlers.
+ * This forces this window to never be instantiated twice, but we should be
+ * safe in that respect.
  */
 console_main_window * console_main_window::this_ = NULL;
 
@@ -97,6 +99,7 @@ console_main_window::console_main_window( )
   , monitor_( NULL )
   , prefs_( Fl_Preferences::USER, "coLinux.org", "FLTK console" )
   , fullscreen_mode_( false )
+  , mark_mode_( false )
 {
     // Set pointer to self for static methods
     this_ = this;
@@ -118,8 +121,16 @@ console_main_window::console_main_window( )
     // Gray all unimplemented menu items
     set_menu_state( unimplemented, false );
 
-    // Console window
-    wConsole_ = new console_widget( 0,mh, w,h-mh-sh );
+    // Console window (inside a scroll group)
+    wScroll_ = new Fl_Scroll(0,mh, w,h-mh-sh );
+    wScroll_->box( FL_THIN_DOWN_FRAME );
+    {
+        const int bdx = Fl::box_dx( FL_THIN_DOWN_FRAME );
+        const int bdy = Fl::box_dx( FL_THIN_DOWN_FRAME );
+        wTerminal_ = new console_fb_view( bdx, bdy + mh,
+                                            640 + bdx*2, 400 + bdy*2 );
+    }
+    wScroll_->end( );
 
     // Status bar
     wStatus_ = new Fl_Group( 0,h-sh, w,sh );
@@ -133,7 +144,7 @@ console_main_window::console_main_window( )
     wStatus_->resizable( status_line_ );
     wStatus_->end( );
 
-    resizable( wConsole_ );
+    resizable( wScroll_ );
     end( );
 
 #ifdef _WIN32
@@ -194,14 +205,7 @@ void console_main_window::on_quit( Fl_Widget*, void* )
         this_->save_preferences( );
         delete this_->wLog_;
         this_->wLog_ = NULL;
-
-        /*
-         * FLTK v1.1.4 doesn't the have Fl::delete_widget() function, but we
-         * need to remember to use that function after upgrading, as that's
-         * the right way to do it (it's dangerous to delete a widget inside
-         * a callback).
-         */
-        delete this_;
+        Fl::delete_widget( this_ );
     }
 }
 
@@ -220,15 +224,8 @@ int console_main_window::start( console_parameters_t &params )
         return -1;
     }
 
-    // Load all fonts from system (with any encoding)
-    Fl::set_fonts( "*" );
-
     // Use last saved preferences
     load_preferences( );
-
-    // If font params given, override preferences
-    if ( params.font_name || params.font_size )
-        set_console_font( params.font_name, params.font_size );
 
     // Show "Message Of The Day", if given.
     if ( params.motd )
@@ -243,7 +240,7 @@ int console_main_window::start( console_parameters_t &params )
     /* Ignore errors, as we can attach latter */
 
     // Make sure the console window starts with the focus
-    wConsole_->take_focus( );
+    wTerminal_->take_focus( );
 
     return 0;
 }
@@ -275,27 +272,13 @@ int console_main_window::handle( int event )
     case FL_DRAG:
     case FL_MOUSEWHEEL:
         // Mark mode enabled?
-        if ( mark_mode_ && Fl::event_inside(wConsole_) )
+        if ( mark_mode_ && Fl::event_inside(wTerminal_) )
             return handle_mark_event( event );
         // Pass mouse messages to colinux, if attached
-        if ( is_attached() && Fl::event_inside(wConsole_) )
+        if ( is_attached() && Fl::event_inside(wTerminal_) )
         {
-            co_mouse_data_t md;
-            // Calculate mouse position relative to console area
-            calc_mouse_position( md );
-            // Get button and mousewheel state
-            unsigned state = Fl::event_state();
-            md.btns = 0;
-            if ( state & FL_BUTTON1 )
-                md.btns |= 1;
-            if ( state & FL_BUTTON2 )
-                md.btns |= 2;
-            if ( state & FL_BUTTON3 )
-                md.btns |= 4;
-            md.rel_z = Fl::event_dy();
-            // Send mouse move event to colinux instance
-            input_.send_mouse_event( md );
-            return 1;
+//            handle_mouse_event( );
+//            return 1;
         }
         break;
     case FL_KEYUP:
@@ -309,10 +292,11 @@ int console_main_window::handle( int event )
         /*
          * FIXME:
          *      I don't see nothing in Fl::event_text() after this.
-         *      Need to check what I'm doing wrong...
-         *      There is a commented version for getting the windows
-         *      clipboard contents in input.c, but we should use a
-         *      portable way (after all that's what FLTK should do for us).
+         *      After a mail to the FLTK list, it seems to be a bug in
+         *      the FLTK library in windows (it works on linux).
+         *      We may need to revert to the 'old' way of getting this,
+         *      using the WIN32 API (as done in the old FLTK console
+         *      version).
          */
         log( "Pasting %d bytes\n"
              "---- BEGIN PASTED TEXT ----\n"
@@ -326,24 +310,16 @@ int console_main_window::handle( int event )
 }
 
 /**
- * Calculate mouse position inside console.
+ * Fetches mouse event data and sends it to the colinux instance.
  */
-void console_main_window::calc_mouse_position( co_mouse_data_t& md ) const
+void console_main_window::handle_mouse_event( )
 {
-    // Get x,y relative to the true console screen
-    int vx = Fl::event_x() - wConsole_->term_x();
-    int vy = Fl::event_y() - wConsole_->term_y();
-    // Check they are inside
-    if ( vx < 0 )
-        vx = 0;
-    else if ( vx >= wConsole_->term_w() )
-        vx = wConsole_->term_w() - 1;
-    if ( vy < 0 )
-        vy = 0;
-    else if ( vy >= wConsole_->term_h() )
-        vy = wConsole_->term_h() - 1;
+    co_mouse_data_t md = { 0,0,0,0 };
+
+    // Get x,y relative to the termninal screen
+    int x = wTerminal_->mouse_x( Fl::event_x() );
+    int y = wTerminal_->mouse_y( Fl::event_y() );
     // Transform to the comouse virtual screen size
-    assert( wConsole_->term_w() && wConsole_->term_h() );
     /*
      * FIXME:
      *
@@ -351,8 +327,25 @@ void console_main_window::calc_mouse_position( co_mouse_data_t& md ) const
      *      Need to check why only these values work, and not the 2048 max.
      *      An alternative is to have a calibration option.
      */
-    md.abs_x = vx*1600 / wConsole_->term_w();
-    md.abs_y = vy*1350 / wConsole_->term_h();
+    md.abs_x = 1024*x / wTerminal_->w();
+    md.abs_y =  768*y / wTerminal_->h();
+
+    // Get button and mousewheel state
+    unsigned state = Fl::event_state();
+    md.btns = 0;
+    if ( state & FL_BUTTON1 )
+        md.btns |= 1;
+    if ( state & FL_BUTTON2 )
+        md.btns |= 2;
+    if ( state & FL_BUTTON3 )
+        md.btns |= 4;
+    md.rel_z = Fl::event_dy();
+
+    printf( "Mouse: (%d,%d)--virt-->(%d,%d) btns=%d z=%d\n",
+                    x,y, md.abs_x,md.abs_y, md.btns, md.rel_z );
+
+    // Send mouse move event to colinux instance
+    input_.send_mouse_event( md );
 }
 
 /**
@@ -401,10 +394,7 @@ void console_main_window::on_options( Fl_Widget*, void* )
     assert( this_ );
     // Open & show the options window
     console_options_window* win = new console_options_window;
-    const Fl_Font cur_face = this_->wConsole_->get_font_face();
-    const int     cur_size = this_->wConsole_->get_font_size();
     this_->center_widget( win );
-    win->select_font( cur_face, cur_size );
     win->set_modal( );
     win->show( );
     // The window will "awake" us with the options selected and destroy itself
@@ -480,7 +470,7 @@ void console_main_window::log( const char *format, ... )
     vsnprintf( buf, sizeof(buf), format, ap );
     va_end( ap );
 
-    // We need to check if it wasn't destroyed during close
+    // Check if it wasn't destroyed during close
     if ( wLog_ )
         wLog_->add( buf );
 }
@@ -537,7 +527,7 @@ void console_main_window::handle_message( co_message_t * msg )
     {
         co_console_message_t * cons_msg;
         cons_msg = reinterpret_cast<co_console_message_t *>( msg->data );
-        wConsole_->handle_console_event( cons_msg );
+        wTerminal_->handle_console_event( cons_msg );
         return;
     }
 
@@ -546,8 +536,15 @@ void console_main_window::handle_message( co_message_t * msg )
     {
         co_module_name_t mod_name;
         ((char *)msg->data)[msg->size - 1] = '\0';
-        log( "%s: %s", co_module_repr(msg->from, &mod_name), msg->data );
+        log( "%s: %s\n", co_module_repr(msg->from, &mod_name), msg->data );
+        return;
     }
+
+    // Say something about unrecognized messages received
+    co_module_name_t mod_name;
+    ((char *)msg->data)[msg->size - 1] = '\0';
+    log( "%s: Unexpected message received\n",
+            co_module_repr(msg->from, &mod_name) );
 }
 
 /**
@@ -597,10 +594,9 @@ bool console_main_window::attach( co_id_t id )
     attached_id_ = id;
     monitor_ = mon;
 
-    wConsole_->attach( con );
+    wTerminal_->attach( con );
     resize_around_console( );
     input_.resume( monitor_ );
-    wConsole_->redraw( );
 
     update_ui_state( );
     status( "Successfully attached to monitor %d", id );
@@ -619,7 +615,7 @@ void console_main_window::dettach( )
     // Stop the input event handling, but first reset it
     input_.reset( false );
     input_.pause( );
-    wConsole_->dettach( );
+    wTerminal_->dettach( );
     co_user_monitor_close( monitor_ );
     monitor_ = NULL;
 
@@ -634,14 +630,14 @@ void console_main_window::on_idle( void* )
 {
     assert( this_ );
 
-    if ( !this_->is_dettached() )
+    if ( !this_->is_attached() )
     {
         /*
          * With FLTK 1.1.6, on_idle is called a lot, so we need to sleep
-         * for a while or the CPU will be always at 100%.
+         * for a while or the CPU will always be at 100%.
          * A 10 msecs sleep seems to be enough.
          */
-        // FIXME: Use a portable sleep [implement co_os_msleep(msecs)]
+        // FIXME: Use a portable msleep [implement co_os_msleep(msecs)]
         ::Sleep( 10 );
     }
     else
@@ -671,7 +667,8 @@ void console_main_window::on_idle( void* )
             this_->btn_log_->redraw( );
             break;
         case TMSG_OPTIONS:
-            this_->set_console_font( Fl_Font(msg->value), int(msg->data) );
+            // No more font selection needed
+//          this_->set_console_font( Fl_Font(msg->value), int(msg->data) );
             break;
         case TMSG_MONITOR_SELECT:
             assert( msg->value != CO_INVALID_ID );
@@ -717,10 +714,10 @@ co_rc_t console_main_window::reactor_data(
  */
 void console_main_window::resize_around_console( )
 {
-    int fit_x = wConsole_->term_w() + 2*(wConsole_->term_x() - wConsole_->x() );
-    int fit_y = wConsole_->term_h() + 2*(wConsole_->term_y() - wConsole_->y() );
-    int w_diff = wConsole_->w() - fit_x;
-    int h_diff = wConsole_->h() - fit_y;
+    int fit_x = wTerminal_->w() + 2*Fl::box_dx(wScroll_->box());
+    int fit_y = wTerminal_->h() + 2*Fl::box_dy(wScroll_->box());
+    int w_diff = wScroll_->w() - fit_x;
+    int h_diff = wScroll_->h() - fit_y;
 
     if ( h_diff != 0 || w_diff != 0 )
         size( w() - w_diff, h() - h_diff );
@@ -802,7 +799,7 @@ void console_main_window::on_change_view( Fl_Widget*, void* data )
 
     const int id = int(data);
     Fl_Menu_Item& mi = this_->get_menu_item( on_change_view, id );
-    Fl_Widget* wcon = this_->wConsole_;
+    Fl_Widget* wscro = this_->wScroll_;
     Fl_Widget* wstat = this_->wStatus_;
     const int mh = 30;
     const int sh = 24;
@@ -815,7 +812,7 @@ void console_main_window::on_change_view( Fl_Widget*, void* data )
         if ( mi.value() )
         {   // Show status bar
             assert( !wstat->visible() );
-            wcon->resize ( 0, mh    , w, h - sh - mh );
+            wscro->resize ( 0, mh    , w, h - sh - mh );
             wstat->resize( 0, h - sh, w, sh );
             this_->init_sizes();
             wstat->show( );
@@ -825,7 +822,7 @@ void console_main_window::on_change_view( Fl_Widget*, void* data )
         else
         {   // Hide status bar
             assert( wstat->visible() );
-            wcon->resize ( 0, mh, w, h - mh );
+            wscro->resize ( 0, mh, w, h - mh );
             wstat->resize( 0, h , w, 0 );
             this_->init_sizes();
             wstat->hide( );
@@ -887,16 +884,6 @@ void console_main_window::load_preferences( )
     prefs_.get( "h", oh, -1 );
     if ( ox > 0 && oy > 0 && ow > 100 && oh > 100 )
         resize( ox,oy, ow,oh );
-    // Load last used console font & size
-    if ( prefs_.entryExists("font_name") && prefs_.entryExists("font_size") )
-    {
-        char  name[128];
-        int   size;
-        prefs_.get( "font_name", name, "", sizeof(name) );
-        prefs_.get( "font_size", size, -1 );
-        if ( name[0] && size > 0 )
-            set_console_font( name, size );
-    }
 }
 
 /**
@@ -914,15 +901,6 @@ void console_main_window::save_preferences( )
         prefs_.set( "y", y() );
         prefs_.set( "w", w() );
         prefs_.set( "h", h() );
-    }
-    // Save console font & size
-    Fl_Font face = wConsole_->get_font_face();
-    int     size = wConsole_->get_font_size();
-    const char* name = Fl::get_font( face );
-    if ( name != NULL )
-    {
-        prefs_.set( "font_name", name );
-        prefs_.set( "font_size", size );
     }
 }
 
@@ -982,39 +960,6 @@ void console_main_window::update_ui_state( )
 }
 
 /**
- * Selects a new font for the console.
- */
-void console_main_window::set_console_font( Fl_Font font, int size )
-{
-    wConsole_->set_font( font, size );
-    resize_around_console( );
-    wConsole_->damage( 1 );
-}
-
-/**
- * Set console font by face name.
- *
- * Searches all available fonts for the given face name.
- */
-void console_main_window::set_console_font( const char* f_face, int f_size )
-{
-    Fl_Font fi = Fl_Font(0);
-    const char* face = Fl::get_font( fi );
-
-    while ( face != NULL )
-    {
-        if ( strcmp(face,f_face) == 0 )
-        {
-            set_console_font( fi, f_size );
-            return;
-        }
-        // Next font
-        fi = Fl_Font( fi + 1 );
-        face = Fl::get_font( fi );
-    }
-}
-
-/**
  * Paste contents of the Clipboard into colinux.
  */
 void console_main_window::on_paste( Fl_Widget*, void* )
@@ -1041,7 +986,6 @@ void console_main_window::on_mark( Fl_Widget*, void* )
 int console_main_window::handle_mark_event( int event )
 {
     static int mx, my;
-
     switch ( event )
     {
     case FL_PUSH:
@@ -1049,19 +993,15 @@ int console_main_window::handle_mark_event( int event )
         my = Fl::event_y();
         break;
     case FL_DRAG:
-        wConsole_->set_marked_text( mx,my, Fl::event_x(),Fl::event_y() );
+        wTerminal_->set_marked_text( mx,my, Fl::event_x(),Fl::event_y() );
         break;
     case FL_RELEASE:
-        wConsole_->set_marked_text( mx,my, Fl::event_x(),Fl::event_y() );
+        wTerminal_->set_marked_text( mx,my, Fl::event_x(),Fl::event_y() );
         end_mark_mode( );
         return 1;
     default:
         return 1;
     }
-
-    // Flush pending drawing operations
-    wConsole_->redraw( );
-
     return 1;
 }
 
@@ -1074,9 +1014,8 @@ void console_main_window::end_mark_mode( )
     input_.resume( monitor_ );
     set_menu_state( on_mark, true );
     set_menu_state( on_paste, true );
-
     // Get marked text
-    const char* buf = wConsole_->get_marked_text( );
+    const char* buf = wTerminal_->get_marked_text( );
 
     if  ( !buf )
     {
@@ -1089,6 +1028,5 @@ void console_main_window::end_mark_mode( )
         status( "%d bytes selected.", len );
     }
 
-    wConsole_->clear_marked( );
-    wConsole_->redraw( );
+    wTerminal_->clear_marked_text( );
 }
