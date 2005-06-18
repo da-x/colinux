@@ -80,10 +80,7 @@ patch_kernel()
 	test $? -ne 0 && error_exit 10 "$KERNEL_VERSION patch failed"
 	# Copy coLinux Version into kernel localversion
 	echo "-co-$CO_VERSION" > localversion-cooperative
-}
 
-configure_kernel()
-{
 	# Is this a patched kernel?
 	if [ ! -f $COLINUX_TARGET_KERNEL_PATH/include/linux/cooperative.h ]
 	then
@@ -104,16 +101,24 @@ configure_kernel()
 	cp "$TOPDIR/conf/linux-$KERNEL_VERSION-config" .config
 
 	# Last chance to add private things, such local config
-	if [ -f $TOPDIR/$PRIVATE_PATCH ]
-	then
-		echo "Private patch $PRIVATE_PATCH"
-		patch -p1 < "$TOPDIR/$PRIVATE_PATCH"
-		test $? -ne 0 && error_exit 10 "$PRIVATE_PATCH: patch failed"
-	fi
+	# user patches, alphabetically sort by name
+	ls -1 $TOPDIR/patch/linux-*.patch 2>/dev/null | \
+	while read name; do
+		echo "reading $name"
+		patch -p0 < $name
+		test $? -ne 0 && error_exit 1 "$name patch failed"
+	done
+	cd "$TOPDIR"
+}
 
+configure_kernel()
+{
+	cd "$TOPDIR"
+	cd "$COLINUX_TARGET_KERNEL_PATH"
 	echo "Configuring Kernel $KERNEL_VERSION"
 	make silentoldconfig >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "Kernel $KERNEL_VERSION config failed (check 'make oldconfig' on kerneltree)"
+	cd "$TOPDIR"
 }
 
 compile_kernel()
@@ -149,17 +154,17 @@ build_kernel()
 	if [ "$1" != "--no-download" -a "$COLINUX_KERNEL_UNTAR" != "no" \
 	     -o ! -f $COLINUX_TARGET_KERNEL_PATH/include/linux/cooperative.h ]; then
 
-	  # do not check files, if rebuild forced
-	  test "$1" = "--rebuild" || check_md5sums
+	    # do not check files, if rebuild forced
+	    test "$1" = "--rebuild" || check_md5sums
 
-	  download_files
-	  # Only Download? Than ready.
-	  test "$1" = "--download-only" && exit 0
+	    download_files
+	    # Only Download? Than ready.
+	    test "$1" = "--download-only" && exit 0
 
-	  # Extract, patch and configure Kernel
-	  extract_kernel
-	  patch_kernel
-	  configure_kernel
+	    # Extract, patch and configure Kernel
+	    extract_kernel
+	    patch_kernel
+	    configure_kernel
 	fi
 
 	# Build Kernel vmlinux
