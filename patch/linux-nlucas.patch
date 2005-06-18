@@ -1,31 +1,3 @@
-# patch "arch/i386/kernel/cooperative.c"
-#  from [d3f00d232b4f8717769a36948bb145e8a6988c30]
-#    to [e365d0faaae2e5c740b8aec331a41bbe7ef75c10]
-# 
-# patch "arch/i386/kernel/sysenter.c"
-#  from [49b2ac4d0a55e2242c25d22006108fb09e4a5a6c]
-#    to [89767d0a76f4aa92ceb3df06e965e24f103af9a6]
-# 
-# patch "drivers/input/mouse/comouse.c"
-#  from [0539ca1d77098790b898d532455c925ec6d96f47]
-#    to [b56e7f978ae79284a7d09ad98d02e401d0e503ec]
-# 
-# patch "drivers/video/console/cocon.c"
-#  from [215b9eb197f9550a6191d947cffe144e1e44bd26]
-#    to [a52d2dae54d06196cd518127907f8e8ecbf6ae18]
-# 
-# patch "include/asm-i386/mach-default/irq_vectors.h"
-#  from [c32dfbea62faa07c84fd436f75c83d9fb33fd82c]
-#    to [090b33332417c2fd4b44388a29d09dbace67a5df]
-# 
-# patch "include/linux/cooperative.h"
-#  from [29319dfc5533eba513e009e46027c6f23955bba9]
-#    to [8742b8aa849530e3cbdd8392db7dba46a752adb9]
-# 
-# patch "kernel/cooperative.c"
-#  from [992d5140535d926c3aed22109a7d123ece1cebb1]
-#    to [d7e04a5226c79c18223bec5e5dbcab10e484ea3d]
-# 
 --- arch/i386/kernel/cooperative.c
 +++ arch/i386/kernel/cooperative.c
 @@ -131,6 +131,7 @@
@@ -236,44 +208,47 @@
 -module_exit(comouse_exit);
 --- drivers/video/console/cocon.c
 +++ drivers/video/console/cocon.c
-@@ -27,10 +27,10 @@
+@@ -27,53 +27,46 @@
  
  #include <linux/cooperative_internal.h>
  
 +/* --------------------------------------------------------------------- */
  /*
-  *  Interface used by the world
-  */
--
- static const char *cocon_startup(void);
- static void cocon_init(struct vc_data *c, int init);
- static void cocon_deinit(struct vc_data *c);
-@@ -38,7 +38,7 @@
- static void cocon_cursor(struct vc_data *c, int mode);
- static int cocon_switch(struct vc_data *c);
- static int cocon_blank(struct vc_data *c, int blank, int mode_switch);
--/* static int cocon_font_op(struct vc_data *c, struct console_font_op *op); */
-+static int cocon_font_set(struct vc_data* vc, struct console_font* f, unsigned unused_flags);
- static int cocon_set_palette(struct vc_data *c, unsigned char *table);
- static int cocon_scrolldelta(struct vc_data *c, int lines);
- static int cocon_set_origin(struct vc_data *c);
-@@ -47,33 +47,46 @@
- static u8 cocon_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink, u8 underline, u8 reverse);
- static void cocon_invert_region(struct vc_data *c, u16 *p, int count);
- 
--static const char __init *cocon_startup(void)
-+/* --------------------------------------------------------------------- */
-+/*
+- *  Interface used by the world
 + * Helper funtion to send generic messages to the host.
 + * <size> is the size of the extra data, that is, the size of the data that
 + * goes in the union in the co_console_message_t struct.
-+ */
+  */
 +static void cocon_send_message(co_console_message_t* msg, unsigned size)
- {
- 	unsigned long flags;
++{
++	unsigned long flags;
++	co_message_t* co_msg;
+ 
+-static const char *cocon_startup(void);
+-static void cocon_init(struct vc_data *c, int init);
+-static void cocon_deinit(struct vc_data *c);
+-static void cocon_clear(struct vc_data *c, int, int, int, int);
+-static void cocon_cursor(struct vc_data *c, int mode);
+-static int cocon_switch(struct vc_data *c);
+-static int cocon_blank(struct vc_data *c, int blank, int mode_switch);
+-/* static int cocon_font_op(struct vc_data *c, struct console_font_op *op); */
+-static int cocon_set_palette(struct vc_data *c, unsigned char *table);
+-static int cocon_scrolldelta(struct vc_data *c, int lines);
+-static int cocon_set_origin(struct vc_data *c);
+-static void cocon_save_screen(struct vc_data *c);
+-static int cocon_scroll(struct vc_data *c, int t, int b, int dir, int lines);
+-static u8 cocon_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink, u8 underline, u8 reverse);
+-static void cocon_invert_region(struct vc_data *c, u16 *p, int count);
++	co_msg = co_send_message_save(&flags);
++	if (!co_msg)
++		return;
+ 
+-static const char __init *cocon_startup(void)
+-{
+-	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
-+	co_message_t* co_msg;
++	size += sizeof(msg->type);
  
 -	co_message = co_send_message_save(&flags);
 -	if (co_message) {
@@ -286,19 +261,13 @@
 -		message->type = CO_OPERATION_CONSOLE_STARTUP;
 -		co_send_message_restore(flags);
 -	}
-+	co_msg = co_send_message_save(&flags);
-+	if (!co_msg)
-+		return;
- 
-+	size += sizeof(msg->type);
-+
 +	co_msg->from = CO_MODULE_LINUX;
 +	co_msg->to = CO_MODULE_CONSOLE;
 +	co_msg->priority = CO_PRIORITY_DISCARDABLE;
 +	co_msg->type = CO_MESSAGE_TYPE_STRING;
 +	co_msg->size = sizeof(*co_msg) + size;
 +	memcpy(co_msg->data, msg, size);
-+
+ 
 +	co_send_message_restore(flags);
 +}
 +
@@ -322,14 +291,17 @@
  	/* We cannot be loaded as a module, therefore init is always 1 */
  	c->vc_can_do_color = 1;
  	c->vc_cols = 80;
-@@ -82,89 +95,43 @@
+@@ -82,89 +75,44 @@
  	c->vc_visible_origin = 0;
  	c->vc_origin = 0;
  
 -	co_message = co_send_message_save(&flags);
 -	if (!co_message)
 -		return;
--
++	co_console_message_t msg = {CO_OPERATION_CONSOLE_INIT};
++	cocon_send_message(&msg, 0);
++}
+ 
 -	message = (co_console_message_t *)co_message->data;
 -	co_message->from = CO_MODULE_LINUX;
 -	co_message->to = CO_MODULE_CONSOLE;
@@ -338,22 +310,23 @@
 -	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
 -	message->type = CO_OPERATION_CONSOLE_INIT;
 -	co_send_message_restore(flags);
-+	co_console_message_t msg = {CO_OPERATION_CONSOLE_INIT};
-+	cocon_send_message(&msg, 0);
- }
- 
+-}
 +/* --------------------------------------------------------------------- */
-+
+ 
  static void cocon_deinit(struct vc_data *c)
  {
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
--
++	co_console_message_t msg = {CO_OPERATION_CONSOLE_DEINIT};
++	cocon_send_message(&msg, 0);
++}
+ 
 -	co_message = co_send_message_save(&flags);
 -	if (!co_message)
 -		return;
--
++/* --------------------------------------------------------------------- */
+ 
 -	message = (co_console_message_t *)co_message->data;
 -	co_message->from = CO_MODULE_LINUX;
 -	co_message->to = CO_MODULE_CONSOLE;
@@ -363,13 +336,11 @@
 -	message->type = CO_OPERATION_CONSOLE_DEINIT;
 -	co_send_message_restore(flags);
 -
-+	co_console_message_t msg = {CO_OPERATION_CONSOLE_DEINIT};
-+	cocon_send_message(&msg, 0);
- }
- 
-+/* --------------------------------------------------------------------- */
-+
- static void cocon_clear(struct vc_data *c, int top, int left, int rows, int cols)
+-}
+-
+-static void cocon_clear(struct vc_data *c, int top, int left, int rows, int cols)
++static
++void cocon_clear(struct vc_data *c, int top, int left, int rows, int cols)
  {
 -	unsigned long flags;
 -	co_console_message_t *message;
@@ -435,16 +406,31 @@
  
  static void cocon_putcs(struct vc_data *conp, 
  			const unsigned short *s, int count, int yy, int xx)
-@@ -195,6 +162,8 @@
+@@ -185,8 +133,8 @@
+ 	co_message->to = CO_MODULE_CONSOLE;
+ 	co_message->priority = CO_PRIORITY_DISCARDABLE;
+ 	co_message->type = CO_MESSAGE_TYPE_STRING;
+-	co_message->size = ((char *)(&message->putcs + 1)) - ((char *)message) + 
+-		count * sizeof(unsigned short);
++	co_message->size = ((char *)(&message->putcs + 1)) - ((char *)message)
++				+ count * sizeof(unsigned short);
+ 	message->type = CO_OPERATION_CONSOLE_PUTCS;
+ 	message->putcs.x = xx;
+ 	message->putcs.y = yy;
+@@ -195,7 +143,11 @@
  	co_send_message_restore(flags);
  }
  
+-static u8 cocon_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink, u8 underline, u8 reverse)
 +/* --------------------------------------------------------------------- */
 +
- static u8 cocon_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink, u8 underline, u8 reverse)
++static
++u8 cocon_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink,
++			u8 underline, u8 reverse)
  {
  	u8 attr = color;
-@@ -213,27 +182,17 @@
+ 
+@@ -213,267 +165,199 @@
  	return attr;
  }
  
@@ -455,8 +441,9 @@
 -	unsigned long flags;
 -	co_message_t *co_message;
 -	co_console_message_t *message;
+-	unsigned long x = (unsigned long)(p - c->vc_origin);  // UPDATE: vc_origin = 0; but not yet
 +	co_console_message_t msg = {CO_OPERATION_CONSOLE_INVERT_REGION};
- 	unsigned long x = (unsigned long)(p - c->vc_origin);  // UPDATE: vc_origin = 0; but not yet
++	unsigned long x = (unsigned long)(p - c->vc_origin);
  
 -	co_message = co_send_message_save(&flags);
 -	if (co_message) {
@@ -479,7 +466,11 @@
  
  	while (count--) {
  		u16 a = scr_readw(p);
-@@ -243,237 +202,176 @@
+-		a = ((a) & 0x88ff) | (((a) & 0x7000) >> 4) | (((a) & 0x0700) << 4);
++		a = ((a) & 0x88ff) | (((a) & 0x7000) >> 4)
++			| (((a) & 0x0700) << 4);
+ 		scr_writew(a, p++);
+         }
  
  }
  
@@ -688,7 +679,10 @@
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
--
++	co_console_message_t msg = {CO_OPERATION_CONSOLE_SAVE_SCREEN};
++	cocon_send_message(&msg, 0);
++}
+ 
 -	co_message = co_send_message_save(&flags);
 -	if (co_message) {
 -		message = (co_console_message_t *)co_message->data;
@@ -700,13 +694,9 @@
 -		message->type = CO_OPERATION_CONSOLE_SAVE_SCREEN;
 -		co_send_message_restore(flags);
 -	}
-+	co_console_message_t msg = {CO_OPERATION_CONSOLE_SAVE_SCREEN};
-+	cocon_send_message(&msg, 0);
-+	return 1;
- }
- 
+-}
 +/* --------------------------------------------------------------------- */
-+
+ 
  static int cocon_scroll(struct vc_data *c, int t, int b, int dir, int lines)
  {
 -	unsigned long flags;
@@ -743,9 +733,12 @@
  	return 0;
  }
  
+-static void cocon_bmove(struct vc_data *c, int sy, int sx, int dy, int dx, int h, int w)
 +/* --------------------------------------------------------------------- */
 +
- static void cocon_bmove(struct vc_data *c, int sy, int sx, int dy, int dx, int h, int w)
++static
++void cocon_bmove(struct vc_data *c, int sy, int sx,
++			int dy, int dx, int h, int w)
  {
 +	co_console_message_t msg = {CO_OPERATION_CONSOLE_BMOVE};
 +
@@ -762,7 +755,7 @@
 +/* --------------------------------------------------------------------- */
 +
 +static
-+int cocon_font_set(struct vc_data* vc, struct console_font* f, unsigned unused_flags)
++int cocon_font_set(struct vc_data* vc, struct console_font* f, unsigned fflags)
 +{
  	unsigned long flags;
  	co_console_message_t *message;
@@ -789,13 +782,14 @@
 -	message->bmove.left = sx;
 -	message->bmove.bottom = sy + h - 1;
 -	message->bmove.right = sx + w - 1;
-+	co_message->size = ((char *)(&message->font + 1)) - ((char *)message) + data_size;
++	co_message->size = ((char *)(&message->font + 1)) - ((char *)message)
++				+ data_size;
 +	message->type = CO_OPERATION_CONSOLE_FONT_OP;
 +	message->font.width = f->width;
 +	message->font.height = f->height;
 +	message->font.count = f->charcount;
 +
-+	/* Only send char height data, instead of fixed 32 scanlines per char */
++	/* Send "compressed" font data (comes as 32 scanlines per char) */
 +	int chlen = fwb*f->height;
 +	int i;
 +	for ( i = 0; i < f->charcount; ++i )
@@ -807,7 +801,7 @@
  }
  
  /*
-@@ -498,6 +396,7 @@
+@@ -498,6 +382,7 @@
  	con_save_screen:	cocon_save_screen,
  	con_build_attr:		cocon_build_attr,
  	con_invert_region:	cocon_invert_region,
