@@ -97,9 +97,9 @@ console_main_window * console_main_window::this_ = NULL;
 console_main_window::console_main_window( )
   : super_( 640,480, "Cooperative Linux console [" COLINUX_VERSION "]" )
   , monitor_( NULL )
-  , prefs_( Fl_Preferences::USER, "coLinux.org", "FLTK console" )
   , fullscreen_mode_( false )
   , mark_mode_( false )
+  , prefs_( Fl_Preferences::USER, "coLinux.org", "FLTK console" )
 {
     // Set pointer to self for static methods
     this_ = this;

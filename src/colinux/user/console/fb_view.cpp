@@ -294,14 +294,14 @@ void console_fb_view::op_clear( int t,int l, int b,int r, cell_t chattr )
 template<typename T>
 void copy_mem( T* dest, const T* src, unsigned count )
 {
-    for ( int i = 0; i < count; ++i )
+    for ( unsigned i = 0; i < count; ++i )
         dest[i] = src[i];
 }
 
 template<typename T>
 void set_mem( T* mem, const T& value, unsigned count )
 {
-    for ( int i = 0; i < count; ++i )
+    for ( unsigned i = 0; i < count; ++i )
         mem[i] = value;
 }
 

@@ -20,8 +20,8 @@
  * Event handling starts paused, so be sure to call resume().
  */
 console_input::console_input( )
-    : monitor_( NULL )
-    , pressed_( 0 )
+    : pressed_( 0 )
+    , monitor_( NULL )
 {
     // Fill key state array with zeros
     memset( kstate_, 0, sizeof(kstate_) );

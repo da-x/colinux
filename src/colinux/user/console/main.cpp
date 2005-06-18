@@ -56,8 +56,7 @@ int parse_args( int argc, char** args, console_parameters_t& params )
         return 0;
 
     /* Parameter parsing loop */
-    int i;
-    for ( i = 1; i < argc; ++i )
+    for ( int i = 1; i < argc; ++i )
     {
         if ( !strcmp(args[i],"-h") || !strcmp(args[i],"--help") )
         {
@@ -69,6 +68,11 @@ int parse_args( int argc, char** args, console_parameters_t& params )
             if ( i + 1 == argc )
                 return i;
             params.instance_id = atoi( args[++i] );
+        }
+        else if ( Fl::arg(argc,args,i) > 0 )
+        {
+            // FLTK increments <i> for us, so decrement it
+            --i;
         }
         else
         {
@@ -121,8 +125,17 @@ int main( int argc, char **argv )
 
     // Setup main window
     app_window->start( params );
-    // Show window (need to pass args, or will use a 'non-native' scheme)
-    app_window->show( argc, argv );
+
+    /*
+     * We need to call show(argc,argv) or we will end with a 'non-native'
+     * color-scheme (at least on Windows). As the FLTK parameters were
+     * already processed in parse_args(), we just fake no-args here.
+     *
+     * Note that the user can decide to start the application minimized
+     * with "-iconic" as parameter.
+     */
+    char* fake_argv[2] = { "colinux-console-fltk", NULL };
+    app_window->show( 1, fake_argv );
 
     // Enter main window loop
     return Fl::run( );
