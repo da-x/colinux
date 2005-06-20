@@ -62,7 +62,7 @@ void select_monitor_window::on_button( Fl_Widget* w, void* v )
     }
 
     // Nothing more to do, destroy window
-    delete this_;
+    Fl::delete_widget( this_ );
 }
 
 /**

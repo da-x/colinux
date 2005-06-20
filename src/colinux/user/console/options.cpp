@@ -228,7 +228,7 @@ void console_options_window::on_button( Fl_Widget* w, void* v )
     }
 
     // All done
-    delete this_;
+    Fl::delete_widget( this_ );
 }
 
 /**

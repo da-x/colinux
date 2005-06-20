@@ -185,28 +185,23 @@ console_main_window::~console_main_window( )
  */
 void console_main_window::on_quit( Fl_Widget*, void* )
 {
-    int quit = 0;
-
-    // Ask for confirmation, but show different message if attached.
+    // Ask for confirmation, but only if attached.
     if ( this_->is_attached() )
     {
-        quit = fl_ask(  "You are currently attached to a colinux instance.\n"
-                        "The colinux instance will stay running after you exit.\n"
-                        "Do you really want to quit?" );
-        if ( quit )
-            this_->dettach( );
+	int quit = fl_ask(
+		"You are currently attached to a colinux instance.\n"
+		"The colinux instance will stay running after you exit.\n"
+		"Do you really want to quit?" );
+	if ( !quit )
+	    return;
+	this_->dettach( );
     }
-    else
-        quit = fl_ask( "Do you really want to quit?" );
 
     // Exit, saving preferences first
-    if ( quit )
-    {
-        this_->save_preferences( );
-        delete this_->wLog_;
-        this_->wLog_ = NULL;
-        Fl::delete_widget( this_ );
-    }
+    this_->save_preferences( );
+    Fl::delete_widget( this_->wLog_ );
+    this_->wLog_ = NULL;
+    Fl::delete_widget( this_ );
 }
 
 /**
