@@ -23,6 +23,9 @@
 #include <colinux/os/user/misc.h>
 #include <colinux/os/current/user/reactor.h>
 
+#define PARM_SLIRP_REDIR_TCP 0
+#define PARM_SLIRP_REDIR_UDP 1
+
 COLINUX_DEFINE_MODULE("colinux-slirp-net-daemon");
 
 /*******************************************************************************
@@ -149,12 +152,6 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 {
 	char **param_scan = argv;
 	const char *option;
-#define REDIRSIZE 256
-	char redirbuf[REDIRSIZE];
-	char *redircursor=redirbuf;
-	char *redirproto;
-	char *redirhostport;
-	char *redirclientport;
 
 	struct in_addr guest_addr;
 
@@ -179,7 +176,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 				return CO_RC(ERROR);
 			}
 
-			sscanf(*param_scan, "%d", &start_parameters->index);
+			start_parameters->index = atoi(*param_scan);
 			param_scan++;
 			continue;
 		}
@@ -192,10 +189,11 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 				return CO_RC(ERROR);
 			}
 
-			sscanf(*param_scan, "%d", (int *)&start_parameters->instance);
+			(int)start_parameters->instance = atoi(*param_scan);
 			param_scan++;
 			continue;
 		}
+
 		option = "-h";
 		if (strcmp(*param_scan, option) == 0) {
 			start_parameters->show_help = PTRUE;
@@ -203,35 +201,38 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 
 		option = "-r";
 		if (strcmp(*param_scan, option) == 0) {
+			int iProto, iHostPort, iClientPort;
+			char *p;
+
 			param_scan++;
-			memset(redirbuf,'\0', REDIRSIZE);
 			if (!(*param_scan)) {
-				co_terminal_print("conet-slirp-daemon: parameter of command line option %s not specified. Fallback to \"tcp:22:22\" \n", option);
-				strcpy(redirbuf,"tcp:22:22");
-			}
-			else
-			{
-				sscanf(*param_scan, "%s", redirbuf);
-				param_scan++;
+				co_terminal_print("conet-slirp-daemon: parameter of command line option %s not specified\n", option);
+				return CO_RC(ERROR);
 			}
 
-			redirproto=redirbuf;
-			redirproto[strlen("tcp")]='\0';
-			redirhostport=redirproto+strlen("tcp")+1;
-			redircursor=redirhostport;
-			while(*redircursor!=':' && redircursor<(redirbuf+REDIRSIZE))
-			{
-				redircursor++;
-			}
-			if(redircursor<(redirbuf+REDIRSIZE))
-			{
-				*redircursor='\0';
-				redircursor++;
-			}
-			redirclientport=redircursor;
+			// minimal len is "tcp:x:x"
+			if (strlen (*param_scan) < 7)
+				continue;
 
-			if (slirp_redir(strcmp(redirproto,"udp") == 0 ? 1 : 0, atol(redirhostport), guest_addr, atol(redirclientport)) < 0) {
-				co_terminal_print("conet-slirp-daemon: slirp redir %d failed.\n",atol(redirclientport));
+			iProto = (memicmp(*param_scan, "udp", 3) == 0)
+				? PARM_SLIRP_REDIR_UDP : PARM_SLIRP_REDIR_TCP;
+
+			// search the first ':'
+			p = strchr (*param_scan, ':');
+			if (!p)
+				continue;
+			iHostPort = atol(p+1);
+
+			// search the second ':'
+			p = strchr (p+1, ':');
+			if (!p)
+				continue;
+			iClientPort = atol(p+1);
+
+			param_scan++;
+
+			if (slirp_redir(iProto, iHostPort, guest_addr, iClientPort) < 0) {
+				co_terminal_print("conet-slirp-daemon: slirp redir %d failed.\n", iClientPort);
 			}
 			continue;
 		}

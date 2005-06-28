@@ -107,7 +107,7 @@ configure_fltk()
 
 	# Configure for cross compiling without X11.
 	./configure \
-	 --prefix=$PREFIX/$TARGET \
+	 --prefix=$PREFIX \
 	 --build=$TARGET \
 	 --host=i386-linux-linux-gnu \
 	 --without-x >>$COLINUX_BUILD_LOG 2>&1
