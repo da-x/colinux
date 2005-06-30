@@ -217,6 +217,8 @@ void co_daemon_destroy(co_daemon_t *daemon)
 	co_os_free(daemon);
 }
 
+/* Remember: Strip tool scans only this file for needed symbols */
+static
 co_rc_t co_daemon_load_symbol_and_data(co_daemon_t *daemon, 
 				       const char *symbol_name, 
 				       unsigned long *address_out,
@@ -247,6 +249,8 @@ co_rc_t co_daemon_load_symbol_and_data(co_daemon_t *daemon,
 	return rc;
 }
 
+/* Remember: Strip tool scans only this file for needed symbols */
+static
 co_rc_t co_daemon_load_symbol(co_daemon_t *daemon, 
 			      const char *symbol_name, 
 			      unsigned long *address_out)

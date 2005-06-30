@@ -124,11 +124,43 @@ compile_kernel()
 
 install_kernel()
 {
+	local STRIP="strip --strip-all"
+	local FROM_SOURCE="../src/colinux/user/daemon.c"
+	local KEEP
+
 	cd "$TOPDIR"
 	cd "$COLINUX_TARGET_KERNEL_PATH"
 	echo "Installing Kernel $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
 	mkdir -p "$COLINUX_INSTALL_DIR"
-	cp -a vmlinux $COLINUX_INSTALL_DIR
+
+	if [ "$COLINUX_KERNEL_STRIP" = "yes" ]
+	then
+		# Strip kernel image file
+
+		# Build the list of needed symbols: Grep from loader function in daemon, this lines
+		# --> rc = co_daemon_load_symbol(daemon, "init_thread_union", &import->kernel_init_task_union);
+		# --> rc = co_daemon_load_symbol_and_data(daemon, "co_arch_info", &import->kernel_co_arch_info,
+		#     _____^^^^^^^^^^^^^^^^^^^^^__________________^************^___^^^^^^______________________
+
+		KEEP=`grep "co_daemon_load_symbol" $TOPDIR/$FROM_SOURCE | \
+		  sed -n -r -e 's/^.+daemon.+\"(.+)\".+import.+$/ --keep-symbol=\1/p' | tr -d "\n"`
+		if [ -n "$KEEP" ]
+		then
+			# Kernel strip
+			$STRIP $KEEP -o $COLINUX_INSTALL_DIR/vmlinux \
+			  $COLINUX_TARGET_KERNEL_PATH/vmlinux || exit $?
+		else
+			# Function not found by grep
+			echo -e "\nWARNING: $FROM_SOURCE" 1>&2
+			echo -e "Can't get symbols for stripping! Don't strip vmlinux\n" 1>&2
+			
+			# Fallback into copy mode
+			cp -a vmlinux $COLINUX_INSTALL_DIR
+		fi
+	else
+		# Kernel file not stripped: Simply copy
+		cp -a vmlinux $COLINUX_INSTALL_DIR
+	fi
 	cd "$TOPDIR"
 }
 
