@@ -13,18 +13,19 @@ targets['executables'] = Target(
     tool = Empty(),
 )
 
-def generate_options(compiler_def_type, libs=None):
+def generate_options(compiler_def_type, libs=None, lflags=None):
     if not libs:
         libs = []
+    if not lflags:
+        lflags = []
     return Options(
         overriders = dict(
             compiler_def_type = compiler_def_type,
             compiler_strip = True,
         ),
         appenders = dict(
-        compiler_flags = [
-            '-mno-cygwin',
-        ],
+        compiler_flags = [ '-mno-cygwin' ],
+	linker_flags = lflags,
         compiler_libs = libs + [
             'user32', 'gdi32', 'ws2_32', 'ntdll', 'kernel32', 'ole32', 'uuid', 'gdi32',
             'msvcrt', 'crtdll', 'shlwapi', 
@@ -85,7 +86,7 @@ targets['colinux-console-fltk.exe'] = Target(
        Input('../../../user/console/build.o'),
     ] + user_dep,
     tool = Compiler(),    
-    mono_options = generate_options('g++', libs=['fltk']),
+    mono_options = generate_options('g++', libs=['fltk'], lflags=['-mwindows']),
 )
 
 targets['colinux-console-nt.exe'] = Target(

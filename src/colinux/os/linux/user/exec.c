@@ -33,7 +33,7 @@ co_rc_t co_launch_process(char *command_line, ...)
 	ret = system(buf2);
 
 	if (ret == -1) {
-		co_debug("error in execution (%d)\n", errno);
+		co_terminal_print("error in execution (%d)\n", errno);
 		return CO_RC(ERROR);
 	}
 

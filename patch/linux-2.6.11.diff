@@ -6762,7 +6762,7 @@ diff -urN a/fs/cofusefs/fuse_i.h b/fs/cofusefs/fuse_i.h
 diff -urN a/fs/cofusefs/inode.c b/fs/cofusefs/inode.c
 --- a/fs/cofusefs/inode.c
 +++ b/fs/cofusefs/inode.c
-@@ -0,0 +1,546 @@
+@@ -0,0 +1,545 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001	Miklos Szeredi (miklos@szeredi.hu)
@@ -7003,7 +7003,6 @@ diff -urN a/fs/cofusefs/inode.c b/fs/cofusefs/inode.c
 +		kfree(conn);
 +		conn = NULL;
 +	}
-+	cofs_volumes[index] = conn;
 +
 +	return conn; 
 +}

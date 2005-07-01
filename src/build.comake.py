@@ -8,6 +8,14 @@ from comake.settings import settings
 settings.arch = os.getenv('COLINUX_ARCH')
 settings.host_os = os.getenv('COLINUX_HOST_OS')
 
+settings.cflags = os.getenv('COLINUX_CFLAGS')
+if not settings.cflags:
+    settings.cflags = ''
+
+settings.lflags = os.getenv('COLINUX_LFLAGS')
+if not settings.lflags:
+    settings.lflags = ''
+
 if not settings.arch:
     settings.arch = 'i386'
     print "Target architecture not specified, defaulting to %s" % (settings.arch, )    
@@ -64,7 +72,11 @@ targets['build'] = Target(
         appenders=dict(
             compiler_flags=[
                 '-Wno-trigraphs', '-fno-strict-aliasing', '-Wall', 
+		settings.cflags,
             ] + compiler_flags,
+	    linker_flags=[
+		settings.lflags,
+	    ],
             compiler_includes=[
                 'src',
                 pathjoin(settings.target_kernel_path, 'include'),

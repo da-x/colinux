@@ -109,6 +109,9 @@ class Compiler(Executer):
                     continue
                 parameters.append('-D%s' % (key, ))
             parameters.append('-c')
+        else:
+            linker_flags = tool_run_inf.options.get('linker_flags', [])
+            parameters += linker_flags
 
         parameters.extend(input_pathnames)
         compiler_lib_paths = tool_run_inf.options.get('compiler_lib_paths', [])
