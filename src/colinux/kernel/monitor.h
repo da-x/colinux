@@ -14,7 +14,6 @@
 #include <colinux/common/config.h>
 #include <colinux/common/import.h>
 #include <colinux/common/ioctl.h>
-#include <colinux/common/console.h>
 #include <colinux/common/messages.h>
 #include <colinux/arch/current/mmu.h>
 #include <colinux/os/kernel/mutex.h>
@@ -76,7 +75,7 @@ typedef struct co_monitor {
 	 * Configuration data.
 	 */
 	co_config_t config;
- 
+
 	/*
 	 * The passage page
 	 */
@@ -154,13 +153,28 @@ typedef struct co_monitor {
 	struct co_manager_open_desc *connected_modules[CO_MONITOR_MODULES_COUNT];
 	co_os_mutex_t connected_modules_write_lock;
 
-	co_console_t *console;
-
         /*
 	 * initrd
 	 */
 	unsigned long initrd_address;
 	unsigned long initrd_size;
+
+	/*
+	 * Video memory
+	 *
+	 * video_buffer      : virtual address the video memory buffer
+	 * video_vm_address  : virtual address of the bufer in the guest (4MB aligned)
+	 * video_size        : size, in bytes, of the video memory.
+	 * video_user_address: virtual address of the buffer in user_space
+	 * video_user_handle : handle for the user address mapping
+	 * video_user_id     : PID of the video client process
+	 */
+	void *         video_buffer;
+	unsigned long  video_vm_address;
+	unsigned long  video_size;
+	void *         video_user_address;
+	void *         video_user_handle;
+	co_id_t        video_user_id;
 
 	/*
 	 * Structures copied directly from the vmlinux file before it

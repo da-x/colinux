@@ -1,7 +1,6 @@
 targets['common.a'] = Target(
     inputs=[
     Input('queue.o'),
-    Input('console.o'),
     Input('debug.o'),
     Input('errors.o'),
     Input('messages.o'),

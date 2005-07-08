@@ -58,6 +58,87 @@ co_rc_t co_monitor_free(co_monitor_t *cmon, void *ptr)
 	return CO_RC(OK);
 }
 
+/*
+ * Map video memory into the linux guest.
+ *
+ * Use memory below CO_VPTR_SELF_MAP, aligned at 4MB (so it can be
+ * mapped using a single page table, with a 4MB limit on size).
+ *
+ * FIXME:
+ *   - The video page table is not mapped into host.
+ *   - Check that memory size doesn't overwrite it (currently it
+ *     doesn't because we limit memory_size to 512MB).
+ *   - Also, make this more generic, because 1280x1024x32 needs
+ *     5 MB, which would need 2 page tables.
+ *   - The same if we intend to support PAE on the guest, as that
+ *     limit each page table to 512 entries, or 2MB.
+ *   - This will need to be handled in a future 64 bits port, off course.
+ */
+static co_rc_t
+guest_video_init( co_monitor_t *cmon )
+{
+	unsigned long video_map_pfn;
+	unsigned long video_map_offset;
+	unsigned long video_num_pages;
+	linux_pte_t* ptes;
+	unsigned pte;
+	co_rc_t rc;
+
+	// Align guest address at a page dir offset
+	cmon->video_vm_address  = CO_VPTR_SELF_MAP - cmon->video_size;
+	cmon->video_vm_address &= CO_ARCH_PMD_MASK;
+	video_num_pages = cmon->video_size >> CO_ARCH_PAGE_SHIFT;
+
+	co_debug_system( "VRAM guest va=%08lX pages=%d\n",
+				cmon->video_vm_address, video_num_pages );
+
+	// Allocate page for holding the video memory page table
+	rc = co_manager_get_page( cmon->manager, &video_map_pfn );
+	if ( !CO_OK(rc)) {
+		co_debug_system( "error: couldn't allocate video mem page table page!\n" );
+		return rc;
+	}
+
+	// Create PTE for it on the page directory
+	video_map_offset = ((cmon->video_vm_address >> PGDIR_SHIFT) * sizeof(linux_pte_t));
+	rc = co_monitor_create_ptes(
+		cmon,
+		cmon->import.kernel_swapper_pg_dir + video_map_offset,
+		sizeof(linux_pte_t),
+		&video_map_pfn);
+	if ( !CO_OK(rc) ) {
+		co_debug_system("error creating PTE for video map in page dir\n");
+		return rc;
+	}
+	// Map PFN, so we can fill table
+	ptes = (linux_pte_t *) co_os_map( cmon->manager, video_map_pfn );
+	if ( !ptes )
+	{
+		co_debug_system( "co_os_map(video_map_pfn) error!\n" );
+		rc = CO_RC(ERROR);
+		return rc;
+	}
+	// Fill page table with video buffer PFNs
+	for( pte = 0;  pte < CO_ARCH_PAGE_SIZE/sizeof(linux_pte_t); ++pte )
+	{
+		if ( pte < video_num_pages )
+		{
+			unsigned long host_addr = (unsigned long)cmon->video_buffer
+						+ pte*CO_ARCH_PAGE_SIZE;
+			ptes[pte] = co_os_virt_to_phys((void*)host_addr)
+				| _PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED;
+		}
+		else
+		{
+			ptes[pte] = 0;
+		}
+	}
+	// Unmap video map pfn. we don't need it mapped anymore
+	co_os_unmap( cmon->manager, ptes, video_map_pfn );
+	
+	return CO_RC(OK);
+}
+
 static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 {
 	co_rc_t rc = CO_RC(OK);
@@ -107,20 +188,23 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 	if (!CO_OK(rc)) {
 		co_debug("error adding reversed physical mapping (%x)\n", rc);
 		goto out_error;
-	}	
+	}
 
+	// Allocate a page and map it in CO_VPTR_SELF_MAP
 	rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP, CO_ARCH_PAGE_SIZE, pfns);
 	if (!CO_OK(rc)) {
 		co_debug("error initializing self_map (%x)\n", rc);
 		goto out_error;
 	}
 
+	// Get PFN of allocated page
 	rc = co_monitor_get_pfn(cmon, CO_VPTR_SELF_MAP, &self_map_pfn);
 	if (!CO_OK(rc)) {
 		co_debug("error getting self_map pfn (%x)\n", rc);
 		goto out_error;
 	}
 
+	// Create PTE for it on the page directory
 	self_map_page_offset = ((CO_VPTR_SELF_MAP >> PGDIR_SHIFT) * sizeof(linux_pte_t));
 	co_debug_ulong(self_map_page_offset);
 
@@ -135,6 +219,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		goto out_error;
 	}	
 
+	// Map passage page in the self map
 	passage_page_offset = ((CO_VPTR_PASSAGE_PAGE & ((1 << PGDIR_SHIFT) - 1)) >> CO_ARCH_PAGE_SHIFT) * sizeof(linux_pte_t);
 	passage_page_pfn = co_os_virt_to_phys(cmon->passage_page) >> CO_ARCH_PAGE_SHIFT;
 
@@ -149,6 +234,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		goto out_error;
 	}	
 
+	// Map the self map in itself (as first entry)
 	rc = co_monitor_create_ptes(
 		cmon, 
 		CO_VPTR_SELF_MAP, 
@@ -160,25 +246,32 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		goto out_error;
 	}	
 
+	// Map IO buffer in the self page table
 	long io_buffer_page = 0;
 	long io_buffer_num_pages = CO_VPTR_IO_AREA_SIZE >> CO_ARCH_PAGE_SHIFT;
 	long io_buffer_offset = ((CO_VPTR_IO_AREA_START & ((1 << PGDIR_SHIFT) - 1)) >> CO_ARCH_PAGE_SHIFT) 
-		* sizeof(linux_pte_t);
+				* sizeof(linux_pte_t);
 	unsigned long io_buffer_host_address = (unsigned long)(cmon->io_buffer);
 
 	for (io_buffer_page=0; io_buffer_page < io_buffer_num_pages; io_buffer_page++) {
 		unsigned long io_buffer_pfn = co_os_virt_to_phys((void *)io_buffer_host_address) >> CO_ARCH_PAGE_SHIFT;
 		
+		// Set PTE for this page
 		rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP + io_buffer_offset,
 					    sizeof(linux_pte_t), &io_buffer_pfn);
 		if (!CO_OK(rc)) {
 			co_debug("error initializing io buffer (%x, %d)\n", rc, io_buffer_page);
 			goto out_error;
 		}
-		
+
 		io_buffer_offset += sizeof(linux_pte_t);
 		io_buffer_host_address += CO_ARCH_PAGE_SIZE;
 	}
+
+	// Map video memory into the guest OS
+	rc = guest_video_init( cmon );
+	if ( !CO_OK(rc) )
+	        goto out_error;
 
 	co_debug("initialization finished\n");
 
@@ -463,16 +556,6 @@ static void incoming_message(co_monitor_t *cmon, co_message_t *message)
 
 	if (message->to == CO_MODULE_CONET0)
 		co_debug_lvl(network, 14, "message received end: %x %x", cmon, message);
-
-	switch (message->to) {
-	case CO_MODULE_CONSOLE:
-		if (message->from == CO_MODULE_LINUX) {
-			co_console_op(cmon->console, (co_console_message_t *)message->data);
-		}
-		break;
-	default:
-		break;
-	}
 }
 
 co_rc_t co_monitor_message_from_user(co_monitor_t *monitor, co_manager_open_desc_t opened, co_message_t *message)
@@ -490,7 +573,6 @@ co_rc_t co_monitor_message_from_user(co_monitor_t *monitor, co_manager_open_desc
 
 	return rc;
 }
-
 
 /*
  * iteration - returning PTRUE means that the driver will return 
@@ -733,7 +815,7 @@ static co_rc_t alloc_pp_ram_mapping(co_monitor_t *monitor)
 				partial_page_table_size);
 		}
 	}
-	
+
 	if (!CO_OK(rc)) {
 		free_pseudo_physical_memory(monitor);
 	}
@@ -797,7 +879,7 @@ static co_rc_t load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_t *p
 	 * Put initrd at the end of the address space.
 	 */
 	address = CO_ARCH_KERNEL_OFFSET + cmon->memory_size - (pages << CO_ARCH_PAGE_SHIFT);
-	
+
 	co_debug("initrd address: %x (0x%x pages)\n", address, pages);
 
 	if (address <= cmon->core_end + 0x100000) {
@@ -818,7 +900,6 @@ static co_rc_t load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_t *p
 
 	return rc;
 }
-
 
 static co_rc_t start(co_monitor_t *cmon)
 {
@@ -845,6 +926,8 @@ static co_rc_t start(co_monitor_t *cmon)
 	co_passage_page->params[1] = cmon->memory_size;
 	co_passage_page->params[2] = cmon->initrd_address;
 	co_passage_page->params[3] = cmon->initrd_size;
+	co_passage_page->params[4] = cmon->video_vm_address;
+	co_passage_page->params[5] = cmon->video_size;
 
 	co_memcpy(&co_passage_page->params[10], cmon->config.boot_parameters_line, 
 	       sizeof(cmon->config.boot_parameters_line));
@@ -898,13 +981,9 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	cmon->state = CO_MONITOR_STATE_EMPTY;
 	cmon->id = co_os_current_id();
 
-	rc = co_console_create(80, 25, 0, &cmon->console);
-	if (!CO_OK(rc))
-		goto out_free_monitor;
-	
 	rc = co_os_mutex_create(&cmon->connected_modules_write_lock);
 	if (!CO_OK(rc))
-		goto out_free_console;
+		goto out_free_monitor;
 
 	rc = co_os_mutex_create(&cmon->linux_message_queue_mutex);
 	if (!CO_OK(rc))
@@ -918,12 +997,39 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 
 	cmon->io_buffer = (co_io_buffer_t *)(co_os_malloc(CO_VPTR_IO_AREA_SIZE));
 	if (cmon->io_buffer == NULL)
+	{
+		rc = CO_RC(OUT_OF_MEMORY);
 		goto out_free_wait;
+	}
 	co_memset(cmon->io_buffer, 0, CO_VPTR_IO_AREA_SIZE);
+
+	/*
+	 * Initialize video memory buffer.
+	 * params->config.video_size comes in KB
+	 * We don't allow more than 4MB of video, and assure 4KB at least.
+	 */
+	if ( params->config.video_size <= 0 )
+		params->config.video_size = 64;
+	else if ( params->config.video_size < 4 )
+		params->config.video_size = 4;
+	else if ( params->config.video_size > 4096 )
+		params->config.video_size = 4096;
+	cmon->video_user_id = CO_INVALID_ID;
+	cmon->video_size = params->config.video_size << 10;
+	cmon->video_buffer = co_os_malloc( cmon->video_size );
+	if ( cmon->video_buffer == NULL )
+	{
+		rc = CO_RC(OUT_OF_MEMORY);
+		co_debug_system( "Error allocating video buffer (size=%d KB)\n",
+				cmon->video_size >> 10 );
+		goto out_free_buffer;
+	}
+	/* By zeroing the video buffer we are also locking it */
+	co_memset(cmon->video_buffer, 0, cmon->video_size);
 
 	rc = alloc_shared_page(cmon);
 	if (!CO_OK(rc))
-		goto out_free_buffer;
+		goto out_free_video;
 
 	params->shared_user_address = cmon->shared_user_address;
 	rc = co_queue_init(&cmon->linux_message_queue);
@@ -1037,6 +1143,9 @@ out_free_linux_message_queue:
 out_free_shared_page:
 	free_shared_page(cmon);
 
+out_free_video:
+	co_os_free(cmon->video_buffer);
+
 out_free_buffer:
 	co_os_free(cmon->io_buffer);
 
@@ -1048,9 +1157,6 @@ out_free_mutex2:
 
 out_free_mutex1:
 	co_os_mutex_destroy(cmon->linux_message_queue_mutex);
-
-out_free_console:
-	co_console_destroy(cmon->console);
 
 out_free_monitor:
 	co_os_free(cmon);
@@ -1089,8 +1195,7 @@ static co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
         co_os_timer_destroy(cmon->timer);
 	co_os_mutex_destroy(cmon->connected_modules_write_lock);
 	co_os_mutex_destroy(cmon->linux_message_queue_mutex);
-	co_console_destroy(cmon->console);
-	cmon->console = NULL;
+	co_os_free(cmon->video_buffer);
 
 	co_debug("after free: %d blocks\n", cmon->blocks_allocated);
 	co_os_free(cmon);
@@ -1116,6 +1221,66 @@ static void send_monitor_end_messages(co_monitor_t *cmon)
 	co_os_mutex_release(cmon->connected_modules_write_lock);
 }
 
+/*
+ * Map video buffer into user space.
+ */
+static co_rc_t
+co_monitor_user_video_attach( co_monitor_t *monitor,
+				co_monitor_ioctl_video_attach_t *params )
+{
+	co_rc_t rc;
+	unsigned long video_pages = monitor->video_size >> CO_ARCH_PAGE_SHIFT;
+	co_id_t user_id = co_os_current_id( );
+
+	/* FIXME: Return a CO_RC_ALREADY_ATTACHED like error */
+	if ( monitor->video_user_id != CO_INVALID_ID )
+		return CO_RC(ERROR);
+
+	/* Create user space mapping */
+	rc = co_os_userspace_map( monitor->video_buffer, video_pages,
+		&monitor->video_user_address, &monitor->video_user_handle );
+	if ( !CO_OK(rc) )
+	{
+		co_debug_system( "Error mapping video into user space! (rc=%x)\n", rc );
+		return rc;
+	}
+
+	co_debug_system( "video_user_address=%08lXh\n", monitor->video_user_address );
+
+	/* Remember which process "owns" the video mapping */
+	monitor->video_user_id = user_id;
+
+	/* Return user mapped video buffer address */
+	params->video_buffer = monitor->video_user_address;
+
+	return CO_RC(OK);
+}
+
+/*
+ * Unmap video buffer from user space.
+ *
+ * This can only be done on video client device close, or else it gets
+ * a SEGFAULT when accessing the video buffer latter.
+ */
+static
+void co_monitor_user_video_dettach( co_monitor_t *monitor )
+{
+	unsigned long video_pages = monitor->video_size >> CO_ARCH_PAGE_SHIFT;
+
+	co_os_userspace_unmap( monitor->video_user_address,
+				monitor->video_user_handle, video_pages );
+
+	monitor->video_user_address = monitor->video_user_handle = NULL;
+	monitor->video_user_id = CO_INVALID_ID;
+}
+
+/*
+ * Decrement monitor reference count.
+ *
+ * Each daemon opens a connection to the driver. The reference count is
+ * incremented/decremented on every open/close.
+ * Only after the count reaches zero, the monitor object is destroyed.
+ */
 co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monitor_owner)
 {
 	co_manager_t *manager;
@@ -1124,6 +1289,9 @@ co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monit
 	bool_t end_messages = PFALSE;
 
 	manager = cmon->manager;
+
+	if (co_os_current_id() == cmon->video_user_id)
+		co_monitor_user_video_dettach(cmon);
 
 	co_os_mutex_acquire(manager->lock);
 	new_count = cmon->refcount;
@@ -1187,6 +1355,8 @@ static co_rc_t co_monitor_user_reset(co_monitor_t *monitor)
 	co_os_mutex_release(monitor->manager->lock);
 
 	co_memset(monitor->io_buffer, 0, CO_VPTR_IO_AREA_SIZE);
+	/* By zeroing the video buffer, we are also locking it */
+	co_memset(monitor->video_buffer, 0, monitor->video_size);
 
 	monitor->state = CO_MONITOR_STATE_INITIALIZED;
 	monitor->termination_reason = CO_TERMINATE_END;
@@ -1204,47 +1374,6 @@ static co_rc_t co_monitor_user_get_state(co_monitor_t *monitor, co_monitor_ioctl
 	return CO_RC(OK);
 }
 
-static co_rc_t co_monitor_user_get_console(co_monitor_t *monitor, co_monitor_ioctl_get_console_t *params)
-{
-	co_message_t *co_message = NULL;
-	co_console_message_t *message = NULL;
-	unsigned long size;
-	int y;
-
-	message = NULL;
-	size = (((char *)(&message->putcs + 1)) - ((char *)message)) + 
-		(monitor->console->x * sizeof(co_console_cell_t));
-
-	params->x = monitor->console->x;
-	params->y = monitor->console->y;
-							  
-	co_message = co_os_malloc(size + sizeof(*co_message));
-	if (!co_message)
-		return CO_RC(ERROR);
-
-	message = (co_console_message_t *)co_message->data;
-	co_message->from = CO_MODULE_LINUX;
-	co_message->to = CO_MODULE_CONSOLE;
-	co_message->priority = CO_PRIORITY_DISCARDABLE;
-	co_message->type = CO_MESSAGE_TYPE_STRING;
-	co_message->size = size; 
-	message->type = CO_OPERATION_CONSOLE_PUTCS;
-	message->putcs.x = 0;
-	message->putcs.count = monitor->console->x;
-
-	for (y=0; y < monitor->console->y; y++) {
-		co_memcpy(&message->putcs.data, 
-			  &monitor->console->screen[y*monitor->console->x], 
-			  monitor->console->x * sizeof(unsigned short));
-		message->putcs.y = y;
-		incoming_message(monitor, co_message);
-	}
-
-	co_os_free(co_message);
-
-	return CO_RC(OK);
-}
-
 co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buffer,
 			 unsigned long in_size, unsigned long out_size, 
 			 unsigned long *return_size, co_manager_open_desc_t opened_manager)
@@ -1257,13 +1386,13 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 		opened_manager->monitor = NULL;
 		return CO_RC_OK;
 	}
-	case CO_MONITOR_IOCTL_GET_CONSOLE: {
-		co_monitor_ioctl_get_console_t *params;
+	case CO_MONITOR_IOCTL_VIDEO_ATTACH: {
+		co_monitor_ioctl_video_attach_t *params;
 
 		*return_size = sizeof(*params);
 		params = (typeof(params))(io_buffer);
 
-		return co_monitor_user_get_console(cmon, params);
+		return co_monitor_user_video_attach(cmon, params);
 	}
 	default:
 		break;

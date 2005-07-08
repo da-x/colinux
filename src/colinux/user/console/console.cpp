@@ -12,7 +12,7 @@
 #include "main.h"
 #include "about.h"
 #include "input.h"
-#include "fb_view.h"
+#include "screen.h"
 #include "options.h"
 #include "log_window.h"
 #include "select_monitor.h"
@@ -30,6 +30,7 @@ extern "C" {
 #include <stdio.h>
 
 
+/* ----------------------------------------------------------------------- */
 /**
  * To be removed after all actions implemented...
  *
@@ -41,6 +42,7 @@ void console_main_window::unimplemented( Fl_Widget* w, void* )
     Fl::warning( "Function not implemented yet!" );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Window menu items.
  *
@@ -82,6 +84,7 @@ Fl_Menu_Item console_main_window::menu_items_[]
         { 0 }
     };
 
+/* ----------------------------------------------------------------------- */
 /**
  * Static pointer to the instantiated window.
  *
@@ -91,6 +94,7 @@ Fl_Menu_Item console_main_window::menu_items_[]
  */
 console_main_window * console_main_window::this_ = NULL;
 
+/* ----------------------------------------------------------------------- */
 /**
  * Class constructor.
  */
@@ -127,7 +131,7 @@ console_main_window::console_main_window( )
     {
         const int bdx = Fl::box_dx( FL_THIN_DOWN_FRAME );
         const int bdy = Fl::box_dx( FL_THIN_DOWN_FRAME );
-        wTerminal_ = new console_fb_view( bdx, bdy + mh,
+        wScreen_ = new console_screen( bdx, bdy + mh,
                                             640 + bdx*2, 400 + bdy*2 );
     }
     wScroll_->end( );
@@ -171,6 +175,7 @@ console_main_window::console_main_window( )
     Fl::add_idle( on_idle );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Release any resources not automatically allocated.
  */
@@ -180,6 +185,7 @@ console_main_window::~console_main_window( )
     co_reactor_destroy( reactor_ );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * "File/Quit" Menu Handler
  */
@@ -204,6 +210,7 @@ void console_main_window::on_quit( Fl_Widget*, void* )
     Fl::delete_widget( this_ );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Use params for setup and show window.
  *
@@ -235,11 +242,12 @@ int console_main_window::start( console_parameters_t &params )
     /* Ignore errors, as we can attach latter */
 
     // Make sure the console window starts with the focus
-    wTerminal_->take_focus( );
+    wScreen_->take_focus( );
 
     return 0;
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Window main event handler
  */
@@ -267,10 +275,10 @@ int console_main_window::handle( int event )
     case FL_DRAG:
     case FL_MOUSEWHEEL:
         // Mark mode enabled?
-        if ( mark_mode_ && Fl::event_inside(wTerminal_) )
+        if ( mark_mode_ && Fl::event_inside(wScreen_) )
             return handle_mark_event( event );
         // Pass mouse messages to colinux, if attached
-        if ( is_attached() && Fl::event_inside(wTerminal_) )
+        if ( is_attached() && Fl::event_inside(wScreen_) )
         {
 //            handle_mouse_event( );
 //            return 1;
@@ -304,6 +312,7 @@ int console_main_window::handle( int event )
     return super_::handle( event );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Fetches mouse event data and sends it to the colinux instance.
  */
@@ -312,8 +321,8 @@ void console_main_window::handle_mouse_event( )
     co_mouse_data_t md = { 0,0,0,0 };
 
     // Get x,y relative to the termninal screen
-    int x = wTerminal_->mouse_x( Fl::event_x() );
-    int y = wTerminal_->mouse_y( Fl::event_y() );
+    int x = wScreen_->mouse_x( Fl::event_x() );
+    int y = wScreen_->mouse_y( Fl::event_y() );
     // Transform to the comouse virtual screen size
     /*
      * FIXME:
@@ -322,8 +331,8 @@ void console_main_window::handle_mouse_event( )
      *      Need to check why only these values work, and not the 2048 max.
      *      An alternative is to have a calibration option.
      */
-    md.abs_x = 1024*x / wTerminal_->w();
-    md.abs_y =  768*y / wTerminal_->h();
+    md.abs_x = 1024*x / wScreen_->w();
+    md.abs_y =  768*y / wScreen_->h();
 
     // Get button and mousewheel state
     unsigned state = Fl::event_state();
@@ -343,6 +352,7 @@ void console_main_window::handle_mouse_event( )
     input_.send_mouse_event( md );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Center given window inside this window.
  */
@@ -351,6 +361,7 @@ void console_main_window::center_widget( Fl_Widget* win )
     win->position( x()+(w()-win->w())/2, y()+(h()-win->h())/2 );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * "Help/About" Menu Handler
  */
@@ -364,10 +375,10 @@ void console_main_window::on_about( Fl_Widget*, void* )
     win->show( );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * "Monitor/Select..." Menu Handler
  */
-
 void console_main_window::on_select( Fl_Widget*, void* )
 {
     assert( this_ );
@@ -379,6 +390,7 @@ void console_main_window::on_select( Fl_Widget*, void* )
     // The dialog will "awake" us with the selected ID and destroy itself
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * "File/Options" Menu Handler
  *
@@ -395,6 +407,7 @@ void console_main_window::on_options( Fl_Widget*, void* )
     // The window will "awake" us with the options selected and destroy itself
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * "Monitor/Attach" Menu Handler
  *
@@ -409,6 +422,7 @@ void console_main_window::on_attach( Fl_Widget*, void* )
             Fl::error( "No colinux instance could be attached!" );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * "Monitor/Dettach" Menu Handler
  *
@@ -420,6 +434,7 @@ void console_main_window::on_dettach( Fl_Widget*, void* )
     this_->dettach( );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * "Monitor/Halt" & "Monitor/Reboot" & "Monitor/Poweroff"
  *
@@ -453,6 +468,7 @@ void console_main_window::on_power( Fl_Widget*, void* v )
     co_user_monitor_message_send( this_->monitor_, &msg.message );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Write text in log window.
  */
@@ -470,29 +486,32 @@ void console_main_window::log( const char *format, ... )
         wLog_->add( buf );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Write text in status bar.
  */
 void console_main_window::status( const char *format, ... )
 {
-    // We need to hold a static buffer, as FLTK v1.1.4 Fl_Widget seems to not
-    // have copy_label() (at least 1.1.6 does)
-    static char buf[512];
+    char buf[512];
     va_list ap;
 
     va_start( ap, format );
     vsnprintf( buf, sizeof(buf), format, ap );
+    buf[sizeof(buf)-1] = '\0';  /* Make sure it's terminated */
     va_end( ap );
 
-    status_line_->label( buf );
+    status_line_->copy_label( buf );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Returns PID of first monitor.
  *
  * If none found, returns CO_INVALID_ID.
  *
  * TODO: Find first monitor not already attached.
+ *       It still isn't possible to get the first non-attached monitor, but
+ *       now it fails to attach if already attached.
  */
 co_id_t console_main_window::find_first_monitor( )
 {
@@ -512,20 +531,12 @@ co_id_t console_main_window::find_first_monitor( )
     return list.ids[0];
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Called when a new message is received from the colinux instance.
  */
 void console_main_window::handle_message( co_message_t * msg )
 {
-    // Messages from the colinux instance
-    if ( msg->from == CO_MODULE_LINUX )
-    {
-        co_console_message_t * cons_msg;
-        cons_msg = reinterpret_cast<co_console_message_t *>( msg->data );
-        wTerminal_->handle_console_event( cons_msg );
-        return;
-    }
-
     // Messages received from other modules (daemons)
     if ( msg->type == CO_MESSAGE_TYPE_STRING )
     {
@@ -542,6 +553,7 @@ void console_main_window::handle_message( co_message_t * msg )
             co_module_repr(msg->from, &mod_name) );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Attach to the given instance ID
  */
@@ -549,9 +561,8 @@ bool console_main_window::attach( co_id_t id )
 {
     co_rc_t                         rc;
     co_module_t                     modules[1] = { CO_MODULE_CONSOLE, };
-    co_monitor_ioctl_get_console_t  ioctl_con;
+    co_monitor_ioctl_video_attach_t ioctl_video;
     co_user_monitor_t           *   mon;
-    co_console_t                *   con;
 
     if ( is_attached() )
     {
@@ -570,26 +581,21 @@ bool console_main_window::attach( co_id_t id )
         return false;
     }
 
-    rc = co_user_monitor_get_console( mon, &ioctl_con );
+    /* Get pointer to shared video buffer */
+    rc = co_user_monitor_video_attach( mon, &ioctl_video );
     if ( !CO_OK(rc) )
     {
-        log( "Monitor%d: Error getting console! (rc=%X)\n", id, rc );
+        log( "Monitor%d: Error attaching video output! (rc=%X)\n", id, rc );
         co_user_monitor_close( mon );
         return false;
     }
 
-    rc = co_console_create( ioctl_con.x, ioctl_con.y, 0, &con );
-    if ( !CO_OK(rc) )
-    {
-        log( "Monitor%d: Error creating console! (rc=%X)\n", id, rc );
-        co_user_monitor_close( mon );
-        return false;
-    }
+    /* Start rendering coLinux screen */
+    wScreen_->attach( ioctl_video.video_buffer );
 
     attached_id_ = id;
     monitor_ = mon;
 
-    wTerminal_->attach( con );
     resize_around_console( );
     input_.resume( monitor_ );
 
@@ -599,6 +605,7 @@ bool console_main_window::attach( co_id_t id )
     return true;
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Dettach the current attached console.
  */
@@ -610,7 +617,7 @@ void console_main_window::dettach( )
     // Stop the input event handling, but first reset it
     input_.reset( false );
     input_.pause( );
-    wTerminal_->dettach( );
+    wScreen_->dettach( );
     co_user_monitor_close( monitor_ );
     monitor_ = NULL;
 
@@ -618,6 +625,7 @@ void console_main_window::dettach( )
     status( "Monitor %d dettached", attached_id_ );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Called when idle to check the connection status and thread messages.
  */
@@ -625,17 +633,7 @@ void console_main_window::on_idle( void* )
 {
     assert( this_ );
 
-    if ( !this_->is_attached() )
-    {
-        /*
-         * With FLTK 1.1.6, on_idle is called a lot, so we need to sleep
-         * for a while or the CPU will always be at 100%.
-         * A 10 msecs sleep seems to be enough.
-         */
-        // FIXME: Use a portable msleep [implement co_os_msleep(msecs)]
-        ::Sleep( 10 );
-    }
-    else
+    if ( this_->is_attached() )
     {
         // Check reactor messages and dettach on connection lost
         co_rc_t rc = co_reactor_select( this_->reactor_, 10 );
@@ -671,6 +669,9 @@ void console_main_window::on_idle( void* )
                 this_->dettach( );
             this_->attach( msg->value );
             break;
+        case TMSG_VIEW_RESIZE:
+            this_->wScroll_->redraw();
+            break;
         default:
             this_->log( "Unkown thread message!!!\n" );
         }
@@ -678,6 +679,7 @@ void console_main_window::on_idle( void* )
     }
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Called by the reactor when a message is received from the attached
  * colinux instance.
@@ -704,13 +706,14 @@ co_rc_t console_main_window::reactor_data(
     return CO_RC(OK);
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Adjust window size to the console size.
  */
 void console_main_window::resize_around_console( )
 {
-    int fit_x = wTerminal_->w() + 2*Fl::box_dx(wScroll_->box());
-    int fit_y = wTerminal_->h() + 2*Fl::box_dy(wScroll_->box());
+    int fit_x = wScreen_->w() + 2*Fl::box_dx(wScroll_->box());
+    int fit_y = wScreen_->h() + 2*Fl::box_dy(wScroll_->box());
     int w_diff = wScroll_->w() - fit_x;
     int h_diff = wScroll_->h() - fit_y;
 
@@ -718,6 +721,7 @@ void console_main_window::resize_around_console( )
         size( w() - w_diff, h() - h_diff );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * "Inspect/..." menu handler.
  *
@@ -784,6 +788,7 @@ void console_main_window::on_inspect( Fl_Widget*, void* v )
     }
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * "View/..." menu handler
  */
@@ -845,6 +850,7 @@ void console_main_window::on_change_view( Fl_Widget*, void* data )
     }
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Handler for show/hide log window.
  *
@@ -864,10 +870,12 @@ void console_main_window::on_show_hide_log( Fl_Widget* w, void* v )
     this_->update_ui_state( );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Load preferences using FLTK Fl_Preferences portable way.
  *
- * TODO: Check if outside screen boundaries.
+ * FIXME: Check if outside screen boundaries.
+ * FIXME: I have read some reports FLTK is not multi-monitors ready.
  */
 void console_main_window::load_preferences( )
 {
@@ -881,6 +889,7 @@ void console_main_window::load_preferences( )
         resize( ox,oy, ow,oh );
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Save preferences using FLTK Fl_Preferences portable way.
  *
@@ -899,6 +908,7 @@ void console_main_window::save_preferences( )
     }
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Enable/Disable menu item state, by callback routine.
  *
@@ -920,6 +930,7 @@ void console_main_window::set_menu_state( Fl_Callback* handler, bool enabled )
     }
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Returns first menu item with the specified callback and user data.
  */
@@ -936,6 +947,7 @@ console_main_window::get_menu_item( Fl_Callback* handler, int id )
     return menu_items_[count-1];
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Gray/enable out menu items & update status bar
  */
@@ -954,6 +966,7 @@ void console_main_window::update_ui_state( )
         mi.clear();
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Paste contents of the Clipboard into colinux.
  */
@@ -964,6 +977,10 @@ void console_main_window::on_paste( Fl_Widget*, void* )
     Fl::paste( *this_ );
 }
 
+/* ----------------------------------------------------------------------- */
+/*
+ * Start "Mark" action, that is copy from console screen buffer.
+ */
 void console_main_window::on_mark( Fl_Widget*, void* )
 {
     assert( this_ && !this_->mark_mode_);
@@ -975,6 +992,7 @@ void console_main_window::on_mark( Fl_Widget*, void* )
     this_->mark_mode_ = true;
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Handle mouse messages events during "mark" mode.
  */
@@ -988,10 +1006,10 @@ int console_main_window::handle_mark_event( int event )
         my = Fl::event_y();
         break;
     case FL_DRAG:
-        wTerminal_->set_marked_text( mx,my, Fl::event_x(),Fl::event_y() );
+        wScreen_->set_marked_text( mx,my, Fl::event_x(),Fl::event_y() );
         break;
     case FL_RELEASE:
-        wTerminal_->set_marked_text( mx,my, Fl::event_x(),Fl::event_y() );
+        wScreen_->set_marked_text( mx,my, Fl::event_x(),Fl::event_y() );
         end_mark_mode( );
         return 1;
     default:
@@ -1000,6 +1018,7 @@ int console_main_window::handle_mark_event( int event )
     return 1;
 }
 
+/* ----------------------------------------------------------------------- */
 /**
  * Stops copy from console (mark) mode.
  */
@@ -1009,8 +1028,9 @@ void console_main_window::end_mark_mode( )
     input_.resume( monitor_ );
     set_menu_state( on_mark, true );
     set_menu_state( on_paste, true );
+
     // Get marked text
-    const char* buf = wTerminal_->get_marked_text( );
+    const char* buf = wScreen_->get_marked_text( );
 
     if  ( !buf )
     {
@@ -1023,5 +1043,6 @@ void console_main_window::end_mark_mode( )
         status( "%d bytes selected.", len );
     }
 
-    wTerminal_->clear_marked_text( );
+    // Clear marking on the screen view
+    wScreen_->clear_marked_text( );
 }

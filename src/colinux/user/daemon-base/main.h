@@ -20,7 +20,6 @@ extern "C" {
 #include <colinux/os/alloc.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/daemon.h>
-#include <colinux/common/console.h>
 #include <colinux/common/libc.h>
 }
 

@@ -59,9 +59,9 @@ typedef enum {
 	CO_MONITOR_IOCTL_RUN,
 	CO_MONITOR_IOCTL_STATUS,
 	CO_MONITOR_IOCTL_LOAD_INITRD, 
-	CO_MONITOR_IOCTL_GET_CONSOLE,
 	CO_MONITOR_IOCTL_GET_STATE,
 	CO_MONITOR_IOCTL_RESET,
+	CO_MONITOR_IOCTL_VIDEO_ATTACH,
 } co_monitor_ioctl_op_t;
 
 /* interface for CO_MANAGER_IOCTL_MONITOR: */
@@ -138,11 +138,11 @@ typedef struct {
 	unsigned char buf[0];
 } co_monitor_ioctl_load_initrd_t;
 
-/* interface for CO_MONITOR_IOCTL_GET_CONSOLE: */
+/* interface for CO_MONITOR_IOCTL_VIDEO_ATTACH: */
 typedef struct {
 	co_manager_ioctl_monitor_t pc;
-	unsigned long x, y;
-} co_monitor_ioctl_get_console_t;
+	void * video_buffer;    /* shared video buffer as output */
+} co_monitor_ioctl_video_attach_t;
 
 typedef struct {
 	unsigned long line;

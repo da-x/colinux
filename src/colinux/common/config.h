@@ -158,6 +158,11 @@ typedef struct co_config {
 	unsigned long ram_size;
 
 	/*
+	 * Size of the video memory (in KB)
+	 */
+	unsigned long video_size;
+
+	/*
 	 * The pathname of the initrd file.
 	 */
 	bool_t initrd_enabled;

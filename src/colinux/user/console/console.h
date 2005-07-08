@@ -26,7 +26,7 @@ extern "C" {
 #include <FL/Fl_Double_Window.H>
 
 
-class console_fb_view;
+class console_screen;
 class console_log_window;
 struct console_parameters_t;
 
@@ -53,7 +53,7 @@ public:
     enum tm_id
     {
         TMSG_LOG_WINDOW, TMSG_MONITOR_SELECT, TMSG_OPTIONS,
-        TMSG_LAST
+        TMSG_VIEW_RESIZE, TMSG_LAST
     };
     /**
      * Thread messages data structure.
@@ -137,10 +137,10 @@ private:
 
     Fl_Preferences          prefs_;             // Application preferences
 
-    // Child windows
+    // Child widgets
     Fl_Menu_Bar         *   menu_;
     Fl_Scroll           *   wScroll_;
-    console_fb_view     *   wTerminal_;
+    console_screen      *   wScreen_;
     console_log_window  *   wLog_;
     Fl_Group            *   wStatus_;
     Fl_Box              *   status_line_;

@@ -13,7 +13,6 @@
 
 #include <colinux/common/config.h>
 #include <colinux/common/messages.h>
-#include <colinux/common/console.h>
 
 #include "elf_load.h"
 #include "monitor.h"
