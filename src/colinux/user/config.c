@@ -467,6 +467,15 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 		
 	co_terminal_print("configuring %d MB of virtual RAM\n", conf->ram_size);
 
+	rc = co_cmdline_get_next_equality_int_value(cmdline, "video_mem", (int *)&conf->video_size, &exists);
+	if (!CO_OK(rc))
+		return rc;
+
+	if (!exists)
+		conf->video_size = 1024;
+
+	co_terminal_print("configuring %d KB of video memory\n", conf->video_size);
+
 	rc = parse_args_config_cobd(cmdline, conf);
 	if (!CO_OK(rc))
 		return rc;

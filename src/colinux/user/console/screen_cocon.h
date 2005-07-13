@@ -27,7 +27,7 @@ class screen_cocon_render : public screen_render
 public:
      screen_cocon_render( cocon_video_mem_info * info );
     ~screen_cocon_render( );
-    unsigned long id() const            { return info_.header.magic; }
+    unsigned long id() const            { return CO_VIDEO_MAGIC_COCON; }
     int w() const                       { return w_; }
     int h() const                       { return h_; }
     void reset( );

@@ -28,7 +28,7 @@ public:
      screen_cofb_render( cofb_video_mem_info * info );
     ~screen_cofb_render( );
 
-    unsigned long id() const            { return info_.header.magic; }
+    unsigned long id() const            { return CO_VIDEO_MAGIC_COFB; }
     int w() const                       { return info_.width; }
     int h() const                       { return info_.height; }
     void reset( );

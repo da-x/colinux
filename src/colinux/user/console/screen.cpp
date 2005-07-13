@@ -180,6 +180,7 @@ bool console_screen::engine_init( co_video_header* video )
 
     // Resize widget acording to viewer
     size( render_->w(), render_->h() );
+
     return true;
 }
 
