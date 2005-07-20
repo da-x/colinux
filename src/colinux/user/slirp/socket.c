@@ -412,7 +412,8 @@ sorecvfrom(so)
 	  udp_detach(so);
 	} else {                            	/* A "normal" UDP packet */
 	  struct mbuf *m;
-	  int len, n;
+	  int len;
+	  unsigned long n;
 
 	  if (!(m = m_get())) return;
 	  m->m_data += if_maxlinkhdr;

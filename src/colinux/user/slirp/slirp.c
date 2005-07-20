@@ -590,7 +590,7 @@ void arp_input(const uint8_t *pkt, int pkt_len)
         break;
     case ARPOP_REPLY:
         if (!memcmp(ah->ar_sip, &client_addr, 4)) {
-    	    memcpy(client_ethaddr, eh->h_source, ETH_ALEN);
+            memcpy(client_ethaddr, eh->h_source, ETH_ALEN);
         }
         break;
     default:
