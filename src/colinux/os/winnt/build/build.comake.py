@@ -26,8 +26,8 @@ def generate_options(compiler_def_type, libs=None, lflags=None):
         compiler_flags = [ '-mno-cygwin' ],
 	linker_flags = lflags,
         compiler_libs = libs + [
-            'user32', 'gdi32', 'ws2_32', 'ntdll', 'kernel32', 'ole32', 'uuid',
-	    'gdi32', 'msvcrt', 'crtdll', 'shlwapi',
+            'user32', 'gdi32', 'ws2_32', 'ntdll', 'kernel32', 'ole32', 'uuid', 'gdi32',
+            'msvcrt', 'crtdll', 'shlwapi', 
         ]),
     )
 

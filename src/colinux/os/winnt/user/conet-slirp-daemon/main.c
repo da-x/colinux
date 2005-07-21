@@ -23,6 +23,9 @@
 #include <colinux/os/user/misc.h>
 #include <colinux/os/current/user/reactor.h>
 
+#define PARM_SLIRP_REDIR_TCP 0
+#define PARM_SLIRP_REDIR_UDP 1
+
 COLINUX_DEFINE_MODULE("colinux-slirp-net-daemon");
 
 /*******************************************************************************
@@ -145,24 +148,55 @@ void co_net_syntax()
 }
 
 static co_rc_t 
-handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
+parse_redir_param (const char *p)
 {
-	char **param_scan = argv;
-	const char *option;
-#define REDIRSIZE 256
-	char redirbuf[REDIRSIZE];
-	char *redircursor=redirbuf;
-	char *redirproto;
-	char *redirhostport;
-	char *redirclientport;
-
+	int iProto, iHostPort, iClientPort;
 	struct in_addr guest_addr;
 
 	if (!inet_aton(CTL_LOCAL, &guest_addr))
 	{
 		co_terminal_print("conet-slirp-daemon: slirp redir setup guest_addr failed.\n");
-		exit(1);
+		return CO_RC(ERROR);
 	}
+
+	do {
+		// minimal len is "tcp:x:x"
+		if (strlen (p) < 7)
+			return CO_RC(ERROR);
+
+		iProto = (memicmp(p, "udp", 3) == 0)
+			? PARM_SLIRP_REDIR_UDP : PARM_SLIRP_REDIR_TCP;
+
+		// search the first ':'
+		p = strchr (p, ':');
+		if (!p)
+			return CO_RC(ERROR);
+		iHostPort = atol(p+1);
+
+		// search the second ':'
+		p = strchr (p+1, ':');
+		if (!p)
+			return CO_RC(ERROR);
+		iClientPort = atol(p+1);
+
+		co_debug("slirp redir %d %d:%d\n", iProto, iHostPort, iClientPort);
+		if (slirp_redir(iProto, iHostPort, guest_addr, iClientPort) < 0) {
+			co_terminal_print("conet-slirp-daemon: slirp redir %d failed.\n", iClientPort);
+		}
+
+		// Next redirection?
+		p = strchr (p, '/');
+	} while (p++);
+
+	return CO_RC(OK);
+}
+
+static co_rc_t 
+handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
+{
+	char **param_scan = argv;
+	const char *option;
+	co_rc_t rc;
 
 	/* Default settings */
 	start_parameters->index = -1;
@@ -179,7 +213,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 				return CO_RC(ERROR);
 			}
 
-			sscanf(*param_scan, "%d", &start_parameters->index);
+			start_parameters->index = atoi(*param_scan);
 			param_scan++;
 			continue;
 		}
@@ -192,10 +226,11 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 				return CO_RC(ERROR);
 			}
 
-			sscanf(*param_scan, "%d", (int *)&start_parameters->instance);
+			start_parameters->instance = (co_id_t) atoi(*param_scan);
 			param_scan++;
 			continue;
 		}
+
 		option = "-h";
 		if (strcmp(*param_scan, option) == 0) {
 			start_parameters->show_help = PTRUE;
@@ -204,35 +239,17 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 		option = "-r";
 		if (strcmp(*param_scan, option) == 0) {
 			param_scan++;
-			memset(redirbuf,'\0', REDIRSIZE);
 			if (!(*param_scan)) {
-				co_terminal_print("conet-slirp-daemon: parameter of command line option %s not specified. Fallback to \"tcp:22:22\" \n", option);
-				strcpy(redirbuf,"tcp:22:22");
-			}
-			else
-			{
-				sscanf(*param_scan, "%s", redirbuf);
-				param_scan++;
+				co_terminal_print("conet-slirp-daemon: parameter of command line option %s not specified\n", option);
+				return CO_RC(ERROR);
 			}
 
-			redirproto=redirbuf;
-			redirproto[strlen("tcp")]='\0';
-			redirhostport=redirproto+strlen("tcp")+1;
-			redircursor=redirhostport;
-			while(*redircursor!=':' && redircursor<(redirbuf+REDIRSIZE))
-			{
-				redircursor++;
+			rc = parse_redir_param(*param_scan);
+			if (!CO_OK(rc)) {
+				co_terminal_print("conet-slirp-daemon: parameter of command line option %s not specified\n", option);
+				return rc;
 			}
-			if(redircursor<(redirbuf+REDIRSIZE))
-			{
-				*redircursor='\0';
-				redircursor++;
-			}
-			redirclientport=redircursor;
-
-			if (slirp_redir(strcmp(redirproto,"udp") == 0 ? 1 : 0, atol(redirhostport), guest_addr, atol(redirclientport)) < 0) {
-				co_terminal_print("conet-slirp-daemon: slirp redir %d failed.\n",atol(redirclientport));
-			}
+			param_scan++;
 			continue;
 		}
 		param_scan++;
@@ -267,7 +284,6 @@ int main(int argc, char *argv[])
 	WSADATA wsad;
 
 	co_debug_start();
-
 	slirp_init();
 
 	rc = handle_paramters(&start_parameters, argc, argv);
@@ -310,8 +326,7 @@ int main(int argc, char *argv[])
 	CloseHandle(slirp_mutex);
 
 out_close:
-	
-	
+
 out:
 	co_debug_end();
 	return exit_code;

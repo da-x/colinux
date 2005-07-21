@@ -242,7 +242,7 @@ For building and runnning coLinux on Linux you need:
 
 1. Tree or headers of the designated host kernel available, in order to build 
 the kernel module (colinux.ko).
-2. mxml-1.2 and a patched fltk-1.1.4 (see patch directory) installed in the 
+2. mxml-1.2 and a patched fltk-1.1.6 (see patch directory) installed in the 
 system (./configure ; make ; make install)
 3. Properly set the environment variables (e.g.):
 
@@ -272,6 +272,32 @@ of the driver is more simple.
     
 PATH=.:$PATH is needed if the executables aren't installed in your e.g 
 /usr/local/bin or elsewhere in $PATH.
+
+
+3.3.1 For Linux as host with different libraries (FLTK version)
+
+- Patch and build fltk from source
+
+  cd /tmp
+  tar xfj fltk-1.1.6-source.tar.bz2
+  cd fltk-1.1.6
+  patch -p1 < colinux-source/patch/fltk-1.1.6-linux.diff
+  ./configure --prefix=$(HOME)/i686-pc-linux-local
+  make -C src
+  make -C src install
+  make -C FL install
+  cd /tmp
+  rm -r fltk-1.1.6
+
+- Run coulinux build with path to FLTK libraries
+
+  export COLINUX_TARGET_KERNEL_PATH=/path/to/your/patched/colinux/kernel/tree
+  export COLINUX_HOST_KERNEL_DIR=/path/to/your/host/kernel
+  export COLINUX_HOST_OS=linux
+  export COLINUX_CFLAGS="-I$(HOME)/i686-pc-linux-local/include"
+  export COLINUX_LFLAGS="-L$(HOME)/i686-pc-linux-local/lib"
+  cd colinux-source/src
+  make
 
 
 4. configure - make - make installer

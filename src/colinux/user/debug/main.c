@@ -130,7 +130,7 @@ static void print_xml_text(const char *str)
 		const char *str_start = str;
 		while (*str  &&  *str != '&')
 			str++;
-		fwrite(str_start, str - str_start, 1, stdout);
+		fwrite(str_start, str - str_start, 1, output_file);
 		if (!*str)
 			break;
 		if (*str == '&')

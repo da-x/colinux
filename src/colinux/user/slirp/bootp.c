@@ -168,7 +168,7 @@ static void bootp_reply(struct bootp_t *bp)
             goto new_addr;
         }
     }
-    dprintf("offered addr=%08x\n", ntohl(daddr.sin_addr.s_addr));
+    dprintf("offered addr=%08lx\n", ntohl(daddr.sin_addr.s_addr));
 
     saddr.sin_addr.s_addr = htonl(ntohl(special_addr.s_addr) | CTL_ALIAS);
     saddr.sin_port = htons(BOOTP_SERVER);

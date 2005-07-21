@@ -78,11 +78,6 @@ host OS directories inside Linux.
       Mount c:\Share as /mnt/windows and give dax exclusive full 
       access to all the files and directories.
 
-    mount -t cofs cofs0:Share -o uid=dax,gid=dax,dmask=0700,fmask=0700 /mnt/windows
-
-      Mount c:\Share as /mnt/windows and give dax exclusive full 
-      access to all the files and directories.
-
     An example fstab entry:
 
       cofs0:Share      /mnt/windows            cofs    defaults          0 0
