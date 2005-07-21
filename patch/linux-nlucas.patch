@@ -1,5 +1,5 @@
---- arch/i386/kernel/cooperative.c
-+++ arch/i386/kernel/cooperative.c
+--- a/arch/i386/kernel/cooperative.c
++++ b/arch/i386/kernel/cooperative.c
 @@ -131,6 +131,7 @@
  
  void co_handle_incoming_message(co_message_node_t *node_message, struct pt_regs *orig_regs)
@@ -44,8 +44,8 @@
  	case CO_DEVICE_NETWORK: {
  		co_queue_incoming_message(node_message);
  
---- arch/i386/kernel/setup.c
-+++ arch/i386/kernel/setup.c
+--- a/arch/i386/kernel/setup.c
++++ b/arch/i386/kernel/setup.c
 @@ -1150,12 +1150,12 @@
  	}
  #else
@@ -63,8 +63,8 @@
  		reserve_bootmem(virt_to_phys(co_initrd), co_initrd_size);
  	}
  #endif
---- arch/i386/kernel/sysenter.c
-+++ arch/i386/kernel/sysenter.c
+--- a/arch/i386/kernel/sysenter.c
++++ b/arch/i386/kernel/sysenter.c
 @@ -44,7 +44,7 @@
  
  static int __init sysenter_setup(void)
@@ -74,8 +74,8 @@
  
  	__set_fixmap(FIX_VSYSCALL, __pa(page), PAGE_READONLY_EXEC);
  
---- drivers/input/mouse/comouse.c
-+++ drivers/input/mouse/comouse.c
+--- a/drivers/input/mouse/comouse.c
++++ b/drivers/input/mouse/comouse.c
 @@ -1,74 +1,99 @@
  /*
 - * Virtual mouse driver for Linux
@@ -225,8 +225,8 @@
 +module_exit( comouse_exit );
 -module_init(comouse_init);
 -module_exit(comouse_exit);
---- drivers/video/Kconfig
-+++ drivers/video/Kconfig
+--- a/drivers/video/Kconfig
++++ b/drivers/video/Kconfig
 @@ -40,7 +40,7 @@
  
  config FB_MODE_HELPERS
@@ -253,8 +253,8 @@
  config FB_VIRTUAL
  	tristate "Virtual Frame Buffer support (ONLY FOR TESTING!)"
  	depends on FB
---- drivers/video/Makefile
-+++ drivers/video/Makefile
+--- a/drivers/video/Makefile
++++ b/drivers/video/Makefile
 @@ -105,5 +105,8 @@
  	                             cfbimgblt.o vgastate.o
  obj-$(CONFIG_FB_OF)               += offb.o cfbfillrect.o cfbimgblt.o cfbcopyarea.o
@@ -264,8 +264,8 @@
 +
  # the test framebuffer is last
  obj-$(CONFIG_FB_VIRTUAL)          += vfb.o cfbfillrect.o cfbcopyarea.o cfbimgblt.o
---- drivers/video/cofb.c
-+++ drivers/video/cofb.c
+--- a/drivers/video/cofb.c
++++ b/drivers/video/cofb.c
 @@ -0,0 +1,548 @@
 +/*
 + *  linux/drivers/video/cofb.c -- CoLinux Virtual frame buffer device
@@ -815,8 +815,8 @@
 +}
 +
 +/* --------------------------------------------------------------------- */
---- drivers/video/console/Kconfig
-+++ drivers/video/console/Kconfig
+--- a/drivers/video/console/Kconfig
++++ b/drivers/video/console/Kconfig
 @@ -144,7 +144,7 @@
  
  config FONT_8x16
@@ -826,8 +826,8 @@
  	default y if !SPARC32 && !SPARC64 && !FONTS
  	help
  	  This is the "high resolution" font for the VGA frame buffer (the one
---- drivers/video/console/cocon.c
-+++ drivers/video/console/cocon.c
+--- a/drivers/video/console/cocon.c
++++ b/drivers/video/console/cocon.c
 @@ -5,9 +5,11 @@
   *  License.  See the file COPYING in the main directory of this archive for
   *  more details.
@@ -841,7 +841,7 @@
   */
  
  #include <linux/config.h>
-@@ -24,462 +26,592 @@
+@@ -24,462 +26,582 @@
  #include <linux/vt_kern.h>
  #include <linux/selection.h>
  #include <linux/init.h>
@@ -922,6 +922,7 @@
 +#define cocon_font_data  (co_video_base + cocon_info->font_data)
 +#define SCRWP(y,x)       (((u16*)cocon_scr_base) + (y)*COLS + (x))
  
+-static const char __init *cocon_startup(void)
 +/* --------------------------------------------------------------------- */
 +/*
 + * Lock video memory.
@@ -939,7 +940,21 @@
 + */
 +static int cocon_no_unlock = 0;
 +static void cocon_lock(void)
-+{
+ {
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
+-
+-	co_message = co_send_message_save(&flags);
+-	if (co_message) {
+-		message = (co_console_message_t *)co_message->data;
+-		co_message->from = CO_MODULE_LINUX;
+-		co_message->to = CO_MODULE_CONSOLE;
+-		co_message->priority = CO_PRIORITY_DISCARDABLE;
+-		co_message->type = CO_MESSAGE_TYPE_STRING;
+-		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+-		message->type = CO_OPERATION_CONSOLE_STARTUP;
+-		co_send_message_restore(flags);
 +	/*
 +	 * If the locking fails, sleep for a while, so the lock owner
 +	 * has time to release the lock.
@@ -953,9 +968,10 @@
 +			return;
 +		}
 +		msleep( 5 );
-+	}
+ 	}
 +}
-+
+ 
+-	return "CoCON";
 +/* --------------------------------------------------------------------- */
 +/*
 + *  Release lock on video memory.
@@ -974,8 +990,9 @@
 +	}
 +	BUG_ON( co_atomic_read(&cocon_info->header.lock) != 0 );
 +	co_atomic_unlock( &cocon_info->header.lock );
-+}
-+
+ }
+ 
+-static void cocon_init(struct vc_data *c, int init)
 +/* --------------------------------------------------------------------- */
 +/*
 + * Setup video memory for cocon usage.
@@ -990,38 +1007,55 @@
 + * TODO:
 + *     Take initial columns/rows from boot parameters.
 + */
- static const char __init *cocon_startup(void)
++static const char __init *cocon_startup(void)
  {
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
 +	printk(KERN_INFO"cocon: video=%lXh (size=%lu bytes)\n", co_video_base, co_video_size );
  
--	co_message = co_send_message_save(&flags);
--	if (co_message) {
--		message = (co_console_message_t *)co_message->data;
--		co_message->from = CO_MODULE_LINUX;
--		co_message->to = CO_MODULE_CONSOLE;
--		co_message->priority = CO_PRIORITY_DISCARDABLE;
--		co_message->type = CO_MESSAGE_TYPE_STRING;
--		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_STARTUP;
--		co_send_message_restore(flags);
+-	/* We cannot be loaded as a module, therefore init is always 1 */
+-	c->vc_can_do_color = 1;
+-	c->vc_cols = 80;
+-	c->vc_rows = 25;
+-	c->vc_complement_mask = 0x7700;
+-	c->vc_visible_origin = 0;
+-	c->vc_origin = 0;
 +	BUG_ON( co_video_size < 4096 );
-+
+ 
+-	co_message = co_send_message_save(&flags);
+-	if (!co_message)
+-		return;
 +	cocon_info = (struct cocon_video_mem_info *) co_video_base;
 +	cocon_info->header.magic = CO_VIDEO_MAGIC_COCON;
 +	cocon_info->header.size  = sizeof(*cocon_info);
-+
+ 
+-	message = (co_console_message_t *)co_message->data;
+-	co_message->from = CO_MODULE_LINUX;
+-	co_message->to = CO_MODULE_CONSOLE;
+-	co_message->priority = CO_PRIORITY_DISCARDABLE;
+-	co_message->type = CO_MESSAGE_TYPE_STRING;
+-	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+-	message->type = CO_OPERATION_CONSOLE_INIT;
+-	co_send_message_restore(flags);
+-}
 +	/* Align start to 32 bits */
 +	cocon_info->scr_start = sizeof(*cocon_info);
 +	cocon_info->scr_start = (cocon_info->scr_start + 3) & ~0x03;
-+
+ 
+-static void cocon_deinit(struct vc_data *c)
+-{
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
 +	/* Setup default 8x16 font data */
 +	struct font_desc* f = &font_vga_8x16;
 +	cocon_info->font_width  = f->width;
 +	cocon_info->font_height = f->height;
-+
+ 
+-	co_message = co_send_message_save(&flags);
+-	if (!co_message)
+-		return;
 +	/* Check if we have enough memory for font ops ( >= 32KB) */
 +	if ( co_video_size >= (32 << 10) )
 +	{
@@ -1040,13 +1074,21 @@
 +		 */
 +		cocon_info->font_data = cocon_info->scr_end;
 +		cocon_info->font_count  = 256;
-+
+ 
+-	message = (co_console_message_t *)co_message->data;
+-	co_message->from = CO_MODULE_LINUX;
+-	co_message->to = CO_MODULE_CONSOLE;
+-	co_message->priority = CO_PRIORITY_DISCARDABLE;
+-	co_message->type = CO_MESSAGE_TYPE_STRING;
+-	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+-	message->type = CO_OPERATION_CONSOLE_DEINIT;
+-	co_send_message_restore(flags);
 +		int fwb    = (f->width - 1)/8 + 1;   /* bytes per scanline */
 +		int fdsize = fwb * f->height * 256;
 +		int favail = co_video_base + co_video_size - cocon_font_data;
 +		BUG_ON( favail < fdsize );
 +		memcpy( (void*)cocon_font_data, f->data, fdsize );
- 	}
++	}
 +	else
 +	{
 +		/* No space for font data. */
@@ -1055,17 +1097,39 @@
 +		cocon_info->font_data   = 0;
 +	}
  
+-}
 +	/* TODO: Set number of rows/columns from boot parameters */
 +	cocon_info->num_cols = 80;
 +	cocon_info->num_rows = 25;
-+
+ 
+-static void cocon_clear(struct vc_data *c, int top, int left, int rows, int cols)
+-{
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
 +	/* Start of screen buffer */
 +	cocon_info->scr_base = cocon_info->scr_end - (COLS*ROWS*2);
-+
+ 
+-	co_message = co_send_message_save(&flags);
+-	if (!co_message)
+-		return;
 +	/* Adjust backlog to full lines */
 +	int backlines = (cocon_scr_base - cocon_scr_start)/(COLS*2);
 +	cocon_info->scr_start = cocon_info->scr_base - backlines*COLS*2;
-+
+ 
+-	message = (co_console_message_t *)co_message->data;
+-	co_message->from = CO_MODULE_LINUX;
+-	co_message->to = CO_MODULE_CONSOLE;
+-	co_message->priority = CO_PRIORITY_DISCARDABLE;
+-	co_message->type = CO_MESSAGE_TYPE_STRING;
+-	co_message->size = ((char *)(&message->clear + 1)) - ((char *)message);
+-	message->type = CO_OPERATION_CONSOLE_CLEAR;
+-	message->clear.top = top;
+-	message->clear.left = left;
+-	message->clear.bottom = top + rows - 1;
+-	message->clear.right = left + cols - 1;
+-	message->clear.charattr = c->vc_video_erase_char;
+-	co_send_message_restore(flags);
 +	printk(KERN_INFO"cocon: scr_start=%lXh scr_base=%lXh scr_end=%lXh fdata=%lxh\n",
 +			cocon_scr_start, cocon_scr_base, cocon_scr_end, cocon_font_data );
 +	printk(KERN_INFO"cocon: %dx%d scrollback=%d lines\n",
@@ -1085,111 +1149,33 @@
 +	/* All done, unlock memory */
 +	cocon_unlock();
 +
- 	return "CoCON";
- }
- 
--static void cocon_init(struct vc_data *c, int init)
-+/* --------------------------------------------------------------------- */
-+
-+static
-+void cocon_init( struct vc_data *c, int init )
- {
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
-+	printk( "cocon_init: vc %d\n", c->vc_num );
- 
- 	/* We cannot be loaded as a module, therefore init is always 1 */
- 	c->vc_can_do_color = 1;
--	c->vc_cols = 80;
--	c->vc_rows = 25;
-+	c->vc_cols = COLS;
-+	c->vc_rows = ROWS;
- 	c->vc_complement_mask = 0x7700;
- 	c->vc_visible_origin = 0;
- 	c->vc_origin = 0;
--
--	co_message = co_send_message_save(&flags);
--	if (!co_message)
--		return;
--
--	message = (co_console_message_t *)co_message->data;
--	co_message->from = CO_MODULE_LINUX;
--	co_message->to = CO_MODULE_CONSOLE;
--	co_message->priority = CO_PRIORITY_DISCARDABLE;
--	co_message->type = CO_MESSAGE_TYPE_STRING;
--	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--	message->type = CO_OPERATION_CONSOLE_INIT;
--	co_send_message_restore(flags);
-+	c->vc_scan_lines = ROWS*cocon_info->font_height;
-+	c->vc_font.height = cocon_info->font_height;
- }
- 
--static void cocon_deinit(struct vc_data *c)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
-+/* --------------------------------------------------------------------- */
- 
--	co_message = co_send_message_save(&flags);
--	if (!co_message)
--		return;
--
--	message = (co_console_message_t *)co_message->data;
--	co_message->from = CO_MODULE_LINUX;
--	co_message->to = CO_MODULE_CONSOLE;
--	co_message->priority = CO_PRIORITY_DISCARDABLE;
--	co_message->type = CO_MESSAGE_TYPE_STRING;
--	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--	message->type = CO_OPERATION_CONSOLE_DEINIT;
--	co_send_message_restore(flags);
--
--}
--
--static void cocon_clear(struct vc_data *c, int top, int left, int rows, int cols)
-+static
-+void cocon_deinit( struct vc_data *c )
- {
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	co_message = co_send_message_save(&flags);
--	if (!co_message)
--		return;
--
--	message = (co_console_message_t *)co_message->data;
--	co_message->from = CO_MODULE_LINUX;
--	co_message->to = CO_MODULE_CONSOLE;
--	co_message->priority = CO_PRIORITY_DISCARDABLE;
--	co_message->type = CO_MESSAGE_TYPE_STRING;
--	co_message->size = ((char *)(&message->clear + 1)) - ((char *)message);
--	message->type = CO_OPERATION_CONSOLE_CLEAR;
--	message->clear.top = top;
--	message->clear.left = left;
--	message->clear.bottom = top + rows - 1;
--	message->clear.right = left + cols - 1;
--	message->clear.charattr = c->vc_video_erase_char;
--	co_send_message_restore(flags);
-+	printk( "cocon_deinit: vc %d\n", c->vc_num );
++	return "CoCON";
  }
  
 -static void cocon_putc(struct vc_data *c, int charattr, int y, int x)
 +/* --------------------------------------------------------------------- */
 +
 +static
-+void cocon_clear( struct vc_data *c, int top, int left, int rows, int cols )
++void cocon_init( struct vc_data *c, int init )
  {
 -	unsigned long flags;
 -	co_message_t *co_message;
 -	co_console_message_t *message;
-+	printk( "cocon_clear\n" );
++	/* We cannot be loaded as a module, therefore init is always 1 */
++	c->vc_can_do_color = 1;
++	c->vc_cols = COLS;
++	c->vc_rows = ROWS;
++	c->vc_complement_mask = 0x7700;
++	c->vc_visible_origin = 0;
++	c->vc_origin = 0;
++	c->vc_scan_lines = ROWS*cocon_info->font_height;
++	c->vc_font.height = cocon_info->font_height;
++}
  
 -	co_message = co_send_message_save(&flags);
 -	if (!co_message)
 -		return;
-+	int j;
++/* --------------------------------------------------------------------- */
  
 -	message = (co_console_message_t *)co_message->data;
 -	co_message->from = CO_MODULE_LINUX;
@@ -1202,11 +1188,9 @@
 -	message->putc.y = y;
 -	message->putc.charattr = charattr;
 -	co_send_message_restore(flags);
-+	cocon_lock();
-+	for ( j = top; j < top+rows; ++j )
-+		scr_memsetw( SCRWP(j,left), BLANK(c), cols*2 );
-+	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
-+	cocon_unlock();
++static
++void cocon_deinit( struct vc_data *c )
++{
  }
  
 +/* --------------------------------------------------------------------- */
@@ -1214,25 +1198,27 @@
 -static void cocon_putcs(struct vc_data *conp, 
 -			const unsigned short *s, int count, int yy, int xx)
 +static
-+void cocon_putc( struct vc_data *c, int charattr, int y, int x )
++void cocon_clear( struct vc_data *c, int top, int left, int rows, int cols )
  {
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
++	int j;
+ 
+-	if (count > CO_MAX_PARAM_SIZE/2 - 16) 
+-		return;
 +	cocon_lock();
-+	*SCRWP(y,x) = charattr;
++	for ( j = top; j < top+rows; ++j )
++		scr_memsetw( SCRWP(j,left), BLANK(c), cols*2 );
 +	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
 +	cocon_unlock();
 +}
  
--	if (count > CO_MAX_PARAM_SIZE/2 - 16) 
--		return;
-+/* --------------------------------------------------------------------- */
- 
 -	co_message = co_send_message_save(&flags);
 -	if (!co_message)
 -		return;
--
++/* --------------------------------------------------------------------- */
+ 
 -	message = (co_console_message_t *)co_message->data;
 -	co_message->from = CO_MODULE_LINUX;
 -	co_message->to = CO_MODULE_CONSOLE;
@@ -1247,10 +1233,10 @@
 -	memcpy(&message->putcs.data, s, count * sizeof(unsigned short));
 -	co_send_message_restore(flags);
 +static
-+void cocon_putcs( struct vc_data *c, const u16* s, int count, int y, int x )
++void cocon_putc( struct vc_data *c, int charattr, int y, int x )
 +{
 +	cocon_lock();
-+	scr_memcpyw( SCRWP(y,x), s, count*2 );
++	*SCRWP(y,x) = charattr;
 +	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
 +	cocon_unlock();
  }
@@ -1259,9 +1245,20 @@
 +/* --------------------------------------------------------------------- */
 +
 +static
++void cocon_putcs( struct vc_data *c, const u16* s, int count, int y, int x )
+ {
++	cocon_lock();
++	scr_memcpyw( SCRWP(y,x), s, count*2 );
++	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
++	cocon_unlock();
++}
++
++/* --------------------------------------------------------------------- */
++
++static
 +u8 cocon_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink,
 +			u8 underline, u8 reverse)
- {
++{
  	u8 attr = color;
  
 -	if (underline)
@@ -1347,19 +1344,31 @@
  }
  
 -static void cocon_cursor(struct vc_data *c, int mode)
--{
++/* --------------------------------------------------------------------- */
++
++static
++int cocon_switch( struct vc_data *c )
+ {
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
-+/* --------------------------------------------------------------------- */
++	/*
++	 * We need to save screen size here as it's the only way
++	 * we can spot the screen has been resized.
++	 */
++	if ( c->vc_cols != COLS || c->vc_rows != ROWS )
++	{
++		cocon_lock();
  
 -	co_message = co_send_message_save(&flags);
 -	if (!co_message)
 -		return;
-+static
-+int cocon_switch( struct vc_data *c )
-+{
-+	printk( "cocon_switch: vc %d\n", c->vc_num );
++		/* Make sure we are in cocon mode */
++		if ( cocon_info->header.magic != CO_VIDEO_MAGIC_COCON )
++		{
++			cocon_unlock();
++			return 0;
++		}
  
 -	message = (co_console_message_t *)co_message->data;
 -	co_message->from = CO_MODULE_LINUX;
@@ -1373,13 +1382,8 @@
 -		co_send_message_restore(flags);
 -		return;
 -	}
-+	/*
-+	 * We need to save screen size here as it's the only way
-+	 * we can spot the screen has been resized.
-+	 */
-+	if ( c->vc_cols != COLS || c->vc_rows != ROWS )
-+	{
-+		cocon_lock();
++		cocon_info->num_cols = c->vc_cols;
++		cocon_info->num_rows = c->vc_rows;
  
 -	if(mode==CM_MOVE) {
 -		message->type = CO_OPERATION_CONSOLE_CURSOR_MOVE;
@@ -1388,12 +1392,9 @@
 -	}
 -	message->cursor.x = c->vc_x;
 -	message->cursor.y = c->vc_y;
-+		/* Make sure we are in cocon mode */
-+		if ( cocon_info->header.magic != CO_VIDEO_MAGIC_COCON )
-+		{
-+			cocon_unlock();
-+			return 0;
-+		}
++		/* Rebase screen offset */
++		cocon_info->scr_base = cocon_info->scr_end - COLS*ROWS*2;
++		BUG_ON( cocon_scr_base < cocon_scr_start );
  
 -	switch (c->vc_cursor_type & CUR_HWMASK) {
 -	case CUR_UNDERLINE:
@@ -1414,42 +1415,17 @@
 -          default:
 -		message->cursor.height = 5;
 -		break;
--	}
-+		cocon_info->num_cols = c->vc_cols;
-+		cocon_info->num_rows = c->vc_rows;
- 
--	co_send_message_restore(flags);
--}
-+		/* Rebase screen offset */
-+		cocon_info->scr_base = cocon_info->scr_end - COLS*ROWS*2;
-+		BUG_ON( cocon_scr_base < cocon_scr_start );
- 
--static int cocon_switch(struct vc_data *c)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
 +		cocon_info->header.flags |= CO_VIDEO_FLAG_INFO_CHANGE;
 +		cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
- 
--	co_message = co_send_message_save(&flags);
--	if (co_message) {
--		message = (co_console_message_t *)co_message->data;
--		co_message->from = CO_MODULE_LINUX;
--		co_message->to = CO_MODULE_CONSOLE;
--		co_message->priority = CO_PRIORITY_DISCARDABLE;
--		co_message->type = CO_MESSAGE_TYPE_STRING;
--		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_SWITCH;
--		co_send_message_restore(flags);
++
 +		cocon_unlock();
  	}
  
--	return 1;	/* Redrawing not needed */
+-	co_send_message_restore(flags);
 +	return 1;	/* Redrawing needed */
  }
  
--static int cocon_set_palette(struct vc_data *c, unsigned char *table)
+-static int cocon_switch(struct vc_data *c)
 +/* --------------------------------------------------------------------- */
 +
 +static
@@ -1469,18 +1445,19 @@
 -		co_message->priority = CO_PRIORITY_DISCARDABLE;
 -		co_message->type = CO_MESSAGE_TYPE_STRING;
 -		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_SET_PALETTE;
+-		message->type = CO_OPERATION_CONSOLE_SWITCH;
 -		co_send_message_restore(flags);
 -	}
 +/* --------------------------------------------------------------------- */
  
+-	return 1;	/* Redrawing not needed */
 +static
 +int cocon_blank( struct vc_data *c, int blank, int mode_switchg )
 +{
- 	return 1;
++	return 1;
  }
  
--static int cocon_blank(struct vc_data *c, int blank, int mode_switchg)
+-static int cocon_set_palette(struct vc_data *c, unsigned char *table)
 +/* --------------------------------------------------------------------- */
 +
 +static
@@ -1500,7 +1477,7 @@
 -		co_message->priority = CO_PRIORITY_DISCARDABLE;
 -		co_message->type = CO_MESSAGE_TYPE_STRING;
 -		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_BLANK;
+-		message->type = CO_OPERATION_CONSOLE_SET_PALETTE;
 -		co_send_message_restore(flags);
 +	if ( lines > 0 )
 +	{
@@ -1527,16 +1504,52 @@
 +	return 0;
  }
  
+-static int cocon_blank(struct vc_data *c, int blank, int mode_switchg)
 +/* --------------------------------------------------------------------- */
- 
--static int cocon_scrolldelta(struct vc_data *c, int lines)
++
 +static
 +int cocon_set_origin( struct vc_data *c )
  {
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
-+	printk( "cocon_set_origin: vc %d\n", c->vc_num );
++	cocon_lock();
++	cocon_info->scrollback = 0;
++	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
++	cocon_unlock();
+ 
+-	co_message = co_send_message_save(&flags);
+-	if (co_message) {
+-		message = (co_console_message_t *)co_message->data;
+-		co_message->from = CO_MODULE_LINUX;
+-		co_message->to = CO_MODULE_CONSOLE;
+-		co_message->priority = CO_PRIORITY_DISCARDABLE;
+-		co_message->type = CO_MESSAGE_TYPE_STRING;
+-		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+-		message->type = CO_OPERATION_CONSOLE_BLANK;
+-		co_send_message_restore(flags);
+-	}
++	return 0;
++}
+ 
+-	return 1;
++/* --------------------------------------------------------------------- */
++
++static
++void cocon_save_screen( struct vc_data *c )
++{
+ }
+ 
++/* --------------------------------------------------------------------- */
+ 
+-static int cocon_scrolldelta(struct vc_data *c, int lines)
++static
++int cocon_scroll( struct vc_data *c, int t, int b, int dir, int lines )
+ {
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
++	int backlines = (cocon_scr_base - cocon_scr_start)/(COLS*2);
  
 -	co_message = co_send_message_save(&flags);
 -	if (co_message) {
@@ -1548,45 +1561,6 @@
 -		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
 -		message->type = CO_OPERATION_CONSOLE_SCROLLDELTA;
 -		co_send_message_restore(flags);
--	}
-+	cocon_lock();
-+	cocon_info->scrollback = 0;
-+	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
-+	cocon_unlock();
- 
--	return 1;
-+	return 0;
- }
- 
--static int cocon_set_origin(struct vc_data *c)
-+/* --------------------------------------------------------------------- */
-+
-+static
-+void cocon_save_screen( struct vc_data *c )
- {
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
-+	printk( "cocon_save_screen: vc %d\n", c->vc_num );
-+}
- 
--	co_message = co_send_message_save(&flags);
--	if (co_message) {
--		message = (co_console_message_t *)co_message->data;
--		co_message->from = CO_MODULE_LINUX;
--		co_message->to = CO_MODULE_CONSOLE;
--		co_message->priority = CO_PRIORITY_DISCARDABLE;
--		co_message->type = CO_MESSAGE_TYPE_STRING;
--		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_SET_ORIGIN;
--		co_send_message_restore(flags);
-+/* --------------------------------------------------------------------- */
-+
-+static
-+int cocon_scroll( struct vc_data *c, int t, int b, int dir, int lines )
-+{
-+	int backlines = (cocon_scr_base - cocon_scr_start)/(COLS*2);
-+
 +	if (!lines)
 +		return 0;
 +
@@ -1613,7 +1587,7 @@
 +	return 0;
  }
  
--static void cocon_save_screen(struct vc_data *c)
+-static int cocon_set_origin(struct vc_data *c)
 +/* --------------------------------------------------------------------- */
 +
 +static
@@ -1633,7 +1607,7 @@
 -		co_message->priority = CO_PRIORITY_DISCARDABLE;
 -		co_message->type = CO_MESSAGE_TYPE_STRING;
 -		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_SAVE_SCREEN;
+-		message->type = CO_OPERATION_CONSOLE_SET_ORIGIN;
 -		co_send_message_restore(flags);
 +	if ( w <= 0 || h <= 0 )
 +		return;
@@ -1643,17 +1617,13 @@
 +	{
 +		scr_memmovew( SCRWP(dy,0), SCRWP(sy,0), h*w*2 );
  	}
--}
 +	else if ( dy < sy || (dy == sy && dx < sx) )
 +	{
 +		src  = SCRWP( sy, sx );
 +		dest = SCRWP( dy, dx );
  
--static int cocon_scroll(struct vc_data *c, int t, int b, int dir, int lines)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
+-	return 1;
+-}
 +		for ( ; h > 0; --h )
 +		{
 +			scr_memmovew( dest, src, w*2 );
@@ -1665,6 +1635,45 @@
 +	{
 +		src  = SCRWP( sy + h - 1, sx );
 +		dest = SCRWP( dy + h - 1, dx );
+ 
+-static void cocon_save_screen(struct vc_data *c)
+-{
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
+-
+-	co_message = co_send_message_save(&flags);
+-	if (co_message) {
+-		message = (co_console_message_t *)co_message->data;
+-		co_message->from = CO_MODULE_LINUX;
+-		co_message->to = CO_MODULE_CONSOLE;
+-		co_message->priority = CO_PRIORITY_DISCARDABLE;
+-		co_message->type = CO_MESSAGE_TYPE_STRING;
+-		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+-		message->type = CO_OPERATION_CONSOLE_SAVE_SCREEN;
+-		co_send_message_restore(flags);
++		for ( ; h > 0; --h )
++		{
++			scr_memmovew( dest, src, w*2 );
++			src  -= COLS;
++			dest -= COLS;
++		}
+ 	}
++	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
++	cocon_unlock();
+ }
+ 
+-static int cocon_scroll(struct vc_data *c, int t, int b, int dir, int lines)
++/* --------------------------------------------------------------------- */
++
++static int
++cocon_font_set( struct vc_data* vc, struct console_font* f, unsigned flags )
+ {
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
++	if ( cocon_info->font_data == 0 )
++		return -ENOMEM;  /* Not enough video memory for font ops */
  
 -	co_message = co_send_message_save(&flags);
 -	if (co_message) {
@@ -1682,39 +1691,32 @@
 -		message->scroll.bottom = b-1;
 -		message->scroll.lines = lines;
 -		co_send_message_restore(flags);
-+		for ( ; h > 0; --h )
-+		{
-+			scr_memmovew( dest, src, w*2 );
-+			src  -= COLS;
-+			dest -= COLS;
-+		}
- 	}
-+	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
-+	cocon_unlock();
-+}
- 
--	return 0;
--}
-+/* --------------------------------------------------------------------- */
- 
--static void cocon_bmove(struct vc_data *c, int sy, int sx, int dy, int dx, int h, int w)
-+static int
-+cocon_font_set( struct vc_data* vc, struct console_font* f, unsigned flags )
- {
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
-+	if ( cocon_info->font_data == 0 )
-+		return -ENOMEM;  /* Not enough video memory for font ops */
- 
--	co_message = co_send_message_save(&flags);
--	if (!co_message)
--		return;
+-	}
 +	/* Check we have enough space to store the font data */
 +	unsigned mem_avail = co_video_base + co_video_size - cocon_font_data;
 +	unsigned fwb = (f->width - 1)/8 + 1;   /* bytes per scanline */
 +	unsigned data_size = fwb * f->height * f->charcount;
 +	unsigned chlen = fwb*f->height;
+ 
+-	return 0;
+-}
++	if ( mem_avail < data_size || f->charcount != 256 )
++		return -ENOMEM;  /* Font too big */
+ 
+-static void cocon_bmove(struct vc_data *c, int sy, int sx, int dy, int dx, int h, int w)
+-{
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
++	printk( KERN_DEBUG"cocon: Seting up font %dx%d (%d chars)\n",
++				f->width, f->height, f->charcount );
++	printk( KERN_DEBUG"cocon: char bitmap: %dx%d = %d bytes\n",
++				fwb, f->height, chlen );
+ 
+-	co_message = co_send_message_save(&flags);
+-	if (!co_message)
+-		return;
++	cocon_lock();
  
 -	message = (co_console_message_t *)co_message->data;
 -	co_message->from = CO_MODULE_LINUX;
@@ -1730,16 +1732,6 @@
 -	message->bmove.bottom = sy + h - 1;
 -	message->bmove.right = sx + w - 1;
 -	co_send_message_restore(flags);
-+	if ( mem_avail < data_size || f->charcount != 256 )
-+		return -ENOMEM;  /* Font too big */
-+
-+	printk( KERN_INFO"cocon: Seting up font %dx%d (%d chars)\n",
-+				f->width, f->height, f->charcount );
-+	printk( KERN_INFO"cocon: char bitmap: %dx%d = %d bytes\n",
-+				fwb, f->height, chlen );
-+
-+	cocon_lock();
-+
 +	cocon_info->font_width  = f->width;
 +	cocon_info->font_height = f->height;
 +	cocon_info->font_count  = f->charcount;
@@ -1783,7 +1775,7 @@
  const struct consw colinux_con = {
  	con_startup:		cocon_startup,
  	con_init:		cocon_init,
-@@ -498,6 +630,7 @@
+@@ -498,6 +620,7 @@
  	con_save_screen:	cocon_save_screen,
  	con_build_attr:		cocon_build_attr,
  	con_invert_region:	cocon_invert_region,
@@ -1791,8 +1783,8 @@
  };
  
  MODULE_LICENSE("GPL");
---- include/asm-i386/mach-default/irq_vectors.h
-+++ include/asm-i386/mach-default/irq_vectors.h
+--- a/include/asm-i386/mach-default/irq_vectors.h
++++ b/include/asm-i386/mach-default/irq_vectors.h
 @@ -70,6 +70,7 @@
  #ifdef CONFIG_COOPERATIVE
  #define KEYBOARD_IRQ 1
@@ -1801,8 +1793,8 @@
  #endif
  
  /*
---- include/linux/cooperative.h
-+++ include/linux/cooperative.h
+--- a/include/linux/cooperative.h
++++ b/include/linux/cooperative.h
 @@ -20,7 +20,7 @@
  
  #include <asm/cooperative.h>
@@ -1932,8 +1924,8 @@
  
  typedef struct {	
  	unsigned long index;
---- include/linux/cooperative_internal.h
-+++ include/linux/cooperative_internal.h
+--- a/include/linux/cooperative_internal.h
++++ b/include/linux/cooperative_internal.h
 @@ -70,6 +70,8 @@
  extern unsigned long co_memory_size;
  extern void *co_initrd;
@@ -1943,8 +1935,8 @@
  
  #define co_io_buffer ((co_io_buffer_t *)CO_VPTR_IO_AREA_START)
  #define cooperative_mode_enabled()     1
---- include/linux/cooperative_video.h
-+++ include/linux/cooperative_video.h
+--- a/include/linux/cooperative_video.h
++++ b/include/linux/cooperative_video.h
 @@ -0,0 +1,180 @@
 +/*
 + *  linux/include/linux/cooperative_video.h
@@ -2126,8 +2118,8 @@
 +
 +
 +#endif /* __LINUX_COOPERATIVE_VIDEO_LINUX_H__ */
---- kernel/cooperative.c
-+++ kernel/cooperative.c
+--- a/kernel/cooperative.c
++++ b/kernel/cooperative.c
 @@ -25,6 +25,8 @@
  unsigned long co_memory_size = 0;
  void *co_initrd = NULL;
