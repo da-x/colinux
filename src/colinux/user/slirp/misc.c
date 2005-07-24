@@ -819,7 +819,7 @@ fd_nonblock(fd)
 	int fd;
 {
 #ifdef FIONBIO
-	int opt = 1;
+	unsigned long opt = 1;
 	
 	ioctlsocket(fd, FIONBIO, &opt);
 #else
@@ -836,7 +836,7 @@ fd_block(fd)
 	int fd;
 {
 #ifdef FIONBIO
-	int opt = 0;
+	unsigned long opt = 0;
 	
 	ioctlsocket(fd, FIONBIO, &opt);
 #else

@@ -19,6 +19,11 @@
 
 #include "daemon.h"
 
+typedef struct {
+    int size;
+    char * buffer;
+    } comma_buffer_t;	/* only for split_comma_separated here */
+
 static co_rc_t co_load_config_cofs(co_config_t *out_config, mxml_element_t *element)
 {
     int i;
@@ -338,6 +343,9 @@ co_rc_t co_load_config_network(co_config_t *out_config, mxml_element_t *element)
 				co_debug("config: invalid network element: invalid type %s\n", element_text);
 				return CO_RC(ERROR);
 			}
+		} else
+		if (strcmp(attr->name, "redir") == 0) {
+			snprintf(desc.redir, sizeof(desc.redir), "%s", attr->value);
 		}
 	}
 
@@ -576,27 +584,22 @@ static bool_t strmatch_identifier(const char *str, const char *identifier, const
 	return PFALSE;
 }
 
-static void split_comma_separated(const char *source, char **out_array, int *array_sizes, int array_length)
+static void split_comma_separated(const char *source, comma_buffer_t *array)
 {
-	int index = 0, j;
+	int j;
 	
-	for (index=0 ; index < array_length ; index++) {
-		out_array[index][0] = '\0';
+	for ( ; array->size > 0 && array->buffer != NULL ; array++) {
+		array->buffer[0] = '\0';
 		j = 0;
-		while (*source != ','  &&  *source != '\0') {
-			if (j == array_sizes[index] - 1) {
-				out_array[index][j] = '\0';
+		while (*source != ',') {
+			if (*source == '\0')
+				return;
+			if (j == array->size - 1)
 				break;
-			}
-			
-			out_array[index][j] = *source;
-			source++;
-			j++;
+
+			array->buffer[j++] = *source++;
+			array->buffer[j] = '\0';
 		}
-		
-		if (*source == '\0')
-			break;
-		
 		source++;
 	}
 }
@@ -607,18 +610,14 @@ static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, co
 	char mac_address[40] = {0, };
 	co_rc_t rc;
 
-	char *array[3] = {
-		conf->net_devs[index].desc,
-		mac_address,
-		host_ip,
-	};
-	int sizes[3] = {
-		sizeof(conf->net_devs[index].desc),
-		sizeof(mac_address),
-		sizeof(host_ip),
+	comma_buffer_t array [] = {
+		{ sizeof(conf->net_devs[index].desc), conf->net_devs[index].desc },
+		{ sizeof(mac_address), mac_address },
+		{ sizeof(host_ip), host_ip },
+		{ 0, NULL }
 	};
 
-	split_comma_separated(param, array, sizes, 3);
+	split_comma_separated(param, array);
 
 	conf->net_devs[index].type = CO_NETDEV_TYPE_TAP;
 	conf->net_devs[index].enabled = PTRUE;
@@ -650,16 +649,13 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 	char mac_address[40] = {0, };
 	co_rc_t rc;
 
-	char *array[3] = {
-		conf->net_devs[index].desc,
-		mac_address,
-	};
-	int sizes[3] = {
-		sizeof(conf->net_devs[index].desc),
-		sizeof(mac_address),
+	comma_buffer_t array [] = {
+		{ sizeof(conf->net_devs[index].desc), conf->net_devs[index].desc },
+		{ sizeof(mac_address), mac_address },
+		{ 0, NULL }
 	};
 
-	split_comma_separated(param, array, sizes, 3);
+	split_comma_separated(param, array);
 
 	conf->net_devs[index].type = CO_NETDEV_TYPE_BRIDGED_PCAP;
 	conf->net_devs[index].enabled = PTRUE;
@@ -693,21 +689,22 @@ static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, 
 {
 	char mac_address[40] = {0, };
 
-	char *array[3] = {
-		conf->net_devs[index].desc,
-		mac_address,
-	};
-	int sizes[3] = {
-		sizeof(conf->net_devs[index].desc),
-		sizeof(mac_address),
+	comma_buffer_t array [] = {
+		{ sizeof(mac_address), mac_address },
+		{ sizeof(conf->net_devs[index].redir), conf->net_devs[index].redir },
+		{ 0, NULL }
 	};
 
-	split_comma_separated(param, array, sizes, 3);
+	*(conf->net_devs[index].redir)='\0';
+	split_comma_separated(param, array);
 
 	conf->net_devs[index].type = CO_NETDEV_TYPE_SLIRP;
 	conf->net_devs[index].enabled = PTRUE;
 
 	co_terminal_print("configured Slirp as eth%d\n", index);
+
+	if (*(conf->net_devs[index].redir))
+		co_terminal_print("redirections %s\n", conf->net_devs[index].redir);
 
 	return CO_RC(OK);
 }

@@ -18,10 +18,14 @@
 #include <colinux/user/debug.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/user/slirp/libslirp.h>
+#include <colinux/user/slirp/ctl.h>
 
 #include "../daemon.h"
 
-COLINUX_DEFINE_MODULE("colinux-serial-net-daemon");
+#define PARM_SLIRP_REDIR_TCP 0
+#define PARM_SLIRP_REDIR_UDP 1
+
+COLINUX_DEFINE_MODULE("colinux-slirp-net-daemon");
 
 /*******************************************************************************
  * Type Declarations
@@ -277,6 +281,51 @@ void co_net_syntax()
 	co_terminal_print("    -i index                Network device index number (0 for eth0, 1 for\n");
 	co_terminal_print("                            eth1, etc.)\n");
 	co_terminal_print("    -c instance             coLinux instance ID to connect to\n");
+	co_terminal_print("    -r tcp|udp:hport:cport  port redirection.\n");
+}
+
+static co_rc_t 
+parse_redir_param (const char *p)
+{
+	int iProto, iHostPort, iClientPort;
+	struct in_addr guest_addr;
+
+	if (!inet_aton(CTL_LOCAL, &guest_addr))
+	{
+		co_terminal_print("conet-slirp-daemon: slirp redir setup guest_addr failed.\n");
+		return CO_RC(ERROR);
+	}
+
+	do {
+		// minimal len is "tcp:x:x"
+		if (strlen (p) < 7)
+			return CO_RC(ERROR);
+
+		iProto = (memicmp(p, "udp", 3) == 0)
+			? PARM_SLIRP_REDIR_UDP : PARM_SLIRP_REDIR_TCP;
+
+		// search the first ':'
+		p = strchr (p, ':');
+		if (!p)
+			return CO_RC(ERROR);
+		iHostPort = atol(p+1);
+
+		// search the second ':'
+		p = strchr (p+1, ':');
+		if (!p)
+			return CO_RC(ERROR);
+		iClientPort = atol(p+1);
+
+		co_debug("slirp redir %d %d:%d\n", iProto, iHostPort, iClientPort);
+		if (slirp_redir(iProto, iHostPort, guest_addr, iClientPort) < 0) {
+			co_terminal_print("conet-slirp-daemon: slirp redir %d failed.\n", iClientPort);
+		}
+
+		// Next redirection?
+		p = strchr (p, '/');
+	} while (p++);
+
+	return CO_RC(OK);
 }
 
 static co_rc_t 
@@ -284,6 +333,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 {
 	char **param_scan = argv;
 	const char *option;
+	co_rc_t rc;
 
 	/* Default settings */
 	start_parameters->index = -1;
@@ -296,11 +346,11 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 		if (strcmp(*param_scan, option) == 0) {
 			param_scan++;
 			if (!(*param_scan)) {
-				co_terminal_print("Parameter of command line option %s not specified\n", option);
+				co_terminal_print("conet-slirp-daemon: parameter of command line option %s not specified\n", option);
 				return CO_RC(ERROR);
 			}
 
-			sscanf(*param_scan, "%d", &start_parameters->index);
+			start_parameters->index = atoi(*param_scan);
 			param_scan++;
 			continue;
 		}
@@ -309,36 +359,53 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 		if (strcmp(*param_scan, option) == 0) {
 			param_scan++;
 			if (!(*param_scan)) {
-				co_terminal_print("Parameter of command line option %s not specified\n", option);
+				co_terminal_print("conet-slirp-daemon: parameter of command line option %s not specified\n", option);
 				return CO_RC(ERROR);
 			}
 
-			sscanf(*param_scan, "%d", (int *)&start_parameters->instance);
+			start_parameters->instance = (co_id_t) atoi(*param_scan);
 			param_scan++;
 			continue;
 		}
+
 		option = "-h";
 		if (strcmp(*param_scan, option) == 0) {
 			start_parameters->show_help = PTRUE;
 		}
 
+		option = "-r";
+		if (strcmp(*param_scan, option) == 0) {
+			param_scan++;
+			if (!(*param_scan)) {
+				co_terminal_print("conet-slirp-daemon: parameter of command line option %s not specified\n", option);
+				return CO_RC(ERROR);
+			}
+
+			rc = parse_redir_param(*param_scan);
+			if (!CO_OK(rc)) {
+				co_terminal_print("conet-slirp-daemon: parameter of command line option %s not specified\n", option);
+				return rc;
+			}
+			param_scan++;
+			continue;
+		}
 		param_scan++;
 	}
 
 	if (start_parameters->index == -1) {
-		co_terminal_print("Device index not specified\n");
+		co_terminal_print("conet-slirp-daemon: device index not specified\n");
 		return CO_RC(ERROR);
 	}
 
 	if ((start_parameters->index < 0) ||
 	    (start_parameters->index >= CO_MODULE_MAX_CONET)) 
 	{
-		co_terminal_print("Invalid index: %d\n", start_parameters->index);
+		co_terminal_print("conet-slirp-daemon: invalid index: %d\n", start_parameters->index);
 		return CO_RC(ERROR);
 	}
 
 	if (start_parameters->instance == -1) {
-		co_terminal_print("coLinux instance not specificed\n");
+		co_terminal_print("conet-slirp-daemon: coLinux instance not specificed\n");
 		return CO_RC(ERROR);
 	}
 
@@ -374,20 +441,14 @@ int main(int argc, char *argv[])
 	WSADATA wsad;
 
 	co_debug_start();
+	WSAStartup(MAKEWORD(2, 0), &wsad);
+	slirp_init();
 
 	rc = handle_paramters(&start_parameters, argc, argv);
 	if (!CO_OK(rc)) {
 		exit_code = -1;
 		goto out;
 	}
-
-	WSAStartup(MAKEWORD(2, 0), &wsad);
-
-	slirp_init();
-	
-	struct in_addr guest_addr;
-	co_inet_aton("10.0.2.15", &guest_addr);
-	slirp_redir(FALSE, 5901, guest_addr, 5901);
 
 	co_terminal_print("Slirp initialized\n");
 

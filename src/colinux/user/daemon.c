@@ -101,7 +101,7 @@ void co_daemon_syntax()
 	co_terminal_print("      Use of new aliases automatically allocates cobd(s), for example:\n");
 	co_terminal_print("\n");
 	co_terminal_print("          colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1 \\\n");
-	co_terminal_print("          eth0=pcap-brigde,\"Local Area Connection\"\n");
+	co_terminal_print("          eth0=pcap-bridge,\"Local Area Connection\"\n");
 	co_terminal_print("\n");
 	co_terminal_print("      See README.txt for more details about command-line usage.\n");
 	co_terminal_print("\n");
@@ -855,7 +855,7 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 		net_dev = &daemon->config.net_devs[i];
 		if (net_dev->enabled == PFALSE)
 			continue;
-			
+
 		co_debug("launching daemon for conet%d\n", i);
 
 		if (strlen(net_dev->desc) != 0) {
@@ -866,7 +866,7 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 		{
 		case CO_NETDEV_TYPE_BRIDGED_PCAP: {
 			char mac_address[18];
-			
+
 			co_build_mac_address(mac_address, sizeof(mac_address), net_dev->mac_address);
 
 			rc = co_launch_process("colinux-bridged-net-daemon -c %d -i %d %s -mac %s", daemon->id, i, interface_name, mac_address);
@@ -879,7 +879,15 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 		}
 
 		case CO_NETDEV_TYPE_SLIRP: {
-			rc = co_launch_process("colinux-slirp-net-daemon -c %d -i %d", daemon->id, i);
+			char redir [CO_NETDEV_REDIRDIR_STR_SIZE+3];
+
+			if (strlen(net_dev->redir) != 0) {
+				co_snprintf(redir, sizeof(redir), " -r %s", net_dev->redir);
+			} else {
+				redir[0]='\0';
+			}
+
+			rc = co_launch_process("colinux-slirp-net-daemon -c %d -i %d%s", daemon->id, i, redir);
 			break;
 		}
 

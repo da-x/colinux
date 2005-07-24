@@ -90,7 +90,7 @@ important when options don't depend on each other.
      colinux-daemon kernel=vmlinux cobd0=root_fs hda2=:cobd0 root=/dev/cobd0
 
    Device node aliasing. The ':' tells the daemon that's cobd0
-  is not a pathname - understand using the next example.
+   is not a pathname - understand using the next example.
 
 
      colinux-daemon kernel=vmlinux hda1=root_fs root=/dev/hda1
@@ -128,3 +128,14 @@ important when options don't depend on each other.
      eth0=pcap-bridge,"Local Area Network"
 
    Uses PCAP bridging. 
+
+
+     eth0=slirp,"",tcp:22:22/tcp:80:80
+
+   Uses SLiRP networking, with port 22 and 80 on host being
+   redirected (or port forwarded) to coLinux guest.
+
+   Redirections must begin with protocol ("tcp" or "udp") then
+   an ":" seperator, the port on coLinux guest followed by ":"
+   seperator, and the port for the host.  More redirections
+   have the same form and are seperated by "/".

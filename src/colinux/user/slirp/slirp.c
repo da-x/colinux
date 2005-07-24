@@ -9,12 +9,19 @@ struct in_addr loopback_addr;
 
 /* address for slirp virtual addresses */
 struct in_addr special_addr;
+struct in_addr client_addr;
 
 const uint8_t special_ethaddr[6] = { 
     0x52, 0x54, 0x00, 0x12, 0x35, 0x00
 };
 
-uint8_t client_ethaddr[6];
+uint8_t client_ethaddr[6] = { 
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+};
+
+const uint8_t bcast_ethaddr[6] = { 
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+};
 
 int do_slowtimo;
 int link_up;
@@ -153,6 +160,7 @@ void slirp_init(void)
     }
 
     inet_aton(CTL_SPECIAL, &special_addr);
+    inet_aton(CTL_LOCAL, &client_addr);
 }
 
 #define CONN_CANFSEND(so) (((so)->so_state & (SS_FCANTSENDMORE|SS_ISFCONNECTED)) == SS_ISFCONNECTED)
@@ -414,7 +422,7 @@ void slirp_select_poll(fd_set *readfds, fd_set *writefds, fd_set *xfds)
 			    /* Connected */
 			    so->so_state &= ~SS_ISFCONNECTING;
 			    
-			    ret = send(so->s, &ret, 0, 0);
+			    ret = send(so->s, (void*)&ret, 0, 0);
 			    if (ret < 0) {
 			      /* XXXXX Must fix, zero bytes is a NOP */
 			      if (errno == EAGAIN || errno == EWOULDBLOCK ||
@@ -562,9 +570,6 @@ void arp_input(const uint8_t *pkt, int pkt_len)
             }
             return;
         arp_ok:
-            /* XXX: make an ARP request to have the client address */
-            memcpy(client_ethaddr, eh->h_source, ETH_ALEN);
-
             /* ARP request for alias/dns mac address */
             memcpy(reh->h_dest, pkt + ETH_ALEN, ETH_ALEN);
             memcpy(reh->h_source, special_ethaddr, ETH_ALEN - 1);
@@ -581,6 +586,11 @@ void arp_input(const uint8_t *pkt, int pkt_len)
             memcpy(rah->ar_tha, ah->ar_sha, ETH_ALEN);
             memcpy(rah->ar_tip, ah->ar_sip, 4);
             slirp_output(arp_reply, sizeof(arp_reply));
+        }
+        break;
+    case ARPOP_REPLY:
+        if (!memcmp(ah->ar_sip, &client_addr, 4)) {
+            memcpy(client_ethaddr, eh->h_source, ETH_ALEN);
         }
         break;
     default:
@@ -623,9 +633,34 @@ void if_encap(const uint8_t *ip_data, int ip_data_len)
 {
     uint8_t buf[1600];
     struct ethhdr *eh = (struct ethhdr *)buf;
+    struct arphdr *rah = (struct arphdr *)(buf + ETH_HLEN);
 
     if (ip_data_len + ETH_HLEN > sizeof(buf))
         return;
+
+    if(!memcmp(client_ethaddr,bcast_ethaddr,6))
+    {
+	/* make an ARP request to have the client address */
+	memcpy(eh->h_dest, bcast_ethaddr, ETH_ALEN);
+	memcpy(eh->h_source, special_ethaddr, ETH_ALEN - 1);
+	eh->h_source[5] = CTL_ALIAS;
+	eh->h_proto = htons(ETH_P_ARP);
+
+	rah->ar_hrd = htons(1);
+	rah->ar_pro = htons(ETH_P_IP);
+	rah->ar_hln = ETH_ALEN;
+	rah->ar_pln = 4;
+	rah->ar_op = htons(ARPOP_REQUEST);
+	memcpy(rah->ar_sha, eh->h_source, ETH_ALEN);
+	memcpy(rah->ar_sip, &special_addr, 4);
+	rah->ar_sip[3]=CTL_ALIAS;
+	memcpy(rah->ar_tha, bcast_ethaddr, ETH_ALEN);
+	memcpy(rah->ar_tip, &client_addr, 4); 
+
+	slirp_output(buf, sizeof(struct arphdr)+ ETH_HLEN);
+/* XXX: We loose the first packet here, cause client_ethaddr 
+   is bcast_ethaddr. */
+    }
 
     memcpy(eh->h_dest, client_ethaddr, ETH_ALEN);
     memcpy(eh->h_source, special_ethaddr, ETH_ALEN - 1);
