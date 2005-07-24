@@ -728,10 +728,10 @@ COLINUX_BUILD_LOG="$logfile"
 COLINUX_KERNEL_UNTAR="$kernel_untar"
 
 # Strip kernel image.
-# Yes: Smales size for dist.
-# No: Leave all debug symbols in image. Good choice for error tracing with gdb.
+# yes: Smales size for dist.
+# no: Leave all debug symbols in image. Good choice for error tracing with gdb.
 #
-COLINUX_KERNEL_STRIP="yes"
+COLINUX_KERNEL_STRIP="no"
 
 # Path to depmod, installed from module-init-tools
 # default: /sbin/depmod
