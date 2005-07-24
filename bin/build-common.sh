@@ -53,7 +53,7 @@ SRCDIR="$SOURCE_DIR"
 # Updated by Sam Lantinga <slouken@libsdl.org>
 # These are the files from the current MingW release
 
-MINGW_VERSION="3.6"
+MINGW_VERSION="3.7"
 MINGW_URL=http://heanet.dl.sourceforge.net/sourceforge/mingw
 MINGW=mingw-runtime-$MINGW_VERSION
 MINGW_ARCHIVE=$MINGW.tar.gz

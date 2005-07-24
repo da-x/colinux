@@ -149,9 +149,6 @@ static void parse_tlv(const co_debug_tlv_t *tlv, const char *block)
 	fprintf(output_file, "  <log ");
 	ptlv = (const co_debug_tlv_t *)block;
 	while ((char *)ptlv < (char *)&block[tlv->length]) {
-#if (0)
-		printf("%x of %x: %02x\n", ((const char *)ptlv) - block, tlv->length, ptlv->type); 
-#endif
 		switch (ptlv->type) {
 		case CO_DEBUG_TYPE_TIMESTAMP: {
 			co_timestamp_t *ts = (typeof(ts))(ptlv->value);
@@ -437,7 +434,7 @@ static void syntax(void)
 	printf("colinux-debug-daemon\n");
 	printf("syntax: \n");
 	printf("\n");
-	printf("    colinux-debug-daemon [-h] [-c config.xml] [-d]\n");
+	printf("    colinux-debug-daemon [-h] [-p] [-d] [-s levels] [-f filename]\n");
 	printf("\n");
 	printf("      -d              Download debug information on the fly\n");
 	printf("      -p              Parse the debug information and output an XML\n");

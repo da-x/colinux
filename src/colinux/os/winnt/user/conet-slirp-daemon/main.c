@@ -384,6 +384,10 @@ int main(int argc, char *argv[])
 	WSAStartup(MAKEWORD(2, 0), &wsad);
 
 	slirp_init();
+	
+	struct in_addr guest_addr;
+	co_inet_aton("10.0.2.15", &guest_addr);
+	slirp_redir(FALSE, 5901, guest_addr, 5901);
 
 	co_terminal_print("Slirp initialized\n");
 
