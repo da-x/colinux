@@ -63,9 +63,21 @@ static co_rc_t co_load_config_cofs(co_config_t *out_config, mxml_element_t *elem
         co_debug("config: invalid cofs element: bad path\n");
         return CO_RC(ERROR);
     }
+
+    /* Check currently configing path against already 
+       configured paths, error if an duplicate is found. 
+    */
+    int index_value=0;
+    for (index_value=0; index_value < index; index_value++) {
+	if ( strcmp(out_config->cofs_devs[index_value].pathname, path ) 
+== 0 ) {
+		co_debug("config: invalid cofs element: duplicate path\n");
+		return CO_RC(ERROR);
+	} 
+    }
     
     if (type == NULL) {
-        co_debug("cofing: invalid cofs element: no type\n");
+        co_debug("config: invalid cofs element: no type\n");
         return CO_RC(ERROR);
     }
     
@@ -126,6 +138,17 @@ co_rc_t co_load_config_blockdev(co_config_t *out_config, mxml_element_t *element
 	if (path == NULL) {
 		co_debug("config: invalid block_dev element: bad path\n");
 		return CO_RC(ERROR);
+	}
+
+	/* Check currently configing path against already 
+           configured paths, error if an duplicate is found. 
+	*/
+        int index_value=0;
+	for (index_value=0; index_value < index; index_value++) {
+		if ( strcmp(out_config->block_devs[index_value].pathname, path) == 0 ) {
+			co_debug("config: invalid cofs element: duplicate path\n");
+			return CO_RC(ERROR);
+		} 
 	}
 
 	blockdev = &out_config->block_devs[index];
@@ -441,6 +464,22 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cobd", &index, param, 
 							     sizeof(param), &exists);
 		if (!CO_OK(rc)) 
+			return rc;
+		
+		char path[0x100];
+		co_snprintf(path, sizeof(path), "%s", param);
+		co_canonize_cobd_path(&path);
+		/* Check currently configing path against already 
+                   configured paths, error if an duplicate is found. 
+                */
+		int index_value=0;
+		for (index_value=0; index_value < index; index_value++) {
+			if (strcmp(conf->block_devs[index_value].pathname, path) == 0 ) {
+				rc = CO_RC(ERROR);
+			}
+		}
+
+		if (!CO_OK(rc))
 			return rc;
 		
 		if (exists) {
@@ -771,6 +810,22 @@ static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_confi
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cofs", &index, param, 
 							     sizeof(param), &exists);
 		if (!CO_OK(rc)) 
+			return rc;
+		
+		char path[0x100];
+		co_snprintf(path, sizeof(path), "%s", param);
+		co_canonize_cobd_path(&path);
+		/* Check currently configing path against already 
+                   configured paths, error if an duplicate is found. 
+                */
+                int index_value=0;
+		for (index_value=0; index_value < index; index_value++) {
+			if (strcmp(conf->cofs_devs[index_value].pathname, path) == 0 ) {
+				rc = CO_RC(ERROR);
+			}
+		}
+
+		if (!CO_OK(rc))
 			return rc;
 		
 		if (exists) {
