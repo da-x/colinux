@@ -146,7 +146,7 @@ co_rc_t co_load_config_blockdev(co_config_t *out_config, mxml_element_t *element
         int index_value=0;
 	for (index_value=0; index_value < index; index_value++) {
 		if ( strcmp(out_config->block_devs[index_value].pathname, path) == 0 ) {
-			co_debug("config: invalid cofs element: duplicate path\n");
+			co_debug("config: invalid cobd element: duplicate path\n");
 			return CO_RC(ERROR);
 		} 
 	}
@@ -466,28 +466,26 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 		if (!CO_OK(rc)) 
 			return rc;
 		
-		char path[0x100];
-		co_snprintf(path, sizeof(path), "%s", param);
-		co_canonize_cobd_path(&path);
-		/* Check currently configing path against already 
-                   configured paths, error if an duplicate is found. 
-                */
-		int index_value=0;
-		for (index_value=0; index_value < index; index_value++) {
-			if (strcmp(conf->block_devs[index_value].pathname, path) == 0 ) {
-				rc = CO_RC(ERROR);
-			}
-		}
-
-		if (!CO_OK(rc))
-			return rc;
-		
 		if (exists) {
 			co_block_dev_desc_t *cobd;
 
 			if (index < 0  || index >= CO_MODULE_MAX_COBD) {
 				co_terminal_print("invalid cobd index: %d\n", index);
 				return CO_RC(ERROR);
+			}
+		
+			char path[0x100];
+			co_snprintf(path, sizeof(path), "%s", param);
+			co_canonize_cobd_path(&path);
+			/* Check currently configing path against already 
+	                   configured paths, error if an duplicate is found. 
+	                */
+			int index_value=0;
+			for (index_value=0; index_value < index; index_value++) {
+				if (strcmp(conf->block_devs[index_value].pathname, path) == 0 ) {
+					co_terminal_print("duplicate cobd path: %s already used in cobd%i\n", path, index_value);
+					return CO_RC(ERROR);
+				}
 			}
 
 			cobd = &conf->block_devs[index];
@@ -812,28 +810,26 @@ static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_confi
 		if (!CO_OK(rc)) 
 			return rc;
 		
-		char path[0x100];
-		co_snprintf(path, sizeof(path), "%s", param);
-		co_canonize_cobd_path(&path);
-		/* Check currently configing path against already 
-                   configured paths, error if an duplicate is found. 
-                */
-                int index_value=0;
-		for (index_value=0; index_value < index; index_value++) {
-			if (strcmp(conf->cofs_devs[index_value].pathname, path) == 0 ) {
-				rc = CO_RC(ERROR);
-			}
-		}
-
-		if (!CO_OK(rc))
-			return rc;
-		
 		if (exists) {
 			co_cofsdev_desc_t *cofs;
 
 			if (index < 0  || index >= CO_MODULE_MAX_COFS) {
 				co_terminal_print("invalid cofs index: %d\n", index);
 				return CO_RC(ERROR);
+			}
+		
+			char path[0x100];
+			co_snprintf(path, sizeof(path), "%s", param);
+			co_canonize_cobd_path(&path);
+			/* Check currently configing path against already 
+	                   configured paths, error if an duplicate is found. 
+	                */
+	                int index_value=0;
+			for (index_value=0; index_value < index; index_value++) {
+				if (strcmp(conf->cofs_devs[index_value].pathname, path) == 0 ) {
+					co_terminal_print("duplicate cofs path: %s already used in cofs%i\n", path, index_value);
+					return CO_RC(ERROR);
+				}
 			}
 
 			cofs = &conf->cofs_devs[index];
