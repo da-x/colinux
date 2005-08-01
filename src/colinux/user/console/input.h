@@ -60,6 +60,11 @@ public:
      */
     void reset( bool dettached );
 
+    /**
+     * Paste text buffer as input.
+     */
+    int paste_text( int len, const char* buf );
+
 private:
     // Helper function for sending the key scancode.
     void send_scancode( unsigned scancode );

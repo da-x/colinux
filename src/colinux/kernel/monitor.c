@@ -118,6 +118,7 @@ guest_video_init( co_monitor_t *cmon )
 		rc = CO_RC(ERROR);
 		return rc;
 	}
+	co_debug_system( "Video buffer PFNs:\n" );
 	// Fill page table with video buffer PFNs
 	for( pte = 0;  pte < CO_ARCH_PAGE_SIZE/sizeof(linux_pte_t); ++pte )
 	{
@@ -125,17 +126,28 @@ guest_video_init( co_monitor_t *cmon )
 		{
 			unsigned long host_addr = (unsigned long)cmon->video_buffer
 						+ pte*CO_ARCH_PAGE_SIZE;
-			ptes[pte] = co_os_virt_to_phys((void*)host_addr)
-				| _PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED;
+			unsigned long pa = co_os_virt_to_phys( (void*)host_addr );
+			co_debug_system( "%08lX ", pa );
+			ptes[pte] = pa | _PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED;
 		}
 		else
 		{
 			ptes[pte] = 0;
 		}
 	}
+	co_debug_system( "Done...\n" );
+
+	// Map the page table page as last entry of self
+	/*
+	 * FIXME: Check we don't overrun this last page!!!
+	 */
+	ptes[ CO_ARCH_PAGE_SIZE/sizeof(linux_pte_t) - 1 ]
+		= (video_map_pfn << CO_ARCH_PAGE_SHIFT)
+		  | _PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED;
+
 	// Unmap video map pfn. we don't need it mapped anymore
 	co_os_unmap( cmon->manager, ptes, video_map_pfn );
-	
+
 	return CO_RC(OK);
 }
 

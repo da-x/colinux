@@ -224,3 +224,48 @@ bool console_input::send_mouse_event( co_mouse_data_t& data )
 
     return true;
 }
+
+/**
+ * Paste text buffer as input.
+ *
+ * To handle simbols in source we pass each character as an Alt+123
+ * sequence. This can be very slow, but in the future this can be better
+ * if we implement a shared buffer to pass keystrokes and mouse messages.
+ *
+ * Returns number of characters pasted.
+ */
+int console_input::paste_text( int len, const char* s )
+{
+    static const char kpad_code[10] /* keypad scan codes ['0'..'9'] */
+	= { 0x52, 0x4F, 0x50, 0x51, 0x4B, 0x4C, 0x4D, 0x47, 0x48, 0x49 };
+
+    if ( !monitor_ )
+        return 0;
+
+    /* Limit maximum number of chars pasted to avoid a possible DoS attack */
+    if ( len > 1024 )
+	len = 1024;
+
+    /* Fake keyboard input */
+    for ( int i = 0; i < len; ++i )
+    {
+	unsigned char ch = s[i];
+	if ( ch == '\n' )
+		ch = '\r';      // get <enter> right
+	// Convert to decimal digits
+	int d1 = ch / 100;
+	int d2 = (ch % 100) / 10;
+	int d3 = (ch % 100) % 10;
+	// Send Alt + NumPad digits
+	send_scancode( 0x0038 );		// press ALT
+	send_scancode( kpad_code[d1] );		// press digit 1
+	send_scancode( kpad_code[d1] | 0x80 );	// release digit 1
+	send_scancode( kpad_code[d2] );		// press digit 2
+	send_scancode( kpad_code[d2] | 0x80 );	// release digit 2
+	send_scancode( kpad_code[d3] );		// press digit 3
+	send_scancode( kpad_code[d3] | 0x80 );	// release digit 3
+	send_scancode( 0x00B8 );		// release ALT
+    }
+
+    return len;
+}

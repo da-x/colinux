@@ -280,8 +280,8 @@ int console_main_window::handle( int event )
         // Pass mouse messages to colinux, if attached
         if ( is_attached() && Fl::event_inside(wScreen_) )
         {
-//            handle_mouse_event( );
-//            return 1;
+            handle_mouse_event( );
+            return 1;
         }
         break;
     case FL_KEYUP:
@@ -292,21 +292,11 @@ int console_main_window::handle( int event )
         end_mark_mode( );
         return 1;
     case FL_PASTE:
-        /*
-         * FIXME:
-         *      I don't see nothing in Fl::event_text() after this.
-         *      After a mail to the FLTK list, it seems to be a bug in
-         *      the FLTK library in windows (it works on linux).
-         *      We may need to revert to the 'old' way of getting this,
-         *      using the WIN32 API (as done in the old FLTK console
-         *      version).
-         */
-        log( "Pasting %d bytes\n"
-             "---- BEGIN PASTED TEXT ----\n"
-             "%s\n"
-             "---- END PASTED TEXT ----\n",
-             Fl::event_length(), Fl::event_text() );
+      {
+        int c = input_.paste_text( Fl::event_length(), Fl::event_text() );
+        status( "%d of %d characters pasted...\n", c, Fl::event_length() );
         return 1;
+      }
     }
 
     return super_::handle( event );
@@ -343,9 +333,9 @@ void console_main_window::handle_mouse_event( )
         md.btns |= 2;
     if ( state & FL_BUTTON3 )
         md.btns |= 4;
-    md.rel_z = Fl::event_dy();
+//    md.rel_z = Fl::event_dy();
 
-    printf( "Mouse: (%d,%d)--virt-->(%d,%d) btns=%d z=%d\n",
+    status( "Mouse: (%d,%d)--virt-->(%d,%d) btns=%d z=%d\n",
                     x,y, md.abs_x,md.abs_y, md.btns, md.rel_z );
 
     // Send mouse move event to colinux instance
@@ -671,6 +661,8 @@ void console_main_window::on_idle( void* )
             break;
         case TMSG_VIEW_RESIZE:
             this_->wScroll_->redraw();
+            if ( !this_->fullscreen_mode_ )
+                this_->resize_around_console( );
             break;
         default:
             this_->log( "Unkown thread message!!!\n" );
@@ -974,7 +966,7 @@ void console_main_window::on_paste( Fl_Widget*, void* )
 {
     assert( this_ );
     // We will receive a FL_PASTE event to complete this
-    Fl::paste( *this_ );
+    Fl::paste( *this_, 1 );
 }
 
 /* ----------------------------------------------------------------------- */
@@ -1046,3 +1038,5 @@ void console_main_window::end_mark_mode( )
     // Clear marking on the screen view
     wScreen_->clear_marked_text( );
 }
+
+/* ----------------------------------------------------------------------- */

@@ -55,13 +55,26 @@ void screen_cofb_render::draw( int x, int y )
     /*
      * Now we can do the real drawing of the rendered screen.
      *
-     * FIXME: I'm using an hardcoded buffer of 32 bits per pixel.
+     * FIXME: 15/16bpp needs color map handling.
+     * FIXME: Strange line widths not handled.
+     * TODO: Implement 8bpp.
      */
-    fl_draw_image( (uchar*)fb_, x,y, w(),h(), 4 );
+    switch ( info_.bpp )
+    {
+    case 15:
+    case 16:
+        fl_draw_image( (uchar*)fb_, x,y, w(),h(), 2 );
+        break;
+    case 24:
+        fl_draw_image( (uchar*)fb_, x,y, w(),h(), 3 );
+        break;
+    case 32:
+        fl_draw_image( (uchar*)fb_, x,y, w(),h(), 4 );
+        break;
+    }
 
     // Finish by clearing the dirty flag
     info_.header.flags &= ~CO_VIDEO_FLAG_DIRTY;
 }
 
 /* ----------------------------------------------------------------------- */
-
