@@ -65,6 +65,11 @@ public:
      */
     int paste_text( int len, const char* buf );
 
+    /**
+     * Send raw scancode directly to colinux.
+     */
+    void send_raw_scancode( unsigned scancode )     { send_scan_(scancode); }
+
 private:
     // Helper function for sending the key scancode.
     void send_scancode( unsigned scancode );

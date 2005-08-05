@@ -61,6 +61,7 @@ console_screen::~console_screen( )
  *      1) The video buffer signature changed (new driver)
  *      2) The video buffer layout changed (resized or new font)
  *      3) Screen changed and more than 100 msecs elapsed since last redraw
+ *      4) No change, but redraw anyway if 500 msecs elapsed (fb mmap case)
  *
  * FIXME: Make the harcoded values changeable and/or test for better ones.
  */
@@ -69,6 +70,8 @@ void console_screen::refresh_callback( void* v )
     self_t& this_ = *(self_t*)v;
     bool refresh = false;
     bool resize_widget = false;
+    clock_t now = clock();
+    clock_t elapsed = 1000*(now - this_.last_redraw_)/CLOCKS_PER_SEC;
 
     // Lock video memory
     co_video_header * video = this_.video_lock( );
@@ -92,9 +95,16 @@ void console_screen::refresh_callback( void* v )
     }
     else if ( video->flags & CO_VIDEO_FLAG_DIRTY )
     {   // Check if 100 msecs elapsed since last redraw
-        clock_t now = clock();
-        clock_t msecs = 1000*(now - this_.last_redraw_)/CLOCKS_PER_SEC;
-        refresh = msecs > 100? true : false;
+        refresh = elapsed > 100? true : false;
+    }
+    else if ( video->magic == CO_VIDEO_MAGIC_COFB && elapsed > 500 )
+    {
+	/*
+	 * This is for the case where linux fb programs write directly
+	 * to the mmaped framebuffer memory.
+	 * This will ensure we will always draw those changes.
+	 */
+	refresh = true;
     }
 
     // Release lock
@@ -221,32 +231,40 @@ void console_screen::video_unlock( co_video_header* header )
 
 /* ----------------------------------------------------------------------- */
 /*
+ * Returns true only if it is the cocon renderer active.
+ */
+bool console_screen::can_mark( ) const
+{
+    return render_ && render_->id() == CO_VIDEO_MAGIC_COCON;
+}
+
+/* ----------------------------------------------------------------------- */
+/*
  * Mark text from (x1,y1) to (x2,y2).
  *
- * Coordinates are in pixels.
+ * FIXME: Lock the shared video memory
  */
 void console_screen::set_marked_text( int x1,int y1, int x2,int y2 )
 {
+    if ( render_ )
+    {
+	int x0 = x();
+	int y0 = y();
+	render_->mark_set( x1-x0,y1-y0, x2-x0,y2-y0 );
+    }
 }
 
 /* ----------------------------------------------------------------------- */
 /*
  * Get current marked text.
  *
- * This will not work in cofb mode, as we don't have access to the console
- * buffer.
+ * FIXME: Lock the shared video memory
  */
-const char* console_screen::get_marked_text( ) const
+unsigned console_screen::get_marked_text( char* buf, unsigned len )
 {
-    return "";
-}
-
-/* ----------------------------------------------------------------------- */
-/*
- * Clear current selection.
- */
-void console_screen::clear_marked_text( )
-{
+    if ( !render_ )
+	return 0;
+    return render_->mark_get( buf, len );
 }
 
 /* ----------------------------------------------------------------------- */

@@ -32,6 +32,8 @@ public:
     virtual unsigned long id() const = 0;
     virtual int w() const = 0;
     virtual int h() const = 0;
+    virtual bool mark_set( int x1,int y1, int x2,int y2 ) { return false; }
+    virtual unsigned mark_get( char* buf, unsigned len )      { return 0; }
 };
 
 
@@ -59,9 +61,9 @@ public:
     int mouse_x( int mx ) const { return mx - x(); }
     int mouse_y( int my ) const { return my - y(); }
 
+    bool can_mark( ) const;
     void set_marked_text( int x1,int y1, int x2,int y2 );
-    const char* get_marked_text( ) const;
-    void clear_marked_text( );
+    unsigned get_marked_text( char* buf, unsigned len );
 
 private:
     // Do the drawing ourselves

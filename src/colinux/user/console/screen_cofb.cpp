@@ -54,22 +54,22 @@ void screen_cofb_render::draw( int x, int y )
 
     /*
      * Now we can do the real drawing of the rendered screen.
-     *
-     * FIXME: 15/16bpp needs color map handling.
-     * FIXME: Strange line widths not handled.
-     * TODO: Implement 8bpp.
      */
     switch ( info_.bpp )
     {
-    case 15:
     case 16:
-        fl_draw_image( (uchar*)fb_, x,y, w(),h(), 2 );
+	/*
+	 * This doesn't work, as fl_draw_image() draws grayscale with this,
+	 * but at least allows us to see something on this mode (some fb
+	 * programs only use this, like fbsplash and qingy).
+	 */
+        fl_draw_image( (uchar*)fb_, x,y, w(),h(), 2, info_.bwidth );
         break;
     case 24:
-        fl_draw_image( (uchar*)fb_, x,y, w(),h(), 3 );
+        fl_draw_image( (uchar*)fb_, x,y, w(),h(), 3, info_.bwidth );
         break;
     case 32:
-        fl_draw_image( (uchar*)fb_, x,y, w(),h(), 4 );
+        fl_draw_image( (uchar*)fb_, x,y, w(),h(), 4, info_.bwidth );
         break;
     }
 

@@ -107,7 +107,7 @@ int main( int argc, char **argv )
     // window in the program. This makes sure we can use Xdbe on servers
     // where double buffering does not exist for every visual (I suppose
     // this is ignored on Windows).
-    Fl::visual( FL_DOUBLE | FL_INDEX );
+    Fl::visual( FL_DOUBLE | FL_RGB );
 
     // Create main window object
     console_main_window * app_window = new console_main_window( );

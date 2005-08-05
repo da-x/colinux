@@ -119,6 +119,8 @@ private:
     static void on_show_hide_log( Fl_Widget*, void* );
     static void on_mark( Fl_Widget*, void* );
     static void on_paste( Fl_Widget*, void* );
+    static void on_calibrate( Fl_Widget*, void* );
+    static void on_key_seq( Fl_Widget*, void* );
     static void unimplemented( Fl_Widget*, void* );
 
     // Callback for the reactor API
@@ -133,7 +135,11 @@ private:
     co_user_monitor_t   *   monitor_;           // colinux instance monitor
     bool                    fullscreen_mode_;   // true if fullscreen on
     console_input           input_;             // Console input handler
-    bool                    mark_mode_;         // True when in "Mark" mode
+
+    enum eMouseMode { MouseNormal, MouseMark, MouseCalibrate };
+    eMouseMode              mouse_mode_;        // Current mouse mode
+    int                     mouse_scale_x_;     // Mouse X axis scaling factor
+    int                     mouse_scale_y_;     // Mouse Y axis scaling factor
 
     Fl_Preferences          prefs_;             // Application preferences
 

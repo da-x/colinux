@@ -55,18 +55,41 @@ Fl_Menu_Item console_main_window::menu_items_[]
             { " Options... ", 0, on_options, 0, FL_MENU_DIVIDER },
             { " Quit "      , 0, on_quit },
             { 0 },
-        { "Edit", 0,0,0, FL_SUBMENU },
-            { " Mark " , 0, on_mark },
-            { " Paste ", 0, on_paste },
+        { "Input", 0,0,0, FL_SUBMENU },
+            { " Mark "              , 0, on_mark      },
+            { " Paste "             , 0, on_paste     , 0, FL_MENU_DIVIDER },
+            { " Calibrate mouse... ", 0, on_calibrate , 0, FL_MENU_DIVIDER},
+            { " Special keys "      , 0,0,0, FL_SUBMENU },
+                { " Alt+SysRq+R (unRaw) "      , 0, on_key_seq   , (void*) 1 },
+                { " Alt+SysRq+K (saK) "        , 0, on_key_seq   , (void*) 2 },
+                { " Alt+SysRq+B (reBoot) "     , 0, on_key_seq   , (void*) 3 },
+                { " Alt+SysRq+N (Nice) "       , 0, on_key_seq   , (void*) 4 },
+                { " Alt+SysRq+S (Sync) "       , 0, on_key_seq   , (void*) 5 },
+                { " Alt+SysRq+U (RemoUnt) "    , 0, on_key_seq   , (void*) 6 },
+                { " Alt+SysRq+P (dumP) "       , 0, on_key_seq   , (void*) 7 },
+                { " Alt+SysRq+T (Tasks) "      , 0, on_key_seq   , (void*) 8 },
+                { " Alt+SysRq+M (Mem) "        , 0, on_key_seq   , (void*) 9 },
+                { " Alt+SysRq+E (sigtErm) "    , 0, on_key_seq   , (void*)10 },
+                { " Alt+SysRq+I (sigkIll) "    , 0, on_key_seq   , (void*)11 },
+                { " Alt+SysRq+L (sigkill aLL) ", 0, on_key_seq   , (void*)12 },
+                { " Alt+SysRq+H (Help) "       , 0, on_key_seq   , (void*)13, FL_MENU_DIVIDER },
+                { " Alt+Tab "                  , 0, on_key_seq   , (void*)20 },
+                { " Alt+Shift+Tab "            , 0, on_key_seq   , (void*)21 },
+                { " Ctrl+Esc "                 , 0, on_key_seq   , (void*)22 },
+                { " PrintScreen "              , 0, on_key_seq   , (void*)23 },
+                { " Pause "                    , 0, on_key_seq   , (void*)24 },
+                { " Ctrl+Break "               , 0, on_key_seq   , (void*)25 },
+                { " Ctrl+Alt+Del "             , 0, on_key_seq   , (void*)26 },
+                { 0 },
             { 0 },
         { "Monitor", 0,0,0, FL_SUBMENU },
-            { " Select... "  , 0, on_select     , 0, FL_MENU_DIVIDER },
-            { " Attach "     , 0, on_attach     },
-            { " Dettach "    , 0, on_dettach    , 0, FL_MENU_DIVIDER },
-            { " Pause "      , 0, unimplemented },
-            { " Resume "     , 0, unimplemented , 0, FL_MENU_DIVIDER },
-            { " Ctl-Alt-Del ", 0, on_power      , (void*)0 },
-            { " Shutdown "   , 0, on_power      , (void*)1 },
+            { " Select... ", 0, on_select     , 0, FL_MENU_DIVIDER },
+            { " Attach "   , 0, on_attach     },
+            { " Dettach "  , 0, on_dettach    , 0, FL_MENU_DIVIDER },
+            { " Pause "    , 0, unimplemented },
+            { " Resume "   , 0, unimplemented , 0, FL_MENU_DIVIDER },
+            { " Reboot "   , 0, on_power      , (void*)0 },
+            { " Shutdown " , 0, on_power      , (void*)1 },
             { 0 },
         { "Inspect", 0,0,0, FL_SUBMENU },
             { " Manager Status ", 0, on_inspect, (void*)1 },
@@ -102,7 +125,9 @@ console_main_window::console_main_window( )
   : super_( 640,480, "Cooperative Linux console [" COLINUX_VERSION "]" )
   , monitor_( NULL )
   , fullscreen_mode_( false )
-  , mark_mode_( false )
+  , mouse_mode_( MouseNormal )
+  , mouse_scale_x_( CO_MOUSE_MAX_X )
+  , mouse_scale_y_( CO_MOUSE_MAX_Y )
   , prefs_( Fl_Preferences::USER, "coLinux.org", "FLTK console" )
 {
     // Set pointer to self for static methods
@@ -132,7 +157,7 @@ console_main_window::console_main_window( )
         const int bdx = Fl::box_dx( FL_THIN_DOWN_FRAME );
         const int bdy = Fl::box_dx( FL_THIN_DOWN_FRAME );
         wScreen_ = new console_screen( bdx, bdy + mh,
-                                            640 + bdx*2, 400 + bdy*2 );
+                                       640 + bdx*2, 400 + bdy*2 );
     }
     wScroll_->end( );
 
@@ -275,10 +300,10 @@ int console_main_window::handle( int event )
     case FL_DRAG:
     case FL_MOUSEWHEEL:
         // Mark mode enabled?
-        if ( mark_mode_ && Fl::event_inside(wScreen_) )
+        if ( mouse_mode_ == MouseMark )
             return handle_mark_event( event );
         // Pass mouse messages to colinux, if attached
-        if ( is_attached() && Fl::event_inside(wScreen_) )
+        if ( is_attached() && Fl::event_inside(wScroll_) )
         {
             handle_mouse_event( );
             return 1;
@@ -286,7 +311,7 @@ int console_main_window::handle( int event )
         break;
     case FL_KEYUP:
     case FL_KEYDOWN:
-        if ( !mark_mode_ )
+        if ( mouse_mode_ != MouseMark )
             return input_.handle_key_event( );
         // Any key will stop the mark mode
         end_mark_mode( );
@@ -313,30 +338,29 @@ void console_main_window::handle_mouse_event( )
     // Get x,y relative to the termninal screen
     int x = wScreen_->mouse_x( Fl::event_x() );
     int y = wScreen_->mouse_y( Fl::event_y() );
-    // Transform to the comouse virtual screen size
-    /*
-     * FIXME:
+
+    /* Transform to the comouse virtual screen size
      *
-     *      This are hardcoded values i saw that worked well enough with gpm.
-     *      Need to check why only these values work, and not the 2048 max.
-     *      An alternative is to have a calibration option.
+     * FIXME:
+     *    The scale factors need to be calibrated for each screen resolution
+     *    and mode. We need to implement a mouse calibrate option.
      */
-    md.abs_x = 1024*x / wScreen_->w();
-    md.abs_y =  768*y / wScreen_->h();
+    md.abs_x = mouse_scale_x_*x / wScreen_->w();
+    md.abs_y = mouse_scale_y_*y / wScreen_->h();
 
     // Get button and mousewheel state
     unsigned state = Fl::event_state();
-    md.btns = 0;
     if ( state & FL_BUTTON1 )
         md.btns |= 1;
     if ( state & FL_BUTTON2 )
         md.btns |= 2;
     if ( state & FL_BUTTON3 )
         md.btns |= 4;
-//    md.rel_z = Fl::event_dy();
+    if ( Fl::event() == FL_MOUSEWHEEL )
+        md.rel_z = Fl::event_dy();
 
-    status( "Mouse: (%d,%d)--virt-->(%d,%d) btns=%d z=%d\n",
-                    x,y, md.abs_x,md.abs_y, md.btns, md.rel_z );
+//    status( "Mouse: (%d,%d)--virt-->(%d,%d) btns=%d z=%d\n",
+//                    x,y, md.abs_x,md.abs_y, md.btns, md.rel_z );
 
     // Send mouse move event to colinux instance
     input_.send_mouse_event( md );
@@ -344,7 +368,7 @@ void console_main_window::handle_mouse_event( )
 
 /* ----------------------------------------------------------------------- */
 /**
- * Center given window inside this window.
+ * Helper to center given window inside this window.
  */
 void console_main_window::center_widget( Fl_Widget* win )
 {
@@ -389,12 +413,15 @@ void console_main_window::on_select( Fl_Widget*, void* )
 void console_main_window::on_options( Fl_Widget*, void* )
 {
     assert( this_ );
+#if 0
     // Open & show the options window
     console_options_window* win = new console_options_window;
     this_->center_widget( win );
     win->set_modal( );
     win->show( );
     // The window will "awake" us with the options selected and destroy itself
+#endif
+    this_->log( "Not yet implemented..." );
 }
 
 /* ----------------------------------------------------------------------- */
@@ -950,6 +977,8 @@ void console_main_window::update_ui_state( )
     set_menu_state( on_attach   , !attached );
     set_menu_state( on_dettach  ,  attached );
     set_menu_state( on_power    ,  attached );
+    set_menu_state( on_paste    ,  attached );
+    set_menu_state( on_key_seq  ,  attached );
     // "Show Log window" checkbox
     Fl_Menu_Item& mi = get_menu_item( on_show_hide_log );
     if ( wLog_->visible() )
@@ -975,13 +1004,19 @@ void console_main_window::on_paste( Fl_Widget*, void* )
  */
 void console_main_window::on_mark( Fl_Widget*, void* )
 {
-    assert( this_ && !this_->mark_mode_);
+    assert( this_ && this_->mouse_mode_!= MouseMark);
+    // Check the screen can be marked
+    if ( !this_->wScreen_->can_mark() )
+    {
+        this_->status( "Can't mark text in graphics mode..." );
+        return;
+    }
     // Disable the "Mark" & "Paste" menu items.
     this_->set_menu_state( on_mark, false );
     this_->set_menu_state( on_paste, false );
     this_->status( "Mark mode enabled. Drag the mouse to copy." );
     // Start mark mode
-    this_->mark_mode_ = true;
+    this_->mouse_mode_ = MouseMark;
 }
 
 /* ----------------------------------------------------------------------- */
@@ -991,17 +1026,30 @@ void console_main_window::on_mark( Fl_Widget*, void* )
 int console_main_window::handle_mark_event( int event )
 {
     static int mx, my;
+
+    int ex = Fl::event_x();
+    int ey = Fl::event_y();
+
+    if ( ! Fl::event_inside(wScroll_) )
+    {
+	ex = mx;
+	ey = my;
+    }
+
     switch ( event )
     {
     case FL_PUSH:
-        mx = Fl::event_x();
-        my = Fl::event_y();
+        mx = ex;
+        my = ey;
         break;
     case FL_DRAG:
-        wScreen_->set_marked_text( mx,my, Fl::event_x(),Fl::event_y() );
+        wScreen_->set_marked_text( mx,my, ex,ey );
+	wScreen_->damage( 1 );
+	status( "Mark: %d,%d --> %d,%d", mx,my, ex,ey );
         break;
     case FL_RELEASE:
-        wScreen_->set_marked_text( mx,my, Fl::event_x(),Fl::event_y() );
+        wScreen_->set_marked_text( mx,my, ex,ey );
+	status( "Mark: %d,%d --> %d,%d", mx,my, ex,ey );
         end_mark_mode( );
         return 1;
     default:
@@ -1016,27 +1064,93 @@ int console_main_window::handle_mark_event( int event )
  */
 void console_main_window::end_mark_mode( )
 {
-    mark_mode_ = false;
+    mouse_mode_ = MouseNormal;
     input_.resume( monitor_ );
     set_menu_state( on_mark, true );
     set_menu_state( on_paste, true );
 
     // Get marked text
-    const char* buf = wScreen_->get_marked_text( );
-
-    if  ( !buf )
-    {
-        status( "Null selection returned!" );
+    char * buf = NULL;
+    unsigned len = wScreen_->get_marked_text( 0,0 );
+    if ( len ) {
+	buf = new char[len];
+	len = wScreen_->get_marked_text( buf, len );
+	wScreen_->damage( 1 );
     }
-    else
-    {
-        int len = strlen( buf );
+
+    if  ( len )
         Fl::copy( buf, len, 1 );
-        status( "%d bytes selected.", len );
-    }
 
-    // Clear marking on the screen view
-    wScreen_->clear_marked_text( );
+    if ( !len )
+	status( "No text returned!" );
+    else
+        status( "%d bytes in the clipboard.", len );
+
+    delete[] buf;
+}
+
+/* ----------------------------------------------------------------------- */
+
+void console_main_window::on_key_seq( Fl_Widget*, void* data )
+{
+    unsigned sysrq = 0;
+
+    if ( !this_->is_attached() )
+        return;
+
+    this_->input_.reset( false );
+
+    switch ( int(data) )
+    {
+    case  1: /*Alt+SysRq+R*/ sysrq = 0x13; break;
+    case  2: /*Alt+SysRq+K*/ sysrq = 0x25; break;
+    case  3: /*Alt+SysRq+B*/ sysrq = 0x30; break;
+    case  4: /*Alt+SysRq+N*/ sysrq = 0x31; break;
+    case  5: /*Alt+SysRq+S*/ sysrq = 0x1F; break;
+    case  6: /*Alt+SysRq+U*/ sysrq = 0x16; break;
+    case  7: /*Alt+SysRq+P*/ sysrq = 0x19; break;
+    case  8: /*Alt+SysRq+T*/ sysrq = 0x14; break;
+    case  9: /*Alt+SysRq+M*/ sysrq = 0x32; break;
+    case 10: /*Alt+SysRq+E*/ sysrq = 0x12; break;
+    case 11: /*Alt+SysRq+I*/ sysrq = 0x17; break;
+    case 12: /*Alt+SysRq+L*/ sysrq = 0x26; break;
+    case 13: /*Alt+SysRq+H*/ sysrq = 0x23; break;
+#define SEND(sc) this_->input_.send_raw_scancode(sc)
+    case 20:    // Alt+Tab
+	SEND(0x38);SEND(0x0F);
+	SEND(0x8F);SEND(0xB8); return;
+    case 21:    // Alt+Shift+Tab
+	SEND(0x38);SEND(0x2A);SEND(0x0F);
+	SEND(0x8F);SEND(0xAA);SEND(0xB8); return;
+    case 22:    // Ctrl+Esc
+        SEND(0x1D);SEND(0x01);
+	SEND(0x81);SEND(0x9D); return;
+    case 23:    // PrintScreen
+	SEND(0xE0);SEND(0x2A);SEND(0xE0);SEND(0x37);
+	SEND(0xE0);SEND(0xB7);SEND(0xE0);SEND(0xAA); return;
+    case 24:    // Pause
+	SEND(0xE1);SEND(0x1D);SEND(0x45);
+	SEND(0xE1);SEND(0x9D);SEND(0xC5); return;
+    case 25:    // Ctrl+Break
+	SEND(0x1D);SEND(0xE1);SEND(0x1D);SEND(0x45);
+	SEND(0xE1);SEND(0x9D);SEND(0xC5);SEND(0x9D); return;
+    case 26:    // Ctrl+Alt+Del
+	SEND(0x1D);SEND(0x38);SEND(0xE0);SEND(0x53);
+	SEND(0xE0);SEND(0xD3);SEND(0xB8);SEND(0x9D); return;
+    default:
+	return;
+    }
+    // Send Alt+SysReq+<??>
+    SEND(0x38);       SEND(0x54); SEND(sysrq);
+    SEND(sysrq|0x80); SEND(0xD4); SEND(0xB8);
+#undef SEND
+}
+
+/* ----------------------------------------------------------------------- */
+
+void console_main_window::on_calibrate( Fl_Widget*, void* )
+{
+    /* TODO: */
 }
 
 /* ----------------------------------------------------------------------- */

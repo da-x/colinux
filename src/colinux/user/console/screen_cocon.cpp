@@ -11,8 +11,7 @@
 #include <FL/Fl.H>
 #include <FL/fl_draw.H>
 #include <stdlib.h>
-//#include <string.h>
-
+#include <memory.h>
 
 
 /* ----------------------------------------------------------------------- */
@@ -53,6 +52,8 @@ screen_cocon_render::screen_cocon_render( cocon_video_mem_info * info )
     , vram_( (__u8*)info )
     , fb_( 0 )
     , palette_( default_color_palette )
+    , mark_begin_( 0 )
+    , mark_end_( 0 )
 {
     reset( );
 }
@@ -102,54 +103,6 @@ void screen_cocon_render::reset( )
 
 /* ----------------------------------------------------------------------- */
 /*
- * Renders current screen.
- *
- * NOTE: draw() must be called with the video memory locked.
- */
-void screen_cocon_render::draw( int x, int y )
-{
-    /*
-     * We need to check the info has not changed since the last reset.
-     * If it has, cancel drawing. It's up to the screen widget to re-set us.
-     */
-    if ( (info_.header.flags & CO_VIDEO_FLAG_INFO_CHANGE)
-            || id() != CO_VIDEO_MAGIC_COCON )
-        return;
-
-    /*
-     * We can be called even if the console buffer hasn't changed, like
-     * on minimize/restore, so only re-render screen if it needs to.
-     */
-    if ( info_.header.flags & CO_VIDEO_FLAG_DIRTY )
-    {
-        __u16* scr = scr_base_;
-        scr -= info_.scrollback*info_.num_cols;
-        // Full rendering of the current view
-        for ( int j=0; j < info_.num_rows; ++j )
-            render_str( j,0, &scr[j*info_.num_cols], info_.num_cols );
-        // Clear the dirty flag
-        info_.header.flags &= ~CO_VIDEO_FLAG_DIRTY;
-    }
-
-    /*
-     * Now we can do the real drawing of the rendered screen
-     */
-    fl_draw_image( (uchar*)fb_, x,y, w_,h_, 4 );
-
-    /*
-     * Draw cursor, if visible and not in scrollback mode
-     */
-    if ( !(info_.header.flags & CO_VIDEO_COCON_CURSOR_HIDE)
-                && !info_.scrollback )
-    {
-        fl_color( FL_WHITE );
-        fl_rectf( x + fw_*info_.cur_x, y + fh_*(info_.cur_y+1) - cur_h_ - 1,
-                  fw_, cur_h_ );
-    }
-}
-
-/* ----------------------------------------------------------------------- */
-/*
  * Render character/attribute at position (row,col).
  */
 void screen_cocon_render::render_char( int row, int col, __u16 chattr )
@@ -188,3 +141,159 @@ void screen_cocon_render::render_str( int row, int col, __u16 * str, int len )
 
 /* ----------------------------------------------------------------------- */
 
+static void draw_mask( int x, int y, int dx, int dy )
+{
+#define VERY_UGLY_RECT_MASK
+
+#ifdef PRETY_BUT_HIGH_CPU_AND_MEM_USAGE
+    static uchar buf[1280*32*3];
+    fl_read_image( buf, x,y, dx,dy );
+    const unsigned len = dx*dy;
+    for ( unsigned i = 0; i < len; ++i )
+        buf[i*3] ^= 0x80;
+    fl_draw_image( buf, x,y, dx,dy, 3 );
+#endif
+
+#ifdef VERY_UGLY_RECT_MASK
+    fl_color( FL_YELLOW );
+    fl_rect( x, y, dx-1, dy+1 );
+#endif
+}
+
+/* ----------------------------------------------------------------------- */
+/*
+ * Renders current screen.
+ *
+ * NOTE: draw() must be called with the video memory locked.
+ */
+void screen_cocon_render::draw( int x, int y )
+{
+    /*
+     * We need to check the info has not changed since the last reset.
+     * If it has, cancel drawing. It's up to the screen widget to re-set us.
+     */
+    if ( (info_.header.flags & CO_VIDEO_FLAG_INFO_CHANGE)
+            || id() != CO_VIDEO_MAGIC_COCON )
+        return;
+
+    /*
+     * We can be called even if the console buffer hasn't changed, like
+     * on minimize/restore, so only re-render screen if it needs to.
+     */
+    if ( info_.header.flags & CO_VIDEO_FLAG_DIRTY )
+    {
+        __u16* scr = scr_base_;
+        scr -= info_.scrollback*info_.num_cols;
+        // Full rendering of the current view
+        for ( int j=0; j < info_.num_rows; ++j )
+            render_str( j,0, &scr[j*info_.num_cols], info_.num_cols );
+        // Clear the dirty flag
+        info_.header.flags &= ~CO_VIDEO_FLAG_DIRTY;
+    }
+
+    /* Now we can do the real drawing of the rendered screen */
+    fl_draw_image( (uchar*)fb_, x,y, w_,h_, 4 );
+
+    /* Draw cursor, if visible and not in scrollback mode */
+    if ( !(info_.header.flags & CO_VIDEO_COCON_CURSOR_HIDE)
+                && !info_.scrollback )
+    {
+        fl_color( FL_WHITE );
+        fl_rectf( x + fw_*info_.cur_x, y + fh_*(info_.cur_y+1) - cur_h_ - 1,
+                  fw_, cur_h_ );
+    }
+
+    /* Draw mark borders, if in mark mode */
+    if ( mark_begin_ != mark_end_ )
+    {
+	// Convert to text coordinates
+	int l = mark_begin_%info_.num_cols; int t = mark_begin_/info_.num_cols;
+	int r = mark_end_%info_.num_cols;   int b = mark_end_/info_.num_cols;
+
+	if ( b == t )
+		draw_mask( x + c2x(l), y + r2y(t), (r-l)*fw_, fh_ );
+	else
+		for ( int j = t; j <= b; ++j )
+		{
+			int mx = x;	int my = y + r2y(j);
+			int mdx = w_;	int mdy = fh_;
+			if ( j == t && l > 0 ) {
+				mx  = x + c2x(l);
+				mdx = (info_.num_cols-l)*fw_;
+			} else if ( j == b && r < info_.num_cols-1 )
+				mdx = r*fw_;
+			draw_mask( mx, my, mdx, mdy );
+		}
+    }
+}
+
+/* ----------------------------------------------------------------------- */
+
+bool screen_cocon_render::mark_set( int x1,int y1, int x2,int y2 )
+{
+    // Convert to text coordinates: (l,t)->(r,b)
+    int l = x1/fw_; int t = y1/fh_;
+    int r = x2/fw_; int b = y2/fh_;
+
+    // Convert to screen offsets
+    int begin = t*info_.num_cols + l;
+    int end   = b*info_.num_cols + r;
+
+    // Check offsets are ok
+    if ( begin < 0 || begin >= info_.num_rows*info_.num_cols
+        || end < 0 || end >= info_.num_rows*info_.num_cols )
+    {
+	mark_begin_ = mark_end_ = 0;
+	return false;
+    }
+
+    // Swap if necessary
+    if ( begin > end )
+    {
+	mark_begin_ = end;
+	mark_end_   = begin;
+    }
+    else
+    {
+	mark_begin_ = begin;
+	mark_end_   = end;
+    }
+
+    return mark_begin_ != mark_end_;
+}
+
+/* ----------------------------------------------------------------------- */
+
+unsigned screen_cocon_render::mark_get( char* buf, unsigned len )
+{
+    // Get start/end of marked buffer
+    __u16 * beg = scr_base_ + mark_begin_;
+    __u16 * end = scr_base_ + mark_end_;
+    int lines = (mark_end_ - mark_begin_) / info_.num_cols;
+
+    // 1 extra char per line and 1 for the terminating '\0'
+    unsigned slen = end - beg + (lines + 1) + 1;
+
+    if ( !buf || !len )
+        return slen;    // Return required buffer size
+    if ( len < slen )
+        return 0;       // Buffer too small
+
+    char * s = buf;
+    while ( beg < end )
+    {
+	*s = 0xFF & *beg;
+	if ( unsigned(*s) < 32 )
+	    *s = ' ';
+	s++;
+	beg++;
+	if ( ((beg - scr_base_) % info_.num_cols) == 0 )
+	        *s++ = '\n';
+    }
+    *s = '\0';
+
+    mark_begin_ = mark_end_ = 0;
+    return s - buf;
+}
+
+/* ----------------------------------------------------------------------- */

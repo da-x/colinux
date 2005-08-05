@@ -202,8 +202,7 @@ bool console_input::send_mouse_event( co_mouse_data_t& data )
     if ( !monitor_ )
         return false;
 
-    struct
-    {
+    struct {
         co_message_t		message;
         co_linux_message_t	msg_linux;
         co_mouse_data_t		mouse;

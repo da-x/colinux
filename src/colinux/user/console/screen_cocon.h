@@ -32,12 +32,15 @@ public:
     int h() const                       { return h_; }
     void reset( );
     void draw( int x, int y );
+    bool mark_set( int x1,int y1, int x2,int y2 );
+    unsigned mark_get( char* buf, unsigned len );
 
 private:
     int c2x( int col ) const        { return col*fw_; }
     int r2y( int row ) const        { return row*fh_; }
     __u32 color( int idx ) const    { return palette_[idx]; }
     __u32& pixel( int x, int y )    { return fb_[y*w_ + x]; }
+    __u16& cell( int r, int c )     { return scr_base_[r*info_.num_cols+c]; }
 
     void render_char( int row, int col, __u16 charattr );
     void render_str( int row, int col, __u16 * strattr, int len );
@@ -52,6 +55,7 @@ private:
     __u8                    *   font_data_;
     __u16                   *   scr_base_;
     __u32                   *   palette_;
+    unsigned                    mark_begin_, mark_end_;
 };
 
 
