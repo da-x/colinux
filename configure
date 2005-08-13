@@ -2,8 +2,8 @@
 
 # File: configure
 #
-# Simlpe configure script for develop coLinux and cross platform,
-# create makefile and bin/user-build.cfg.
+# Simlpe configure script for develop coLinux and cross platform, checks
+# build environment (gcc and tools) and create bin/user-build.cfg.
 #
 # - Henry Nestler <henry@bigfoot.de>
 #
@@ -11,7 +11,7 @@
 #	./configure --help
 
 # Some defaults from config file (Kernel version and dir, binutil version)
-cd bin; source build-common.sh --get-vars; cd ..
+cd bin; . build-common.sh --get-vars; cd ..
 
 # Some default values
 target=i686-pc-mingw32
@@ -26,7 +26,6 @@ targetmoduledir=NONE
 hostkerneldir=NONE
 colinux_os=NONE
 configfile="bin/user-build.cfg"
-makefileout="Makefile"
 no_create=
 verbose=no
 kernel_untar="yes"
@@ -100,7 +99,7 @@ Options:
                           use \$\$ for process id and separate files.
                           [\$TOPDIR/log/build-colinux-\$\$.log]
   --no-kernel-untar       Do not delete and untar kernel tree, if exist.
-  --no-create             Test only this configure, no Makefile create
+  --no-create             Test only this configure, no files create
   --verbose               More messages in configure.
 -------------------------------------------------------------------------------
 Sample for WinNT as host (default):
@@ -111,6 +110,13 @@ Sample for WinNT as host (default):
 Sample for Linux as host:
   ./configure --target=i686-pc-linux \\
 	--downloaddir=$SOURCE_DIR \\
+	--targetkerneldir=$BUILD_DIR/linux-$KERNEL_VERSION \\
+	--hostkerneldir=/usr/src/`uname -r`
+
+Sample for WinNT and Linux as host in same config:
+  ./configure \\
+	--downloaddir=$SOURCE_DIR \\
+	--prefix=$PREFIX \\
 	--targetkerneldir=$BUILD_DIR/linux-$KERNEL_VERSION \\
 	--hostkerneldir=/usr/src/`uname -r`
 
@@ -328,7 +334,6 @@ esac
 #
 
 if [ "$target_os" = "linux" ] ; then
-
  UNAME_RELEASE=`(uname -r) 2>/dev/null` || UNAME_RELEASE=unknown
  echo " UNAME_RELEASE=$UNAME_RELEASE"
 
@@ -352,7 +357,9 @@ if [ "$target_os" = "linux" ] ; then
   fi
   echo "Setting hostkerneldir=$hostkerneldir"
  fi
+fi
 
+if [ "$hostkerneldir" != "NONE" ] ; then
   if [ ! -f $hostkerneldir/Makefile ] ; then
     { echo "configure: error: missing host kernel source in $hostkerneldir" 1>&2; exit 1; }
   fi
@@ -374,7 +381,6 @@ if [ "$target_os" = "linux" ] ; then
   if [ "$HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL$HOST_EXTRAVERSION" != "`uname -r`" ] ; then
     echo -e "\n WARNING! Running kernel is not same as host kernel - You can not run colinux on this machine!\n"
   fi
-
 fi
 
 # Default logfile directory
@@ -462,7 +468,7 @@ gcc_helper()
 	# tar xfz $downloaddir/gcc-core-$GCC_RELEASE-src.tar.gz
 	# tar xfz $downloaddir/gcc-g++-$GCC_RELEASE-src.tar.gz
 	# cd gcc-$GCC_RELEASE
-	# ./configure --prefix=/home/\$USER/local-i686
+	# ./configure --prefix=\$HOME/i686-pc-linux-local
 	# make
 	# make install
 	# cd / ; rm -rf /tmp/gcc-$GCC_RELEASE
@@ -470,7 +476,7 @@ gcc_helper()
 	Than run counfigure and make for colinux again
 	with binary path to this directory.
 
-	# export PATH="/home/\$USER/local-i686/bin:\$PATH"
+	# export PATH="\$HOME/i686-pc-linux-local/bin:\$PATH"
 	# cd $srcdir
 	# ./configure && make
 
@@ -483,7 +489,8 @@ check_depmod()
   echo -n "Checking for depmod ... "
 
   # Locate depmod in user dirs and check for module-init-tools version
-  if depmod_cfg=`PATH="$prefix/$target/bin:/sbin:/usr/sbin:/usr/local/sbin:$PATH" which depmod 2>/dev/null`; then
+  if depmod_cfg=`PATH="$prefix/bin:/sbin:/usr/sbin:/usr/local/sbin:$PATH" \
+		 which depmod 2>/dev/null`; then
 
     # Depmod 2.4.x is bugy with "-V" only, "--help" does nothing real.
     installed=`$depmod_cfg -V --help 2>/dev/null | grep module-init-tools`
@@ -495,7 +502,7 @@ check_depmod()
 	See http://www.codemonkey.org.uk/docs/post-halloween-2.6.txt
 
 	Install the file 'depmod', in directory
-	$prefix/$target/bin,
+	$prefix/bin,
 	to use only for cross buildings.
 
 EOF
@@ -558,121 +565,6 @@ test "$no_create" = yes && { echo "nothing created!" 1>&2; exit 1; }
 logfile_dir=`dirname $logfile`
 mkdir -p $logfile_dir
 
-# Backup old makefile
-test -f $makefileout -a ! -f $makefileout.old && mv $makefileout $makefileout.old
-
-#
-# Create Makefile in base directory
-#
-
-echo "Create toplevel $makefileout"
-    cat > $makefileout << EOF
-# $makefileout for coLinux $CO_VERSION ($target_os)
-# created by configure at `date`
-
-TARGET=$target
-USER_TOPDIR=$topdir
-SRCDIR=$srcdir
-DOWNLOAD=$downloaddir
-BUILDDIR=$builddir
-PREFIX=$prefix
-DISTDIR=$distdir
-MD5CACHE=$md5dir
-
-# Target directories
-export COLINUX_TARGET_KERNEL_PATH=$targetkerneldir
-export COLINUX_INSTALL_DIR=\$(DISTDIR)
-
-EOF
-
-case $colinux_os in
-  linux) # for Linux
-    cat >> $makefileout << EOF
-# Host system directories
-export COLINUX_HOST_KERNEL_DIR=$hostkerneldir
-export COLINUX_HOST_OS=linux
-
-.PHONY: all colinux
-all: colinux
-
-EOF
-  ;;
-  *) # for Winnt
-    cat >> $makefileout << EOF
-# Need some variables and PATH of cross compiler in make. Export this all
-export PATH := \$(PREFIX)/bin:\${PATH}
-
-.PHONY: all cross cross libs kernel download package installer
-all: cross libs kernel colinux
-
-#
-# Check tools and targets via md5sum
-#
-
-cross:
-	@cd bin && ./build-cross.sh
-
-libs:
-	@cd bin && ./build-colinux-libs.sh
-
-kernel:
-	@cd bin && ./build-kernel.sh
-
-# Download only all missing sources (for cross compile)
-download:
-	@cd bin && source build-common.sh --download-all
-
-# Create a pre-distributabel package as ZIP
-package:
-	@cd bin && source build-common.sh --package-all
-
-# Create installer (need wine)
-installer:
-	@cd src && make installer
-
-EOF
-  ;;
-esac
-
-    cat >> $makefileout << EOF
-.PHONY: colinux clean help distclean
-# Compile daemons
-colinux:
-	@cd src && make colinux
-
-clean:
-	@cd src && make clean
-
-help:
-	@echo  ''
-	@echo  'Execute "make" or "make all" to build all targets'
-	@echo  'Execute "make package" to ZIP targets into \$(DISTDIR)'
-	@echo  ''
-	@echo  'Other generic targets:'
-	@echo  '  all		- Build crosstools, all targets marked with [*]'
-	@echo  '* download	- Download all sources (for cross tools and libs)'
-	@echo  '* cross		- Build and install cross compiler and binutils'
-	@echo  '* libs		- Build and install libs: fltk,win32api'
-	@echo  '* kernel	- Build colinux kernel vmlinux and modules'
-	@echo  '* colinux	- Build colinux daemons'
-	@echo  '  package	- Create ZIP file packages for pre releases'
-	@echo  '  installer	- Create Installer (need wine)'
-	@echo  ''
-	@echo  'Cleaning colinux build (daemons only, no cross compiler, no libs):'
-	@echo  '  clean		- remove most generated files but keep the config and distry files'
-	@echo  '  distclean	- remove all generated files + config + md5sum'
-	@echo  ''
-
-distclean: clean
-	rm -f $makefileout $makefileout.old \\
-	 $configfile $configfile.old \\
-	 \$(MD5CACHE)/.build-*.md5
-
-######################################
-# CONFIGURE was call with follow args:
-# $@
-EOF
-
 # Backup old config file
 test -f $configfile -a ! -f $configfile.old && mv $configfile $configfile.old
 
@@ -683,18 +575,18 @@ test -f $configfile -a ! -f $configfile.old && mv $configfile $configfile.old
 
 echo "Create $configfile"
     cat > $configfile << EOF
-# $configfile
+# File: $configfile
 # Configfile for coLinux $CO_VERSION, kernel $KERNEL_VERSION
 # created by configure at `date`
 
-# Setup target OS
+# Setup target OS (winnt or linux)
 COLINUX_HOST_OS="$colinux_os"
 
 # Directory where we start for all subdirs in build processing
-# default: /home/\$USER/src/colinux-devel  (use only in this file)
+# default: \$HOME/src/colinux-devel  (use only in this file)
 USER_TOPDIR="$topdir"
 
-# Directory where we store download sources or where we find source already stored
+# Directory where we store download sources or where find source already stored
 # default: \$USER_TOPDIR/download
 SOURCE_DIR="$downloaddir"
 
@@ -716,7 +608,7 @@ COLINUX_TARGET_KERNEL_PATH="$targetkerneldir"
 COLINUX_TARGET_MODULE_PATH="$targetmoduledir"
 
 # HOST-Kernel (only, if host system is linux)
-#  export COLINUX_HOST_KERNEL_DIR=/path/to/your/host/kernel
+# default: /path/to/your/host/kernel/source
 COLINUX_HOST_KERNEL_DIR="$hostkerneldir"
 
 # Install directory for target binaries (daemons, kernel and modules)
@@ -730,7 +622,6 @@ COLINUX_BUILD_LOG="$logfile"
 # Overwrite kerneltree before rebuild? yes/no
 # yes: Build script will overwrite kerneltree and config (default)
 # no:  Build script leave kernel source untouched. User can make patches and config
-#
 COLINUX_KERNEL_UNTAR="$kernel_untar"
 
 # Path to depmod, installed from module-init-tools
@@ -743,5 +634,6 @@ EOF
 Configure DONE
 
 Ready for "make download && make && make package && make installer"
+Run "make help" for more instructions, and read doc/building.
 
 EOF

@@ -1,11 +1,21 @@
 #!/bin/sh
 
-. ./build-common.sh
+# Build libraries for cross platform mingw32
 
-PATH="$PREFIX/$TARGET/bin:$PATH"
+. build-common.sh
 
 # Store version of installed libs here
 VERSION_CACHE="$PREFIX/$TARGET/include"
+
+# Current developing build system
+BUILD=i686-linux
+
+# Current developing build system should not same as target
+if [ "$BUILD" = "$TARGET" ]
+then
+	echo "Fatal error: BUILD = TARGET, that's no cross build!"
+	exit -1
+fi
 
 download_files()
 {
@@ -100,16 +110,11 @@ configure_fltk()
 	echo "Configuring FLTK"
 	cd "$BUILD_DIR/$FLTK"
 
-	# Using of --host=$TARGET is old!
-	# Please beleve host=i386, also your host is mostly i686!
-	# "i386..." is a pseudonym to enable "cross-compiling",
-	# because target is diffent with "i686..."
-
 	# Configure for cross compiling without X11.
 	./configure \
+	 --build=$BUILD \
+	 --host=$TARGET \
 	 --prefix=$PREFIX/$TARGET \
-	 --build=$TARGET \
-	 --host=i386-linux-linux-gnu \
 	 --without-x >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "FLTK configure failed"
 
@@ -151,7 +156,11 @@ configure_mxml()
 {
 	echo "Configuring MXML"
 	cd "$BUILD_DIR/$MXML"
-	./configure --host=$TARGET >>$COLINUX_BUILD_LOG 2>&1
+	./configure \
+	 --build=$BUILD \
+	 --host=$TARGET \
+	 --prefix=$PREFIX/$TARGET \
+	 >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "MXML configure failed"
 
 	echo "Making MXML"
@@ -202,6 +211,7 @@ configure_w32api_src()
 	echo "Configuring w32api source"
 	cd "$BUILD_DIR/$W32API_SRC"
 	./configure \
+	 --build=$BUILD \
 	 --host=$TARGET \
 	 --prefix=$PREFIX/$TARGET \
 	 CC=$TARGET-gcc >>$COLINUX_BUILD_LOG 2>&1
@@ -243,8 +253,9 @@ install_winpcap_src()
 {
 	echo "Installing $WINPCAP_SRC"
 	cd "$BUILD_DIR/$WINPCAP_SRC"
-	cp Include/PCAP.H "$PREFIX/$TARGET/include/pcap.h"
+	cp Include/pcap.h "$PREFIX/$TARGET/include/pcap.h"
 	cp Include/pcap-stdinc.h "$PREFIX/$TARGET/include"
+	cp Include/pcap-bpf.h "$PREFIX/$TARGET/include"
 	cp Include/bittypes.h "$PREFIX/$TARGET/include"
 	cp Include/ip6_misc.h "$PREFIX/$TARGET/include"
 	mkdir -p "$PREFIX/$TARGET/include/net"

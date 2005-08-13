@@ -1,4 +1,4 @@
-;Cooeprative Linux installer
+;Cooperative Linux installer
 ;Written by NEBOR Regis
 ;Modified by Dan Aloni (c) 2004
 ;Modified 8/20/2004,2/4/2004 by George P Boutwell
@@ -68,6 +68,7 @@
 
   !define MUI_FINISHPAGE_LINK "Visit the Cooperative Linux website"
   !define MUI_FINISHPAGE_LINK_LOCATION "http://www.colinux.org/"
+  !define MUI_FINISHPAGE_SHOWREADME "README.TXT"
   
   !insertmacro MUI_PAGE_FINISH
   !insertmacro MUI_UNPAGE_CONFIRM
@@ -127,20 +128,19 @@ Section
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayName" "coLinux"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "UninstallString" '"$INSTDIR\Uninstall.exe"'
 
-  SetOutPath "$INSTDIR"
-  
-  
+
   ;---------------------------------------------------------------FILES--
   ;----------------------------------------------------------------------
   ; Our Files . If you adds something here, Remember to delete it in 
   ; the uninstall section
 
-  File "..\..\build\coLinux-daemon.exe"
-  File "..\..\build\linux.sys"
-  File /oname=README.txt "..\..\..\..\..\..\RUNNING"
-  File /oname=news.txt "..\..\..\..\..\..\NEWS" 
-  File /oname=cofs.txt  "..\..\..\..\..\..\doc\cofs"
-  File /oname=colinux-daemon.txt "..\..\..\..\..\..\doc\colinux-daemon"
+  SetOutPath "$INSTDIR"
+  File "premaid\coLinux-daemon.exe"
+  File "premaid\linux.sys"
+  File "premaid\README.txt"
+  File "premaid\news.txt"
+  File "premaid\cofs.txt"
+  File "premaid\colinux-daemon.txt"
   File "premaid\vmlinux"
   File "premaid\vmlinux-modules.tar.gz"
   ; initrd replaces vmlinux-modules.tar.gz as preferred way to ship modules.
@@ -169,7 +169,7 @@ Section "Native Windows Linux Console" SecNTConsole
   ; the uninstall section
 
   SetOutPath "$INSTDIR"
-  File "..\..\build\coLinux-console-nt.exe"
+  File "premaid\coLinux-console-nt.exe"
 
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
@@ -184,7 +184,7 @@ Section "Cross-platform Linux Console" SecFLTKConsole
   ; the uninstall section
 
   SetOutPath "$INSTDIR"
-  File "..\..\build\coLinux-console-fltk.exe"
+  File "premaid\coLinux-console-fltk.exe"
 
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
@@ -203,7 +203,7 @@ Section "coLinux Virtual Ethernet Driver (TAP-Win32)" SeccoLinuxNet
   File "premaid\netdriver\tap0801co.sys"
   File "premaid\netdriver\tapcontrol.exe"
 
-  File "..\..\build\coLinux-net-daemon.exe"
+  File "premaid\coLinux-net-daemon.exe"
 
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
@@ -219,7 +219,7 @@ Section "coLinux Virtual Network Daemon (SLiRP)" SeccoLinuxNetSLiRP
   ; the uninstall section
 
   SetOutPath "$INSTDIR"
-  File "..\..\build\coLinux-slirp-net-daemon.exe"
+  File "premaid\coLinux-slirp-net-daemon.exe"
 
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
@@ -235,7 +235,7 @@ Section "coLinux Bridged Ethernet (WinPcap)" SeccoLinuxBridgedNet
   ; the uninstall section
 
   SetOutPath "$INSTDIR"
-  File "..\..\build\coLinux-bridged-net-daemon.exe"
+  File "premaid\coLinux-bridged-net-daemon.exe"
 
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
@@ -250,7 +250,7 @@ Section "coLinux Virtual Serial Device" SeccoLinuxSerial
   ; the uninstall section
 
   SetOutPath "$INSTDIR"
-  File "..\..\build\coLinux-serial-daemon.exe"
+  File "premaid\coLinux-serial-daemon.exe"
   
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
@@ -266,7 +266,7 @@ Section "coLinux Debugging" SeccoLinuxDebug
   ; the uninstall section
 
   SetOutPath "$INSTDIR"
-  File "..\..\build\coLinux-debug-daemon.exe"
+  File "premaid\coLinux-debug-daemon.exe"
   ;File /oname=debugging.txt  "..\..\..\..\..\..\doc\debugging"
   
   ;--------------------------------------------------------------/FILES--

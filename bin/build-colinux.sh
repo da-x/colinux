@@ -1,36 +1,43 @@
 #!/bin/sh
 
-source build-common.sh
+# Build colinux daemons from cross platform. Read doc/building
+
+. build-common.sh
 
 # Need Variable in make
 export COLINUX_TARGET_KERNEL_PATH
-export COLINUX_INSTALL_DIR
 
-compile_colinux_daemons()
-{
-	echo "Compiling colinux (daemons)"
-	cd "$TOPDIR/src"
-	make colinux >>$COLINUX_BUILD_LOG 2>&1
-	test $? -ne 0 && error_exit 1 "colinux make failed"
-	cd "$BINDIR"
-}
+# nothing to do for download
+test "$1" = "--download-only" && exit 0
 
-installer_colinux_daemons()
-{
-	echo "Installing colinux (daemons) to $COLINUX_INSTALL_DIR/"
-	cd "$TOPDIR/src"
-	make installer >>$COLINUX_BUILD_LOG 2>&1
-	test $? -ne 0 && error_exit 1 "colinux install failed"
-	cd $BINDIR
-}
+echo "Compiling colinux (daemons)"
+cd $TOPDIR/src
+make colinux
+if test $? -ne 0
+then
+	echo "colinux make daemons failed"
+	exit 1
+fi
+cd $BINDIR
 
-build_colinux_daemons()
-{
-	# nothing to do for download
-	test "$1" = "--download-only" && exit 0
-	compile_colinux_daemons
-	installer_colinux_daemons
-}
+# linux as host and ends here
+test "$COLINUX_HOST_OS" = "linux" && exit 0
 
-# ALL
-build_colinux_daemons $1
+# Set from "false" to "true" If you have WINE installed
+#  with NullSoft Installer System v2.05 or later and
+#  would like an Windows based Installer created.
+#
+if false
+then
+	echo "Build premaid"
+	cd $TOPDIR/src/colinux/os/winnt/user/install && . premaid.sh
+
+	echo "Create installer"
+	cd $TOPDIR/src
+	make installer
+	if test $? -ne 0
+	then
+		echo "colinux make installer failed"
+		exit 1
+	fi
+fi

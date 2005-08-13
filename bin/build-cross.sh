@@ -1,6 +1,8 @@
 #!/bin/sh
 
-source build-common.sh
+# Build cross platform mingw32.
+
+. build-common.sh
 
 download_files()
 {
@@ -23,21 +25,22 @@ check_installed()
 	     -x $PREFIX/bin/$TARGET-strip ]
 	then
 		# Verify version of installed GCC and LD
-		if [ ! `$TARGET-gcc -dumpversion` = $GCC_VERSION ]
+		if [ `$TARGET-gcc -dumpversion` != $GCC_VERSION ]
 		then
 			echo "$TARGET-gcc $GCC_VERSION not installed"
 			return 1
 		fi
 
-		if ! $TARGET-ld --version | grep -q -e "$BINUTILS_VERSION"
+		if $TARGET-ld --version | egrep -q "$BINUTILS_VERSION"
 		then
+			echo "Skip $TARGET-gcc, $TARGET-ld"
+			echo " - already installed on $PREFIX/bin"
+			exit 0
+		else
 			echo "$TARGET-ld $BINUTILS_VERSION not installed"
 			return 1
 		fi
 
-		echo "Skip $TARGET-gcc, $TARGET-ld"
-		echo " - already installed on $PREFIX/bin"
-		exit 0
 	fi
 	echo "No executable, rebuilding"
 }
@@ -162,7 +165,7 @@ final_tweaks()
 	fi
 
 	# strip all the binaries
-	ls "$PREFIX"/bin/* "$PREFIX/$TARGET"/bin/* | egrep -v '.dll$' |
+	ls $PREFIX/bin/* $PREFIX/$TARGET/bin/* | egrep -v '.dll|gccbug' |
 	while read file; do
 		strip "$file"
 	done

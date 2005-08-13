@@ -8,9 +8,7 @@
 # 
 # - Dan Aloni <da-x@colinux.org>
 #
-# This file will source from toplevel Makefile.
-# For backwards, can source from command line for sample:
-#  source build-common.sh --build-all
+# This file will source from toplevel Makefile and scripts.
 #
 # Options MUST ones of (and only ones):
 #  --build-all		Build all, without checking old targed files.
@@ -35,10 +33,10 @@
 # Use User config, if exist
 if [ -f user-build.cfg ] ; then
 	# Users directories
-	source user-build.cfg
+	. user-build.cfg
 else
 	# fall back to default config
-	source sample.user-build.cfg
+	. sample.user-build.cfg
 fi
 
 # what flavor are we building?
@@ -57,7 +55,7 @@ SRCDIR="$SOURCE_DIR"
 # Updated by Sam Lantinga <slouken@libsdl.org>
 # These are the files from the current MingW release
 
-MINGW_VERSION="3.6"
+MINGW_VERSION="3.7"
 MINGW_URL=http://heanet.dl.sourceforge.net/sourceforge/mingw
 MINGW=mingw-runtime-$MINGW_VERSION
 MINGW_ARCHIVE=$MINGW.tar.gz
@@ -83,7 +81,6 @@ W32API_ARCHIVE=$W32API.tar.gz
 W32API_PATCH=patch/$W32API_SRC.diff
 
 
-# (from build-colinux-libs.sh) #
 FLTK_VERSION="1.1.6"
 FLTK_URL=http://heanet.dl.sourceforge.net/sourceforge/fltk 
 FLTK=fltk-$FLTK_VERSION
@@ -95,9 +92,9 @@ MXML_URL=http://www.easysw.com/~mike/mxml/swfiles
 MXML=mxml-$MXML_VERSION
 MXML_ARCHIVE=$MXML.tar.gz
 
-WINPCAP_VERSION="3_0"
+WINPCAP_VERSION="3_1_beta4"
 WINPCAP_URL=http://winpcap.polito.it/install/bin
-WINPCAP_SRC=wpdpack
+WINPCAP_SRC=WpdPack
 WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_$WINPCAP_VERSION.zip
 
 
@@ -222,18 +219,19 @@ error_exit()
 		echo -e "\n  --- ERROR LOG:"
 		tail -n 20 $COLINUX_BUILD_LOG
 		# less $COLINUX_BUILD_LOG
+		echo "$2"
+		echo "  --- log available: $COLINUX_BUILD_LOG"
+	else
+		echo "$2"
 	fi
 
-	echo "$2"
-	echo "  --- log available: $COLINUX_BUILD_LOG"
 	exit $1
 }
 
 # Create ZIP packages (for "autobuild")
-package_all()
+build_package()
 {
 	local name bname oname
-	local PATH="$PREFIX/bin:$PATH"
 	local STRIP="$TARGET-strip --strip-all"
 	local SYMBOLS_ZIP=$COLINUX_INSTALL_DIR/symbols-$CO_VERSION.zip
 	local DAEMONS_ZIP=$COLINUX_INSTALL_DIR/daemons-$CO_VERSION.zip
@@ -309,8 +307,8 @@ case "$1" in
     --rebuild-all)
 	build_all --rebuild
 	;;
-    --package-all)
-	package_all
+    --package)
+	build_package
 	;;
     --help)
 	echo "

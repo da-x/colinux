@@ -10,7 +10,7 @@
 #			Disable md5sum. untar and patch source.
 #			Overwrite all old source!
 
-source build-common.sh
+. build-common.sh
 
 download_files()
 {
@@ -76,8 +76,26 @@ extract_kernel()
 patch_kernel()
 {
 	cd "$BUILD_DIR/$KERNEL"
-	patch -p1 < "$TOPDIR/$KERNEL_PATCH"
-	test $? -ne 0 && error_exit 10 "$KERNEL_VERSION patch failed"
+
+	# A minor hack for now.  Allowing linux config to be 'version specific' 
+	#  in the future, but keeping backwards compatability.
+	if [ -f "$TOPDIR/conf/linux-config" ]; then
+		cp "$TOPDIR/conf/linux-config" "$TOPDIR/conf/linux-$KERNEL_VERSION-config"
+	fi
+	cp "$TOPDIR/conf/linux-$KERNEL_VERSION-config" .config
+
+	# Standard patch, user patches, alphabetically sort by name
+	# Last chance to add private things, such local config
+	for name in $TOPDIR/$KERNEL_PATCH $TOPDIR/patch/linux-*.patch
+	do
+		if [ -f $name ]
+		then
+			echo "reading $name"
+			patch -p1 < $name
+			test $? -ne 0 && error_exit 10 "$name patch failed"
+		fi
+	done
+
 	# Copy coLinux Version into kernel localversion
 	echo "-co-$CO_VERSION" > localversion-cooperative
 }
@@ -91,29 +109,16 @@ configure_kernel()
 		echo "Please verify setting of these variables:"
 		echo "COLINUX_TARGET_KERNEL_PATH=$COLINUX_TARGET_KERNEL_PATH"
 		echo "BUILD_DIR/KERNEL=$BUILD_DIR/$KERNEL"
+		echo
+		echo "\$COLINUX_TARGET_KERNEL_PATH should the same as \$BUILD_DIR/\$KERNEL"
 		exit 1
 	fi
 
 	cd "$COLINUX_TARGET_KERNEL_PATH"
-
-	# A minor hack for now.  Allowing linux config to be 'version specific' 
-	#  in the future, but keeping backwards compatability.
-	if [ -f "$TOPDIR/conf/linux-config" ]; then
-		cp "$TOPDIR/conf/linux-config" "$TOPDIR/conf/linux-$KERNEL_VERSION-config"
-	fi
-	cp "$TOPDIR/conf/linux-$KERNEL_VERSION-config" .config
-
-	# Last chance to add private things, such local config
-	if [ -f $TOPDIR/$PRIVATE_PATCH ]
-	then
-		echo "Private patch $PRIVATE_PATCH"
-		patch -p1 < "$TOPDIR/$PRIVATE_PATCH"
-		test $? -ne 0 && error_exit 10 "$PRIVATE_PATCH: patch failed"
-	fi
-
 	echo "Configuring Kernel $KERNEL_VERSION"
-	make silentoldconfig >>$COLINUX_BUILD_LOG 2>&1
-	test $? -ne 0 && error_exit 1 "Kernel $KERNEL_VERSION config failed (check 'make oldconfig' on kerneltree)"
+	make silentoldconfig
+	test $? -ne 0 && error_exit 10 \
+	    "Kernel $KERNEL_VERSION config failed (check 'make oldconfig' on kerneltree)"
 }
 
 compile_kernel()

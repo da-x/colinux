@@ -10,11 +10,25 @@ targets['coLinux.exe'] = Target(
     inputs = [
        Input('colinux.nsi'),
        Input('colinux_def.inc'),
+       Input('premaid/colinux-bridged-net-daemon.exe'),
+       Input('premaid/colinux-console-fltk.exe'),
+       Input('premaid/colinux-console-nt.exe'),
+       Input('premaid/colinux-daemon.exe'),
+       Input('premaid/colinux-net-daemon.exe'),
+       Input('premaid/colinux-slirp-net-daemon.exe'),
+       Input('premaid/linux.sys'),
+       Input('premaid/README.txt'),
+       Input('premaid/cofs.txt'),
+       Input('premaid/colinux-daemon.txt'),
+       Input('premaid/example.conf'),
+       Input('premaid/vmlinux'),
+       Input('premaid/vmlinux-modules.tar.gz'),
+       Input('premaid/initrd.gz'),
     ],
 )
 
 def script_cmdline(scripter, tool_run_inf):
-    command_line = 'python %s %s %s' % (
+    command_line = 'sh -c ". %s %s %s"' % (
         tool_run_inf.target.inputs[0].pathname,
         tool_run_inf.target.inputs[1].pathname,
         tool_run_inf.target.pathname)
@@ -23,8 +37,7 @@ def script_cmdline(scripter, tool_run_inf):
 targets['colinux_def.inc'] = Target(
     tool = Script(script_cmdline),
     inputs = [
-       Input('colinux_def.py'),
+       Input('colinux_def.sh'),
        Input('src/colinux/VERSION', root_relative=True),
     ]
 )
-

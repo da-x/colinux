@@ -284,6 +284,7 @@ int main(int argc, char *argv[])
 	WSADATA wsad;
 
 	co_debug_start();
+	WSAStartup(MAKEWORD(2, 0), &wsad);
 	slirp_init();
 
 	rc = handle_paramters(&start_parameters, argc, argv);
@@ -291,8 +292,6 @@ int main(int argc, char *argv[])
 		exit_code = -1;
 		goto out;
 	}
-
-	WSAStartup(MAKEWORD(2, 0), &wsad);
 
 	co_terminal_print("conet-slirp-daemon: slirp initialized\n");
 
