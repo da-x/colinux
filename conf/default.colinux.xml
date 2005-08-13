@@ -19,7 +19,7 @@
     <block_device index="1" path="\DosDevices\c:\coLinux\swap_device" enabled="true" />
 
     <!-- This is an experimental feature, it may not function completely.
-    <cofs_device index="0" mode=flat path=\DosDevices\C:\coLinux enabled="true" />
+    <cofs_device index="0" type="flat" path="\DosDevices\C:\" enabled="true" />
     -->
 
     <!-- bootparams allows you to pass kernel boot parameters -->
