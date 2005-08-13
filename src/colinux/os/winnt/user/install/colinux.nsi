@@ -137,6 +137,7 @@ Section "coLinux" SeccoLinux
   File "${DISTDIR}\colinux-console-nt.exe"
   File "${DISTDIR}\colinux-net-daemon.exe"
   File "${DISTDIR}\colinux-slirp-net-daemon.exe"
+  File "${DISTDIR}\colinux-debug-daemon.exe"
   File "${DISTDIR}\colinux-daemon.exe"
   File "${DISTDIR}\README.txt"
   File "${DISTDIR}\news.txt"

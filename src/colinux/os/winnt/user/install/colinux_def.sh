@@ -15,5 +15,5 @@ echo "!define LONGVERSION \"$VERSION.1\""
 echo "!define PRE_VERSION \"$PRE_VERSION\""
 echo "!define KERNEL_VERSION \"$KERNEL_VERSION\""
 
-# dist is s link to $COLINUX_INSTALL_DIR
+# distdir is a link to $COLINUX_INSTALL_DIR (see Makefile)
 echo "!define DISTDIR \"distdir\""
