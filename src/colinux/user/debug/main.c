@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <signal.h>
 
 #include <colinux/os/alloc.h>
 #include <colinux/os/timer.h>
@@ -36,7 +37,9 @@ typedef struct co_debug_parameters {
 
 static co_debug_parameters_t parameters;
 
-static FILE *output_file = NULL;
+static FILE *output_file;
+
+static void sig_handle(int signo);	/* Forward declaration */
 
 static void co_debug_download(void)
 {
@@ -134,7 +137,7 @@ static void print_xml_text(const char *str)
 		if (!*str)
 			break;
 		if (*str == '&')
-			printf(" ");
+			fprintf(output_file, " ");
 		str++;
 	}
 }
@@ -227,11 +230,37 @@ static void xml_start(void)
 {
 	fprintf(output_file, "<?xml version=\"1.0\" encoding=\"iso-8859-1\"?>\n");
 	fprintf(output_file, "<dump>\n");
+
+	signal (SIGINT, sig_handle);	/* CTRL-C on command line */
+	signal (SIGTERM, sig_handle);	/* Termination signal (Linux) */
 }
 
 static void xml_end(void)
 {
 	fprintf(output_file, "</dump>\n");
+}
+
+static void sig_handle(int signo)
+{
+	xml_end();
+	fprintf (stderr, "\ncolinux-debug-daemon terminated (%d)\n", signo);
+	exit (signo);
+}
+
+static int read_helper (int fd, void * bf, int len)
+{
+	int total_rd = 0;
+	int rd;
+
+	/* Input file can pipe, or unflushed device */
+	/* An incomplete read is not the end of debug log */
+	while ((rd = read (fd, bf, len)) > 0 && len > 0) {
+	    total_rd += rd;
+	    (char*)bf += rd;
+	    len -= rd;
+	}
+	
+	return (total_rd);
 }
 
 static void co_debug_parse(int fd)
@@ -242,18 +271,19 @@ static void co_debug_parse(int fd)
 		int nread;
 
 		nread = read(fd, &tlv, sizeof(tlv));
-		if (nread == 0)
-			break;
-
-		if (nread != sizeof(tlv))
+		if (nread != sizeof(tlv) || tlv.length == 0)
 			break;
 
 		char block[tlv.length];
-		nread = read(fd, &block, tlv.length);
+		nread = read_helper(fd, &block, tlv.length);
 		if (nread != tlv.length)
 			break;
 
 		parse_tlv(&tlv, block);
+
+		/* Flush every block, if stdout not redirected */
+		if (output_file != stdout)
+			fflush (output_file);
 	}
 	xml_end();
 }
@@ -279,6 +309,10 @@ void co_debug_download_and_parse(void)
 				}
 
 				parse_tlv_buffer(buffer, debug_reader.filled);
+
+				/* Flush, if stdout not redirected */
+				if (output_file != stdout)
+					fflush (output_file);
 			}
 		}
 		co_os_free(buffer);
@@ -407,7 +441,7 @@ static void syntax(void)
 	printf("                      Without -d, uses standard input, otherwise parses\n");
 	printf("                      the downloaded information\n");
 	printf("      -f [filename]   File to append the output instead of writing to\n");
-	printf("                      standard output\n");
+	printf("                      standard output. Write with flush every line.\n");
 	printf("      -s level=num,level2=num2,...\n");
 	printf("                      Change the levels of the given debug facilities\n");
 	printf("      -n [ip-address] Send logs as UDP packets to [ip-address]:63000\n");
@@ -449,7 +483,7 @@ int co_debug_main(int argc, char *argv[])
 	} else if (parameters.download_mode) {
 		co_debug_download();
 	} else if (parameters.parse_mode) {
-		co_debug_parse(0);
+		co_debug_parse(STDIN_FILENO);
 	} else {
 		syntax();
 	}

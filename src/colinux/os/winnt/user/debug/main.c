@@ -19,8 +19,6 @@
 
 COLINUX_DEFINE_MODULE("colinux-debug-daemon");
 
-#define BUFFER_SIZE   (0x100000)
-
 int main(int argc, char *argv[]) 
 {
 	int ret;

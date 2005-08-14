@@ -1,6 +1,6 @@
-diff -urN a/drivers/block/Kconfig b/drivers/block/Kconfig
---- a/drivers/block/Kconfig
-+++ b/drivers/block/Kconfig
+diff -urN ./drivers/block/Kconfig ./drivers/block/Kconfig
+--- ./drivers/block/Kconfig
++++ ./drivers/block/Kconfig
 @@ -417,6 +417,12 @@
  
  	  If unsure, say Y.
@@ -14,9 +14,9 @@ diff -urN a/drivers/block/Kconfig b/drivers/block/Kconfig
  config INITRAMFS_SOURCE
  	string "Initramfs source file(s)"
  	default ""
-diff -urN a/drivers/block/Makefile b/drivers/block/Makefile
---- a/drivers/block/Makefile
-+++ b/drivers/block/Makefile
+diff -urN ./drivers/block/Makefile ./drivers/block/Makefile
+--- ./drivers/block/Makefile
++++ ./drivers/block/Makefile
 @@ -30,6 +30,7 @@
  obj-$(CONFIG_AMIGA_Z2RAM)	+= z2ram.o
  obj-$(CONFIG_BLK_DEV_RAM)	+= rd.o
@@ -25,9 +25,9 @@ diff -urN a/drivers/block/Makefile b/drivers/block/Makefile
  obj-$(CONFIG_BLK_DEV_LOOP)	+= loop.o
  obj-$(CONFIG_BLK_DEV_PS2)	+= ps2esdi.o
  obj-$(CONFIG_BLK_DEV_XD)	+= xd.o
-diff -urN a/drivers/block/cloop.c b/drivers/block/cloop.c
---- a/drivers/block/cloop.c
-+++ b/drivers/block/cloop.c
+diff -urN ./drivers/block/cloop.c ./drivers/block/cloop.c
+--- ./drivers/block/cloop.c
++++ ./drivers/block/cloop.c
 @@ -0,0 +1,772 @@
 +/*
 + *  compressed_loop.c: Read-only compressed loop blockdevice
@@ -72,7 +72,7 @@ diff -urN a/drivers/block/cloop.c b/drivers/block/cloop.c
 +#include <asm/uaccess.h>
 +#include <asm/byteorder.h>
 +#include <linux/byteorder/generic.h>
-+/* Use zlib_inflate from lib/zlib_inflate */
++/* Use zlib_inflate from li./zlib_inflate */
 +#include <linux/zutil.h>
 +#include <linux/loop.h>
 +#include <linux/buffer_head.h>
@@ -801,9 +801,9 @@ diff -urN a/drivers/block/cloop.c b/drivers/block/cloop.c
 +
 +static const char __module_depends[]
 + __attribute_used__ __attribute__ ((section(".modinfo"))) = "depends=";
-diff -urN a/drivers/block/cloop.h b/drivers/block/cloop.h
---- a/drivers/block/cloop.h
-+++ b/drivers/block/cloop.h
+diff -urN ./drivers/block/cloop.h ./drivers/block/cloop.h
+--- ./drivers/block/cloop.h
++++ ./drivers/block/cloop.h
 @@ -0,0 +1,22 @@
 +#ifndef _COMPRESSED_LOOP_H
 +#define _COMPRESSED_LOOP_H
