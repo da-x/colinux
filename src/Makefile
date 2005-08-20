@@ -18,3 +18,4 @@ installer:
 
 clean:
 	python ../bin/make.py clean
+	rm -f colinux/arch/current colinux/os/current

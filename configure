@@ -489,7 +489,7 @@ check_depmod()
   echo -n "Checking for depmod ... "
 
   # Locate depmod in user dirs and check for module-init-tools version
-  if depmod_cfg=`PATH="$prefix/bin:/sbin:/usr/sbin:/usr/local/sbin:$PATH" \
+  if depmod_cfg=`PATH="$prefix/$target/bin:/sbin:/usr/sbin:/usr/local/sbin:$PATH" \
 		 which depmod 2>/dev/null`; then
 
     # Depmod 2.4.x is bugy with "-V" only, "--help" does nothing real.
@@ -502,7 +502,7 @@ check_depmod()
 	See http://www.codemonkey.org.uk/docs/post-halloween-2.6.txt
 
 	Install the file 'depmod', in directory
-	$prefix/bin,
+	$prefix/$target/bin,
 	to use only for cross buildings.
 
 EOF

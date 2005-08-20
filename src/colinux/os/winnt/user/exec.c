@@ -13,6 +13,7 @@
 #include <stdio.h>
 
 #include <colinux/os/user/exec.h>
+#include <colinux/os/user/misc.h>
 
 co_rc_t co_launch_process(char *command_line, ...)
 {
@@ -30,7 +31,7 @@ co_rc_t co_launch_process(char *command_line, ...)
 	vsnprintf(buf, sizeof(buf), command_line, ap);
 	va_end(ap);
 
-	co_terminal_print("executing: %s\n", buf);
+	co_debug("executing: %s\n", buf);
 
 	ret = CreateProcess(NULL,
 			    buf,              // Command line. 
