@@ -3,7 +3,7 @@
 /* host address */
 struct in_addr our_addr;
 /* host dns address */
-struct in_addr dns_addr;
+static struct in_addr dns_addr;
 /* host loopback address */
 struct in_addr loopback_addr;
 
@@ -123,6 +123,21 @@ static int get_dns_addr(struct in_addr *pdns_addr)
 
 #endif
 
+/* Get DNS-Address from host, cached for 10 Seconds (SO_EXPIREFAST) */
+struct in_addr cached_dns_addr (void)
+{
+    static long dns_expire;
+    
+    if (!dns_addr.s_addr || curtime > dns_expire) {
+        if (get_dns_addr(&dns_addr) < 0) {
+    	    fprintf(stderr, "Could not get DNS address\n");
+            return (dns_addr);
+        }
+        dns_expire = curtime + SO_EXPIREFAST;
+    }
+    return (dns_addr);
+}
+
 #ifdef _WIN32
 void slirp_cleanup(void)
 {
@@ -153,11 +168,6 @@ void slirp_init(void)
     /* set default addresses */
     getouraddr();
     inet_aton("127.0.0.1", &loopback_addr);
-
-    if (get_dns_addr(&dns_addr) < 0) {
-        fprintf(stderr, "Could not get DNS address\n");
-        exit(1);
-    }
 
     inet_aton(CTL_SPECIAL, &special_addr);
     inet_aton(CTL_LOCAL, &client_addr);

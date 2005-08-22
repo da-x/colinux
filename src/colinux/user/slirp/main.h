@@ -36,7 +36,7 @@ extern struct in_addr ctl_addr;
 extern struct in_addr special_addr;
 extern struct in_addr our_addr;
 extern struct in_addr loopback_addr;
-extern struct in_addr dns_addr;
+// extern struct in_addr dns_addr;
 extern char *username;
 extern char *socket_path;
 extern int towrite_max;

@@ -20,6 +20,7 @@ typedef uint32_t u_int32_t;
 typedef uint64_t u_int64_t;
 typedef char *caddr_t;
 
+# include <windows.h>
 # include <winsock2.h>
 # include <sys/timeb.h>
 # include <iphlpapi.h>
@@ -316,6 +317,9 @@ u_int8_t tcp_tos _P((struct socket *));
 int tcp_emu _P((struct socket *, struct mbuf *));
 int tcp_ctl _P((struct socket *));
 struct tcpcb *tcp_drop(struct tcpcb *tp, int err);
+
+/* slirp.c */
+struct in_addr cached_dns_addr (void);
 
 #ifdef USE_PPP
 #define MIN_MRU MINMRU
