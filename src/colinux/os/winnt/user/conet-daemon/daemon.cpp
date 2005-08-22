@@ -62,6 +62,11 @@ const char *user_network_tap_daemon_t::get_daemon_title()
 	return "Cooperative Linux TAP network daemon";
 }
 
+const char *user_network_tap_daemon_t::get_extended_syntax()
+{
+	return "[-n 'adapter name']";
+}
+
 static user_network_tap_daemon_t *tap_daemon = 0;
 
 static co_rc_t tap_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
@@ -139,9 +144,9 @@ void user_network_tap_daemon_t::handle_extended_parameters(co_command_line_param
 void user_network_tap_daemon_t::syntax()
 {
 	user_daemon_t::syntax();
-	co_terminal_print("    -n 'adapter name'       The name of the network adapter to attach to\n");
-	co_terminal_print("                            Without this option, the daemon tries to\n");
-	co_terminal_print("                            guess which interface to use\n");
+	co_terminal_print("    -n 'adapter name'   The name of the network adapter to attach to\n");
+	co_terminal_print("                        Without this option, the daemon tries to\n");
+	co_terminal_print("                        guess which interface to use\n");
 }
 
 

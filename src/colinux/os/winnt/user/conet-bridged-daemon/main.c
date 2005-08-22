@@ -359,15 +359,15 @@ void co_net_syntax()
 	co_terminal_print("\n");
 	co_terminal_print("syntax: \n");
 	co_terminal_print("\n");
-	co_terminal_print("  colinux-bridged-net-daemon -i index [-h] [-n 'adapter name'] [-mac xx:xx:xx:xx:xx:xx]\n");
+	co_terminal_print("  colinux-bridged-net-daemon -i pid -u unit [-h] [-n 'adapter name'] [-mac xx:xx:xx:xx:xx:xx]\n");
 	co_terminal_print("\n");
 	co_terminal_print("    -h                      Show this help text\n");
+	co_terminal_print("    -i pid                  coLinux instance ID to connect to\n");
+	co_terminal_print("    -u unit                 Network device index number (0 for eth0, 1 for\n");
+	co_terminal_print("                            eth1, etc.)\n");
 	co_terminal_print("    -n 'adapter name'       The name of the network adapter to attach to\n");
 	co_terminal_print("                            Without this option, the daemon tries to\n");
 	co_terminal_print("                            guess which interface to use\n");
-	co_terminal_print("    -i index                Network device index number (0 for eth0, 1 for\n");
-	co_terminal_print("                            eth1, etc.)\n");
-	co_terminal_print("    -c instance             coLinux instance ID to connect to\n");
 	co_terminal_print("    -mac xx:xx:xx:xx:xx:xx  MAC address for the bridged interface\n");
 }
 
@@ -404,7 +404,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 			continue;
 		}
 
-		option = "-i";
+		option = "-u";
 		if (strcmp(*param_scan, option) == 0) {
 			param_scan++;
 			if (!(*param_scan)) {
@@ -412,7 +412,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 				return CO_RC(ERROR);
 			}
 
-			sscanf(*param_scan, "%d", &start_parameters->index);
+			start_parameters->index = atoi(*param_scan);
 			param_scan++;
 			continue;
 		}
@@ -425,7 +425,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 				return CO_RC(ERROR);
 			}
 
-			sscanf(*param_scan, "%d", (int *)&start_parameters->instance);
+			start_parameters->instance = (co_id_t) atoi(*param_scan);
 			param_scan++;
 			continue;
 		}
@@ -450,6 +450,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 		option = "-h";
 		if (strcmp(*param_scan, option) == 0) {
 			start_parameters->show_help = PTRUE;
+			return CO_RC(OK);
 		}
 		param_scan++;
 	}

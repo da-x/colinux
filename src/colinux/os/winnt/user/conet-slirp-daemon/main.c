@@ -138,12 +138,12 @@ void co_net_syntax()
 	co_terminal_print("\n");
 	co_terminal_print("syntax: \n");
 	co_terminal_print("\n");
-	co_terminal_print("  colinux-slirp-net-daemon -c 0 -i index [-h]\n");
+	co_terminal_print("  colinux-slirp-net-daemon -i pid -u unit [-h]\n");
 	co_terminal_print("\n");
 	co_terminal_print("    -h                      Show this help text\n");
-	co_terminal_print("    -i index                Network device index number (0 for eth0, 1 for\n");
+	co_terminal_print("    -i pid                  coLinux instance ID to connect to\n");
+	co_terminal_print("    -u unit                 Network device index number (0 for eth0, 1 for\n");
 	co_terminal_print("                            eth1, etc.)\n");
-	co_terminal_print("    -c instance             coLinux instance ID to connect to\n");
 	co_terminal_print("    -r tcp|udp:hport:cport  port redirection.\n");
 }
 
@@ -205,7 +205,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 
 	/* Parse command line */
 	while (*param_scan) {
-		option = "-i";
+		option = "-u";
 		if (strcmp(*param_scan, option) == 0) {
 			param_scan++;
 			if (!(*param_scan)) {
@@ -218,7 +218,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 			continue;
 		}
 
-		option = "-c";
+		option = "-i";
 		if (strcmp(*param_scan, option) == 0) {
 			param_scan++;
 			if (!(*param_scan)) {
@@ -234,6 +234,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 		option = "-h";
 		if (strcmp(*param_scan, option) == 0) {
 			start_parameters->show_help = PTRUE;
+			return CO_RC(OK);
 		}
 
 		option = "-r";
@@ -281,10 +282,8 @@ int main(int argc, char *argv[])
 	int exit_code = 0;
 	start_parameters_t start_parameters;
 	co_module_t modules[] = {CO_MODULE_CONET0, };
-	WSADATA wsad;
 
 	co_debug_start();
-	WSAStartup(MAKEWORD(2, 0), &wsad);
 	slirp_init();
 
 	rc = handle_paramters(&start_parameters, argc, argv);
@@ -293,7 +292,12 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-	co_terminal_print("conet-slirp-daemon: slirp initialized\n");
+	if (start_parameters.show_help) {
+		co_net_syntax();
+		return 0;
+	}
+
+	co_debug("conet-slirp-daemon: slirp initialized\n");
 
 	daemon_parameters = &start_parameters;
 	slirp_mutex = CreateMutex(NULL, FALSE, NULL);
@@ -306,7 +310,7 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-	co_terminal_print("conet-slirp-daemon: connecting to monitor\n");
+	co_debug("conet-slirp-daemon: connecting to monitor\n");
 
 	modules[0] += start_parameters.index;
 	rc = co_user_monitor_open(g_reactor, monitor_receive,

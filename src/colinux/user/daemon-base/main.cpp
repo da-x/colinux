@@ -192,9 +192,9 @@ void user_daemon_t::syntax()
 	co_terminal_print("\n");
 	co_terminal_print("  %s -i pid -u unit_index %s\n", get_daemon_name(), get_extended_syntax());
 	co_terminal_print("\n");
-	co_terminal_print("    -i pid          coLinux instance ID to connect to\n");
-	co_terminal_print("    -u unit_index   Network device index number (e.g, 0 for eth0, 1 for\n");
-	co_terminal_print("                    eth1, etc.)\n");
+	co_terminal_print("    -i pid              coLinux instance ID to connect to\n");
+	co_terminal_print("    -u unit_index       Network device index number (e.g, 0 for eth0, 1 for\n");
+	co_terminal_print("                        eth1, etc.)\n");
 }
 
 const char *user_daemon_t::get_extended_syntax()

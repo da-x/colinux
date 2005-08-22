@@ -214,7 +214,7 @@ co_rc_t get_device_guid(
 
 					snprintf(name, name_size, "%s", enum_name);
 					if (actual_name) {
-						if (strcmp(actual_name, "") != 0) {
+						if (*actual_name) {
 							if (strcmp(name_data, actual_name) != 0) {
 								RegCloseKey (connection_key);
 								++i;

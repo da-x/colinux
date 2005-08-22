@@ -285,8 +285,11 @@ co_rc_t co_load_initrd(co_daemon_t *daemon)
 	co_debug("reading initrd from (%s)\n", daemon->config.initrd_path);
 
 	rc = co_os_file_load(&daemon->config.initrd_path, &initrd, &initrd_size);
-	if (!CO_OK(rc))
+	if (!CO_OK(rc)) {
+		co_terminal_print("error loading initrd file '%s'\n",
+				  daemon->config.initrd_path);
 		return rc;
+	}
 
 	co_debug("initrd size: %d bytes\n", initrd_size);
 
@@ -435,14 +438,14 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 
 	rc = co_os_file_load(&daemon->config.vmlinux_path, &daemon->buf, &size);
 	if (!CO_OK(rc)) {
-		co_debug("error loading vmlinux file (%s)\n", 
+		co_terminal_print("error loading vmlinux file '%s'\n", 
 		      &daemon->config.vmlinux_path);
 		goto out;
 	}
 
 	rc = co_elf_image_read(&daemon->elf_data, daemon->buf, size);
 	if (!CO_OK(rc)) {
-		co_debug("error reading image (%d bytes)\n", size);
+		co_terminal_print("error reading image (%d bytes)\n", size);
 		goto out_free_vmlinux; 
 	}
 
@@ -456,7 +459,7 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 
 	rc = co_elf_image_load(daemon);
 	if (!CO_OK(rc)) {
-		co_debug("error loading image\n");
+		co_terminal_print("error loading image\n");
 		goto out_destroy;
 	}
 
@@ -577,7 +580,7 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 
 			co_build_mac_address(mac_address, sizeof(mac_address), net_dev->mac_address);
 
-			rc = co_launch_process("colinux-bridged-net-daemon -c %d -i %d %s -mac %s", daemon->id, i, interface_name, mac_address);
+			rc = co_launch_process("colinux-bridged-net-daemon -i %d -u %d %s -mac %s", daemon->id, i, interface_name, mac_address);
 			break;
 		}
 
@@ -587,15 +590,8 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 		}
 
 		case CO_NETDEV_TYPE_SLIRP: {
-			char redir [CO_NETDEV_REDIRDIR_STR_SIZE+3];
-
-			if (strlen(net_dev->redir) != 0) {
-				co_snprintf(redir, sizeof(redir), " -r %s", net_dev->redir);
-			} else {
-				redir[0]='\0';
-			}
-
-			rc = co_launch_process("colinux-slirp-net-daemon -c %d -i %d%s", daemon->id, i, redir);
+			rc = co_launch_process("colinux-slirp-net-daemon -i %d -u %d%s%s",
+				daemon->id, i, (*net_dev->redir)?" -r ":"", net_dev->redir);
 			break;
 		}
 
@@ -670,7 +666,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 
 	rc = co_daemon_launch_net_daemons(daemon);
 	if (!CO_OK(rc)) {
-		co_terminal_print("colinux: launching network daemons\n");
+		co_terminal_print("error launching network daemons\n");
 		goto out;
 	}
 
