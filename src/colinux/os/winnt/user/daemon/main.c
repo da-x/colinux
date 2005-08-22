@@ -109,8 +109,19 @@ co_rc_t co_winnt_daemon_main(co_start_parameters_t *start_parameters)
 		goto out;
 
 	rc = co_daemon_start_monitor(g_daemon);
-	if (!CO_OK(rc))
+	if (!CO_OK(rc)) {
+		co_rc_t rc_tmp;
+
+		// View error details, mostly wrong version.
+		// But save original return-code (arg 0 = view errors only)
+		rc_tmp = co_winnt_status_driver(0);
+
+		// View error as text, not as "exit code"
+		if (CO_RC_GET_CODE(rc_tmp) == CO_RC_VERSION_MISMATCHED)
+			rc = rc_tmp;
+
 		goto out_destroy;
+	}
 
 	rc = co_daemon_run(g_daemon);
 
@@ -121,7 +132,9 @@ out_destroy:
 
 out:
 	if (!CO_OK(rc)) {
-		if (CO_RC_GET_CODE(rc) == CO_RC_OUT_OF_PAGES) {
+		if (CO_RC_GET_CODE(rc) == CO_RC_VERSION_MISMATCHED) {
+			co_terminal_print("daemon: error driver version, please reinstall driver!\n");
+		} else if (CO_RC_GET_CODE(rc) == CO_RC_OUT_OF_PAGES) {
 			co_terminal_print("daemon: not enough physical memory available (try with a lower setting)\n", rc);
 		} else {
 			char buf[0x100];
@@ -200,7 +213,7 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 	}
 
 	if (winnt_parameters.status_driver) {
-		co_winnt_status_driver();
+		co_winnt_status_driver(1); // arg 1 = View all driver details
 		return CO_RC(OK);
 	}
 

@@ -162,7 +162,6 @@ static int global_event_hook(const XEvent& thisevent)
 		sc.code = scan;
 		sc.down = (xevent.type == KeyPress);
 
-			   
 		if ((sc.down == 0) && (scan_code_state[sc.code] == 0)) {
 			sc_down = sc;
 			sc_down.down = 1;
