@@ -13,7 +13,7 @@ This means that running it may crash the host (Windows or Linux system).
 KNOWN ISSUES:
 
   Any known issues for an release can be found on the Wiki 
-(http://wiki.colinux.org/cgi-bin/FrontPage)
+http://wiki.colinux.org
 
   PLEASE REPORT and read about problems on the colinux-devel@sourceforge.net 
 mailing list or file an Bug report at 
@@ -199,7 +199,7 @@ command-line, in this "mode" the command-line arguments are:
 	ethX=tap | pcap-bridge,<network connection name>,<MAC> 
 		Use any number of these to specify network interfaces,
 		<network connection name & <MAC> are optional.
-        OR
+	OR
 
 	ethX=slirp,<MAC>,<redirections>
 		Use any number of these to specify network interfaces,
@@ -274,4 +274,4 @@ Richard Goodwin (readme portions)
 colinux@newdiversions.com
 
 George P Boutwell (readme updates, fixes, etc)
-gboutwel@praize.com
+george.boutwell@gmail.com

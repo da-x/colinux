@@ -23,8 +23,11 @@ Additional developers and contributors:
     Thomas Fritzsche <tf@noto.de> 
     scripting
     
-    George Boutwell <gboutwel@praize.com> 
+    George Boutwell <george.boutwell@gmail.com>
     scripting, various patches
+
+    Henry Nestler <Henry@BigFoot.de>
+    lots of scripting, kernel, code, etc patches
     
     Jaroslaw Kowalski <jaak@zd.com.pl>
     support for installing as a Windows service

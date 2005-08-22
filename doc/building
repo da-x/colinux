@@ -104,16 +104,16 @@ This need a Compiler devel-libs and a lot of tools:
 Create a new directory, extract colinux source in this directory, make scripts
 executable and ran the download-script in "bin" directory.
 
-    mkdir /home/$USER/colinux-devel
-    cd /home/$USER/colinux-devel
+    mkdir $HOME/colinux-devel
+    cd $HOME/colinux-devel
     tar xfz colinux-20040807.tar.gz
     cd colinux-20040807/bin
     chmod +x *.sh
     ./download-all.sh
     
-Files will be downloaded into directory /home/$USER/colinux-devel/download.
+Files will be downloaded into directory $HOME/colinux-devel/download.
 
-    cd /home/$USER/colinux-devel/colinux-20040807/bin
+    cd $HOME/colinux-devel/colinux-20040807/bin
     ./build-all.sh
 
 This is a complete build process for binutils, cross compiler, libraries,
@@ -312,16 +312,16 @@ Please run './configure --help' for list of options.
 
 Sample for WinNT as host (default):
   ./configure --target=i686-pc-mingw32 \
-        --downloaddir=/home/$USER/colinux-devel/download \
-        --prefix=/home/$USER/colinux-devel/mingw32
+        --downloaddir=$HOME/colinux-devel/download \
+        --prefix=$HOME/colinux-devel/mingw32
 
 For Linux as Host must use the option '--target=i686-pc-linux'. Host kernel
 directories will automatic detect. You can overwrite with --hostkerneldir.
 
 Sample for Linux as host:
   ./configure --target=i686-pc-linux \
-        --downloaddir=/home/$USER/colinux-devel/download \
-        --targetkerneldir=/home/$USER/colinux-devel/download/linux-2.6.11
+        --downloaddir=$HOME/colinux-devel/download \
+        --targetkerneldir=$HOME/colinux-devel/download/linux-2.6.11
         --hostkerneldir=/usr/src/linux
 
 
@@ -408,11 +408,11 @@ Run this steps, if you have patched colinux kernel in download directory:
 
 To create private pathfile for kernel source, you should diff colinux
 kernel with your kernel source and configuration.
-"KPRIVATE" is your kernel, configured and also patched for colinux.
+"PRIVATE" is your kernel, configured and also patched for colinux.
 Please remember: Your private kernel tree should start one directory up
 from source (patch will be call with -p1)!
  # VANILLA=linux-2.6.10
- # PRIVATE=/home/$USER/src/linux-2.6.10-private
+ # PRIVATE=$HOME/src/linux-2.6.10-private
  # cd /tmp
  # tar xfj $VANILLA.bz2
  # cd $VANILLA

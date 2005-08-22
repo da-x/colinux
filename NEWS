@@ -1,3 +1,36 @@
+* Version 0.6.3
+  * Fixes issue with Services being killed during Windows Shutdown, 
+    instead of Windows waiting for the Service to shutdown properly.
+  * Fixes for memory size that are not a multiple of 4 (caused crashes).
+  * Improved console i/o peroformance (especially on XP)
+  * Resolved SF Bug# 1117510 - README file lacks information.
+  * Resolved SF Bug# 1117511 - coLinux exits with our error message when 
+    given a bad ethX command-line argument.
+  * Restricted access to /dev/mem & /dev/kmem (fixes some udev and 
+    install program problems)
+  * Add CTRL-ALT-SHIFT-DEL to do an CTRL-ALT-DEL in NT Console
+  * Added Unicode name support to cofs
+  * Fixed problem with cofs, where creating a directory caused a crash 
+    of Windows.
+  * Made error messages slightly more friendly.
+  * Optimized a little bit for non-PAE machines.
+  * Fixed issue with reboot when doing a rename on cofs.
+  * Kernel has been updated from 2.6.10 to 2.6.11 to fix console 
+    slowness, in addition some patches to 2.6.11 to fix problems with crashes.
+  * Synced several linux files for linux host builds to winnt files 
+    for winnt host builds.
+  * build scripts now use POSIX shell syntax.
+  * Max Memory upted to 1000MB & tested.
+  * Fixed problem with cofs, where doing "df" on Win2k caused 100% cpu 
+    usage.
+  * Updated slirp code, slirp is now a very stable and viable network 
+    option.
+  * FLTK console's font name and size can be specified by an environment 
+    variable (only allows fixed width fonts):  
+    set COLINUX_CONSOLE_FONT=Lucida Console:12
+  * Added "sdo" to scsi aliasing.
+  * Lots of other document, little bugs, etc...
+
 * Version 0.6.2
   * The entire configuration can be passed on the command line instead
     of using an XML file (working towards UML compatibility). Read
