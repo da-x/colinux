@@ -100,11 +100,14 @@ WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_$WINPCAP_VERSION.zip
 
 # Kernel version we are targeting
 # Remember: Please update also conf/kernel-config, if changing kernel version!
-# Read version from filename of patchfile patch/linux-2.6.11.diff
+# Read version from filename of patchfile patch/linux-2.6.11.diff,
+# can overwrite in CFG file.
 # KERNEL_VERSION: full kernel version (e.g. 2.6.11)
 # KERNEL_DIR: sub-dir in www.kernel.org for the download (e.g. v2.6)
 #
-KERNEL_VERSION=`ls $TOPDIR/patch/linux-*.diff | sed -r -e 's/^.+\-([0-9\.]+)\.diff$/\1/'`
+if [ -z "$KERNEL_VERSION" ] ; then
+  KERNEL_VERSION=`ls $TOPDIR/patch/linux-*.diff | sed -r -e 's/^.+\-([0-9\.]+)\.diff$/\1/'`
+fi
 KERNEL_DIR=`echo $KERNEL_VERSION | sed -r -e 's/^([0-9]+)\.([0-9]+)\..+$/v\1.\2/'`
 
 CO_VERSION=`cat $TOPDIR/src/colinux/VERSION`
