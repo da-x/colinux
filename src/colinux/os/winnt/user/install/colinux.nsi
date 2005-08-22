@@ -145,6 +145,7 @@ Section
   File "premaid\vmlinux-modules.tar.gz"
   ; initrd replaces vmlinux-modules.tar.gz as preferred way to ship modules.
   File "premaid\initrd.gz"
+  File "premaid\example.conf"
 
   ; Remove kludge from older installations	
   Delete "$INSTDIR\packet.dll"
@@ -508,6 +509,7 @@ Section "Uninstall"
   Delete "$INSTDIR\news.txt"
   Delete "$INSTDIR\cofs.txt"
   Delete "$INSTDIR\colinux-daemon.txt"
+  Delete "$INSTDIR\example.conf"
 
   Delete "$INSTDIR\netdriver\OemWin2k.inf"
   Delete "$INSTDIR\netdriver\tap0801co.sys"
