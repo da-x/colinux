@@ -67,7 +67,7 @@ CO_DEBUG_LIST;
         if (co_debug_log_##facility##_level(__level__))  \
 		co_debug_(_colinux_module, CO_DEBUG_FACILITY_##facility, __level__, __FILE__, \
                           __LINE__, __FUNCTION__, fmt, ## __VA_ARGS__);	\
-} while (0);
+} while (0)
 
 #else
 
