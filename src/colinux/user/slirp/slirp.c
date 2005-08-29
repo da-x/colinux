@@ -127,12 +127,25 @@ static int get_dns_addr(struct in_addr *pdns_addr)
 struct in_addr cached_dns_addr (void)
 {
     static long dns_expire;
+    struct in_addr new_dns_addr;
     
     if (!dns_addr.s_addr || curtime > dns_expire) {
-        if (get_dns_addr(&dns_addr) < 0) {
-    	    fprintf(stderr, "Could not get DNS address\n");
+        if (get_dns_addr(&new_dns_addr) < 0) {
+            fprintf(stderr, "Could not get DNS address\n");
             return (dns_addr);
         }
+
+        /* If DNS server changed, re-read host ipaddr */
+        if (dns_addr.s_addr != new_dns_addr.s_addr) {
+            getouraddr();
+#if 0
+            printf( "conet-slirp-daemon: host internet connection update detected.\n" );
+            printf( "Our addr: %s\n", inet_ntoa(our_addr));
+            printf( "DNS Server: %s\n", inet_ntoa(new_dns_addr));
+#endif
+        }
+
+        dns_addr = new_dns_addr;
         dns_expire = curtime + SO_EXPIREFAST;
     }
     return (dns_addr);
@@ -168,6 +181,9 @@ void slirp_init(void)
     /* set default addresses */
     getouraddr();
     inet_aton("127.0.0.1", &loopback_addr);
+
+    if (our_addr.s_addr == loopback_addr.s_addr)
+        printf ("Warning only loopback addr 127.0.0.1 available.\n");
 
     inet_aton(CTL_SPECIAL, &special_addr);
     inet_aton(CTL_LOCAL, &client_addr);
