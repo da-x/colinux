@@ -83,6 +83,10 @@ static int daemon_main(int argc, char *argv[])
 		if (CO_OK(rc)) {
 			co_terminal_print("daemon: manager is loaded\n");
 		} else {
+			if (CO_RC_GET_CODE(rc) == CO_RC_VERSION_MISMATCHED) {
+				co_terminal_print("driver version is %d while expected version %d\n", 
+					 status.periphery_api_version, CO_LINUX_PERIPHERY_API_VERSION);
+			}
 			co_terminal_print("daemon: can't get manager status\n");
 			return -1;
 		}

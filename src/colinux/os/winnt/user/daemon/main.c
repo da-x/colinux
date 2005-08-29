@@ -278,11 +278,11 @@ int WINAPI WinMain(HINSTANCE hInstance,
 	co_debug_start();
 
 	rc = co_winnt_main(szCmdLine);
-	if (!CO_OK(rc))  {
-    		co_debug_end();
-		return -1;
-	}
 
 	co_debug_end();
+
+	if (!CO_OK(rc))
+		return -1;
+
 	return 0;
 }

@@ -33,6 +33,8 @@ typedef struct co_debug_parameters {
 	char settings_change[0x100];
 	bool_t network_server_specified;
 	char network_server[0x100];
+	bool_t rc_specified;
+	char rc_str[20];
 } co_debug_parameters_t;
 
 static co_debug_parameters_t parameters;
@@ -401,6 +403,7 @@ static co_rc_t co_debug_parse_args(co_command_line_params_t cmdline, co_debug_pa
 	parameters->parse_mode = PFALSE;
 	parameters->output_filename_specified = PFALSE;
 	parameters->network_server_specified = PFALSE;
+	parameters->rc_specified = PFALSE;
 
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-d", &parameters->download_mode);
 	if (!CO_OK(rc)) 
@@ -425,6 +428,10 @@ static co_rc_t co_debug_parse_args(co_command_line_params_t cmdline, co_debug_pa
 	if (!CO_OK(rc)) 
 		return rc;
 
+	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-e", &parameters->rc_specified,
+						      parameters->rc_str, sizeof(parameters->rc_str));
+	if (!CO_OK(rc)) 
+		return rc;
 
 	return CO_RC(OK);
 }
@@ -434,7 +441,7 @@ static void syntax(void)
 	printf("colinux-debug-daemon\n");
 	printf("syntax: \n");
 	printf("\n");
-	printf("    colinux-debug-daemon [-h] [-p] [-d] [-s levels] [-f filename]\n");
+	printf("    colinux-debug-daemon [-h] [-p] [-d] [-s levels] [-f filename] [-e exitcode]\n");
 	printf("\n");
 	printf("      -d              Download debug information on the fly\n");
 	printf("      -p              Parse the debug information and output an XML\n");
@@ -446,6 +453,7 @@ static void syntax(void)
 	printf("                      Change the levels of the given debug facilities\n");
 	printf("      -n [ip-address] Send logs as UDP packets to [ip-address]:63000\n");
 	printf("                      (requires -d)\n");
+	printf("      -e exitcode     Translate exitcode into human readable format.\n");
 	printf("\n");
 }
 
@@ -466,6 +474,19 @@ int co_debug_main(int argc, char *argv[])
 	if (!CO_OK(rc)) {
 		co_terminal_print("error parsing args\n");
 		return CO_RC(ERROR);
+	}
+
+	if (parameters.rc_specified) {
+		char buf[0x100];
+		unsigned long exitcode;
+
+		// Don't use co_strtol, don't work here!
+		exitcode = strtoul(parameters.rc_str, NULL, 16);
+		co_rc_format_error((co_rc_t)exitcode, buf, sizeof(buf));
+
+		printf(" Translate error code %lx\n", exitcode);
+		printf(" %s\n", buf);
+		return 0;
 	}
 
 	if (parameters.output_filename_specified) {
