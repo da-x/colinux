@@ -65,10 +65,9 @@ targets['colinux-slirp-net-daemon.exe'] = Target(
     inputs = user_res + [
        Input('../user/conet-slirp-daemon/build.o'),
        Input('../../../user/slirp/build.o'),
-       Input('../../../user/daemon-base/build.o'),
     ] + user_dep,
     tool = Compiler(),    
-    mono_options = generate_options('g++', libs=['iphlpapi']),
+    mono_options = generate_options('gcc', libs=['iphlpapi']),
 )
 
 targets['colinux-serial-daemon.exe'] = Target(

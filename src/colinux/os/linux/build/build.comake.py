@@ -2,6 +2,7 @@ targets['executables'] = Target(
     inputs=[
     Input('colinux-daemon'),
     Input('colinux-net-daemon'),
+    Input('colinux-slirp-net-daemon'),
     Input('colinux-console-fltk'),
     Input('colinux-debug-daemon'),
     Input('colinux.ko'),
@@ -41,6 +42,15 @@ targets['colinux-net-daemon'] = Target(
     ] + user_dep,
     tool = Compiler(),    
     mono_options = generate_options('g++'),
+)
+
+targets['colinux-slirp-net-daemon'] = Target(
+    inputs = [
+       Input('../user/conet-slirp-daemon/build.o'),
+       Input('../../../user/slirp/build.o'),
+    ] + user_dep,
+    tool = Compiler(),
+    mono_options = generate_options('gcc'),
 )
 
 targets['colinux-console-fltk'] = Target(
