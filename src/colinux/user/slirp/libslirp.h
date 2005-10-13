@@ -4,6 +4,7 @@
 #ifdef _WIN32
 #include <winsock2.h>
 int inet_aton(const char *cp, struct in_addr *ia);
+#include <stdint.h>
 #else
 #include <sys/select.h>
 #include <arpa/inet.h>

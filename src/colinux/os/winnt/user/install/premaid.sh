@@ -6,7 +6,7 @@ TOPDIR=../../../../../..
 EXEDIR=../../build
 THISDIR=`pwd`
 
-# get configur
+# get configure
 cd ${TOPDIR}/bin; . build-common.sh; cd $THISDIR
 
 PATH="$PREFIX/bin:$PATH"
