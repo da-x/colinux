@@ -474,16 +474,15 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 				return CO_RC(ERROR);
 			}
 		
-			char path[0x100];
-			co_snprintf(path, sizeof(path), "%s", param);
-			co_canonize_cobd_path(&path);
+			co_canonize_cobd_path(&param);
+
 			/* Check currently configing path against already 
 	                   configured paths, error if an duplicate is found. 
 	                */
 			int index_value=0;
 			for (index_value=0; index_value < index; index_value++) {
-				if (strcmp(conf->block_devs[index_value].pathname, path) == 0 ) {
-					co_terminal_print("duplicate cobd path: %s already used in cobd%i\n", path, index_value);
+				if (strcmp(conf->block_devs[index_value].pathname, param) == 0 ) {
+					co_terminal_print("duplicate cobd path: %s already used in cobd%i\n", param, index_value);
 					return CO_RC(ERROR);
 				}
 			}
@@ -492,8 +491,6 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 			cobd->enabled = PTRUE;
 
 			co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
-
-			co_canonize_cobd_path(&cobd->pathname);
 
 			co_terminal_print("mapping cobd%d to %s\n", index, cobd->pathname);
 		}
@@ -818,16 +815,15 @@ static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_confi
 				return CO_RC(ERROR);
 			}
 		
-			char path[0x100];
-			co_snprintf(path, sizeof(path), "%s", param);
-			co_canonize_cobd_path(&path);
+			co_canonize_cobd_path(&param);
+
 			/* Check currently configing path against already 
 	                   configured paths, error if an duplicate is found. 
 	                */
 	                int index_value=0;
 			for (index_value=0; index_value < index; index_value++) {
-				if (strcmp(conf->cofs_devs[index_value].pathname, path) == 0 ) {
-					co_terminal_print("duplicate cofs path: %s already used in cofs%i\n", path, index_value);
+				if (strcmp(conf->cofs_devs[index_value].pathname, param) == 0 ) {
+					co_terminal_print("duplicate cofs path: %s already used in cofs%i\n", param, index_value);
 					return CO_RC(ERROR);
 				}
 			}
@@ -836,8 +832,6 @@ static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_confi
 			cofs->enabled = PTRUE;
 
 			co_snprintf(cofs->pathname, sizeof(cofs->pathname), "%s", param);
-
-			co_canonize_cobd_path(&cofs->pathname);
 			
 			co_terminal_print("mapping cofs%d to %s\n", index, cofs->pathname);
 		}
