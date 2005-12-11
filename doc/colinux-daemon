@@ -139,3 +139,22 @@ important when options don't depend on each other.
    an ":" seperator, the port on coLinux guest followed by ":"
    seperator, and the port for the host.  More redirections
    have the same form and are seperated by "/".
+
+ Options for console device:
+
+   FLTK console is configurable via environment settings.
+
+
+     set COLINUX_CONSOLE_FONT=Lucida Console:12
+
+   Sets fontname and size.  Allows only fixed width fonts.
+
+
+     set COLINUX_CONSOLE_FONT=Lucida Console
+
+   Sets fontname.
+
+
+     set COLINUX_CONSOLE_FONT=:12
+
+   Sets only size. Default font "Terminal" is active.
