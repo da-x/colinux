@@ -20,6 +20,7 @@
 #include <colinux/os/user/misc.h>
 #include <colinux/common/common.h>
 #include <colinux/user/debug.h>
+#include <colinux/user/cmdline.h>
 #include "../daemon.h"
 #include "../unix.h"
 
@@ -27,12 +28,7 @@
 
 COLINUX_DEFINE_MODULE("colinux-net-daemon");
 
-/*
- * IMPORTANT NOTE:
- *
- * This is work-in-progress. This daemon is currently hardcoded
- * to work against coLinux0 as conet0. Expect changes.
- */
+static int conet_unit = 0;
 
 int tap_alloc(char *dev)
 {
@@ -105,13 +101,13 @@ co_rc_t tap_events(co_daemon_handle_t daemon_handle, int tap, int revents)
 		if (read_size <= 0)
 			return CO_RC(ERROR);
 		
-		message.message.from = CO_MODULE_CONET0;
+		message.message.from = CO_MODULE_CONET0+conet_unit;
 		message.message.to = CO_MODULE_LINUX;
 		message.message.priority = CO_PRIORITY_DISCARDABLE;
 		message.message.type = CO_MESSAGE_TYPE_OTHER;
 		message.message.size = sizeof(message.msg_linux) + read_size;
 		message.msg_linux.device = CO_DEVICE_NETWORK;
-		message.msg_linux.unit = 0;
+		message.msg_linux.unit = conet_unit;
 		message.msg_linux.size = read_size;
 
 		rc = co_os_daemon_message_send(daemon_handle, &message.message);
@@ -174,7 +170,7 @@ co_rc_t wait_loop(co_daemon_handle_t daemon_handle, int tap)
 void syntax(void)
 {
 	co_terminal_print("syntax:\n");
-	co_terminal_print("           colinux-conet-dameon [colinux instance number] [conet unit]\n");
+	co_terminal_print("  colinux-net-daemon -c 'colinux instance number'  -i 'conet unit' [-h] [-n 'adapter name']\n");
 }
 
 int main(int argc, char *argv[])
@@ -184,8 +180,11 @@ int main(int argc, char *argv[])
 	co_daemon_handle_t daemon_handle_;
 	int tap_fd;
 	char tap_name[0x30];
-	int unit = 0;
 	int colinux_instance = 0;
+	co_command_line_params_t cmdline;
+	bool_t instance_specified = PFALSE;
+	bool_t unit_specified = PFALSE;
+	bool_t name_specified = PFALSE;
 
 	co_debug_start();
 
@@ -195,7 +194,40 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-	snprintf(tap_name, sizeof(tap_name), "conet-host-%d-%d", colinux_instance, unit);
+	rc = co_cmdline_params_alloc(&argv[1], argc-1, &cmdline);
+	if (!CO_OK(rc)) {
+		co_terminal_print("colinux-conet-daemon: error parsing arguments\n");
+		goto out;
+	}
+
+	rc = co_cmdline_params_one_arugment_int_parameter(
+			cmdline, "-c", &instance_specified, &colinux_instance);
+	if (!CO_OK(rc)) {
+		syntax();
+		goto out;
+	}
+
+	rc = co_cmdline_params_one_arugment_int_parameter(
+			cmdline, "-i", &unit_specified, &conet_unit);
+	if (!CO_OK(rc)) {
+		syntax();
+		goto out;
+	}
+
+	snprintf(tap_name, sizeof(tap_name), "conet-host-%d-%d", colinux_instance, conet_unit);
+
+	rc = co_cmdline_params_one_arugment_parameter(
+			cmdline, "-n", &name_specified, tap_name, sizeof(tap_name));
+	if (!CO_OK(rc)) {
+		syntax();
+		goto out;
+	}
+
+	rc = co_cmdline_params_check_for_no_unparsed_parameters(cmdline, PTRUE);
+	if (!CO_OK(rc)) {
+		syntax();
+		goto out;
+	}
 
 	co_terminal_print("creating network %s\n", tap_name);
 
@@ -208,7 +240,7 @@ int main(int argc, char *argv[])
 
 	co_terminal_print("TAP interface %s created\n", tap_name);
 
-	rc = co_os_daemon_pipe_open(0, CO_MODULE_CONET0, &daemon_handle_);
+	rc = co_os_daemon_pipe_open(colinux_instance, CO_MODULE_CONET0+conet_unit, &daemon_handle_);
 	if (!CO_OK(rc)) {
 		co_terminal_print("Error opening a pipe to the daemon\n");
 		goto out_close;
