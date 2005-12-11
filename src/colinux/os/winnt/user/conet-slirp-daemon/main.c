@@ -438,10 +438,8 @@ int main(int argc, char *argv[])
 	int exit_code = 0;
 	co_daemon_handle_t daemon_handle_;
 	start_parameters_t start_parameters;
-	WSADATA wsad;
 
 	co_debug_start();
-	WSAStartup(MAKEWORD(2, 0), &wsad);
 	slirp_init();
 
 	rc = handle_paramters(&start_parameters, argc, argv);
