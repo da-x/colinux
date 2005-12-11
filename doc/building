@@ -143,7 +143,7 @@ The cross compiler mostly you never need compile again.
 
 The work of build-all.sh is controlled by md5sum of some sources and some
 target files. Md5sum is updated after complety build step and put as file
-.build-*.md5 in 'downlod' directory.
+.build-*.md5 in 'download' directory.
 
 Call as 'build-all.sh --rebuild-all' will ignore md5sum and builds all
 cross tools, cross compiler, libraries and target files again.

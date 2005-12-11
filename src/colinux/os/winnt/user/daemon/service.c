@@ -95,7 +95,7 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, co_start_pa
 	co_ntevent_print("daemon: service command line: %s\n", command);
 
 #if (0)
-	/* broken somwhow for recent TAP driver */
+	/* broken somehow for recent TAP driver */
 	if (co_winnt_is_winxp_or_better())
 		service_user_name = "NT AUTHORITY\\NetworkService";
 #endif

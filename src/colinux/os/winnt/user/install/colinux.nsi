@@ -1,4 +1,4 @@
-;Cooeprative Linux installer
+;Cooperative Linux installer
 ;Written by NEBOR Regis
 ;Modified by Dan Aloni (c) 2004
 ;Modified 8/20/2004,2/4/2004 by George P Boutwell

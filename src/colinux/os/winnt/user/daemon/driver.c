@@ -143,13 +143,13 @@ co_rc_t co_winnt_status_driver(int verbose)
 
 	if (!installed) {
 		co_terminal_print("driver not installed\n");
-		return CO_RC(ERROR_ACCESSING_DRIVER); /* FIXME: Is this error code correct for this? */
+		return CO_RC(ERROR_ACCESSING_DRIVER);
 	}
 
 	handle = co_os_manager_open();
 	if (!handle) {
 		co_terminal_print("couldn't get driver handle\n");
-		return CO_RC(ERROR_MONITOR_NOT_LOADED); /* FIXME: Is this error code correct for this? */
+		return CO_RC(ERROR_MONITOR_NOT_LOADED);
 	}		
 	
 	rc = co_manager_status(handle, &status);
@@ -171,7 +171,7 @@ co_rc_t co_winnt_status_driver(int verbose)
 		co_terminal_print("current periphery api version: %d\n", status.periphery_api_version);
 	}
 	co_os_manager_close(handle);
-    
+
 	return rc;
 }
 
