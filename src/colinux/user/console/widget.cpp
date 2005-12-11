@@ -154,16 +154,25 @@ void console_widget_t::draw()
 		if (yi < 0)
 			continue;
 
-		if (yi > console->y)
+		if (yi >= console->y)
 			break;
 
 		co_console_cell_t *row_start = &console->screen[yi*console->x];
 		co_console_cell_t *cell, *start, *end;
+		co_console_cell_t *limit = &console->screen[console->y*console->x];
 		char text_buff[0x100];
 
 		start = row_start + x1;
 		end = row_start + x2;
 		cell = start;
+
+		if (end > limit) {
+#if 0
+			co_debug("BUG: end=%p limit=%p row=%p start=%p x1=%d x2=%d y1=%d y2=%d",
+			    end, limit, row_start, start, x1, x2, y1, y2);
+#endif
+			end = limit; // Hack: Fix the overrun!
+		}
 		
 		while (cell < end) {
 			while (cell < end  &&  start->attr == cell->attr) {
