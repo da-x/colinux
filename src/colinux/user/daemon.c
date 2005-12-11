@@ -879,15 +879,8 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 		}
 
 		case CO_NETDEV_TYPE_SLIRP: {
-			char redir [CO_NETDEV_REDIRDIR_STR_SIZE+3];
-
-			if (strlen(net_dev->redir) != 0) {
-				co_snprintf(redir, sizeof(redir), " -r %s", net_dev->redir);
-			} else {
-				redir[0]='\0';
-			}
-
-			rc = co_launch_process("colinux-slirp-net-daemon -c %d -i %d%s", daemon->id, i, redir);
+			rc = co_launch_process("colinux-slirp-net-daemon -c %d -i %d%s%s",
+				daemon->id, i, (*net_dev->redir)?" -r ":"", net_dev->redir);
 			break;
 		}
 
@@ -1035,4 +1028,3 @@ void co_daemon_end_monitor(co_daemon_t *daemon)
 	co_daemon_monitor_destroy(daemon);
 	co_os_file_free(daemon->buf);
 }
-
