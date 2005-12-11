@@ -27,9 +27,13 @@
 #include <colinux/user/cmdline.h>
 #include <colinux/common/common.h>
 #include <colinux/user/slirp/libslirp.h>
+#include <colinux/user/slirp/ctl.h>
 
 #include "../daemon.h"
 #include "../unix.h"
+
+#define PARM_SLIRP_REDIR_TCP 0
+#define PARM_SLIRP_REDIR_UDP 1
 
 COLINUX_DEFINE_MODULE("colinux-slirp-net-daemon");
 
@@ -91,7 +95,7 @@ static co_rc_t wait_loop(void)
 			nfds = daemon_handle->sock;
 
 		tv.tv_sec = 0;
-		tv.tv_usec = 100000;
+		tv.tv_usec = 10000;
 
 		ret = select(nfds + 1, &rfds, &wfds, &xfds, &tv);
 		if (ret > 0) {
@@ -101,6 +105,8 @@ static co_rc_t wait_loop(void)
 				/* Received packet from daemon */
 				co_message_t *message = NULL;
 				rc = co_os_daemon_get_message_ready(daemon_handle, &message);
+				if (!CO_OK(rc))
+					return rc;
 				if (message) {
 					slirp_input(message->data, message->size);
 					co_os_free(message);
@@ -128,6 +134,53 @@ static void syntax(void)
 	co_terminal_print("    -i index                Network device index number (0 for eth0, 1 for\n");
 	co_terminal_print("                            eth1, etc.)\n");
 	co_terminal_print("    -c instance             coLinux instance ID to connect to\n");
+	co_terminal_print("    -r tcp|udp:hport:cport  port redirection.\n");
+}
+
+static co_rc_t 
+parse_redir_param (char *p)
+{
+	int iProto, iHostPort, iClientPort;
+	struct in_addr guest_addr;
+
+	if (!inet_aton(CTL_LOCAL, &guest_addr))
+	{
+		co_terminal_print("conet-slirp-daemon: slirp redir setup guest_addr failed.\n");
+		return CO_RC(ERROR);
+	}
+
+	do {
+		// minimal len is "tcp:x:x"
+		if (strlen (p) < 7)
+			return CO_RC(ERROR);
+
+		if (strncasecmp(p, "tcp", 3) == 0)
+			iProto = PARM_SLIRP_REDIR_TCP;
+		else if (strncasecmp(p, "udp", 3) == 0)
+			iProto = PARM_SLIRP_REDIR_UDP;
+		else
+			return CO_RC(ERROR);
+
+		// check first ':'
+		p += 3;
+		if (*p != ':')
+			return CO_RC(ERROR);
+		iHostPort = strtol(p+1, &p, 10);
+
+		// check second ':'
+		if (*p != ':')
+			return CO_RC(ERROR);
+		iClientPort = strtol(p+1, &p, 10);
+
+		co_debug("slirp redir %d %d:%d\n", iProto, iHostPort, iClientPort);
+		if (slirp_redir(iProto, iHostPort, guest_addr, iClientPort) < 0) {
+			co_terminal_print("conet-slirp-daemon: slirp redir %d:%d failed.\n", iHostPort, iClientPort);
+		}
+
+		// Next redirection?
+	} while (*p++ == '/');
+
+	return CO_RC(OK);
 }
 
 co_rc_t daemon_mode(int unit, int instance)
@@ -155,6 +208,8 @@ static co_rc_t co_slirp_main(int argc, char *argv[])
 	bool_t unit_specified = PFALSE;
 	int instance = 0;
 	bool_t instance_specified = PFALSE;
+	char redir_buff [0x100];
+	bool_t redir_specified;
 	
 	co_debug_start();
 
@@ -182,11 +237,28 @@ static co_rc_t co_slirp_main(int argc, char *argv[])
 
 	net_unit = unit;
 
-	rc = co_cmdline_params_check_for_no_unparsed_parameters(cmdline, PTRUE);
-	if (!CO_OK(rc))
+	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-r", &redir_specified,
+						      redir_buff, sizeof(redir_buff));
+	if (!CO_OK(rc)) {
+		syntax();
 		goto out;
+	}
+
+	rc = co_cmdline_params_check_for_no_unparsed_parameters(cmdline, PTRUE);
+	if (!CO_OK(rc)) {
+		syntax();
+		goto out;
+	}
 
 	slirp_init();
+
+	if (redir_specified) {
+		rc = parse_redir_param(redir_buff);
+		if (!CO_OK(rc)) {
+			co_terminal_print("conet-slirp-daemon: Error in redirection '%s'\n", redir_buff);
+			return rc;
+		}
+	}
 
 	co_terminal_print("conet-slirp-daemon: slirp initialized\n");
 
