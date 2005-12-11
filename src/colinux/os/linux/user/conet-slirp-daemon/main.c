@@ -136,7 +136,7 @@ co_rc_t daemon_mode(int unit, int instance)
 
 	rc = co_os_daemon_pipe_open(instance, CO_MODULE_CONET0 + unit, &daemon_handle);
 	if (!CO_OK(rc)) {
-		co_terminal_print("conet_slirp: error opening a pipe to the daemon\n");
+		co_terminal_print("conet-slirp-daemon: error opening a pipe to the daemon\n");
 		goto out;
 	}
 
@@ -160,7 +160,7 @@ static co_rc_t co_slirp_main(int argc, char *argv[])
 
 	rc = co_cmdline_params_alloc(&argv[1], argc-1, &cmdline);
 	if (!CO_OK(rc)) {
-		co_terminal_print("conet_slirp: error parsing arguments\n");
+		co_terminal_print("conet-slirp-daemon: error parsing arguments\n");
 		goto out_clean;
 	}
 
@@ -188,7 +188,7 @@ static co_rc_t co_slirp_main(int argc, char *argv[])
 
 	slirp_init();
 
-	co_terminal_print("Slirp initialized\n");
+	co_terminal_print("conet-slirp-daemon: slirp initialized\n");
 
 	rc = daemon_mode(unit, instance);
 
