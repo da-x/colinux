@@ -193,14 +193,13 @@ command-line, in this "mode" the command-line arguments are:
 	ethX=tap | pcap-bridge,<network connection name>,<MAC> 
 		Use any number of these to specify network interfaces,
 		<network connection name & <MAC> are optional.
-
 	OR
 
-	ethX=slirp,<MAC>
+	ethX=slirp,<MAC>,<redirections>
 		Use any number of these to specify network interfaces,
-		<MAC> is optional.  Slirp is a special easy to use 
-                very unintrusive networking option that uses an 
-                daemon to use host network instead of installing drivers.
+		<MAC> and <redirections> are options.  <redirections> 
+		take the form tcp|upd:guest_port:host_port, multiple 
+                redirections are seperated by /, ie tcp:2222:22/tcp:8080:80
 		
 	root=<root device>
 		This is the device (as coLinux gues sees it) to the root

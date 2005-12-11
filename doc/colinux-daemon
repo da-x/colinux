@@ -130,10 +130,10 @@ important when options don't depend on each other.
    Uses PCAP bridging.
 
 
-     eth0=slirp,,tcp:22:22/tcp:80:80
+     eth0=slirp,,tcp:2222:22/tcp:8080:80
 
-   Uses SLiRP networking, with port 22 and 80 on host being
-   redirected (or port forwarded) to coLinux guest.
+   Uses SLiRP networking, with port 2222 and 8080 on host being
+   redirected (or port forwarded) to coLinux guest 22 and 80.
 
    Redirections must begin with protocol ("tcp" or "udp") then
    an ":" seperator, the port on coLinux guest followed by ":"
