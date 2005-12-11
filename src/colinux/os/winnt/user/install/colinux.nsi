@@ -68,6 +68,7 @@
 
   !define MUI_FINISHPAGE_LINK "Visit the Cooperative Linux website"
   !define MUI_FINISHPAGE_LINK_LOCATION "http://www.colinux.org/"
+  !define MUI_FINISHPAGE_SHOWREADME "README.TXT"
   
   !insertmacro MUI_PAGE_FINISH
   !insertmacro MUI_UNPAGE_CONFIRM
