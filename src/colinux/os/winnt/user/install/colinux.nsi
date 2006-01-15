@@ -221,7 +221,7 @@ Section "Root Filesystem image Download" SeccoLinuxImage
     tryGentoo:
     StrCmp $GENTOO "1" "" tryDebian
     ;MessageBox MB_OK "Gentoo"
-    StrCpy $R0 "Gentoo-2005.1-stage3-ext3.bz2
+    StrCpy $R0 "Gentoo-2005.1-stage3-ext3.bz2"
     Goto tryDownload
 
     tryDebian:
