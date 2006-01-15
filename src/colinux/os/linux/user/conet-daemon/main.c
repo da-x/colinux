@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
 
 	rc = co_cmdline_params_alloc(&argv[1], argc-1, &cmdline);
 	if (!CO_OK(rc)) {
-		co_terminal_print("colinux-conet-daemon: error parsing arguments\n");
+		co_terminal_print("colinux-net-daemon: error parsing arguments\n");
 		goto out;
 	}
 

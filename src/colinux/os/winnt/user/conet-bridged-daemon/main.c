@@ -341,7 +341,8 @@ co_rc_t get_device_name(char *name,
 			name_data,
 			&len);
 		if (status != ERROR_SUCCESS || name_type != REG_SZ) {
-			co_terminal_print("Error opening registry key: %s\\%s\\%s",					NETWORK_CONNECTIONS_KEY, connection_string, name_string);
+			co_terminal_print("Error opening registry key: %s\\%s\\%s",
+				NETWORK_CONNECTIONS_KEY, connection_string, name_string);
 			return CO_RC(ERROR);
 		}
 		else {
@@ -384,42 +385,57 @@ pcap_init()
 		goto pcap_out;
 	}
 
-	co_terminal_print("Looking for interface \"%s\"\n", daemon_parameters->interface_name);
+	if (daemon_parameters->name_specified == PTRUE)
+		co_terminal_print("Looking for interface \"%s\"\n", daemon_parameters->interface_name);
+	else
+		co_terminal_print("Auto selecting name for bridged interface\n");
 	
 	device = alldevs;
 	char name_data[256];
 	char connection_name_data[256];
 	while (device) {
-		
-		memset(connection_name_data, 0, sizeof(connection_name_data));
 
-		if (daemon_parameters->name_specified == PFALSE)
-			break;
+		memset(connection_name_data, 0, sizeof(connection_name_data));
 
 		snprintf(name_data, sizeof(name_data), "%s", device->name+(sizeof(PCAP_NAME_HDR) - 1));
 
 		get_device_name(name_data, sizeof(name_data),
 		                connection_name_data, sizeof(connection_name_data));
 
-		if (strcmp(connection_name_data, "") != 0) {
+		if (*connection_name_data != 0) {
 			co_terminal_print("Checking connection: %s\n", connection_name_data);
-			/*
-			  Do an partial search, if partial search is found,
-			   set this device as he found device, but continue
-			   looping through devices.
-			 */
-			if (strstr(connection_name_data, daemon_parameters->interface_name) != NULL &&
-			    found_device == NULL) {
-				found_device = device;
+
+			if (daemon_parameters->name_specified == PTRUE) {
+				/*
+				 If an exact match exists, over-ride any found device,
+				  setting exact match device to it.
+				 */
+				if (strcmp(connection_name_data, daemon_parameters->interface_name) == 0) {
+					found_device = device;
+					break;
+				}
+
+				/*
+				  Do an partial search, if partial search is found,
+				   set this device as he found device, but continue
+				   looping through devices.
+				 */
+				
+				if (found_device == NULL &&
+				    strstr(connection_name_data, daemon_parameters->interface_name) != NULL) {
+					found_device = device;
+				}
+			} else {
+				/* 
+				 If no name specified and network has an address,
+				  autoselect first device.
+				*/
+				if (device->addresses) {
+					found_device = device;
+					break;
+				}
 			}
 			
-			/*
-			 If an exact match exists, over-ride any found device,
-			  setting exact match device to it.
-			 */
-			if (strcmp(connection_name_data, daemon_parameters->interface_name) == 0) {
-				found_device = device;
-			}
 		}
 		else {
 			co_terminal_print("Adapter %s doesn't have a connection\n", device->description);
@@ -429,7 +445,7 @@ pcap_init()
 	}
 
 	if (found_device == NULL) {
-		co_terminal_print("No matching adapter\n");
+		co_terminal_print("colinux-bridged-net-daemon: No matching adapter\n");
                 exit_code = -1;
                 goto pcap_out_close;
 	}
@@ -484,8 +500,8 @@ pcap_init()
 		goto pcap_out_close;
 	}
 
-	co_terminal_print("Listening on: %s...\n", device->description);
-	co_terminal_print("Listening for: %s\n", packet_filter);
+	co_terminal_print("Bridged listening on: %s...\n", device->description);
+	co_terminal_print("Bridged listening for: %s\n", packet_filter);
 
 	pcap_packet.adhandle = adhandle;
 

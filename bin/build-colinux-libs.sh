@@ -222,8 +222,9 @@ install_winpcap_src()
 {
 	cd "$SRCDIR/$WINPCAP_SRC"
 	echo "Installing $WINPCAP_SRC"
-	cp Include/PCAP.H "$PREFIX/$TARGET/include/pcap.h"
+	cp Include/pcap.h "$PREFIX/$TARGET/include/pcap.h"
 	cp Include/pcap-stdinc.h "$PREFIX/$TARGET/include"
+	cp Include/pcap-bpf.h "$PREFIX/$TARGET/include"
 	cp Include/bittypes.h "$PREFIX/$TARGET/include"
 	cp Include/ip6_misc.h "$PREFIX/$TARGET/include"
 	if ! test -d "$PREFIX/$TARGET/include/net"; then

@@ -94,17 +94,17 @@ anything.
 
 	a. Running as an service.  
 		colinux-daemon.exe -c config.xml --install-service "Cooperative Linux"
-		Also, to remove the service:
-		colinux-daemon.exe --remove-service "Cooopeative Linux".
-	   Then go to the Service Manager and start the "Cooperative Linux" 
-	   service,
-	   OR net start "Cooperative Linux"
+	   Also, to remove the service:
+	   colinux-daemon.exe --remove-service "Cooopeative Linux".
+	   Then go to the Service Manager and start the "Cooperative Linux" service,
+	   OR
+		net start "Cooperative Linux"
 	   Last, got to the installation directory and double-click on
-	   	colinux-console-fltk.exe OR
-		colinux-console-nt.exe		
-	b. As an regular application. 
+		colinux-console-fltk.exe OR
+		colinux-console-nt.exe
+	b. As an regular application.
 		colinux-daemon.exe -c config.xml
-           See colinux-daemon --help for details about possible 
+	   See colinux-daemon --help for details about possible 
 	   command-line arguments.
    
    The console window opens and you would see a Linux machine booting in 
@@ -180,9 +180,9 @@ command-line, in this "mode" the command-line arguments are:
 
 	alias=<path to image file> | :cobdX
 		Use any number of these to specify an alias (hda1, etc)
-                for an block device's image file.  <path to image file 
+                for an block device's image file.  <path to image file>
                 can be to an partition using standard 
-                \HardDiskX\PartitionY format.
+                \Device\HarddiskX\PartitionY format.
 
 	cofsX=<path to windows directory>
 		Use any number of these to specify a Cooperative 
@@ -199,14 +199,14 @@ command-line, in this "mode" the command-line arguments are:
 		Use any number of these to specify network interfaces,
 		<MAC> and <redirections> are options.  <redirections> 
 		take the form tcp|upd:guest_port:host_port, multiple 
-                redirections are seperated by /, ie tcp:2222:22/tcp:8080:80
+		redirections are seperated by /, ie tcp:2222:22/tcp:8080:80
 		
 	root=<root device>
 		This is the device (as coLinux gues sees it) to the root
 		device.
 
 	ANY additional parameters are passed to the coLinux kernel as is 
-(unmodified).
+	(unmodified).
 
 
 Common Problems
@@ -246,7 +246,7 @@ bugs, etc.
 
 	Project Web-site
 		Source Forge Project website is at 
-http://www.sourceforge.net/project/colinux
+		http://www.sourceforge.net/project/colinux
 	
 	WIKI
 		The community has contributed wonderful and helpful 

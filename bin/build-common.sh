@@ -53,7 +53,7 @@ SRCDIR="$SOURCE_DIR"
 # Updated by Sam Lantinga <slouken@libsdl.org>
 # These are the files from the current MingW release
 
-MINGW_VERSION="3.7"
+MINGW_VERSION="3.9"
 MINGW_URL=http://heanet.dl.sourceforge.net/sourceforge/mingw
 MINGW=mingw-runtime-$MINGW_VERSION
 MINGW_ARCHIVE=$MINGW.tar.gz
@@ -64,8 +64,8 @@ BINUTILS=binutils-$BINUTILS_RELEASE
 BINUTILS_ARCHIVE=$BINUTILS-src.tar.gz
 BINUTILS_CHECKSUM=$SRCDIR/.build-cross.md5
 
-GCC_VERSION="3.3.1"
-GCC_RELEASE="$GCC_VERSION-20030804-1"
+GCC_VERSION="3.4.2"
+GCC_RELEASE="$GCC_VERSION-20040916-1"
 GCC=gcc-$GCC_RELEASE
 GCC_ARCHIVE1=gcc-core-$GCC_RELEASE-src.tar.gz
 GCC_ARCHIVE2=gcc-g++-$GCC_RELEASE-src.tar.gz
@@ -95,7 +95,7 @@ MXML_ARCHIVE=$MXML.tar.gz
 
 WINPCAP_SRC=WpdPack
 WINPCAP_URL=http://winpcap.polito.it/install/bin
-WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_3_1_beta4.zip
+WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_3_1.zip
 
 
 # (from sample.user-build.cfg) #

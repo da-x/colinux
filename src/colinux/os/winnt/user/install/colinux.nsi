@@ -2,6 +2,7 @@
 ;Written by NEBOR Regis
 ;Modified by Dan Aloni (c) 2004
 ;Modified 8/20/2004,2/4/2004 by George P Boutwell
+;Modified 1/11/2006 by Henry Nestler
 
 ;-------------------------------------
 ;Good look
@@ -124,8 +125,11 @@ FunctionEnd
 
 Section "coLinux" SeccoLinux
 
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayName" "coLinux"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayName" "coLinux ${VERSION}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayIcon" "$INSTDIR\colinux-daemon.exe,0"
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "NoModify" "1"
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "NoRepair" "1"
 
 
   ;---------------------------------------------------------------FILES--
@@ -166,7 +170,7 @@ Section "coLinux" SeccoLinux
   ;----------------------------------------------------------------------
 
   ;Store install folder
-  WriteRegStr HKCU "Software\coLinux" "" $INSTDIR
+  WriteRegStr HKCU "Software\coLinux" "" "$INSTDIR"
   
   ;Create uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
@@ -217,7 +221,7 @@ Section "Root Filesystem image Download" SeccoLinuxImage
     tryGentoo:
     StrCmp $GENTOO "1" "" tryDebian
     ;MessageBox MB_OK "Gentoo"
-    StrCpy $R0 "Gentoo-colinux-stage3-x86-2004.3.bz2"
+    StrCpy $R0 "Gentoo-2005.1-stage3-ext3.bz2
     Goto tryDownload
 
     tryDebian:
@@ -342,7 +346,7 @@ Section -post
     IntCmp $R0 -1 tapinstall
 
  ;tapupdate:
-    DetailPrint "TAP-Win32 UPDATE"
+    DetailPrint "TAP-Win32 UPDATE (please confirm Windows-Logo-Test)"
     nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" update "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
@@ -350,7 +354,7 @@ Section -post
     Goto tapcontrol_check_error
 
  tapinstall:
-    DetailPrint "TAP-Win32 INSTALL"
+    DetailPrint "TAP-Win32 INSTALL (please confirm Windows-Logo-Test)"
     nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" install "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
