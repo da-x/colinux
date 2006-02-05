@@ -349,7 +349,7 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 	} entry_buffer;
 	IO_STATUS_BLOCK io_status;
 	co_rc_t rc;
-	int len;
+	int len, len1;
 	LARGE_INTEGER LastAccessTime;
 	LARGE_INTEGER LastWriteTime;
 	LARGE_INTEGER ChangeTime;
@@ -359,6 +359,7 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 	co_snprintf(dirname, sizeof(dirname), "%s", fullname);
 	
 	len = co_strlen(dirname);
+	len1 = len;
 	
 	while (len > 0 && (dirname[len-1] != '\\'))
 		len--;
@@ -432,7 +433,9 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
  
         attr->mode = FUSE_S_IRWXU | FUSE_S_IRGRP | FUSE_S_IROTH;
  
-        if (FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+	/* Hack: WinNT detects "C:\" not as directory! */
+        if ((FileAttributes & FILE_ATTRIBUTE_DIRECTORY) ||
+	    (len1 >= 3 && len == len1 && fullname [len1-1] == '\\'))
                 attr->mode |= FUSE_S_IFDIR;
         else
                 attr->mode |= FUSE_S_IFREG;

@@ -143,7 +143,7 @@ icmp_input(m, hlen)
 	/* It's an alias */
 	switch(ntohl(so->so_faddr.s_addr) & 0xff) {
 	case CTL_DNS:
-	  addr.sin_addr = dns_addr;
+	  addr.sin_addr = cached_dns_addr();
 	  break;
 	case CTL_ALIAS:
 	default:

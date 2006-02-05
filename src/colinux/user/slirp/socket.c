@@ -178,10 +178,11 @@ soread(so)
 	 * Dan Aloni says: actually it can return -1 here...
 	 */
 	if (n == 2 && nn == iov[0].iov_len) {
-	   int ret = recv(so->s, iov[1].iov_base, iov[1].iov_len,0);
-	   if (ret >= 0)
-		   nn += ret;
-	}
+            int ret;
+            ret = recv(so->s, iov[1].iov_base, iov[1].iov_len,0);
+            if (ret > 0)
+                nn += ret;
+        }
 	
 	DEBUG_MISC((dfd, " ... read nn = %d bytes\n", nn));
 #endif
@@ -353,8 +354,12 @@ sowrite(so)
 	}
 	
 #ifndef HAVE_READV
-	if (n == 2 && nn == iov[0].iov_len)
-	   nn += send(so->s, iov[1].iov_base, iov[1].iov_len,0);
+	if (n == 2 && nn == iov[0].iov_len) {
+            int ret;
+            ret = send(so->s, iov[1].iov_base, iov[1].iov_len,0);
+            if (ret > 0)
+                nn += ret;
+        }
         DEBUG_MISC((dfd, "  ... wrote nn = %d bytes\n", nn));
 #endif
 	
@@ -394,7 +399,19 @@ sorecvfrom(so)
 	  len = recvfrom(so->s, buff, 256, 0, 
 			 (struct sockaddr *)&addr, &addrlen);
 	  /* XXX Check if reply is "correct"? */
-	  
+
+#ifdef WSAECONNRESET
+	  /*
+	   * WSAECONNRESET: Connection reset by peer. An existing
+	   * connection was forcibly closed by the remote host
+	   * WIN32: Connection is closed after "ping" replay.
+	   * Hack: It's not an error, it's good response here.
+	   */
+          if (len == -1 && errno == WSAECONNRESET) {
+	    icmp_reflect(so->so_m);
+	    so->so_m = 0; /* Don't m_free() it again! */
+	  } else
+#endif
 	  if(len == -1 || len == 0) {
 	    u_char code=ICMP_UNREACH_PORT;
 
@@ -495,7 +512,7 @@ sosendto(so, m)
 	  /* It's an alias */
 	  switch(ntohl(so->so_faddr.s_addr) & 0xff) {
 	  case CTL_DNS:
-	    addr.sin_addr = dns_addr;
+	    addr.sin_addr = cached_dns_addr();
 	    break;
 	  case CTL_ALIAS:
 	  default:

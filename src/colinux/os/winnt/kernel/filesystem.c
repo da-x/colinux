@@ -42,7 +42,7 @@ int co_os_fs_add_last_component(co_pathname_t *dirname)
 	int len;
 
 	len = co_strlen(*dirname);
-	if (len > 0  &&  (*dirname)[len] != '\\'  && (len + 2) < sizeof(*dirname)) {
+	if (len > 0  &&  (*dirname)[len-1] != '\\'  && (len + 2) < sizeof(*dirname)) {
 		(*dirname)[len] = '\\';
 		(*dirname)[len + 1] = '\0';
 		len++;
