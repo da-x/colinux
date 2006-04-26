@@ -28,8 +28,8 @@ static co_rc_t co_load_config_cofs(co_config_t *out_config, mxml_element_t *elem
 {
     int i;
     long index = -1;
-    char *path = "";
-    co_cofsdev_desc_t *cofs;
+    char *path = NULL;
+    co_cofsdev_desc_t *cofs, *dev;
     char *enabled = NULL;
     char *type = NULL;
     
@@ -64,18 +64,6 @@ static co_rc_t co_load_config_cofs(co_config_t *out_config, mxml_element_t *elem
         return CO_RC(ERROR);
     }
 
-    /* Check currently configing path against already 
-       configured paths, error if an duplicate is found. 
-    */
-    int index_value=0;
-    for (index_value=0; index_value < index; index_value++) {
-	if ( strcmp(out_config->cofs_devs[index_value].pathname, path ) 
-== 0 ) {
-		co_debug("config: invalid cofs element: duplicate path\n");
-		return CO_RC(ERROR);
-	} 
-    }
-    
     if (type == NULL) {
         co_debug("config: invalid cofs element: no type\n");
         return CO_RC(ERROR);
@@ -93,10 +81,28 @@ static co_rc_t co_load_config_cofs(co_config_t *out_config, mxml_element_t *elem
     }
     
     snprintf(cofs->pathname, sizeof(cofs->pathname), "%s", path);
+    co_canonize_cobd_path(&cofs->pathname);
     cofs->enabled = enabled ? (strcmp(enabled, "true") == 0) : 0;
+
+    /* no checks, if disabled */
+    if (!cofs->enabled)
+        return CO_RC(OK);
     
+    /* Check currently configing path against already 
+       configured paths, error if an duplicate is found. 
+    */
+    for (i = 0, dev = out_config->cofs_devs; i < CO_MODULE_MAX_COFS; i++, dev++)
+    {
+	if ( i != index && dev->enabled &&
+             stricmp(dev->pathname, cofs->pathname) == 0 )
+	{
+             co_debug("config: invalid cofs element: duplicate path in cofs%i and cofs%i\n", index, i);
+             return CO_RC(ERROR);
+	} 
+    }
+
     co_terminal_print("mapping cofs%d to %s\n", index, cofs->pathname);
-    
+
     return CO_RC(OK);
 }
 
@@ -104,10 +110,10 @@ co_rc_t co_load_config_blockdev(co_config_t *out_config, mxml_element_t *element
 {
 	int i;
 	long index = -1;
-	char *path = "";
+	char *path = NULL;
 	char *alias = NULL;
 	char *enabled = NULL;
-	co_block_dev_desc_t *blockdev;
+	co_block_dev_desc_t *blockdev, *dev;
 
 	for (i=0; i < element->num_attrs; i++) {
 		mxml_attr_t *attr = &element->attrs[i];
@@ -140,24 +146,32 @@ co_rc_t co_load_config_blockdev(co_config_t *out_config, mxml_element_t *element
 		return CO_RC(ERROR);
 	}
 
+	blockdev = &out_config->block_devs[index];
+	
+	snprintf(blockdev->alias, sizeof(blockdev->alias), "%s", alias);
+	blockdev->alias_used = alias != NULL;
+
+	snprintf(blockdev->pathname, sizeof(blockdev->pathname), "%s", path);
+	co_canonize_cobd_path(&blockdev->pathname);
+	blockdev->enabled = enabled ? (strcmp(enabled, "true") == 0) : 0;
+
+	/* no checks, if disabled */
+	if (!blockdev->enabled)
+		return CO_RC(OK);
+
 	/* Check currently configing path against already 
            configured paths, error if an duplicate is found. 
 	*/
-        int index_value=0;
-	for (index_value=0; index_value < index; index_value++) {
-		if ( strcmp(out_config->block_devs[index_value].pathname, path) == 0 ) {
+	for (i = 0, dev = out_config->block_devs; i < CO_MODULE_MAX_COBD; i++, dev++) {
+		if ( i != index && dev->enabled &&
+		     stricmp(dev->pathname, blockdev->pathname) == 0 )
+		{
 			co_debug("config: invalid cobd element: duplicate path\n");
 			return CO_RC(ERROR);
 		} 
 	}
 
-	blockdev = &out_config->block_devs[index];
-	
-	snprintf(blockdev->pathname, sizeof(blockdev->pathname), "%s", path);
-	blockdev->enabled = enabled ? (strcmp(enabled, "true") == 0) : 0;
-
-	snprintf(blockdev->alias, sizeof(blockdev->alias), "%s", alias);
-	blockdev->alias_used = alias != NULL;
+	co_terminal_print("mapping cobd%d to %s\n", index, blockdev->pathname);
 
 	return CO_RC(OK);
 }
@@ -165,7 +179,7 @@ co_rc_t co_load_config_blockdev(co_config_t *out_config, mxml_element_t *element
 co_rc_t co_load_config_image(co_config_t *out_config, mxml_element_t *element)
 {
 	int i;
-	char *path = "";
+	char *path = NULL;
 
 	for (i=0; i < element->num_attrs; i++) {
 		mxml_attr_t *attr = &element->attrs[i];
@@ -225,7 +239,7 @@ co_rc_t co_load_config_boot_params(co_config_t *out_config, mxml_node_t *node)
 co_rc_t co_load_config_initrd(co_config_t *out_config, mxml_element_t *element)
 {
 	int i;
-	char *path = "";
+	char *path = NULL;
 
 	for (i=0; i < element->num_attrs; i++) {
 		mxml_attr_t *attr = &element->attrs[i];
@@ -427,7 +441,7 @@ co_rc_t co_load_config(char *text, co_config_t *out_config)
 				rc = co_load_config_network(out_config, &walk->value.element);
 			} else if (strcmp(name, "cofs_device") == 0) {
 				rc = co_load_config_cofs(out_config, &walk->value.element);
-            }
+			}
 
 			if (!CO_OK(rc))
 				break;
@@ -468,6 +482,7 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 		
 		if (exists) {
 			co_block_dev_desc_t *cobd;
+			int i;
 
 			if (index < 0  || index >= CO_MODULE_MAX_COBD) {
 				co_terminal_print("invalid cobd index: %d\n", index);
@@ -479,17 +494,15 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 			/* Check currently configing path against already 
 	                   configured paths, error if an duplicate is found. 
 	                */
-			int index_value=0;
-			for (index_value=0; index_value < index; index_value++) {
-				if (strcmp(conf->block_devs[index_value].pathname, param) == 0 ) {
-					co_terminal_print("duplicate cobd path: %s already used in cobd%i\n", param, index_value);
+			for (i = 0, cobd = conf->block_devs; i < CO_MODULE_MAX_COBD; i++, cobd++) {
+				if (cobd->enabled && stricmp(cobd->pathname, param) == 0 ) {
+					co_terminal_print("duplicate cobd path: %s already used in cobd%i\n", param, i);
 					return CO_RC(ERROR);
 				}
 			}
 
 			cobd = &conf->block_devs[index];
 			cobd->enabled = PTRUE;
-
 			co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
 
 			co_terminal_print("mapping cobd%d to %s\n", index, cobd->pathname);
@@ -581,7 +594,7 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 				cobd->alias_used = PTRUE;
 				snprintf(cobd->alias, sizeof(cobd->alias), "%s%s", prefix, suffix);
 
-				co_terminal_print("mapping %s%s to param\n", prefix, suffix, &param[1]);
+				co_terminal_print("mapping %s%s to %s\n", prefix, suffix, &param[1]);
 				
 			} else {
 				rc = allocate_by_alias(conf, prefix, suffix, param);
@@ -809,6 +822,7 @@ static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_confi
 		
 		if (exists) {
 			co_cofsdev_desc_t *cofs;
+			int i;
 
 			if (index < 0  || index >= CO_MODULE_MAX_COFS) {
 				co_terminal_print("invalid cofs index: %d\n", index);
@@ -820,17 +834,15 @@ static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_confi
 			/* Check currently configing path against already 
 	                   configured paths, error if an duplicate is found. 
 	                */
-	                int index_value=0;
-			for (index_value=0; index_value < index; index_value++) {
-				if (strcmp(conf->cofs_devs[index_value].pathname, param) == 0 ) {
-					co_terminal_print("duplicate cofs path: %s already used in cofs%i\n", param, index_value);
+			for (i = 0, cofs = conf->cofs_devs; i < CO_MODULE_MAX_COFS; i++, cofs++) {
+				if (cofs->enabled && stricmp(cofs->pathname, param) == 0 ) {
+					co_terminal_print("duplicate cofs path: %s already used in cofs%i\n", param, i);
 					return CO_RC(ERROR);
 				}
 			}
 
 			cofs = &conf->cofs_devs[index];
 			cofs->enabled = PTRUE;
-
 			co_snprintf(cofs->pathname, sizeof(cofs->pathname), "%s", param);
 			
 			co_terminal_print("mapping cofs%d to %s\n", index, cofs->pathname);

@@ -230,7 +230,6 @@ install_winpcap_src()
 	if ! test -d "$PREFIX/$TARGET/include/net"; then
 		mkdir "$PREFIX/$TARGET/include/net"
 	fi
-	cp Include/NET/*.h "$PREFIX/$TARGET/include/net/"
 	cp Lib/libwpcap.a "$PREFIX/$TARGET/lib"
 	if test $? -ne 0; then
 	        echo "winpcap install failed"
@@ -247,6 +246,12 @@ build_winpcap_src()
 
 # ALL
 
+clean_up()
+{
+	echo "Cleanup building"
+	rm -rf "$SRCDIR/$FLTK" "$SRCDIR/$MXML" "$SRCDIR/$W32API_SRC" "$SRCDIR/$WINPCAP_SRC"
+}
+
 build_colinux_libs()
 {
         download_files
@@ -261,6 +266,7 @@ build_colinux_libs()
 	build_w32api_src
 	build_winpcap_src
 
+	clean_up
 	create_md5sums
 }
 

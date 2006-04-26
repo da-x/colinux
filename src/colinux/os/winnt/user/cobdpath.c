@@ -22,30 +22,33 @@
 
 co_rc_t co_canonize_cobd_path(co_pathname_t *pathname)
 {
-	co_pathname_t copied_path;
-
-	memcpy(&copied_path, pathname, sizeof(copied_path));
-
-	if (!(co_strncmp(copied_path, "\\Device\\", 8) == 0  ||
-	      co_strncmp(copied_path, "\\DosDevices\\", 12) == 0)) 
+	if (!(co_strncmp(*pathname, "\\Device\\", 8) == 0  ||
+	      co_strncmp(*pathname, "\\DosDevices\\", 12) == 0)) 
 	{
+		co_pathname_t copied_path;
 		UNICODE_STRING dos_uni;
 		UNICODE_STRING nt_uni;
 		ANSI_STRING dos_ansi;
 		ANSI_STRING nt_ansi;
 		NTSTATUS status;
-		
-		/* If it's not an absolute path */
-		if (!(co_strlen(copied_path) >= 3  &&  (copied_path[1] == ':' && copied_path[2] == '\\'))) {
-			co_pathname_t cwd_path;
+		int len;
 
-			/* ... then make it so */
-			getcwd(cwd_path, sizeof(cwd_path));
-			co_snprintf(*pathname, sizeof(*pathname), "%s\\%s", cwd_path, copied_path);
+		/* Convert relative path to absolute path with drive */
+		if (!_fullpath(copied_path, *pathname, sizeof(copied_path))) {
+			co_terminal_print("%s: Error in path, or to long\n", *pathname);
+			return CO_RC(ERROR);
 		}
+		
+		len = co_strlen(copied_path);
 
-		dos_ansi.Buffer = &(*pathname)[0];
-		dos_ansi.Length = strlen(*pathname);
+		/* Only root dir "C:\" should end with backslash */
+		if (len > 3 && copied_path[len-1] == '\\') {
+		    /* Remove tailing backslash */
+		    copied_path[len--] = '\0';
+		}
+		
+		dos_ansi.Buffer = copied_path;
+		dos_ansi.Length = len;
 		dos_ansi.MaximumLength = dos_ansi.Length + 1;
 
 		status = RtlAnsiStringToUnicodeString(&dos_uni, &dos_ansi, TRUE);

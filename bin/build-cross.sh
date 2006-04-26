@@ -69,6 +69,7 @@ configure_binutils()
 	cd "binutils-$TARGET"
 	echo "Configuring binutils"
 	"$SRCDIR/$BINUTILS/configure" --prefix="$PREFIX" --target=$TARGET \
+	 --disable-nls \
 	 >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "configure binutils failed"
 	cd "$TOPDIR"
@@ -90,6 +91,12 @@ install_binutils()
 	make install >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "install binutils failed"
 	cd "$TOPDIR"
+}
+
+clean_binutils()
+{
+	echo "Clean binutils"
+	rm -rf "$TOPDIR/binutils-$TARGET" "$SRCDIR/$BINUTILS"
 }
 
 extract_gcc()
@@ -123,6 +130,7 @@ configure_gcc()
 		--prefix="$PREFIX" --target=$TARGET \
 		--with-headers="$PREFIX/$TARGET/include" \
 		--with-gnu-as --with-gnu-ld \
+		--disable-nls \
 		--without-newlib --disable-multilib >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "configure gcc failed"
 	cd "$TOPDIR"
@@ -146,12 +154,21 @@ install_gcc()
 	cd "$TOPDIR"
 }
 
+clean_gcc()
+{
+	echo "Clean gcc"
+	rm -rf "$TOPDIR/gcc-$TARGET" "$SRCDIR/$GCC"
+}
+
 final_tweaks()
 {
 	echo "Finalizing installation"
 
 	# remove gcc build headers
 	rm -rf "$PREFIX/$TARGET/sys-include"
+
+	# remove info and man pages
+	rm -rf "$TOPDIR/gcc-$TARGET" "$SRCDIR/$GCC" "$PREFIX/info" "$PREFIX/man"
 
         # Add extra binary links
 	if [ ! -f "$PREFIX/$TARGET/bin/objdump" ]; then
@@ -170,15 +187,13 @@ final_tweaks()
 	fi
 
 	# strip all the binaries
-	ls "$PREFIX"/bin/* "$PREFIX/$TARGET"/bin/* | egrep -v '.dll$' |
+	ls "$PREFIX"/bin/* "$PREFIX/$TARGET"/bin/* \
+	 "$PREFIX"/libexec/gcc/$TARGET/$GCC_VERSION/c* \
+	 | egrep -v '.dll$|gccbug' |
 	while read file; do
 		strip "$file"
 	done
 	
-	# Installation should have been successful, so clean-up
-	#  after ourselves an little bit.
-	rm -rf *i686-pc-mingw32
-
 	echo "Installation complete!"
 }
 
@@ -197,12 +212,14 @@ build_cross()
         configure_binutils
         build_binutils
         install_binutils
+        clean_binutils
 
         extract_gcc
         patch_gcc
         configure_gcc
         build_gcc
         install_gcc
+        clean_gcc
 
         final_tweaks
 	create_md5sums

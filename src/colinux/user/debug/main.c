@@ -249,7 +249,7 @@ static void sig_handle(int signo)
 	exit (signo);
 }
 
-static int read_helper (int fd, void * bf, int len)
+static int read_helper (int fd, char * bf, int len)
 {
 	int total_rd = 0;
 	int rd;
@@ -258,7 +258,7 @@ static int read_helper (int fd, void * bf, int len)
 	/* An incomplete read is not the end of debug log */
 	while ((rd = read (fd, bf, len)) > 0 && len > 0) {
 	    total_rd += rd;
-	    (char*)bf += rd;
+	    bf += rd;
 	    len -= rd;
 	}
 	
@@ -277,7 +277,7 @@ static void co_debug_parse(int fd)
 			break;
 
 		char block[tlv.length];
-		nread = read_helper(fd, &block, tlv.length);
+		nread = read_helper(fd, (void*)&block, tlv.length);
 		if (nread != tlv.length)
 			break;
 

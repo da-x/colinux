@@ -172,8 +172,6 @@ udp_input(m, iphlen)
 		for (tmp = udb.so_next; tmp != &udb; tmp = tmp->so_next) {
 			if (tmp->so_lport == uh->uh_sport &&
 			    tmp->so_laddr.s_addr == ip->ip_src.s_addr) {
-				tmp->so_faddr.s_addr = ip->ip_dst.s_addr;
-				tmp->so_fport = uh->uh_dport;
 				so = tmp;
 				break;
 			}
@@ -186,7 +184,10 @@ udp_input(m, iphlen)
 		}
 	}
 	
-	if (so == NULL) {
+	if (so != NULL) {
+	  so->so_faddr = ip->ip_dst;
+	  so->so_fport = uh->uh_dport;
+	} else {
 	  /*
 	   * If there's no socket for this packet,
 	   * create one

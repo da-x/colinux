@@ -2068,13 +2068,13 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +	
 +	if (alias->gendisk == NULL) {
 +		static struct gendisk **gendisks;
-+		gendisks = kmalloc(alias->minor_count * sizeof(struct gendisk *), GFP_KERNEL);
-+		memset(gendisks, 0, alias->minor_count * sizeof(struct gendisk *));
 +
++		gendisks = kmalloc(alias->minor_count * sizeof(struct gendisk *), GFP_KERNEL);
 +		if (!gendisks) {
 +			printk(KERN_WARNING "cannot allocate gendisk array for %s\n", alias->name);
 +			return -ENOMEM;
 +		}
++		memset(gendisks, 0, alias->minor_count * sizeof(struct gendisk *));
 +
 +		if (!alias->major->registered) {
 +			if (register_blkdev(alias->major->number, alias->major->name)) {

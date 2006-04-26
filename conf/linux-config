@@ -1,6 +1,6 @@
 #
 # Automatically generated make config: don't edit
-# Linux kernel version: 2.6.11-co-0.6.3-rc4
+# Linux kernel version: 2.6.11-co-0.6.3
 # Sat Jan 21 05:19:01 2006
 #
 CONFIG_X86=y
@@ -211,7 +211,6 @@ CONFIG_BLK_DEV_RAM_COUNT=16
 CONFIG_BLK_DEV_RAM_SIZE=4096
 CONFIG_BLK_DEV_INITRD=y
 CONFIG_BLK_DEV_COBD=y
-CONFIG_BLK_DEV_CLOOP=m
 CONFIG_INITRAMFS_SOURCE=""
 # CONFIG_LBD is not set
 # CONFIG_CDROM_PKTCDVD is not set

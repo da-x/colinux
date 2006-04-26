@@ -112,13 +112,29 @@ co_win32_daemon_read_received(co_win32_overlapped_t * overlapped)
 	int pcap_rc;
 	/* Received packet from daemon. */
 	co_message_t *message;
-	message = (co_message_t *) overlapped->buffer;
+	char * buffer = overlapped->buffer;
+	long size_left = overlapped->size;
+	unsigned long message_size;
 
-	co_debug_lvl(network, 12, "sending to pcap (0x%x size 0x%x)\n", message->data, message->size);
-	/* Send packet using pcap. */
-	pcap_rc = pcap_sendpacket(pcap_packet.adhandle,
+	do {
+		message = (co_message_t *)buffer;
+		message_size = message->size + sizeof (co_message_t);
+		buffer += message_size;
+		size_left -= message_size;
+
+		/* Check buffer overrun */
+		if (size_left < 0) {
+			co_debug("Error: Message incomplete (%ld)\n", size_left);
+			return CO_RC(ERROR);
+		}
+
+		co_debug_lvl(network, 12, "sending to pcap (0x%x size 0x%x)\n", message->data, message->size);
+		/* Send packet using pcap. */
+		pcap_rc = pcap_sendpacket(pcap_packet.adhandle,
 				  message->data, message->size);
-	co_debug_lvl(network, 13, "sent (%x)\n", pcap_rc);
+		co_debug_lvl(network, 13, "sent (%x)\n", pcap_rc);
+
+	} while (size_left > 0);
 
 	return CO_RC(OK);
 }
@@ -177,8 +193,9 @@ co_win32_overlapped_read_async(co_win32_overlapped_t * overlapped)
 				co_debug_lvl(network, 5, "error: %x\n", error);
 				return CO_RC(ERROR);
 			}
-		} else
+		} else {
 			co_win32_daemon_read_received(overlapped);
+		}
 	}
 
 	return CO_RC(OK);

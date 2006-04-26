@@ -106,14 +106,29 @@ co_rc_t co_win32_overlapped_read_received(co_win32_overlapped_t *overlapped)
 	if (overlapped == &daemon_overlapped) {
 		/* Received packet from daemon */
 		co_message_t *message;
+		char * buffer = overlapped->buffer;
+		long size_left = overlapped->size;
+		unsigned long message_size;
 
-		message = (co_message_t *)overlapped->buffer;
+		do {
+			message = (co_message_t *)buffer;
+			message_size = message->size + sizeof (co_message_t);
+			buffer += message_size;
+			size_left -= message_size;
 
-		profile_me("to slirp");
+			/* Check buffer overrun */
+			if (size_left < 0) {
+				co_debug("Error: Message incomplete (%ld)\n", size_left);
+				return CO_RC(ERROR);
+			}
 
-		WaitForSingleObject(slirp_mutex, INFINITE);
-		slirp_input(message->data, message->size);
-		ReleaseMutex(slirp_mutex);
+			profile_me("to slirp");
+
+			WaitForSingleObject(slirp_mutex, INFINITE);
+			slirp_input(message->data, message->size);
+			ReleaseMutex(slirp_mutex);
+
+		} while (size_left > 0);
 	}
 
 	return CO_RC(OK);

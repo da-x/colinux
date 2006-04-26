@@ -96,8 +96,8 @@ patch_kernel()
 	ls -1 $TOPDIR/../patch/linux-*.patch 2>/dev/null | \
 	while read name; do
 		echo "reading $name"
-		patch -p1 < $name
-		test $? -ne 0 && { echo "$name patch failed"; exit 1; }
+		patch -p1 -f < $name
+		test $? -ne 0 && echo "$name patch failed"
 	done
 	cd "$TOPDIR"
 }

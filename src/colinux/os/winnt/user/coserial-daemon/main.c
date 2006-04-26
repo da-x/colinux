@@ -78,10 +78,25 @@ co_rc_t co_win32_overlapped_read_received(co_win32_overlapped_t *overlapped)
 	if (overlapped == &daemon_overlapped) {
 		/* Received packet from daemon */
 		co_message_t *message;
+		char * buffer = overlapped->buffer;
+		long size_left = overlapped->size;
+		unsigned long message_size;
 
-		message = (co_message_t *)overlapped->buffer;
+		do {
+			message = (co_message_t *)buffer;
+			message_size = message->size + sizeof (co_message_t);
+			buffer += message_size;
+			size_left -= message_size;
 
-		co_win32_overlapped_write_async(&stdio_overlapped, message->data, message->size);
+			/* Check buffer overrun */
+			if (size_left < 0) {
+				co_debug("Error: Message incomplete (%ld)\n", size_left);
+				return CO_RC(ERROR);
+			}
+
+			co_win32_overlapped_write_async(&stdio_overlapped, message->data, message->size);
+
+		} while (size_left > 0);
 
 	} else {
 		/* Received packet from standard input */
