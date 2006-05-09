@@ -13,7 +13,7 @@ This means that running it may crash the host (Windows or Linux system).
 KNOWN ISSUES:
 
   Any known issues for an release can be found on the Wiki 
-(http://wiki.colinux.org/cgi-bin/FrontPage)
+http://wiki.colinux.org
 
   PLEASE REPORT and read about problems on the colinux-devel@sourceforge.net 
 mailing list or file an Bug report at 
@@ -33,7 +33,7 @@ See other 2.6 upgrade resources for information about other changes.
 upgrading to 0.6.3 and so block device names change from cobdX to cobd/X 
 and render the image unbootable.  For more details and solutions see the
 2.6 related information on the Wiki 
-(http://wiki.colinux.org/cgi-bin/FrontPage)
+(http://wiki.colinux.org/)
 
 RUNNING:
 
@@ -95,8 +95,9 @@ anything.
 	a. Running as an service.  
 		colinux-daemon.exe -c config.xml --install-service "Cooperative Linux"
 	   Also, to remove the service:
-	   colinux-daemon.exe --remove-service "Cooopeative Linux".
-	   Then go to the Service Manager and start the "Cooperative Linux" service,
+		colinux-daemon.exe --remove-service "Cooopeative Linux".
+	   Then go to the Service Manager and start the "Cooperative Linux"
+	   service,
 	   OR
 		net start "Cooperative Linux"
 	   Last, got to the installation directory and double-click on
@@ -190,17 +191,19 @@ command-line, in this "mode" the command-line arguments are:
 		local mount point). There are some limitations in it's
 		use currently (namely non-ASCII files).
 
-	ethX=tap | pcap-bridge,<network connection name>,<MAC> 
+	ethX=tap | pcap-bridge,<network connection name>,<MAC>,<promisc> 
 		Use any number of these to specify network interfaces,
-		<network connection name & <MAC> are optional.
+		<network connection name> and <MAC> are optional.
+		<promisc> is optional only for pcap-bridge, default is
+		'promisc'. Some cases works only with 'nopromisc'.
 	OR
 
 	ethX=slirp,<MAC>,<redirections>
 		Use any number of these to specify network interfaces,
 		<MAC> and <redirections> are options.  <redirections> 
-		take the form tcp|upd:guest_port:host_port, multiple 
+		take the form tcp|upd:host_port:linux_port, multiple 
 		redirections are seperated by /, ie tcp:2222:22/tcp:8080:80
-		
+
 	root=<root device>
 		This is the device (as coLinux gues sees it) to the root
 		device.
@@ -214,7 +217,7 @@ Common Problems
 
 	"Unable to mount root fs"
 		Generally this means that the root filesystem image is 
-		missing, or was specified incorrectly.
+		missing, was specified incorrectly, or not uncompressed.
 
   Additional problems not know at time of release are typically 
 documented on the Wiki (http://wiki.colinux.org/cgi-bin/FrontPage), look 
@@ -247,13 +250,13 @@ bugs, etc.
 	Project Web-site
 		Source Forge Project website is at 
 		http://www.sourceforge.net/project/colinux
-	
+
 	WIKI
 		The community has contributed wonderful and helpful 
                 information on numerous topics, which is available at
-                http://wiki.colinux.org/cgi-bin/FrontPage (You can 
-		contribute here too!)
-	
+                http://wiki.colinux.org/
+		(You can contribute here too!)
+
 	Mailing Lists
 		Visit the colinux.org website and choose from the available 
 		mailing lists (user and devel) to join, view archives, etc.

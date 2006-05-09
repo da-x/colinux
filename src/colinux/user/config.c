@@ -331,6 +331,7 @@ co_rc_t co_load_config_network(co_config_t *out_config, mxml_element_t *element)
 	desc.enabled = PFALSE;
 	desc.type = CO_NETDEV_TYPE_BRIDGED_PCAP;
 	desc.manual_mac_address = PFALSE;
+	desc.promisc_mode = 1;
 
 	for (i=0; i < element->num_attrs; i++) {
 		mxml_attr_t *attr = &element->attrs[i];
@@ -383,6 +384,13 @@ co_rc_t co_load_config_network(co_config_t *out_config, mxml_element_t *element)
 		} else
 		if (strcmp(attr->name, "redir") == 0) {
 			snprintf(desc.redir, sizeof(desc.redir), "%s", attr->value);
+		} else
+		if (strcmp(attr->name, "promisc") == 0) {
+			element_text = attr->value;
+
+			/* default is 1 (true) */
+			if (strcmp(element_text, "false") == 0)
+				desc.promisc_mode = 0;
 		}
 	}
 
@@ -694,11 +702,13 @@ static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, co
 static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, const char *param)
 {
 	char mac_address[40] = {0, };
+	char promisc_mode[10] = {0, };
 	co_rc_t rc;
 
 	comma_buffer_t array [] = {
 		{ sizeof(conf->net_devs[index].desc), conf->net_devs[index].desc },
 		{ sizeof(mac_address), mac_address },
+		{ sizeof(promisc_mode), promisc_mode },
 		{ 0, NULL }
 	};
 
@@ -706,6 +716,7 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 
 	conf->net_devs[index].type = CO_NETDEV_TYPE_BRIDGED_PCAP;
 	conf->net_devs[index].enabled = PTRUE;
+	conf->net_devs[index].promisc_mode = 1;
 
 	if (strlen(mac_address) > 0) {
 		rc = co_parse_mac_address(mac_address, conf->net_devs[index].mac_address);
@@ -728,6 +739,19 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 		co_terminal_print("MAC address: %s\n", mac_address);
 	else
 		co_terminal_print("MAC address: auto generated\n");
+
+	if (strlen(promisc_mode) > 0) {
+		if (strcmp(promisc_mode, "nopromisc") == 0) {
+			conf->net_devs[index].promisc_mode = 0;
+			co_terminal_print("Pcap mode: nopromisc\n");
+		} else if (strcmp(promisc_mode, "promisc") == 0) {
+			conf->net_devs[index].promisc_mode = 1;
+			co_terminal_print("Pcap mode: promisc\n");
+		} else {
+			co_terminal_print("error: PCAP bridge option only allowed 'promisc' or 'nopromisc'\n");
+			return CO_RC(ERROR);
+		}
+	}
 
 	return CO_RC(OK);
 }

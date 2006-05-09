@@ -502,10 +502,11 @@ tcp_connect(inso)
 	
 	so->so_fport = addr.sin_port;
 	so->so_faddr = addr.sin_addr;
-	/* Translate connections from localhost to the real hostname */
-	if (so->so_faddr.s_addr == 0 || so->so_faddr.s_addr == loopback_addr.s_addr)
-	   so->so_faddr = our_addr;
-	
+
+	/* Translate connections from localhost to the alias hostname */
+	if (is_localhost(so->so_faddr))
+	   so->so_faddr = alias_addr; /* our addr */
+
 	/* Close the accept() socket, set right state */
 	if (inso->so_state & SS_FACCEPTONCE) {
 		closesocket(so->s); /* If we only accept once, close the accept() socket */
@@ -838,9 +839,9 @@ tcp_emu(so, m)
 				ns->so_faddr=so->so_faddr;
 				ns->so_fport=htons(IPPORT_RESERVED-1); /* Use a fake port. */
 
-				if (ns->so_faddr.s_addr == 0 || 
-					ns->so_faddr.s_addr == loopback_addr.s_addr)
-                  ns->so_faddr = our_addr;
+				/* Translate connections from localhost to the alias hostname */
+				if (is_localhost(ns->so_faddr.s_addr))
+					ns->so_faddr = alias_addr; /* our addr */
 
 				ns->so_iptos = tcp_tos(ns);
 				tp = sototcpcb(ns);

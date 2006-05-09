@@ -340,7 +340,8 @@ esac
 
 # $1 Name of comomponent
 # $2 Call for check
-# $3 Version need, or empty string
+# $3 Minimum version need, or empty string
+# $4 Maximum version supported, or empty string
 # sample: "wget-1.8" "wget --version" "1.8.x"
 check_exec_tool()
 {
@@ -348,14 +349,14 @@ check_exec_tool()
   
   echo -n "Checking for $1 ... "
   if ($2) </dev/null >/dev/null 2>&1; then
-    if [ ! -z "$3" ]; then
+    if [ -n "$3" ]; then
       # get installed version
       eval `($2) 2>&1 | sed -n -r -e \
-        's/.*([0-9]{1,2})\.([0-9]{1,2})\.([0-9]{1,2}).*/i1=\1 i2=\2 i3=\3/p'`
+        's/[^0-9]*([0-9]+)\.([0-9]+)\.([0-9]+).*/i1=\1 i2=\2 i3=\3/p'`
 
       # get needed version
       eval `echo $3 | sed -r -e \
-        's/([0-9]{1,2})\.([0-9x]{1,2})\.([0-9x]{1,2})/v1=\1 v2=\2 v3=\3/' -e 's/x/0/' -e 's/x/0/'`
+        's/([0-9]+)\.([0-9x]+)\.([0-9x]+)/v1=\1 v2=\2 v3=\3/' -e 's/x/0/' -e 's/x/0/'`
 
       if [ -z "$i1" -o -z "$v1" -o -z "$i2" -o -z "$v2" -o -z "$i3" -o -z "$v3" ]; then
         echo "Version not dectect"
@@ -371,6 +372,22 @@ check_exec_tool()
 	echo "wrong version, need $3"
 	missing=yes
 	return 1
+      fi
+
+      if [ -n "$4" ]; then
+	local m1="" m2="" m3=""
+	# get needed version, transform the 'x' into 999
+	eval `echo $4 | sed -r -e \
+	    's/([0-9]+)\.([0-9x]+)\.([0-9x]+)/m1=\1 m2=\2 m3=\3/'`
+	test "$m2" = "x" && m2="999"
+	test "$m3" = "x" && m3="999"
+	if [ $i1 -gt $m1 -o \
+	     $i1 -eq $m1 -a $i2 -gt $m2 -o \
+	     $i1 -eq $m1 -a $i2 -eq $m2 -a $i3 -gt $m3 ]; then
+	  echo "version not supported, maximum $4"
+	  missing=yes
+	  return 1
+	fi
       fi
     fi
 
@@ -478,6 +495,7 @@ EOF
 missing=no
 
 # Get version from script, replace the last digit
+BINUTILS_NEEDED=`echo "$BINUTILS_VERSION" | sed -e 's/\([0-9]\+\)\.\([0-9]\+\).*$/\1.\2/'`.x
 GCC_NEEDED=`echo "$GCC_VERSION" | sed -e 's/\([0-9]\+\)\.\([0-9]\+\).*$/\1.\2/'`.x
 
 # Remove default path from md5 files
@@ -490,7 +508,8 @@ check_exec_tool "wget" "wget --version" ""
 check_exec_tool "Python interpreter" "python -V" ""
 check_exec_tool "patch" "patch --version" ""
 check_exec_tool "make" "make --version" ""
-check_exec_tool "gcc host" "gcc -dumpversion" "$GCC_NEEDED" || gcc_helper
+check_exec_tool "binutils host" "as --version" "$BINUTILS_NEEDED" "$BINUTILS_NEEDED"
+check_exec_tool "gcc host" "gcc -dumpversion" "$GCC_NEEDED" "$GCC_NEEDED" || gcc_helper
 
 case $colinux_os in
   linux) # for Linux as host
@@ -508,6 +527,7 @@ case $colinux_os in
     check_exec_tool "texinfo" "texindex --version" ""
     check_exec_tool "flex" "flex --version" ""
     check_exec_tool "gettext" "gettext --version" ""
+    # need by "make installer" only ...
     check_exec_tool "unix2dos" "unix2dos --version" ""
   ;;
 esac

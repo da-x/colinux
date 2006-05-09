@@ -40,6 +40,9 @@ COLINUX_DEFINE_MODULE("colinux-slirp-net-daemon");
 static int net_unit = 0;
 static co_daemon_handle_t daemon_handle;
 
+/* from slirp.c */
+extern struct in_addr client_addr;
+
 int slirp_can_output(void)
 {
 	return 1;
@@ -141,13 +144,6 @@ static co_rc_t
 parse_redir_param (char *p)
 {
 	int iProto, iHostPort, iClientPort;
-	struct in_addr guest_addr;
-
-	if (!inet_aton(CTL_LOCAL, &guest_addr))
-	{
-		co_terminal_print("conet-slirp-daemon: slirp redir setup guest_addr failed.\n");
-		return CO_RC(ERROR);
-	}
 
 	do {
 		// minimal len is "tcp:x:x"
@@ -173,7 +169,7 @@ parse_redir_param (char *p)
 		iClientPort = strtol(p+1, &p, 10);
 
 		co_debug("slirp redir %d %d:%d\n", iProto, iHostPort, iClientPort);
-		if (slirp_redir(iProto, iHostPort, guest_addr, iClientPort) < 0) {
+		if (slirp_redir(iProto, iHostPort, client_addr, iClientPort) < 0) {
 			co_terminal_print("conet-slirp-daemon: slirp redir %d:%d failed.\n", iHostPort, iClientPort);
 		}
 

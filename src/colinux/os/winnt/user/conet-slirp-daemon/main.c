@@ -55,6 +55,9 @@ co_win32_overlapped_t daemon_overlapped;
 
 HANDLE slirp_mutex;
 
+/* from slirp.c */
+extern struct in_addr client_addr;
+
 #ifdef profile_me
 #undef profile_me
 void profile_me(char *location)
@@ -303,13 +306,6 @@ static co_rc_t
 parse_redir_param (const char *p)
 {
 	int iProto, iHostPort, iClientPort;
-	struct in_addr guest_addr;
-
-	if (!inet_aton(CTL_LOCAL, &guest_addr))
-	{
-		co_terminal_print("conet-slirp-daemon: slirp redir setup guest_addr failed.\n");
-		return CO_RC(ERROR);
-	}
 
 	do {
 		// minimal len is "tcp:x:x"
@@ -332,7 +328,7 @@ parse_redir_param (const char *p)
 		iClientPort = atol(p+1);
 
 		co_debug("slirp redir %d %d:%d\n", iProto, iHostPort, iClientPort);
-		if (slirp_redir(iProto, iHostPort, guest_addr, iClientPort) < 0) {
+		if (slirp_redir(iProto, iHostPort, client_addr, iClientPort) < 0) {
 			co_terminal_print("conet-slirp-daemon: slirp redir %d failed.\n", iClientPort);
 		}
 

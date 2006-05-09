@@ -59,6 +59,7 @@ typedef struct start_parameters {
 	char interface_name[0x100];
 	co_id_t instance;
 	int index;
+	int promisc;
 } start_parameters_t;
 
 /*******************************************************************************
@@ -472,7 +473,7 @@ pcap_init()
 	/* Open the first adapter. */
 	if ((adhandle = pcap_open_live(device->name,	// name of the device
 				       65536,	// captures entire packet.
-				       1,	// promiscuous mode
+				       daemon_parameters->promisc,	// promiscuous mode
 				       1,	// read timeout
 				       errbuf	// error buffer
 	     )) == NULL) {
@@ -519,6 +520,8 @@ pcap_init()
 
 	co_terminal_print("Bridged listening on: %s...\n", device->description);
 	co_terminal_print("Bridged listening for: %s\n", packet_filter);
+	if (daemon_parameters->promisc == 0)	// promiscuous mode?
+		co_terminal_print("Bridged Promiscuous mode disabled\n");
 
 	pcap_packet.adhandle = adhandle;
 
@@ -542,7 +545,7 @@ void co_net_syntax()
 	co_terminal_print("\n");
 	co_terminal_print("syntax: \n");
 	co_terminal_print("\n");
-	co_terminal_print("  colinux-bridged-net-daemon -i index [-h] [-n 'adapter name'] [-mac xx:xx:xx:xx:xx:xx]\n");
+	co_terminal_print("  colinux-bridged-net-daemon -i index [-h] [-n 'adapter name'] [-p promiscuous] [-mac xx:xx:xx:xx:xx:xx]\n");
 	co_terminal_print("\n");
 	co_terminal_print("    -h                      Show this help text\n");
 	co_terminal_print("    -n 'adapter name'       The name of the network adapter to attach to\n");
@@ -551,6 +554,8 @@ void co_net_syntax()
 	co_terminal_print("    -i index                Network device index number (0 for eth0, 1 for\n");
 	co_terminal_print("                            eth1, etc.)\n");
 	co_terminal_print("    -c instance             coLinux instance ID to connect to\n");
+	co_terminal_print("    -p mode                 Promiscuous mode can disable with mode 0, if\n");
+	co_terminal_print("                            have problems. It's 1 (enabled) by default\n");
 	co_terminal_print("    -mac xx:xx:xx:xx:xx:xx  MAC address for the bridged interface\n");
 }
 
@@ -566,6 +571,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 	start_parameters->show_help = PFALSE;
 	start_parameters->mac_specified = PFALSE;
 	start_parameters->name_specified = PFALSE;
+	start_parameters->promisc = 1;
 
 	/* Parse command line */
 	while (*param_scan) {
@@ -626,6 +632,19 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 				    "%s", *param_scan);
 
 			start_parameters->name_specified = PTRUE;
+			param_scan++;
+			continue;
+		}
+
+		option = "-p";
+		if (strcmp(*param_scan, option) == 0) {
+			param_scan++;
+			if (!(*param_scan)) {
+				co_terminal_print("Parameter of command line option %s not specified\n", option);
+				return CO_RC(ERROR);
+			}
+
+			sscanf(*param_scan, "%d", &start_parameters->promisc);
 			param_scan++;
 			continue;
 		}

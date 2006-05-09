@@ -76,6 +76,10 @@ typedef struct co_netdev_desc {
 
 	/* Slirp Parameters */
 	char redir[CO_NETDEV_REDIRDIR_STR_SIZE];
+
+	/* Bridged P Parameters */
+	/* http://www.winpcap.org/docs/docs31/html/group__wpcapfunc.html#ga1 */
+	int promisc_mode;
 } co_netdev_desc_t;
 
 typedef enum {

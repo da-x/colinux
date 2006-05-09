@@ -529,7 +529,7 @@ struct cu_header {
 			OTOSIN(omsg, addr)->sin_port = addr.sin_port;
 			OTOSIN(omsg, addr)->sin_addr = our_addr;
 			OTOSIN(nmsg, addr)->sin_port = addr.sin_port;
-			OTOSIN(nmsg, addr)->sin_addr = our_addr;		
+			OTOSIN(nmsg, addr)->sin_addr = our_addr;
 			
 			/* send LEAVE_INVITEs */
 			temp_port = OTOSIN(omsg, ctl_addr)->sin_port;
@@ -657,8 +657,10 @@ udp_listen(port, laddr, lport, flags)
 	
 	getsockname(so->s,(struct sockaddr *)&addr,&addrlen);
 	so->so_fport = addr.sin_port;
-	if (addr.sin_addr.s_addr == 0 || addr.sin_addr.s_addr == loopback_addr.s_addr)
-	   so->so_faddr = our_addr;
+
+	/* Translate connections from localhost to the alias hostname */
+	if (is_localhost(addr.sin_addr))
+	   so->so_faddr = alias_addr; /* our addr */
 	else
 	   so->so_faddr = addr.sin_addr;
 	

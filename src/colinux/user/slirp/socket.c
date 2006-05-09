@@ -582,7 +582,7 @@ solisten(port, laddr, lport, flags)
 	so->so_state = (SS_FACCEPTCONN|flags);
 	so->so_lport = lport; /* Kept in network format */
 	so->so_laddr.s_addr = laddr; /* Ditto */
-	
+
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY;
 	addr.sin_port = port;
@@ -607,8 +607,10 @@ solisten(port, laddr, lport, flags)
 	
 	getsockname(s,(struct sockaddr *)&addr,&addrlen);
 	so->so_fport = addr.sin_port;
-	if (addr.sin_addr.s_addr == 0 || addr.sin_addr.s_addr == loopback_addr.s_addr)
-	   so->so_faddr = our_addr;
+
+	/* Translate connections from localhost to the alias hostname */
+	if (is_localhost(addr.sin_addr))
+	   so->so_faddr = alias_addr; /*  our addr */
 	else
 	   so->so_faddr = addr.sin_addr;
 
