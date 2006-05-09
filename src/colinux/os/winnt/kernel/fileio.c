@@ -20,6 +20,7 @@
 #include <colinux/kernel/monitor.h>
 #include <colinux/kernel/filesystem.h>
 #include <colinux/os/kernel/time.h>
+#include <colinux/os/kernel/filesystem.h>
 
 #include "time.h"
 #include "fileio.h"
@@ -345,7 +346,7 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 			FILE_FULL_DIRECTORY_INFORMATION entry;
 			FILE_BOTH_DIRECTORY_INFORMATION entry2;
 		};
-		WCHAR name[0x80];
+		WCHAR name[sizeof(co_pathname_t)];
 	} entry_buffer;
 	IO_STATUS_BLOCK io_status;
 	co_rc_t rc;
@@ -697,6 +698,7 @@ co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *
 	int loop = 2;
 	
 	memcpy(&pathname, &filesystem->base_path, sizeof(co_pathname_t));
+	co_os_fs_add_last_component(&pathname);
 
 	len = strlen(pathname);
 	do {

@@ -61,6 +61,9 @@ int	udpcksum = 0;		/* XXX */
 
 struct	socket *udp_last_so = &udb;
 
+/* incrase receive buffer (win32 default: 8k) */
+static const int max_rcvbuf_size = 32768;
+
 void
 udp_init()
 {
@@ -347,6 +350,7 @@ udp_attach(so)
 #endif
     } else {
       /* success, insert in queue */
+      setsockopt(so->s,SOL_SOCKET,SO_RCVBUF,(char *)&max_rcvbuf_size,sizeof(int));
       so->so_expire = curtime + SO_EXPIRE;
       insque(so,&udb);
     }
@@ -654,6 +658,7 @@ udp_listen(port, laddr, lport, flags)
 	}
 	setsockopt(so->s,SOL_SOCKET,SO_REUSEADDR,(char *)&opt,sizeof(int));
 /*	setsockopt(so->s,SOL_SOCKET,SO_OOBINLINE,(char *)&opt,sizeof(int)); */
+	setsockopt(so->s,SOL_SOCKET,SO_RCVBUF,(char *)&max_rcvbuf_size,sizeof(int));
 	
 	getsockname(so->s,(struct sockaddr *)&addr,&addrlen);
 	so->so_fport = addr.sin_port;

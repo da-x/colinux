@@ -324,6 +324,13 @@ static co_rc_t inode_dir_read(co_monitor_t *cmon,
 			dirent.ino = -1;
 		}
 
+		/* TODO: Make it dynamicly.  See NAME_MAX in linux kernel. */
+		if (slen > sizeof(dirent.name)) {
+			/* Name to long */
+			co_debug_lvl(filesystem, 5, "name to long (%d) '%s'", slen, name->name);
+			slen = sizeof(dirent.name);
+		}
+
 		dirent.namelen = slen;
 		dirent.type = name->type;
 		
