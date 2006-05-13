@@ -1,3 +1,47 @@
+* Version 0.6.4
+    * colinux-daemon: Fix incorrect explaination in --help, for --remove-driver.
+      SF Bug#1483449
+    * Improved building 
+        * improvements to cut down on disk size needed to build coLinux
+        * improvements to make process smoother and better handle some errors
+    * Fix do_wp_page: bogus page at address <address> (mainly seen with syslog) 
+      when linux is host
+      Thanks to Robert for >=2.6.13 part (2006-02-26) and Bernd Brandstetter 
+      for 2.6.12 (2005-10-01).
+      Tested host kernels: 2.6.10, 2.6.11, 2.6.12, 2.6.13, 2.6.14.4, 2.6.15, 
+                           2.6.16-rc5
+    * Fix daemons to read more than one message
+    * Fix for dropped UDP/TCP packets between linux and host daemons.
+    * cofs and cobd:
+        * Allow relative paths in XML (except for \Device & \DosDevices)
+        * Remove trailing backslashes from cofs paths
+        * Improve console output of mapped devices & paths
+        * Case insensitive scans for duplicate paths
+    * cobd:
+        * Fix for reference to NULL-Pointer
+    * cofs:
+        * Fix BSOD for long non-ansi names in directory 
+          (Thanks to Kensuke Matsuzaki)
+        * Fix for handling longer basenames (from 127 to 255)
+    * slirp:
+        * Handle larger UDP/TCP packet (more than 3000...4000 bytes of user data
+        * Fix realloc problem that caused slirp to crash 
+          (Thanks to Bernd Brandstetter for finding it) 
+        * Always set destination address and port, destination port is not 
+          always the same 
+          (Thanks to Bern Brandstetter for finding & submitting patch)
+        * bind 10.0.2.2 to Window's localhost, instead of window's LAN adapter
+        * Packets from Windows host are translated to 10.0.2.2, 
+          other packets are routed but not translated 
+        * Slirp redirection now works without any real network adapter
+        * Fix Slirp redirection to work on LAN if colinux started before LAN is
+          connected
+    * pcap/Bridged:
+        * Add promisc="false" in config.xml, or 'nopromisc' as last command-line
+          argument  
+          (ie, eth1=pcap,"Local Area Connection","<FAKE MAC>",nopromisc ). 
+          Default is Promiscuous on.
+
 * Version 0.6.3
   * Fixed "VFS: Cannot open root device" after installation modules from
     initrd (linuxrc). Mostly on jurnaled filesystems such reiser or ext3.
