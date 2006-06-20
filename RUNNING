@@ -1,4 +1,4 @@
-Cooperative Linux 0.6.3 README
+Cooperative Linux 0.6.4 README
 ----------------------------------------------------------------------------
 
   Instructions for running Cooperative Linux for Windows (see source for 
@@ -24,13 +24,13 @@ NOTES ON UPGRADING:
  1) If upgrading, please backup or copy your current default.colinux.XMfile
       before installing!
 
- 2) If you are upgrading from 0.6.1 to 0.6.3 the kernel version has 
-changed (2.4.x in 0.6.1 and 2.6.x in 0.6.3), make sure you get 
+ 2) If you are upgrading from 0.6.1 to 0.6.4 the kernel version has 
+changed (2.4.x in 0.6.1 and 2.6.x in 0.6.4), make sure you get 
 module-init-tools if you want to work with modules in this new version. 
 See other 2.6 upgrade resources for information about other changes.
 
  3) Gentoo users need to be careful, Gentoo tends to use devfs when 
-upgrading to 0.6.3 and so block device names change from cobdX to cobd/X 
+upgrading from 0.6.2 and so block device names change from cobdX to cobd/X 
 and render the image unbootable.  For more details and solutions see the
 2.6 related information on the Wiki 
 (http://wiki.colinux.org/)
@@ -47,15 +47,14 @@ anything.
    of block devices files are currently aboslute. However, note that any 
    directory should be acceptable.
 
-3. Choose networking method(s) to install. Currently there are two choices:
+3. Choose networking method(s) to install. Currently there are three choices:
 
 	a. TAP driver - This method installs a virtual network adapter that can 
 	then be either shared or bridged with a physical network connection. 
 	Note that this requires Internet Connection Sharing or Bridging 
 	(Windows XP or higher) or a 3rd party Internet connection 
-        sharing application. See the Wiki at 
-	http://wiki.colinux.org/cgi-bin/FrontPage for more 
-        information/help. The TAP method autmatically chooses the TAP 
+        sharing application. See the Wiki at http://wiki.colinux.org/ for
+	more information/help. The TAP method autmatically chooses the TAP 
         first TAP adapter it finds, if this is not correct for you, you 
         can specify the specific adapter by name (name="TAP1"). 
 
@@ -65,7 +64,21 @@ anything.
 	that type="bridged" and the 'name' parameter needs to be set to a 
 	substring of the network connection name that you will be bridging 
 	with (e.g. name="Local Area Connection"). See the Wiki at 
-	http://wiki.colinux.org/cgi-bin/FrontPage for more information/help.
+	http://wiki.colinux.org/ the page Network for more information/help.
+
+	c. Slirp - The simplest way to use networks in coLinux.  This runs as
+	user application on the Windows host and needs no changes on the host
+	networks.  Slirp is a good choice for dialup networks and WLAN cards.
+	Slirp use all times the current outgoing interface and forwards (NAT)
+	networking from linux to the internet world.  Slirp is a virtual
+	Gateway for all outgoing TCP and UDP connections (no IMCP, no ping).
+	Standard installation works as firewall to your linux.  It means, you
+	can not connect from windows side to your linux.  To allow incomings
+	from host system to linux, must additional configure 'redirections'.
+	Slirp has a DHCP-Server for linux side.  To use slirp, edit your XML
+	file and set type="slirp".  Inside linux use DHCP-Client to get your
+	network	configuration.  Read more about slirp in the Wiki page Network
+	at http://wiki.colinux.org/
 
 4. Choose whether to download a root file system from the Cooperative Linux 
    sourceforge page. The installer will try to download directly in 
@@ -116,7 +129,7 @@ Post Installation
 
 You may wish to set up some post installation parameters, including increasing
 the amount of memory allocated to Cooperative Linux, or adding a swap 
-partition. See the Wiki at http://wiki.colinux.org/cgi-bin/FrontPage for 
+partition. See the Wiki at http://wiki.colinux.org/ for 
 additional help on these tasks.
 
 
@@ -220,7 +233,7 @@ Common Problems
 		missing, was specified incorrectly, or not uncompressed.
 
   Additional problems not know at time of release are typically 
-documented on the Wiki (http://wiki.colinux.org/cgi-bin/FrontPage), look 
+documented on the Wiki (http://wiki.colinux.org/), look 
 there for known problems.  If your problem isn't listed, report on the 
 colinux-devel@sourceforge.net mailing list or file an Bug report at 
 http://www.sourceforge.net/projects/colinux

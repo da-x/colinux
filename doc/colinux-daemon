@@ -37,7 +37,7 @@ The following options are specific to Windows NT/XP/2000:
       --remove-service [name]      Remove colinux service
                                    (default service name: Cooperative Linux)
       --install-driver             Install the colinux-driver (linux.sys)
-      --remove-driver              Install the colinux-driver (linux.sys)
+      --remove-driver              Uninstall (remove) the colinux-driver (linux.sys)
       --status-driver              Show status about the installed/running driver
 
 It is also possible (and sometimes preferable) to configure coLinux from the 
