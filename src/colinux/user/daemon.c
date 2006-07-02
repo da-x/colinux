@@ -279,12 +279,12 @@ void co_daemon_prepare_net_macs(co_daemon_t *daemon)
 
 co_rc_t co_load_initrd(co_daemon_t *daemon)
 {
-	co_rc_t rc = CO_RC(OK);
+	co_rc_t rc;
 	char *initrd;
 	unsigned long initrd_size; 
 
 	if (!daemon->config.initrd_enabled)
-		return rc;
+		return CO_RC(OK);
 
 	co_debug("reading initrd from (%s)\n", daemon->config.initrd_path);
 
@@ -566,7 +566,7 @@ static co_rc_t message_receive(co_reactor_user_t user, unsigned char *buffer, un
 co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 {
 	int i;
-	co_rc_t rc = CO_RC(OK);
+	co_rc_t rc;
 
 	for (i=0; i < CO_MODULE_MAX_CONET; i++) { 
 		co_netdev_desc_t *net_dev;
@@ -588,17 +588,17 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 
 			co_build_mac_address(mac_address, sizeof(mac_address), net_dev->mac_address);
 
-			rc = co_launch_process("colinux-bridged-net-daemon -i %d -u %d %s -mac %s", daemon->id, i, interface_name, mac_address);
+			rc = co_launch_process(NULL, "colinux-bridged-net-daemon -i %d -u %d %s -mac %s", daemon->id, i, interface_name, mac_address);
 			break;
 		}
 
 		case CO_NETDEV_TYPE_TAP: {
-			rc = co_launch_process("colinux-net-daemon -i %d -u %d %s", daemon->id, i, interface_name);
+			rc = co_launch_process(NULL, "colinux-net-daemon -i %d -u %d %s", daemon->id, i, interface_name);
 			break;
 		}
 
 		case CO_NETDEV_TYPE_SLIRP: {
-			rc = co_launch_process("colinux-slirp-net-daemon -i %d -u %d%s%s",
+			rc = co_launch_process(NULL, "colinux-slirp-net-daemon -i %d -u %d%s%s",
 				daemon->id, i, (*net_dev->redir)?" -r ":"", net_dev->redir);
 			break;
 		}
@@ -608,19 +608,17 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 			break;
 		}
 
-		if (!CO_OK(rc)) {
+		if (!CO_OK(rc))
 			co_terminal_print("WARNING: error launching network daemon!\n");
-			rc = CO_RC(OK);
-		}
 	}
 
-	return rc;
+	return CO_RC(OK);
 }
 
 static co_rc_t co_daemon_launch_serial_daemons(co_daemon_t *daemon)
 {
 	int i;
-	co_rc_t rc = CO_RC(OK);
+	co_rc_t rc;
 	co_serialdev_desc_t *serial;
 
 	for (i = 0, serial = daemon->config.serial_devs; i < CO_MODULE_MAX_SERIAL; i++, serial++) {
@@ -629,23 +627,69 @@ static co_rc_t co_daemon_launch_serial_daemons(co_daemon_t *daemon)
 		if (serial->enabled == PFALSE)
 			continue;
 
-		co_debug("launching daemon for ttyS%d\n", i);
+		co_debug("launching daemon for ttys%d\n", i);
 
 		if (serial->mode)
 			co_snprintf(mode_param, sizeof(mode_param), " -m \"%s\"", serial->mode);
 
-		rc = co_launch_process("colinux-serial-daemon -i %d -u %d -f %s%s",
+		rc = co_launch_process(NULL, "colinux-serial-daemon -i %d -u %d -f %s%s",
 			    daemon->id, i,
 			    serial->desc,	/* -f COM1 */
 			    mode_param);	/* -m 9600,n,8,2 */
 
-		if (!CO_OK(rc)) {
+		if (!CO_OK(rc))
 			co_terminal_print("WARNING: error launching serial daemon!\n");
-			rc = CO_RC(OK);
-		}
 	}
 
-	return rc;
+	return CO_RC(OK);
+}
+
+static co_rc_t co_daemon_launch_executes(co_daemon_t *daemon)
+{
+	int i;
+	co_rc_t rc;
+	co_execute_desc_t *execute;
+
+	for (i = 0, execute = daemon->config.executes; i < CO_MODULE_MAX_EXECUTE; i++, execute++) {
+
+		if (execute->enabled == PFALSE)
+			continue;
+
+		co_debug("launching exec%d", i);
+
+		rc = co_launch_process(&execute->pid,
+				(execute->args) ? "%s %s" : "%s",
+				execute->prog, execute->args);
+
+		if (!CO_OK(rc))
+			co_terminal_print("WARNING: error launching exec%d '%s'!\n", i, execute->prog);
+	}
+
+	return CO_RC(OK);
+}
+
+static co_rc_t co_daemon_kill_executes(co_daemon_t *daemon)
+{
+	int i;
+	co_rc_t rc;
+	co_execute_desc_t *execute;
+
+	for (i = 0, execute = daemon->config.executes; i < CO_MODULE_MAX_EXECUTE; i++, execute++) {
+
+		if (execute->enabled == PFALSE || execute->pid == 0)
+			continue;
+
+		co_debug("killing exec%d", i);
+
+		rc = co_kill_process(execute->pid);
+
+		if (!CO_OK(rc))
+			co_terminal_print("WARNING: error killing '%s'!\n", execute->prog);
+
+		execute->pid = 0;
+	}
+
+	return CO_RC(OK);
 }
 
 static co_rc_t co_daemon_restart(co_daemon_t *daemon)
@@ -696,7 +740,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 
 	if (daemon->start_parameters->launch_console) {
 		co_terminal_print("colinux: launching console\n");
-		rc = co_launch_process("colinux-console-%s -a %d", daemon->start_parameters->console, daemon->id);
+		rc = co_launch_process(NULL, "colinux-console-%s -a %d", daemon->start_parameters->console, daemon->id);
 		if (!CO_OK(rc)) {
 			co_terminal_print("error launching console\n");
 			goto out;
@@ -710,6 +754,10 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	}
 
 	rc = co_daemon_launch_serial_daemons(daemon);
+	if (!CO_OK(rc))
+		goto out;
+
+	rc = co_daemon_launch_executes(daemon);
 	if (!CO_OK(rc))
 		goto out;
 
@@ -778,6 +826,8 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 			}
 		}
 	} while (restarting);
+
+	co_daemon_kill_executes(daemon);
 
 	co_user_monitor_close(daemon->message_monitor);
 

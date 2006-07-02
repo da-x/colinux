@@ -1,6 +1,6 @@
 def script_cmdline(scripter, tool_run_inf):
     nsis_install_path = r"C:\Program Files\NSIS\makensis"
-    command_line = 'wine "%s" %s' % (
+    command_line = 'wine -- "%s" /V3 %s' % (
         nsis_install_path.replace("\\", "\\\\"),
         tool_run_inf.target.inputs[0].pathname)
     return command_line

@@ -407,7 +407,8 @@ md5dir="$builddir"
 
 # $1 Name of comomponent
 # $2 Call for check
-# $3 Version need, or empty string
+# $3 Minimal version need, or empty string
+# $4 Maximal version supported, or empty string
 # sample: "wget-1.8" "wget --version" "1.8.x"
 check_exec_tool()
 {
@@ -445,6 +446,22 @@ check_exec_tool()
 	echo "wrong version, need $3"
 	missing=yes
 	return 1
+      fi
+
+      if [ -n "$4" ]; then
+	local m1="" m2="" m3=""
+	# get needed version, transform the 'x' into 999
+	eval `echo $4 | sed -r -e \
+	    's/([0-9]{1,2})\.([0-9x]{1,2})\.([0-9x]{1,2})/m1=\1 m2=\2 m3=\3/'`
+	test "$m2" = "x" && m2="999"
+	test "$m3" = "x" && m3="999"
+	if [ $i1 -gt $m1 -o \
+	     $i1 -eq $m1 -a $i2 -gt $m2 -o \
+	     $i1 -eq $m1 -a $i2 -eq $m2 -a $i3 -gt $m3 ]; then
+	  echo "version not suppoted, maximum $4"
+	  missing=yes
+	  return 1
+	fi
       fi
     fi
 
@@ -541,7 +558,7 @@ fi
 
 # General tools for winnt and linux
 check_exec_tool "wget" "wget --version" ""
-check_exec_tool "Python interpreter 2.3" "python2.3 -V" "2.3.x"
+check_exec_tool "Python interpreter 2.3" "python -V" "2.3.x" "2.4.x"
 check_exec_tool "patch" "patch --version" ""
 check_exec_tool "make" "make --version" ""
 
@@ -563,13 +580,14 @@ case $colinux_os in
   *) # for Winnt as host
     # Check GCC for kernel
     missing_last=$missing
-    check_exec_tool "gcc for kernel" "${gcc_guest_target_prefix}gcc -dumpversion" "$GCC_NEEDED" || \
-    if [ "$gcc_guest_build" = "no" ]; then
+    check_exec_tool "gcc for kernel" "${gcc_guest_target_prefix}gcc -dumpversion" \
+       "$GCC_NEEDED" "$GCC_NEEDED" || \
+      if [ "$gcc_guest_build" = "no" ]; then
         gcc_helper
-    else
+      else
         echo "  Can't use local gcc for kernel, build guest '${gcc_guest_target_prefix}gcc' later"
         missing=$missing_last
-    fi
+      fi
 
     # Locate users depmod and check for module-init-tools
     check_depmod
@@ -614,39 +632,53 @@ echo "Create $configfile"
 # created by configure at `date`
 
 # Setup target OS (winnt or linux)
+#
 COLINUX_HOST_OS="$colinux_os"
 
 # Directory where we start for all subdirs in build processing
 # default: \$HOME/src/colinux-devel  (use only in this file)
+#
 USER_TOPDIR="$topdir"
 
 # Directory where we store download sources or where find source already stored
 # default: \$USER_TOPDIR/download
+#
 SOURCE_DIR="$downloaddir"
 
 # In this directoy the cross-tools will be extract and compile (GCC and Co.)
 # default: \$USER_TOPDIR/build
+#
 BUILD_DIR="$builddir"
 
 # Directory for compiler binary (build by cross)
 # default: \$USER_TOPDIR/mingw32
 # (/usr/local/mingw32 not supported by this scripts, need root level)
+#
 PREFIX="$prefix"
+
+# Overwrite kernelversion, if multiple diff files in patchdir.
+# default: empty (automatic detect from patch file name)
+#
+# KERNEL_VERSION=$KERNEL_VERSION
 
 # Link to colinux kernel, need for colinux daemons build processing (Guest kernel)
 # default: \$BUILD_DIR/linux-\$KERNEL_VERSION
+#
 COLINUX_TARGET_KERNEL_PATH="$targetkerneldir"
 
 # Output directory for target modules. Used for INSTALL_MOD_PATH in kernel build
 # default: \$COLINUX_TARGET_KERNEL_PATH/_install
+#
 COLINUX_TARGET_MODULE_PATH="$targetmoduledir"
 
 # HOST-Kernel (only, if host system is linux)
 # default: /path/to/your/host/kernel/source
+#
 COLINUX_HOST_KERNEL_DIR="$hostkerneldir"
 
 # Install directory for target binaries (daemons, kernel and modules)
 # default: \$PREFIX/dist
+#
 COLINUX_INSTALL_DIR="$distdir"
 
 # Logfile of building (append)
@@ -654,8 +686,9 @@ COLINUX_INSTALL_DIR="$distdir"
 COLINUX_BUILD_LOG="$logfile"
 
 # Overwrite kerneltree before rebuild? yes/no
-# yes: Build script will overwrite kerneltree and config
-# no:  Leave kernel source untouched. User friendly for patches and config (default)
+# yes: Build script will overwrite kerneltree and config.
+# no:  Leave kernel source untouched. User friendly for patches and config (default).
+#
 COLINUX_KERNEL_UNTAR="$kernel_untar"
 
 # Strip the kernel image
@@ -666,10 +699,11 @@ COLINUX_KERNEL_STRIP="no"
 
 # Path to depmod, installed from module-init-tools
 # default: /sbin/depmod
+#
 COLINUX_DEPMOD=$depmod_cfg
 
 # "COLINUX_GCC_GUEST_TARGET" is running colinux guest system.
-# This compiler will use for buiding colinux kernel.
+# This compiler will use for building colinux kernel.
 # Enable GUEST specific compiler, if your compiler from distribution
 # is not compatible with current cross gcc.
 # default: empty

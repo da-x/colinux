@@ -22,17 +22,30 @@
 
 #include "../ioctl.h"
 
-co_manager_handle_t co_os_manager_open(void)
+static co_manager_handle_t co_os_manager_open_(int verbose)
 {
 	int fd, ret;
 
 	fd = open("/proc/colinux/ioctl", O_RDWR);
-	if (fd == -1)
+	if (fd == -1) {
+		if (verbose)
+			perror(NULL);
 		return NULL;
+	}
 
 	ret = fcntl(fd, F_SETFD, FD_CLOEXEC);
 
 	return (co_manager_handle_t)(fd);
+}
+
+co_manager_handle_t co_os_manager_open(void)
+{
+	return co_os_manager_open_(1);
+}
+
+co_manager_handle_t co_os_manager_open_quite(void)
+{
+	return co_os_manager_open_(0);
 }
 
 co_rc_t co_os_manager_ioctl(

@@ -128,6 +128,27 @@ typedef struct co_serialdev_desc {
 
 } co_serialdev_desc_t;
 
+#define CO_MODULE_MAX_EXECUTE 8
+#define CO_EXECUTE_PROG_STR_SIZE 0x100
+#define CO_EXECUTE_ARGS_STR_SIZE 0x200
+
+typedef struct co_execute_desc {
+	/*
+	 * Determines whether we use this device slot or not.
+	 */
+	bool_t enabled;
+
+	/* Executable program name */
+	char *prog;
+
+	/* Optional args */
+	char *args;
+
+	/* PID, if program running */
+	int pid;
+
+} co_execute_desc_t;
+
 /*
  * Per-machine coLinux configuration
  */
@@ -166,6 +187,11 @@ typedef struct co_config {
 	 * Serial devices
 	 */
 	co_serialdev_desc_t serial_devs[CO_MODULE_MAX_SERIAL];
+
+	/*
+	 * Executable programs
+	 */
+	co_execute_desc_t executes[CO_MODULE_MAX_EXECUTE];
 
 	/*
 	 * Parameters passed to the kernel at boot.

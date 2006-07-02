@@ -14,12 +14,11 @@
 #include <conio.h>
 #include <ctype.h>
 
-#include <colinux/common/common.h>
 #include <colinux/user/debug.h>
 #include <colinux/user/reactor.h>
 #include <colinux/user/monitor.h>
-#include <colinux/os/user/misc.h>
 #include <colinux/user/cmdline.h>
+#include <colinux/os/user/misc.h>
 #include <colinux/os/current/user/reactor.h>
 #include <colinux/os/winnt/user/misc.h>
 
@@ -46,7 +45,6 @@ static start_parameters_t g_daemon_parameters;
 static co_reactor_t g_reactor;
 static co_user_monitor_t *g_monitor_handle;
 static co_winnt_reactor_packet_user_t g_reactor_handle;
-
 
 
 static co_rc_t monitor_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
@@ -209,7 +207,7 @@ static co_rc_t coserial_main(int argc, char *argv[])
 	module = CO_MODULE_SERIAL0 + g_daemon_parameters.index;
 	rc = co_user_monitor_open(g_reactor, monitor_receive,
 				  g_daemon_parameters.instance,
-				  &module, sizeof(module)/sizeof(co_module_t),
+				  &module, 1,
 				  &g_monitor_handle);
 	if (!CO_OK(rc))
 		return rc;

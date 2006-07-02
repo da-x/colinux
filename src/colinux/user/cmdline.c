@@ -267,9 +267,10 @@ co_rc_t co_cmdline_params_argumentless_parameter(co_command_line_params_t cmdlin
 	return CO_RC(OK);
 }
 
-co_rc_t co_cmdline_get_next_equality(co_command_line_params_t cmdline, const char *expected_prefix, int max_suffix_len,
-				     char *key, int key_size, char *value, int value_size, bool_t *out_exists)
+static co_rc_t co_cmdline_get_next_equality_wrapper(co_command_line_params_t cmdline, const char *expected_prefix, int max_suffix_len,
+				     char *key, int key_size, char **pp_value, int value_size, bool_t *out_exists)
 {
+	static char *value;
 	int i;
 	int length;
 	int prefix_len = co_strlen(expected_prefix);
@@ -288,7 +289,7 @@ co_rc_t co_cmdline_get_next_equality(co_command_line_params_t cmdline, const cha
 		if (!key_found)
 			continue;
 		
-		if (!!co_strncmp(expected_prefix, cmdline->argv[i], prefix_len))
+		if (co_strncmp(expected_prefix, cmdline->argv[i], prefix_len))
 			continue;
 		
 		cmdline->argv[i] = NULL;
@@ -304,25 +305,28 @@ co_rc_t co_cmdline_get_next_equality(co_command_line_params_t cmdline, const cha
 			key[key_len] = '\0';
 		}
 
-		/* string size and start */
-		value_size--;
+		/* string start and size */
 		key_found++;
+		length = co_strlen(key_found);
 
-		if ((length = co_strlen(key_found)) >= value_size) {
+		if (!value_size) {
+			/* free old value */
+			if (value)
+				co_os_free(value);
+			/* dynamic alloc value buffer */
+			value = (char *)co_os_malloc(length+1);
+			if (!value) {
+				co_os_free(arg);
+				return CO_RC(OUT_OF_MEMORY);
+			}
+			*pp_value = value;
+		} else if (length >= value_size-1) {
 			co_os_free(arg);
 			return CO_RC(ERROR);
 		}
 
-		/* Remove quotation marks */
-		if (*key_found == '\"') {
-			if (key_found[length-1] == '\"') {
-				key_found++;
-				length -= 2;
-			}
-		}
-
-		co_memcpy(value, key_found, length);
-		value[length] = '\0';
+		co_memcpy(*pp_value, key_found, length);
+		(*pp_value)[length] = '\0';
 		co_os_free(arg);
 		
 		*out_exists = PTRUE;
@@ -332,25 +336,45 @@ co_rc_t co_cmdline_get_next_equality(co_command_line_params_t cmdline, const cha
 	return CO_RC(OK);
 }
 
+co_rc_t co_cmdline_get_next_equality(co_command_line_params_t cmdline, const char *expected_prefix, int max_suffix_len,
+				     char *key, int key_size, char *value, int value_size, bool_t *out_exists)
+{
+	return co_cmdline_get_next_equality_wrapper(cmdline, expected_prefix, max_suffix_len,
+				     key, key_size, &value, value_size, out_exists);
+}
+
+co_rc_t co_cmdline_get_next_equality_alloc(co_command_line_params_t cmdline, const char *expected_prefix, int max_suffix_len,
+				     char *key, int key_size, char **pp_value, bool_t *out_exists)
+{
+	return co_cmdline_get_next_equality_wrapper(cmdline, expected_prefix, max_suffix_len,
+				     key, key_size, pp_value, 0, out_exists);
+}
+
 co_rc_t co_cmdline_get_next_equality_int_prefix(co_command_line_params_t cmdline, const char *expected_prefix, 
-						int *key_int, char *value, int value_size, bool_t *out_exists)
+						int *key_int, int max_index, char **pp_value, bool_t *out_exists)
 {
 	char number[11];
 	co_rc_t rc;
 	
-	rc = co_cmdline_get_next_equality(cmdline, expected_prefix, sizeof(number) - 1,
-					  number, sizeof(number), value, value_size, out_exists);
+	rc = co_cmdline_get_next_equality_alloc(cmdline, expected_prefix, sizeof(number) - 1,
+					  number, sizeof(number), pp_value, out_exists);
 	if (!CO_OK(rc)) 
 		return rc;
 	
 	if (*out_exists) {
-		char *number_parse  = NULL;
+		char *number_parse = NULL;
 		int value_int;
 		
 		value_int = co_strtol(number, &number_parse, 10);
 		if (number_parse == number) {
 			/* not a number */
 			co_terminal_print("cmdline: suffix not a number\n");
+			return CO_RC(ERROR);
+		}
+
+		if (value_int < 0 || value_int >= max_index) {
+			co_terminal_print("cmdline: invalid %s index: %d\n", 
+					  expected_prefix, value_int);
 			return CO_RC(ERROR);
 		}
 
@@ -363,7 +387,7 @@ co_rc_t co_cmdline_get_next_equality_int_prefix(co_command_line_params_t cmdline
 co_rc_t co_cmdline_get_next_equality_int_value(co_command_line_params_t cmdline, const char *expected_prefix, 
 					       int *value_int, bool_t *out_exists)
 {
-	char value[0x100];
+	char value[20];
 	co_rc_t rc;
 	
 	rc = co_cmdline_get_next_equality(cmdline, expected_prefix, 0, NULL, 0, value, sizeof(value), out_exists);
@@ -536,4 +560,18 @@ void co_cmdline_params_free(co_command_line_params_t cmdline)
 	}
 	co_os_free(cmdline->argv);
 	co_os_free(cmdline);
+}
+
+void co_remove_quotation_marks(char *value)
+{
+	int length;
+
+	if (*value == '\"') {
+		length = co_strlen(value)-1;
+		if (value[length] == '\"') {
+			length--;
+			co_memcpy(value, value+1, length);
+			value[length] = '\0';
+		}
+	}
 }

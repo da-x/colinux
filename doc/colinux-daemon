@@ -167,3 +167,11 @@ important when options don't depend on each other.
 
    Enable automatic close console after detach from colinux.
    This is good option for closing console after linux shutting down.
+
+
+ Options for executable programs:
+
+     exec0=C:\Programs\Xming\Xming.exe,":0 -clipboard -multiwindow -ac"
+
+   Run the program Xming.exe at start of colnux and terminate it, if colinux
+   is shutting down.

@@ -5,6 +5,7 @@ targets['executables'] = Target(
     Input('colinux-slirp-net-daemon'),
     Input('colinux-console-fltk'),
     Input('colinux-debug-daemon'),
+    Input('colinux-serial-daemon'),
     Input('colinux.ko'),
     ],
     tool = Empty(),
@@ -38,7 +39,7 @@ targets['colinux-daemon'] = Target(
 targets['colinux-net-daemon'] = Target(
     inputs = [
        Input('../user/conet-daemon/build.o'),
-       Input('../../../user/daemon-base/build.o'),
+       Input('../../../user/daemon-base/build.a'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('g++'),
@@ -56,9 +57,9 @@ targets['colinux-slirp-net-daemon'] = Target(
 targets['colinux-console-fltk'] = Target(
     inputs = [
        Input('../user/console/build.o'),
-       Input('../../../user/console/build.o'),
+       Input('../../../user/console/build.a'),
     ] + user_dep,
-    tool = Compiler(),    
+    tool = Compiler(),
     mono_options = generate_options('g++', libs=['X11', 'fltk'],
                                     lib_paths=['/usr/X11R6/lib']),
 )
@@ -67,6 +68,14 @@ targets['colinux-debug-daemon'] = Target(
     inputs = [
        Input('../user/debug/build.o'),
        Input('../../../user/debug/build.o'),
+    ] + user_dep,
+    tool = Compiler(),
+    mono_options = generate_options('gcc'),
+)
+
+targets['colinux-serial-daemon'] = Target(
+    inputs = [
+       Input('../user/coserial-daemon/build.o'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('gcc'),

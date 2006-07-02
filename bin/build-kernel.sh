@@ -175,7 +175,7 @@ compile_modules()
 build_kernel()
 {
 	# Full user control for compile (kernel developers)
-	if [ "$1" != "--no-download" -a "$COLINUX_KERNEL_UNTAR" != "no" \
+	if [ "$1" != "--no-download" -a "$COLINUX_KERNEL_UNTAR" = "yes" \
 	     -o ! -f $COLINUX_TARGET_KERNEL_PATH/include/linux/cooperative.h ]; then
 
 	  # do not check files, if rebuild forced

@@ -71,22 +71,28 @@ and the version that the patch is designed to apply to.
 
 For example:
     ~/# wget http://www.kernel.org/pub/linux/kernel/2.6/linux-2.6.12.tar.bz2
-    ~/# bunzip linux-2.6.12.tar.bz2
+    ~/# bunzip2 -dc linux-2.6.12.tar.bz2 | tar x
     ~/# cd linux-2.6.12
-    ~/linux-2.6.12# patch -p1 < ../colinux/patch/linux-2.6.12.diff
+    ~/linux-2.6.12# patch -p1 < PathToColinux/patch/linux-2.6.12.diff
 
 The coLinux package is supplied with a premaid Linux kernel
 configuration file. Copy it to your Linux tree:
 
-    ~/linux-2.6.12# cp ../colinux/conf/linux-config .config
+    ~/linux-2.6.12# cp PathToColinux/conf/linux-config .config
 
-And then, to build vmlinux:
+Update config and build vmlinux:
     ~/linux-2.6.12# make oldconfig
     ~/linux-2.6.12# make vmlinux
 
 For new module build it and install:
     ~/linux-2.6.12# make modules
     ~/linux-2.6.12# su -c "make modules_install"
+
+Then test to run this unchanged kernel with your daemons.  After these
+steps you can modify kernel config or adding some special patches and
+rebuild your special kernel.  But please: Don't enable device drivers with
+direct hardware access (ISA-, PCI- or VL-Bus) and don't change cpu specific
+configs.  This would mostly crash your system.
 
 
 3. Compiling the OS support code
@@ -105,7 +111,7 @@ The coLinux console depends on:
   * FLTK (major version 1)
 
 Python build system
-  * Python interpreter 2.3
+  * Python interpreter 2.3 or 2.4
 
 
 3.2. For Microsoft Windows as host
@@ -173,7 +179,7 @@ build-all.sh			Extract (OVERWRITE!) and compile all files
 
 ! Any starts of build-kernel.sh will delete all source and extract it again !
 ! If you have changed some kernel sources, do not use these script          !
-! Call "make menuconfig" and "make" into kenel directory manually           !
+! Call "make menuconfig" and "make" into kernel directory manually          !
 
 After Downloading a new version of colinux source, should only extract source
 at same top level directory and run the last scripts build-kernel.sh and
@@ -288,6 +294,7 @@ For building and runnning coLinux on Linux you need:
 
 1. Tree or headers of the designated host kernel available, in order to build 
    the kernel module (colinux.ko).
+   Currently works only with host kernel 2.6.x up to 2.6.8.1
 2. patched fltk-1.1.6 (see patch directory) installed in the 
    system (./configure ; make ; su -c "make install")
    You can also install this version local under your HOME (see below).
@@ -306,18 +313,22 @@ Running it is quite simple. For example, consider these list of files:
 -rwxr-xr-x  1 root root  107509 Jun 21 09:58 colinux-net-daemon
 -rwxr-xr-x  1 root root  115637 Jun 21 13:02 colinux-serial-daemon
 -rw-r--r--  1 root root  341519 Jun 21 13:02 colinux.ko
--rw-r--r--  1 root root     399 Jun  5 18:17 default.colinux.xml
+-rw-r--r--  1 root root     399 Jun  5 18:17 colinux.cfg
 -rwxr-xr-x  1 root root 2614823 Jun 21 13:02 vmlinux
 
 The steps are basically:
 
+    xhost +
     su
     insmod colinux.ko
     PATH=.:$PATH colinux-daemon @colinux.cfg
 
 This much like the Windows port except where the logic around the installation 
 of the driver is more simple.
-    
+
+You shoult run colinx in a graphic environment, KDE, Gnome or after 'startx'.
+'xhost +' allows root (su) to use your user desktop (access control disabled).
+
 PATH=.:$PATH is needed if the executables aren't installed in your e.g 
 /usr/local/bin or elsewhere in $PATH.
 
@@ -412,7 +423,7 @@ libraries are untouched.
 
 4.7 make disclean
 
-This remove also control files for md5sum, toplevel Makefile and user-build.cfg.
+This remove also control files for md5sum and user-build.cfg.
 After this step you must './configure' again. Next 'make' will also rebuild the
 cross tools and libraries.
 

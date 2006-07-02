@@ -13,6 +13,7 @@
 
 #include <colinux/common/common.h>
 
-extern co_rc_t co_launch_process(char *command_line, ...);
+extern co_rc_t co_launch_process(int *pid, char *command_line, ...);
+extern co_rc_t co_kill_process(int pid);
 
 #endif

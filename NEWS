@@ -1,6 +1,24 @@
 * Version 0.7.1
+  * New: "execX=..." in configuration, launch external programs.
+  * Bug fix: Quotation marks detection in config file, samples:
+    eth0=tuntap,"LAN-Connection 14",00:11:22:33:44:55
+    cofs0="C:\My files"
+  * Bug fix: Crash at open /dev/ttyS*.
+    New: "ttysX=..." in configuration, launch coserial daemon.
+    New parameters "-f DeviceName -m Mode" for colinux-serial-daemon.
+    Serial daemon is light usable under WinNT, you can login on /dev/ttyS0
+    or redirect serial communication port.
+  * Bug fix: Crash, if walking in big directory of cofs with
+    "find | xargs file" or updatedb. (unicode maxlen)
+  * Bug fix: Buffer overrun, on Fontname for FLTK console or screen resize.
+  * Update for libraries:
+    MinGW from 3.7 to 3.8
+    w32api from 3.2 to 3.3
+    WinPcap from 3.1-beta4 to 3.1
+    Remove all XML libraries from source.
   * TAP device version 8.3, usable without admin rights.
   * Bridged allows empty name for autosearch connected LAN interface.
+  --- end of only in version hn* ---
   * Kernel 2.6.12
   * New option for colinux-debug-daemon: '-e exitcode'
     Translate a given exitcode into error text, filename and line number.

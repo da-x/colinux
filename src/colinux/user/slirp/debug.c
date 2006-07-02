@@ -24,6 +24,7 @@ extern struct termios slirp_tty_settings;
 extern int slirp_tty_restore;
 
 
+#ifdef DEBUG
 void
 debug_init(file, dbg)
 	char *file;
@@ -46,6 +47,7 @@ debug_init(file, dbg)
 			file, strerror(errno));
 	}
 }
+#endif
 
 /*
  * Dump a packet in the same format as tcpdump -x
@@ -129,6 +131,7 @@ allttystats()
 }
 #endif
 
+#ifdef DEBUG
 void
 ipstats()
 {
@@ -152,6 +155,7 @@ ipstats()
 	lprint("  %6d with bad protocol field\r\n", ipstat.ips_noproto);
 	lprint("  %6d total packets delivered\r\n", ipstat.ips_delivered);
 }
+#endif
 
 #if 0
 void
@@ -172,6 +176,7 @@ vjstats()
 }
 #endif
 
+#ifdef DEBUG
 void
 tcpstats()
 {
@@ -331,6 +336,7 @@ sockstats()
 				so->so_rcv.sb_cc, so->so_snd.sb_cc);
 	}
 }
+#endif
 
 #if 0
 void

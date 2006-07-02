@@ -18,11 +18,13 @@
 
 #include <colinux/common/libc.h>
 #include <colinux/common/common.h>
+#include <colinux/user/cmdline.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/cobdpath.h>
 
 co_rc_t co_canonize_cobd_path(co_pathname_t *pathname)
 {
+	co_remove_quotation_marks(*pathname);
 
 	if (!(co_strncmp(*pathname, "\\Device\\", 8) == 0  ||
 	      co_strncmp(*pathname, "\\DosDevices\\", 12) == 0)) 

@@ -51,7 +51,7 @@ co_rc_t co_os_reactor_select(co_reactor_t handle, int miliseconds)
 			return CO_RC(ERROR); /* TODO */
 		}
 		if (wait_list[index].revents & POLLHUP) {
-			return CO_RC(ERROR); /* TODO */
+			return CO_RC(BROKEN_PIPE);
 		}
 	}
 	

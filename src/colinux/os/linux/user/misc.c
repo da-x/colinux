@@ -54,11 +54,21 @@ void co_terminal_print_color(co_terminal_color_t color, const char *format, ...)
 {
 	va_list ap;
 	
-	/* FIXME: colors (ncurses? */
+	/* use simple VT100 sequences, see: man console_codes */
+	switch (color) {
+	case CO_TERM_COLOR_YELLOW:
+		printf ("\033[33;1;40m"); /* brown foreground, bold, black background */
+		break;
+	case CO_TERM_COLOR_WHITE:
+		printf ("\033[37;1;40m"); /* white foreground, bold, black background */
+		break;
+	}
 
 	va_start(ap, format);
 	co_terminal_printv(format, ap);
 	va_end(ap);
+
+	printf ("\033[0m"); /* reset all attributes to their defaults */
 }
 
 double co_os_timer_highres()

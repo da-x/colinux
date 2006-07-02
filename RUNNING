@@ -214,6 +214,11 @@ command-line, in this "mode" the command-line arguments are:
 		PARITY=n DATA=8 STOP=1 dtr=on rts=on"
 		Refer host system help (MODE -?) for more options.
 
+	execX=<executable program>,<parameters>
+		Use any number X of these to specify order of launching a
+		program and terminamte at stopping linux. Use Quotation
+		marks, if more as one parameter.
+
 	root=<root device>
 		This is the device (as coLinux gues sees it) to the root
 		device.
@@ -227,7 +232,7 @@ Common Problems
 
 	"Unable to mount root fs"
 		Generally this means that the root filesystem image is 
-		missing, or was specified incorrectly.
+		missing, was specified incorrectly, or not uncompressed.
 
   Additional problems not know at time of release are typically 
 documented on the Wiki (http://wiki.colinux.org/cgi-bin/FrontPage), look 

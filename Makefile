@@ -2,7 +2,7 @@
 
 # User config, if exist. Empty, if not.
 USER_CFG := $(shell test -f bin/user-build.cfg \
-    && echo "bin/user-build.cfg" )
+    && echo "./bin/user-build.cfg" )
 
 ifneq ($(USER_CFG),)
 
@@ -44,7 +44,7 @@ clean:
 distclean: clean
 ifneq ($(USER_CFG),)
 	rm -f bin/user-build.cfg bin/user-build.cfg.old \
-	$(shell . $(USER_CFG); echo $$BUILD_DIR)/.build-*.md5
+	    $(shell . $(USER_CFG); echo $$BUILD_DIR)/.build-*.md5
 endif
 	find . \( -name '.tmp_versions' -o -name 'premaid' \
 		\) -type d -print | xargs rm -rf

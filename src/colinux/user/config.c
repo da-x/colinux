@@ -34,36 +34,29 @@ typedef struct {
 static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_config_t *conf)
 {
 	bool_t exists;
-	char param[0x100];
+	char *param;
 	co_rc_t rc;
 
 	do {
 		int index;
-		exists = PFALSE;
+		co_block_dev_desc_t *cobd;
 
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cobd", &index, param, 
-							     sizeof(param), &exists);
-		if (!CO_OK(rc)) 
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cobd", 
+							     &index, CO_MODULE_MAX_COBD, 
+							     &param, &exists);
+		if (!CO_OK(rc))
 			return rc;
 		
-		if (exists) {
-			co_block_dev_desc_t *cobd;
+		if (!exists)
+			break;
 
-			if (index < 0  || index >= CO_MODULE_MAX_COBD) {
-				co_terminal_print("invalid cobd index: %d\n", index);
-				return CO_RC(ERROR);
-			}
+		cobd = &conf->block_devs[index];
+		cobd->enabled = PTRUE;
 
-			cobd = &conf->block_devs[index];
-			cobd->enabled = PTRUE;
-
-			co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
-
-			co_canonize_cobd_path(&cobd->pathname);
-
-			co_terminal_print("mapping cobd%d to %s\n", index, cobd->pathname);
-		}
-	} while (exists);
+		co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
+		co_canonize_cobd_path(&cobd->pathname);
+		co_terminal_print("mapping cobd%d to %s\n", index, cobd->pathname);
+	} while (1);
 
 	return CO_RC(OK);
 }
@@ -93,7 +86,7 @@ static co_rc_t allocate_by_alias(co_config_t *conf, const char *prefix, const ch
 
 	co_canonize_cobd_path(&cobd->pathname);
 
-	co_terminal_print("selected cobd%d for %s%s, mapping to '%s'\n", i, prefix, suffix, cobd->pathname);
+	co_terminal_print("selected cobd%d for %s, mapping to '%s'\n", i, cobd->alias, cobd->pathname);
 
 	return CO_RC(OK);
 }
@@ -103,7 +96,7 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 	const char *prefixes[] = {"sd", "hd"};
 	const char *prefix;
 	bool_t exists;
-	char param[0x100];
+	char *param;
 	co_rc_t rc;
 	int i;
 
@@ -112,8 +105,8 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 		char suffix[5];
 			
 		do {
-			rc = co_cmdline_get_next_equality(cmdline, prefix, sizeof(suffix)-1, suffix, sizeof(suffix), 
-							  param, sizeof(param), &exists);
+			rc = co_cmdline_get_next_equality_alloc(cmdline, prefix, sizeof(suffix)-1, suffix, sizeof(suffix), 
+							  &param, &exists);
 			if (!CO_OK(rc)) 
 				return rc;
 			
@@ -132,7 +125,7 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 					return CO_RC(ERROR);
 				}
 
-				if (index < 0  || index >= CO_MODULE_MAX_COBD) {
+				if (index < 0 || index >= CO_MODULE_MAX_COBD) {
 					co_terminal_print("invalid cobd index %d in alias %s%s\n", index, prefix, suffix);
 					return CO_RC(ERROR);
 				}
@@ -157,7 +150,7 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 				if (!CO_OK(rc))
 					return rc;
 			}
-		} while (exists);
+		} while (1);
 	}
 
 	return CO_RC(OK);
@@ -192,40 +185,40 @@ static void split_comma_separated(const char *source, comma_buffer_t *array)
 	int j;
 	bool_t quotation_marks;
 	
-	for ( ; array->size > 0 && array->buffer != NULL ; array++) {
-		array->buffer[0] = '\0';
+	for (; array->buffer != NULL; array++) {
 		j = 0;
+		quotation_marks = PFALSE;
 
 		// quotation marks detection in config file, sample:
 		// eth0=tuntap,"LAN-Connection 14",00:11:22:33:44:55
 		// String store without quotation marks.
-		if (( quotation_marks = (*source == '"') ))
-			source++;
 
-		while (j < array->size - 1) {
-			if (*source == '\0')
-				return;
-			if (quotation_marks) {
-				if (*source ==  '"' ) {
-					quotation_marks = PFALSE;
-					source++;
+		while (j < array->size - 1 && *source != '\0') {
+			if (*source == '"') {
+				if (*++source != '"') {
+					quotation_marks = !quotation_marks;
 					continue;
 				}
-			} else if (*source == ',')
+			} else if (*source == ',' && !quotation_marks)
 				break;
 
 			array->buffer[j++] = *source++;
-			array->buffer[j] = '\0';
 		}
-		source++;
+
+		// End for destination buffers
+		array->buffer[j] = '\0';
+
+		// Skip, if end of source, but go away for _all_ buffers
+		if (*source != '\0')
+			source++;
 	}
 }
 
 static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, const char *param)
 {
 	co_netdev_desc_t *net_dev = &conf->net_devs[index];
-	char mac_address[40] = {0, };
-	char host_ip[40] = {0, };
+	char mac_address[40];
+	char host_ip[40];
 	co_rc_t rc;
 
 	comma_buffer_t array [] = {
@@ -266,7 +259,7 @@ static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, co
 static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, const char *param)
 {
 	co_netdev_desc_t *net_dev = &conf->net_devs[index];
-	char mac_address[40] = {0, };
+	char mac_address[40];
 	co_rc_t rc;
 
 	comma_buffer_t array [] = {
@@ -303,7 +296,7 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, const char *param)
 {
 	co_netdev_desc_t *net_dev = &conf->net_devs[index];
-	char mac_address[40] = {0, }; /* currently ignored */
+	char mac_address[40]; /* currently ignored */
 
 	comma_buffer_t array [] = {
 		{ sizeof(mac_address), mac_address },
@@ -311,7 +304,6 @@ static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, 
 		{ 0, NULL }
 	};
 
-	*net_dev->redir = 0;
 	split_comma_separated(param, array);
 
 	net_dev->type = CO_NETDEV_TYPE_SLIRP;
@@ -347,29 +339,25 @@ static co_rc_t parse_args_networking_device(co_config_t *conf, int index, const 
 static co_rc_t parse_args_networking(co_command_line_params_t cmdline, co_config_t *conf)
 {
 	bool_t exists;
-	char param[0x100];
+	char *param;
 	co_rc_t rc;
 
 	do {
 		int index;
-		exists = PFALSE;
 
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "eth", &index, param, 
-							     sizeof(param), &exists);
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "eth", 
+							     &index, CO_MODULE_MAX_CONET, 
+							     &param, &exists);
 		if (!CO_OK(rc))
 			return rc;
 		
-		if (exists) {
-			if (index < 0  || index >= CO_MODULE_MAX_CONET) {
-				co_terminal_print("invalid network index: %d\n", index);
-				return CO_RC(ERROR);
-			}
+		if (!exists)
+			break;
 
-			rc = parse_args_networking_device(conf, index, param);
-			if (!CO_OK(rc))
-				return rc;
-		}
-	} while (exists);
+		rc = parse_args_networking_device(conf, index, param);
+		if (!CO_OK(rc))
+			return rc;
+	} while (1);
 
 	return CO_RC(OK);
 }
@@ -377,43 +365,36 @@ static co_rc_t parse_args_networking(co_command_line_params_t cmdline, co_config
 static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_config_t *conf)
 {
 	bool_t exists;
-	char param[0x100];
+	char *param;
 	co_rc_t rc;
 
 	do {
 		int index;
-		exists = PFALSE;
+		co_cofsdev_desc_t *cofs;
 
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cofs", &index, param, 
-							     sizeof(param), &exists);
-		if (!CO_OK(rc)) 
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cofs", 
+							     &index, CO_MODULE_MAX_COFS, 
+							     &param, &exists);
+		if (!CO_OK(rc))
 			return rc;
 		
-		if (exists) {
-			co_cofsdev_desc_t *cofs;
+		if (!exists)
+			break;
 
-			if (index < 0  || index >= CO_MODULE_MAX_COFS) {
-				co_terminal_print("invalid cofs index: %d\n", index);
-				return CO_RC(ERROR);
-			}
+		cofs = &conf->cofs_devs[index];
+		cofs->enabled = PTRUE;
 
-			cofs = &conf->cofs_devs[index];
-			cofs->enabled = PTRUE;
-
-			co_snprintf(cofs->pathname, sizeof(cofs->pathname), "%s", param);
-
-			co_canonize_cobd_path(&cofs->pathname);
-			
-			co_terminal_print("mapping cofs%d to %s\n", index, cofs->pathname);
-		}
-	} while (exists);
+		co_snprintf(cofs->pathname, sizeof(cofs->pathname), "%s", param);
+		co_canonize_cobd_path(&cofs->pathname);
+		co_terminal_print("mapping cofs%d to %s\n", index, cofs->pathname);
+	} while (1);
 
 	return CO_RC(OK);
 }
 
 static co_rc_t parse_args_serial_device(co_config_t *conf, int index, const char *param)
 {
-	co_serialdev_desc_t *serial;
+	co_serialdev_desc_t *serial = &conf->serial_devs[index];
 	char name [CO_SERIAL_DESC_STR_SIZE];
 	char mode [CO_SERIAL_MODE_STR_SIZE];
 
@@ -423,10 +404,8 @@ static co_rc_t parse_args_serial_device(co_config_t *conf, int index, const char
 		{ 0, NULL }
 	};
 
-	serial = &conf->serial_devs[index];
 	serial->enabled = PTRUE;
 
-	name[0] = mode[0] = 0;
 	split_comma_separated(param, array);
 
 	if (!*name) {
@@ -448,35 +427,84 @@ static co_rc_t parse_args_serial_device(co_config_t *conf, int index, const char
 static co_rc_t parse_args_config_serial(co_command_line_params_t cmdline, co_config_t *conf)
 {
 	bool_t exists;
-	char param[0x100];
+	char *param;
 	co_rc_t rc;
 
 	do {
 		int index;
-		exists = PFALSE;
 
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "ttys", 
-				    &index, param, sizeof(param), &exists);
-		if (!exists) {
-			// No ttys, perhaps ttyS?
-			rc = co_cmdline_get_next_equality_int_prefix(cmdline, "ttyS", 
-					&index, param, sizeof(param), &exists);
-		}
-		
+							     &index, CO_MODULE_MAX_SERIAL, 
+							     &param, &exists);
 		if (!CO_OK(rc)) 
 			return rc;
-		
-		if (exists) {
-			if (index < 0  || index >= CO_MODULE_MAX_SERIAL) {
-				co_terminal_print("invalid ttys index: %d\n", index);
-				return CO_RC(INVALID_PARAMETER);
-			}
 
-			rc = parse_args_serial_device(conf, index, param);
-			if (!CO_OK(rc)) 
-				return rc;
-		}
-	} while (exists);
+		if (!exists)
+			break;
+
+		rc = parse_args_serial_device(conf, index, param);
+		if (!CO_OK(rc)) 
+			return rc;
+	} while (1);
+
+	return CO_RC(OK);
+}
+
+static co_rc_t parse_args_execute(co_config_t *conf, int index, const char *param)
+{
+	co_execute_desc_t *execute = &conf->executes[index];
+	char prog [CO_EXECUTE_PROG_STR_SIZE];
+	char args [CO_EXECUTE_ARGS_STR_SIZE];
+
+	comma_buffer_t array [] = {
+		{ sizeof(prog), prog },
+		{ sizeof(args), args },
+		{ 0, NULL }
+	};
+
+	execute->enabled = PTRUE;
+	execute->pid = 0;
+
+	split_comma_separated(param, array);
+
+	if (!*prog) {
+		co_terminal_print("missing program path for exec%d\n", index);
+		return CO_RC(INVALID_PARAMETER);
+	}
+
+	co_debug("exec%d: '%s'", index, prog);
+	execute->prog = strdup(prog);
+	
+	if (*args) {
+		co_debug("args%d: %s", index, args);
+		execute->args = strdup(args);
+	}
+
+	return CO_RC(OK);
+}
+
+static co_rc_t parse_args_config_execute(co_command_line_params_t cmdline, co_config_t *conf)
+{
+	bool_t exists;
+	char *param;
+	co_rc_t rc;
+
+	do {
+		int index;
+
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "exec", 
+							     &index, CO_MODULE_MAX_EXECUTE, 
+							     &param, &exists);
+		if (!CO_OK(rc)) 
+			return rc;
+
+		if (!exists)
+			break;
+
+		rc = parse_args_execute(conf, index, param);
+		if (!CO_OK(rc)) 
+			return rc;
+	} while (1);
 
 	return CO_RC(OK);
 }
@@ -492,8 +520,10 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 	if (!CO_OK(rc)) 
 		return rc;
 
-	if (conf->initrd_enabled)
+	if (conf->initrd_enabled) {
+		co_remove_quotation_marks(conf->initrd_path);
 		co_terminal_print("using '%s' as initrd image\n", conf->initrd_path);
+	}
 
 	rc = co_cmdline_get_next_equality_int_value(cmdline, "mem", (int *)&conf->ram_size, &exists);
 	if (!CO_OK(rc)) 
@@ -524,34 +554,35 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 	if (!CO_OK(rc))
 		return rc;
 
+	rc = parse_args_config_execute(cmdline, conf);
+	if (!CO_OK(rc))
+		return rc;
+
 	return rc;
 }
 
 co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_parameters_t *start_parameters)
 {
 	co_rc_t rc, rc_;
-	co_config_t *conf;
+	co_config_t *conf = &start_parameters->config;
 
 	start_parameters->cmdline_config = PFALSE;
-	conf = &start_parameters->config;
 
 	rc = co_cmdline_get_next_equality(cmdline, "kernel", 0, NULL, 0, 
 					  conf->vmlinux_path, sizeof(conf->vmlinux_path),
 					  &start_parameters->cmdline_config);
-		
-	if (!CO_OK(rc)) {
+	if (!CO_OK(rc))
 		return rc;
-	}
 
 	if (!start_parameters->cmdline_config)
 		return CO_RC(OK);
 
+	co_remove_quotation_marks(conf->vmlinux_path);
 	co_terminal_print("using '%s' as kernel image\n", conf->vmlinux_path);
 
 	rc = parse_config_args(cmdline, conf);
-	if (!CO_OK(rc)) {
+	if (!CO_OK(rc))
 		co_terminal_print("daemon: error parsing configuration parameters\n");
-	}
 	
 	rc_ = co_cmdline_params_format_remaining_parameters(cmdline, conf->boot_parameters_line,
 							    sizeof(conf->boot_parameters_line));
@@ -564,6 +595,5 @@ co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_paramete
 		start_parameters->config_specified = PTRUE;
 	}
 
-	
 	return rc;
 }

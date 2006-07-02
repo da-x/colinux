@@ -259,7 +259,7 @@ co_rc_t co_slirp_main(int argc, char *argv[])
 {
 	co_command_line_params_t cmdline;
 	co_rc_t rc;
-	co_module_t modules[] = {CO_MODULE_CONET0, };
+	co_module_t module;
 
 	co_debug_start();
 	slirp_init();
@@ -289,10 +289,10 @@ co_rc_t co_slirp_main(int argc, char *argv[])
 
 	co_debug("conet-slirp-daemon: connecting to monitor\n");
 
-	modules[0] += g_daemon_parameters.index;
+	module = CO_MODULE_CONET0 + g_daemon_parameters.index;
 	rc = co_user_monitor_open(g_reactor, monitor_receive,
-				  g_daemon_parameters.instance, modules,
-				  sizeof(modules)/sizeof(co_module_t),
+				  g_daemon_parameters.instance,
+				  &module, 1,
 				  &g_monitor_handle);
 	if (!CO_OK(rc)) {
 		co_terminal_print("conet-slirp-daemon: monitor open failed\n");

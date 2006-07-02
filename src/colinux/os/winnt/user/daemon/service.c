@@ -70,7 +70,7 @@ void co_winnt_set_service_restart_options(SC_HANDLE schService)
 	}
 }
 
-void patch_command_line_for_service(char *destbuf, const char *srcbuf)
+static void patch_command_line_for_service(char *destbuf, const char *srcbuf)
 {
 	/* replace any instance of --install-service with --run-service */
 
@@ -99,22 +99,22 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char 
 	char error_message[1024];
 	char *service_user_name = NULL;
 
-	co_ntevent_print("daemon: installing service '%s'\n", service_name);
+	co_terminal_print("daemon: installing service '%s'\n", service_name);
 	if (!GetModuleFileName(0, exe_name, sizeof(exe_name))) {
-		co_ntevent_print("Cannot determin exe name. Install failed.\n");
+		co_terminal_print("Cannot determin exe name. Install failed.\n");
 		return CO_RC(ERROR);
 	}
 
 	schSCManager = OpenSCManager(0, 0, SC_MANAGER_ALL_ACCESS);
 	if (schSCManager == 0) {
-		co_ntevent_print("daemon: cannot open service control maanger. Install failed.\n");
+		co_terminal_print("daemon: cannot open service control maanger. Install failed.\n");
 		return CO_RC(ERROR);
 	}
 
 	patch_command_line_for_service(patched_commandline, original_commandline);
 
 	co_snprintf(command, sizeof(command), "\"%s\" %s", exe_name, patched_commandline);
-	co_ntevent_print("daemon: service command line: %s\n", command);
+	co_terminal_print("daemon: service command line: %s\n", command);
 
 #if (0)
 	/* broken somehow for recent TAP driver */
@@ -129,14 +129,14 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char 
 
 	if (schService != 0) {	
 	        co_winnt_set_service_restart_options(schService);
-		co_ntevent_print("daemon: service installed.\n");
+		co_terminal_print("daemon: service installed.\n");
 		CloseServiceHandle(schService);
 		CloseServiceHandle(schSCManager);
 		return CO_RC(OK);
 	}
 
 	co_winnt_get_last_error(error_message, sizeof(error_message));
-	co_ntevent_print("daemon: failed to install service: %s\n", error_message);
+	co_terminal_print("daemon: failed to install service: %s\n", error_message);
 	CloseServiceHandle(schSCManager);
 
 	return CO_RC(ERROR);
@@ -147,41 +147,38 @@ int co_winnt_daemon_remove_service(const char *service_name)
 	SC_HANDLE schService;
 	SC_HANDLE schSCManager;
 	char exe_name[512];
-	char command[1024];
 	char error_message[1024];
 
-	co_ntevent_print("daemon: removing service '%s'\n", service_name);
+	co_terminal_print("daemon: removing service '%s'\n", service_name);
 	if (!GetModuleFileName(0, exe_name, sizeof(exe_name))) {
-		co_ntevent_print("daemon: cannot determine exe name. Remove failed.\n");
+		co_terminal_print("daemon: cannot determine exe name. Remove failed.\n");
 		return CO_RC(ERROR);
 	}
 
-	co_snprintf(command, sizeof(command), "\"%s\" --run-service %s", exe_name, service_name);
-
 	schSCManager = OpenSCManager(0, 0, SC_MANAGER_ALL_ACCESS);
 	if (schSCManager == 0) {
-		co_ntevent_print("daemon: cannot open service control manager. Remove failed.\n");
+		co_terminal_print("daemon: cannot open service control manager. Remove failed.\n");
 		return CO_RC(ERROR);
 	}
 
 	schService = OpenService(schSCManager, service_name, SERVICE_ALL_ACCESS);
 	if (schService == 0) {
 		co_winnt_get_last_error(error_message, sizeof(error_message));
-		co_ntevent_print("daemon: failed to remove service. OpenService() failed\n");
+		co_terminal_print("daemon: failed to remove service. OpenService() failed\n");
 		CloseServiceHandle(schSCManager);
 		return CO_RC(ERROR);
 	}
 
 	if (!DeleteService(schService))	{
 		co_winnt_get_last_error(error_message, sizeof(error_message));
-		co_ntevent_print("daemon: failed to remove service: %s\n", error_message);
+		co_terminal_print("daemon: failed to remove service: %s\n", error_message);
 		CloseServiceHandle(schService);
 		return CO_RC(ERROR);
 	}
 
 	CloseServiceHandle(schService);
 	CloseServiceHandle(schSCManager);
-	co_ntevent_print("daemon: service '%s' removed successfully.\n", service_name);
+	co_terminal_print("daemon: service '%s' removed successfully.\n", service_name);
 
 	return CO_RC(OK);
 }
