@@ -8,7 +8,7 @@
 BUILD_FLAGS="CFLAGS=-O2 LDFLAGS=-s"
 
 # TEMPORARY until release, you can disable it for faster builds:
-#ENABLE_CHECKING=--disable-checking
+#DISABLE_CHECKING=--disable-checking
 
 download_files()
 {
@@ -109,6 +109,13 @@ install_binutils()
 	test $? -ne 0 && error_exit 1 "install binutils failed"
 }
 
+clean_binutils()
+{
+	echo "Clean binutils"
+	cd $BUILD_DIR
+	rm -rf "$BINUTILS" binutils-$TARGET binutils-$COLINUX_GCC_GUEST_TARGET
+}
+
 extract_gcc()
 {
 	echo "Extracting gcc"
@@ -141,7 +148,7 @@ configure_gcc()
 		--with-gnu-as --with-gnu-ld \
 		--without-newlib --disable-multilib \
 		--enable-languages="c,c++" \
-		$ENABLE_CHECKING \
+		$DISABLE_CHECKING \
 		>>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "configure gcc failed"
 }
@@ -160,6 +167,13 @@ install_gcc()
 	cd "$BUILD_DIR/gcc-$TARGET"
 	make install >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "install gcc failed"
+}
+
+clean_gcc()
+{
+	echo "Clean gcc"
+	cd $BUILD_DIR
+	rm -rf "$GCC" gcc-$TARGET gcc-$COLINUX_GCC_GUEST_TARGET
 }
 
 #
@@ -263,7 +277,7 @@ build_gcc_guest()
 		--program-prefix="${COLINUX_GCC_GUEST_TARGET}-" \
 		--prefix="$PREFIX/$COLINUX_GCC_GUEST_TARGET" \
 		--enable-languages="c,c++" \
-		$ENABLE_CHECKING \
+		$DISABLE_CHECKING \
 		>>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "configure gcc failed"
 
@@ -282,11 +296,6 @@ final_tweaks()
 
 	# remove gcc build headers
 	rm -rf "$PREFIX/$TARGET/sys-include"
-
-	# Installation should have been successful,
-	# clean-up after ourselves an little bit.
-	cd $BUILD_DIR
-	rm -rf "$BINUTILS" "$GCC" *-$TARGET *-$COLINUX_GCC_GUEST_TARGET
 
 	echo "Installation complete!"
 }
@@ -310,15 +319,16 @@ build_cross()
 	configure_binutils
 	build_binutils
 	install_binutils
+	check_binutils_guest || build_binutils_guest
+	clean_binutils
 
 	extract_gcc
 	patch_gcc
 	configure_gcc
 	build_gcc
 	install_gcc
-
-	check_binutils_guest || build_binutils_guest
-	check_gcc_guest      || build_gcc_guest
+	check_gcc_guest || build_gcc_guest
+	clean_gcc
 
 	final_tweaks
 }

@@ -405,7 +405,7 @@ KERNEL_CHECKSUM=`basename $KERNEL_CHECKSUM`
 # MD5sum files stored here
 md5dir="$builddir"
 
-# $1 Name of comomponent
+# $1 Name of component
 # $2 Call for check
 # $3 Minimal version need, or empty string
 # $4 Maximal version supported, or empty string
@@ -661,7 +661,7 @@ PREFIX="$prefix"
 #
 # KERNEL_VERSION=$KERNEL_VERSION
 
-# Link to colinux kernel, need for colinux daemons build processing (Guest kernel)
+# Path to guest kernel, need for colinux daemons build processing
 # default: \$BUILD_DIR/linux-\$KERNEL_VERSION
 #
 COLINUX_TARGET_KERNEL_PATH="$targetkerneldir"

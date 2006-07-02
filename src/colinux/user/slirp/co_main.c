@@ -43,6 +43,9 @@ static start_parameters_t g_daemon_parameters;
 static co_reactor_t g_reactor;
 static co_user_monitor_t *g_monitor_handle;
 
+/* from slirp.c */
+extern struct in_addr client_addr;
+
 static co_rc_t monitor_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
 {
 	co_message_t *message;
@@ -147,13 +150,6 @@ static co_rc_t
 parse_redir_param (char *p)
 {
 	int iProto, iHostPort, iClientPort;
-	struct in_addr guest_addr;
-
-	if (!inet_aton(CTL_LOCAL, &guest_addr))
-	{
-		co_terminal_print("conet-slirp-daemon: slirp redir setup guest_addr failed.\n");
-		return CO_RC(ERROR);
-	}
 
 	do {
 		// minimal len is "tcp:x:x"
@@ -179,7 +175,7 @@ parse_redir_param (char *p)
 		iClientPort = strtol(p+1, &p, 10);
 
 		co_debug("slirp redir %d %d:%d\n", iProto, iHostPort, iClientPort);
-		if (slirp_redir(iProto, iHostPort, guest_addr, iClientPort) < 0) {
+		if (slirp_redir(iProto, iHostPort, client_addr, iClientPort) < 0) {
 			co_terminal_print("conet-slirp-daemon: slirp redir %d:%d failed.\n", iHostPort, iClientPort);
 		}
 

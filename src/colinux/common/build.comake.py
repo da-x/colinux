@@ -60,7 +60,10 @@ def version_inputs(scripter, tool_run_inf):
 
 targets['version.o'] = Target(
     tool = Compiler(),
-    inputs = [Input('version.c')],
+    inputs = [
+       Input('version.c'),
+       Input('version.h'),
+    ]
 )
 
 targets['version.h'] = Target(

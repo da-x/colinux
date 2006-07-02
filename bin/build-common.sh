@@ -58,31 +58,30 @@ SRCDIR="$SOURCE_DIR"
 # Updated by Sam Lantinga <slouken@libsdl.org>
 # These are the files from the current MingW release
 
-MINGW_VERSION="3.8"
+MINGW_VERSION="3.9"
 MINGW_URL=http://heanet.dl.sourceforge.net/sourceforge/mingw
 MINGW=mingw-runtime-$MINGW_VERSION
 MINGW_ARCHIVE=$MINGW.tar.gz
 
-BINUTILS_VERSION="2.15.91"
-BINUTILS_RELEASE="$BINUTILS_VERSION-20040904-1"
+BINUTILS_VERSION="2.16.91"
+BINUTILS_RELEASE="$BINUTILS_VERSION-20060119-1"
 BINUTILS=binutils-$BINUTILS_RELEASE
 BINUTILS_ARCHIVE=$BINUTILS-src.tar.gz
-BINUTILS_PATCH="patch/$BINUTILS.diff"
+#BINUTILS_PATCH="patch/$BINUTILS.diff"
 
-GCC_VERSION="3.3.1"
-GCC_RELEASE="$GCC_VERSION-20030804-1"
+GCC_VERSION="3.4.5"
+GCC_RELEASE="$GCC_VERSION-20060117-1"
 GCC=gcc-$GCC_RELEASE
 GCC_ARCHIVE1=gcc-core-$GCC_RELEASE-src.tar.gz
 GCC_ARCHIVE2=gcc-g++-$GCC_RELEASE-src.tar.gz
-GCC_PATCH=""
+#GCC_PATCH="patch/$GCC.diff"
 
-W32API_VERSION=3.3
+W32API_VERSION=3.5
 W32API=w32api-$W32API_VERSION
 W32API_SRC=$W32API
 W32API_SRC_ARCHIVE=$W32API-src.tar.gz
 W32API_ARCHIVE=$W32API.tar.gz
-# Patch can be empty or comment out, if not need
-W32API_PATCH=patch/$W32API_SRC.diff
+#W32API_PATCH="patch/$W32API_SRC.diff"
 
 
 FLTK_VERSION="1.1.6"
@@ -123,10 +122,6 @@ KERNEL=linux-$KERNEL_VERSION
 KERNEL_URL=http://www.kernel.org/pub/linux/kernel/$KERNEL_DIR
 KERNEL_ARCHIVE=$KERNEL.tar.bz2
 KERNEL_PATCH=patch/linux-$KERNEL_VERSION.diff
-
-# Developer private patchfile. Used after maintainer patch,
-# use also for manipulate ".config". Sourced in kernel build directory.
-PRIVATE_PATCH=patch/linux-private.patch
 
 # MD5sum files stored here
 MD5DIR="$BUILD_DIR"
@@ -342,7 +337,7 @@ build_package()
 		# root of fs, lib/modules with full version of kernel and colinux.
 		echo "Installing Modules $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
 		cd "$COLINUX_TARGET_MODULE_PATH"
-		tar cfz $MODULES_TGZ lib/modules/$COMPLETE_KERNEL_NAME || exit $?
+		tar czf $MODULES_TGZ lib/modules/$COMPLETE_KERNEL_NAME || exit $?
 	fi
 }
 

@@ -439,6 +439,7 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 {
 	co_rc_t rc;
 	unsigned long size;
+	co_manager_ioctl_status_t status;
 
 	rc = co_os_file_load(&daemon->config.vmlinux_path, &daemon->buf, &size);
 	if (!CO_OK(rc)) {
@@ -460,6 +461,11 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 		co_debug("error initializing\n");
 		goto out_free_vmlinux;
 	}
+
+	// Don't start, if API_VERSION mismatch
+	rc = co_manager_status(daemon->monitor->handle, &status);
+	if (!CO_OK(rc))
+		goto out_destroy;
 
 	rc = co_elf_image_load(daemon);
 	if (!CO_OK(rc)) {

@@ -294,7 +294,8 @@ For building and runnning coLinux on Linux you need:
 
 1. Tree or headers of the designated host kernel available, in order to build 
    the kernel module (colinux.ko).
-   Currently works only with host kernel 2.6.x up to 2.6.8.1
+   Currently works only with host kernel 2.6.x, testet up to 2.6.8.1,
+   2.6.10 - 2.6.16
 2. patched fltk-1.1.6 (see patch directory) installed in the 
    system (./configure ; make ; su -c "make install")
    You can also install this version local under your HOME (see below).

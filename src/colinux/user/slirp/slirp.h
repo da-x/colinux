@@ -319,7 +319,7 @@ int tcp_ctl _P((struct socket *));
 struct tcpcb *tcp_drop(struct tcpcb *tp, int err);
 
 /* slirp.c */
-struct in_addr cached_dns_addr (void);
+struct in_addr cached_dns_addr _P((void));
 
 #ifdef USE_PPP
 #define MIN_MRU MINMRU

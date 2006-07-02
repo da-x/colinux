@@ -50,7 +50,17 @@ co_rc_t co_os_userspace_map(void *address, unsigned long pages, void **user_addr
 
 	result = (void *)do_mmap_pgoff(filp, 0, pages << PAGE_SHIFT, 
 					     PROT_EXEC | PROT_READ | PROT_WRITE, 
-					     MAP_PRIVATE, pa >> PAGE_SHIFT);
+#if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,12)
+					     MAP_SHARED,
+#else
+					     MAP_PRIVATE,
+#endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,13)
+					     ((unsigned)__va(pa)) >> PAGE_SHIFT
+#else
+					     pa >> PAGE_SHIFT
+#endif
+	);
 	if (IS_ERR(result)) {
 		filp_close(filp, NULL);
 		return CO_RC(ERROR);

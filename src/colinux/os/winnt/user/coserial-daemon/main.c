@@ -252,6 +252,11 @@ static co_rc_t coserial_main(int argc, char *argv[])
 				return CO_RC(ERROR);
 			}
 		
+			/* Set defaults. user can overwrite ot */
+			dcb.fOutxCtsFlow = FALSE; /* Disable Handshake */
+			dcb.fDtrControl = DTR_CONTROL_ENABLE;
+			dcb.fRtsControl = RTS_CONTROL_ENABLE;
+
 			if (!BuildCommDCB(g_daemon_parameters.mode, &dcb)) {
 				/*co_terminal_print_last_error("colinux-serial-daemon: BuildCommDCB");*/
 				co_terminal_print("colinux-serial-daemon: error in mode parameter '%s'\n",
@@ -259,23 +264,19 @@ static co_rc_t coserial_main(int argc, char *argv[])
 				return CO_RC(ERROR);
 			}
 
-			dcb.fOutxCtsFlow = FALSE; /* Disable Handshake */
-			dcb.fDtrControl = DTR_CONTROL_ENABLE;
-			dcb.fRtsControl = RTS_CONTROL_ENABLE;
-
 			if (!SetCommState(in_handle, &dcb)) {
 				co_terminal_print_last_error("SetCommState");
 				return CO_RC(ERROR);
 			}
 		} else {
 			if (!EscapeCommFunction(in_handle, SETDTR)) {
-				co_terminal_print_last_error("EscapeCommFunction DTR");
-				return CO_RC(ERROR);
+				co_terminal_print_last_error("Warning EscapeCommFunction DTR");
+				/* return CO_RC(ERROR); */
 			}
 
 			if (!EscapeCommFunction(in_handle, SETRTS)) {
-				co_terminal_print_last_error("EscapeCommFunction RTS");
-				return CO_RC(ERROR);
+				co_terminal_print_last_error("Warning EscapeCommFunction RTS");
+				/* return CO_RC(ERROR); */
 			}
 		}
 
@@ -284,7 +285,7 @@ static co_rc_t coserial_main(int argc, char *argv[])
 			return CO_RC(ERROR);
 		}
 
-		if (!SetupComm(in_handle, 2048, 512)) {
+		if (!SetupComm(in_handle, 2048, 2048)) {
 			co_terminal_print_last_error("SetupComm");
 			return CO_RC(ERROR);
 		}

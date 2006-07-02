@@ -2,7 +2,7 @@
 
 # User config, if exist. Empty, if not.
 USER_CFG := $(shell test -f bin/user-build.cfg \
-    && echo "./bin/user-build.cfg" )
+    && echo "bin/user-build.cfg" )
 
 ifneq ($(USER_CFG),)
 
@@ -40,6 +40,9 @@ endif
 
 clean:
 	@cd src && make clean
+	find . \( -name '*.o' -o -name '*.pyc' \
+		-o -name '.*.cmd' -o -name 'colinux.mod.c' \
+		\) -type f -print | xargs rm -f
 
 distclean: clean
 ifneq ($(USER_CFG),)
@@ -48,11 +51,9 @@ ifneq ($(USER_CFG),)
 endif
 	find . \( -name '.tmp_versions' -o -name 'premaid' \
 		\) -type d -print | xargs rm -rf
-	find . \( -name '*.o' -o -name '*.pyc' \
-		-o -name '*.orig' -o -name '*.rej' \
+	find . \( -name '*.orig' -o -name '*.rej' \
 		-o -name '.*.orig' -o -name '.*.rej' \
-		-o -name '*%' -o -name '.*.cmd' \
-		-o -name 'colinux.mod.c' \
+		-o -name '*%' \
 		\) -type f -print | xargs rm -f
 
 help:

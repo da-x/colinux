@@ -6,110 +6,135 @@ LOG=/linuxrc.log
 
 KERNEL_VERSION=$(uname -r)
 
-# find string within a string
-stringinstring() {
-   case " $2 " in *\ $1\ *) return 0;; esac
-   return 1
-}
+install_modules()
+{
+	# rootfs mounted right?
+	if [ ! -d /mnt/linux/etc ]; then
+		return
+	fi
 
-# Mount filesystems in /etc/fstab.
-echo  "Mount proc: " >> $LOG
-/bin/mount -t proc /proc /proc 2>&1 >> $LOG
+	# modules exist on rootfs?
+	if [ -d /mnt/linux/lib/modules/$KERNEL_VERSION ]; then
+		echo "Modules already installed." | tee -a $LOG
+		return
+	fi
 
-# Read boot command line (use cat, shell read function may fail)
-CMDLINE="$(cat /proc/cmdline)"
+	echo "Installing modules for coLinux $KERNEL_VERSION" | tee -a $LOG
 
-# Check boot comandline for specified option
-checkbootparam() {
-	stringinstring "$1" "$CMDLINE"
-	return "$?"
-}
+	# search device with path to lib/modules
+	while read device mountpoint type opts dump
+	do
+		case "$device" in
+		/dev/*)
+			case "$mountpoint" in
+			/lib)
+				echo "mount lib" >> $LOG
+				device="$(echo $device | sed -r -e 's|(/dev/.+)/([0-9]+)|\1\2|')"
+				mount $device /mnt/linux$mountpoint -t $type 2>&1 >> $LOG
+				lib_dev=$device
+			;;
+			/lib/modules)
+				echo "mount modules" >> $LOG
+				device="$(echo $device | sed -r -e 's|(/dev/.+)/([0-9]+)|\1\2|')"
+				mount $device /mnt/linux$mountpoint -t $type 2>&1 >> $LOG
+				modules_dev=$device
+			;;
+			esac
+		;;
+		esac
+	done < /mnt/linux/etc/fstab
 
-# Set screen blank time to 60 minutes.
-#echo -e "\033[9;60]"
-
-# Display /etc/issue file.
-echo  "Displaying /etc/issue file" >> $LOG
-if [ -s /etc/issue ]; then
-	cat /etc/issue
-fi
-sleep 1
-
-echo -n "Determining /" 
-echo "Determining /" >> $LOG
-ROOT_DEVICE=/dev/root
-if [ ! -f $ROOT_DEVICE ]; then
-	for i in "$(echo $CMDLINE | cut -d' ' -f1)"; do
-		echo "Parsing for root, found: $i" >> $LOG
-		 NAME="$(echo $i | cut -d= -f1)"
-		 VALUE="$(echo $i | cut -d= -f2)"
-		 case "$NAME" in root) ROOT_DEVICE=$VALUE; ;; esac
-	done
-fi
-
-echo " ($ROOT_DEVICE) " >> $LOG && echo ", Found."
-
-echo -n "Mounting /"
-echo "Mounting /" >> $LOG
-if /bin/mount $ROOT_DEVICE /mnt/linux >> $LOG
-then
-	# deal with users fstab, if /lib is separate mount partion
-	echo "Mount users fstab" >> $LOG
-	/usr/sbin/chroot /mnt/linux mount -a >> $LOG 2>&1
-
-	echo -n "Installing modules for coLinux $KERNEL_VERSION" 
-	echo "Installing modules for coLinux $KERNEL_VERSION" >> $LOG
-	if [ -d "/mnt/linux/lib/modules/$KERNEL_VERSION" ]; then
-		echo ", Skipping." | tee -a $LOG
+	if [ -d /mnt/linux/lib/modules/$KERNEL_VERSION ] ; then
+		echo "Skipping." | tee -a $LOG
 	else
-	    cd /mnt/linux
-	    tar zxf /lib/modules/vmlinux-modules.tar.gz >> $LOG 2>&1
-	    echo ", Done."
-	    cd /
-
-	    # Clear cache, before umount exits with an error!
-	    sync
-	    sleep 1
+		cd /mnt/linux
+		tar zxf /lib/modules/vmlinux-modules.tar.gz 2>&1 >> $LOG
+		cd /
+		echo "Done." | tee -a $LOG
+		sync ; sleep 1
 	fi
 
 	# Create console for boot with udev
 	if [ ! -c /mnt/linux/dev/console ]; then
 		mknod /mnt/linux/dev/console c 5 1
 	fi
-else
-	echo " failed" | tee -a $LOG
+
+	# Need umount lib/modules?
+	if [ -n "$modules_dev" ]; then
+		echo "umount modules" >> $LOG
+		umount $modules_dev 2>&1 >> $LOG
+		sync ; sleep 1
+	fi
+
+	if [ -n "$lib_dev" ]; then
+		echo "umount lib" >> $LOG
+		umount $lib_dev 2>&1 >> $LOG
+		sync; sleep 1
+	fi
+}
+
+# Re-mount in rw mode (in case ro was passed on boot)
+echo "(Re)mount / read-write" >> $LOG
+mount -o remount,rw / 2>> $LOG
+
+# Mount filesystems in /etc/fstab.
+echo  "Mount proc: " >> $LOG
+mount -t proc /proc /proc 2>&1 | tee -a $LOG
+
+# Read boot command line (use cat, shell read function may fail)
+CMDLINE="$(cat /proc/cmdline)"
+
+# Display /etc/issue file.
+echo  "Displaying /etc/issue file" >> $LOG
+if [ -s /etc/issue ]; then
+	cat /etc/issue
 fi
 
-echo -n "Closing /" 
-echo "Closing users fstab" >> $LOG
-/usr/sbin/chroot /mnt/linux umount -a >> $LOG 2>&1
-echo "Closing /" >> $LOG
-if /bin/umount -f /mnt/linux >> $LOG 2>&1
-then
-	echo ", Done."
-else
-	echo " failed"
+sleep 1
 
-	# try again
-	/usr/sbin/chroot /mnt/linux umount -a
-	sync
-	sleep 1
-	/bin/umount -f /mnt/linux
-	sleep 1
+if [ -f /lib/modules/vmlinux-modules.tar.gz ]; then
+	
+	echo -n "Determining /" 
+	echo "Determining /" >> $LOG
+	ROOT_DEVICE=/dev/root
+	for i in "$(echo $CMDLINE | cut -d' ' -f1)"; do
+		echo "Parsing for root, found: $i" >> $LOG
+		NAME="$(echo $i | cut -d= -f1)"
+		VALUE="$(echo $i | cut -d= -f2)"
+		case "$NAME" in
+		root)
+			# Transform /dev/cobd/0 into /dev/cobd0 for udev
+			ROOT_DEVICE="$(echo $VALUE | sed -r -e 's|(/dev/.+)/([0-9]+)|\1\2|')"
+			echo ", Found."
+		;;
+		esac
+	done
+
+	echo " ($ROOT_DEVICE) " >> $LOG
+
+	echo "Mounting /" | tee -a $LOG
+	if mount $ROOT_DEVICE /mnt/linux
+	then
+		install_modules
+	fi
+
+	echo "Closing /" | tee -a $LOG
+	if ! umount -f /mnt/linux 2>&1 >> $LOG
+	then
+		echo "Failed. (trying again)"
+		sync ; sleep 1
+		if ! umount -f /mnt/linux
+		then
+			echo -e "\ninitrd: umount failed on rootfs"
+			echo "Try to run coLinux without initrd.  Comment out initrd from configuration."
+			echo -e "\nPress <ENTER> to continue"
+			read junk
+		fi
+		sync
+	fi
 fi
 
 # Freeing proc that was auto-mounted earlier
-umount /proc >> $LOG 2>&1
+umount /proc 2>&1 >> $LOG
 
-# Now delete self
-if [ "$ROOT_DEVICE" = "/dev/ram0" ]; then
-	cp /linuxrc /install-modules.sh
-fi
-rm -rf /linuxrc >> $LOG 2>&1
-
-sync >> $LOG 2>&1
-
-# If initrd is used a root, then do an 'normal' root.
-if [ "$ROOT_DEVICE" = "/dev/ram0" ]; then
-	ln -s bin/busybox linuxrc
-fi
+sync

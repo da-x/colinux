@@ -173,5 +173,5 @@ important when options don't depend on each other.
 
      exec0=C:\Programs\Xming\Xming.exe,":0 -clipboard -multiwindow -ac"
 
-   Run the program Xming.exe at start of colnux and terminate it, if colinux
+   Program Xming.exe runs at start of colnux and terminate it, if colinux
    is shutting down.

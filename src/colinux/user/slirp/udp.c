@@ -172,8 +172,6 @@ udp_input(m, iphlen)
 		for (tmp = udb.so_next; tmp != &udb; tmp = tmp->so_next) {
 			if (tmp->so_lport == uh->uh_sport &&
 			    tmp->so_laddr.s_addr == ip->ip_src.s_addr) {
-				tmp->so_faddr.s_addr = ip->ip_dst.s_addr;
-				tmp->so_fport = uh->uh_dport;
 				so = tmp;
 				break;
 			}
@@ -186,7 +184,10 @@ udp_input(m, iphlen)
 		}
 	}
 	
-	if (so == NULL) {
+	if (so != NULL) {
+	  so->so_faddr = ip->ip_dst;
+	  so->so_fport = uh->uh_dport;
+	} else {
 	  /*
 	   * If there's no socket for this packet,
 	   * create one
@@ -528,7 +529,7 @@ struct cu_header {
 			OTOSIN(omsg, addr)->sin_port = addr.sin_port;
 			OTOSIN(omsg, addr)->sin_addr = our_addr;
 			OTOSIN(nmsg, addr)->sin_port = addr.sin_port;
-			OTOSIN(nmsg, addr)->sin_addr = our_addr;		
+			OTOSIN(nmsg, addr)->sin_addr = our_addr;
 			
 			/* send LEAVE_INVITEs */
 			temp_port = OTOSIN(omsg, ctl_addr)->sin_port;
@@ -656,8 +657,10 @@ udp_listen(port, laddr, lport, flags)
 	
 	getsockname(so->s,(struct sockaddr *)&addr,&addrlen);
 	so->so_fport = addr.sin_port;
-	if (addr.sin_addr.s_addr == 0 || addr.sin_addr.s_addr == loopback_addr.s_addr)
-	   so->so_faddr = our_addr;
+
+	/* Translate connections from localhost to the alias hostname */
+	if (is_localhost(addr.sin_addr))
+	   so->so_faddr = alias_addr; /* our addr */
 	else
 	   so->so_faddr = addr.sin_addr;
 	

@@ -57,7 +57,6 @@ create_md5sums()
 	cd "$TOPDIR"
 	md5sum -b \
 	    src/colinux/VERSION \
-	    $KERNEL_PATCH \
 	    conf/linux-$KERNEL_VERSION-config \
 	    $COLINUX_TARGET_KERNEL_PATH/.config \
 	    $COLINUX_TARGET_KERNEL_PATH/vmlinux \
@@ -65,10 +64,12 @@ create_md5sums()
 	    > $KERNEL_CHECKSUM
 	test $? -ne 0 && error_exit 10 "can not create md5sum"
 
-	if [ -f $PRIVATE_PATCH ]
-	then
-		md5sum -b $PRIVATE_PATCH >> $KERNEL_CHECKSUM
-	fi
+	# Md5sums for patches
+	for name in $KERNEL_PATCH patch/linux-*.patch
+	do
+		md5sum -b $name >> $KERNEL_CHECKSUM
+	done
+
 	cd "$BINDIR"
 }
 
@@ -105,12 +106,9 @@ patch_kernel()
 	# Last chance to add private things, such local config
 	for name in $TOPDIR/$KERNEL_PATCH $TOPDIR/patch/linux-*.patch
 	do
-		if [ -f $name ]
-		then
-			echo "reading $name"
-			patch -p1 < $name
-			test $? -ne 0 && error_exit 10 "$name patch failed"
-		fi
+		echo "reading $name"
+		patch -p1 < $name
+		test $? -ne 0 && error_exit 10 "$name patch failed"
 	done
 
 	# Copy coLinux Version into kernel localversion

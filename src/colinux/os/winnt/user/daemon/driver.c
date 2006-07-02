@@ -74,7 +74,7 @@ co_rc_t co_winnt_install_driver(void)
 	handle = co_os_manager_open();
 	if (handle == NULL) {
 		co_terminal_print("error opening kernel driver\n");
-		return CO_RC(ERROR);
+		return CO_RC(ERROR_ACCESSING_DRIVER);
 	}
 	
 	return CO_RC(OK);
@@ -100,7 +100,7 @@ co_rc_t co_winnt_remove_driver(void)
 	if (!handle) {
 		co_terminal_print("couldn't get driver handle, removing anyway\n");
 		co_winnt_driver_remove_lowlevel();
-		return CO_RC(ERROR);
+		return CO_RC(ERROR_ACCESSING_DRIVER);
 	}		
 	rc = co_manager_status(handle, &status);
 	if (!CO_OK(rc)) {

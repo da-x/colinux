@@ -170,7 +170,7 @@ static void bootp_reply(struct bootp_t *bp)
     }
     dprintf("offered addr=%08lx\n", ntohl(daddr.sin_addr.s_addr));
 
-    saddr.sin_addr.s_addr = htonl(ntohl(special_addr.s_addr) | CTL_ALIAS);
+    saddr.sin_addr.s_addr = alias_addr.s_addr;
     saddr.sin_port = htons(BOOTP_SERVER);
 
     daddr.sin_port = htons(BOOTP_CLIENT);

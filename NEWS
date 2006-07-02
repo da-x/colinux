@@ -7,7 +7,7 @@
     New: "ttysX=..." in configuration, launch coserial daemon.
     New parameters "-f DeviceName -m Mode" for colinux-serial-daemon.
     Serial daemon is light usable under WinNT, you can login on /dev/ttyS0
-    or redirect serial communication port.
+    or redirect serial communication port (COM1 for sample).
   * Bug fix: Crash, if walking in big directory of cofs with
     "find | xargs file" or updatedb. (unicode maxlen)
   * Bug fix: Buffer overrun, on Fontname for FLTK console or screen resize.

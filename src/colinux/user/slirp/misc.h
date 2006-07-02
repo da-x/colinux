@@ -70,6 +70,7 @@ extern int x_port, x_server, x_display;
 int show_x _P((char *, struct socket *));
 void redir_x _P((u_int32_t, int, int, int));
 void getouraddr _P((void));
+int is_localhost _P((struct in_addr paddr));
 inline  void slirp_insque  _P((void *, void *));
 inline  void slirp_remque  _P((void *));
 int add_exec _P((struct ex_list **, int, char *, int, int));

@@ -39,7 +39,7 @@ co_rc_t co_user_monitor_create(co_user_monitor_t **out_mon, co_manager_ioctl_cre
 	handle = co_os_manager_open();
 	if (!handle) {
 		co_os_free(mon);
-		return CO_RC(ERROR);
+		return CO_RC(ERROR_ACCESSING_DRIVER);
 	}
 
 	rc = co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_CREATE,
@@ -82,7 +82,7 @@ co_rc_t co_user_monitor_open(co_reactor_t reactor, co_reactor_user_receive_func_
 	handle = co_os_manager_open();
 	if (!handle) {
 		co_os_free(mon);
-		return CO_RC(ERROR);
+		return CO_RC(ERROR_ACCESSING_DRIVER);
 	}
 
 	params.id = id;

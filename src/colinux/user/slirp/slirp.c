@@ -5,11 +5,12 @@ struct in_addr our_addr;
 /* host dns address */
 static struct in_addr dns_addr;
 /* host loopback address */
-struct in_addr loopback_addr;
+struct in_addr loopback_addr;	/* 127.0.0.1 */
 
 /* address for slirp virtual addresses */
-struct in_addr special_addr;
-struct in_addr client_addr;
+struct in_addr special_addr;	/* 10.0.2.0 */
+struct in_addr alias_addr;	/* 10.0.2.2  windows */
+struct in_addr client_addr;	/* 10.0.2.15 Linux */
 
 const uint8_t special_ethaddr[6] = { 
     0x52, 0x54, 0x00, 0x12, 0x35, 0x00
@@ -182,11 +183,9 @@ void slirp_init(void)
     getouraddr();
     inet_aton("127.0.0.1", &loopback_addr);
 
-    if (our_addr.s_addr == loopback_addr.s_addr)
-        printf ("Warning only loopback addr 127.0.0.1 available.\n");
-
     inet_aton(CTL_SPECIAL, &special_addr);
-    inet_aton(CTL_LOCAL, &client_addr);
+    alias_addr.s_addr  = special_addr.s_addr | htonl(CTL_ALIAS);
+    client_addr.s_addr = special_addr.s_addr | htonl(CTL_CLIENT);
 }
 
 #define CONN_CANFSEND(so) (((so)->so_state & (SS_FCANTSENDMORE|SS_ISFCONNECTED)) == SS_ISFCONNECTED)
@@ -596,11 +595,6 @@ void arp_input(const uint8_t *pkt, int pkt_len)
             }
             return;
         arp_ok:
-            /* XXX: make an ARP request to have the client address */
-            /* XXX: ARP request would send an invalid request in if_encap.
-	       It's better to save the client eth addr (mac) all times. */
-            memcpy(client_ethaddr, eh->h_source, ETH_ALEN);
-
             /* ARP request for alias/dns mac address */
             memcpy(reh->h_dest, pkt + ETH_ALEN, ETH_ALEN);
             memcpy(reh->h_source, special_ethaddr, ETH_ALEN - 1);

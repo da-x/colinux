@@ -110,19 +110,8 @@ co_rc_t co_winnt_daemon_main(co_start_parameters_t *start_parameters)
 		goto out;
 
 	rc = co_daemon_start_monitor(g_daemon);
-	if (!CO_OK(rc)) {
-		co_rc_t rc_tmp;
-
-		// View error details, mostly wrong version.
-		// But save original return-code (arg 0 = view errors only)
-		rc_tmp = co_winnt_status_driver(0);
-
-		// View error as text, not as "exit code"
-		if (CO_RC_GET_CODE(rc_tmp) == CO_RC_VERSION_MISMATCHED)
-			rc = rc_tmp;
-
+	if (!CO_OK(rc))
 		goto out_destroy;
-	}
 
 	rc = co_daemon_run(g_daemon);
 
@@ -133,17 +122,24 @@ out_destroy:
 
 out:
 	if (!CO_OK(rc)) {
-		if (CO_RC_GET_CODE(rc) == CO_RC_VERSION_MISMATCHED) {
-			co_terminal_print("daemon: error driver version, please reinstall driver!\n");
-		} else if (CO_RC_GET_CODE(rc) == CO_RC_OUT_OF_PAGES) {
-			co_terminal_print("daemon: not enough physical memory available (try with a lower setting)\n", rc);
-		} else {
-			char buf[0x100];
-			co_rc_format_error(rc, buf, sizeof(buf));
+		char buf[0x100];
 
-			co_terminal_print("daemon: exit code %x\n", rc);
-			co_terminal_print("daemon: %s\n", buf);
+		switch (CO_RC_GET_CODE(rc)) {
+		case CO_RC_VERSION_MISMATCHED:
+			strcpy(buf, "error driver version, please reinstall driver!");
+			break;
+		case CO_RC_OUT_OF_PAGES:
+			strcpy(buf, "not enough physical memory available (try with a lower setting)");
+			break;
+		case CO_RC_ERROR_ACCESSING_DRIVER:
+			strcpy(buf, "can't access CoLinuxDriver, please check status driver!");
+			break;
+		default:
+			co_rc_format_error(rc, buf, sizeof(buf));
 		}
+
+		co_terminal_print("daemon: exit code %x\n", rc);
+		co_terminal_print("daemon: %s\n", buf);
 
 		ret = CO_RC(ERROR);
 	} else {

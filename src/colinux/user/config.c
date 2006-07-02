@@ -413,7 +413,7 @@ static co_rc_t parse_args_serial_device(co_config_t *conf, int index, const char
 		return CO_RC(INVALID_PARAMETER);
 	}
 
-	co_terminal_print("mapping ttyS%d to %s\n", index, name);
+	co_terminal_print("mapping ttys%d to %s\n", index, name);
 	serial->desc = strdup(name);
 	
 	if (*mode) {
