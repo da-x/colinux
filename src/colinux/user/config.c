@@ -289,11 +289,6 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 		net_dev->manual_mac_address = PTRUE;
 	}
 
-	if (!*net_dev->desc) {
-		co_terminal_print("error, the name of the network interface to attach was not specified\n");
-		return CO_RC(INVALID_PARAMETER);
-	}
-
 	co_terminal_print("configured PCAP bridge at '%s' device as eth%d\n", 
 			net_dev->desc, index);
 

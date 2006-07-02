@@ -320,6 +320,7 @@ co_rc_t co_cmdline_get_next_equality(co_command_line_params_t cmdline, const cha
 				length -= 2;
 			}
 		}
+
 		co_memcpy(value, key_found, length);
 		value[length] = '\0';
 		co_os_free(arg);

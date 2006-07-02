@@ -212,20 +212,20 @@ co_rc_t get_device_guid(
 				if (is_tap_win32_dev(enum_name)) {
 					co_terminal_print("colinux-net-daemon: found TAP device named \"%s\"\n", name_data);
 
+					stop = 1;
 					snprintf(name, name_size, "%s", enum_name);
 					if (actual_name) {
 						if (*actual_name) {
+							/* verify given name */
 							if (strcmp(name_data, actual_name) != 0) {
-								RegCloseKey (connection_key);
-								++i;
-								continue;
+								stop = 0;
 							}
 						}
 						else {
+							/* name is not given */
 							snprintf(actual_name, actual_name_size, "%s", name_data);
 						}
 					}
-					stop = 1;
 				}
 			}
 

@@ -15,7 +15,7 @@ INCLUDES=$(DDK_INCLUDE_PATH)
 # config-win32.h
 C_DEFINES=
 C_DEFINES=$(C_DEFINES) -DTAP_DRIVER_MAJOR_VERSION=8
-C_DEFINES=$(C_DEFINES) -DTAP_DRIVER_MINOR_VERSION=1
+C_DEFINES=$(C_DEFINES) -DTAP_DRIVER_MINOR_VERSION=3
 
 # Use 00:FF:XX:XX:XX:XX format MAC addresses where
 # the Xs are random (like Linux tap driver).
@@ -61,6 +61,7 @@ MSC_OPTIMIZATION=/Od /Oi /Fc
 
 # Generate a linker map file just in case we need one for debugging
 LINKER_FLAGS=$(LINKER_FLAGS) /MAP /MAPINFO:EXPORTS /MAPINFO:LINES /MAPINFO:FIXUPS
+LINKER_DBG_SECTION=-debug:NONE
 
 # Generate a browser information file for use in IDE development
 BROWSER_INFO=1

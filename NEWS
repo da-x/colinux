@@ -1,4 +1,6 @@
 * Version 0.7.1
+  * TAP device version 8.3, usable without admin rights.
+  * Bridged allows empty name for autosearch connected LAN interface.
   * Kernel 2.6.12
   * New option for colinux-debug-daemon: '-e exitcode'
     Translate a given exitcode into error text, filename and line number.

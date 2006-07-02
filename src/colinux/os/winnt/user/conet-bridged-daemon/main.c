@@ -216,7 +216,7 @@ int
 pcap_init()
 {
 	pcap_if_t *alldevs = NULL;
-	pcap_if_t *device = NULL;
+	pcap_if_t *device;
 	pcap_if_t *found_device = NULL;
 	int exit_code = 0;
 	pcap_t *adhandle = NULL;
@@ -236,42 +236,57 @@ pcap_init()
 		goto pcap_out;
 	}
 
-	co_terminal_print("conet-bridged-daemon: looking for interface \"%s\"\n", daemon_parameters->interface_name);
+	if (daemon_parameters->name_specified == PTRUE)
+		co_terminal_print("conet-bridged-daemon: Looking for interface \"%s\"\n", daemon_parameters->interface_name);
+	else
+		co_terminal_print("conet-bridged-daemon: Auto selecting name for bridged interfac\n");
 	
 	device = alldevs;
 	char name_data[256];
 	char connection_name_data[256];
 	while (device) {
-		
-		memset(connection_name_data, 0, sizeof(connection_name_data));
 
-		if (daemon_parameters->name_specified == PFALSE)
-			break;
+		memset(connection_name_data, 0, sizeof(connection_name_data));
 
 		snprintf(name_data, sizeof(name_data), "%s", device->name+(sizeof(PCAP_NAME_HDR) - 1));
 
 		get_device_name(name_data, sizeof(name_data),
 		                connection_name_data, sizeof(connection_name_data));
 
-		if (strcmp(connection_name_data, "") != 0) {
+		if (*connection_name_data != 0) {
 			co_terminal_print("conet-bridged-daemon: checking connection: %s\n", connection_name_data);
-			/*
-			  Do an partial search, if partial search is found,
-			   set this device as he found device, but continue
-			   looping through devices.
-			 */
-			if (strstr(connection_name_data, daemon_parameters->interface_name) != NULL &&
-			    found_device == NULL) {
-				found_device = device;
+
+			if (daemon_parameters->name_specified == PTRUE) {
+				/*
+				 If an exact match exists, over-ride any found device,
+				  setting exact match device to it.
+				 */
+				if (strcmp(connection_name_data, daemon_parameters->interface_name) == 0) {
+					found_device = device;
+					break;
+				}
+
+				/*
+				  Do an partial search, if partial search is found,
+				   set this device as he found device, but continue
+				   looping through devices.
+				 */
+				
+				if (found_device == NULL &&
+				    strstr(connection_name_data, daemon_parameters->interface_name) != NULL) {
+					found_device = device;
+				}
+			} else {
+				/* 
+				 If no name specified and network has an address,
+				  autoselect first device.
+				*/
+				if (device->addresses) {
+					found_device = device;
+					break;
+				}
 			}
 			
-			/*
-			 If an exact match exists, over-ride any found device,
-			  setting exact match device to it.
-			 */
-			if (strcmp(connection_name_data, daemon_parameters->interface_name) == 0) {
-				found_device = device;
-			}
 		}
 		else {
 			co_terminal_print("conet-bridged-daemon: adapter %s doesn't have a connection\n", device->description);

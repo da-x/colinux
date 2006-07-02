@@ -37,7 +37,7 @@ co_rc_t co_canonize_cobd_path(co_pathname_t *pathname)
 
 		/* Convert relative path to absolute path with drive */
 		if (!_fullpath(copied_path, *pathname, sizeof(copied_path))) {
-			co_terminal_print("%s:error in path, or to long\n", *pathname);
+			co_terminal_print("%s: Error in path, or to long\n", *pathname);
 			return CO_RC(ERROR);
 		}
 		

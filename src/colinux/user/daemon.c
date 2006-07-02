@@ -573,9 +573,8 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 
 		co_debug("launching daemon for conet%d\n", i);
 
-		if (strlen(net_dev->desc) != 0) {
+		if (*net_dev->desc != 0)
 			co_snprintf(interface_name, sizeof(interface_name), "-n \"%s\"", net_dev->desc);
-		}
 
 		switch (net_dev->type) 
 		{
