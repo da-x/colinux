@@ -109,6 +109,25 @@ typedef struct co_cofsdev_desc_t {
 	co_cofs_type_t type;
 } co_cofsdev_desc_t;
 
+#define CO_SERIAL_DESC_STR_SIZE 0x40
+#define CO_SERIAL_MODE_STR_SIZE 0x100
+
+typedef struct co_serialdev_desc {
+	/*
+	 * Determines whether we use this device slot or not.
+	 */
+	bool_t enabled;
+
+	/* Device name on host side */
+	char *desc;
+
+	/*
+	 * Individual mode setting
+	 */
+	char *mode;
+
+} co_serialdev_desc_t;
+
 /*
  * Per-machine coLinux configuration
  */
@@ -142,6 +161,11 @@ typedef struct co_config {
 	 * File systems
 	 */
 	co_cofsdev_desc_t cofs_devs[CO_MODULE_MAX_COFS];
+
+	/*
+	 * Serial devices
+	 */
+	co_serialdev_desc_t serial_devs[CO_MODULE_MAX_SERIAL];
 
 	/*
 	 * Parameters passed to the kernel at boot.

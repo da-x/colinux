@@ -84,7 +84,7 @@ void select_monitor_widget_t::load_monitors_list()
 	for (unsigned i = 0; i < list.count; ++i) {
 		char buf[32];
 		id_map[i] = list.ids[i];
-		snprintf( buf, sizeof(buf), "Monitor%d (pid=%d)\t", i, id_map[i]);
+		snprintf( buf, sizeof(buf), "Monitor%d (pid=%d)\t", i, (int)id_map[i]);
 		browser->add(buf);
 	}
 	

@@ -93,7 +93,7 @@ co_rc_t co_winnt_remove_driver(void)
 
 	if (!installed) {
 		co_terminal_print("driver not installed\n");
-		return CO_RC(OK);
+		return CO_RC(ERROR_ACCESSING_DRIVER);
 	}
 
 	handle = co_os_manager_open();
@@ -113,7 +113,7 @@ co_rc_t co_winnt_remove_driver(void)
 
 		co_os_manager_close(handle);
 		co_winnt_driver_remove_lowlevel();
-		return CO_RC(ERROR);
+		return rc;
 	}		
 
 	if (status.monitors_count != 0) {

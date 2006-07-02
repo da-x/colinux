@@ -40,7 +40,7 @@ targets['colinux-net-daemon'] = Target(
        Input('../user/conet-daemon/build.o'),
        Input('../../../user/daemon-base/build.o'),
     ] + user_dep,
-    tool = Compiler(),    
+    tool = Compiler(),
     mono_options = generate_options('g++'),
 )
 
@@ -68,11 +68,11 @@ targets['colinux-debug-daemon'] = Target(
        Input('../user/debug/build.o'),
        Input('../../../user/debug/build.o'),
     ] + user_dep,
-    tool = Compiler(),    
-    mono_options = generate_options('g++'),
+    tool = Compiler(),
+    mono_options = generate_options('gcc'),
 )
 
 targets['colinux.ko'] = Target(
     inputs = [Input('../kernel/module/colinux.ko')],
-    tool = Copy(),    
+    tool = Copy(),
 )

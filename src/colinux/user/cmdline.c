@@ -8,6 +8,7 @@
  */
 
 #include <malloc.h>
+#include <string.h>
 #include "cmdline.h"
 
 #include <colinux/os/alloc.h>
@@ -270,6 +271,7 @@ co_rc_t co_cmdline_get_next_equality(co_command_line_params_t cmdline, const cha
 				     char *key, int key_size, char *value, int value_size, bool_t *out_exists)
 {
 	int i;
+	int length;
 	int prefix_len = co_strlen(expected_prefix);
 
 	*out_exists = PFALSE;
@@ -301,13 +303,25 @@ co_rc_t co_cmdline_get_next_equality(co_command_line_params_t cmdline, const cha
 			co_memcpy(key, prefix_len + arg, key_len);
 			key[key_len] = '\0';
 		}
-		
-		if (co_strlen(&key_found[1]) + 1 > value_size) {
+
+		/* string size and start */
+		value_size--;
+		key_found++;
+
+		if ((length = co_strlen(key_found)) >= value_size) {
 			co_os_free(arg);
 			return CO_RC(ERROR);
 		}
-		
-		co_snprintf(value, value_size, "%s", &key_found[1]);
+
+		/* Remove quotation marks */
+		if (*key_found == '\"') {
+			if (key_found[length-1] == '\"') {
+				key_found++;
+				length -= 2;
+			}
+		}
+		co_memcpy(value, key_found, length);
+		value[length] = '\0';
 		co_os_free(arg);
 		
 		*out_exists = PTRUE;

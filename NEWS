@@ -1,3 +1,29 @@
+* Version 0.7.1
+  * Kernel 2.6.12
+  * New option for colinux-debug-daemon: '-e exitcode'
+    Translate a given exitcode into error text, filename and line number.
+  * Shutdown the service, if Windows is shutting down.
+  * Print human readable error, if wrong linux.sys installed.
+  * Print error on console, if initrd can't load.
+  * SLiRP get DNS dymanicly from host. Refresh if expire 10 Sec.
+    This should better work for dialup connections.
+  * SLiRP ping, if destination supports UDP echo/7 (WSAECONNRESET hack).
+  * Build scripts ash/dash compliant (more POSIX-compliant)
+  * Checkbox to view README.TXT after install finish.
+  * Bug #1151757: COFS disallow mutiple mounts.
+  * Introduce a new build system:
+     bin/make.py colinux
+     - Automatic awareness of changes in header files.
+     - Doesn't require 'make clean' between compilation of 
+       different coLinux ports.
+     - Clean, flexible and easier to maintain.
+  * Add icons to the other executables.
+  * Obsoleted the use of XML files for configuration.
+  * Added support for @ at the command line for passing 
+    simple configuration files. See example.conf.
+  * Added '-k' option to suppress kernel messages on boot. This should
+    let you watch other daemon's output more easily.
+
 * Version 0.6.3
   * Fixes issue with Services being killed during Windows Shutdown, 
     instead of Windows waiting for the Service to shutdown properly.

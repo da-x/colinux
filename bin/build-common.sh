@@ -4,7 +4,7 @@
 # This script builds the mingw32 cross compiler on Linux,
 # and patches the w32api package.
 #
-# It also downloads, compiles, and installs FLTK and mxml.
+# It also downloads, compiles, and installs FLTK.
 # 
 # - Dan Aloni <da-x@colinux.org>
 #
@@ -42,6 +42,9 @@ fi
 # what flavor are we building?
 TARGET=i686-pc-mingw32
 
+# Current developing build system
+BUILD=i686-pc-linux
+
 # you probably don't need to change anything from here down
 # BINDIR is bin directory with scripts
 BINDIR=`pwd`
@@ -55,7 +58,7 @@ SRCDIR="$SOURCE_DIR"
 # Updated by Sam Lantinga <slouken@libsdl.org>
 # These are the files from the current MingW release
 
-MINGW_VERSION="3.7"
+MINGW_VERSION="3.8"
 MINGW_URL=http://heanet.dl.sourceforge.net/sourceforge/mingw
 MINGW=mingw-runtime-$MINGW_VERSION
 MINGW_ARCHIVE=$MINGW.tar.gz
@@ -72,7 +75,7 @@ GCC_ARCHIVE1=gcc-core-$GCC_RELEASE-src.tar.gz
 GCC_ARCHIVE2=gcc-g++-$GCC_RELEASE-src.tar.gz
 GCC_PATCH=""
 
-W32API_VERSION=3.2
+W32API_VERSION=3.3
 W32API=w32api-$W32API_VERSION
 W32API_SRC=$W32API
 W32API_SRC_ARCHIVE=$W32API-src.tar.gz
@@ -86,14 +89,9 @@ FLTK_URL=http://heanet.dl.sourceforge.net/sourceforge/fltk
 FLTK=fltk-$FLTK_VERSION
 FLTK_ARCHIVE=$FLTK-source.tar.bz2
 
-MXML_VERSION="1.3"
-MXML_URL=http://www.easysw.com/~mike/mxml/swfiles
-# a mirror http://gniarf.nerim.net/colinux
-MXML=mxml-$MXML_VERSION
-MXML_ARCHIVE=$MXML.tar.gz
-
-WINPCAP_VERSION="3_1_beta4"
+WINPCAP_VERSION="3_1"
 WINPCAP_URL=http://winpcap.polito.it/install/bin
+WINPCAP_URL2=http://www.winpcap.org/install/bin
 WINPCAP_SRC=WpdPack
 WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_$WINPCAP_VERSION.zip
 
@@ -107,6 +105,13 @@ WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_$WINPCAP_VERSION.zip
 #
 if [ -z "$KERNEL_VERSION" ] ; then
   KERNEL_VERSION=`ls $TOPDIR/patch/linux-*.diff | sed -r -e 's/^.+\-([0-9\.]+)\.diff$/\1/'`
+  # Check multiple patchfiles
+  CHECK=`ls $TOPDIR/patch/linux-*.diff | sed -n -e '2p'`
+  if [ -n "$CHECK" ] ; then
+    echo "WARNING: Can only handle one patchfile for automatic version detection"
+    echo "Please set $""KERNEL_VERSION in user-build.cfg"
+    exit -1
+  fi
 fi
 KERNEL_DIR=`echo $KERNEL_VERSION | sed -r -e 's/^([0-9]+)\.([0-9]+)\..+$/v\1.\2/'`
 
@@ -231,6 +236,38 @@ error_exit()
 	exit $1
 }
 
+#
+# Strip kernel image file 'vmlinux'
+# Arg1: input file
+# Arg2: stripped output file
+#
+strip_kernel()
+{
+	local STRIP="strip --strip-all"
+	local FROM_SOURCE="src/colinux/user/daemon.c"
+	local KEEP
+
+	# Build the list of needed symbols: Grep from loader function in daemon, this lines
+	# --> rc = co_daemon_load_symbol(daemon, "init_thread_union", &import->kernel_init_task_union);
+	# --> rc = co_daemon_load_symbol_and_data(daemon, "co_arch_info", &import->kernel_co_arch_info,
+	#     _____^^^^^^^^^^^^^^^^^^^^^__________________^************^___^^^^^^______________________
+
+	KEEP=`grep "co_daemon_load_symbol" $TOPDIR/$FROM_SOURCE | \
+	  sed -n -r -e 's/^.+daemon.+\"(.+)\".+import.+$/ --keep-symbol=\1/p' | tr -d "\n"`
+	if [ -n "$KEEP" ]
+	then
+		# Kernel strip
+		$STRIP $KEEP -o $2 $1 || exit $?
+	else
+		# Function not found by grep
+		echo -e "\nWARNING: $FROM_SOURCE" 1>&2
+		echo -e "Can't get symbols for stripping! Don't strip vmlinux\n" 1>&2
+			
+		# Fallback into copy mode
+		cp -a $1 $2
+	fi
+}
+
 # Create ZIP packages (for "autobuild")
 build_package()
 {
@@ -276,8 +313,25 @@ build_package()
 		# remove old zip file
 		rm -f $VMLINUX_ZIP
 
-		# Add kernel to ZIP
-		zip -j $VMLINUX_ZIP $COLINUX_TARGET_KERNEL_PATH/vmlinux || exit $?
+		if [ "$COLINUX_KERNEL_STRIP" = "yes" ]
+		then
+			name=vmlinux
+			oname=$COLINUX_INSTALL_DIR/$name
+
+			# Create map file with symbols, add to zip
+			map=$COLINUX_INSTALL_DIR/$name.map
+			nm $COLINUX_TARGET_KERNEL_PATH/$name | sort | uniq > $map
+			zip -j $VMLINUX_ZIP $map || exit $?
+			rm $map
+
+			# Strip kernel and add to ZIP
+			strip_kernel $COLINUX_TARGET_KERNEL_PATH/$name $oname
+			zip -j $VMLINUX_ZIP $oname || exit $?
+			rm $oname
+		else
+			# Add kernel to ZIP (not stripped)
+			zip -j $VMLINUX_ZIP $COLINUX_TARGET_KERNEL_PATH/vmlinux || exit $?
+		fi
 	fi
 
 	# Exist target modules.dep and is newer?

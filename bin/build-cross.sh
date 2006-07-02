@@ -4,6 +4,12 @@
 
 . build-common.sh
 
+# Flags for building gcc (not for target)
+BUILD_FLAGS="CFLAGS=-O2 LDFLAGS=-s"
+
+# TEMPORARY until release, you can disable it for faster builds:
+#ENABLE_CHECKING=--disable-checking
+
 download_files()
 {
 	mkdir -p "$SRCDIR"
@@ -28,7 +34,7 @@ check_installed()
 		if [ `$TARGET-gcc -dumpversion` != $GCC_VERSION ]
 		then
 			echo "$TARGET-gcc $GCC_VERSION not installed"
-			return 1
+			return
 		fi
 
 		if $TARGET-ld --version | egrep -q "$BINUTILS_VERSION"
@@ -38,7 +44,7 @@ check_installed()
 			exit 0
 		else
 			echo "$TARGET-ld $BINUTILS_VERSION not installed"
-			return 1
+			return
 		fi
 
 	fi
@@ -72,7 +78,8 @@ configure_binutils()
 	mkdir "binutils-$TARGET"
 	cd "binutils-$TARGET"
 	"$BUILD_DIR/$BINUTILS/configure" \
-	 --prefix="$PREFIX" --target=$TARGET >>$COLINUX_BUILD_LOG 2>&1
+		--prefix="$PREFIX" --target=$TARGET \
+		>>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "configure binutils failed"
 }
 
@@ -80,7 +87,7 @@ build_binutils()
 {
 	echo "Building binutils"
 	cd "$BUILD_DIR/binutils-$TARGET"
-	make >>$COLINUX_BUILD_LOG 2>&1
+	make $BUILD_FLAGS >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "make binutils failed"
 }
 
@@ -106,7 +113,8 @@ patch_gcc()
 	if [ "$GCC_PATCH" != "" ]; then
 		echo "Patching gcc"
 		cd "$BUILD_DIR/$GCC"
-		patch -p1 < "$SRCDIR/$GCC_PATCH"
+		patch -p1 < "$TOPDIR/$GCC_PATCH"
+		test $? -ne 0 && error_exit 10 "patch gcc failed"
 	fi
 }
 
@@ -121,7 +129,10 @@ configure_gcc()
 		--prefix="$PREFIX" --target=$TARGET \
 		--with-headers="$PREFIX/$TARGET/include" \
 		--with-gnu-as --with-gnu-ld \
-		--without-newlib --disable-multilib >>$COLINUX_BUILD_LOG 2>&1
+		--without-newlib --disable-multilib \
+		--enable-languages="c,c++" \
+		$ENABLE_CHECKING \
+		>>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "configure gcc failed"
 }
 
@@ -129,7 +140,7 @@ build_gcc()
 {
 	echo "Building gcc"
 	cd "$BUILD_DIR/gcc-$TARGET"
-	make LANGUAGES="c c++" >>$COLINUX_BUILD_LOG 2>&1
+	make $BUILD_FLAGS >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "make gcc failed"
 }
 
@@ -137,8 +148,122 @@ install_gcc()
 {
 	echo "Installing gcc"
 	cd "$BUILD_DIR/gcc-$TARGET"
-	make LANGUAGES="c c++" install >>$COLINUX_BUILD_LOG 2>&1
+	make install >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "install gcc failed"
+}
+
+#
+# Build compiler for coLinux GUEST system kernel compiling.
+#
+
+check_binutils_guest()
+{
+	test -z "$COLINUX_GCC_GUEST_TARGET" && return 0
+	echo -n "Check guest binutils $BINUTILS_VERSION: "
+
+	# Get version number
+	local PATH=$COLINUX_GCC_GUEST_PATH:$PATH
+	ver=`${COLINUX_GCC_GUEST_TARGET}-as --version 2>/dev/null | \
+		sed -n -r -e 's/^.+ ([0-9]+\.[0-9]+\.[0-9]+).+$/\1/p'`
+
+	if [ -z "$ver" ]
+	then
+		ver=`as --version 2>/dev/null | sed -n -r -e \
+			's/^.+ ([0-9]+\.[0-9]+\.[0-9]+).+$/\1/p'`
+	fi
+
+	if [ -n "$ver" ]
+	then
+		# Verify version of installed AS
+		if [ $ver = $BINUTILS_VERSION ]
+		then
+			echo "found"
+			return 0
+		fi
+
+		echo "Wrong version ($ver), build now"
+		return 1
+	fi
+
+	echo "No executables, build now"
+	return 1
+}
+
+build_binutils_guest()
+{
+	echo "Configuring guest binutils"
+	cd "$BUILD_DIR"
+	rm -rf "binutils-$COLINUX_GCC_GUEST_TARGET"
+	mkdir "binutils-$COLINUX_GCC_GUEST_TARGET"
+	cd "binutils-$COLINUX_GCC_GUEST_TARGET"
+	"$BUILD_DIR/$BINUTILS/configure" \
+		--program-prefix="${COLINUX_GCC_GUEST_TARGET}-" \
+		--prefix="$PREFIX/$COLINUX_GCC_GUEST_TARGET" \
+		>>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "configure guest binutils failed"
+
+	echo "Building guest binutils"
+	make $BUILD_FLAGS >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "make guest binutils failed"
+
+	echo "Installing guest binutils"
+	make install >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "install guest binutils failed"
+}
+
+check_gcc_guest()
+{
+	test -z "$COLINUX_GCC_GUEST_TARGET" && return 0
+	echo -n "Check guest compiler $GCC_VERSION: "
+
+	# Get version number
+	local PATH=$COLINUX_GCC_GUEST_PATH:$PATH
+	ver=`${COLINUX_GCC_GUEST_TARGET}-gcc -dumpversion 2>/dev/null`
+
+	if [ -z "$ver" ]
+	then
+		ver=`gcc -dumpversion 2>/dev/null`
+	fi
+
+	if [ -n "$ver" ]
+	then
+		# Verify version of installed GCC
+		if [ $ver = $GCC_VERSION ]
+		then
+			echo "found"
+			return 0
+		fi
+
+		echo "Wrong version ($ver), build now"
+		return 1
+	fi
+
+	echo "No executables, build now"
+	return 1
+}
+
+build_gcc_guest()
+{
+	echo "Configuring guest gcc"
+	cd "$BUILD_DIR"
+	rm -rf "gcc-$COLINUX_GCC_GUEST_TARGET"
+	mkdir "gcc-$COLINUX_GCC_GUEST_TARGET"
+	cd "gcc-$COLINUX_GCC_GUEST_TARGET"
+	"$BUILD_DIR/$GCC/configure" -v \
+		--program-prefix="${COLINUX_GCC_GUEST_TARGET}-" \
+		--prefix="$PREFIX/$COLINUX_GCC_GUEST_TARGET" \
+		--enable-languages="c,c++" \
+		$ENABLE_CHECKING \
+		>>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "configure gcc failed"
+
+	echo "Building guest gcc"
+	make $BUILD_FLAGS >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "make guest gcc failed"
+
+	echo "Installing guest gcc"
+	make install >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "install guest gcc failed"
 }
 
 final_tweaks()
@@ -148,32 +273,10 @@ final_tweaks()
 	# remove gcc build headers
 	rm -rf "$PREFIX/$TARGET/sys-include"
 
-        # Add extra binary links
-	if [ ! -f "$PREFIX/$TARGET/bin/objdump" ]; then
-		ln "$PREFIX/bin/$TARGET-objdump" "$PREFIX/$TARGET/bin/objdump"
-	fi
-
-	# make cc and c++ symlinks to gcc and g++
-	if [ ! -f "$PREFIX/$TARGET/bin/g++" ]; then
-		ln "$PREFIX/bin/$TARGET-g++" "$PREFIX/$TARGET/bin/g++"
-	fi
-	if [ ! -f "$PREFIX/$TARGET/bin/cc" ]; then
-		ln -s "gcc" "$PREFIX/$TARGET/bin/cc"
-	fi
-	if [ ! -f "$PREFIX/$TARGET/bin/c++" ]; then
-		ln -s "g++" "$PREFIX/$TARGET/bin/c++"
-	fi
-
-	# strip all the binaries
-	ls $PREFIX/bin/* $PREFIX/$TARGET/bin/* | egrep -v '.dll|gccbug' |
-	while read file; do
-		strip "$file"
-	done
-	
-	# Installation should have been successful, so clean-up
-	#  after ourselves an little bit.
+	# Installation should have been successful,
+	# clean-up after ourselves an little bit.
 	cd $BUILD_DIR
-	rm -rf *i686-pc-mingw32 "$BINUTILS" "$GCC"
+	rm -rf "$BINUTILS" "$GCC" *-$TARGET *-$COLINUX_GCC_GUEST_TARGET
 
 	echo "Installation complete!"
 }
@@ -187,20 +290,26 @@ build_cross()
 	# Only Download? Than ready.
 	test "$1" = "--download-only" && exit 0
 
-        install_libs
+	echo "log: $COLINUX_BUILD_LOG"
+	mkdir -p `dirname $COLINUX_BUILD_LOG`
 
-        extract_binutils
-        configure_binutils
-        build_binutils
-        install_binutils
+	install_libs
 
-        extract_gcc
-        patch_gcc
-        configure_gcc
-        build_gcc
-        install_gcc
+	extract_binutils
+	configure_binutils
+	build_binutils
+	install_binutils
 
-        final_tweaks
+	extract_gcc
+	patch_gcc
+	configure_gcc
+	build_gcc
+	install_gcc
+
+	check_binutils_guest || build_binutils_guest
+	check_gcc_guest      || build_gcc_guest
+
+	final_tweaks
 }
 
 build_cross $1

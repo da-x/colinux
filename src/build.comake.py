@@ -6,16 +6,6 @@ import os
 from comake.settings import settings
 
 settings.arch = os.getenv('COLINUX_ARCH')
-settings.host_os = os.getenv('COLINUX_HOST_OS')
-
-settings.cflags = os.getenv('COLINUX_CFLAGS')
-if not settings.cflags:
-    settings.cflags = ''
-
-settings.lflags = os.getenv('COLINUX_LFLAGS')
-if not settings.lflags:
-    settings.lflags = ''
-
 if not settings.arch:
     settings.arch = 'i386'
     print "Target architecture not specified, defaulting to %s" % (settings.arch, )    
@@ -25,6 +15,7 @@ if os.path.exists(current_arch_symlink):
     os.unlink(current_arch_symlink)
 os.symlink(settings.arch, current_arch_symlink)
 
+settings.host_os = os.getenv('COLINUX_HOST_OS')
 if not settings.host_os:
     settings.host_os = 'winnt'
     print "Target OS not specified, defaulting to %s" % (settings.host_os, )
@@ -33,6 +24,17 @@ current_os_symlink = target_pathname(pathjoin('colinux', 'os', 'current'))
 if os.path.exists(current_os_symlink):
     os.unlink(current_os_symlink)
 os.symlink(settings.host_os, current_os_symlink)
+
+settings.cflags = os.getenv('COLINUX_CFLAGS')
+if not settings.cflags:
+    settings.cflags = ''
+
+settings.lflags = os.getenv('COLINUX_LFLAGS')
+if not settings.lflags:
+    settings.lflags = ''
+
+# Setup "i686-co-linux", if local gcc can't use for linux kernel
+settings.gcc_guest_target = os.getenv('COLINUX_GCC_GUEST_TARGET');
 
 compiler_defines = dict(
     COLINUX_FILE_ID='0',
@@ -47,7 +49,10 @@ if settings.host_os == 'winnt':
     compiler_flags = ['-mpush-args', '-mno-accumulate-outgoing-args']
     compiler_defines['WINVER'] = '0x0500'
 else:
-    cross_compilation_prefix = ''
+    if settings.gcc_guest_target:
+	cross_compilation_prefix = settings.gcc_guest_target + '-'
+    else:
+	cross_compilation_prefix = ''
     compiler_flags = []
 
 settings.target_kernel_path = getenv('COLINUX_TARGET_KERNEL_PATH')

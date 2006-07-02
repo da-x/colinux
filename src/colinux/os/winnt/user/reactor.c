@@ -44,13 +44,12 @@ co_rc_t co_os_reactor_select(co_reactor_t handle, int miliseconds)
 		if (user->os_data->read_enabled) {
 			if (user->os_data->read_event == wait_list[index]) {
 				rc = user->last_read_rc = user->os_data->read(user);
+				return rc;
 			}
 		}
-		if (CO_OK(rc)) {
-			if (user->os_data->write_enabled) {
-				if (user->os_data->write_event == wait_list[index]) {
-					user->os_data->write(user);
-				}
+		if (user->os_data->write_enabled) {
+			if (user->os_data->write_event == wait_list[index]) {
+				user->os_data->write(user);
 			}
 		}
 	}
@@ -76,6 +75,10 @@ static co_rc_t packet_read_async(co_winnt_reactor_packet_user_t handle)
 			{ 
 			case ERROR_IO_PENDING: 
 				return CO_RC(OK);
+			case ERROR_NOT_ENOUGH_MEMORY:
+				/* Hack for serial daemon */
+				co_debug("Warn: NOT_ENOUGH_MEMORY (handle=%d)\n", handle->rhandle);
+				return CO_RC(OUT_OF_MEMORY);
 			default:
 				co_debug("Error: %x\n", error);
 				return CO_RC(ERROR);
@@ -102,7 +105,7 @@ static co_rc_t packet_read_completed(co_winnt_reactor_packet_user_t handle)
 	} else {
 		if (GetLastError() == ERROR_BROKEN_PIPE) {
 			co_debug("Pipe broken, exiting\n");
-			return CO_RC(ERROR);
+			return CO_RC(BROKEN_PIPE);
 		}
 
 		co_debug("GetOverlappedResult error %d\n", GetLastError());
@@ -191,8 +194,13 @@ co_rc_t co_winnt_reactor_packet_user_create(
 
 	rc = packet_read_async(user);
 	if (!CO_OK(rc)) {
-		co_winnt_reactor_packet_user_destroy(user);
-		return rc;
+		// Hack for coserial daemon (kbhit and getch)
+		// Ignore error from first ReadFile
+		if (CO_RC_GET_CODE(rc) != CO_RC_OUT_OF_MEMORY ||
+		    rhandle != GetStdHandle(STD_INPUT_HANDLE)) {
+			co_winnt_reactor_packet_user_destroy(user);
+			return rc;
+		}
 	}
 
 	*handle_out = user;

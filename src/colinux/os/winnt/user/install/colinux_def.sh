@@ -14,7 +14,7 @@ TARGET_FILE=$2
 KERNEL_VERSION=`cd bin; . build-common.sh --get-vars; echo \$KERNEL_VERSION`
 
 # coLinux full version with "-preXX", if exist
-PRE_VERSION=`cat $1`
+PRE_VERSION=`cat $VERSION_FILE`
 
 # coLinux standard version
 VERSION=`echo $PRE_VERSION | sed -e 's/\([^-]\+\).*/\1/'`

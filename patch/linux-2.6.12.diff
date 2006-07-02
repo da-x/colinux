@@ -22,7 +22,7 @@ diff -urN a/Makefile b/Makefile
  LD		= $(CROSS_COMPILE)ld
  CC		= $(CROSS_COMPILE)gcc
 +ifeq ($(GCCTRACE),Y)
-+CC              = $(CORSS_COMPILE)$(COLINUX_ROOT)/bin/tracewrapper.py gcc
++CC              = $(COLINUX_ROOT)/bin/tracewrapper.py $(CORSS_COMPILE)gcc
 +else
 +CC		= $(CROSS_COMPILE)gcc
 +endif
@@ -2204,7 +2204,7 @@ diff -urN a/drivers/char/Makefile b/drivers/char/Makefile
 diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 --- a/drivers/char/cocd.c
 +++ b/drivers/char/cocd.c
-@@ -0,0 +1,368 @@
+@@ -0,0 +1,389 @@
 +/*
 + *  Copyright (C) 2004 Dan Aloni <da-x@colinux.org>
 + *
@@ -2221,6 +2221,12 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 + * 20050101: Uses interruptible_sleep_on() and wake_up() instead of schedule().
 + *         : Uses list_*() for dispatched data flow to each unit.
 + *         : Handles multiple units in seperate tasks.
++ * 20050918: cocd_unit_task() waits for open complete. open_count was unsave.
++ * 20051023: Endless loop in cocd_unit_task has stopped other consoles.  From
++ *           schedule_work() should never endless loop. Use schedule_work()
++ *           instand of interruptible_sleep_on() and wake_up().
++ *           Remove serial console setup (currently not used).
++ *           Serial(-boot) console currently not enabled.
 + *
 +*/
 +
@@ -2254,88 +2260,89 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +	unsigned		open_count;	/* open()/close() tally */
 +	struct work_struct	work;		/* individual unit task */
 +	struct list_head	inq;		/* input queue */
-+	wait_queue_head_t	waitq;
 +	int			throttled;	/* data flow throttle bit */
++	int			throttle_index;	/* data flow throttle index */
 +};
 +
-+static struct tty_driver *cocd_driver = NULL;
++static struct tty_driver *cocd_driver;
 +DECLARE_MUTEX(cocd_sem);
 +
 +static void cocd_unit_task(void *data)
 +{
 +	co_message_node_t *input;
-+	struct cocd_tty *cocd = data;
++	struct cocd_tty *cocd;
 +	co_linux_message_t *message;
 +	char *p, *e, *m;
 +	struct tty_struct *tty;
++	int index;
++
++	cocd = data;
++	if (!cocd)
++		return;
 +
 +	tty = cocd->tty;
++	if (!tty)
++		return;
 +
-+	while(cocd->open_count) {
-+		down(&cocd->sem);
-+		if(list_empty(&cocd->inq)) {
-+			up(&cocd->sem);
-+			interruptible_sleep_on(&cocd->waitq);
-+			continue;
-+			}
++	down(&cocd->sem);
++	index = cocd->throttle_index;
++	while(cocd->open_count && !list_empty(&cocd->inq)) {
 +		input = list_entry(cocd->inq.prev, co_message_node_t, node);
-+		up(&cocd->sem);
-+
 +		message = (co_linux_message_t *)&input->msg.data;
++
 +		e = (m = p = message->data) + message->size;
++		p += index;
 +		while(p < e && cocd->open_count) {
 +			if(cocd->throttled) {
-+				interruptible_sleep_on(&cocd->waitq);
-+				continue;
-+				}
++				/* stop here, save position */
++				cocd->throttle_index = p - (char*)(message->data);
++				up(&cocd->sem);
++				return;
++			}
++			up(&cocd->sem);
 +			if(e < (m += (TTY_FLIPBUF_SIZE - tty->flip.count)))
 +				m = e;
-+			while(p < m) 
++			while(p < m)
 +				tty_insert_flip_char(tty, *(p++), 0);
 +			if(tty->flip.count >= TTY_FLIPBUF_SIZE) {
 +				tty_flip_buffer_push(tty);
 +			}
++			down(&cocd->sem);
 +		}
-+		down(&cocd->sem);
 +		list_del(&input->node);
-+		up(&cocd->sem);
 +		co_free_message(input);
-+		if(tty->flip.count && cocd->open_count) {
-+			if(cocd->throttled) {
-+				interruptible_sleep_on(&cocd->waitq);
-+				}
-+			tty_flip_buffer_push(tty);
-+			continue;
-+		}
++		cocd->throttle_index = index = 0;
 +	}
-+	down(&cocd->sem);
-+	while(!list_empty(&cocd->inq)) {
-+		input = list_entry(cocd->inq.prev, co_message_node_t, node);
-+		list_del(&input->node);
-+		co_free_message(input);
++
++	if (cocd->open_count == 0) {
++		/* last close, clear all */
++		tty->driver_data = NULL;
++		while(!list_empty(&cocd->inq)) {
++			input = list_entry(cocd->inq.prev, co_message_node_t, node);
++			list_del(&input->node);
++			co_free_message(input);
 +		}
++		up(&cocd->sem); /* but nobody should wait here! */
++
++		kfree(cocd);
++		return;
++	}
 +	up(&cocd->sem);
-+	kfree(cocd);
++
++	if(tty->flip.count)
++		tty_flip_buffer_push(tty);
 +}
 +
-+int cocd_open(struct tty_struct *tty, struct file * filp)
++static int cocd_open(struct tty_struct *tty, struct file * filp)
 +{
-+	struct cocd_tty *cocd =  NULL;
++	struct cocd_tty *cocd;
 +
 +	down(&cocd_sem);
 +
-+	/* MOD_INC_USE_COUNT; - Removed in 2.6, reference count is handled
-+	 *   outside the module in 2.6
-+	 */
-+
 +	if ((cocd = (struct cocd_tty *)tty->driver_data)) {
-+		down (&cocd->sem);
++		down(&cocd->sem);
 +	} else {
 +		if(!(cocd = kmalloc(sizeof(*cocd), GFP_KERNEL))) {
-+			/* MOD_DEC_USE_COUNT; - Removed in 2.6, reference count
-+			 *   is handled  outside the module in 2.6
-+			 */
-+
 +			up(&cocd_sem);
 +			return -ENOMEM;
 +		}
@@ -2344,88 +2351,82 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +		cocd->open_count = 0;
 +		cocd->tty = tty;
 +		cocd->throttled = 0;
++		cocd->throttle_index = 0;
 +		INIT_WORK(&cocd->work, cocd_unit_task, cocd);
 +		INIT_LIST_HEAD(&cocd->inq);
-+		init_waitqueue_head(&cocd->waitq);
 +		tty->driver_data = cocd;
 +		tty->low_latency = 1;
-+		schedule_work(&cocd->work);
 +	}
 +
 +	cocd->open_count++;
 +
 +	up(&cocd->sem);
 +	up(&cocd_sem);
-+	
++
 +	return 0;
 +}
 +
-+void cocd_close(struct tty_struct *tty, struct file * filp)
++static void cocd_close(struct tty_struct *tty, struct file * filp)
 +{
-+	struct cocd_tty *cocd =  NULL;
++	struct cocd_tty *cocd;
 +
 +	down(&cocd_sem);
 +
 +	cocd = (struct cocd_tty *)tty->driver_data;
 +	if (!cocd) {
-+		printk("cocd: no attached struct\n");
++		printk(KERN_ERR "cocd: close no attached struct\n");
 +		goto out;
 +	}
 +
 +	down(&cocd->sem);
-+	if (cocd->open_count == 1) { /* last close */
-+		tty->driver_data = NULL;
-+		wake_up(&cocd->waitq);
-+	}
-+	cocd->open_count--;
++	if (--cocd->open_count == 0)
++		schedule_work(&cocd->work);
 +	up(&cocd->sem);
 +
 +out:
-+	/* MOD_DEC_USE_COUNT; - Removed in 2.6, reference count is handled
-+	 *   outside the module in 2.6
-+	 */
 +
 +	up(&cocd_sem);
 +}
 +
 +void cocd_interrupt(void)
 +{
++	co_message_node_t *input;
++	co_linux_message_t *message;
++	struct tty_struct *tty;
++	struct cocd_tty *cocd;
++
 +	if (!cocd_driver)
 +		return;
 +
-+	co_message_node_t *input;
 +	if(!co_get_message(&input, CO_DEVICE_SERIAL))
 +		return;
 +	if(!input)
 +		return;
 +
-+	co_linux_message_t *message;
-+	struct tty_struct *tty;
-+	struct cocd_tty *cocd;
 +	message = (co_linux_message_t *)&input->msg.data;
 +	down(&cocd_sem);
 +	if (message->unit < CO_MODULE_MAX_SERIAL
 +	 && (tty = cocd_driver->ttys[message->unit])
 +	 && (cocd = (struct cocd_tty *)tty->driver_data)) {
 +		up(&cocd_sem);
++
 +		down(&cocd->sem);
 +		list_add_tail(&input->node,&cocd->inq);
++		if (!cocd->throttled)
++			schedule_work(&cocd->work);
 +		up(&cocd->sem);
-+		wake_up(&cocd->waitq);
++
 +		return;
-+		}
++	}
 +	up(&cocd_sem);
-+	co_free_message(input);
++	co_free_message(input); /* message lose */
 +}
 +
-+int cocd_write(struct tty_struct * tty,
++static int cocd_write(struct tty_struct * tty,
 +	       const unsigned char *buf, int count)
 +{
-+	const char *kbuf_scan = NULL;
-+	int count_left;
-+
-+	kbuf_scan = buf;
-+	count_left = count;
++	const char *kbuf_scan = buf;
++	int count_left = count;
 +
 +	while (count_left > 0) {
 +		int count_partial = count_left;
@@ -2446,61 +2447,59 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +	return count;
 +}
 +
-+int cocd_write_room(struct tty_struct *tty)
++static int cocd_write_room(struct tty_struct *tty)
 +{
-+	struct cocd_tty *cocd = NULL;
-+
-+	cocd = (struct cocd_tty *)tty->driver_data;
++	struct cocd_tty *cocd = (struct cocd_tty *)tty->driver_data;
 +	if (!cocd)
-+		return 0;
++		return -ENODEV;
 +
 +	down(&cocd->sem);
 +	if (cocd->open_count == 0) {
 +		/* port was not opened */
 +		up(&cocd->sem);
-+		return 0;
++		return -EINVAL;
 +	}
 +
 +	up(&cocd->sem);
 +	return 255;
 +}
 +
-+void cocd_hangup(struct tty_struct *tty)
++static void cocd_hangup(struct tty_struct *tty)
 +{
 +}
 +
-+void cocd_throttle(struct tty_struct * tty)
++static void cocd_throttle(struct tty_struct * tty)
 +{
-+	struct cocd_tty *cocd;
-+	cocd = (struct cocd_tty *)tty->driver_data;
++	struct cocd_tty *cocd = (struct cocd_tty *)tty->driver_data;
 +	if (!cocd)
 +		return;
++
 +	down(&cocd->sem);
 +	cocd->throttled = 1;
 +	up(&cocd->sem);
 +}
 +
-+void cocd_unthrottle(struct tty_struct * tty)
++static void cocd_unthrottle(struct tty_struct * tty)
 +{
-+	struct cocd_tty *cocd;
-+	cocd = (struct cocd_tty *)tty->driver_data;
++	struct cocd_tty *cocd = (struct cocd_tty *)tty->driver_data;
 +	if (!cocd)
 +		return;
++
 +	down(&cocd->sem);
 +	cocd->throttled = 0;
++	schedule_work(&cocd->work);
 +	up(&cocd->sem);
-+	wake_up(&cocd->waitq);
 +}
 +
-+void cocd_flush_buffer(struct tty_struct *tty)
++static void cocd_flush_buffer(struct tty_struct *tty)
 +{
 +}
 +
-+void cocd_set_termios(struct tty_struct *tty, struct termios *old_termios)
++static void cocd_set_termios(struct tty_struct *tty, struct termios *old_termios)
 +{
 +}
 +
-+int cocd_chars_in_buffer(struct tty_struct *tty)
++static int cocd_chars_in_buffer(struct tty_struct *tty)
 +{
 +	return 0;
 +}
@@ -2518,8 +2517,55 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +	.set_termios = cocd_set_termios,
 +};
 +
-+static struct tty_driver *cocd_driver;
++static int __init cocd_init(void)
++{
++	int retval;
 +
++    	cocd_driver = alloc_tty_driver(CO_MODULE_MAX_SERIAL);
++
++	if (!cocd_driver) {
++		printk(KERN_ERR "Couldn't allocate cocd driver");
++		return -ENOMEM;
++	}
++
++	cocd_driver->owner = THIS_MODULE;
++	cocd_driver->driver_name = "coserial";
++	cocd_driver->name = "ttyS";
++	cocd_driver->devfs_name = "tts/";
++	cocd_driver->major = TTY_MAJOR;
++	cocd_driver->minor_start = 64;
++	cocd_driver->type = TTY_DRIVER_TYPE_SERIAL;
++	cocd_driver->subtype = SERIAL_TYPE_NORMAL;
++	cocd_driver->init_termios = tty_std_termios;
++	cocd_driver->flags = 0;
++
++	tty_set_operations(cocd_driver, &cocd_ops);
++
++	retval = tty_register_driver(cocd_driver);
++	if (retval) {
++		printk(KERN_ERR "Couldn't register cocd driver");
++		put_tty_driver(cocd_driver);
++		return retval;
++	}
++	    
++	return 0;
++}
++
++static void __exit cocd_exit(void)
++{
++	tty_unregister_driver(cocd_driver);
++	put_tty_driver(cocd_driver);
++}
++
++module_init(cocd_init);
++module_exit(cocd_exit);
++
++/*
++ * ------------------------------------------------------------
++ * Serial console driver
++ * ------------------------------------------------------------
++ */
++#ifdef CONFIG_SERIAL_CONSOLE
 +static void cocd_console_write(struct console *c, const char *string,  unsigned len)
 +{
 +}
@@ -2530,49 +2576,24 @@ diff -urN a/drivers/char/cocd.c b/drivers/char/cocd.c
 +        return cocd_driver;
 +}
 +
-+static int cocd_console_setup(struct console *co, char *options)
-+{
-+        return(0);
-+}
-+
 +static struct console cocd_cons = {
 +        name:           "ttyS",
 +        write:          cocd_console_write,
 +        device:         cocd_console_device,
-+        setup:          cocd_console_setup,
 +        flags:          CON_PRINTBUFFER,
 +        index:          -1,
 +};
 +
-+static int __init cocd_init(void)
++/*
++ *	Register console.
++ */
++static int __init cocd_console_init(void)
 +{
-+	cocd_driver = alloc_tty_driver(CO_MODULE_MAX_SERIAL);
-+
-+	if (!cocd_driver)
-+		panic("Couldn't allocate cocd driver");
-+
-+	cocd_driver->owner = THIS_MODULE;
-+	cocd_driver->driver_name = "Cooperative serial lines";
-+	cocd_driver->name = "ttS";
-+	cocd_driver->devfs_name = "tts/";
-+	cocd_driver->major = TTY_MAJOR;
-+	cocd_driver->minor_start = 64;
-+	cocd_driver->type = TTY_DRIVER_TYPE_SERIAL;
-+	cocd_driver->subtype = 0;
-+	cocd_driver->init_termios = tty_std_termios;
-+	cocd_driver->flags = 0;
-+
-+	tty_set_operations(cocd_driver, &cocd_ops);
-+	
-+	if (tty_register_driver(cocd_driver))
-+		panic("Couldn't register cocd driver");
-+	
 +	register_console(&cocd_cons);
-+
 +	return 0;
 +}
-+
-+module_init(cocd_init);
++console_initcall(cocd_console_init);
++#endif
 diff -urN a/drivers/char/mem.c b/drivers/char/mem.c
 --- a/drivers/char/mem.c
 +++ b/drivers/char/mem.c

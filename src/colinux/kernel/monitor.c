@@ -969,8 +969,8 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 
 	if (cmon->memory_size < 8)
 		cmon->memory_size = 8;
-	else if (cmon->memory_size > 512)
-		cmon->memory_size = 512;
+	else if (cmon->memory_size > 1000)	/* 1000 = 1024 - 8*4 */
+		cmon->memory_size = 1000;	/* 24MB = 8 Pages a 4K reserved */
 
 	co_debug("after adjustments: %d MB\n", cmon->memory_size);
 

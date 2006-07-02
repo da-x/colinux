@@ -213,8 +213,7 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 	}
 
 	if (winnt_parameters.status_driver) {
-		co_winnt_status_driver(1); // arg 1 = View all driver details
-		return CO_RC(OK);
+		return co_winnt_status_driver(1); // arg 1 = View all driver details
 	}
 
 	if (winnt_parameters.install_driver) {
@@ -273,16 +272,26 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		   int iCmdShow) 
 {
 	co_rc_t rc;
+	int ret;
 
 	co_current_win32_instance = hInstance;
 	co_debug_start();
 
 	rc = co_winnt_main(szCmdLine);
 
+	// Translate retcode into errorlevel, for --status-driver
+	ret = CO_RC_GET_CODE(rc);
+	switch (ret) {
+	case CO_RC_OK:				//  0: ok, no error
+	case CO_RC_VERSION_MISMATCHED:		//  3: co_manager_status
+	case CO_RC_ERROR_ACCESSING_DRIVER:	// 14: driver not installed
+		break;
+	default:
+		ret = 1;
+	}
+
+	co_debug ("rc=%x exit=%d\n", rc, -ret);
 	co_debug_end();
 
-	if (!CO_OK(rc))
-		return -1;
-
-	return 0;
+	return -ret;
 }

@@ -7,9 +7,6 @@
 # Store version of installed libs here
 VERSION_CACHE="$PREFIX/$TARGET/include"
 
-# Current developing build system
-BUILD=i686-linux
-
 # Current developing build system should not same as target
 if [ "$BUILD" = "$TARGET" ]
 then
@@ -22,7 +19,6 @@ download_files()
 	mkdir -p "$SRCDIR"
 	
 	download_file "$FLTK_ARCHIVE" "$FLTK_URL"
-	download_file "$MXML_ARCHIVE" "$MXML_URL"
 	download_file "$W32API_SRC_ARCHIVE" "$MINGW_URL"
 	download_file "$WINPCAP_SRC_ARCHIVE" "$WINPCAP_URL"
 }
@@ -33,7 +29,6 @@ check_md5sums()
 	cd "$TOPDIR"
 
 	if [ -f $PREFIX/$TARGET/lib/libfltk.a -a \
-	     -f $PREFIX/$TARGET/lib/libmxml.a -a \
 	     -f $PREFIX/$TARGET/lib/libwin32k.a ]
 	then
 
@@ -41,11 +36,10 @@ check_md5sums()
 	    then
 		# Check versions
 		if [ "`cat $VERSION_CACHE/.fltk.version 2>/dev/null`" = "$FLTK_VERSION" -a \
-		     "`cat $VERSION_CACHE/.mxml.version 2>/dev/null`" = "$MXML_VERSION" -a \
 		     "`cat $VERSION_CACHE/.w32api.version 2>/dev/null`" = "$W32API_VERSION" -a \
 		     "`cat $VERSION_CACHE/.winpcap.version 2>/dev/null`" = "$WINPCAP_VERSION" ]
 		then
-		    echo "Skip w32api.h, libfltk.a, libmxml.a, libwin32k.a"
+		    echo "Skip w32api.h, libfltk.a, libwin32k.a"
 		    echo " - already installed on $PREFIX/$TARGET/lib"
 		    exit 0
 		else
@@ -65,7 +59,6 @@ create_md5sums()
 
 	# Save version number into files
 	echo "$FLTK_VERSION" >$VERSION_CACHE/.fltk.version
-	echo "$MXML_VERSION" >$VERSION_CACHE/.mxml.version
 	echo "$W32API_VERSION" >$VERSION_CACHE/.w32api.version
 	echo "$WINPCAP_VERSION" >$VERSION_CACHE/.winpcap.version
 
@@ -76,7 +69,6 @@ create_md5sums()
 	    $W32API_PATCH \
 	    $PREFIX/$TARGET/include/w32api.h \
 	    $VERSION_CACHE/.fltk.version \
-	    $VERSION_CACHE/.mxml.version \
 	    $VERSION_CACHE/.w32api.version \
 	    $VERSION_CACHE/.winpcap.version \
 	    > $W32LIBS_CHECKSUM
@@ -140,50 +132,6 @@ build_fltk()
 }
 
 #
-# MXML
-#
-
-extract_mxml()
-{
-	echo "Extracting MXML"
-	cd "$BUILD_DIR"
-	rm -rf "$MXML"
-	gzip -dc "$SRCDIR/$MXML_ARCHIVE" | tar x
-	test $? -ne 0 && error_exit 10 "MXML extract failed"
-}
-
-configure_mxml()
-{
-	echo "Configuring MXML"
-	cd "$BUILD_DIR/$MXML"
-	./configure \
-	 --build=$BUILD \
-	 --host=$TARGET \
-	 --prefix=$PREFIX/$TARGET \
-	 >>$COLINUX_BUILD_LOG 2>&1
-	test $? -ne 0 && error_exit 1 "MXML configure failed"
-
-	echo "Making MXML"
-	make libmxml.a >>$COLINUX_BUILD_LOG 2>&1
-	test $? -ne 0 && error_exit 1 "MXML make failed"
-}
-
-install_mxml()
-{
-	echo "Installing MXML"
-	cd "$BUILD_DIR/$MXML"
-	cp libmxml.a $PREFIX/$TARGET/lib
-	cp mxml.h $PREFIX/$TARGET/include
-}
-
-build_mxml()
-{
-	extract_mxml
-	configure_mxml
-	install_mxml
-}
-
-#
 # w32api_src source
 #
 
@@ -238,7 +186,9 @@ build_w32api_src()
 	install_w32api_src
 }
 
+#
 # WinPCAP
+#
 
 extract_winpcap_src()
 {
@@ -253,15 +203,15 @@ install_winpcap_src()
 {
 	echo "Installing $WINPCAP_SRC"
 	cd "$BUILD_DIR/$WINPCAP_SRC"
-	cp Include/pcap.h "$PREFIX/$TARGET/include/pcap.h"
-	cp Include/pcap-stdinc.h "$PREFIX/$TARGET/include"
-	cp Include/pcap-bpf.h "$PREFIX/$TARGET/include"
-	cp Include/bittypes.h "$PREFIX/$TARGET/include"
-	cp Include/ip6_misc.h "$PREFIX/$TARGET/include"
-	mkdir -p "$PREFIX/$TARGET/include/net"
-	cp Include/NET/*.h "$PREFIX/$TARGET/include/net/"
-	cp Lib/libwpcap.a "$PREFIX/$TARGET/lib"
-	test $? -ne 0 && error_exit 10 "winpcap install failed"
+	cp -p Include/pcap.h \
+	    Include/pcap-stdinc.h \
+	    Include/pcap-bpf.h \
+	    Include/bittypes.h \
+	    Include/ip6_misc.h \
+	    "$PREFIX/$TARGET/include"
+	test $? -ne 0 && error_exit 10 "winpcap install headers failed"
+	cp -p Lib/libwpcap.a "$PREFIX/$TARGET/lib"
+	test $? -ne 0 && error_exit 10 "winpcap install lib failed"
 }
 
 build_winpcap_src()
@@ -279,7 +229,7 @@ clean_up()
 	# Installation should have been successful, so clean-up
 	#  after ourselves an little bit.
 	cd $BUILD_DIR
-	rm -rf "$FLTK" "$MXML" "$W32API_SRC" "$WINPCAP_SRC"
+	rm -rf "$FLTK" "$W32API_SRC" "$WINPCAP_SRC"
 }
 
 build_colinux_libs()
@@ -291,8 +241,10 @@ build_colinux_libs()
 	# Only Download? Than ready.
 	test "$1" = "--download-only" && exit 0
 
+	echo "log: $COLINUX_BUILD_LOG"
+	mkdir -p `dirname $COLINUX_BUILD_LOG`
+
 	build_fltk
-	build_mxml
 	build_w32api_src
 	build_winpcap_src
 

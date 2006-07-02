@@ -241,7 +241,7 @@ co_rc_t console_window_t::start()
 
 	tile->resizable(widget);
 	tile->end();
-	
+
 	window->resizable(tile);
 	window->end();
 	window->show();
@@ -252,6 +252,37 @@ co_rc_t console_window_t::start()
 	menu_item_deactivate(console_terminate_cb);
 	menu_item_deactivate(console_detach_cb);
 	menu_item_deactivate(console_attach_cb);
+
+	// Default Font is "Terminal" with size 18
+	// Sample WinNT environment: set COLINUX_CONSOLE_FONT=Lucida Console:12
+	// Change only font size:    set COLINUX_CONSOLE_FONT=:12
+	char * env_font = getenv ("COLINUX_CONSOLE_FONT");
+	if (env_font) {
+		char *p = strchr (env_font, ':');
+
+		if (p) {
+			int size = atoi (p+1);
+			if (size >= 4 && size <= 24) {
+				// Set size
+				widget->set_font_size(size);
+			}
+			*p = 0; // End for Fontname
+		}
+		
+		// Set new font style
+		if (strlen (env_font)) {
+			// Remember: set_font need a non stack buffer!
+			// Environment is global static.
+			Fl::set_font(FL_SCREEN, env_font);
+
+			// Now check font width
+			fl_font(FL_SCREEN, 18); // Use default High for test here
+			if ((int)fl_width('i') != (int)fl_width('W')) {
+				Fl::set_font(FL_SCREEN, "Terminal"); // Restore standard font
+				log("%s: is not fixed font. Using 'Terminal'\n", env_font);
+			}
+		}
+	}
 
 	log("Cooperative Linux console started\n");
 	
@@ -467,7 +498,17 @@ void console_window_t::idle()
 	rc = co_reactor_select(reactor, 1);
 
 	if (!CO_OK(rc)) {
-		detach();
+		rc = detach();
+
+		// Option in environment: "COLINUX_CONSOLE_EXIT_ON_DETACH=1"
+		// Exit Console after detach
+		if (CO_OK(rc) && state != CO_CONSOLE_STATE_ATTACHED) {
+			char * str = getenv ("COLINUX_CONSOLE_EXIT_ON_DETACH");
+			if (str && atoi(str) != 0) {
+				log("Console exit after detach\n");
+				exit (0);
+			}
+		}
 	}
 }
 

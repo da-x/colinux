@@ -338,10 +338,10 @@ int pvsnfmt_char(char **pinsertion, long *nmax, const char fmt, int flags,
 }
 
 /* strnlen not available on all platforms.. maybe autoconf it? */
-long pstrnlen(const char *s, long count)
+static long pstrnlen(const char *s, long count)
 {
     const char *p = s;
-    while (*p && count-- > 0)
+    while (count-- > 0 && *p)
         p++;
 
     return p - s;

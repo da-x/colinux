@@ -21,9 +21,12 @@ COLINUX_DEFINE_MODULE("colinux-debug-daemon");
 
 int main(int argc, char *argv[]) 
 {
-	int ret;
+	co_rc_t rc;
 
-	ret = co_debug_main(argc, argv);
+	rc = co_debug_main(argc, argv);
 
-	return ret;
+	if (!CO_OK(rc))
+		return -1;
+
+	return 0;
 }

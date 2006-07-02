@@ -10,6 +10,8 @@
 #include "common.h"
 #include "debug.h"
 
+static int file_id_max;
+
 #define X(name) "CO_RC_ERROR_"#name,
 static const char *co_errors_strings[] = {
 	"<no error>",
@@ -19,27 +21,37 @@ static const char *co_errors_strings[] = {
 
 void co_rc_format_error(co_rc_t rc, char *buf, int size)
 {
-	int code;
-
 	if (CO_OK(rc)) {
 		co_snprintf(buf, size, "success - line %d, file id %d",
 			 CO_RC_GET_LINE(rc),
 			 CO_RC_GET_FILE_ID(rc));
 	} else {
+		unsigned int code;
+		unsigned int file_id;
 		const char *code_string;
-		int file_id;
+		const char *file_string;
 
 		code = -CO_RC_GET_CODE(rc);
 		if (code < (sizeof(co_errors_strings)/sizeof(co_errors_strings[0]))) {
 			code_string = co_errors_strings[code];
 		} else {
-			code_string = "<no error>";
+			code_string = "<unknown error>";
 		}
 
+		if (file_id_max == 0) {
+			while (colinux_obj_filenames[file_id_max])
+				file_id_max++;
+		}
+ 
 		file_id = CO_RC_GET_FILE_ID(rc);
-		
+		if (file_id < file_id_max) {
+			file_string = colinux_obj_filenames[file_id];
+		} else {
+			file_string = "<unknown file>";
+		}
+ 
 		co_snprintf(buf, size, "error - %s, line %d, file %s (%d)",
-			    code_string, CO_RC_GET_LINE(rc), colinux_obj_filenames[file_id], file_id);
+			    code_string, CO_RC_GET_LINE(rc), file_string, file_id);
 	}
 }
 

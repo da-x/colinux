@@ -1,6 +1,6 @@
 # Makefile for coLinux
 
-# User config, if exist. Fallback to sample, if not.
+# User config, if exist. Empty, if not.
 USER_CFG := $(shell test -f bin/user-build.cfg \
     && echo "bin/user-build.cfg" )
 
@@ -23,15 +23,16 @@ conf_missing:
 
 endif
 
+.PHONY: colinux clean distclean help
+
 # Include host OS specific makefile
 ifneq ($(HOSTOS),)
 include Makefile.$(HOSTOS)
-endif
 
-.PHONY: colinux clean distclean help
 # Compile daemons
 colinux:
 	@cd src && make colinux
+endif
 
 clean:
 	@cd src && make clean
@@ -39,8 +40,16 @@ clean:
 distclean: clean
 ifneq ($(USER_CFG),)
 	rm -f bin/user-build.cfg bin/user-build.cfg.old \
-	 $(shell . $(USER_CFG); echo $$BUILD_DIR)/.build-*.md5
+	$(shell . $(USER_CFG); echo $$BUILD_DIR)/.build-*.md5
 endif
+	find . \( -name '.tmp_versions' -o -name 'premaid' \
+		\) -type d -print | xargs rm -rf
+	find . \( -name '*.o' -o -name '*.pyc' \
+		-o -name '*.orig' -o -name '*.rej' \
+		-o -name '.*.orig' -o -name '.*.rej' \
+		-o -name '*%' -o -name '.*.cmd' \
+		-o -name 'colinux.mod.c' \
+		\) -type f -print | xargs rm -f
 
 help:
 	@echo  ''

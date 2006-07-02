@@ -28,7 +28,7 @@ def generate_options(compiler_def_type, libs=None, lflags=None):
 	linker_flags = lflags,
         compiler_libs = libs + [
             'user32', 'gdi32', 'ws2_32', 'ntdll', 'kernel32', 'ole32', 'uuid', 'gdi32',
-            'msvcrt', 'crtdll', 'shlwapi', 
+            'msvcrt', 'crtdll', 'shlwapi',
         ]),
     )
 
@@ -48,7 +48,7 @@ targets['colinux-net-daemon.exe'] = Target(
        Input('../user/conet-daemon/build.o'),
        Input('../../../user/daemon-base/build.o'),
     ] + user_dep,
-    tool = Compiler(),    
+    tool = Compiler(),
     mono_options = generate_options('g++'),
 )
 
@@ -57,7 +57,7 @@ targets['colinux-bridged-net-daemon.exe'] = Target(
        Input('../user/conet-bridged-daemon/build.o'),
        Input('../../../user/daemon-base/build.o'),
     ] + user_dep,
-    tool = Compiler(),    
+    tool = Compiler(),
     mono_options = generate_options('g++', libs=['wpcap']),
 )
 
@@ -66,17 +66,16 @@ targets['colinux-slirp-net-daemon.exe'] = Target(
        Input('../user/conet-slirp-daemon/build.o'),
        Input('../../../user/slirp/build.o'),
     ] + user_dep,
-    tool = Compiler(),    
+    tool = Compiler(),
     mono_options = generate_options('gcc', libs=['iphlpapi']),
 )
 
 targets['colinux-serial-daemon.exe'] = Target(
     inputs = user_res + [
        Input('../user/coserial-daemon/build.o'),
-       Input('../../../user/daemon-base/build.o'),
     ] + user_dep,
-    tool = Compiler(),    
-    mono_options = generate_options('g++'),
+    tool = Compiler(),
+    mono_options = generate_options('gcc'),
 )
 
 targets['colinux-console-fltk.exe'] = Target(
@@ -84,7 +83,7 @@ targets['colinux-console-fltk.exe'] = Target(
        Input('../user/console/build.o'),
        Input('../../../user/console/build.o'),
     ] + user_dep,
-    tool = Compiler(),    
+    tool = Compiler(),
     mono_options = generate_options('g++', libs=['fltk'], lflags=['-mwindows']),
 )
 
@@ -93,7 +92,7 @@ targets['colinux-console-nt.exe'] = Target(
        Input('../user/console-nt/build.o'),
        Input('../../../user/console-base/build.o'),
     ] + user_dep,
-    tool = Compiler(),    
+    tool = Compiler(),
     mono_options = generate_options('g++'),
 )
 
@@ -102,8 +101,8 @@ targets['colinux-debug-daemon.exe'] = Target(
        Input('../user/debug/build.o'),
        Input('../../../user/debug/build.o'),
     ] + user_dep,
-    tool = Compiler(),    
-    mono_options = generate_options('g++'),
+    tool = Compiler(),
+    mono_options = generate_options('gcc'),
 )
 
 targets['driver.o'] = Target(

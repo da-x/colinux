@@ -26,9 +26,11 @@ targetmoduledir=NONE
 hostkerneldir=NONE
 colinux_os=NONE
 configfile="bin/user-build.cfg"
-no_create=
+no_create=""
 verbose=no
-kernel_untar="yes"
+kernel_untar=yes
+gcc_guest_target=i686-co-linux
+gcc_guest_build=no
 
 # Try the directory containing this script, then its working dir.
 prog=$0
@@ -64,7 +66,7 @@ do
     # This message is too long to be a string in the A/UX 3.1 sh.
     cat << EOF
 
-Usage: configure [options] [host]
+Usage: configure [options]
 Options: [defaults in brackets after descriptions]
 Configuration:
   --help                  print this message
@@ -101,6 +103,9 @@ Options:
   --no-kernel-untar       Do not delete and untar kernel tree, if exist.
   --no-create             Test only this configure, no files create
   --verbose               More messages in configure.
+  --gcc-guest-build       Build C compiler from source of gnu cross compiler,
+                          and use for kernel compiling, if gcc version (major +
+                          minor) is different from your distribution compiler.
 -------------------------------------------------------------------------------
 Sample for WinNT as host (default):
   ./configure --target=i686-pc-mingw32 \\
@@ -121,12 +126,6 @@ Sample for WinNT and Linux as host in same config:
 	--hostkerneldir=/usr/src/`uname -r`
 
 EOF
-
-# TODO:
-#  --gcc-build-local=DIR   Build gnu C compiler from same source as gnu cross
-#                          compiler. This compiler is used for kernel.
-#			  Need only, if local compiler is not version 3.3.x
-#			  [\$TOPDIR/i686-pc-linux-local]
 
     exit 0 ;;
 
@@ -202,6 +201,9 @@ EOF
   -no-kernel-untar | --no-kernel-untar | --no-kernel | \
   -disable-kernel-untar | --disable-kernel-untar)
     kernel_untar=no ;;
+
+  --gcc-guest*)
+    gcc_guest_build=yes ;;
 
   -v | -verbose | --verbose)
     verbose=yes ;;
@@ -452,15 +454,14 @@ check_exec_tool()
 
 gcc_helper()
 {
-# TODO:
-#	To build local gcc for colinux kernel from cross sources now,
-#	run configure with "--gcc-build-local=/home/$USER/i686-pc-linux-local"
-
 	cat << EOF
 
-	Cross gcc and local gcc should be the same version.
-	Please download source for gcc $GCC_NEEDED,
-	configure and build for local system!
+	Cross gcc and local gcc should be the same major and minor version.
+
+	Please use option  "--gcc-guest-build"  to enable building of guest gcc
+	from sources, if building cross tools later. (Need for kernel building)
+
+	Or download source for gcc $GCC_NEEDED, configure and build self:
 	
 	# cd $srcdir/bin
 	# ./build-cross.sh --download-only
@@ -468,15 +469,14 @@ gcc_helper()
 	# tar xfz $downloaddir/gcc-core-$GCC_RELEASE-src.tar.gz
 	# tar xfz $downloaddir/gcc-g++-$GCC_RELEASE-src.tar.gz
 	# cd gcc-$GCC_RELEASE
-	# ./configure --prefix=\$HOME/i686-pc-linux-local
-	# make
-	# make install
+	# ./configure --prefix=\$HOME/$gcc_guest_target
+	# make && make install
 	# cd / ; rm -rf /tmp/gcc-$GCC_RELEASE
 
 	Than run counfigure and make for colinux again
-	with binary path to this directory.
+	with binary path to this directory:
 
-	# export PATH="\$HOME/i686-pc-linux-local/bin:\$PATH"
+	# export PATH="\$HOME/$gcc_guest_target/bin:\$PATH"
 	# cd $srcdir
 	# ./configure && make
 
@@ -524,20 +524,48 @@ missing=no
 # Get version from script, replace the last digit
 GCC_NEEDED=`echo "$GCC_VERSION" | sed -e 's/\([0-9]\+\)\.\([0-9]\+\).*$/\1.\2/'`.x
 
+# Build specific path
+if [ "$gcc_guest_build" = "no" ]; then
+  gcc_guest_build_comment="# "
+  gcc_guest_target_prefix=""
+else
+  gcc_guest_build_comment=""
+  gcc_guest_target_prefix=${gcc_guest_target}-
+  PATH=$PATH:$prefix/$gcc_guest_target/bin
+fi
+
 # General tools for winnt and linux
 check_exec_tool "wget" "wget --version" ""
 check_exec_tool "Python interpreter 2.3" "python2.3 -V" "2.3.x"
 check_exec_tool "patch" "patch --version" ""
 check_exec_tool "make" "make --version" ""
-check_exec_tool "gcc host" "gcc -dumpversion" "$GCC_NEEDED" || gcc_helper
 
 case $colinux_os in
   linux) # for Linux as host
-    check_exec_tool "gcc g++" "g++ --version" "$GCC_NEEDED"
-    check_exec_tool "FLTK devel (patched)" "fltk-config --version" "$FLTK_VERSION"
-    check_exec_tool "mxml devel" "mxmldoc --version" ""
+    check_exec_tool "gcc for kernel" "${gcc_guest_target_prefix}gcc -dumpversion" "$GCC_NEEDED"
+    check_exec_tool "gcc g++" "${gcc_guest_target_prefix}g++ --version" "$GCC_NEEDED"
+    check_exec_tool "FLTK devel (patched)" "fltk-config --version" "$FLTK_VERSION" && \
+    if nm `fltk-config --libs` | grep -q "fl_x_global_event_hook"
+    then
+	if [ "$verbose" = "yes" ]; then
+	    echo "  `fltk-config --libs`: Label fl_x_global_event_hook found"
+	fi
+    else
+	echo "  `fltk-config --libs`: label fl_x_global_event_hook not found"
+	echo "  Please set right path to a patched FLTK"
+    fi
   ;;
   *) # for Winnt as host
+    # Check GCC for kernel
+    missing_last=$missing
+    check_exec_tool "gcc for kernel" "${gcc_guest_target_prefix}gcc -dumpversion" "$GCC_NEEDED" || \
+    if [ "$gcc_guest_build" = "no" ]; then
+        gcc_helper
+    else
+        echo "  Can't use local gcc for kernel, build guest '${gcc_guest_target_prefix}gcc' later"
+        missing=$missing_last
+    fi
+
     # Locate users depmod and check for module-init-tools
     check_depmod
     check_exec_tool "unzip" "unzip -h" ""
@@ -625,10 +653,25 @@ COLINUX_BUILD_LOG="$logfile"
 # no:  Build script leave kernel source untouched. User can make patches and config
 COLINUX_KERNEL_UNTAR="$kernel_untar"
 
+# Strip the kernel image
+# yes: Smalest size for package dist.
+# no:  Leave all debug symbols in image. Good choice for error tracing with gdb.
+#
+COLINUX_KERNEL_STRIP="no"
+
 # Path to depmod, installed from module-init-tools
 # default: /sbin/depmod
 COLINUX_DEPMOD=$depmod_cfg
 
+# "COLINUX_GCC_GUEST_TARGET" is running colinux guest system.
+# This compiler will use for buiding colinux kernel.
+# Enable GUEST specific compiler, if your compiler from distribution
+# is not compatible with current cross gcc.
+# default: empty
+# optional: $gcc_guest_target
+#
+${gcc_guest_build_comment}COLINUX_GCC_GUEST_TARGET="$gcc_guest_target"
+${gcc_guest_build_comment}COLINUX_GCC_GUEST_PATH="\$PREFIX/\$COLINUX_GCC_GUEST_TARGET/bin"
 EOF
 
     cat << EOF

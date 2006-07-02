@@ -12,6 +12,16 @@
 
 . build-common.sh
 
+# Use different gcc for kernel, if defined
+if [ -n "$COLINUX_GCC_GUEST_TARGET" ]
+then
+	# Default path, if empty
+	test -z "$COLINUX_CGG_GUEST_PATH" && \
+		COLINUX_GCC_GUEST_PATH="$PREFIX/$COLINUX_GCC_GUEST_TARGET/bin"
+	export PATH=$COLINUX_GCC_GUEST_PATH:$PATH
+	export CROSS_COMPILE=${COLINUX_GCC_GUEST_TARGET}-
+fi
+
 download_files()
 {
 	mkdir -p "$SRCDIR"
@@ -24,6 +34,13 @@ check_md5sums()
 {
 	echo -n "Check kernel and modules: "
 	cd "$TOPDIR"
+
+	if [ ! -f $COLINUX_TARGET_KERNEL_PATH/vmlinux ]
+	then
+		echo "vmlinux don't exist, build it now"
+		return
+	fi
+
 	if md5sum -c $KERNEL_CHECKSUM >/dev/null 2>&1
 	then
 		echo "Skip $COMPLETE_KERNEL_NAME"
@@ -98,6 +115,13 @@ patch_kernel()
 
 	# Copy coLinux Version into kernel localversion
 	echo "-co-$CO_VERSION" > localversion-cooperative
+
+	# Hack for sample config. Directory name with unknown kernel version.
+	if [ ! -d $COLINUX_TARGET_KERNEL_PATH ]; then
+		echo "COLINUX_TARGET_KERNEL_PATH=$COLINUX_TARGET_KERNEL_PATH"
+		echo "BUILD_DIR/KERNEL=$BUILD_DIR/$KERNEL"
+		ln -s $BUILD_DIR/$KERNEL $COLINUX_TARGET_KERNEL_PATH
+	fi
 }
 
 configure_kernel()
@@ -166,6 +190,9 @@ build_kernel()
 	  patch_kernel
 	  configure_kernel
 	fi
+
+	echo "log: $COLINUX_BUILD_LOG"
+	mkdir -p `dirname $COLINUX_BUILD_LOG`
 
 	# Build Kernel vmlinux
 	compile_kernel

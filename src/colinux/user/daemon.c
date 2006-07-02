@@ -197,6 +197,8 @@ void co_daemon_destroy(co_daemon_t *daemon)
 	co_os_free(daemon);
 }
 
+/* Remember: Strip tool scans only this file for needed symbols */
+static
 co_rc_t co_daemon_load_symbol_and_data(co_daemon_t *daemon, 
 				       const char *symbol_name, 
 				       unsigned long *address_out,
@@ -227,6 +229,8 @@ co_rc_t co_daemon_load_symbol_and_data(co_daemon_t *daemon,
 	return rc;
 }
 
+/* Remember: Strip tool scans only this file for needed symbols */
+static
 co_rc_t co_daemon_load_symbol(co_daemon_t *daemon, 
 			      const char *symbol_name, 
 			      unsigned long *address_out)
@@ -609,6 +613,37 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 	return rc;
 }
 
+static co_rc_t co_daemon_launch_serial_daemons(co_daemon_t *daemon)
+{
+	int i;
+	co_rc_t rc = CO_RC(OK);
+	co_serialdev_desc_t *serial;
+
+	for (i = 0, serial = daemon->config.serial_devs; i < CO_MODULE_MAX_SERIAL; i++, serial++) {
+		char mode_param[CO_SERIAL_MODE_STR_SIZE + 10] = {0, };
+
+		if (serial->enabled == PFALSE)
+			continue;
+
+		co_debug("launching daemon for ttyS%d\n", i);
+
+		if (serial->mode)
+			co_snprintf(mode_param, sizeof(mode_param), " -m \"%s\"", serial->mode);
+
+		rc = co_launch_process("colinux-serial-daemon -i %d -u %d -f %s%s",
+			    daemon->id, i,
+			    serial->desc,	/* -f COM1 */
+			    mode_param);	/* -m 9600,n,8,2 */
+
+		if (!CO_OK(rc)) {
+			co_terminal_print("WARNING: error launching serial daemon!\n");
+			rc = CO_RC(OK);
+		}
+	}
+
+	return rc;
+}
+
 static co_rc_t co_daemon_restart(co_daemon_t *daemon)
 {
 	co_rc_t rc = co_user_monitor_reset(daemon->monitor);
@@ -670,6 +705,10 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 		goto out;
 	}
 
+	rc = co_daemon_launch_serial_daemons(daemon);
+	if (!CO_OK(rc))
+		goto out;
+
 	co_terminal_print("colinux: booting\n");
 
 	daemon->next_reboot_will_shutdown = PFALSE;
@@ -684,10 +723,9 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 		while (daemon->running) {
 			co_monitor_ioctl_run_t params;
 			rc = co_user_monitor_run(daemon->monitor, &params);
-			co_reactor_select(reactor, 0);
-
 			if (!CO_OK(rc))
 				break;
+			co_reactor_select(reactor, 0);
 		}
 
 		if (CO_RC_GET_CODE(rc) == CO_RC_INSTANCE_TERMINATED) {

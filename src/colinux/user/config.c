@@ -150,7 +150,7 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 				cobd->alias_used = PTRUE;
 				co_snprintf(cobd->alias, sizeof(cobd->alias), "%s%s", prefix, suffix);
 
-				co_terminal_print("mapping %s%s to param\n", prefix, suffix, &param[1]);
+				co_terminal_print("mapping %s%s to %s\n", prefix, suffix, &param[1]);
 				
 			} else {
 				rc = allocate_by_alias(conf, prefix, suffix, param);
@@ -190,14 +190,28 @@ static bool_t strmatch_identifier(const char *str, const char *identifier, const
 static void split_comma_separated(const char *source, comma_buffer_t *array)
 {
 	int j;
+	bool_t quotation_marks;
 	
 	for ( ; array->size > 0 && array->buffer != NULL ; array++) {
 		array->buffer[0] = '\0';
 		j = 0;
-		while (*source != ',') {
+
+		// quotation marks detection in config file, sample:
+		// eth0=tuntap,"LAN-Connection 14",00:11:22:33:44:55
+		// String store without quotation marks.
+		if (( quotation_marks = (*source == '"') ))
+			source++;
+
+		while (j < array->size - 1) {
 			if (*source == '\0')
 				return;
-			if (j == array->size - 1)
+			if (quotation_marks) {
+				if (*source ==  '"' ) {
+					quotation_marks = PFALSE;
+					source++;
+					continue;
+				}
+			} else if (*source == ',')
 				break;
 
 			array->buffer[j++] = *source++;
@@ -209,12 +223,13 @@ static void split_comma_separated(const char *source, comma_buffer_t *array)
 
 static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, const char *param)
 {
-	char host_ip[40] = {0, };
+	co_netdev_desc_t *net_dev = &conf->net_devs[index];
 	char mac_address[40] = {0, };
+	char host_ip[40] = {0, };
 	co_rc_t rc;
 
 	comma_buffer_t array [] = {
-		{ sizeof(conf->net_devs[index].desc), conf->net_devs[index].desc },
+		{ sizeof(net_dev->desc), net_dev->desc },
 		{ sizeof(mac_address), mac_address },
 		{ sizeof(host_ip), host_ip },
 		{ 0, NULL }
@@ -222,26 +237,27 @@ static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, co
 
 	split_comma_separated(param, array);
 
-	conf->net_devs[index].type = CO_NETDEV_TYPE_TAP;
-	conf->net_devs[index].enabled = PTRUE;
+	net_dev->type = CO_NETDEV_TYPE_TAP;
+	net_dev->enabled = PTRUE;
 
-	if (strlen(mac_address) > 0) {
-		rc = co_parse_mac_address(mac_address, conf->net_devs[index].mac_address);
+	if (*mac_address) {
+		rc = co_parse_mac_address(mac_address, net_dev->mac_address);
 		if (!CO_OK(rc)) {
 			co_terminal_print("error parsing MAC address: %s\n", mac_address);
 			return rc;
 		}
-		conf->net_devs[index].manual_mac_address = PTRUE;
+		net_dev->manual_mac_address = PTRUE;
 	}
 
-	co_terminal_print("configured TAP device as eth%d\n", index);
+	co_terminal_print("configured TAP at '%s' device as eth%d\n",
+				net_dev->desc, index);
 
-	if (strlen(mac_address) > 0)
+	if (*mac_address)
 		co_terminal_print("MAC address: %s\n", mac_address);
 	else
 		co_terminal_print("MAC address: auto generated\n");
 
-	if (strlen(host_ip) > 0)
+	if (*host_ip)
 		co_terminal_print("Host IP address: %s (currently ignored)\n", host_ip);
 
 	return CO_RC(OK);
@@ -249,38 +265,39 @@ static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, co
 
 static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, const char *param)
 {
+	co_netdev_desc_t *net_dev = &conf->net_devs[index];
 	char mac_address[40] = {0, };
 	co_rc_t rc;
 
 	comma_buffer_t array [] = {
-		{ sizeof(conf->net_devs[index].desc), conf->net_devs[index].desc },
+		{ sizeof(net_dev->desc), net_dev->desc },
 		{ sizeof(mac_address), mac_address },
 		{ 0, NULL }
 	};
 
 	split_comma_separated(param, array);
 
-	conf->net_devs[index].type = CO_NETDEV_TYPE_BRIDGED_PCAP;
-	conf->net_devs[index].enabled = PTRUE;
+	net_dev->type = CO_NETDEV_TYPE_BRIDGED_PCAP;
+	net_dev->enabled = PTRUE;
 
-	if (strlen(mac_address) > 0) {
-		rc = co_parse_mac_address(mac_address, conf->net_devs[index].mac_address);
+	if (*mac_address) {
+		rc = co_parse_mac_address(mac_address, net_dev->mac_address);
 		if (!CO_OK(rc)) {
 			co_terminal_print("error parsing MAC address: %s\n", mac_address);
 			return rc;
 		}
-		conf->net_devs[index].manual_mac_address = PTRUE;
+		net_dev->manual_mac_address = PTRUE;
 	}
 
-	if (strlen(conf->net_devs[index].desc) == 0) {
+	if (!*net_dev->desc) {
 		co_terminal_print("error, the name of the network interface to attach was not specified\n");
-		return CO_RC(ERROR);
+		return CO_RC(INVALID_PARAMETER);
 	}
 
 	co_terminal_print("configured PCAP bridge at '%s' device as eth%d\n", 
-			  conf->net_devs[index].desc, index);
+			net_dev->desc, index);
 
-	if (strlen(mac_address) > 0)
+	if (*mac_address)
 		co_terminal_print("MAC address: %s\n", mac_address);
 	else
 		co_terminal_print("MAC address: auto generated\n");
@@ -290,24 +307,25 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 
 static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, const char *param)
 {
-	char mac_address[40] = {0, };
+	co_netdev_desc_t *net_dev = &conf->net_devs[index];
+	char mac_address[40] = {0, }; /* currently ignored */
 
 	comma_buffer_t array [] = {
 		{ sizeof(mac_address), mac_address },
-		{ sizeof(conf->net_devs[index].redir), conf->net_devs[index].redir },
+		{ sizeof(net_dev->redir), net_dev->redir },
 		{ 0, NULL }
 	};
 
-	*(conf->net_devs[index].redir)='\0';
+	*net_dev->redir = 0;
 	split_comma_separated(param, array);
 
-	conf->net_devs[index].type = CO_NETDEV_TYPE_SLIRP;
-	conf->net_devs[index].enabled = PTRUE;
+	net_dev->type = CO_NETDEV_TYPE_SLIRP;
+	net_dev->enabled = PTRUE;
 
 	co_terminal_print("configured Slirp as eth%d\n", index);
 
-	if (*(conf->net_devs[index].redir))
-		co_terminal_print("redirections %s\n", conf->net_devs[index].redir);
+	if (*net_dev->redir)
+		co_terminal_print("redirections %s\n", net_dev->redir);
 
 	return CO_RC(OK);
 }
@@ -398,6 +416,76 @@ static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_confi
 	return CO_RC(OK);
 }
 
+static co_rc_t parse_args_serial_device(co_config_t *conf, int index, const char *param)
+{
+	co_serialdev_desc_t *serial;
+	char name [CO_SERIAL_DESC_STR_SIZE];
+	char mode [CO_SERIAL_MODE_STR_SIZE];
+
+	comma_buffer_t array [] = {
+		{ sizeof(name), name },
+		{ sizeof(mode), mode },
+		{ 0, NULL }
+	};
+
+	serial = &conf->serial_devs[index];
+	serial->enabled = PTRUE;
+
+	name[0] = mode[0] = 0;
+	split_comma_separated(param, array);
+
+	if (!*name) {
+		co_terminal_print("missing host serial device name for ttys%d\n", index);
+		return CO_RC(INVALID_PARAMETER);
+	}
+
+	co_terminal_print("mapping ttyS%d to %s\n", index, name);
+	serial->desc = strdup(name);
+	
+	if (*mode) {
+		co_debug("mode: %s", mode);
+		serial->mode = strdup(mode);
+	}
+
+	return CO_RC(OK);
+}
+
+static co_rc_t parse_args_config_serial(co_command_line_params_t cmdline, co_config_t *conf)
+{
+	bool_t exists;
+	char param[0x100];
+	co_rc_t rc;
+
+	do {
+		int index;
+		exists = PFALSE;
+
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "ttys", 
+				    &index, param, sizeof(param), &exists);
+		if (!exists) {
+			// No ttys, perhaps ttyS?
+			rc = co_cmdline_get_next_equality_int_prefix(cmdline, "ttyS", 
+					&index, param, sizeof(param), &exists);
+		}
+		
+		if (!CO_OK(rc)) 
+			return rc;
+		
+		if (exists) {
+			if (index < 0  || index >= CO_MODULE_MAX_SERIAL) {
+				co_terminal_print("invalid ttys index: %d\n", index);
+				return CO_RC(INVALID_PARAMETER);
+			}
+
+			rc = parse_args_serial_device(conf, index, param);
+			if (!CO_OK(rc)) 
+				return rc;
+		}
+	} while (exists);
+
+	return CO_RC(OK);
+}
+
 static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *conf)
 {
 	co_rc_t rc;
@@ -434,6 +522,10 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 		return rc;
 
 	rc = parse_args_config_cofs(cmdline, conf);
+	if (!CO_OK(rc))
+		return rc;
+
+	rc = parse_args_config_serial(cmdline, conf);
 	if (!CO_OK(rc))
 		return rc;
 

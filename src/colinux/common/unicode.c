@@ -107,7 +107,7 @@ int co_utf8_mbstrlen(const char *src)
 
 	ip = (const unsigned char *)src;
 
-	while (*ip  &&  maxlen > 0) {
+	while (maxlen > 0  &&  *ip) {
 		length++;
 		
 		if (*ip & 0x80) {
@@ -150,7 +150,7 @@ co_rc_t co_utf8_mbstowcs(co_wchar_t *dest, const char *src, int maxlen)
 	op = dest;
 	ip = (const unsigned char *)src;
 
-	while (*ip  &&  maxlen > 0) {
+	while (maxlen > 0  &&  *ip) {
 		if (*ip & 0x80) {
 			size = utf8_mbtowc(op, ip, maxlen);
 			if (size == -1) {
@@ -190,7 +190,7 @@ co_rc_t co_utf8_wcstombs(char *dest, const co_wchar_t *src, int maxlen)
 	ip = src;
 	maxlen -= 1;
 
-	while (*ip  &&  maxlen > 0) {
+	while (maxlen > 0  &&  *ip) {
 		if (*ip > 0x7f) {
 			size = utf8_wctomb(op, *ip, maxlen);
 			if (size == -1) {
@@ -227,7 +227,7 @@ int co_utf8_wctowbstrlen(const co_wchar_t *src, int maxlen)
 
 	ip = src;
 
-	while (*ip  &&  maxlen > 0) {
+	while (maxlen > 0  &&  *ip) {
 		if (*ip > 0x7f) {
 			size = utf8_wctomb(op, *ip, sizeof(op));
 			if (size == -1) {

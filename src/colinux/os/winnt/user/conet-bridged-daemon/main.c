@@ -128,7 +128,7 @@ pcap2Daemon(LPVOID lpParam)
 		/* Attempt to receive packet from WPcap. */
 		pcap_status = pcap_next_ex(pcap_packet.adhandle,
 					   &pcap_packet.pkt_header,
-					   &pcap_packet.buffer);
+					   (const u_char **)&pcap_packet.buffer);
 		switch (pcap_status) {
 		case 1:	/* Packet read */
 			rc = co_win32_pcap_read_received(&pcap_packet);
@@ -529,8 +529,7 @@ conet_bridged_main(int argc, char *argv[])
 	}
 
 	while (1) {
-		co_rc_t rc;
-		rc = co_reactor_select(g_reactor, 10);
+		rc = co_reactor_select(g_reactor, -1);
 		if (!CO_OK(rc))
 			break;
 	}

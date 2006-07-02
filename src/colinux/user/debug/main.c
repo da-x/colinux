@@ -43,12 +43,22 @@ static FILE *output_file;
 
 static void sig_handle(int signo);	/* Forward declaration */
 
+static co_manager_handle_t debug_co_os_manager_open (void)
+{
+	co_manager_handle_t handle = co_os_manager_open();
+	
+	if (!handle)
+		perror("Manager open");
+
+	return (handle);
+}
+
 static void co_debug_download(void)
 {
 	co_manager_handle_t handle;
 	co_rc_t rc;
 
-	handle = co_os_manager_open();
+	handle = debug_co_os_manager_open();
 	if (handle) {
 		char *buffer = (char *)co_os_malloc(BUFFER_SIZE);
 		if (buffer) {
@@ -67,9 +77,9 @@ static void co_debug_download(void)
 			}
 		}
 		co_os_free(buffer);
+		co_os_manager_close(handle);
 	}
 
-	co_os_manager_close(handle);
 }
 
 static void co_debug_download_to_network(void)
@@ -85,7 +95,7 @@ static void co_debug_download_to_network(void)
 	if (sock == -1)
 		return;
 
-	handle = co_os_manager_open();
+	handle = debug_co_os_manager_open();
 	if (!handle) {
 		co_udp_socket_close(sock);
 		return;
@@ -249,7 +259,7 @@ static void sig_handle(int signo)
 	exit (signo);
 }
 
-static int read_helper (int fd, void * bf, int len)
+static int read_helper (int fd, char * bf, int len)
 {
 	int total_rd = 0;
 	int rd;
@@ -258,7 +268,7 @@ static int read_helper (int fd, void * bf, int len)
 	/* An incomplete read is not the end of debug log */
 	while ((rd = read (fd, bf, len)) > 0 && len > 0) {
 	    total_rd += rd;
-	    (char*)bf += rd;
+	    bf += rd;
 	    len -= rd;
 	}
 	
@@ -277,7 +287,7 @@ static void co_debug_parse(int fd)
 			break;
 
 		char block[tlv.length];
-		nread = read_helper(fd, &block, tlv.length);
+		nread = read_helper(fd, (void*)&block, tlv.length);
 		if (nread != tlv.length)
 			break;
 
@@ -295,7 +305,7 @@ void co_debug_download_and_parse(void)
 	co_manager_handle_t handle;
 	xml_start();
 
-	handle = co_os_manager_open();
+	handle = debug_co_os_manager_open();
 	if (handle) {
 		char *buffer = (char *)co_os_malloc(BUFFER_SIZE);
 		if (buffer) {
@@ -340,7 +350,7 @@ static facility_descriptor_t facility_descriptors[] = {
 void co_update_settings(void) 
 {
 	co_manager_handle_t handle;
-	handle = co_os_manager_open();
+	handle = debug_co_os_manager_open();
 	if (!handle)
 		return;
 
@@ -457,7 +467,7 @@ static void syntax(void)
 	printf("\n");
 }
 
-int co_debug_main(int argc, char *argv[])
+co_rc_t co_debug_main(int argc, char *argv[])
 {
 	co_command_line_params_t cmdline;
 	co_rc_t rc;
@@ -486,7 +496,7 @@ int co_debug_main(int argc, char *argv[])
 
 		printf(" Translate error code %lx\n", exitcode);
 		printf(" %s\n", buf);
-		return 0;
+		return CO_RC(OK);	
 	}
 
 	if (parameters.output_filename_specified) {
@@ -512,5 +522,5 @@ int co_debug_main(int argc, char *argv[])
 	if (output_file != stdout) 
 		fclose(output_file);
 
-	return 0;
+	return CO_RC(OK);	
 }

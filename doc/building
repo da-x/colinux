@@ -4,18 +4,34 @@ Building Cooperative Linux            Dan Aloni, da-x@colinux.org
 Table of Contents
 
   1. Prerequisites
-  2. Cooperative Linux kernel (the vmlinux file)
-  3. Host Operating system support code, i.e, the daemon, console, 
-     and kernel driver
+  2. Compiling the Cooperative Linux kernel (the vmlinux file)
+  3. Compiling the OS support code
+  3.1. Build Dependencies
+  3.2. For Microsoft Windows as host
+  3.2.1 Complete download and building for Win32 under Linux (mingw32)
+  3.2.2 Configuration script compiling
+  3.2.3 Source tree sample for a mingw build process
+  3.3. For Linux as host
+  3.3.1 For Linux as host with different libraries (FLTK version)
   4. configure - make - make installer
+  4.1 configure
+  4.2 make download
+  4.3 make
+  4.4 make package
+  4.5 make installer
+  4.6 make clean
+  4.7 make disclean
+  4.8 Comments about configure system
   5. Private kernel config or patches
+  5.1 Private kernel config only
+  5.2 Private kernel patches and config
 
 =================================================================
 
 1. Prerequisites
 ----------------
 
-When compiling coLinux to run on Linux of the same architecture,
+When compiling coLinux to run on Linux of the same architecture, 
 only one compiler can to be used.
 
 For cross compiling, the components that comprise coLinux need 
@@ -29,80 +45,95 @@ The versions of the two compilers need to match as closely as
 possible. Versions 2.95.x, 3.1.x, 3.2.x and 3.3.x of gcc are 
 not guaranteed to be ABI-compatible.
 
+If your compiler for kernel building and daemons don't match the 
+right version, you can't run colinux.  The daemon blocks this.
 
-2. Compiling the Cooperative Linux kernel
------------------------------------------
+To resolve these problems, you should build the Linux compiler 
+(i686-co-linux) and the Win32 compiler (i686-pc-mingw32) from 
+same source of gnu/gcc and put it in first search PATH.
+You can set variables 'COLINUX_GCC_GUEST*' in bin/*.cfg. The 
+scripts will automatic build and use the specific compiler.
 
-Unpack the source tarball of coLinux and the Linux kernel tarball 
-(version 2.6.10 for instance, can be obtained from www.kernel.org)
-in the same  directory. Make sure that the directory of the Linux 
-kernel is named 'linux'. 
+
+2. Compiling the Cooperative Linux kernel (the vmlinux file)
+------------------------------------------------------------
+
+Unpack the source tarball of coLinux.  Locate the file linux-2.6.12.diff
+in the directory ./patch. This file give you the kernel version.
+(version 2.6.12 for instance, can be obtained from www.kernel.org) 
+Unpack the kernel tar in home directory. Make sure that the directory 
+of the Linux kernel is named 'linux-2.6.12'.
 
 Apply the patch found in the ./patch directory of the Cooperative 
-Linux tarball, to the Linux kernel. If conflicts arrise, then it is
+Linux tarball, to the Linux kernel. If conflicts arrise, then it is 
 possible that there is a mismatch between the version of the kernel 
 and the version that the patch is designed to apply to.
 
-For example: 
-    ~/linux-2.6.7# patch -p1 < ../colinux/patch/linux-2.x.y.diff
+For example:
+    ~/# wget http://www.kernel.org/pub/linux/kernel/2.6/linux-2.6.12.tar.bz2
+    ~/# bunzip linux-2.6.12.tar.bz2
+    ~/# cd linux-2.6.12
+    ~/linux-2.6.12# patch -p1 < ../colinux/patch/linux-2.6.12.diff
 
-The coLinux package is supplied with a premaid Linux kernel 
+The coLinux package is supplied with a premaid Linux kernel
 configuration file. Copy it to your Linux tree:
 
-    ~/linux-2.6.7# cp ../colinux/conf/linux-config .config
+    ~/linux-2.6.12# cp ../colinux/conf/linux-config .config
 
 And then, to build vmlinux:
-    ~/linux-2.6.7# make oldconfig
-    ~/linux-2.6.7# make vmlinux 
+    ~/linux-2.6.12# make oldconfig
+    ~/linux-2.6.12# make vmlinux
+
+For new module build it and install:
+    ~/linux-2.6.12# make modules
+    ~/linux-2.6.12# su -c "make modules_install"
 
 
-3. Compiling the OS support code 
+3. Compiling the OS support code
 --------------------------------
 
 Compiling the operating system dependent support code is a little more
 complex. The current build system assumes a cross compiler toolchain is 
 installed for that purpose. 
 
-Please read the cygwin-cross-build for 
-instructions concerning the creation of such toolchain.
-
 3.1. Build Dependencies
 
-The coLinux daemon depends on:
-  * mxml
+Cross platform
+  * MinGW (version 3.x)
 
 The coLinux console depends on:
   * FLTK (major version 1)
 
+Python build system
+  * Python interpreter 2.3
+
 
 3.2. For Microsoft Windows as host
 
-[TBD...]
-
 3.2.1 Complete download and building for Win32 under Linux (mingw32)
 
-See also step "4. configure lite" build processing.
+===> See also step "4. configure - make" build processing. <===
 
 To compile source for a Windows target, the compiler must be self compiled
 for this target. You can not download a binary of this compiler!
 
 This need a Compiler devel-libs and a lot of tools:
-(Versions from my installation. Others works also, see into configure script.)
-    bison-1.75		need by binutils (yacc 91.7.30 have a error YYEMPTY)
+(Versions from my installation. Others works also. Run ./configure script.)
+    bison-1.75		need by binutils (yacc 91.7.30 have error YYEMPTY)
     flex-2.5.4		need by binutils (arlex.l: Permission denied)
     gnu/gcc 3.3.1
     make-3.80
     module-init-tools-0.9.14
     patch-2.5.9
-    python2.3		for colinux build system, need exact version 2.3.x!
+    python2.3		for colinux build system, need version 2.3.x!
     texinfo-4.5		need by binutils
     unzip-5.50.0	extracing winapi source
     wget-1.8.2		download source files
     zip-2.3		packing pre releases
     ... and many more ...
 
-Create a new directory, extract colinux source in this directory, make scripts
-executable and ran the download-script in "bin" directory.
+Create a new directory, extract colinux source in this directory, set 
+scripts executable and ran the download script in "bin" directory.
 
     mkdir $HOME/colinux-devel
     cd $HOME/colinux-devel
@@ -117,7 +148,7 @@ Files will be downloaded into directory $HOME/colinux-devel/download.
     ./build-all.sh
 
 This is a complete build process for binutils, cross compiler, libraries,
-kernel and colinux daemons. (30 Minutes on 1.8MHz Pentium)
+kernel and colinux daemons. (~30 Minutes on 1.8MHz Pentium)
 
 The build process based on script build-all.sh works completly at top-level
 directory colinux-devel. The cross-compiler was also installed in users 
@@ -140,9 +171,9 @@ build-all.sh			Extract (OVERWRITE!) and compile all files
     build-kernel.sh		Extract, patch, compile the kernel and modules
     build-colinux.sh		Recompile only the colinux daemons and console
 
-! Any starts of compile script will delete all source and extract it again!
-! If you have changed some sources, do not use these scripts!
-! Call "make" into directory manually!
+! Any starts of build-kernel.sh will delete all source and extract it again !
+! If you have changed some kernel sources, do not use these script          !
+! Call "make menuconfig" and "make" into kenel directory manually           !
 
 After Downloading a new version of colinux source, should only extract source
 at same top level directory and run the last scripts build-kernel.sh and
@@ -174,14 +205,13 @@ Source tree before building the cross compiler:
     +-- download/
         +-- binutils-2.15.90-20040222-1-src.tar.gz
         +-- colinux-20050322.tar.gz
-        +-- fltk-1.1.4-source.tar.bz2
+        +-- fltk-1.1.6-source.tar.bz2
         +-- gcc-core-3.3.1-20030804-1-src.tar.gz
         +-- gcc-g++-3.3.1-20030804-1-src.tar.gz
-        +-- linux-2.6.12.tar.bz2
+        +-- linux-2.x.y.tar.bz2			(version of colinux kernel)
         +-- mingw-runtime-3.6.tar.gz
-        +-- mxml-1.3.tar.gz
-        +-- w32api-3.2-src.tar.gz
-        +-- w32api-3.2.tar.gz
+        +-- w32api-3.3-src.tar.gz
+        +-- w32api-3.3.tar.gz
         +-- wpdpack_3_0.zip
 
 
@@ -193,16 +223,14 @@ Source tree after building cross compiler and colinux binaries:
     |   +-- binutils-2.15.90-20040222-1/	(cross working dirs,
     |   +-- fltk-1.1.4/				 deleted after build)
     |   +-- gcc-3.3.1-20030804-1/
-    |   +-- linux-2.6.7/
-    |   +-- mxml-1.3/
-    |   +-- w32api-2.5/
+    |   +-- w32api-3.3/
     |   +-- wpdpack/
-    |   +-- linux-2.6.12/			$COLINUX_TARGET_KERNEL_PATH
+    |   +-- linux-2.x.y/			$COLINUX_TARGET_KERNEL_PATH
     |       ... kernel sources and building dir
     |       +--_install/                        $COLINUX_TARGET_MODULE_PATH
     |          +-- lib
     |              +-- modules
-    |                  +-- 2.6.12-co-0.7.1/
+    |                  +-- 2.x.y-co-0.7.1/
     |                      +-- kernel/
     |                      |   +-- ... Some modules.ko ...
     |                      +-- modules.dep
@@ -212,7 +240,8 @@ Source tree after building cross compiler and colinux binaries:
     |   +-- build-colinux-$$.log		(Logfiles of build process)
     +-- mingw32/				$PREFIX
 	+-- bin/
-	|   ... Cross compiler binaries (e.g. i686-pc-mingw32-gcc) ...
+        |   +-- i686-pc-mingw32-gcc
+	|   ... Cross compiler binaries with prefix 'i686-pc-mingw32-'
 	+-- dist/				$COLINUX_INSTALL_DIR
 	|   +-- daemons-0.7.1.zip		(Binaries for target)
         |   |   +-- colinux-console-fltk.exe
@@ -223,10 +252,27 @@ Source tree after building cross compiler and colinux binaries:
         |   |   +-- linux.sys			(Windows colinux driver)
 	|   +-- vmlinux-0.7.1.zip
         |   |   +-- vmlinux			(kernel)
-	|   +-- modules-2.6.12-co-0.7.1.tgz	(Modules for target kernel)
+	|   +-- modules-2.x.y-co-0.7.1.tgz	(Modules for target kernel)
+	+-- i686-co-linux/
+	|   +-- bin/				$COLINUX_GCC_GUEST_PATH
+	|   |   +-- i686-co-linux-gcc
+	|   |   ... Compiler for kernel build with prefix 'i686-co-linux-'
+	|   +-- i686-pc-linux-gnu/
+	|   |   +-- bin/
+	|   |       +-- gcc
+	|   |       ... Compiler for kernel build without prefix
+        |   +-- include/
+        |   +-- info/
+        |   +-- lib/				(for Linux as host)
+	|       +-- libstdc++.so.6.0.3
+	|       +-- libstdc++.a
+	|       ... Linux libraries for this compiler
+        |   +-- man/
+        |   +-- share/
 	+-- i686-pc-mingw32/
 	|   +-- bin/
-	|   |   ... Cross compiler binaries (e.g. gcc) ...
+	|   |   +-- gcc
+	|   |   ... Cross compiler binaries without prefix
 	|   +-- lib/
 	|       ... Cross compiler static libraries (e.g. libfltk.a) ...
 	+-- include/
@@ -241,9 +287,10 @@ Source tree after building cross compiler and colinux binaries:
 For building and runnning coLinux on Linux you need:
 
 1. Tree or headers of the designated host kernel available, in order to build 
-the kernel module (colinux.ko).
-2. mxml-1.2 and a patched fltk-1.1.6 (see patch directory) installed in the 
-system (./configure ; make ; make install)
+   the kernel module (colinux.ko).
+2. patched fltk-1.1.6 (see patch directory) installed in the 
+   system (./configure ; make ; su -c "make install")
+   You can also install this version local under your HOME (see below).
 3. Properly set the environment variables (e.g.):
 
   export COLINUX_TARGET_KERNEL_PATH=/path/to/your/patched/colinux/kernel/tree
@@ -263,9 +310,10 @@ Running it is quite simple. For example, consider these list of files:
 -rwxr-xr-x  1 root root 2614823 Jun 21 13:02 vmlinux
 
 The steps are basically:
-       
+
+    su
     insmod colinux.ko
-    PATH=.:$PATH colinux-daemon -c default.colinux.xml
+    PATH=.:$PATH colinux-daemon @colinux.cfg
 
 This much like the Windows port except where the logic around the installation 
 of the driver is more simple.
@@ -289,7 +337,7 @@ PATH=.:$PATH is needed if the executables aren't installed in your e.g
   cd /tmp
   rm -r fltk-1.1.6
 
-- Run coulinux build with path to FLTK libraries
+- Run colinux build with path to FLTK libraries
 
   export COLINUX_TARGET_KERNEL_PATH=/path/to/your/patched/colinux/kernel/tree
   export COLINUX_HOST_KERNEL_DIR=/path/to/your/host/kernel
@@ -305,8 +353,9 @@ PATH=.:$PATH is needed if the executables aren't installed in your e.g
 
 4.1 configure
 
-Call './configure' in toplevel directory will create one toplevel Makefile
-and the file bin/user-build.cfg with absolute paths of your installation.
+Call './configure' in toplevel directory will create the file 
+bin/user-build.cfg with absolute paths of your installation.
+
 Default target is winnt. Mostly directories can overwrite by options.
 Please run './configure --help' for list of options.
 
@@ -321,7 +370,7 @@ directories will automatic detect. You can overwrite with --hostkerneldir.
 Sample for Linux as host:
   ./configure --target=i686-pc-linux \
         --downloaddir=$HOME/colinux-devel/download \
-        --targetkerneldir=$HOME/colinux-devel/download/linux-2.6.12
+        --targetkerneldir=$HOME/colinux-devel/download/linux-2.x.y
         --hostkerneldir=/usr/src/linux
 
 
@@ -371,9 +420,9 @@ cross tools and libraries.
 4.8 Comments about configure system
 
 This script is not the same as in some other software projects. This script do
-not detect of all needed tools and host environment. It do only create a simple
-Makefile to have fun for "standard" linux projects. It should help some newbies
-to compile colinux.
+not detect all needed tools and host environments. It do only create a simple
+config to have fun for "standard" linux projects ala "./configure && make".
+It should help some newbies to compile colinux.
 
 Actual version of configure provided only targets i686-pc-mingw32 or
 i686-pc-linux. No other strings supported. (Sorry, configure is very simple.)
@@ -396,11 +445,11 @@ Store patch/linux-private.patch, before call bin/build-kernel.sh or make.
 To create private configfile, you should diff colinux config with your config
 and store this in file patch/linux-private.patch.
 Run this steps, if you have patched colinux kernel in download directory:
- # cd coLinuxDownloadPath/linux-2.6.10
+ # cd coLinuxDownloadPath/linux-2.x.y
  # make menuconfig
  ... configure your kernel and save file .config ...
  # cd ..
- # diff -urN coLinuxDevelPath/patch/linux linux-2.6.10/.config > linux-private.patch
+ # diff -ur coLinuxDevelPath/patch/linux linux-2.x.y/.config > linux-private.patch
 
 
 5.2 Private kernel patches and config
@@ -409,18 +458,19 @@ Run this steps, if you have patched colinux kernel in download directory:
 To create private pathfile for kernel source, you should diff colinux
 kernel with your kernel source and configuration.
 "PRIVATE" is your kernel, configured and also patched for colinux.
+"VANILLA" is the current kernel version, supported from colinux.
 Please remember: Your private kernel tree should start one directory up
 from source (patch will be call with -p1)!
- # VANILLA=linux-2.6.10
- # PRIVATE=$HOME/src/linux-2.6.10-private
+ # VANILLA=linux-2.x.y
+ # PRIVATE=$HOME/src/linux-2.x.y-private
  # cd /tmp
  # tar xfj $VANILLA.bz2
  # cd $VANILLA
- # patch -p1 < DevelPath/patch/linux
+ # patch -p1 < DevelPath/patch/$VANILLA.diff
  # cd $PRIVATE
  ... here you can "make menuconfig" for aditional configuration ...
  # cd ..
  # wget http://www.moses.uklinux.net/patches/dontdiff
- # diff -Nur -X dontdiff /tmp/$VANILLA $PRIVATE > linux-private.patch
- # diff -Nu DevelPath/conf/linux-config $PRIVATE/.config >> linux-private.patch
+ # diff -urN -X dontdiff /tmp/$VANILLA $PRIVATE > linux-private.patch
+ # diff -u DevelPath/conf/linux-config $PRIVATE/.config >> linux-private.patch
  # rm -rf dontdiff /tmp/$VANILLA

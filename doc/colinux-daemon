@@ -118,12 +118,52 @@ important when options don't depend on each other.
    Uses PCAP bridging.
 
 
-     eth0=slirp,"",tcp:22:22/tcp:80:80
+     eth0=slirp,"",tcp:2222:22/tcp:8080:80
 
-   Uses SLiRP networking, with port 22 and 80 on host being
-   redirected (or port forwarded) to coLinux guest.
+   Uses SLiRP networking, with port 2222 and 8080 on host being
+   redirected (or port forwarded) to coLinux guest 22 and 80.
 
    Redirections must begin with protocol ("tcp" or "udp") then
    an ":" seperator, the port on coLinux guest followed by ":"
    seperator, and the port for the host.  More redirections
    have the same form and are seperated by "/".
+
+
+ Options for serial device:
+
+     ttys0=COM1
+
+   Connect the serial device /dev/ttyS0 from linux to host system COM1.
+   Please set the line paremters for serial port on hostsystem, before
+   colinux starts, or use the follow optional parameters.
+
+     ttys0=COM1,"BAUD=115200 PARITY=n DATA=8 STOP=1 dtr=on rts=on"
+
+   Sets many more default parameters for the serial port.  Please refer you
+   manual or help system of host system for optional parameters ("MODE /?").
+
+
+ Options for console device:
+
+   FLTK console is configurable via environment settings.
+
+
+     set COLINUX_CONSOLE_FONT=Lucida Console:12
+
+   Sets fontname and size.  Allows only fixed width fonts.
+
+
+     set COLINUX_CONSOLE_FONT=Lucida Console
+
+   Sets fontname.
+
+
+     set COLINUX_CONSOLE_FONT=:12
+
+   Sets only size. Default font "Terminal" is active.
+
+
+     set COLINUX_CONSOLE_EXIT_ON_DETACH=1
+
+   Enable automatic close console after detach from colinux.
+   This is good option for closing console after linux shutting down.

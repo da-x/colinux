@@ -174,7 +174,7 @@ asm(""							\
 									\
 /* save and switch from old esp */					\
     "    movl %esp, "CO_ARCH_STATE_STACK_ESP"(%ebp)"   "\n"		\
-    "    movl %ss, "CO_ARCH_STATE_STACK_SS"(%ebp)"   "\n"		\
+    "    mov %ss, "CO_ARCH_STATE_STACK_SS"(%ebp)"      "\n"		\
 									\
 /* save flags */							\
     "    movl (%esp), %eax"                  "\n"			\
