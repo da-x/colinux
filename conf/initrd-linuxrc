@@ -1,0 +1,105 @@
+#!/bin/sh
+
+PATH=/sbin:/bin:/usr/bin:/usr/sbin
+
+LOG=/linuxrc.log
+
+KERNEL_VERSION=$(uname -r)
+
+# find string within a string
+stringinstring() {
+   case " $2 " in *\ $1\ *) return 0;; esac
+   return 1
+}
+
+# Mount filesystems in /etc/fstab.
+echo  "Mount proc: " >> $LOG
+/bin/mount -t proc /proc /proc 2>&1 >> $LOG
+
+# Read boot command line (use cat, shell read function may fail)
+CMDLINE="$(cat /proc/cmdline)"
+
+# Check boot comandline for specified option
+checkbootparam() {
+	stringinstring "$1" "$CMDLINE"
+	return "$?"
+}
+
+# Display /etc/issue file.
+echo  "Displaying /etc/issue file" >> $LOG
+if [ -s /etc/issue ]; then
+	cat /etc/issue
+fi
+sleep 1
+
+echo -n "Determining /" 
+echo "Determining /" >> $LOG
+ROOT_DEVICE=/dev/root
+if [ ! -f $ROOT_DEVICE ]; then
+	for i in "$(echo $CMDLINE | cut -d' ' -f1)"; do
+		echo "Parsing for root, found: $i" >> $LOG
+		 NAME="$(echo $i | cut -d= -f1)"
+		 VALUE="$(echo $i | cut -d= -f2)"
+		 case "$NAME" in root) ROOT_DEVICE=$VALUE; ;; esac
+	done
+fi
+
+echo " ($ROOT_DEVICE) " >> $LOG && echo ", Found."
+
+echo -n "Mounting /"
+echo "Mounting /" >> $LOG
+if /bin/mount $ROOT_DEVICE /mnt/linux >> $LOG
+then
+	echo -n "Installing modules for coLinux $KERNEL_VERSION" 
+	echo "Installing modules for coLinux $KERNEL_VERSION" >> $LOG
+	if [ -d "/mnt/linux/lib/modules/$KERNEL_VERSION" ]; then
+		echo ", Skipping." | tee -a $LOG
+	else
+	    cd /mnt/linux
+	    tar zxf /lib/modules/vmlinux-modules.tar.gz >> $LOG 2>&1
+	    echo ", Done."
+	    cd /
+
+	    # Clear cache, before umount exits with an error!
+	    sync
+	    sleep 1
+	fi
+
+	# Create console for boot with udev
+	if [ ! -c /mnt/linux/dev/console ]; then
+		mknod /mnt/linux/dev/console c 5 1
+	fi
+else
+	echo " failed" | tee -a $LOG
+fi
+
+echo -n "Closing /" 
+echo "Closing /" >> $LOG
+if /bin/umount -f /mnt/linux >> $LOG 2>&1
+then
+	echo ", Done."
+else
+	echo " failed"
+
+	# try again
+	sync
+	sleep 1
+	/bin/umount -f /mnt/linux
+	sleep 1
+fi
+
+# Freeing proc that was auto-mounted earlier
+umount /proc >> $LOG 2>&1
+
+# Now delete self
+if [ "$ROOT_DEVICE" = "/dev/ram0" ]; then
+	cp /linuxrc /install-modules.sh
+fi
+rm -rf /linuxrc >> $LOG 2>&1
+
+sync >> $LOG 2>&1
+
+# If initrd is used a root, then do an 'normal' root.
+if [ "$ROOT_DEVICE" = "/dev/ram0" ]; then
+	ln -s bin/busybox linuxrc
+fi
