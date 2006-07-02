@@ -143,13 +143,13 @@ static void syntax(void)
 	co_terminal_print("    -i pid                  coLinux instance ID to connect to\n");
 	co_terminal_print("    -u unit                 Network device index number (0 for eth0, 1 for\n");
 	co_terminal_print("                            eth1, etc.)\n");
-	co_terminal_print("    -r tcp|udp:hport:cport  port redirection.\n");
+	co_terminal_print("    -r tcp|udp:hport:cport[:count]  port redirection.\n");
 }
 
-static co_rc_t 
+static co_rc_t
 parse_redir_param (char *p)
 {
-	int iProto, iHostPort, iClientPort;
+	int iProto, iHostPort, iClientPort, iPortCount, i;
 
 	do {
 		// minimal len is "tcp:x:x"
@@ -174,9 +174,19 @@ parse_redir_param (char *p)
 			return CO_RC(ERROR);
 		iClientPort = strtol(p+1, &p, 10);
 
-		co_debug("slirp redir %d %d:%d\n", iProto, iHostPort, iClientPort);
-		if (slirp_redir(iProto, iHostPort, client_addr, iClientPort) < 0) {
-			co_terminal_print("conet-slirp-daemon: slirp redir %d:%d failed.\n", iHostPort, iClientPort);
+		// check optional third ':'
+		iPortCount = 1;
+		if (*p == ':')
+			iPortCount = strtol(p+1, &p, 10);
+
+		if (iPortCount <= 0)
+			return CO_RC(ERROR);
+
+		for (i = 0; i < iPortCount; i++) {
+			co_debug("slirp redir %d %d:%d (%d)\n", iProto, iHostPort+i, iClientPort+i);
+			if (slirp_redir(iProto, iHostPort+i, client_addr, iClientPort+i) < 0) {
+				co_terminal_print("conet-slirp-daemon: slirp redir %d:%d failed.\n", iHostPort+i, iClientPort+i);
+			}
 		}
 
 		// Next redirection?
@@ -295,7 +305,7 @@ co_rc_t co_slirp_main(int argc, char *argv[])
 		goto out_close;
 	}
 
-	co_terminal_print("conet-slirp-daemon: loop running\n");
+	co_terminal_print("conet-slirp-daemon: running\n");
 
 	wait_loop();
 

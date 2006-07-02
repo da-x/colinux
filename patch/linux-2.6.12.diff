@@ -85,7 +85,7 @@ diff -urN a/arch/i386/kernel/Makefile b/arch/i386/kernel/Makefile
 diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 --- a/arch/i386/kernel/cooperative.c
 +++ b/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,356 @@
+@@ -0,0 +1,360 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -283,6 +283,8 @@ diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 +{
 +	kernel_fpu_begin();
 +
++	{
++
 +	/*
 +	 * We don't trust the passage page code to safely restore %gs and %fs. 
 +	 *
@@ -310,6 +312,8 @@ diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 +	 */
 +	loadsegment(fs, fs);
 +	loadsegment(gs, gs);
++
++	}
 +
 +	kernel_fpu_end();
 +}
@@ -1208,7 +1212,7 @@ diff -urN a/arch/i386/kernel/timers/timer.c b/arch/i386/kernel/timers/timer.c
 diff -urN a/arch/i386/kernel/timers/timer_cooperative.c b/arch/i386/kernel/timers/timer_cooperative.c
 --- a/arch/i386/kernel/timers/timer_cooperative.c
 +++ b/arch/i386/kernel/timers/timer_cooperative.c
-@@ -0,0 +1,140 @@
+@@ -0,0 +1,142 @@
 +/*
 + *  Cooperative mode timer.
 + *
@@ -1273,13 +1277,15 @@ diff -urN a/arch/i386/kernel/timers/timer_cooperative.c b/arch/i386/kernel/timer
 +static long get_offset_cooperative(void)
 +{
 +	unsigned long flags;
++	unsigned long long this_time;
++	unsigned long reminder, result;
++	long long diff, lldiff;
++	long signed_result;
 +
 +	local_irq_save(flags);
 +	
-+	unsigned long long this_time = query_host_highprec_time() - first_time;
-+	unsigned long reminder = 0, result;
-+	long long diff, lldiff;
-+	long signed_result;
++	this_time = query_host_highprec_time() - first_time;
++	reminder = 0;
 +
 +	diff = ((long long)this_time - (long long)(last_mark));
 +	if (diff < 0)
@@ -8652,7 +8658,7 @@ diff -urN a/kernel/Makefile b/kernel/Makefile
 diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 --- a/kernel/cooperative.c
 +++ b/kernel/cooperative.c
-@@ -0,0 +1,422 @@
+@@ -0,0 +1,426 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -8732,14 +8738,16 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +
 +void co_send_message_s(co_message_t *message, const char *data)
 +{
++	unsigned long flags;
++	co_message_t *buffer;
++	
 +	if ((sizeof(co_message_t) + message->size) > CO_VPTR_IO_AREA_SIZE - sizeof(co_io_buffer_t))
 +		return;
 +	
 +	if (co_passage_page_held())
 +		return;
 +	
-+	unsigned long flags;
-+	co_message_t *buffer = (co_message_t *)co_io_buffer->buffer;
++	buffer = (co_message_t *)co_io_buffer->buffer;
 +	
 +	co_passage_page_acquire(&flags);
 +	if (co_io_buffer->messages_waiting) {
@@ -8960,18 +8968,20 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +
 +void co_queue_incoming_message(co_message_node_t *node_message)
 +{
++	co_linux_message_t *message;
++	co_message_queue_t *queue;
++	unsigned long flags;
++
 +	if (!co_messages_active)
 +		return;
 +	
-+	co_linux_message_t *message = (co_linux_message_t *)&node_message->msg.data;
++	message = (co_linux_message_t *)&node_message->msg.data;
 +	if (message->device < 0 || (message->device >= CO_DEVICES_TOTAL))
 +		return;
 +	
-+	co_message_queue_t *queue;
 +	queue = &co_incoming_queued_messages[message->device];
 +
 +	/* Add to the queue */
-+	unsigned long flags;
 +	local_irq_save(flags);
 +	list_add(&node_message->node, &queue->list);
 +	queue->num_messages++;

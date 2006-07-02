@@ -407,8 +407,8 @@ md5dir="$builddir"
 
 # $1 Name of component
 # $2 Call for check
-# $3 Minimal version need, or empty string
-# $4 Maximal version supported, or empty string
+# $3 Minimum version need, or empty string
+# $4 Maximum version supported, or empty string
 # sample: "wget-1.8" "wget --version" "1.8.x"
 check_exec_tool()
 {
@@ -416,7 +416,7 @@ check_exec_tool()
   
   echo -n "Checking for $1 ... "
   if ($2) </dev/null >/dev/null 2>&1; then
-    if [ ! -z "$3" ]; then
+    if [ -n "$3" ]; then
       # get needed version, transform the 'x' into 0
       eval `echo $3 | sed -r -e \
         's/([0-9]{1,2})\.([0-9x]{1,2})\.([0-9x]{1,2})/v1=\1 v2=\2 v3=\3/' -e 'y/x/0/'`

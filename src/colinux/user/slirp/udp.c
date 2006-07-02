@@ -61,11 +61,15 @@ int	udpcksum = 0;		/* XXX */
 
 struct	socket *udp_last_so = &udb;
 
+/* incrase receive buffer (win32 default: 8k) */
+static const int max_rcvbuf_size = 32768;
+
 void
 udp_init()
 {
 	udb.so_next = udb.so_prev = &udb;
 }
+
 /* m->m_data  points at ip packet header 
  * m->m_len   length ip packet 
  * ip->ip_len length data (IPDU)
@@ -347,6 +351,7 @@ udp_attach(so)
 #endif
     } else {
       /* success, insert in queue */
+      setsockopt(so->s,SOL_SOCKET,SO_RCVBUF,(char *)&max_rcvbuf_size,sizeof(int));
       so->so_expire = curtime + SO_EXPIRE;
       insque(so,&udb);
     }
@@ -366,9 +371,13 @@ udp_detach(so)
 
 struct tos_t udptos[] = {
 	{0, 53, IPTOS_LOWDELAY, 0},			/* DNS */
+#ifdef EMULATE_TALK
 	{517, 517, IPTOS_LOWDELAY, EMU_TALK},	/* talk */
 	{518, 518, IPTOS_LOWDELAY, EMU_NTALK},	/* ntalk */
+#endif
+#ifdef EMULATE_CUSEEME
 	{0, 7648, IPTOS_LOWDELAY, EMU_CUSEEME},	/* Cu-Seeme */
+#endif
 	{0, 0, 0, 0}
 };
 
@@ -402,8 +411,10 @@ udp_emu(so, m)
 	struct socket *so;
 	struct mbuf *m;
 {
+#if defined(EMULATE_TALK) || defined(EMULATE_CUSEEME)
 	struct sockaddr_in addr;
         int addrlen = sizeof(addr);
+#endif
 #ifdef EMULATE_TALK
 	CTL_MSG_OLD *omsg;
 	CTL_MSG *nmsg;
@@ -417,9 +428,9 @@ struct talk_request {
 } *req;
 	
 	static struct talk_request *req_tbl = 0;	
-	
 #endif
-	
+
+#ifdef EMULATE_TALK
 struct cu_header {
 	uint16_t	d_family;		// destination family
 	uint16_t	d_port;			// destination port
@@ -432,6 +443,7 @@ struct cu_header {
 	uint16_t	data_type;		// data type
 	uint16_t	pkt_len;		// packet length
 } *cu_head;
+#endif
 
 	switch(so->so_emu) {
 
@@ -605,6 +617,7 @@ struct cu_header {
 		return;		
 #endif
 		
+#ifdef EMULATE_CUSEEME
 	case EMU_CUSEEME:
 	
 		/*
@@ -622,6 +635,7 @@ struct cu_header {
 		}
 		
 		return;
+#endif
 	}
 }
 
@@ -654,6 +668,7 @@ udp_listen(port, laddr, lport, flags)
 	}
 	setsockopt(so->s,SOL_SOCKET,SO_REUSEADDR,(char *)&opt,sizeof(int));
 /*	setsockopt(so->s,SOL_SOCKET,SO_OOBINLINE,(char *)&opt,sizeof(int)); */
+	setsockopt(so->s,SOL_SOCKET,SO_RCVBUF,(char *)&max_rcvbuf_size,sizeof(int));
 	
 	getsockname(so->s,(struct sockaddr *)&addr,&addrlen);
 	so->so_fport = addr.sin_port;

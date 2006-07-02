@@ -118,15 +118,26 @@ important when options don't depend on each other.
    Uses PCAP bridging.
 
 
+     eth0=pcap-bridge,"Local Area Network",11:22:33:44:55:66,nopromisc
+
+   Uses PCAP bridging, defined  MAC address and disabled the Promiscuous mode.
+
+
+     eth0=slirp
+
+   Slirp, the simplest way to internet.  Inside coLinux can use a DHCP-Client.
+
+
      eth0=slirp,"",tcp:2222:22/tcp:8080:80
 
    Uses SLiRP networking, with port 2222 and 8080 on host being
    redirected (or port forwarded) to coLinux guest 22 and 80.
 
-   Redirections must begin with protocol ("tcp" or "udp") then
-   an ":" seperator, the port on coLinux guest followed by ":"
-   seperator, and the port for the host.  More redirections
-   have the same form and are seperated by "/".
+   Redirections must begin with protocol ("tcp" or "udp") then an ":"
+   seperator, the port on Windows host, followed by ":" seperator,
+   and the port for the coLinux guest.  Optional third ":" seperator
+   counts for port array.  More redirections have the same form and
+   are seperated by "/".
 
 
  Options for serial device:

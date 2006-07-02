@@ -594,7 +594,8 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 
 			co_build_mac_address(mac_address, sizeof(mac_address), net_dev->mac_address);
 
-			rc = co_launch_process(NULL, "colinux-bridged-net-daemon -i %d -u %d %s -mac %s", daemon->id, i, interface_name, mac_address);
+			rc = co_launch_process(NULL, "colinux-bridged-net-daemon -i %d -u %d %s -mac %s -p %d",
+					daemon->id, i, interface_name, mac_address, net_dev->promisc_mode);
 			break;
 		}
 

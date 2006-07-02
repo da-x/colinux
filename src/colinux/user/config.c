@@ -260,11 +260,13 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 {
 	co_netdev_desc_t *net_dev = &conf->net_devs[index];
 	char mac_address[40];
+	char promisc_mode[10];
 	co_rc_t rc;
 
 	comma_buffer_t array [] = {
 		{ sizeof(net_dev->desc), net_dev->desc },
 		{ sizeof(mac_address), mac_address },
+		{ sizeof(promisc_mode), promisc_mode },
 		{ 0, NULL }
 	};
 
@@ -272,6 +274,7 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 
 	net_dev->type = CO_NETDEV_TYPE_BRIDGED_PCAP;
 	net_dev->enabled = PTRUE;
+	net_dev->promisc_mode = 1;
 
 	if (*mac_address) {
 		rc = co_parse_mac_address(mac_address, net_dev->mac_address);
@@ -289,6 +292,19 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 		co_terminal_print("MAC address: %s\n", mac_address);
 	else
 		co_terminal_print("MAC address: auto generated\n");
+
+	if (strlen(promisc_mode) > 0) {
+		if (strcmp(promisc_mode, "nopromisc") == 0) {
+			net_dev->promisc_mode = 0;
+			co_terminal_print("Pcap mode: nopromisc\n");
+		} else if (strcmp(promisc_mode, "promisc") == 0) {
+			net_dev->promisc_mode = 1;
+			co_terminal_print("Pcap mode: promisc\n");
+		} else {
+			co_terminal_print("error: PCAP bridge option only allowed 'promisc' or 'nopromisc'\n");
+			return CO_RC(ERROR);
+		}
+	}
 
 	return CO_RC(OK);
 }

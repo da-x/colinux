@@ -11,14 +11,15 @@
   * Bug fix: Crash, if walking in big directory of cofs with
     "find | xargs file" or updatedb. (unicode maxlen)
   * Bug fix: Buffer overrun, on Fontname for FLTK console or screen resize.
-  * Update for libraries:
-    MinGW from 3.7 to 3.8
-    w32api from 3.2 to 3.3
+  * Update libraries:
+    MinGW from 3.7 to 3.9
+    w32api from 3.2 to 3.4
     WinPcap from 3.1-beta4 to 3.1
+    FLTK from 1.1.4 to 1.1.6
     Remove all XML libraries from source.
   * TAP device version 8.3, usable without admin rights.
   * Bridged allows empty name for autosearch connected LAN interface.
-  --- end of only in version hn* ---
+    New option promisc/nopromisc.
   * Kernel 2.6.12
   * New option for colinux-debug-daemon: '-e exitcode'
     Translate a given exitcode into error text, filename and line number.

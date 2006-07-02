@@ -1,4 +1,4 @@
-Cooperative Linux README
+Cooperative Linux 0.7.1 README
 ----------------------------------------------------------------------------
 
   Instructions for running Cooperative Linux for Windows (see source for 
@@ -37,8 +37,8 @@ NOTES ON UPGRADING:
 
 RUNNING:
 
-To run Cooperative Linux, please follow these instructions before trying to run 
-anything.
+To run Cooperative Linux, please follow these instructions before trying to
+run anything.
 
 1. Run the downloaded installer file to begin the installation. 
    
@@ -95,17 +95,18 @@ downloaded.
 
 	a. Running as an service.  
 		colinux-daemon.exe @default.conf --install-service "Cooperative Linux"
-		Also, to remove the service:
+	   Also, to remove the service:
 		colinux-daemon.exe --remove-service "Cooopeative Linux".
-	   Then go to the Service Manager and start the "Cooperative Linux" 
+	   Then go to the Service Manager and start the "Cooperative Linux"
 	   service,
-	   OR net start "Cooperative Linux"
+	   OR
+		net start "Cooperative Linux"
 	   Last, got to the installation directory and double-click on
-	   	colinux-console-fltk.exe OR
-		colinux-console-nt.exe		
-	b. As an regular application. 
+		colinux-console-fltk.exe OR
+		colinux-console-nt.exe
+	b. As an regular application.
 		colinux-daemon.exe @default.conf
-           See colinux-daemon --help for details about possible 
+	   See colinux-daemon --help for details about possible 
 	   command-line arguments.
    
    The console window opens and you would see a Linux machine booting in 
@@ -188,7 +189,7 @@ command-line, in this "mode" the command-line arguments are:
 		Use any number of these to specify an alias (hda1, etc)
                 for an block device's image file.  <path to image file>
                 can be to an partition using standard 
-                \HardDiskX\PartitionY format.
+                \Device\HarddiskX\PartitionY format.
 
 	cofsX=<path to windows directory>
 		Use any number of these to specify a Cooperative 
@@ -196,22 +197,24 @@ command-line, in this "mode" the command-line arguments are:
 		local mount point). There are some limitations in it's
 		use currently (namely non-ASCII files).
 
-	ethX=tap | pcap-bridge,<network connection name>,<MAC> 
+	ethX=tap | pcap-bridge,<network connection name>,<MAC>,<promisc> 
 		Use any number of these to specify network interfaces,
-		<network connection name & <MAC> are optional.
+		<network connection name> and <MAC> are optional.
+		<promisc> is optional only for pcap-bridge, default is
+		'promisc'. Some cases works only with 'nopromisc'.
 	OR
 
 	ethX=slirp,<MAC>,<redirections>
 		Use any number of these to specify network interfaces,
 		<MAC> and <redirections> are options.  <redirections> 
-		take the form tcp|upd:guest_port:host_port, multiple 
-                redirections are seperated by /, ie tcp:22:22/tcp:80:80
+		take the form tcp|upd:host_port:linux_port[:count], multiple 
+                redirections are seperated by /, ie tcp:2222:22/tcp:8080:80
 
 	ttysX=<serial device name>,<mode parameters>
 		Use any number X of these to specify serial interface (ttys0),
-		and host specific device name (COM1).  <mode parameter> sets
-		baudrate, data format and line disciplin., ie "BAUD=115200 
-		PARITY=n DATA=8 STOP=1 dtr=on rts=on"
+		and host specific device name (COM1).  <mode parameter>
+		sets baudrate, data format and line disciplin., ie
+		"BAUD=115200 PARITY=n DATA=8 STOP=1 dtr=on rts=on"
 		Refer host system help (MODE -?) for more options.
 
 	execX=<executable program>,<parameters>
@@ -224,7 +227,7 @@ command-line, in this "mode" the command-line arguments are:
 		device.
 
 	ANY additional parameters are passed to the coLinux kernel as is 
-(unmodified).
+	(unmodified).
 
 
 Common Problems
@@ -264,14 +267,14 @@ bugs, etc.
 
 	Project Web-site
 		Source Forge Project website is at 
-http://www.sourceforge.net/project/colinux
-	
+		http://www.sourceforge.net/project/colinux
+
 	WIKI
 		The community has contributed wonderful and helpful 
                 information on numerous topics, which is available at
-                http://wiki.colinux.org/cgi-bin/FrontPage (You can 
-		contribute here too!)
-	
+                http://wiki.colinux.org/
+		(You can contribute here too!)
+
 	Mailing Lists
 		Visit the colinux.org website and choose from the available 
 		mailing lists (user and devel) to join, view archives, etc.
