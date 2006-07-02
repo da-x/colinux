@@ -17,12 +17,14 @@ cd bin; . ./build-common.sh --get-vars; cd ..
 target=i686-pc-mingw32
 nonopt=NONE
 prefix=NONE
-distdir=NONE
+distdir="\$USER_TOPDIR/dist"
 downloaddir=NONE
-builddir=NONE
-logfile=NONE
+builddir="\$USER_TOPDIR/build"
+logfile="\$USER_TOPDIR/log/build-colinux-\$\$.log"
+targetkernelsource="\$BUILD_DIR/linux-$KERNEL_VERSION-source"
+targetkernelbuild="\$BUILD_DIR/linux-$KERNEL_VERSION-build"
 targetkerneldir=NONE
-targetmoduledir=NONE
+targetmoduledir="$targetkernelbuild/_install"
 hostkerneldir=NONE
 colinux_os=NONE
 configfile="bin/user-build.cfg"
@@ -82,16 +84,20 @@ Directories:
                           [$topdir]
   --downloaddir=DIR       source download
                           [\$TOPDIR/download]
-  --builddir=DIR          extract and compile tools
+  --builddir=BUILD_DIR    extract and compile tools
                           [\$TOPDIR/build]
   --prefix=PREFIX         install architecture-independent files in PREFIX
                           [\$TOPDIR/mingw32]
   --distdir=DIR           distribution of all winnt files
-                          [\$PREFIX/dist]
-  --targetkerneldir=DIR   path to your patched colinux kernel tree (Guest)
-                          [\$TOPDIR/build/linux-$KERNEL_VERSION]
+                          [\$TOPDIR/dist]
+  --targetkernelsource=DIR  path to patched colinux guest kernel source tree
+                          [$targetkernelsource]
+  --targetkernelbuild=DIR output directory for building colinux guest kernel
+                          [$targetkernelbuild]
+  --targetkerneldir=DIR   path to patched colinux guest kernel tree, source
+                          and builds in same directory  (obsolate, see above)
   --targetmoduledir=DIR   Modules output for target kernel (Guest)
-                          [\$TOPDIR/build/linux-$KERNEL_VERSION/_install]
+                          [$targetmoduledir]
   --hostkerneldir=DIR     path to your host kernel (only for linux as host)
                           [\usr\src\linux]
 
@@ -117,14 +123,14 @@ Sample for Linux as host:
   ./configure --target=i686-pc-linux \\
 	--downloaddir=$SOURCE_DIR \\
 	--targetkerneldir=$BUILD_DIR/linux-$KERNEL_VERSION \\
-	--hostkerneldir=/usr/src/`uname -r`
+	--hostkerneldir=/usr/src/linux-`uname -r`
 
 Sample for WinNT and Linux as host in same config:
   ./configure \\
 	--downloaddir=$SOURCE_DIR \\
 	--prefix=$PREFIX \\
 	--targetkerneldir=$BUILD_DIR/linux-$KERNEL_VERSION \\
-	--hostkerneldir=/usr/src/`uname -r`
+	--hostkerneldir=/usr/src/linux-`uname -r`
 
 EOF
 
@@ -164,6 +170,16 @@ EOF
     prev=distdir ;;
   --distdir=*)
     distdir="$optarg" ;;
+
+  --targetkernelsource)
+    prev=targetkernelsource ;;
+  --targetkernelsource=*)
+    targetkernelsource="$optarg" ;;
+
+  --targetkernelbuild)
+    prev=targetkernelbuild ;;
+  --targetkernelbuild=*)
+    targetkernelbuild="$optarg" ;;
 
   --targetkerneldir)
     prev=targetkerneldir ;;
@@ -233,10 +249,6 @@ if test -n "$prev"; then
   { echo "configure: error: missing argument to --`echo $prev | sed 's/_/-/g'`" 1>&2; exit 1; }
 fi
 
-if test "`cd $srcdir && pwd`" != "`pwd`" && test -f $srcdir/config.status; then
-  { echo "configure: error: source directory already configured; run "make distclean" there first" 1>&2; exit 1; }
-fi
-
 
 #
 # Check for target system
@@ -296,14 +308,6 @@ NONE)
   ;;
 esac
 
-# Default dist directory
-case $distdir in
-NONE)
-  distdir="$prefix/dist"
-  echo "Setting distdir=$distdir"
-  ;;
-esac
-
 # Default download directory
 case $downloaddir in
 NONE)
@@ -312,27 +316,14 @@ NONE)
   ;;
 esac
 
-# Default builddir directory
-case $builddir in
-NONE)
-  builddir="$topdir/build"
-  echo "Setting builddir=$builddir"
-  ;;
-esac
-
-# Default target kernel directory
+# Splitted target kernel directories?
 case $targetkerneldir in
 NONE)
-  targetkerneldir="$builddir/linux-$KERNEL_VERSION"
-  echo "Setting targetkerneldir=$targetkerneldir"
+  targetkerneldir="\$BUILD_DIR/linux-$KERNEL_VERSION"
   ;;
-esac
-
-# Default target module directory
-case $targetmoduledir in
-NONE)
-  targetmoduledir="$builddir/linux-$KERNEL_VERSION/_install"
-  echo "Setting targetmoduledir=$targetmoduledir"
+*)
+  targetkernelsource="\$COLINUX_TARGET_KERNEL_PATH"
+  targetkernelbuild="\$COLINUX_TARGET_KERNEL_PATH"
   ;;
 esac
 
@@ -390,51 +381,58 @@ if [ "$hostkerneldir" != "NONE" ] ; then
   fi
 fi
 
-# Default logfile directory
-case $logfile in
-NONE)
-  logfile="$topdir/log/build-colinux-\$\$.log"
-  echo "Setting logfile=$logfile"
-  ;;
-esac
-
 # Remove path from md5 files
 W32LIBS_CHECKSUM=`basename $W32LIBS_CHECKSUM`
 KERNEL_CHECKSUM=`basename $KERNEL_CHECKSUM`
 
-# MD5sum files stored here
-md5dir="$builddir"
+# $1 Name of component
+# $2 yes: add to warnings | no: add to failed
+add_failed()
+{
+    if [ "$2" != "yes" ]; then
+	test -z "$failed" && failed="$1" || failed="$failed, $1"
+    else
+	test -z "$warnings" && warnings="$1" || warnings="$warnings, $1"
+    fi
+}
+
 
 # $1 Name of component
 # $2 Call for check
 # $3 Minimum version need, or empty string
 # $4 Maximum version supported, or empty string
+# '--warn' optional as first param, add to warning lis
 # sample: "wget-1.8" "wget --version" "1.8.x"
 check_exec_tool()
 {
-  local v1="" v2="" v3="" i1="" i2="" i3=""
+  local v1="" v2="" v3="" i1="" i2="" i3="" warn=""
+
+  if [ "$1" = "--warn" ]; then
+    warn="yes"
+    shift
+  fi
   
   echo -n "Checking for $1 ... "
   if ($2) </dev/null >/dev/null 2>&1; then
     if [ -n "$3" ]; then
       # get needed version, transform the 'x' into 0
       eval `echo $3 | sed -r -e \
-        's/([0-9]{1,2})\.([0-9x]{1,2})\.([0-9x]{1,2})/v1=\1 v2=\2 v3=\3/' -e 'y/x/0/'`
+        's/([0-9]+)\.([0-9x]+)\.([0-9x]+)/v1=\1 v2=\2 v3=\3/' -e 'y/x/0/'`
 
       # get installed version
       eval `($2) 2>&1 | sed -n -r -e \
-        's/.*([0-9]{1,2})\.([0-9]{1,2})\.([0-9]{1,2}).*/i1=\1 i2=\2 i3=\3/p'`
+        's/[^0-9]*([0-9]+)\.([0-9]+)\.([0-9]+).*/i1=\1 i2=\2 i3=\3/p'`
 
       if [ "$v3" = "0" -a -z "$i1" ]; then
         # get installed version with two numbers
         eval `($2) 2>&1 | sed -n -r -e \
-          's/.*([0-9]{1,2})\.([0-9]{1,2}).*/i1=\1 i2=\2/p'`
+          's/[^0-9]*([0-9]+)\.([0-9]+).*/i1=\1 i2=\2/p'`
 	i3="0"
       fi
 
       if [ -z "$i1" -o -z "$v1" -o -z "$i2" -o -z "$v2" -o -z "$i3" -o -z "$v3" ]; then
         echo "Version not dectect"
-	missing=yes
+	add_failed "$1" $warn
 	return 1
       fi
 
@@ -444,7 +442,7 @@ check_exec_tool()
            $i1 -eq $v1 -a $i2 -lt $v2 -o \
            $i1 -eq $v1 -a $i2 -eq $v2 -a $i3 -lt $v3 ]; then
 	echo "wrong version, need $3"
-	missing=yes
+	add_failed "$1" $warn
 	return 1
       fi
 
@@ -452,14 +450,14 @@ check_exec_tool()
 	local m1="" m2="" m3=""
 	# get needed version, transform the 'x' into 999
 	eval `echo $4 | sed -r -e \
-	    's/([0-9]{1,2})\.([0-9x]{1,2})\.([0-9x]{1,2})/m1=\1 m2=\2 m3=\3/'`
+	    's/([0-9]+)\.([0-9x]+)\.([0-9x]+)/m1=\1 m2=\2 m3=\3/'`
 	test "$m2" = "x" && m2="999"
 	test "$m3" = "x" && m3="999"
 	if [ $i1 -gt $m1 -o \
 	     $i1 -eq $m1 -a $i2 -gt $m2 -o \
 	     $i1 -eq $m1 -a $i2 -eq $m2 -a $i3 -gt $m3 ]; then
-	  echo "version not suppoted, maximum $4"
-	  missing=yes
+	  echo "version not supported, maximum $4"
+	  add_failed "$1" $warn
 	  return 1
 	fi
       fi
@@ -468,14 +466,20 @@ check_exec_tool()
     echo "found"
   else
     echo "missing (no exec)"
-    missing=yes
+    add_failed "$1" $warn
     return 1
   fi
   return 0
 }
 
+
 gcc_helper()
 {
+	if [ "$gcc_guest_build" = "yes" ]; then
+		echo "  Can't use local gcc for kernel, build guest '${gcc_guest_target_prefix}gcc' later"
+		return
+	fi
+
 	cat << EOF
 
 	Cross gcc and local gcc should be the same major and minor version.
@@ -483,28 +487,27 @@ gcc_helper()
 	Please use option  "--gcc-guest-build"  to enable building of guest gcc
 	from sources, if building cross tools later. (Need for kernel building)
 
-	Or download source for gcc $GCC_NEEDED, configure and build self:
+	--- OR ---
 	
-	# cd $srcdir/bin
-	# ./build-cross.sh --download-only
-	# cd /tmp
-	# tar xfz $downloaddir/gcc-core-$GCC_RELEASE-src.tar.gz
-	# tar xfz $downloaddir/gcc-g++-$GCC_RELEASE-src.tar.gz
-	# cd gcc-$GCC_RELEASE
-	# ./configure --prefix=\$HOME/$gcc_guest_target
-	# make && make install
-	# cd / ; rm -rf /tmp/gcc-$GCC_RELEASE
+	# download source for gcc $GCC_NEEDED, configure and build self:
+	cd $srcdir/bin
+	./build-cross.sh --download-only
+	cd /tmp
+	tar xzf $downloaddir/gcc-core-$GCC_RELEASE-src.tar.gz
+	tar xzf $downloaddir/gcc-g++-$GCC_RELEASE-src.tar.gz
+	cd gcc-$GCC_RELEASE
+	./configure --prefix=\$HOME/$gcc_guest_target
+	make && make install
+	cd / ; rm -rf /tmp/gcc-$GCC_RELEASE
 
-	Than run counfigure and make for colinux again
-	with binary path to this directory:
-
-	# export PATH="\$HOME/$gcc_guest_target/bin:\$PATH"
-	# cd $srcdir
-	# ./configure && make
-
+	# Than run configure and make again with binary path to this directory:
+	export PATH="\$HOME/$gcc_guest_target/bin:\$PATH"
+	cd $srcdir
+	./configure && make
 EOF
 	exit 1
 }
+
 
 check_depmod()
 {
@@ -528,22 +531,24 @@ check_depmod()
 	to use only for cross buildings.
 
 EOF
-      missing=yes
+      add_failed "$1"
     else
       echo "($installed) found"
     fi
   else
     echo "missing (no exec)"
-    missing=yes
+    add_failed "$1"
   fi
 }
 
 #
 # Check for tools
 #
-missing=no
+warning=""
+failed=""
 
 # Get version from script, replace the last digit
+#BINUTILS_NEEDED=`echo "$BINUTILS_VERSION" | sed -e 's/\([0-9]\+\)\.\([0-9]\+\).*$/\1.\2/'`.x
 GCC_NEEDED=`echo "$GCC_VERSION" | sed -e 's/\([0-9]\+\)\.\([0-9]\+\).*$/\1.\2/'`.x
 
 # Build specific path
@@ -579,43 +584,44 @@ case $colinux_os in
   ;;
   *) # for Winnt as host
     # Check GCC for kernel
-    missing_last=$missing
-    check_exec_tool "gcc for kernel" "${gcc_guest_target_prefix}gcc -dumpversion" \
-       "$GCC_NEEDED" "$GCC_NEEDED" || \
-      if [ "$gcc_guest_build" = "no" ]; then
-        gcc_helper
-      else
-        echo "  Can't use local gcc for kernel, build guest '${gcc_guest_target_prefix}gcc' later"
-        missing=$missing_last
-      fi
+    check_exec_tool --warn "gcc for kernel" "${gcc_guest_target_prefix}gcc -dumpversion" \
+       "$GCC_NEEDED" "$GCC_NEEDED" || gcc_helper
+    check_exec_tool --warn "binutils for kernel" "${gcc_guest_target_prefix}as --version" \
+       "$BINUTILS_NEEDED" "$BINUTILS_NEEDED" || gcc_helper
 
     # Locate users depmod and check for module-init-tools
-    check_depmod
-    check_exec_tool "unzip" "unzip -h" ""
-    check_exec_tool "zip" "zip -h" ""
+    check_depmod "depmod"
+    check_exec_tool "unzip" "unzip -h"
+    check_exec_tool "zip" "zip -h"
     # bison-1.75-109   need by binutils (yacc 91.7.30 have a error YYEMPTY)
-    check_exec_tool "bison" "bison --version" ""
+    check_exec_tool "bison" "bison --version"
     # need by binutils ...
-    check_exec_tool "texinfo" "texindex --version" ""
-    check_exec_tool "flex" "flex --version" ""
-    check_exec_tool "gettext" "gettext --version" ""
-    check_exec_tool "unix2dos" "unix2dos --version" ""
+    check_exec_tool "texinfo" "texindex --version"
+    check_exec_tool "flex" "flex --version"
+    check_exec_tool "gettext" "gettext --version"
+    # need by "make installer" only ...
+    check_exec_tool --warn "unix2dos" "unix2dos --version"
   ;;
 esac
 
 #
 # Stop, if some tools missing or wrong version
 #
-test "$missing" = yes && exit 1
+if [ -n "$warnings" ]
+then
+    echo " warnings: $warnings"
+fi
+
+if [ -n "$failed" ]
+then
+    echo " failed: $failed"
+    exit 1
+fi
 
 #
 # do nothing, if trace option enabled
 #
 test "$no_create" = yes && { echo "nothing created!" 1>&2; exit 1; }
-
-# Create log-Directory
-logfile_dir=`dirname $logfile`
-mkdir -p $logfile_dir
 
 # Backup old config file
 test -f $configfile -a ! -f $configfile.old && mv $configfile $configfile.old
@@ -661,13 +667,23 @@ PREFIX="$prefix"
 #
 # KERNEL_VERSION=$KERNEL_VERSION
 
-# Path to guest kernel, need for colinux daemons build processing
+# Path to guest kernel, need for colinux daemons build processing (obsolate)
 # default: \$BUILD_DIR/linux-\$KERNEL_VERSION
 #
 COLINUX_TARGET_KERNEL_PATH="$targetkerneldir"
 
+# Directory target kernel source path for unpacking source (Guest kernel)
+# default: \$BUILD_DIR/linux-\$KERNEL_VERSION-source
+#
+COLINUX_TARGET_KERNEL_SOURCE="$targetkernelsource"
+
+# Directory target kernel for building (Guest kernel)
+# default: \$BUILD_DIR/linux-\$KERNEL_VERSION-build
+#
+COLINUX_TARGET_KERNEL_BUILD="$targetkernelbuild"
+
 # Output directory for target modules. Used for INSTALL_MOD_PATH in kernel build
-# default: \$COLINUX_TARGET_KERNEL_PATH/_install
+# default: \$COLINUX_TARGET_KERNEL_BUILD/_install
 #
 COLINUX_TARGET_MODULE_PATH="$targetmoduledir"
 

@@ -51,6 +51,9 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 			break;
 
 		cobd = &conf->block_devs[index];
+
+		if (cobd->enabled)
+			co_terminal_print("warning cobd%d double defined\n", index);
 		cobd->enabled = PTRUE;
 
 		co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
@@ -81,10 +84,10 @@ static co_rc_t allocate_by_alias(co_config_t *conf, const char *prefix, const ch
 
 	cobd->enabled = PTRUE;
 	co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
+	co_canonize_cobd_path(&cobd->pathname);
+
 	cobd->alias_used = PTRUE;
 	co_snprintf(cobd->alias, sizeof(cobd->alias), "%s%s", prefix, suffix);
-
-	co_canonize_cobd_path(&cobd->pathname);
 
 	co_terminal_print("selected cobd%d for %s, mapping to '%s'\n", i, cobd->alias, cobd->pathname);
 
@@ -122,12 +125,12 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 				index = co_strtol(index_str, &number_parse, 10);
 				if (number_parse == index_str) {
 					co_terminal_print("invalid alias: %s%s=%s\n", prefix, suffix, param);
-					return CO_RC(ERROR);
+					return CO_RC(INVALID_PARAMETER);
 				}
 
 				if (index < 0 || index >= CO_MODULE_MAX_COBD) {
 					co_terminal_print("invalid cobd index %d in alias %s%s\n", index, prefix, suffix);
-					return CO_RC(ERROR);
+					return CO_RC(INVALID_PARAMETER);
 				}
 
 				cobd = &conf->block_devs[index];
@@ -137,7 +140,7 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 				
 				if (cobd->alias_used) {
 					co_terminal_print("error, alias cannot be used twice for cobd%d\n", index);
-					return CO_RC(ERROR);
+					return CO_RC(INVALID_PARAMETER);
 				}
 
 				cobd->alias_used = PTRUE;
@@ -302,7 +305,7 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 			co_terminal_print("Pcap mode: promisc\n");
 		} else {
 			co_terminal_print("error: PCAP bridge option only allowed 'promisc' or 'nopromisc'\n");
-			return CO_RC(ERROR);
+			return CO_RC(INVALID_PARAMETER);
 		}
 	}
 
@@ -346,7 +349,7 @@ static co_rc_t parse_args_networking_device(co_config_t *conf, int index, const 
 	} else {
 		co_terminal_print("unsupported network transport type: %s\n", param);
 		co_terminal_print("supported types are: tuntap, pcap-bridge, slirp\n");
-		return CO_RC(ERROR);
+		return CO_RC(INVALID_PARAMETER);
 	}
 
 	return CO_RC(OK);
@@ -370,6 +373,9 @@ static co_rc_t parse_args_networking(co_command_line_params_t cmdline, co_config
 		if (!exists)
 			break;
 
+		if (conf->net_devs[index].enabled)
+			co_terminal_print("warning eth%d double defined\n", index);
+
 		rc = parse_args_networking_device(conf, index, param);
 		if (!CO_OK(rc))
 			return rc;
@@ -378,16 +384,29 @@ static co_rc_t parse_args_networking(co_command_line_params_t cmdline, co_config
 	return CO_RC(OK);
 }
 
+static co_rc_t parse_args_cofs_device(co_config_t *conf, int index, const char *param)
+{
+	co_cofsdev_desc_t *cofs = &conf->cofs_devs[index];
+
+	if (cofs->enabled)
+		co_terminal_print("warning cofs%d double defined\n", index);
+	cofs->enabled = PTRUE;
+
+	co_snprintf(cofs->pathname, sizeof(cofs->pathname), "%s", param);
+	co_canonize_cobd_path(&cofs->pathname);
+	co_terminal_print("mapping cofs%d to %s\n", index, cofs->pathname);
+
+	return CO_RC(OK);
+}
+
 static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_config_t *conf)
 {
+	int index;
 	bool_t exists;
 	char *param;
 	co_rc_t rc;
 
 	do {
-		int index;
-		co_cofsdev_desc_t *cofs;
-
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cofs", 
 							     &index, CO_MODULE_MAX_COFS, 
 							     &param, &exists);
@@ -397,12 +416,9 @@ static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_confi
 		if (!exists)
 			break;
 
-		cofs = &conf->cofs_devs[index];
-		cofs->enabled = PTRUE;
-
-		co_snprintf(cofs->pathname, sizeof(cofs->pathname), "%s", param);
-		co_canonize_cobd_path(&cofs->pathname);
-		co_terminal_print("mapping cofs%d to %s\n", index, cofs->pathname);
+		rc = parse_args_cofs_device(conf, index, param);
+		if (!CO_OK(rc))
+			return rc;
 	} while (1);
 
 	return CO_RC(OK);
@@ -420,6 +436,8 @@ static co_rc_t parse_args_serial_device(co_config_t *conf, int index, const char
 		{ 0, NULL }
 	};
 
+	if (serial->enabled)
+		co_terminal_print("warning ttys%d double defined\n", index);
 	serial->enabled = PTRUE;
 
 	split_comma_separated(param, array);
@@ -431,10 +449,14 @@ static co_rc_t parse_args_serial_device(co_config_t *conf, int index, const char
 
 	co_terminal_print("mapping ttys%d to %s\n", index, name);
 	serial->desc = strdup(name);
+	if (!serial->desc)
+		return CO_RC(OUT_OF_MEMORY);
 	
 	if (*mode) {
 		co_debug("mode: %s", mode);
 		serial->mode = strdup(mode);
+		if (!serial->mode)
+			return CO_RC(OUT_OF_MEMORY);
 	}
 
 	return CO_RC(OK);
@@ -478,6 +500,8 @@ static co_rc_t parse_args_execute(co_config_t *conf, int index, const char *para
 		{ 0, NULL }
 	};
 
+	if (execute->enabled)
+		co_terminal_print("warning exec%d double defined\n", index);
 	execute->enabled = PTRUE;
 	execute->pid = 0;
 
@@ -490,10 +514,14 @@ static co_rc_t parse_args_execute(co_config_t *conf, int index, const char *para
 
 	co_debug("exec%d: '%s'", index, prog);
 	execute->prog = strdup(prog);
+	if (!execute->prog)
+		return CO_RC(OUT_OF_MEMORY);
 	
 	if (*args) {
 		co_debug("args%d: %s", index, args);
 		execute->args = strdup(args);
+		if (!execute->args)
+			return CO_RC(OUT_OF_MEMORY);
 	}
 
 	return CO_RC(OK);
@@ -530,17 +558,6 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 	co_rc_t rc;
 	bool_t exists;
 
-	rc = co_cmdline_get_next_equality(cmdline, "initrd", 0, NULL, 0, 
-					  conf->initrd_path, sizeof(conf->initrd_path),
-					  &conf->initrd_enabled);
-	if (!CO_OK(rc)) 
-		return rc;
-
-	if (conf->initrd_enabled) {
-		co_remove_quotation_marks(conf->initrd_path);
-		co_terminal_print("using '%s' as initrd image\n", conf->initrd_path);
-	}
-
 	rc = co_cmdline_get_next_equality_int_value(cmdline, "mem", (int *)&conf->ram_size, &exists);
 	if (!CO_OK(rc)) 
 		return rc;
@@ -565,6 +582,38 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 	rc = parse_args_config_cofs(cmdline, conf);
 	if (!CO_OK(rc))
 		return rc;
+
+	rc = co_cmdline_get_next_equality(cmdline, "initrd", 0, NULL, 0, 
+					  conf->initrd_path, sizeof(conf->initrd_path),
+					  &conf->initrd_enabled);
+	if (!CO_OK(rc)) 
+		return rc;
+
+	if (conf->initrd_enabled) {
+		co_remove_quotation_marks(conf->initrd_path);
+		co_terminal_print("using '%s' as initrd image\n", conf->initrd_path);
+
+		/* Is last cofs free for automatic set? */
+		if (!conf->cofs_devs[CO_MODULE_MAX_COFS-1].enabled) {
+			char *param;
+
+			/* copy path from initrd file */
+			param = strdup(conf->initrd_path);
+			if (!param)
+				return CO_RC(OUT_OF_MEMORY);
+
+			/* get only the directory */
+			co_dirname(param);
+
+			if (*param)
+				rc = parse_args_cofs_device(conf, CO_MODULE_MAX_COFS-1, param);
+
+			co_os_free (param);
+
+			if (!CO_OK(rc))
+				return rc;
+		}
+	}
 
 	rc = parse_args_config_serial(cmdline, conf);
 	if (!CO_OK(rc))

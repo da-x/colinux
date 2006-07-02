@@ -17,13 +17,6 @@ targets['prelinked_driver.o'] = Target(
     )
 )
 
-def script_cmdline(scripter, tool_run_inf):
-    command_line = 'export COLINUX_PWD=`pwd`; cd ; make -C V=1' % (
-        tool_run_inf.target.inputs[0].pathname,
-        tool_run_inf.target.inputs[1].pathname,
-        tool_run_inf.target.pathname)
-    return command_line
-
 class ModuleBuilder(Executer):
     def prepare_command(self, tool_run_inf):
         from comake import build_root

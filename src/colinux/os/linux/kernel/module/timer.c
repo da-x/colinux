@@ -35,7 +35,7 @@ co_rc_t co_os_timer_create(co_os_func_t func, void *data,
 
 	t = co_os_malloc(sizeof(*t));
 	if (!t)
-		return CO_RC(ERROR);
+		return CO_RC(OUT_OF_MEMORY);
 
 	init_timer(&t->timer);
 

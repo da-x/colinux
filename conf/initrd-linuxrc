@@ -6,8 +6,17 @@ LOG=/linuxrc.log
 
 KERNEL_VERSION=$(uname -r)
 
+message_disable_initrd()
+{
+	echo "Try to run coLinux without initrd.  Comment out initrd from configuration."
+	sleep 1
+	echo -e "\nPress <ENTER> to continue"
+	read junk
+}
+
 install_modules()
 {
+
 	# rootfs mounted right?
 	if [ ! -d /mnt/linux/etc ]; then
 		return
@@ -44,14 +53,32 @@ install_modules()
 		esac
 	done < /mnt/linux/etc/fstab
 
-	if [ -d /mnt/linux/lib/modules/$KERNEL_VERSION ] ; then
+	if [ -d /mnt/linux/lib/modules/$KERNEL_VERSION ]; then
 		echo "Skipping." | tee -a $LOG
 	else
-		cd /mnt/linux
-		tar zxf /lib/modules/vmlinux-modules.tar.gz 2>&1 >> $LOG
-		cd /
-		echo "Done." | tee -a $LOG
-		sync ; sleep 1
+		if [ ! -f /lib/modules/vmlinux-modules.tar.gz ]; then
+			echo "Mounting cofs for vmlinux-modules.tar.gz" | tee -a $LOG
+			# TODO: get cofs index number from proc fs
+			if mount -o ro -t cofs 31 /lib/modules
+			then
+				if [ ! -f /lib/modules/vmlinux-modules.tar.gz ]; then
+					echo "initrd: vmlinux-modules.tar.gz not found in cofs31!" | tee -a $LOG
+				fi
+			else
+				echo "failed" | tee -a $LOG
+			fi
+		fi
+
+		if [ -f /lib/modules/vmlinux-modules.tar.gz ]; then
+			echo "untar" >> $LOG
+			if tar zxf /lib/modules/vmlinux-modules.tar.gz -C /mnt/linux 2>&1 >> $LOG
+			then
+				echo "done" >> $LOG
+			fi
+			sync; sleep 1
+		fi
+
+		umount /lib/modules 2>/dev/null
 	fi
 
 	# Create console for boot with udev
@@ -63,7 +90,7 @@ install_modules()
 	if [ -n "$modules_dev" ]; then
 		echo "umount modules" >> $LOG
 		umount $modules_dev 2>&1 >> $LOG
-		sync ; sleep 1
+		sync; sleep 1
 	fi
 
 	if [ -n "$lib_dev" ]; then
@@ -92,31 +119,28 @@ fi
 
 sleep 1
 
-if [ -f /lib/modules/vmlinux-modules.tar.gz ]; then
-	
-	echo -n "Determining /" 
-	echo "Determining /" >> $LOG
-	ROOT_DEVICE=/dev/root
-	for i in "$(echo $CMDLINE | cut -d' ' -f1)"; do
-		echo "Parsing for root, found: $i" >> $LOG
-		NAME="$(echo $i | cut -d= -f1)"
-		VALUE="$(echo $i | cut -d= -f2)"
-		case "$NAME" in
-		root)
-			# Transform /dev/cobd/0 into /dev/cobd0 for udev
-			ROOT_DEVICE="$(echo $VALUE | sed -r -e 's|(/dev/.+)/([0-9]+)|\1\2|')"
-			echo ", Found."
-		;;
-		esac
-	done
+echo -n "Determining /" 
+echo "Determining /" >> $LOG
+ROOT_DEVICE=/dev/root
+for i in "$(echo $CMDLINE | cut -d' ' -f1)"; do
+	echo "Parsing for root, found: $i" >> $LOG
+	NAME="$(echo $i | cut -d= -f1)"
+	VALUE="$(echo $i | cut -d= -f2)"
+	case "$NAME" in
+	root)
+		# Transform /dev/cobd/0 into /dev/cobd0 for udev
+		ROOT_DEVICE="$(echo $VALUE | sed -r -e 's|(/dev/.+)/([0-9]+)|\1\2|')"
+		echo ", Found."
+	;;
+	esac
+done
 
-	echo " ($ROOT_DEVICE) " >> $LOG
+echo " ($ROOT_DEVICE) " >> $LOG
 
-	echo "Mounting /" | tee -a $LOG
-	if mount $ROOT_DEVICE /mnt/linux
-	then
-		install_modules
-	fi
+echo "Mounting /" | tee -a $LOG
+if mount $ROOT_DEVICE /mnt/linux
+then
+	install_modules
 
 	echo "Closing /" | tee -a $LOG
 	if ! umount -f /mnt/linux 2>&1 >> $LOG
@@ -126,15 +150,14 @@ if [ -f /lib/modules/vmlinux-modules.tar.gz ]; then
 		if ! umount -f /mnt/linux
 		then
 			echo -e "\ninitrd: umount failed on rootfs"
-			echo "Try to run coLinux without initrd.  Comment out initrd from configuration."
-			echo -e "\nPress <ENTER> to continue"
-			read junk
+			message_disable_initrd
 		fi
 		sync
 	fi
 fi
 
+sync
+
 # Freeing proc that was auto-mounted earlier
 umount /proc 2>&1 >> $LOG
-
 sync

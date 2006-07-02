@@ -367,7 +367,7 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 	dirname = co_os_malloc(len+1);
 	if (!dirname) {
 		co_debug_lvl(filesystem, 5, "no memory");
-		return CO_RC(ERROR);
+		return CO_RC(OUT_OF_MEMORY);
 	}
 
 	memcpy(dirname, fullname, len);
@@ -658,7 +658,7 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 
 			new_name = co_os_malloc(filename_utf8_length + sizeof(co_filesystem_name_t) + 2);
 			if (!new_name) {
-				rc = CO_RC(ERROR);
+				rc = CO_RC(OUT_OF_MEMORY);
 				goto error_2;
 			}
 			

@@ -7,7 +7,7 @@ export COLINUX_HOST_OS := winnt
 PREFIX := $(shell . $(USER_CFG); echo $$PREFIX)
 
 # Need some variables and PATH of cross compiler in make.
-export PATH := $(PREFIX)/bin:$(PATH)
+export PATH := $(PATH):$(PREFIX)/bin
 
 .PHONY: all cross cross libs kernel download package installer
 all: cross libs kernel colinux

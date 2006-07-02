@@ -18,14 +18,12 @@ then
 	# Default path, if empty
 	test -z "$COLINUX_CGG_GUEST_PATH" && \
 		COLINUX_GCC_GUEST_PATH="$PREFIX/$COLINUX_GCC_GUEST_TARGET/bin"
-	export PATH=$COLINUX_GCC_GUEST_PATH:$PATH
-	export CROSS_COMPILE=${COLINUX_GCC_GUEST_TARGET}-
+	export PATH="$PATH:$COLINUX_GCC_GUEST_PATH"
+	export CROSS_COMPILE="${COLINUX_GCC_GUEST_TARGET}-"
 fi
 
 download_files()
 {
-	mkdir -p "$SRCDIR"
-	
 	download_file "$KERNEL_ARCHIVE" "$KERNEL_URL"
 }
 
@@ -35,7 +33,7 @@ check_md5sums()
 	echo -n "Check kernel and modules: "
 	cd "$TOPDIR"
 
-	if [ ! -f $COLINUX_TARGET_KERNEL_PATH/vmlinux ]
+	if [ ! -f "$COLINUX_TARGET_KERNEL_BUILD/vmlinux" ]
 	then
 		echo "vmlinux don't exist, build it now"
 		return
@@ -44,7 +42,7 @@ check_md5sums()
 	if md5sum -c $KERNEL_CHECKSUM >/dev/null 2>&1
 	then
 		echo "Skip $COMPLETE_KERNEL_NAME"
-		echo " - already done in $COLINUX_TARGET_KERNEL_PATH"
+		echo " - already done in $COLINUX_TARGET_KERNEL_BUILD"
 		exit 0
 	fi
 	echo "MD5sum don't match, rebuilding"
@@ -58,14 +56,14 @@ create_md5sums()
 	md5sum -b \
 	    src/colinux/VERSION \
 	    conf/linux-$KERNEL_VERSION-config \
-	    $COLINUX_TARGET_KERNEL_PATH/.config \
-	    $COLINUX_TARGET_KERNEL_PATH/vmlinux \
-	    $COLINUX_TARGET_MODULE_PATH/lib/modules/$COMPLETE_KERNEL_NAME/modules.dep \
-	    > $KERNEL_CHECKSUM
-	test $? -ne 0 && error_exit 10 "can not create md5sum"
+	    "$COLINUX_TARGET_KERNEL_BUILD/.config" \
+	    "$COLINUX_TARGET_KERNEL_BUILD/vmlinux" \
+	    "$COLINUX_TARGET_MODULE_PATH/lib/modules/$COMPLETE_KERNEL_NAME/modules.dep" \
+	    > $KERNEL_CHECKSUM \
+	|| error_exit 10 "can not create md5sum"
 
 	# Md5sums for patches
-	for name in $KERNEL_PATCH patch/linux-*.patch
+	for name in $KERNEL_PATCH patch/linux-*.patch patch/config-*.patch
 	do
 		md5sum -b $name >> $KERNEL_CHECKSUM
 	done
@@ -80,75 +78,88 @@ create_md5sums()
 extract_kernel()
 {
 	echo "Extracting Kernel $KERNEL_VERSION"
-	cd "$BUILD_DIR"
+
 	# Backup users modifired source
-	if [ -d "$KERNEL" -a ! -d "$KERNEL.bak" ]
+	if [ -d "$COLINUX_TARGET_KERNEL_SOURCE" -a ! -d "$COLINUX_TARGET_KERNEL_SOURCE.bak" ]
 	then
-		mv "$KERNEL" "$KERNEL.bak"
+		echo "Backup old kernel source to"
+		echo " $COLINUX_TARGET_KERNEL_SOURCE.bak"
+		mv "$COLINUX_TARGET_KERNEL_SOURCE" "$COLINUX_TARGET_KERNEL_SOURCE.bak"
+		cp -p "$COLINUX_TARGET_KERNEL_BUILD/.config" "$COLINUX_TARGET_KERNEL_SOURCE.bak/config"
 	fi
-	rm -rf "$KERNEL"
-	bzip2 -dc "$SRCDIR/$KERNEL_ARCHIVE" | tar x
-	test $? -ne 0 && error_exit 10 "$KERNEL_VERSION extract failed"
+
+	mkdir -p "$COLINUX_TARGET_KERNEL_SOURCE-tmp" || exit 1
+	rm -rf "$COLINUX_TARGET_KERNEL_SOURCE" "$COLINUX_TARGET_KERNEL_BUILD"
+	bzip2 -dc "$SOURCE_DIR/$KERNEL_ARCHIVE" | tar x -C "$COLINUX_TARGET_KERNEL_SOURCE-tmp" \
+	|| error_exit 10 "$KERNEL_VERSION extract failed"
+	mv "$COLINUX_TARGET_KERNEL_SOURCE-tmp/$KERNEL" "$COLINUX_TARGET_KERNEL_SOURCE" || exit 1
+	rm -rf "$COLINUX_TARGET_KERNEL_SOURCE-tmp"
 }
 
-patch_kernel()
+patch_kernel_source()
 {
-	cd "$BUILD_DIR/$KERNEL"
-
-	# A minor hack for now.  Allowing linux config to be 'version specific' 
-	#  in the future, but keeping backwards compatability.
-	if [ -f "$TOPDIR/conf/linux-config" ]; then
-		cp "$TOPDIR/conf/linux-config" "$TOPDIR/conf/linux-$KERNEL_VERSION-config"
-	fi
-	cp "$TOPDIR/conf/linux-$KERNEL_VERSION-config" .config
-
 	# Standard patch, user patches, alphabetically sort by name
 	# Last chance to add private things, such local config
-	for name in $TOPDIR/$KERNEL_PATCH $TOPDIR/patch/linux-*.patch
+	# patches on source
+	for name in "$TOPDIR/$KERNEL_PATCH" "$TOPDIR"/patch/linux-*.patch
 	do
 		echo "reading $name"
-		patch -p1 < $name
-		test $? -ne 0 && error_exit 10 "$name patch failed"
+		patch -p1 -f -d "$COLINUX_TARGET_KERNEL_SOURCE" < $name \
+		|| error_exit 10 "$name patch failed"
 	done
 
 	# Copy coLinux Version into kernel localversion
-	echo "-co-$CO_VERSION" > localversion-cooperative
+	echo "-co-$CO_VERSION" > "$COLINUX_TARGET_KERNEL_SOURCE/localversion-cooperative"
+}
 
-	# Hack for sample config. Directory name with unknown kernel version.
-	if [ ! -d $COLINUX_TARGET_KERNEL_PATH ]; then
-		echo "COLINUX_TARGET_KERNEL_PATH=$COLINUX_TARGET_KERNEL_PATH"
-		echo "BUILD_DIR/KERNEL=$BUILD_DIR/$KERNEL"
-		ln -s $BUILD_DIR/$KERNEL $COLINUX_TARGET_KERNEL_PATH
+patch_kernel_build()
+{
+	mkdir -p "$COLINUX_TARGET_KERNEL_BUILD" || exit 1
+	# A minor hack for now.  Allowing linux config to be 'version specific' 
+	#  in the future, but keeping backwards compatability.
+	if [ ! -f "$TOPDIR/conf/linux-$KERNEL_VERSION-config" ]; then
+		ln -s "linux-config" "$TOPDIR/conf/linux-$KERNEL_VERSION-config"
 	fi
+	cp "$TOPDIR/conf/linux-$KERNEL_VERSION-config" "$COLINUX_TARGET_KERNEL_BUILD/.config"
+
+	# patches on config in buildir
+	for name in "$TOPDIR"/patch/config-*.patch
+	do
+		echo "reading $name"
+		patch -p1 -f -d "$COLINUX_TARGET_KERNEL_BUILD" < $name \
+		|| error_exit 10 "$name patch failed"
+	done
 }
 
 configure_kernel()
 {
 	# Is this a patched kernel?
-	if [ ! -f $COLINUX_TARGET_KERNEL_PATH/include/linux/cooperative.h ]
+	if [ ! -f "$COLINUX_TARGET_KERNEL_SOURCE/include/linux/cooperative.h" ]
 	then
-		echo -e "\nHups: Missing cooperative.h in kernel source!\n"
-		echo "Please verify setting of these variables:"
-		echo "COLINUX_TARGET_KERNEL_PATH=$COLINUX_TARGET_KERNEL_PATH"
-		echo "BUILD_DIR/KERNEL=$BUILD_DIR/$KERNEL"
-		echo
-		echo "\$COLINUX_TARGET_KERNEL_PATH should the same as \$BUILD_DIR/\$KERNEL"
+		cat <<EOF >&2
+Hups: Missing cooperative.h in kernel source!
+
+Please verify setting of these variables:
+COLINUX_TARGET_KERNEL_SOURCE=$COLINUX_TARGET_KERNEL_SOURCE
+BUILD_DIR/KERNEL=$BUILD_DIR/$KERNEL
+
+\$COLINUX_TARGET_KERNEL_SOURCE should the same as \$BUILD_DIR/\$KERNEL
+EOF
 		exit 1
 	fi
 
-	cd "$COLINUX_TARGET_KERNEL_PATH"
 	echo "Configuring Kernel $KERNEL_VERSION"
-	make silentoldconfig
-	test $? -ne 0 && error_exit 10 \
-	    "Kernel $KERNEL_VERSION config failed (check 'make oldconfig' on kerneltree)"
+	cd "$COLINUX_TARGET_KERNEL_SOURCE" || exit 1
+	make O="$COLINUX_TARGET_KERNEL_BUILD" silentoldconfig >>$COLINUX_BUILD_LOG 2>&1 \
+	|| error_exit 1 "Kernel $KERNEL_VERSION config failed (check 'make oldconfig' on kerneltree)"
 }
 
 compile_kernel()
 {
 	echo "Making Kernel $KERNEL_VERSION"
-	cd "$COLINUX_TARGET_KERNEL_PATH"
-	make vmlinux >>$COLINUX_BUILD_LOG 2>&1
-	test $? -ne 0 && error_exit 1 "Kernel $KERNEL_VERSION make failed"
+	cd "$COLINUX_TARGET_KERNEL_BUILD" || exit 1
+	make vmlinux >>$COLINUX_BUILD_LOG 2>&1 \
+	|| error_exit 1 "Kernel $KERNEL_VERSION make failed"
 }
 
 #
@@ -158,39 +169,43 @@ compile_kernel()
 compile_modules()
 {
 	echo "Making Modules $KERNEL_VERSION"
-	cd "$COLINUX_TARGET_KERNEL_PATH"
+	cd "$COLINUX_TARGET_KERNEL_BUILD" || exit 1
 
 	#Fall back for older config
 	test -z "$COLINUX_DEPMOD" && COLINUX_DEPMOD=/sbin/depmod
 
 	make \
-	    INSTALL_MOD_PATH=$COLINUX_TARGET_MODULE_PATH \
+	    INSTALL_MOD_PATH="$COLINUX_TARGET_MODULE_PATH" \
 	    DEPMOD=$COLINUX_DEPMOD \
-	    modules modules_install >>$COLINUX_BUILD_LOG 2>&1
-	test $? -ne 0 && error_exit 1 "Kernel $KERNEL_VERSION make modules failed"
+	    modules modules_install >>$COLINUX_BUILD_LOG 2>&1 \
+	|| error_exit 1 "Kernel $KERNEL_VERSION make modules failed"
 }
 
 build_kernel()
 {
-	# Full user control for compile (kernel developers)
-	if [ "$1" != "--no-download" -a "$COLINUX_KERNEL_UNTAR" = "yes" \
-	     -o ! -f $COLINUX_TARGET_KERNEL_PATH/include/linux/cooperative.h ]; then
-
-	  # do not check files, if rebuild forced
-	  test "$1" = "--rebuild" || check_md5sums
-
-	  download_files
-	  # Only Download? Than ready.
-	  test "$1" = "--download-only" && exit 0
-
-	  # Extract, patch and configure Kernel
-	  extract_kernel
-	  patch_kernel
-	  configure_kernel
-	fi
-
 	echo "log: $COLINUX_BUILD_LOG"
 	mkdir -p `dirname $COLINUX_BUILD_LOG`
+
+	# Full user control for compile (kernel developers)
+	if [ "$1" != "--no-download" -a "$COLINUX_KERNEL_UNTAR" = "yes" \
+	     -o ! -s "$COLINUX_TARGET_KERNEL_SOURCE/include/linux/cooperative.h" ]; then
+
+		# do not check files, if rebuild forced
+		test "$1" = "--rebuild" || check_md5sums
+
+		download_files
+		# Only Download? Than ready.
+		test "$1" = "--download-only" && exit 0
+
+		# Extract, patch and configure Kernel
+		extract_kernel
+		patch_kernel_source
+	fi
+
+	if [ ! -f $COLINUX_TARGET_KERNEL_BUILD/.config ]; then
+		patch_kernel_build
+		configure_kernel
+	fi
 
 	# Build Kernel vmlinux
 	compile_kernel

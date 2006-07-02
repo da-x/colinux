@@ -562,21 +562,22 @@ static bool_t iteration(co_monitor_t *cmon)
 
 	case CO_OPERATION_PRINTK: {
 		unsigned long size = co_passage_page->params[0];
-		if (size <= 120) {/* sanity */
-			char *ptr = (char *)&co_passage_page->params[1];
-			co_message_t *co_message = NULL;
+		char *ptr = (char *)&co_passage_page->params[1];
+		co_message_t *co_message;
 
-			co_message = co_os_malloc(1 + size + sizeof(*co_message));
-			if (co_message) {
-				co_message->from = CO_MODULE_LINUX;
-				co_message->to = CO_MODULE_PRINTK;
-				co_message->priority = CO_PRIORITY_DISCARDABLE;
-				co_message->type = CO_MESSAGE_TYPE_STRING;
-				co_message->size = size + 1; 
-				co_memcpy(co_message->data, ptr, size + 1);
-				incoming_message(cmon, co_message);
-				co_os_free(co_message);
-			}
+		if (size > 200) 
+			size = 200; /* sanity, see co_terminal_printv */
+
+		co_message = co_os_malloc(1 + size + sizeof(*co_message));
+		if (co_message) {
+			co_message->from = CO_MODULE_LINUX;
+			co_message->to = CO_MODULE_PRINTK;
+			co_message->priority = CO_PRIORITY_DISCARDABLE;
+			co_message->type = CO_MESSAGE_TYPE_STRING;
+			co_message->size = size + 1; 
+			co_memcpy(co_message->data, ptr, size + 1);
+			incoming_message(cmon, co_message);
+			co_os_free(co_message);
 		}
 
 		return PTRUE;
@@ -917,8 +918,10 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	params->id = cmon->id;
 
 	cmon->io_buffer = (co_io_buffer_t *)(co_os_malloc(CO_VPTR_IO_AREA_SIZE));
-	if (cmon->io_buffer == NULL)
+	if (cmon->io_buffer == NULL) {
+		rc = CO_RC(OUT_OF_MEMORY);
 		goto out_free_wait;
+	}
 	co_memset(cmon->io_buffer, 0, CO_VPTR_IO_AREA_SIZE);
 
 	rc = alloc_shared_page(cmon);
@@ -1220,7 +1223,7 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t *monitor, co_monitor_ioc
 							  
 	co_message = co_os_malloc(size + sizeof(*co_message));
 	if (!co_message)
-		return CO_RC(ERROR);
+		return CO_RC(OUT_OF_MEMORY);
 
 	message = (co_console_message_t *)co_message->data;
 	co_message->from = CO_MODULE_LINUX;

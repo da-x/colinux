@@ -4,16 +4,17 @@
 
 . ./build-common.sh
 
-# Need Variable in make
-export COLINUX_TARGET_KERNEL_PATH
-
 # nothing to do for download
 test "$1" = "--download-only" && exit 0
 
+# Need Variables in make
+export COLINUX_TARGET_KERNEL_SOURCE
+export COLINUX_TARGET_KERNEL_BUILD
+export COLINUX_TARGET_KERNEL_PATH
+
 echo "Compiling colinux (daemons)"
 cd $TOPDIR/src
-make colinux
-if test $? -ne 0
+if make colinux
 then
 	echo "colinux make daemons failed"
 	exit 1
@@ -34,8 +35,7 @@ then
 
 	echo "Create installer"
 	cd $TOPDIR/src
-	make installer
-	if test $? -ne 0
+	if make installer
 	then
 		echo "colinux make installer failed"
 		exit 1

@@ -32,7 +32,7 @@ co_rc_t co_user_monitor_create(co_user_monitor_t **out_mon, co_manager_ioctl_cre
 
 	mon = co_os_malloc(sizeof(*mon));
 	if (!mon)
-		return CO_RC(ERROR);
+		return CO_RC(OUT_OF_MEMORY);
 
 	memset(mon, 0, sizeof(*mon));
 
@@ -143,6 +143,9 @@ co_rc_t co_user_monitor_load_section(co_user_monitor_t *umon,
 		alloc_size += params->size;
     
 	params_copy = (co_monitor_ioctl_load_section_t *)co_os_malloc(alloc_size);
+	if (!params_copy)
+		return CO_RC(OUT_OF_MEMORY);
+
 	*params_copy = *params;
 
 	if (params->user_ptr) 

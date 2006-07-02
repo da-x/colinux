@@ -277,10 +277,9 @@ co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
 	co_rc_t rc = CO_RC(OK);
 	co_osdep_manager_t dep;
 
-	dep = (typeof(*osdep))(co_os_malloc(sizeof(**osdep)));
-	*osdep = dep;
-	if (*osdep == NULL)
-		return CO_RC(ERROR);
+	*osdep = dep = (typeof(dep))(co_os_malloc(sizeof(*dep)));
+	if (dep == NULL)
+		return CO_RC(OUT_OF_MEMORY);
 
 	memset(dep, 0, sizeof(*dep));
 
@@ -322,7 +321,7 @@ co_rc_t co_os_manager_userspace_open(co_manager_open_desc_t opened)
 {
 	opened->os = co_os_malloc(sizeof(*opened->os));
 	if (!opened->os)
-		return CO_RC(ERROR);
+		return CO_RC(OUT_OF_MEMORY);
 
 	memset(opened->os, 0, sizeof(*opened->os));
 	init_waitqueue_head(&opened->os->waitq);

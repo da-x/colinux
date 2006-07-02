@@ -39,7 +39,7 @@ co_rc_t co_message_switch_set_rule(co_message_switch_t *ms, co_module_t destinat
 
 	rule = (co_switch_rule_t *)co_os_malloc(sizeof(*rule));
 	if (rule == NULL)
-		return CO_RC(ERROR);
+		return CO_RC(OUT_OF_MEMORY);
 
 	rule->type = CO_SWITCH_RULE_TYPE_CALLBACK;
 	rule->destination = destination;
@@ -59,7 +59,7 @@ co_rc_t co_message_switch_set_rule_reroute(co_message_switch_t *ms, co_module_t 
 
 	rule = (co_switch_rule_t *)co_os_malloc(sizeof(*rule));
 	if (rule == NULL)
-		return CO_RC(ERROR);
+		return CO_RC(OUT_OF_MEMORY);
 
 	rule->type = CO_SWITCH_RULE_TYPE_REROUTE;
 	rule->destination = destination;
@@ -221,7 +221,7 @@ co_rc_t co_message_dup(co_message_t *message, co_message_t **dup_message_out)
 	
 	allocated = (co_message_t *)co_os_malloc(size);
 	if (allocated == NULL)
-		return CO_RC(ERROR);
+		return CO_RC(OUT_OF_MEMORY);
 
 	memcpy(allocated, message, size);
 

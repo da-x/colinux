@@ -17,24 +17,25 @@ co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
 {
 	co_rc_t rc = CO_RC(OK);
 	int i;
+	co_osdep_manager_t dep;
 
-	*osdep = (typeof(*osdep))(co_os_malloc(sizeof(**osdep)));
-	if (*osdep == NULL)
-		return CO_RC(ERROR);
+	*osdep = dep = (typeof(dep))(co_os_malloc(sizeof(*dep)));
+	if (dep == NULL)
+		return CO_RC(OUT_OF_MEMORY);
 
 	co_global_manager = manager;
 
-	memset(*osdep, 0, sizeof(**osdep));
+	memset(dep, 0, sizeof(*dep));
 
-	co_list_init(&(*osdep)->mdl_list);
-	co_list_init(&(*osdep)->mapped_allocated_list);
-	co_list_init(&(*osdep)->pages_unused);
+	co_list_init(&dep->mdl_list);
+	co_list_init(&dep->mapped_allocated_list);
+	co_list_init(&dep->pages_unused);
 	for (i=0; i < PFN_HASH_SIZE; i++)
-		co_list_init(&(*osdep)->pages_hash[i]);
+		co_list_init(&dep->pages_hash[i]);
 
 	MmResetDriverPaging(&co_global_manager);
 	
-	rc = co_os_mutex_create(&(*osdep)->mutex);
+	rc = co_os_mutex_create(&dep->mutex);
 
 	return rc;
 }
@@ -56,7 +57,7 @@ co_rc_t co_os_manager_userspace_open(co_manager_open_desc_t opened)
 {
 	opened->os = co_os_malloc(sizeof(*opened->os));
 	if (!opened->os)
-		return CO_RC(ERROR);
+		return CO_RC(OUT_OF_MEMORY);
 
 	memset(opened->os, 0, sizeof(*opened->os));
 

@@ -1655,7 +1655,7 @@ diff -urN a/drivers/block/Makefile b/drivers/block/Makefile
 diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 --- a/drivers/block/cobd.c
 +++ b/drivers/block/cobd.c
-@@ -0,0 +1,540 @@
+@@ -0,0 +1,538 @@
 +/*
 + *  Copyright (C) 2003 Dan Aloni <da-x@colinux.org>
 + *
@@ -2098,7 +2098,7 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +	return 0;
 +}
 +
-+static int __init cobd_aliases_init(void)
++static void __init cobd_aliases_init(void)
 +{
 +	int unit;
 +	co_block_request_t request;
@@ -2123,8 +2123,6 @@ diff -urN a/drivers/block/cobd.c b/drivers/block/cobd.c
 +		if (alias->name == NULL)
 +			printk("alias %s is unknown (see cobd_aliases in cobd.c)\n", request.alias);
 +	}
-+
-+	return 0;
 +}
 +
 +static void cobd_drives_exit(void) 
@@ -7917,6 +7915,25 @@ diff -urN a/include/asm-i386/timer.h b/include/asm-i386/timer.h
  
  extern unsigned long calibrate_tsc(void);
  extern void init_cpu_khz(void);
+diff -urN a/include/asm-i386/bugs.h b/include/asm-i386/bugs.h
+--- a/include/asm-i386/bugs.h
++++ b/include/asm-i386/bugs.h
+@@ -42,6 +42,7 @@
+ 
+ __setup("mca-pentium", mca_pentium);
+ 
++#ifdef CONFIG_MATH_EMULATION
+ static int __init no_387(char *s)
+ {
+ 	boot_cpu_data.hard_math = 0;
+@@ -50,6 +51,7 @@
+ }
+ 
+ __setup("no387", no_387);
++#endif
+ 
+ static double __initdata x = 4195835.0;
+ static double __initdata y = 3145727.0;
 diff -urN a/include/linux/console.h b/include/linux/console.h
 --- a/include/linux/console.h
 +++ b/include/linux/console.h

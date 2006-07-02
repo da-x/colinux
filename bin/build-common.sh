@@ -52,9 +52,6 @@ BINDIR=`pwd`
 # TOPDIR is the directory with ./configure
 TOPDIR=`dirname $BINDIR`
 
-# Downloads store here
-SRCDIR="$SOURCE_DIR"
-
 # Updated by Sam Lantinga <slouken@libsdl.org>
 # These are the files from the current MingW release
 
@@ -115,13 +112,28 @@ if [ -z "$KERNEL_VERSION" ] ; then
 fi
 KERNEL_DIR=`echo $KERNEL_VERSION | sed -r -e 's/^([0-9]+)\.([0-9]+)\..+$/v\1.\2/'`
 
-CO_VERSION=`cat $TOPDIR/src/colinux/VERSION`
-COMPLETE_KERNEL_NAME=$KERNEL_VERSION-co-$CO_VERSION
-
 KERNEL=linux-$KERNEL_VERSION
 KERNEL_URL=http://www.kernel.org/pub/linux/kernel/$KERNEL_DIR
 KERNEL_ARCHIVE=$KERNEL.tar.bz2
 KERNEL_PATCH=patch/linux-$KERNEL_VERSION.diff
+
+CO_VERSION=`cat $TOPDIR/src/colinux/VERSION`
+COMPLETE_KERNEL_NAME=$KERNEL_VERSION-co-$CO_VERSION
+
+# Set defaults
+if [ -z "$COLINUX_TARGET_KERNEL_SOURCE" -a -z "$COLINUX_TARGET_KERNEL_BUILD" ]
+then
+	if [ -z "$COLINUX_TARGET_KERNEL_PATH" ]
+	then
+		# Source and buld in differ directories
+		COLINUX_TARGET_KERNEL_SOURCE="$BUILD_DIR/$KERNEL-source"
+		COLINUX_TARGET_KERNEL_BUILD="$BUILD_DIR/$KERNEL-build"
+	else
+		# fallback for old style
+		COLINUX_TARGET_KERNEL_SOURCE="$COLINUX_TARGET_KERNEL_PATH"
+		COLINUX_TARGET_KERNEL_BUILD="$COLINUX_TARGET_KERNEL_PATH"
+	fi
+fi
 
 # MD5sum files stored here
 MD5DIR="$BUILD_DIR"
@@ -159,15 +171,9 @@ if [ -z "$BUILD_DIR" ] ; then
     exit -1
 fi
 
-# coLinux enabled kernel source?
-if [ -z "$COLINUX_TARGET_KERNEL_PATH" ] ; then
-    echo "Please specify the $""COLINUX_TARGET_KERNEL_PATH in user-build.cfg (e.g, /tmp/$USER/linux-co)"
-    exit -1
-fi
-
 # Default path to modules
 if [ -z "$COLINUX_TARGET_MODULE_PATH" ] ; then
-    COLINUX_TARGET_MODULE_PATH="$COLINUX_TARGET_KERNEL_PATH/_install"
+    COLINUX_TARGET_MODULE_PATH="$COLINUX_TARGET_KERNEL_BUILD/_install"
 fi
 
 # Default logfile of building (Append), can overwrite in user-build.cfg
@@ -183,8 +189,9 @@ fi
 
 # These are the files from the SDL website
 # need install directory first on the path so gcc can find binutils
+# Fairly for ccache: Add the cross path at end.
 
-PATH="$PREFIX/bin:$PATH"
+PATH="$PATH:$PREFIX/bin"
 
 #
 # download a file from a given url, only if it is not present
@@ -193,22 +200,27 @@ PATH="$PREFIX/bin:$PATH"
 download_file()
 {
 	# Make sure wget is installed
-	if test "x`which wget`" = "x" ; then
+	if [ "x`which wget`" = "x" ]
+	then
 		echo "You need to install wget."
 		exit 1
 	fi
-	cd "$SRCDIR"
-	if test ! -f $1 ; then
+
+	if [ ! -f "$SOURCE_DIR/$1" ]
+	then
+		mkdir -p "$SOURCE_DIR"
+		cd "$SOURCE_DIR"
 		echo "Downloading $1"
 		wget "$2/$1"
-		if test ! -f $1 ; then
+		if [ ! -f $1 ]
+		then
 			echo "Could not download $1"
 			exit 1
 		fi
+  		cd "$BINDIR"
 	else
-		echo "Found $1 in the srcdir $SRCDIR"
+		echo "Found $1 in the srcdir $SOURCE_DIR"
 	fi
-  	cd "$BINDIR"
 }
 
 #
@@ -302,7 +314,7 @@ build_package()
 	done
 
 	# Exist Kernel and is newer?
-	if [ $COLINUX_TARGET_KERNEL_PATH/vmlinux -nt $VMLINUX_ZIP ]
+	if [ $COLINUX_TARGET_KERNEL_BUILD/vmlinux -nt $VMLINUX_ZIP ]
 	then
 		echo "Installing Kernel $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
 
@@ -316,17 +328,17 @@ build_package()
 
 			# Create map file with symbols, add to zip
 			map=$COLINUX_INSTALL_DIR/$name.map
-			nm $COLINUX_TARGET_KERNEL_PATH/$name | sort | uniq > $map
+			nm $COLINUX_TARGET_KERNEL_BUILD/$name | sort | uniq > $map
 			zip -j $VMLINUX_ZIP $map || exit $?
 			rm $map
 
 			# Strip kernel and add to ZIP
-			strip_kernel $COLINUX_TARGET_KERNEL_PATH/$name $oname
+			strip_kernel $COLINUX_TARGET_KERNEL_BUILD/$name $oname
 			zip -j $VMLINUX_ZIP $oname || exit $?
 			rm $oname
 		else
 			# Add kernel to ZIP (not stripped)
-			zip -j $VMLINUX_ZIP $COLINUX_TARGET_KERNEL_PATH/vmlinux || exit $?
+			zip -j $VMLINUX_ZIP $COLINUX_TARGET_KERNEL_BUILD/vmlinux || exit $?
 		fi
 	fi
 

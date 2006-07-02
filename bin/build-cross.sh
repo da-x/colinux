@@ -8,12 +8,10 @@
 BUILD_FLAGS="CFLAGS=-O2 LDFLAGS=-s"
 
 # TEMPORARY until release, you can disable it for faster builds:
-#DISABLE_CHECKING=--disable-checking
+DISABLE_CHECKING=--disable-checking
 
 download_files()
 {
-	mkdir -p "$SRCDIR"
-	
 	download_file "$GCC_ARCHIVE1" "$MINGW_URL"
 	download_file "$GCC_ARCHIVE2" "$MINGW_URL"
 	download_file "$BINUTILS_ARCHIVE" "$MINGW_URL"
@@ -57,8 +55,8 @@ install_libs()
 	echo "Installing cross libs and includes"
 	mkdir -p "$PREFIX/$TARGET"
 	cd "$PREFIX/$TARGET"
-	gzip -dc "$SRCDIR/$MINGW_ARCHIVE" | tar x
-	gzip -dc "$SRCDIR/$W32API_ARCHIVE" | tar x
+	gzip -dc "$SOURCE_DIR/$MINGW_ARCHIVE" | tar x
+	gzip -dc "$SOURCE_DIR/$W32API_ARCHIVE" | tar x
 }
 
 extract_binutils()
@@ -67,7 +65,7 @@ extract_binutils()
 	mkdir -p "$BUILD_DIR"
 	cd "$BUILD_DIR"
 	rm -rf "$BINUTILS"
-	gzip -dc "$SRCDIR/$BINUTILS_ARCHIVE" | tar x
+	gzip -dc "$SOURCE_DIR/$BINUTILS_ARCHIVE" | tar x
 }
 
 patch_binutils()
@@ -89,6 +87,7 @@ configure_binutils()
 	cd "binutils-$TARGET"
 	"$BUILD_DIR/$BINUTILS/configure" \
 		--prefix="$PREFIX" --target=$TARGET \
+		--disable-nls \
 		>>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "configure binutils failed"
 }
@@ -121,8 +120,8 @@ extract_gcc()
 	echo "Extracting gcc"
 	cd "$BUILD_DIR"
 	rm -rf "$GCC"
-	gzip -dc "$SRCDIR/$GCC_ARCHIVE1" | tar x
-	gzip -dc "$SRCDIR/$GCC_ARCHIVE2" | tar x
+	gzip -dc "$SOURCE_DIR/$GCC_ARCHIVE1" | tar x
+	gzip -dc "$SOURCE_DIR/$GCC_ARCHIVE2" | tar x
 }
 
 patch_gcc()
@@ -146,6 +145,7 @@ configure_gcc()
 		--prefix="$PREFIX" --target=$TARGET \
 		--with-headers="$PREFIX/$TARGET/include" \
 		--with-gnu-as --with-gnu-ld \
+		--disable-nls \
 		--without-newlib --disable-multilib \
 		--enable-languages="c,c++" \
 		$DISABLE_CHECKING \
@@ -186,7 +186,7 @@ check_binutils_guest()
 	echo -n "Check guest binutils $BINUTILS_VERSION: "
 
 	# Get version number
-	local PATH=$COLINUX_GCC_GUEST_PATH:$PATH
+	local PATH="$PATH:$COLINUX_GCC_GUEST_PATH"
 	ver=`${COLINUX_GCC_GUEST_TARGET}-as --version 2>/dev/null | \
 		sed -n -r -e 's/^.+ ([0-9]+\.[0-9]+\.[0-9]+).+$/\1/p'`
 
@@ -223,6 +223,7 @@ build_binutils_guest()
 	"$BUILD_DIR/$BINUTILS/configure" \
 		--program-prefix="${COLINUX_GCC_GUEST_TARGET}-" \
 		--prefix="$PREFIX/$COLINUX_GCC_GUEST_TARGET" \
+		--disable-nls \
 		>>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "configure guest binutils failed"
 
@@ -241,7 +242,7 @@ check_gcc_guest()
 	echo -n "Check guest compiler $GCC_VERSION: "
 
 	# Get version number
-	local PATH=$COLINUX_GCC_GUEST_PATH:$PATH
+	local PATH="$PATH:$COLINUX_GCC_GUEST_PATH"
 	ver=`${COLINUX_GCC_GUEST_TARGET}-gcc -dumpversion 2>/dev/null`
 
 	if [ -z "$ver" ]
@@ -276,6 +277,7 @@ build_gcc_guest()
 	"$BUILD_DIR/$GCC/configure" -v \
 		--program-prefix="${COLINUX_GCC_GUEST_TARGET}-" \
 		--prefix="$PREFIX/$COLINUX_GCC_GUEST_TARGET" \
+		--disable-nls \
 		--enable-languages="c,c++" \
 		$DISABLE_CHECKING \
 		>>$COLINUX_BUILD_LOG 2>&1
@@ -288,6 +290,9 @@ build_gcc_guest()
 	echo "Installing guest gcc"
 	make install >>$COLINUX_BUILD_LOG 2>&1
 	test $? -ne 0 && error_exit 1 "install guest gcc failed"
+
+	# remove info and man pages
+	rm -rf "$PREFIX/$COLINUX_GCC_GUEST_TARGET/info" "$PREFIX/$COLINUX_GCC_GUEST_TARGET/man"
 }
 
 final_tweaks()
@@ -296,6 +301,9 @@ final_tweaks()
 
 	# remove gcc build headers
 	rm -rf "$PREFIX/$TARGET/sys-include"
+
+	# remove info and man pages
+	rm -rf "$PREFIX/info" "$PREFIX/man"
 
 	echo "Installation complete!"
 }

@@ -1,4 +1,8 @@
 * Version 0.7.1
+  * initrd: Automatic use cofs31 as path to vmlinux-modules.tar.gz.
+  * Warn about double configured index for cobd, eth, cofs, ttys, exec.
+  * Bug #1479042: Ignore bootparm "no387", while no emulation is enabled.
+  * Building: Target kernel dir splitt into source and objects.
   * cofs: Break out the limit of fullname length.  Basename length up
     to 255.  Fullpath is limited by path depth of 256 directories.
   * New: Console NT without -a connects to first monitor.

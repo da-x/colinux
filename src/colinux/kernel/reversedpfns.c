@@ -33,7 +33,7 @@ co_rc_t co_manager_alloc_reversed_pfns(co_manager_t *manager)
 	co_debug("allocating top level pages map (%d bytes)\n", map_size);
 	manager->reversed_map_pfns = (co_pfn_t *)co_os_malloc(map_size);
 	if (manager->reversed_map_pfns == NULL)
-		return CO_RC(ERROR);
+		return CO_RC(OUT_OF_MEMORY);
 
 	co_memset(manager->reversed_map_pfns, 0, map_size);
 	

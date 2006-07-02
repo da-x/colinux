@@ -16,8 +16,6 @@ fi
 
 download_files()
 {
-	mkdir -p "$SRCDIR"
-	
 	download_file "$FLTK_ARCHIVE" "$FLTK_URL"
 	download_file "$W32API_SRC_ARCHIVE" "$MINGW_URL"
 	download_file "$WINPCAP_SRC_ARCHIVE" "$WINPCAP_URL"
@@ -86,7 +84,7 @@ extract_fltk()
 	mkdir -p "$BUILD_DIR"
 	cd "$BUILD_DIR"
 	rm -rf "$FLTK"
-	bzip2 -dc "$SRCDIR/$FLTK_ARCHIVE" | tar x
+	bzip2 -dc "$SOURCE_DIR/$FLTK_ARCHIVE" | tar x
 	test $? -ne 0 && error_exit 10 "FLTK extract failed"
 }
 
@@ -140,7 +138,7 @@ extract_w32api_src()
 	echo "Extracting w32api source"
 	cd "$BUILD_DIR"
 	rm -rf "$W32API_SRC"
-	gzip -dc "$SRCDIR/$W32API_SRC_ARCHIVE" | tar x
+	gzip -dc "$SOURCE_DIR/$W32API_SRC_ARCHIVE" | tar x
 	test $? -ne 0 && error_exit 10 "w32api extract failed"
 }
 
@@ -195,7 +193,7 @@ extract_winpcap_src()
 	echo "Extracting winpcap source"
 	cd "$BUILD_DIR"
 	rm -rf "$WINPCAP_SRC"
-	unzip "$SRCDIR/$WINPCAP_SRC_ARCHIVE"
+	unzip "$SOURCE_DIR/$WINPCAP_SRC_ARCHIVE"
 	test $? -ne 0 && error_exit 10 "winpcap extracting failed"
 }
 

@@ -76,3 +76,22 @@ co_rc_t co_canonize_cobd_path(co_pathname_t *pathname)
 
 	return CO_RC(OK);
 }
+
+co_rc_t co_dirname (char *path)
+{
+	char *p = path + strlen(path);
+
+	while (--p > path) {
+		if (*p == '/' || *p == '\\')
+			break;
+		*p = 0;
+	}
+
+	if (p == path) {
+		*p++ = '.';
+		*p = '\0';
+	}
+
+	return CO_RC(OK);
+}
+

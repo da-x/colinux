@@ -1,17 +1,35 @@
 The Cooperative Linux Daemon hosts the Linux virtual machine as one process 
-under the host operating system. Its command line syntax is as follows:
+under the host operating system.
 
-  colinux-daemon [-h] [-d] [-t name] [configuration and boot parameter] [@params.txt]
+The daemon spits out the kernel's printk() messages along with its own prints. It
+also optionally launches the virtual VGA console, that can be used to interface
+with the virtual machine.
+
+Its command line syntax is as follows:
+
+  colinux-daemon [-h] [-d] [k] [-t name] [configuration and boot parameter] [@params.txt]
 
     -h             Show this help text
-    -d             Don't launch and attach a coLinux console on
-                   startup
+    -d             Don't launch and attach a coLinux console on startup
     -k             Suppress kernel messages
     -t name        When spawning a console, this is the type of 
                    console (e.g, nt, fltk, etc...)
     @params.txt    Take more command line params from the given text file (can be multi-line)
 
-  Configuration and boot parameters:
+The following options are specific to Windows NT/XP/2000:
+
+      --install-service [name]     Install colinux-daemon.exe as an NT service
+                                   (default service name: Cooperative Linux)
+      --remove-service [name]      Remove colinux service
+                                   (default service name: Cooperative Linux)
+      --install-driver             Install the colinux-driver (linux.sys)
+      --remove-driver              Uninstall (remove) the colinux-driver (linux.sys)
+      --status-driver              Show status about the installed/running driver
+
+  Configuration and boot parameter:
+
+    Refer the file README.TXT in coLinux installation for the full list of
+    device parameters.
 
     For example, a simple network-less setup:
 
@@ -23,24 +41,10 @@ under the host operating system. Its command line syntax is as follows:
 
     Unhandled paramters are forwarded to the kernel's boot parameters string.
 
-The daemon spits out the kernel's printk() messages along with its own prints. It
-also optionally launches the virtual VGA console, that can be used to interface
-with the virtual machine.
-
-The following options are specific to Windows NT/XP/2000:
-
-      --install-service [name]     Install colinux-daemon.exe as an NT service
-                                   (default service name: Cooperative Linux)
-      --remove-service [name]      Remove colinux service
-                                   (default service name: Cooperative Linux)
-      --install-driver             Install the colinux-driver (linux.sys)
-      --remove-driver              Install the colinux-driver (linux.sys)
-      --status-driver              Show status about the installed/running driver
-
 The kernel= option enables this mode. Order of parameters is not
 important when options don't depend on each other.              
 
- For example:
+ Typical examples:
 
      colinux-daemon kernel=vmlinux
 
@@ -128,16 +132,25 @@ important when options don't depend on each other.
    Slirp, the simplest way to internet.  Inside coLinux can use a DHCP-Client.
 
 
-     eth0=slirp,"",tcp:2222:22/tcp:8080:80
+     eth0=slirp,"",tcp:22:22
 
-   Uses SLiRP networking, with port 2222 and 8080 on host being
-   redirected (or port forwarded) to coLinux guest 22 and 80.
+   Uses SLiRP networking, forwards the port 22 from host to linux (SSH)
 
-   Redirections must begin with protocol ("tcp" or "udp") then an ":"
-   seperator, the port on Windows host, followed by ":" seperator,
-   and the port for the coLinux guest.  Optional third ":" seperator
-   counts for port array.  More redirections have the same form and
-   are seperated by "/".
+
+     eth0=slirp,"",tcp:2222:22
+
+   Uses SLiRP networking, with port 2222 on host being redirected (or port
+   forwarded) to coLinux guest 22.
+
+
+     eth0=slirp,"",tcp:2222:22/tcp:4000:80:3
+
+   Uses SLiRP networking, and forwards counts of ports
+	Host (windows)  --> guest (coLinux)
+	2222            --> 22
+	4000		--> 80
+	4001		--> 81
+	4002		--> 82
 
 
  Options for serial device:
