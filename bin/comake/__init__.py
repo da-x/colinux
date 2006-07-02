@@ -1,4 +1,4 @@
-import os
+import os, sys
 
 DEFAULT_BUILD_NAME = 'build.comake.py'
 COMAKE_OUTPUT_DIRECTORY = '.comake.build'
@@ -23,6 +23,7 @@ def main(args):
     else:
         from comake.target import create_target_tree, statistics
         from comake.target import TargetNotFoundError, BuildCancelError
+        from comake.tools import TargetNotBuildError
         print "Analyzing target tree..."
         try:
             target_tree = create_target_tree(filename)
@@ -35,7 +36,12 @@ def main(args):
             target_tree.dump()
         else:
             print "Starting build"
-            target_tree.build()
+	    try:
+		target_tree.build()
+	    except TargetNotBuildError:
+		# Don't Traceback Python scripts for build errors
+		print "Error: Target not build (TargetNotBuildError)"
+		sys.exit(1)
             if statistics.made_targets == 0:
                 print "No targets were rebuilt."
             print "Total number of targets: %d" % (statistics.targets, )

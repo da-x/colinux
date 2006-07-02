@@ -25,6 +25,9 @@ checkbootparam() {
 	return "$?"
 }
 
+# Set screen blank time to 60 minutes.
+#echo -e "\033[9;60]"
+
 # Display /etc/issue file.
 echo  "Displaying /etc/issue file" >> $LOG
 if [ -s /etc/issue ]; then
@@ -50,6 +53,10 @@ echo -n "Mounting /"
 echo "Mounting /" >> $LOG
 if /bin/mount $ROOT_DEVICE /mnt/linux >> $LOG
 then
+	# deal with users fstab, if /lib is separate mount partion
+	echo "Mount users fstab" >> $LOG
+	/usr/sbin/chroot /mnt/linux mount -a >> $LOG 2>&1
+
 	echo -n "Installing modules for coLinux $KERNEL_VERSION" 
 	echo "Installing modules for coLinux $KERNEL_VERSION" >> $LOG
 	if [ -d "/mnt/linux/lib/modules/$KERNEL_VERSION" ]; then
@@ -74,6 +81,8 @@ else
 fi
 
 echo -n "Closing /" 
+echo "Closing users fstab" >> $LOG
+/usr/sbin/chroot /mnt/linux umount -a >> $LOG 2>&1
 echo "Closing /" >> $LOG
 if /bin/umount -f /mnt/linux >> $LOG 2>&1
 then
@@ -82,6 +91,7 @@ else
 	echo " failed"
 
 	# try again
+	/usr/sbin/chroot /mnt/linux umount -a
 	sync
 	sleep 1
 	/bin/umount -f /mnt/linux

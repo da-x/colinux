@@ -596,6 +596,11 @@ void arp_input(const uint8_t *pkt, int pkt_len)
             }
             return;
         arp_ok:
+            /* XXX: make an ARP request to have the client address */
+            /* XXX: ARP request would send an invalid request in if_encap.
+	       It's better to save the client eth addr (mac) all times. */
+            memcpy(client_ethaddr, eh->h_source, ETH_ALEN);
+
             /* ARP request for alias/dns mac address */
             memcpy(reh->h_dest, pkt + ETH_ALEN, ETH_ALEN);
             memcpy(reh->h_source, special_ethaddr, ETH_ALEN - 1);
