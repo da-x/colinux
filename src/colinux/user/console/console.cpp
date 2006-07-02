@@ -164,6 +164,7 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
  * If none found, returns CO_INVALID_ID.
  *
  * TODO: Find first monitor not already attached.
+ *       Duplicate source in src/colinux/user/console-base/console.cpp
  */
 static co_id_t find_first_monitor(void)
 {

@@ -88,17 +88,45 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 		goto out;
 	}
 
+#if 0
 	if (!instance_specified) {
 		co_terminal_print("console: error, coLinux instance ID must be specified\n");
 		syntax();
 		return CO_RC(ERROR);
 	}
+#endif
 
 out:
 	co_cmdline_params_free(cmdline);
 
 out_clean:
 	return rc;
+}
+
+/**
+ * Returns PID of first monitor.
+ *
+ * If none found, returns CO_INVALID_ID.
+ *
+ * TODO: Find first monitor not already attached.
+ *       Duplicate source in src/colinux/user/console/console.cpp
+ */
+static co_id_t find_first_monitor(void)
+{
+	co_manager_handle_t handle;
+	co_manager_ioctl_monitor_list_t	list;
+	co_rc_t	rc;
+
+	handle = co_os_manager_open();
+	if (handle == NULL)
+		return CO_INVALID_ID;
+
+	rc = co_manager_monitor_list(handle, &list);
+	co_os_manager_close(handle);
+	if (!CO_OK(rc) || list.count == 0)
+		return CO_INVALID_ID;
+
+	return list.ids[0];
 }
 
 co_rc_t console_window_t::send_ctrl_alt_del()
@@ -147,6 +175,9 @@ co_rc_t console_window_t::start()
 	if (start_parameters.attach_id != CO_INVALID_ID) {
 		instance_id = start_parameters.attach_id;
 	}
+
+	if (instance_id == CO_INVALID_ID)
+		instance_id = find_first_monitor();
 
 	return attach();
 }

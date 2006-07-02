@@ -1,4 +1,7 @@
 * Version 0.7.1
+  * cofs: Break out the limit of fullname length.  Basename length up
+    to 255.  Fullpath is limited by path depth of 256 directories.
+  * New: Console NT without -a connects to first monitor.
   * New: "execX=..." in configuration, launch external programs.
   * Bug fix: Quotation marks detection in config file, samples:
     eth0=tuntap,"LAN-Connection 14",00:11:22:33:44:55

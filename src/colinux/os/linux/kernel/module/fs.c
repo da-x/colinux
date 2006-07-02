@@ -2,7 +2,7 @@
 #include <colinux/os/kernel/filesystem.h>
 
 co_rc_t co_os_fs_inode_to_path(co_filesystem_t *fs, co_inode_t *dir, 
-				      co_pathname_t *out_name)
+				      char **out_name, int add)
 {
 	/* TODO */
 	return CO_RC(ERROR);
@@ -14,7 +14,7 @@ int co_os_fs_add_last_component(co_pathname_t *dirname)
 }
 
 co_rc_t co_os_fs_dir_inode_to_path(co_filesystem_t *fs, co_inode_t *dir, 
-				   co_pathname_t *out_name, char *name)
+				   char **out_name, char *name)
 {
 	/* TODO */
 	return CO_RC(ERROR);

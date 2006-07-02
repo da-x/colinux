@@ -17,11 +17,11 @@
  * OS-specific pathname helpers.
  */
 extern co_rc_t co_os_fs_inode_to_path(co_filesystem_t *fs, co_inode_t *dir, 
-				      co_pathname_t *out_name);
+				      char **out_name, int need_len);
 extern int co_os_fs_add_last_component(co_pathname_t *dirname);
 extern co_rc_t co_os_fs_dir_join_unix_path(co_pathname_t *dirname, const char *addition);
 extern co_rc_t co_os_fs_dir_inode_to_path(co_filesystem_t *fs, co_inode_t *dir, 
-					  co_pathname_t *out_name, char *name);
+					  char **out_name, char *name);
 extern co_rc_t co_os_fs_get_attr(co_filesystem_t *fs, char *filename, 
 				 struct fuse_attr *attr);
 
