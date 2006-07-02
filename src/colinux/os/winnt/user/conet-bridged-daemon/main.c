@@ -417,7 +417,7 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 			continue;
 		}
 
-		option = "-c";
+		option = "-i";
 		if (strcmp(*param_scan, option) == 0) {
 			param_scan++;
 			if (!(*param_scan)) {
@@ -472,6 +472,11 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 		return CO_RC(ERROR);
 	}
 
+	if (!start_parameters->mac_specified) {
+		co_terminal_print("conet-bridged-daemon: error, MAC address not specified\n");
+		return CO_RC(ERROR);
+	}
+
 	return CO_RC(OK);	
 }
 
@@ -491,16 +496,6 @@ conet_bridged_main(int argc, char *argv[])
 	if (start_parameters.show_help) {
 		co_net_syntax();
 		return 0;
-	}
-
-	if (!start_parameters.mac_specified) {
-		co_terminal_print("conet-bridged-daemon: error, MAC address not specified\n");
-		return CO_RC(ERROR);
-	}
-
-	if (start_parameters.index == -1) {
-		co_terminal_print("conet-bridged-daemon: error, index not specified\n");
-		return CO_RC(ERROR);
 	}
 
 	daemon_parameters = &start_parameters;
