@@ -1,3 +1,3 @@
-targets['build.o'] = Target(
+targets['build.a'] = Target(
     inputs=input_list(".cpp", ".o"),
 )

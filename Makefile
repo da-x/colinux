@@ -32,6 +32,10 @@ include Makefile.$(HOSTOS)
 # Compile daemons
 colinux:
 	@cd src && make colinux
+
+# Dump python build tree
+dump:
+	@cd src && python ../bin/make.py colinux --dump
 endif
 
 clean:
@@ -64,6 +68,7 @@ help:
 	@echo  '* colinux	- Build colinux daemons'
 	@echo  '  package	- Create ZIP file packages for pre releases'
 	@echo  '  installer	- Create Installer (need wine and running x11)'
+	@echo  '  dump		- Dump build tree and dependencies from python scripts'
 	@echo  ''
 	@echo  'Cleaning colinux build (daemons only, no cross compiler, no libs):'
 	@echo  '  clean		- remove most generated files but keep distry files'

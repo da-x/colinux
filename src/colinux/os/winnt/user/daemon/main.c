@@ -42,6 +42,7 @@ static bool_t stoped = PFALSE;
  * 
  * This callback function is called when Windows sends a Stop request to the
  * coLinux service.
+ * Or the user closed the command prompt of colinux-daemon.
  *
  **/
 void co_winnt_daemon_stop(void)

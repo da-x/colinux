@@ -7,7 +7,7 @@ EXEDIR=../../build
 THISDIR=`pwd`
 
 # get configure
-cd ${TOPDIR}/bin; . build-common.sh; cd $THISDIR
+cd ${TOPDIR}/bin; . ./build-common.sh; cd $THISDIR
 
 PATH="$PREFIX/bin:$PATH"
 STRIP="$TARGET-strip --strip-all"

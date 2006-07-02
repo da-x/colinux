@@ -28,9 +28,9 @@ def main(args):
         try:
             target_tree = create_target_tree(filename)
         except BuildCancelError:
-            return
+	    sys.exit(3)
         except TargetNotFoundError:
-            return
+	    sys.exit(2)
             
         if '--dump' in args:
             target_tree.dump()

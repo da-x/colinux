@@ -26,7 +26,7 @@
 #include "manager.h"
 #include "reactor.h"
 
-co_manager_handle_t co_os_manager_open(void)
+static co_manager_handle_t co_os_manager_open_(int verbose)
 {
 	co_manager_handle_t handle;
 
@@ -40,12 +40,23 @@ co_manager_handle_t co_os_manager_open(void)
 				    FILE_ATTRIBUTE_NORMAL  | FILE_FLAG_OVERLAPPED, NULL);
 
 	if (handle->handle == INVALID_HANDLE_VALUE) {
-		co_terminal_print_last_error("colinux: manager open");
+		if (verbose)
+			co_terminal_print_last_error("colinux: manager open");
 		co_os_free(handle);
 		return NULL;
 	}
 
 	return handle;
+}
+
+co_manager_handle_t co_os_manager_open(void)
+{
+	return co_os_manager_open_(1);
+}
+
+co_manager_handle_t co_os_manager_open_quite(void)
+{
+	return co_os_manager_open_(0);
 }
 
 void co_os_manager_close(co_manager_handle_t handle)

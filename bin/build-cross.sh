@@ -2,7 +2,7 @@
 
 # Build cross platform mingw32.
 
-. build-common.sh
+. ./build-common.sh
 
 # Flags for building gcc (not for target)
 BUILD_FLAGS="CFLAGS=-O2 LDFLAGS=-s"
@@ -68,6 +68,16 @@ extract_binutils()
 	cd "$BUILD_DIR"
 	rm -rf "$BINUTILS"
 	gzip -dc "$SRCDIR/$BINUTILS_ARCHIVE" | tar x
+}
+
+patch_binutils()
+{
+	if [ "$BINUTILS_PATCH" != "" ]; then
+		echo "Patching binutils"
+		cd "$BUILD_DIR/$BINUTILS"
+		patch -p1 < "$TOPDIR/$BINUTILS_PATCH"
+		test $? -ne 0 && error_exit 10 "patch binutils failed"
+	fi
 }
 
 configure_binutils()
@@ -296,6 +306,7 @@ build_cross()
 	install_libs
 
 	extract_binutils
+	patch_binutils
 	configure_binutils
 	build_binutils
 	install_binutils

@@ -125,7 +125,7 @@ SectionGroup "coLinux" SecGrpcoLinux
 
 Section
 
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayName" "coLinux"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayName" '"coLinux ${VERSION}"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "UninstallString" '"$INSTDIR\Uninstall.exe"'
 
 
@@ -155,7 +155,7 @@ Section
   ;----------------------------------------------------------------------
 
   ;Store install folder
-  WriteRegStr HKCU "Software\coLinux" "" $INSTDIR
+  WriteRegStr HKCU "Software\coLinux" "" "$INSTDIR"
   
   ;Create uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"

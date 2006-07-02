@@ -28,7 +28,7 @@ def generate_options(compiler_def_type, libs=None, lflags=None):
 	linker_flags = lflags,
         compiler_libs = libs + [
             'user32', 'gdi32', 'ws2_32', 'ntdll', 'kernel32', 'ole32', 'uuid', 'gdi32',
-            'msvcrt', 'crtdll', 'shlwapi',
+            'msvcrt', 'crtdll', 'shlwapi', 
         ]),
     )
 
@@ -45,8 +45,8 @@ targets['colinux-daemon.exe'] = Target(
 
 targets['colinux-net-daemon.exe'] = Target(
     inputs = user_res + [
-       Input('../user/conet-daemon/build.o'),
-       Input('../../../user/daemon-base/build.o'),
+       Input('../user/conet-daemon/build.a'),
+       Input('../../../user/daemon-base/build.a'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('g++'),
@@ -55,10 +55,9 @@ targets['colinux-net-daemon.exe'] = Target(
 targets['colinux-bridged-net-daemon.exe'] = Target(
     inputs = user_res + [
        Input('../user/conet-bridged-daemon/build.o'),
-       Input('../../../user/daemon-base/build.o'),
     ] + user_dep,
     tool = Compiler(),
-    mono_options = generate_options('g++', libs=['wpcap']),
+    mono_options = generate_options('gcc', libs=['wpcap']),
 )
 
 targets['colinux-slirp-net-daemon.exe'] = Target(
@@ -80,17 +79,17 @@ targets['colinux-serial-daemon.exe'] = Target(
 
 targets['colinux-console-fltk.exe'] = Target(
     inputs = user_res + [
-       Input('../user/console/build.o'),
-       Input('../../../user/console/build.o'),
+       Input('../user/console/build.a'),
+       Input('../../../user/console/build.a'),
     ] + user_dep,
     tool = Compiler(),
-    mono_options = generate_options('g++', libs=['fltk'], lflags=['-mwindows']),
+    mono_options = generate_options('g++', libs=['fltk', 'mingw32'], lflags=['-mwindows']),
 )
 
 targets['colinux-console-nt.exe'] = Target(
     inputs = user_res + [
-       Input('../user/console-nt/build.o'),
-       Input('../../../user/console-base/build.o'),
+       Input('../user/console-nt/build.a'),
+       Input('../../../user/console-base/build.a'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('g++'),

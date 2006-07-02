@@ -1,4 +1,4 @@
-targets['build.o'] = Target(
+targets['build.a'] = Target(
     inputs=[
        Input('head.o'),
     ],

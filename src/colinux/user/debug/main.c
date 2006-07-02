@@ -43,22 +43,12 @@ static FILE *output_file;
 
 static void sig_handle(int signo);	/* Forward declaration */
 
-static co_manager_handle_t debug_co_os_manager_open (void)
-{
-	co_manager_handle_t handle = co_os_manager_open();
-	
-	if (!handle)
-		perror("Manager open");
-
-	return (handle);
-}
-
 static void co_debug_download(void)
 {
 	co_manager_handle_t handle;
 	co_rc_t rc;
 
-	handle = debug_co_os_manager_open();
+	handle = co_os_manager_open();
 	if (handle) {
 		char *buffer = (char *)co_os_malloc(BUFFER_SIZE);
 		if (buffer) {
@@ -95,7 +85,7 @@ static void co_debug_download_to_network(void)
 	if (sock == -1)
 		return;
 
-	handle = debug_co_os_manager_open();
+	handle = co_os_manager_open();
 	if (!handle) {
 		co_udp_socket_close(sock);
 		return;
@@ -305,7 +295,7 @@ void co_debug_download_and_parse(void)
 	co_manager_handle_t handle;
 	xml_start();
 
-	handle = debug_co_os_manager_open();
+	handle = co_os_manager_open();
 	if (handle) {
 		char *buffer = (char *)co_os_malloc(BUFFER_SIZE);
 		if (buffer) {
@@ -350,7 +340,7 @@ static facility_descriptor_t facility_descriptors[] = {
 void co_update_settings(void) 
 {
 	co_manager_handle_t handle;
-	handle = debug_co_os_manager_open();
+	handle = co_os_manager_open();
 	if (!handle)
 		return;
 

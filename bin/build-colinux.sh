@@ -2,7 +2,7 @@
 
 # Build colinux daemons from cross platform. Read doc/building
 
-. build-common.sh
+. ./build-common.sh
 
 # Need Variable in make
 export COLINUX_TARGET_KERNEL_PATH

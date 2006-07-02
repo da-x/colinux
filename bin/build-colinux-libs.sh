@@ -2,7 +2,7 @@
 
 # Build libraries for cross platform mingw32
 
-. build-common.sh
+. ./build-common.sh
 
 # Store version of installed libs here
 VERSION_CACHE="$PREFIX/$TARGET/include"

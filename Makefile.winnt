@@ -27,13 +27,13 @@ kernel:
 
 # Download only all missing sources (for cross compile)
 download:
-	@cd bin && . build-common.sh --download-all
+	@cd bin && . ./build-common.sh --download-all
 
 # Create a pre-distributabel package as ZIP
 package:
-	@cd bin && . build-common.sh --package
+	@cd bin && . ./build-common.sh --package
 
 # Create installer (need wine and running X11)
 installer:
-	@cd src/colinux/os/winnt/user/install && . premaid.sh
+	@cd src/colinux/os/winnt/user/install && . ./premaid.sh
 	@cd src && make installer

@@ -33,10 +33,10 @@
 # Use User config, if exist
 if [ -f user-build.cfg ] ; then
 	# Users directories
-	. user-build.cfg
+	. ./user-build.cfg
 else
 	# fall back to default config
-	. sample.user-build.cfg
+	. ./sample.user-build.cfg
 fi
 
 # what flavor are we building?
@@ -67,6 +67,7 @@ BINUTILS_VERSION="2.15.91"
 BINUTILS_RELEASE="$BINUTILS_VERSION-20040904-1"
 BINUTILS=binutils-$BINUTILS_RELEASE
 BINUTILS_ARCHIVE=$BINUTILS-src.tar.gz
+BINUTILS_PATCH="patch/$BINUTILS.diff"
 
 GCC_VERSION="3.3.1"
 GCC_RELEASE="$GCC_VERSION-20030804-1"

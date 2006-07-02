@@ -19,6 +19,7 @@ struct co_manager_handle;
 typedef struct co_manager_handle *co_manager_handle_t; 
 
 extern co_manager_handle_t co_os_manager_open(void);
+extern co_manager_handle_t co_os_manager_open_quite(void);
 extern void co_os_manager_close(co_manager_handle_t handle);
 
 extern co_rc_t co_os_manager_ioctl(

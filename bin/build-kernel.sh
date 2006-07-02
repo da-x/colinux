@@ -10,7 +10,7 @@
 #			Disable md5sum. untar and patch source.
 #			Overwrite all old source!
 
-. build-common.sh
+. ./build-common.sh
 
 # Use different gcc for kernel, if defined
 if [ -n "$COLINUX_GCC_GUEST_TARGET" ]

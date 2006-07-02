@@ -11,7 +11,7 @@
 #	./configure --help
 
 # Some defaults from config file (Kernel version and dir, binutil version)
-cd bin; . build-common.sh --get-vars; cd ..
+cd bin; . ./build-common.sh --get-vars; cd ..
 
 # Some default values
 target=i686-pc-mingw32
@@ -28,7 +28,7 @@ colinux_os=NONE
 configfile="bin/user-build.cfg"
 no_create=""
 verbose=no
-kernel_untar=yes
+kernel_untar=no
 gcc_guest_target=i686-co-linux
 gcc_guest_build=no
 
@@ -100,8 +100,9 @@ Options:
   --logfile=ARG           logfile for build process, open append.
                           use \$\$ for process id and separate files.
                           [\$TOPDIR/log/build-colinux-\$\$.log]
-  --no-kernel-untar       Do not delete and untar kernel tree, if exist.
-  --no-create             Test only this configure, no files create
+  --kernel-untar          Untar and overwrite kernel tree, if exist.  Is good
+                          for clean builds or automation builds.
+  --no-create             Test only this configure, no files create.
   --verbose               More messages in configure.
   --gcc-guest-build       Build C compiler from source of gnu cross compiler,
                           and use for kernel compiling, if gcc version (major +
@@ -201,6 +202,10 @@ EOF
   -no-kernel-untar | --no-kernel-untar | --no-kernel | \
   -disable-kernel-untar | --disable-kernel-untar)
     kernel_untar=no ;;
+
+  -kernel-untar | --kernel-untar | \
+  -enable-kernel-untar | --enable-kernel-untar)
+    kernel_untar=yes ;;
 
   --gcc-guest*)
     gcc_guest_build=yes ;;
@@ -649,8 +654,8 @@ COLINUX_INSTALL_DIR="$distdir"
 COLINUX_BUILD_LOG="$logfile"
 
 # Overwrite kerneltree before rebuild? yes/no
-# yes: Build script will overwrite kerneltree and config (default)
-# no:  Build script leave kernel source untouched. User can make patches and config
+# yes: Build script will overwrite kerneltree and config
+# no:  Leave kernel source untouched. User friendly for patches and config (default)
 COLINUX_KERNEL_UNTAR="$kernel_untar"
 
 # Strip the kernel image

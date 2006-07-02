@@ -80,6 +80,7 @@ class Executer(Tool):
 class Compiler(Executer):
     def get_command_line(self, tool_run_inf):
         actual_compile = False
+	count_archives = 0
         compiler_def_type = tool_run_inf.options.get('compiler_def_type', [])
         if not compiler_def_type:
             compiler_def_type = 'gcc'
@@ -89,6 +90,8 @@ class Compiler(Executer):
         for tinput in tool_run_inf.target.get_actual_inputs():
             if tinput.get_ext() in ['.c', '.cpp']:
                 actual_compile = True
+            elif tinput.get_ext() in ['.a']:
+	        count_archives += 1
             input_pathnames.append(tinput.pathname)
 
         parameters = []
@@ -113,11 +116,15 @@ class Compiler(Executer):
             linker_flags = tool_run_inf.options.get('linker_flags', [])
             parameters += linker_flags
 
+        if count_archives > 1:
+            parameters.append('-Wl,--start-group')
         parameters.extend(input_pathnames)
         compiler_lib_paths = tool_run_inf.options.get('compiler_lib_paths', [])
         compiler_libs = tool_run_inf.options.get('compiler_libs', [])
         parameters += ["-L" + path for path in compiler_lib_paths]
         parameters += ["-l" + path for path in compiler_libs]
+        if count_archives > 1:
+            parameters.append('-Wl,--end-group')
         
         parameters.append('-o')
         parameters.append(tool_run_inf.target.pathname)
