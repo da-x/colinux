@@ -2,6 +2,7 @@
 ;Written by NEBOR Regis
 ;Modified by Dan Aloni (c) 2004
 ;Modified 8/20/2004,2/4/2004 by George P Boutwell
+;Modified 7/10/2006 by Henry Nestler
 
 ;-------------------------------------
 ;Good look
@@ -127,6 +128,9 @@ Section
 
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayName" "coLinux ${VERSION}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayIcon" "$INSTDIR\colinux-daemon.exe,0"
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "NoModify" "1"
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "NoRepair" "1"
 
 
   ;---------------------------------------------------------------FILES--
@@ -145,6 +149,10 @@ Section
   File "premaid\vmlinux-modules.tar.gz"
   ; initrd replaces vmlinux-modules.tar.gz as preferred way to ship modules.
   File "premaid\initrd.gz"
+
+  ;Backup config file if present
+  IfFileExists "$INSTDIR\default.colinux.xml" 0 +1
+    CopyFiles /SILENT "$INSTDIR\example.conf" "$INSTDIR\example.conf.old"
   File "premaid\example.conf"
 
   ; Remove kludge from older installations	
@@ -290,7 +298,7 @@ Section "Root Filesystem image Download" SeccoLinuxImage
     tryGentoo:
     StrCmp $GENTOO "1" "" tryDebian
     ;MessageBox MB_OK "Gentoo"
-    StrCpy $R0 "Gentoo-colinux-stage3-x86-2004.3.bz2"
+    StrCpy $R0 "Gentoo-2005.1-stage3-ext3.bz2"
     Goto tryDownload
 
     tryDebian:
@@ -415,7 +423,7 @@ Section -post
     IntCmp $R0 -1 tapinstall
 
  ;tapupdate:
-    DetailPrint "TAP-Win32 UPDATE"
+    DetailPrint "TAP-Win32 UPDATE (please confirm Windows-Logo-Test)"
     nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" update "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
@@ -423,7 +431,7 @@ Section -post
     Goto tapcontrol_check_error
 
  tapinstall:
-    DetailPrint "TAP-Win32 INSTALL"
+    DetailPrint "TAP-Win32 INSTALL (please confirm Windows-Logo-Test)"
     nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" install "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0

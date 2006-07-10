@@ -25,15 +25,23 @@ NOTES ON UPGRADING:
     syntax in a name=value per line plain text file instead:
 
 	kernel=vlinux
+	initrd=initrd.gz
 	mem=32
 	cobd0=fs\root_fs
 	cobd1=fs\swap_fs
 	eth0=tuntap
-	root=/dev/cobd/0
+	root=/dev/cobd0
 	ro
 
- 2. If upgrading from 0.6.1, see README.txt for 0.6.2 or Wiki for 
-    information about other issues when upgrading.
+ 2. Gentoo users need to be careful, Gentoo tends to use devfs when
+    upgrading from 0.6.1 and so block device names change from cobdX to cobd/X
+    and render the image unbootable.  For more details and solutions see the
+    2.6 related information on the Wiki (http://wiki.colinux.org/)
+
+ 3. The file initrd contains no modules.  Modules are only in the file
+    vmlinux-modules.tar.gz.  The initrd extracts modules over device cofs31
+    automaticly, if you configure it as "initrd=initrd.gz" in config file.
+    After modules are installed, you can remove the initrd from config.
 
 RUNNING:
 
@@ -53,10 +61,10 @@ run anything.
 	then be either shared or bridged with a physical network connection. 
 	Note that this requires Internet Connection Sharing or Bridging 
 	(Windows XP or higher) or a 3rd party Internet connection 
-        sharing application. See the Wiki at http://wiki.colinux.org/ for
+	sharing application. See the Wiki at http://wiki.colinux.org/ for
 	more information/help. The TAP method autmatically chooses the TAP 
-        first TAP adapter it finds, if this is not correct for you, you 
-        can specify the specific adapter by name ("TAP-Colinux").
+	first TAP adapter it finds, if this is not correct for you, you 
+	can specify the specific adapter by name ("TAP-Colinux").
 
   	b. Bridging - This method allows the Cooperative Linux network 
 	interface to directly interoperate with one of your built in networking 
@@ -98,8 +106,8 @@ run anything.
    downloaded. 
    
 6. The installation directory should include vmlinux, default.conf, the 
-   supplied linux.sys driver, executables and dlls, and probably the root 
-   filesystem image. Be sure to review the XML file for any additional 
+   supplied linux.sys driver and executables, and probably the root 
+   filesystem image. Be sure to review the config file for any additional 
    configuration that may be needed.
 
 7. Run coLinux. The current directory should be the installation directory, 
@@ -177,7 +185,7 @@ Linux.
 
 	Allows you to remove the Cooperative Linux service. 
 
-    --install-drvier
+    --install-driver
 
 	This command to install the driver portion of Cooperative 
 	Linux. BIG NOTE: This already happens during the installation 
