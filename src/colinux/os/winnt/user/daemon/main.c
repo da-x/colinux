@@ -178,6 +178,8 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 		return rc;
 	}
 
+	co_winnt_change_directory_for_service(argc, args);
+
 	rc = co_cmdline_params_alloc(args, argc, &cmdline);
 	if (!CO_OK(rc)) {
 		co_terminal_print("daemon: error parsing arguments\n");
@@ -247,7 +249,7 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 			start_parameters.launch_console = PFALSE;
 		}
 
-		return co_winnt_daemon_initialize_service(&start_parameters, winnt_parameters.service_name);
+		return co_winnt_daemon_initialize_service(&start_parameters);
 	}
 
 	if (!start_parameters.config_specified){
