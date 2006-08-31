@@ -14,7 +14,7 @@ export COLINUX_TARGET_KERNEL_PATH
 
 echo "Compiling colinux (daemons)"
 cd $TOPDIR/src
-if make colinux
+if ! make colinux
 then
 	echo "colinux make daemons failed"
 	exit 1
@@ -35,7 +35,7 @@ then
 
 	echo "Create installer"
 	cd $TOPDIR/src
-	if make installer
+	if ! make installer
 	then
 		echo "colinux make installer failed"
 		exit 1
