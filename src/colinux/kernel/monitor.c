@@ -372,11 +372,18 @@ static bool_t co_terminate(co_monitor_t *cmon)
 	cmon->termination_reason = co_passage_page->params[0];
 
 	if (cmon->termination_reason == CO_TERMINATE_BUG) {
+		int len;
 		char *str = (char *)&co_passage_page->params[4];
 		cmon->bug_info.code = co_passage_page->params[1];
 		cmon->bug_info.line = co_passage_page->params[2];
 
-		co_snprintf(cmon->bug_info.file, sizeof(cmon->bug_info.file), "%s", str);
+		len = co_strlen(str);
+		if (len < sizeof(cmon->bug_info.file)-1)
+			co_snprintf(cmon->bug_info.file, sizeof(cmon->bug_info.file), "%s", str);
+		else
+			/* show the end of filename */
+			co_snprintf(cmon->bug_info.file, sizeof(cmon->bug_info.file),
+				    "...%s", str + len - sizeof(cmon->bug_info.file)-1 - 3);
 
 		co_debug_system("BUG%d at %s:%d\n", cmon->bug_info.code,
 				cmon->bug_info.file, cmon->bug_info.line);
