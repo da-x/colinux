@@ -95,27 +95,25 @@ WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_$WINPCAP_VERSION.zip
 
 # Kernel version we are targeting
 # Remember: Please update also conf/kernel-config, if changing kernel version!
-# Read version from filename of patchfile patch/linux-2.6.11.diff,
+# Read version from filename of file patch/series-2.6.11,
 # can overwrite in CFG file.
 # KERNEL_VERSION: full kernel version (e.g. 2.6.11)
 # KERNEL_DIR: sub-dir in www.kernel.org for the download (e.g. v2.6)
 #
 if [ -z "$KERNEL_VERSION" ] ; then
-  KERNEL_VERSION=`ls $TOPDIR/patch/linux-*.diff | sed -r -e 's/^.+\-([0-9\.]+)\.diff$/\1/'`
   # Check multiple patchfiles
-  CHECK=`ls $TOPDIR/patch/linux-*.diff | sed -n -e '2p'`
-  if [ -n "$CHECK" ] ; then
+  if [ 1 -ne `ls $TOPDIR/patch/series-* | wc -l` ] ; then
     echo "WARNING: Can only handle one patchfile for automatic version detection"
     echo "Please set $""KERNEL_VERSION in user-build.cfg"
     exit -1
   fi
+  KERNEL_VERSION=`ls $TOPDIR/patch/series-* | sed -r -e 's/^.+\-([0-9\.]+)$/\1/'`
 fi
 KERNEL_DIR=`echo $KERNEL_VERSION | sed -r -e 's/^([0-9]+)\.([0-9]+)\..+$/v\1.\2/'`
 
 KERNEL=linux-$KERNEL_VERSION
 KERNEL_URL=http://www.kernel.org/pub/linux/kernel/$KERNEL_DIR
 KERNEL_ARCHIVE=$KERNEL.tar.bz2
-KERNEL_PATCH=patch/linux-$KERNEL_VERSION.diff
 
 CO_VERSION=`cat $TOPDIR/src/colinux/VERSION`
 COMPLETE_KERNEL_NAME=$KERNEL_VERSION-co-$CO_VERSION

@@ -63,9 +63,13 @@ create_md5sums()
 	|| error_exit 10 "can not create md5sum"
 
 	# Md5sums for patches
-	for name in $KERNEL_PATCH patch/linux-*.patch patch/config-*.patch
+	cd patch
+	for name in `cat series-$KERNEL_VERSION` config-*.patch
 	do
-		md5sum -b $name >> $KERNEL_CHECKSUM
+		if [ -e "$name" ]
+		then
+			md5sum -b $name >> $KERNEL_CHECKSUM
+		fi
 	done
 
 	cd "$BINDIR"
@@ -96,20 +100,42 @@ extract_kernel()
 	rm -rf "$COLINUX_TARGET_KERNEL_SOURCE-tmp"
 }
 
+emulate_quilt_push()
+{
+	while read name level
+	do
+		if [ -e "patches/$name" ]
+		then
+			echo "reading $name"
+			test -z "$level" && level="-p1"
+			patch $level -f < "patches/$name" \
+			|| error_exit 10 "$name patch failed"
+		fi
+	done < series
+}
+
+# Standard patch, user patches...
 patch_kernel_source()
 {
-	# Standard patch, user patches, alphabetically sort by name
-	# Last chance to add private things, such local config
-	# patches on source
-	for name in "$TOPDIR/$KERNEL_PATCH" "$TOPDIR"/patch/linux-*.patch
-	do
-		echo "reading $name"
-		patch -p1 -f -d "$COLINUX_TARGET_KERNEL_SOURCE" < $name \
-		|| error_exit 10 "$name patch failed"
-	done
+	cd "$COLINUX_TARGET_KERNEL_SOURCE"
+	test -f "series"  || ln -s "$TOPDIR/patch/series-$KERNEL_VERSION" "series"
+	test -f "patches" || ln -s "$TOPDIR/patch" "patches"
+
+	if quilt --version >/dev/null
+	then
+		# use quilt for patching, don't trust users settings
+		unset QUILT_COMMAND_ARGS
+		unset QUILT_PATCHES
+		quilt --quiltrc /dev/null push -a \
+		|| error_exit 10 "quilt failed"
+	else
+		# Fallback without quilt
+		emulate_quilt_push
+	fi
 
 	# Copy coLinux Version into kernel localversion
-	echo "-co-$CO_VERSION" > "$COLINUX_TARGET_KERNEL_SOURCE/localversion-cooperative"
+	echo "-co-$CO_VERSION" > localversion-cooperative
+	cd -
 }
 
 patch_kernel_build()
