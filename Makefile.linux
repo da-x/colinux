@@ -1,0 +1,26 @@
+# Makefile.linux for coLinux (linux)
+
+# Host System architecture
+export COLINUX_HOST_OS := linux
+
+# Host system directories
+export COLINUX_HOST_KERNEL_DIR := \
+    $(shell . $(USER_CFG); echo $$COLINUX_HOST_KERNEL_DIR)
+
+# Define Host specific compiler and linker flags,
+# such for specific FLTK library
+#export COLINUX_CFLAGS = -I$(HOME)/i686-pc-linux-local/include
+#export COLINUX_LFLAGS = -L$(HOME)/i686-pc-linux-local/lib
+
+# Set different host compiler for kernel, if option enabled
+COLINUX_GCC_GUEST_TARGET := \
+    $(shell . $(USER_CFG); echo $$COLINUX_GCC_GUEST_TARGET)
+
+ifneq ($(COLINUX_GCC_GUEST_TARGET),)
+export COLINUX_GCC_GUEST_TARGET
+PATH := $(shell . $(USER_CFG); echo $$PATH:$$COLINUX_GCC_GUEST_PATH)
+endif
+
+.PHONY: all
+all: colinux
+

@@ -8,13 +8,14 @@
  *
  */ 
 #include <string.h>
-#include <mxml.h>
 
 #include <colinux/common/libc.h>
 #include <colinux/common/config.h>
 #include <colinux/user/cmdline.h>
+#include <colinux/os/user/file.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/cobdpath.h>
+#include <colinux/os/alloc.h>
 #include "macaddress.h"
 
 #include "daemon.h"
@@ -23,449 +24,6 @@ typedef struct {
     int size;
     char * buffer;
     } comma_buffer_t;	/* only for split_comma_separated here */
-
-static co_rc_t co_load_config_cofs(co_config_t *out_config, mxml_element_t *element)
-{
-    int i;
-    long index = -1;
-    char *path = NULL;
-    co_cofsdev_desc_t *cofs, *dev;
-    char *enabled = NULL;
-    char *type = NULL;
-    
-    for (i=0; i < element->num_attrs; i++) {
-        mxml_attr_t *attr = &element->attrs[i];
-        
-        if (strcmp(attr->name, "index") == 0)
-            index = atoi(attr->value);
-        
-        if (strcmp(attr->name, "path") == 0)
-            path = attr->value;
-        
-        if (strcmp(attr->name, "enabled") == 0)
-            enabled = attr->value;
-        
-        if (strcmp(attr->name, "type") == 0)
-            type = attr->value;
-    }
-    
-    if (index < 0) {
-        co_debug("config: invalid cofs element: bad index\n");
-        return CO_RC(ERROR);
-    }
-    
-    if (index >= CO_MODULE_MAX_COFS) {
-        co_debug("config: invalid cofs element: bad index\n");
-        return CO_RC(ERROR);
-    }
-    
-    if (path == NULL) {
-        co_debug("config: invalid cofs element: bad path\n");
-        return CO_RC(ERROR);
-    }
-
-    if (type == NULL) {
-        co_debug("config: invalid cofs element: no type\n");
-        return CO_RC(ERROR);
-    }
-    
-    cofs = &out_config->cofs_devs[index];
-    
-    if        ( strcmp(type, "flat") == 0 ) {
-        cofs->type = CO_COFS_TYPE_FLAT;
-    } else if ( strcmp(type, "meta") == 0 ) {
-        cofs->type = CO_COFS_TYPE_UNIX_METADATA;
-    } else {
-        co_debug("cofing: invalid cofs element: bad type\n");
-        return CO_RC(ERROR);
-    }
-    
-    snprintf(cofs->pathname, sizeof(cofs->pathname), "%s", path);
-    co_canonize_cobd_path(&cofs->pathname);
-    cofs->enabled = enabled ? (strcmp(enabled, "true") == 0) : 0;
-
-    /* no checks, if disabled */
-    if (!cofs->enabled)
-        return CO_RC(OK);
-    
-    /* Check currently configing path against already 
-       configured paths, error if an duplicate is found. 
-    */
-    for (i = 0, dev = out_config->cofs_devs; i < CO_MODULE_MAX_COFS; i++, dev++)
-    {
-	if ( i != index && dev->enabled &&
-             stricmp(dev->pathname, cofs->pathname) == 0 )
-	{
-             co_debug("config: invalid cofs element: duplicate path in cofs%i and cofs%i\n", index, i);
-             return CO_RC(ERROR);
-	} 
-    }
-
-    co_terminal_print("mapping cofs%d to %s\n", index, cofs->pathname);
-
-    return CO_RC(OK);
-}
-
-co_rc_t co_load_config_blockdev(co_config_t *out_config, mxml_element_t *element)
-{
-	int i;
-	long index = -1;
-	char *path = NULL;
-	char *alias = NULL;
-	char *enabled = NULL;
-	co_block_dev_desc_t *blockdev, *dev;
-
-	for (i=0; i < element->num_attrs; i++) {
-		mxml_attr_t *attr = &element->attrs[i];
-
-		if (strcmp(attr->name, "index") == 0)
-			index = atoi(attr->value);
-
-		if (strcmp(attr->name, "path") == 0)
-			path = attr->value;
-
-		if (strcmp(attr->name, "enabled") == 0)
-			enabled = attr->value;
-
-		if (strcmp(attr->name, "alias") == 0)
-			alias = attr->value;
-	}
-	
-	if (index < 0) {
-		co_debug("config: invalid block_dev element: bad index\n");
-		return CO_RC(ERROR);
-	}
-
-	if (index >= CO_MODULE_MAX_COBD) {
-		co_debug("config: invalid block_dev element: bad index\n");
-		return CO_RC(ERROR);
-	}
-
-	if (path == NULL) {
-		co_debug("config: invalid block_dev element: bad path\n");
-		return CO_RC(ERROR);
-	}
-
-	blockdev = &out_config->block_devs[index];
-	
-	snprintf(blockdev->alias, sizeof(blockdev->alias), "%s", alias);
-	blockdev->alias_used = alias != NULL;
-
-	snprintf(blockdev->pathname, sizeof(blockdev->pathname), "%s", path);
-	co_canonize_cobd_path(&blockdev->pathname);
-	blockdev->enabled = enabled ? (strcmp(enabled, "true") == 0) : 0;
-
-	/* no checks, if disabled */
-	if (!blockdev->enabled)
-		return CO_RC(OK);
-
-	/* Check currently configing path against already 
-           configured paths, error if an duplicate is found. 
-	*/
-	for (i = 0, dev = out_config->block_devs; i < CO_MODULE_MAX_COBD; i++, dev++) {
-		if ( i != index && dev->enabled &&
-		     stricmp(dev->pathname, blockdev->pathname) == 0 )
-		{
-			co_debug("config: invalid cobd element: duplicate path\n");
-			return CO_RC(ERROR);
-		} 
-	}
-
-	co_terminal_print("mapping cobd%d to %s\n", index, blockdev->pathname);
-
-	return CO_RC(OK);
-}
-
-co_rc_t co_load_config_image(co_config_t *out_config, mxml_element_t *element)
-{
-	int i;
-	char *path = NULL;
-
-	for (i=0; i < element->num_attrs; i++) {
-		mxml_attr_t *attr = &element->attrs[i];
-
-		if (strcmp(attr->name, "path") == 0)
-			path = attr->value;
-	}
-	
-	if (path == NULL) {
-		co_debug("config: invalid image element: bad path\n");
-		return CO_RC(ERROR);
-	}
-
-	snprintf(out_config->vmlinux_path, sizeof(out_config->vmlinux_path), 
-		 "%s", path);
-
-	return CO_RC(OK);
-}
-
-co_rc_t co_load_config_boot_params(co_config_t *out_config, mxml_node_t *node)
-{
-	char *param_line;
-	unsigned long param_line_size_left;
-	unsigned long index;
-	mxml_node_t *text_node;
-
-	if (node == NULL)
-		return CO_RC(ERROR);
-
-	param_line = out_config->boot_parameters_line;
-	param_line_size_left = sizeof(out_config->boot_parameters_line);
-
-	co_bzero(param_line, param_line_size_left);
-
-	text_node = node;
-	index = 0;
-
-	while (text_node  &&  text_node->type == MXML_TEXT) {
-		if (index != 0) {
-			int param_size = strlen(param_line);
-			param_line += param_size;
-			param_line_size_left -= param_size;
-		}
-						
-		snprintf(param_line, 
-			 param_line_size_left, 
-			 index == 0 ? "%s" : " %s", 
-			 text_node->value.text.string);
-
-		index++;
-		text_node = text_node->next;
-	}
-
-	return CO_RC(OK);
-}
-
-co_rc_t co_load_config_initrd(co_config_t *out_config, mxml_element_t *element)
-{
-	int i;
-	char *path = NULL;
-
-	for (i=0; i < element->num_attrs; i++) {
-		mxml_attr_t *attr = &element->attrs[i];
-                                                     
-		if (strcmp(attr->name, "path") == 0)  
-			path = attr->value;
-	}
-
-	if (path == NULL) {
-		co_debug("config: invalid initrd element: bad path\n");
-		return CO_RC(ERROR);
-	}
-
-	out_config->initrd_enabled = PTRUE;
-
-	snprintf(out_config->initrd_path, sizeof(out_config->initrd_path),
-		 "%s", path);
-
-	return CO_RC(OK);
-}
-
-
-static bool_t char_is_digit(char ch)
-{
-	return (ch >= '0'  &&  ch <= '9');
-}
-
-co_rc_t co_str_to_unsigned_long(const char *text, unsigned long *number_out)
-{
-	unsigned long number = 0;
-	unsigned long last_number = 0;
-
-	if (!char_is_digit(*text))
-		return CO_RC(ERROR);
-
-	do {
-		last_number = number;
-		number *= 10;
-		number += (*text - '0');
-
-		if (number < last_number) {
-			/* Overflow */
-			return CO_RC(ERROR);
-		}
-
-	} while (char_is_digit(*++text)) ;
-
-	if (*text == '\0') {
-		*number_out = number;
-		return CO_RC(OK);
-	}
-
-	return CO_RC(ERROR);
-}
-
-co_rc_t co_load_config_memory(co_config_t *out_config, mxml_element_t *element)
-{
-	int i;
-	char *element_text = NULL;
-	co_rc_t rc;
-
-	for (i=0; i < element->num_attrs; i++) {
-		mxml_attr_t *attr = &element->attrs[i];
-
-		if (strcmp(attr->name, "size") == 0)
-			element_text = attr->value;
-	}
-	
-	if (element_text == NULL) {
-		co_debug("config: invalid memory element: bad memory specification\n");
-		return CO_RC(ERROR);
-	}
-
-	rc = co_str_to_unsigned_long(element_text, &out_config->ram_size);
-	if (!CO_OK(rc))
-		co_debug("config: invalid memory element: invalid size format\n");
-
-	return rc;
-}
-
-co_rc_t co_load_config_network(co_config_t *out_config, mxml_element_t *element)
-{
-	int i;
-	char *element_text = NULL;
-	co_rc_t rc = CO_RC(ERROR);
-	co_netdev_desc_t desc = {0, };
-	unsigned long index = -1;
-
-	desc.enabled = PFALSE;
-	desc.type = CO_NETDEV_TYPE_BRIDGED_PCAP;
-	desc.manual_mac_address = PFALSE;
-	desc.promisc_mode = 1;
-
-	for (i=0; i < element->num_attrs; i++) {
-		mxml_attr_t *attr = &element->attrs[i];
-
-		if (strcmp(attr->name, "mac") == 0) {
-			element_text = attr->value;
-
-			rc = co_parse_mac_address(element_text, desc.mac_address);
-			if (!CO_OK(rc)) { 
-				co_debug("config: invalid network element: invalid mac address specified (use the xx:xx:xx:xx:xx:xx format)\n");
-				return rc;
-			}
-
-			desc.manual_mac_address = PTRUE;
-		} else
-		if (strcmp(attr->name, "index") == 0) {
-			element_text = attr->value;
-
-			rc = co_str_to_unsigned_long(element_text, &index);
-			if (!CO_OK(rc)) {
-				co_debug("config: invalid network element: invalid index format\n");
-				return CO_RC(ERROR);
-			}
-			
-			if (index < 0  ||  index >= CO_MODULE_MAX_CONET) {
-				co_debug("config: invalid network element: invalid index %d\n", (int)index);
-				return CO_RC(ERROR);
-			}
-
-			desc.enabled = PTRUE;
-		} else
-		if (strcmp(attr->name, "name") == 0) {
-			element_text = attr->value;
-
-			snprintf(desc.desc, sizeof(desc.desc), "%s", element_text);
-		} else
-		if (strcmp(attr->name, "type") == 0) {
-			element_text = attr->value;
-
-			if (strcmp(element_text, "bridged") == 0) {
-				desc.type = CO_NETDEV_TYPE_BRIDGED_PCAP;
-			} else if (strcmp(element_text, "slirp") == 0) {
-				desc.type = CO_NETDEV_TYPE_SLIRP;
-			} else if (strcmp(element_text, "tap") == 0) {
-				desc.type = CO_NETDEV_TYPE_TAP;
-			} else {
-				co_debug("config: invalid network element: invalid type %s\n", element_text);
-				return CO_RC(ERROR);
-			}
-		} else
-		if (strcmp(attr->name, "redir") == 0) {
-			snprintf(desc.redir, sizeof(desc.redir), "%s", attr->value);
-		} else
-		if (strcmp(attr->name, "promisc") == 0) {
-			element_text = attr->value;
-
-			/* default is 1 (true) */
-			if (strcmp(element_text, "false") == 0)
-				desc.promisc_mode = 0;
-		}
-	}
-
-	if (index == -1) {
-		co_debug("config: invalid network element: index not specified\n");
-		return CO_RC(ERROR);
-	}
-
-	out_config->net_devs[index] = desc;
-	
-	return rc;
-}
-
-co_rc_t co_load_config(char *text, co_config_t *out_config)
-{
-	mxml_node_t *node, *tree, *walk;
-	char *name;
-	co_rc_t rc = CO_RC(OK);
-
-	/* Check presence of an UTF-8 BOM marker.
-	 * Our XML library doesn't like Byte Order Markers */
-	if ( text[0] == '\xEF' && text[1] == '\xBB' && text[2] == '\xBF' )
-		text += 3;	// skip it
-
-	out_config->initrd_enabled = PFALSE;
-
-	tree = mxmlLoadString(NULL, text, NULL);
-	if (tree == NULL) {
-		co_debug("config: error parsing config XML. Please check XML's validity\n");
-		return CO_RC(ERROR);
-	}
-
-	node = mxmlFindElement(tree, tree, "colinux", NULL, NULL, MXML_DESCEND);
-
-	if (node == NULL) {
-		co_debug("config: couldn't find colinux element within XML\n");
-		return CO_RC(ERROR);
-	}
-
-	for (walk = node->child; walk; walk = walk->next) {
-		if (walk->type == MXML_ELEMENT) {
-			name = walk->value.element.name;
-			rc = CO_RC(OK);
-
-			if (strcmp(name, "block_device") == 0) {
-				rc = co_load_config_blockdev(out_config, &walk->value.element);
-			} else if (strcmp(name, "bootparams") == 0) {
-				rc = co_load_config_boot_params(out_config, walk->child);
-			} else if (strcmp(name, "image") == 0) {
-				rc = co_load_config_image(out_config, &walk->value.element);
-			} else if (strcmp(name, "initrd") == 0) {
-				rc = co_load_config_initrd(out_config, &walk->value.element);
-			} else if (strcmp(name, "memory") == 0) {
-				rc = co_load_config_memory(out_config, &walk->value.element);
-			} else if (strcmp(name, "network") == 0) {
-				rc = co_load_config_network(out_config, &walk->value.element);
-			} else if (strcmp(name, "cofs_device") == 0) {
-				rc = co_load_config_cofs(out_config, &walk->value.element);
-			}
-
-			if (!CO_OK(rc))
-				break;
-		}
-	}
-
-	mxmlRemove(tree);
-
-	if (strcmp(out_config->vmlinux_path, "") == 0)
-		snprintf(out_config->vmlinux_path, sizeof(out_config->vmlinux_path), "vmlinux");
-
-	return rc;
-}
-
-
-/************************/
 
 /* 
  * "New" command line configuration gathering scheme. It existed a long time in 
@@ -476,46 +34,32 @@ co_rc_t co_load_config(char *text, co_config_t *out_config)
 static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_config_t *conf)
 {
 	bool_t exists;
-	char param[0x100];
+	char *param;
 	co_rc_t rc;
 
 	do {
 		int index;
-		exists = PFALSE;
+		co_block_dev_desc_t *cobd;
 
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cobd", &index, param, 
-							     sizeof(param), &exists);
-		if (!CO_OK(rc)) 
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cobd", 
+							     &index, CO_MODULE_MAX_COBD, 
+							     &param, &exists);
+		if (!CO_OK(rc))
 			return rc;
 		
-		if (exists) {
-			co_block_dev_desc_t *cobd;
-			int i;
+		if (!exists)
+			break;
 
-			if (index < 0  || index >= CO_MODULE_MAX_COBD) {
-				co_terminal_print("invalid cobd index: %d\n", index);
-				return CO_RC(ERROR);
-			}
-		
-			co_canonize_cobd_path(&param);
+		cobd = &conf->block_devs[index];
 
-			/* Check currently configing path against already 
-	                   configured paths, error if an duplicate is found. 
-	                */
-			for (i = 0, cobd = conf->block_devs; i < CO_MODULE_MAX_COBD; i++, cobd++) {
-				if (cobd->enabled && stricmp(cobd->pathname, param) == 0 ) {
-					co_terminal_print("duplicate cobd path: %s already used in cobd%i\n", param, i);
-					return CO_RC(ERROR);
-				}
-			}
+		if (cobd->enabled)
+			co_terminal_print("warning cobd%d double defined\n", index);
+		cobd->enabled = PTRUE;
 
-			cobd = &conf->block_devs[index];
-			cobd->enabled = PTRUE;
-			co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
-
-			co_terminal_print("mapping cobd%d to %s\n", index, cobd->pathname);
-		}
-	} while (exists);
+		co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
+		co_canonize_cobd_path(&cobd->pathname);
+		co_terminal_print("mapping cobd%d to %s\n", index, cobd->pathname);
+	} while (1);
 
 	return CO_RC(OK);
 }
@@ -540,12 +84,12 @@ static co_rc_t allocate_by_alias(co_config_t *conf, const char *prefix, const ch
 
 	cobd->enabled = PTRUE;
 	co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
-	cobd->alias_used = PTRUE;
-	snprintf(cobd->alias, sizeof(cobd->alias), "%s%s", prefix, suffix);
-
 	co_canonize_cobd_path(&cobd->pathname);
 
-	co_terminal_print("selected cobd%d for %s%s, mapping to '%s'\n", i, prefix, suffix, cobd->pathname);
+	cobd->alias_used = PTRUE;
+	co_snprintf(cobd->alias, sizeof(cobd->alias), "%s%s", prefix, suffix);
+
+	co_terminal_print("selected cobd%d for %s, mapping to '%s'\n", i, cobd->alias, cobd->pathname);
 
 	return CO_RC(OK);
 }
@@ -555,7 +99,7 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 	const char *prefixes[] = {"sd", "hd"};
 	const char *prefix;
 	bool_t exists;
-	char param[0x100];
+	char *param;
 	co_rc_t rc;
 	int i;
 
@@ -564,8 +108,8 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 		char suffix[5];
 			
 		do {
-			rc = co_cmdline_get_next_equality(cmdline, prefix, sizeof(suffix)-1, suffix, sizeof(suffix), 
-							  param, sizeof(param), &exists);
+			rc = co_cmdline_get_next_equality_alloc(cmdline, prefix, sizeof(suffix)-1, suffix, sizeof(suffix), 
+							  &param, &exists);
 			if (!CO_OK(rc)) 
 				return rc;
 			
@@ -581,12 +125,12 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 				index = co_strtol(index_str, &number_parse, 10);
 				if (number_parse == index_str) {
 					co_terminal_print("invalid alias: %s%s=%s\n", prefix, suffix, param);
-					return CO_RC(ERROR);
+					return CO_RC(INVALID_PARAMETER);
 				}
 
-				if (index < 0  || index >= CO_MODULE_MAX_COBD) {
+				if (index < 0 || index >= CO_MODULE_MAX_COBD) {
 					co_terminal_print("invalid cobd index %d in alias %s%s\n", index, prefix, suffix);
-					return CO_RC(ERROR);
+					return CO_RC(INVALID_PARAMETER);
 				}
 
 				cobd = &conf->block_devs[index];
@@ -596,11 +140,11 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 				
 				if (cobd->alias_used) {
 					co_terminal_print("error, alias cannot be used twice for cobd%d\n", index);
-					return CO_RC(ERROR);
+					return CO_RC(INVALID_PARAMETER);
 				}
 
 				cobd->alias_used = PTRUE;
-				snprintf(cobd->alias, sizeof(cobd->alias), "%s%s", prefix, suffix);
+				co_snprintf(cobd->alias, sizeof(cobd->alias), "%s%s", prefix, suffix);
 
 				co_terminal_print("mapping %s%s to %s\n", prefix, suffix, &param[1]);
 				
@@ -609,7 +153,7 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 				if (!CO_OK(rc))
 					return rc;
 			}
-		} while (exists);
+		} while (1);
 	}
 
 	return CO_RC(OK);
@@ -642,31 +186,46 @@ static bool_t strmatch_identifier(const char *str, const char *identifier, const
 static void split_comma_separated(const char *source, comma_buffer_t *array)
 {
 	int j;
+	bool_t quotation_marks;
 	
-	for ( ; array->size > 0 && array->buffer != NULL ; array++) {
-		array->buffer[0] = '\0';
+	for (; array->buffer != NULL; array++) {
 		j = 0;
-		while (*source != ',') {
-			if (*source == '\0')
-				return;
-			if (j == array->size - 1)
+		quotation_marks = PFALSE;
+
+		// quotation marks detection in config file, sample:
+		// eth0=tuntap,"LAN-Connection 14",00:11:22:33:44:55
+		// String store without quotation marks.
+
+		while (j < array->size - 1 && *source != '\0') {
+			if (*source == '"') {
+				if (*++source != '"') {
+					quotation_marks = !quotation_marks;
+					continue;
+				}
+			} else if (*source == ',' && !quotation_marks)
 				break;
 
 			array->buffer[j++] = *source++;
-			array->buffer[j] = '\0';
 		}
-		source++;
+
+		// End for destination buffers
+		array->buffer[j] = '\0';
+
+		// Skip, if end of source, but go away for _all_ buffers
+		if (*source != '\0')
+			source++;
 	}
 }
 
 static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, const char *param)
 {
-	char host_ip[40] = {0, };
-	char mac_address[40] = {0, };
+	co_netdev_desc_t *net_dev = &conf->net_devs[index];
+	char mac_address[40];
+	char host_ip[40];
 	co_rc_t rc;
 
 	comma_buffer_t array [] = {
-		{ sizeof(conf->net_devs[index].desc), conf->net_devs[index].desc },
+		{ sizeof(net_dev->desc), net_dev->desc },
 		{ sizeof(mac_address), mac_address },
 		{ sizeof(host_ip), host_ip },
 		{ 0, NULL }
@@ -674,26 +233,27 @@ static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, co
 
 	split_comma_separated(param, array);
 
-	conf->net_devs[index].type = CO_NETDEV_TYPE_TAP;
-	conf->net_devs[index].enabled = PTRUE;
+	net_dev->type = CO_NETDEV_TYPE_TAP;
+	net_dev->enabled = PTRUE;
 
-	if (strlen(mac_address) > 0) {
-		rc = co_parse_mac_address(mac_address, conf->net_devs[index].mac_address);
+	if (*mac_address) {
+		rc = co_parse_mac_address(mac_address, net_dev->mac_address);
 		if (!CO_OK(rc)) {
 			co_terminal_print("error parsing MAC address: %s\n", mac_address);
 			return rc;
 		}
-		conf->net_devs[index].manual_mac_address = PTRUE;
+		net_dev->manual_mac_address = PTRUE;
 	}
 
-	co_terminal_print("configured TAP device as eth%d\n", index);
+	co_terminal_print("configured TAP at '%s' device as eth%d\n",
+				net_dev->desc, index);
 
-	if (strlen(mac_address) > 0)
+	if (*mac_address)
 		co_terminal_print("MAC address: %s\n", mac_address);
 	else
 		co_terminal_print("MAC address: auto generated\n");
 
-	if (strlen(host_ip) > 0)
+	if (*host_ip)
 		co_terminal_print("Host IP address: %s (currently ignored)\n", host_ip);
 
 	return CO_RC(OK);
@@ -701,12 +261,13 @@ static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, co
 
 static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, const char *param)
 {
-	char mac_address[40] = {0, };
-	char promisc_mode[10] = {0, };
+	co_netdev_desc_t *net_dev = &conf->net_devs[index];
+	char mac_address[40];
+	char promisc_mode[10];
 	co_rc_t rc;
 
 	comma_buffer_t array [] = {
-		{ sizeof(conf->net_devs[index].desc), conf->net_devs[index].desc },
+		{ sizeof(net_dev->desc), net_dev->desc },
 		{ sizeof(mac_address), mac_address },
 		{ sizeof(promisc_mode), promisc_mode },
 		{ 0, NULL }
@@ -714,42 +275,37 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 
 	split_comma_separated(param, array);
 
-	conf->net_devs[index].type = CO_NETDEV_TYPE_BRIDGED_PCAP;
-	conf->net_devs[index].enabled = PTRUE;
-	conf->net_devs[index].promisc_mode = 1;
+	net_dev->type = CO_NETDEV_TYPE_BRIDGED_PCAP;
+	net_dev->enabled = PTRUE;
+	net_dev->promisc_mode = 1;
 
-	if (strlen(mac_address) > 0) {
-		rc = co_parse_mac_address(mac_address, conf->net_devs[index].mac_address);
+	if (*mac_address) {
+		rc = co_parse_mac_address(mac_address, net_dev->mac_address);
 		if (!CO_OK(rc)) {
 			co_terminal_print("error parsing MAC address: %s\n", mac_address);
 			return rc;
 		}
-		conf->net_devs[index].manual_mac_address = PTRUE;
-	}
-
-	if (strlen(conf->net_devs[index].desc) == 0) {
-		co_terminal_print("error, the name of the network interface to attach was not specified\n");
-		return CO_RC(ERROR);
+		net_dev->manual_mac_address = PTRUE;
 	}
 
 	co_terminal_print("configured PCAP bridge at '%s' device as eth%d\n", 
-			  conf->net_devs[index].desc, index);
+			net_dev->desc, index);
 
-	if (strlen(mac_address) > 0)
+	if (*mac_address)
 		co_terminal_print("MAC address: %s\n", mac_address);
 	else
 		co_terminal_print("MAC address: auto generated\n");
 
 	if (strlen(promisc_mode) > 0) {
 		if (strcmp(promisc_mode, "nopromisc") == 0) {
-			conf->net_devs[index].promisc_mode = 0;
+			net_dev->promisc_mode = 0;
 			co_terminal_print("Pcap mode: nopromisc\n");
 		} else if (strcmp(promisc_mode, "promisc") == 0) {
-			conf->net_devs[index].promisc_mode = 1;
+			net_dev->promisc_mode = 1;
 			co_terminal_print("Pcap mode: promisc\n");
 		} else {
 			co_terminal_print("error: PCAP bridge option only allowed 'promisc' or 'nopromisc'\n");
-			return CO_RC(ERROR);
+			return CO_RC(INVALID_PARAMETER);
 		}
 	}
 
@@ -758,24 +314,24 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 
 static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, const char *param)
 {
-	char mac_address[40] = {0, };
+	co_netdev_desc_t *net_dev = &conf->net_devs[index];
+	char mac_address[40]; /* currently ignored */
 
 	comma_buffer_t array [] = {
 		{ sizeof(mac_address), mac_address },
-		{ sizeof(conf->net_devs[index].redir), conf->net_devs[index].redir },
+		{ sizeof(net_dev->redir), net_dev->redir },
 		{ 0, NULL }
 	};
 
-	*(conf->net_devs[index].redir)='\0';
 	split_comma_separated(param, array);
 
-	conf->net_devs[index].type = CO_NETDEV_TYPE_SLIRP;
-	conf->net_devs[index].enabled = PTRUE;
+	net_dev->type = CO_NETDEV_TYPE_SLIRP;
+	net_dev->enabled = PTRUE;
 
 	co_terminal_print("configured Slirp as eth%d\n", index);
 
-	if (*(conf->net_devs[index].redir))
-		co_terminal_print("redirections %s\n", conf->net_devs[index].redir);
+	if (*net_dev->redir)
+		co_terminal_print("redirections %s\n", net_dev->redir);
 
 	return CO_RC(OK);
 }
@@ -793,7 +349,7 @@ static co_rc_t parse_args_networking_device(co_config_t *conf, int index, const 
 	} else {
 		co_terminal_print("unsupported network transport type: %s\n", param);
 		co_terminal_print("supported types are: tuntap, pcap-bridge, slirp\n");
-		return CO_RC(ERROR);
+		return CO_RC(INVALID_PARAMETER);
 	}
 
 	return CO_RC(OK);
@@ -802,76 +358,197 @@ static co_rc_t parse_args_networking_device(co_config_t *conf, int index, const 
 static co_rc_t parse_args_networking(co_command_line_params_t cmdline, co_config_t *conf)
 {
 	bool_t exists;
-	char param[0x100];
+	char *param;
 	co_rc_t rc;
 
 	do {
 		int index;
-		exists = PFALSE;
 
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "eth", &index, param, 
-							     sizeof(param), &exists);
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "eth", 
+							     &index, CO_MODULE_MAX_CONET, 
+							     &param, &exists);
 		if (!CO_OK(rc))
 			return rc;
 		
-		if (exists) {
-			if (index < 0  || index >= CO_MODULE_MAX_CONET) {
-				co_terminal_print("invalid network index: %d\n", index);
-				return CO_RC(ERROR);
-			}
+		if (!exists)
+			break;
 
-			rc = parse_args_networking_device(conf, index, param);
-			if (!CO_OK(rc))
-				return rc;
-		}
-	} while (exists);
+		if (conf->net_devs[index].enabled)
+			co_terminal_print("warning eth%d double defined\n", index);
+
+		rc = parse_args_networking_device(conf, index, param);
+		if (!CO_OK(rc))
+			return rc;
+	} while (1);
+
+	return CO_RC(OK);
+}
+
+static co_rc_t parse_args_cofs_device(co_config_t *conf, int index, const char *param)
+{
+	co_cofsdev_desc_t *cofs = &conf->cofs_devs[index];
+
+	if (cofs->enabled)
+		co_terminal_print("warning cofs%d double defined\n", index);
+	cofs->enabled = PTRUE;
+
+	co_snprintf(cofs->pathname, sizeof(cofs->pathname), "%s", param);
+	co_canonize_cobd_path(&cofs->pathname);
+	co_terminal_print("mapping cofs%d to %s\n", index, cofs->pathname);
 
 	return CO_RC(OK);
 }
 
 static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_config_t *conf)
 {
+	int index;
 	bool_t exists;
-	char param[0x100];
+	char *param;
+	co_rc_t rc;
+
+	do {
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cofs", 
+							     &index, CO_MODULE_MAX_COFS, 
+							     &param, &exists);
+		if (!CO_OK(rc))
+			return rc;
+		
+		if (!exists)
+			break;
+
+		rc = parse_args_cofs_device(conf, index, param);
+		if (!CO_OK(rc))
+			return rc;
+	} while (1);
+
+	return CO_RC(OK);
+}
+
+static co_rc_t parse_args_serial_device(co_config_t *conf, int index, const char *param)
+{
+	co_serialdev_desc_t *serial = &conf->serial_devs[index];
+	char name [CO_SERIAL_DESC_STR_SIZE];
+	char mode [CO_SERIAL_MODE_STR_SIZE];
+
+	comma_buffer_t array [] = {
+		{ sizeof(name), name },
+		{ sizeof(mode), mode },
+		{ 0, NULL }
+	};
+
+	if (serial->enabled)
+		co_terminal_print("warning ttys%d double defined\n", index);
+	serial->enabled = PTRUE;
+
+	split_comma_separated(param, array);
+
+	if (!*name) {
+		co_terminal_print("missing host serial device name for ttys%d\n", index);
+		return CO_RC(INVALID_PARAMETER);
+	}
+
+	co_terminal_print("mapping ttys%d to %s\n", index, name);
+	serial->desc = strdup(name);
+	if (!serial->desc)
+		return CO_RC(OUT_OF_MEMORY);
+	
+	if (*mode) {
+		co_debug("mode: %s", mode);
+		serial->mode = strdup(mode);
+		if (!serial->mode)
+			return CO_RC(OUT_OF_MEMORY);
+	}
+
+	return CO_RC(OK);
+}
+
+static co_rc_t parse_args_config_serial(co_command_line_params_t cmdline, co_config_t *conf)
+{
+	bool_t exists;
+	char *param;
 	co_rc_t rc;
 
 	do {
 		int index;
-		exists = PFALSE;
 
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cofs", &index, param, 
-							     sizeof(param), &exists);
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "ttys", 
+							     &index, CO_MODULE_MAX_SERIAL, 
+							     &param, &exists);
 		if (!CO_OK(rc)) 
 			return rc;
-		
-		if (exists) {
-			co_cofsdev_desc_t *cofs;
-			int i;
 
-			if (index < 0  || index >= CO_MODULE_MAX_COFS) {
-				co_terminal_print("invalid cofs index: %d\n", index);
-				return CO_RC(ERROR);
-			}
-		
-			co_canonize_cobd_path(&param);
+		if (!exists)
+			break;
 
-			/* Check currently configing path against already 
-	                   configured paths, error if an duplicate is found. 
-	                */
-			for (i = 0, cofs = conf->cofs_devs; i < CO_MODULE_MAX_COFS; i++, cofs++) {
-				if (cofs->enabled && stricmp(cofs->pathname, param) == 0 ) {
-					co_terminal_print("duplicate cofs path: %s already used in cofs%i\n", param, i);
-					return CO_RC(ERROR);
-				}
-			}
+		rc = parse_args_serial_device(conf, index, param);
+		if (!CO_OK(rc)) 
+			return rc;
+	} while (1);
 
-			cofs = &conf->cofs_devs[index];
-			cofs->enabled = PTRUE;
-			co_snprintf(cofs->pathname, sizeof(cofs->pathname), "%s", param);
-			
-			co_terminal_print("mapping cofs%d to %s\n", index, cofs->pathname);
-		}
-	} while (exists);
+	return CO_RC(OK);
+}
+
+static co_rc_t parse_args_execute(co_config_t *conf, int index, const char *param)
+{
+	co_execute_desc_t *execute = &conf->executes[index];
+	char prog [CO_EXECUTE_PROG_STR_SIZE];
+	char args [CO_EXECUTE_ARGS_STR_SIZE];
+
+	comma_buffer_t array [] = {
+		{ sizeof(prog), prog },
+		{ sizeof(args), args },
+		{ 0, NULL }
+	};
+
+	if (execute->enabled)
+		co_terminal_print("warning exec%d double defined\n", index);
+	execute->enabled = PTRUE;
+	execute->pid = 0;
+
+	split_comma_separated(param, array);
+
+	if (!*prog) {
+		co_terminal_print("missing program path for exec%d\n", index);
+		return CO_RC(INVALID_PARAMETER);
+	}
+
+	co_debug("exec%d: '%s'", index, prog);
+	execute->prog = strdup(prog);
+	if (!execute->prog)
+		return CO_RC(OUT_OF_MEMORY);
+	
+	if (*args) {
+		co_debug("args%d: %s", index, args);
+		execute->args = strdup(args);
+		if (!execute->args)
+			return CO_RC(OUT_OF_MEMORY);
+	}
+
+	return CO_RC(OK);
+}
+
+static co_rc_t parse_args_config_execute(co_command_line_params_t cmdline, co_config_t *conf)
+{
+	bool_t exists;
+	char *param;
+	co_rc_t rc;
+
+	do {
+		int index;
+
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "exec", 
+							     &index, CO_MODULE_MAX_EXECUTE, 
+							     &param, &exists);
+		if (!CO_OK(rc)) 
+			return rc;
+
+		if (!exists)
+			break;
+
+		rc = parse_args_execute(conf, index, param);
+		if (!CO_OK(rc)) 
+			return rc;
+	} while (1);
 
 	return CO_RC(OK);
 }
@@ -880,15 +557,6 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 {
 	co_rc_t rc;
 	bool_t exists;
-
-	rc = co_cmdline_get_next_equality(cmdline, "initrd", 0, NULL, 0, 
-					  conf->initrd_path, sizeof(conf->initrd_path),
-					  &conf->initrd_enabled);
-	if (!CO_OK(rc)) 
-		return rc;
-
-	if (conf->initrd_enabled)
-		co_terminal_print("using '%s' as initrd image\n", conf->initrd_path);
 
 	rc = co_cmdline_get_next_equality_int_value(cmdline, "mem", (int *)&conf->ram_size, &exists);
 	if (!CO_OK(rc)) 
@@ -915,34 +583,71 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 	if (!CO_OK(rc))
 		return rc;
 
+	rc = co_cmdline_get_next_equality(cmdline, "initrd", 0, NULL, 0, 
+					  conf->initrd_path, sizeof(conf->initrd_path),
+					  &conf->initrd_enabled);
+	if (!CO_OK(rc)) 
+		return rc;
+
+	if (conf->initrd_enabled) {
+		co_remove_quotation_marks(conf->initrd_path);
+		co_terminal_print("using '%s' as initrd image\n", conf->initrd_path);
+
+		/* Is last cofs free for automatic set? */
+		if (!conf->cofs_devs[CO_MODULE_MAX_COFS-1].enabled) {
+			char *param;
+
+			/* copy path from initrd file */
+			param = strdup(conf->initrd_path);
+			if (!param)
+				return CO_RC(OUT_OF_MEMORY);
+
+			/* get only the directory */
+			co_dirname(param);
+
+			if (*param)
+				rc = parse_args_cofs_device(conf, CO_MODULE_MAX_COFS-1, param);
+
+			co_os_free (param);
+
+			if (!CO_OK(rc))
+				return rc;
+		}
+	}
+
+	rc = parse_args_config_serial(cmdline, conf);
+	if (!CO_OK(rc))
+		return rc;
+
+	rc = parse_args_config_execute(cmdline, conf);
+	if (!CO_OK(rc))
+		return rc;
+
 	return rc;
 }
 
 co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_parameters_t *start_parameters)
 {
 	co_rc_t rc, rc_;
-	co_config_t *conf;
+	co_config_t *conf = &start_parameters->config;
 
 	start_parameters->cmdline_config = PFALSE;
-	conf = &start_parameters->config;
 
 	rc = co_cmdline_get_next_equality(cmdline, "kernel", 0, NULL, 0, 
 					  conf->vmlinux_path, sizeof(conf->vmlinux_path),
 					  &start_parameters->cmdline_config);
-		
-	if (!CO_OK(rc)) {
+	if (!CO_OK(rc))
 		return rc;
-	}
 
 	if (!start_parameters->cmdline_config)
 		return CO_RC(OK);
 
+	co_remove_quotation_marks(conf->vmlinux_path);
 	co_terminal_print("using '%s' as kernel image\n", conf->vmlinux_path);
 
 	rc = parse_config_args(cmdline, conf);
-	if (!CO_OK(rc)) {
+	if (!CO_OK(rc))
 		co_terminal_print("daemon: error parsing configuration parameters\n");
-	}
 	
 	rc_ = co_cmdline_params_format_remaining_parameters(cmdline, conf->boot_parameters_line,
 							    sizeof(conf->boot_parameters_line));
@@ -955,6 +660,5 @@ co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_paramete
 		start_parameters->config_specified = PTRUE;
 	}
 
-	
 	return rc;
 }

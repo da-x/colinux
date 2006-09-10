@@ -24,7 +24,6 @@
 #include <colinux/user/cmdline.h>
 #include <colinux/os/user/manager.h>
 #include <colinux/os/user/misc.h>
-#include <colinux/os/user/pipe.h>
 
 #include "../osdep.h"
 #include "cmdline.h"
@@ -43,11 +42,13 @@ static bool_t stoped = PFALSE;
  * 
  * This callback function is called when Windows sends a Stop request to the
  * coLinux service.
+ * Or the user closed the command prompt of colinux-daemon.
  *
  **/
 void co_winnt_daemon_stop(void)
 {
 	if (g_daemon != NULL) {
+		g_daemon->next_reboot_will_shutdown = PTRUE;
 		co_daemon_send_ctrl_alt_del(g_daemon);
 		stoped = PTRUE;
 	}
@@ -109,19 +110,8 @@ co_rc_t co_winnt_daemon_main(co_start_parameters_t *start_parameters)
 		goto out;
 
 	rc = co_daemon_start_monitor(g_daemon);
-	if (!CO_OK(rc)) {
-		co_rc_t rc_tmp;
-
-		// View error details, mostly wrong version.
-		// But save original return-code (arg 0 = view errors only)
-		rc_tmp = co_winnt_status_driver(0);
-
-		// View error as text, not as "exit code"
-		if (CO_RC_GET_CODE(rc_tmp) == CO_RC_VERSION_MISMATCHED)
-			rc = rc_tmp;
-
+	if (!CO_OK(rc))
 		goto out_destroy;
-	}
 
 	rc = co_daemon_run(g_daemon);
 
@@ -132,17 +122,24 @@ out_destroy:
 
 out:
 	if (!CO_OK(rc)) {
-		if (CO_RC_GET_CODE(rc) == CO_RC_VERSION_MISMATCHED) {
-			co_terminal_print("daemon: error driver version, please reinstall driver!\n");
-		} else if (CO_RC_GET_CODE(rc) == CO_RC_OUT_OF_PAGES) {
-			co_terminal_print("daemon: not enough physical memory available (try with a lower setting)\n", rc);
-		} else {
-			char buf[0x100];
-			co_rc_format_error(rc, buf, sizeof(buf));
+		char buf[0x100];
 
-			co_terminal_print("daemon: exit code %x\n", rc);
-			co_terminal_print("daemon: %s\n", buf);
+		switch (CO_RC_GET_CODE(rc)) {
+		case CO_RC_VERSION_MISMATCHED:
+			strcpy(buf, "error driver version, please reinstall driver!");
+			break;
+		case CO_RC_OUT_OF_PAGES:
+			strcpy(buf, "not enough physical memory available (try with a lower setting)");
+			break;
+		case CO_RC_ERROR_ACCESSING_DRIVER:
+			strcpy(buf, "can't access CoLinuxDriver, please check status driver!");
+			break;
+		default:
+			co_rc_format_error(rc, buf, sizeof(buf));
 		}
+
+		co_terminal_print("daemon: exit code %x\n", rc);
+		co_terminal_print("daemon: %s\n", buf);
 
 		ret = CO_RC(ERROR);
 	} else {
@@ -152,6 +149,12 @@ out:
 	SetConsoleCtrlHandler( co_winnt_daemon_ctrl_handler, FALSE );
 
 	return ret; 
+}
+
+static void co_winnt_help(void)
+{
+	co_terminal_print("\n");
+	co_terminal_print("NOTE: Run without arguments to receive help about command line syntax.\n");
 }
 
 co_rc_t co_winnt_main(LPSTR szCmdLine)
@@ -171,9 +174,11 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 	rc = co_os_parse_args(szCmdLine, &argc, &args);
 	if (!CO_OK(rc)) {
 		co_terminal_print("daemon: error parsing arguments\n");
-		co_daemon_syntax();
+		co_winnt_help();
 		return rc;
 	}
+
+	co_winnt_change_directory_for_service(argc, args);
 
 	rc = co_cmdline_params_alloc(args, argc, &cmdline);
 	if (!CO_OK(rc)) {
@@ -182,37 +187,32 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 		return rc;
 	}
 
+	rc = co_winnt_daemon_parse_args(cmdline, &winnt_parameters);
+	if (!CO_OK(rc)) {
+		co_terminal_print("daemon: error parsing parameters\n");
+		co_winnt_help();
+		return CO_RC(ERROR);
+	}
+
 	rc = co_daemon_parse_args(cmdline, &start_parameters);
 	if (!CO_OK(rc) || start_parameters.show_help){
 		if (!CO_OK(rc)) {
 			co_terminal_print("daemon: error parsing parameters\n");
 		}
-
-		co_daemon_syntax();
-		co_winnt_daemon_syntax();
-		return CO_RC(ERROR);
-	}
-
-	rc = co_winnt_daemon_parse_args(cmdline, &winnt_parameters);
-	if (!CO_OK(rc)) {
-		co_terminal_print("daemon: error parsing parameters\n");
-		co_daemon_syntax();
-		co_winnt_daemon_syntax();
+		co_winnt_help();
 		return CO_RC(ERROR);
 	}
 
 	rc = co_cmdline_params_check_for_no_unparsed_parameters(cmdline, PFALSE);
 	if (!CO_OK(rc)) {
-		co_daemon_syntax();
-		co_winnt_daemon_syntax();
+		co_winnt_help();
 		co_terminal_print("\n");
 		co_cmdline_params_check_for_no_unparsed_parameters(cmdline, PTRUE);
 		return CO_RC(ERROR);
 	}
 
 	if (winnt_parameters.status_driver) {
-		co_winnt_status_driver(1); // arg 1 = View all driver details
-		return CO_RC(OK);
+		return co_winnt_status_driver(1); // arg 1 = View all driver details
 	}
 
 	if (winnt_parameters.install_driver) {
@@ -228,7 +228,7 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 			co_terminal_print("daemon: config not specified\n");
 			return CO_RC(ERROR);
 		}
-		return co_winnt_daemon_install_as_service(winnt_parameters.service_name, &start_parameters);
+		return co_winnt_daemon_install_as_service(winnt_parameters.service_name, szCmdLine);
 	}
 
 	if (winnt_parameters.remove_service) {
@@ -243,8 +243,13 @@ co_rc_t co_winnt_main(LPSTR szCmdLine)
 		co_running_as_service = PTRUE;
 
 		co_terminal_print("colinux: running as service '%s'\n", winnt_parameters.service_name);
+		if (start_parameters.launch_console)
+		{
+			co_terminal_print("colinux: not spawning a console, because we're running as service.\n");
+			start_parameters.launch_console = PFALSE;
+		}
 
-		return co_winnt_daemon_initialize_service(&start_parameters, winnt_parameters.service_name);
+		return co_winnt_daemon_initialize_service(&start_parameters);
 	}
 
 	if (!start_parameters.config_specified){
@@ -266,16 +271,26 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		   int iCmdShow) 
 {
 	co_rc_t rc;
+	int ret;
 
 	co_current_win32_instance = hInstance;
 	co_debug_start();
 
 	rc = co_winnt_main(szCmdLine);
-	if (!CO_OK(rc))  {
-    		co_debug_end();
-		return -1;
+
+	// Translate retcode into errorlevel, for --status-driver
+	ret = CO_RC_GET_CODE(rc);
+	switch (ret) {
+	case CO_RC_OK:				//  0: ok, no error
+	case CO_RC_VERSION_MISMATCHED:		//  3: co_manager_status
+	case CO_RC_ERROR_ACCESSING_DRIVER:	// 14: driver not installed
+		break;
+	default:
+		ret = 1;
 	}
 
+	co_debug ("rc=%x exit=%d\n", rc, -ret);
 	co_debug_end();
-	return 0;
+
+	return -ret;
 }

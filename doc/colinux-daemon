@@ -1,34 +1,20 @@
 The Cooperative Linux Daemon hosts the Linux virtual machine as one process 
-under the host operating system. Its command line syntax is as follows:
-
-  colinux-daemon [-h] [-d] [-t name]
-                  ([-c config.xml]|[configuration and boot parameters])
-
-    -h             Show this help text
-    -c config.xml  Specify configuration file
-                   (default: colinux.default.xml)
-    -d             Don't launch and attach a coLinux console on
-                   startup
-    -t name        When spawning a console, this is the type of 
-                   console (e.g, nt, fltk, etc...)
-
-    Configuration and boot parameters:
-
-      When specifying kernel=vmlinux (where vmlinux is the kernel image file
-      the -c option is not needed. Instead, you pass all configuration via
-      the command line, for example:
-
-       colinux-daemon kernel=vmlinux cobd0=root_fs root=/dev/cobd0 hda1=:cobd0
-
-    Use of new aliases automatically allocates cobd(s), for example:
-
-       colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1
-
-    Unhandled paramters are forwarded to the kernel's boot parameters string.
+under the host operating system.
 
 The daemon spits out the kernel's printk() messages along with its own prints. It
 also optionally launches the virtual VGA console, that can be used to interface
 with the virtual machine.
+
+Its command line syntax is as follows:
+
+  colinux-daemon [-h] [-d] [k] [-t name] [configuration and boot parameter] [@params.txt]
+
+    -h             Show this help text
+    -d             Don't launch and attach a coLinux console on startup
+    -k             Suppress kernel messages
+    -t name        When spawning a console, this is the type of 
+                   console (e.g, nt, fltk, etc...)
+    @params.txt    Take more command line params from the given text file (can be multi-line)
 
 The following options are specific to Windows NT/XP/2000:
 
@@ -40,18 +26,25 @@ The following options are specific to Windows NT/XP/2000:
       --remove-driver              Uninstall (remove) the colinux-driver (linux.sys)
       --status-driver              Show status about the installed/running driver
 
-It is also possible (and sometimes preferable) to configure coLinux from the 
-command line, i.e, XML config is not needed. This mode and the XML mode are 
-mutual exclusive.
+  Configuration and boot parameter:
 
-The reason for this feature is an ongoing effort to bring coLinux's
-interfaces to be closer to UML (User Mode Linux) *and* to make it  
-easier to operate for the novice users.
+    Refer the file README.TXT in coLinux installation for the full list of
+    device parameters.
+
+    For example, a simple network-less setup:
+
+       colinux-daemon kernel=vmlinux cobd0=root_fs root=/dev/cobd0 hda1=:cobd0
+
+    Use of new aliases automatically allocates cobd(s), for example:
+
+       colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1
+
+    Unhandled paramters are forwarded to the kernel's boot parameters string.
 
 The kernel= option enables this mode. Order of parameters is not
 important when options don't depend on each other.              
 
- For example:
+ Typical examples:
 
      colinux-daemon kernel=vmlinux
 
@@ -89,8 +82,8 @@ important when options don't depend on each other.
 
      colinux-daemon kernel=vmlinux cobd0=root_fs hda2=:cobd0 root=/dev/cobd0
 
-   Device node aliasing. The ':' tells the daemon that's cobd0
-   is not a pathname - understand using the next example.
+   Device node aliasing. The ':' tells the daemon that cobd0 is not a 
+   pathname - read the next example for understanding more.
 
 
      colinux-daemon kernel=vmlinux hda1=root_fs root=/dev/hda1
@@ -101,7 +94,6 @@ important when options don't depend on each other.
 
    This syntax reminds a bit of QEMU's syntax (it also has
    hda=).
-
 
      colinux-daemon kernel=vmlinux hda1=root_fs root=/dev/hda1 initrd=initrd.gz
 
@@ -140,15 +132,40 @@ important when options don't depend on each other.
    Slirp, the simplest way to internet.  Inside coLinux can use a DHCP-Client.
 
 
-     eth0=slirp,,tcp:2222:22/tcp:8080:80
+     eth0=slirp,"",tcp:22:22
 
-   Uses SLiRP networking, with port 2222 and 8080 on host being
-   redirected (or port forwarded) to coLinux guest 22 and 80.
+   Uses SLiRP networking, forwards the port 22 from host to linux (SSH)
 
-   Redirections must begin with protocol ("tcp" or "udp") then an ":"
-   seperator, the port on Windows host followed by ":" seperator, and
-   the port for the coLinux guest.  More redirections have the same
-   form and are seperated by "/".
+
+     eth0=slirp,"",tcp:2222:22
+
+   Uses SLiRP networking, with port 2222 on host being redirected (or port
+   forwarded) to coLinux guest 22.
+
+
+     eth0=slirp,"",tcp:2222:22/tcp:4000:80:3
+
+   Uses SLiRP networking, and forwards counts of ports
+	Host (windows)  --> guest (coLinux)
+	2222            --> 22
+	4000		--> 80
+	4001		--> 81
+	4002		--> 82
+
+
+ Options for serial device:
+
+     ttys0=COM1
+
+   Connect the serial device /dev/ttyS0 from linux to host system COM1.
+   Please set the line paremters for serial port on hostsystem, before
+   colinux starts, or use the follow optional parameters.
+
+     ttys0=COM1,"BAUD=115200 PARITY=n DATA=8 STOP=1 dtr=on rts=on"
+
+   Sets many more default parameters for the serial port.  Please refer you
+   manual or help system of host system for optional parameters ("MODE /?").
+
 
  Options for console device:
 
@@ -168,3 +185,17 @@ important when options don't depend on each other.
      set COLINUX_CONSOLE_FONT=:12
 
    Sets only size. Default font "Terminal" is active.
+
+
+     set COLINUX_CONSOLE_EXIT_ON_DETACH=1
+
+   Enable automatic close console after detach from colinux.
+   This is good option for closing console after linux shutting down.
+
+
+ Options for executable programs:
+
+     exec0=C:\Programs\Xming\Xming.exe,":0 -clipboard -multiwindow -ac"
+
+   Program Xming.exe runs at start of colnux and terminate it, if colinux
+   is shutting down.

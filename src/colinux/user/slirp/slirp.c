@@ -161,7 +161,9 @@ void slirp_cleanup(void)
 
 void slirp_init(void)
 {
-    //    debug_init("/tmp/slirp.log", DEBUG_DEFAULT);
+#ifdef DEBUG
+    debug_init("slirp.log", DEBUG_DEFAULT);
+#endif
     
 #ifdef _WIN32
     {

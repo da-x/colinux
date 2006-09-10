@@ -8,13 +8,12 @@
  *  Copyright (C) Damion K. Wilson, 2003, and is released under the
  *  GPL version 2 (see below).
  *
- *  All other source code is Copyright (C) James Yonan, 2003-2004,
+ *  All other source code is Copyright (C) 2002-2005 OpenVPN Solutions LLC,
  *  and is released under the GPL version 2 (see below).
  *
  *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
+ *  it under the terms of the GNU General Public License version 2
+ *  as published by the Free Software Foundation.
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -93,8 +92,8 @@ TapExtension, *TapExtensionPointer;
 typedef struct _TapPacket
    {
 #   define TAP_PACKET_SIZE(data_size) (sizeof (TapPacket) + (data_size))
-#   define TP_POINT_TO_POINT 0x80000000
-#   define TP_SIZE_MASK      (~TP_POINT_TO_POINT)
+#   define TP_TUN 0x80000000
+#   define TP_SIZE_MASK      (~TP_TUN)
     ULONG m_SizeFlags;
     UCHAR m_Data []; // m_Data must be the last struct member
    }
@@ -108,6 +107,9 @@ typedef struct _TapAdapter
   BOOLEAN m_InterfaceIsRunning;
   NDIS_HANDLE m_MiniportAdapterHandle;
   LONG m_Rx, m_Tx, m_RxErr, m_TxErr;
+#if PACKET_TRUNCATION_CHECK
+  LONG m_RxTrunc, m_TxTrunc;
+#endif
   NDIS_MEDIUM m_Medium;
   ULONG m_Lookahead;
   ULONG m_MTU;
@@ -124,9 +126,10 @@ typedef struct _TapAdapter
   char m_DeviceState;
 
   // Info for point-to-point mode
-  BOOLEAN m_PointToPoint;
+  BOOLEAN m_tun;
   IPADDR m_localIP;
-  IPADDR m_remoteIP;
+  IPADDR m_remoteNetwork;
+  IPADDR m_remoteNetmask;
   ETH_HEADER m_TapToUser;
   ETH_HEADER m_UserToTap;
   MACADDR m_MAC_Broadcast;

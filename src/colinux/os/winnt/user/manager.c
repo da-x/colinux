@@ -23,12 +23,10 @@
 #include <colinux/os/current/ioctl.h>
 
 #include "misc.h"
+#include "manager.h"
+#include "reactor.h"
 
-struct co_manager_handle {
-	HANDLE handle;
-};
-
-co_manager_handle_t co_os_manager_open(void)
+static co_manager_handle_t co_os_manager_open_(int verbose)
 {
 	co_manager_handle_t handle;
 
@@ -38,15 +36,27 @@ co_manager_handle_t co_os_manager_open(void)
 
 	handle->handle = CreateFile(CO_DRIVER_USER_PATH, 
 				    GENERIC_READ | GENERIC_WRITE, 0, NULL, 
-				    OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+				    OPEN_EXISTING, 
+				    FILE_ATTRIBUTE_NORMAL  | FILE_FLAG_OVERLAPPED, NULL);
 
 	if (handle->handle == INVALID_HANDLE_VALUE) {
-		co_terminal_print_last_error("colinux: manager open");
+		if (verbose)
+			co_terminal_print_last_error("colinux: manager open");
 		co_os_free(handle);
 		return NULL;
 	}
 
 	return handle;
+}
+
+co_manager_handle_t co_os_manager_open(void)
+{
+	return co_os_manager_open_(1);
+}
+
+co_manager_handle_t co_os_manager_open_quite(void)
+{
+	return co_os_manager_open_(0);
 }
 
 void co_os_manager_close(co_manager_handle_t handle)
@@ -113,4 +123,22 @@ co_rc_t co_winnt_check_driver(IN LPCTSTR DriverName, bool_t *installed)
 co_rc_t co_os_manager_is_installed(bool_t *installed)
 {
 	return co_winnt_check_driver(CO_DRIVER_NAME, installed);
+}
+
+co_rc_t co_os_reactor_monitor_create(
+	co_reactor_t reactor, co_manager_handle_t whandle,
+	co_reactor_user_receive_func_t receive,
+	co_reactor_user_t *handle_out)
+{
+	*handle_out = NULL;
+
+	return co_winnt_reactor_packet_user_create(
+		reactor, whandle->handle, whandle->handle, receive,
+		(co_winnt_reactor_packet_user_t *)handle_out);
+	
+}
+
+void co_os_reactor_monitor_destroy(co_reactor_user_t handle)
+{
+	co_winnt_reactor_packet_user_destroy((co_winnt_reactor_packet_user_t)handle);
 }

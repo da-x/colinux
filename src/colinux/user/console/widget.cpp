@@ -167,10 +167,8 @@ void console_widget_t::draw()
 		cell = start;
 
 		if (end > limit) {
-#if 0
-			co_debug("BUG: end=%p limit=%p row=%p start=%p x1=%d x2=%d y1=%d y2=%d",
-			    end, limit, row_start, start, x1, x2, y1, y2);
-#endif
+			// co_debug("BUG: end=%p limit=%p row=%p start=%p x1=%d x2=%d y1=%d y2=%d",
+			//     end, limit, row_start, start, x1, x2, y1, y2);
 			end = limit; // Hack: Fix the overrun!
 		}
 		

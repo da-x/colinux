@@ -11,13 +11,16 @@
 
 #include <windows.h>
 #include <stdio.h>
+#include <conio.h>
+#include <ctype.h>
 
-#include <colinux/common/common.h>
 #include <colinux/user/debug.h>
-#include <colinux/os/user/misc.h>
+#include <colinux/user/reactor.h>
+#include <colinux/user/monitor.h>
 #include <colinux/user/cmdline.h>
-#include <colinux/common/common.h>
-#include "../daemon.h"
+#include <colinux/os/user/misc.h>
+#include <colinux/os/current/user/reactor.h>
+#include <colinux/os/winnt/user/misc.h>
 
 COLINUX_DEFINE_MODULE("colinux-serial-daemon");
 
@@ -25,213 +28,85 @@ COLINUX_DEFINE_MODULE("colinux-serial-daemon");
  * Type Declarations
  */
 
-typedef struct co_win32_overlapped {
-	HANDLE write_handle;
-	HANDLE read_handle;
-	HANDLE read_event;
-	HANDLE write_event;
-	OVERLAPPED read_overlapped;
-	OVERLAPPED write_overlapped;
-	char buffer[0x10000];
-	unsigned long size;
-} co_win32_overlapped_t;
-
 typedef struct start_parameters {
 	bool_t show_help;
 	int index;
 	int instance;
+	bool_t filename_specified;
+	char filename [CO_SERIAL_DESC_STR_SIZE];
+	bool_t mode_specified;
+	char mode [CO_SERIAL_MODE_STR_SIZE];
 } start_parameters_t;
 
 /*******************************************************************************
  * Globals
  */
-start_parameters_t *daemon_parameters;
+static start_parameters_t g_daemon_parameters;
+static co_reactor_t g_reactor;
+static co_user_monitor_t *g_monitor_handle;
+static co_winnt_reactor_packet_user_t g_reactor_handle;
 
-co_win32_overlapped_t stdio_overlapped, daemon_overlapped;
 
-co_rc_t co_win32_overlapped_write_async(co_win32_overlapped_t *overlapped,
-					void *buffer, unsigned long size)
+static co_rc_t monitor_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
 {
-	unsigned long write_size;
-	BOOL result;
-	DWORD error;
+	co_message_t *message;
+	unsigned long message_size;
+	long size_left = size;
+	long position = 0;
 
-	result = WriteFile(overlapped->write_handle, buffer, size,
-			   &write_size, &overlapped->write_overlapped);
+	while (size_left > 0) {
+		message = (typeof(message))(&buffer[position]);
+		message_size = message->size + sizeof(*message);
+		size_left -= message_size;
+		if (size_left >= 0) {
+			g_reactor_handle->user.send(&g_reactor_handle->user, message->data, message->size);
+		}
+		position += message_size;
+	}
+
+	return CO_RC(OK);
+}
+
+static co_rc_t std_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
+{
+	struct {
+		co_message_t message;
+		co_linux_message_t message_linux;
+		char data[size];
+	} message;
+
+	/* Received packet from standard input to linux serial */
+	message.message.from = CO_MODULE_SERIAL0 + g_daemon_parameters.index;
+	message.message.to = CO_MODULE_LINUX;
+	message.message.priority = CO_PRIORITY_DISCARDABLE;
+	message.message.type = CO_MESSAGE_TYPE_OTHER;
+	message.message.size = sizeof(message) - sizeof(message.message);
+	message.message_linux.device = CO_DEVICE_SERIAL;
+	message.message_linux.unit = g_daemon_parameters.index;
+	message.message_linux.size = size;
+	memcpy(message.data, buffer, size);
 	
-	if (!result) { 
-		switch (error = GetLastError())
-		{ 
-		case ERROR_IO_PENDING: 
-			WaitForSingleObject(overlapped->write_event, INFINITE);
-			break;
-		default:
-			return CO_RC(ERROR);
-		} 
-	}
+	g_monitor_handle->reactor_user->send(g_monitor_handle->reactor_user,
+					     (unsigned char *)&message, sizeof(message));
 
 	return CO_RC(OK);
 }
 
-co_rc_t co_win32_overlapped_read_received(co_win32_overlapped_t *overlapped)
+
+/*
+ * Read user input and sent it to the daemon.
+ */
+static void send_userinput(void)
 {
-	if (overlapped == &daemon_overlapped) {
-		/* Received packet from daemon */
-		co_message_t *message;
-		char * buffer = overlapped->buffer;
-		long size_left = overlapped->size;
-		unsigned long message_size;
+	char buf[256];
 
-		do {
-			message = (co_message_t *)buffer;
-			message_size = message->size + sizeof (co_message_t);
-			buffer += message_size;
-			size_left -= message_size;
-
-			/* Check buffer overrun */
-			if (size_left < 0) {
-				co_debug("Error: Message incomplete (%ld)\n", size_left);
-				return CO_RC(ERROR);
-			}
-
-			co_win32_overlapped_write_async(&stdio_overlapped, message->data, message->size);
-
-		} while (size_left > 0);
-
-	} else {
-		/* Received packet from standard input */
-		struct {
-			co_message_t message;
-			co_linux_message_t linux;
-			char data[overlapped->size];
-		} message;
-		
-		message.message.from = CO_MODULE_SERIAL0 + daemon_parameters->index;
-		message.message.to = CO_MODULE_LINUX;
-		message.message.priority = CO_PRIORITY_DISCARDABLE;
-		message.message.type = CO_MESSAGE_TYPE_OTHER;
-		message.message.size = sizeof(message) - sizeof(message.message);
-		message.linux.device = CO_DEVICE_SERIAL;
-		message.linux.unit = daemon_parameters->index;
-		message.linux.size = overlapped->size;
-		memcpy(message.data, overlapped->buffer, overlapped->size);
-
-		co_win32_overlapped_write_async(&daemon_overlapped, &message, sizeof(message));
+	fgets( buf, sizeof(buf), stdin );
+	size_t len = strlen( buf );
+	if ( len ) {
+		std_receive(0, buf, len);
 	}
-
-	return CO_RC(OK);
 }
 
-co_rc_t co_win32_overlapped_read_async(co_win32_overlapped_t *overlapped)
-{
-	BOOL result;
-	DWORD error;
-
-	while (TRUE) {
-		result = ReadFile(overlapped->read_handle,
-				  &overlapped->buffer,
-				  sizeof(overlapped->buffer),
-				  &overlapped->size,
-				  &overlapped->read_overlapped);
-
-		if (!result) { 
-			error = GetLastError();
-			switch (error)
-			{ 
-			case ERROR_IO_PENDING: 
-				return CO_RC(OK);
-			default:
-				co_debug("Error: %x\n", error);
-				return CO_RC(ERROR);
-			}
-		} else {
-			co_win32_overlapped_read_received(overlapped);
-		}
-	}
-
-	return CO_RC(OK);
-}
-
-co_rc_t co_win32_overlapped_read_completed(co_win32_overlapped_t *overlapped)
-{
-	BOOL result;
-
-	result = GetOverlappedResult(
-		overlapped->read_handle,
-		&overlapped->read_overlapped,
-		&overlapped->size,
-		FALSE);
-
-	if (result) {
-		co_win32_overlapped_read_received(overlapped);
-		co_win32_overlapped_read_async(overlapped);
-	} else {
-		if (GetLastError() == ERROR_BROKEN_PIPE) {
-			co_debug("Pipe broken, exiting\n");
-			return CO_RC(ERROR);
-		}
-
-		co_debug("GetOverlappedResult error %d\n", GetLastError());
-	}
-	 
-	return CO_RC(OK);
-}
-
-void co_win32_overlapped_init(co_win32_overlapped_t *overlapped, HANDLE read_handle, HANDLE write_handle)
-{
-	overlapped->read_handle = read_handle;
-	overlapped->write_handle = write_handle;
-	overlapped->read_event = CreateEvent(NULL, FALSE, FALSE, NULL);
-	overlapped->write_event = CreateEvent(NULL, FALSE, FALSE, NULL);
-
-	overlapped->read_overlapped.Offset = 0; 
-	overlapped->read_overlapped.OffsetHigh = 0; 
-	overlapped->read_overlapped.hEvent = overlapped->read_event; 
-
-	overlapped->write_overlapped.Offset = 0; 
-	overlapped->write_overlapped.OffsetHigh = 0; 
-	overlapped->write_overlapped.hEvent = overlapped->write_event; 
-}
-
-int wait_loop(HANDLE daemon_handle)
-{
-	HANDLE wait_list[2];
-	ULONG status;
-	co_rc_t rc;
-
-	co_win32_overlapped_init(&daemon_overlapped, daemon_handle, daemon_handle);
-	co_win32_overlapped_init(&stdio_overlapped, GetStdHandle(STD_INPUT_HANDLE), GetStdHandle(STD_OUTPUT_HANDLE));
-
-	wait_list[0] = stdio_overlapped.read_event;
-	wait_list[1] = daemon_overlapped.read_event;
-
-	co_win32_overlapped_read_async(&stdio_overlapped);
-	co_win32_overlapped_read_async(&daemon_overlapped); 
-
-	while (1) {
-		status = WaitForMultipleObjects(2, wait_list, FALSE, INFINITE); 
-			
-		switch (status) {
-		case WAIT_OBJECT_0: {/* stdio */
-			rc = co_win32_overlapped_read_completed(&stdio_overlapped);
-			if (!CO_OK(rc))
-				return 0;
-			break;
-		}
-		case WAIT_OBJECT_0+1: {/* daemon */
-			rc = co_win32_overlapped_read_completed(&daemon_overlapped);
-			if (!CO_OK(rc))
-				return 0;
-
-			break;
-		}
-		default:
-			break;
-		}
-	}
-
-	return 0;
-}
 
 /********************************************************************************
  * parameters
@@ -240,10 +115,10 @@ int wait_loop(HANDLE daemon_handle)
 static void syntax(void)
 {
 	co_terminal_print("Cooperative Linux Virtual Serial Daemon\n");
-	co_terminal_print("Dan Aloni, 2004 (c)\n");
+	co_terminal_print("Dan Aloni, 2005 (c)\n");
 	co_terminal_print("\n");
 	co_terminal_print("Syntax:\n");
-	co_terminal_print("     colinux-serial-daemon [-i colinux instance number] [-u unit]\n");
+	co_terminal_print("     colinux-serial-daemon -i pid [-u unit] [-f serial device name] [-m mode]\n");
 }
 
 static co_rc_t 
@@ -256,29 +131,38 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 	/* Default settings */
 	start_parameters->index = 0;
 	start_parameters->instance = 0;
-	start_parameters->show_help = PFALSE;
 
 	rc = co_cmdline_params_alloc(&argv[1], argc-1, &cmdline);
 	if (!CO_OK(rc)) {
-		co_terminal_print("coserial: error parsing arguments\n");
+		co_terminal_print("colinux-serial-daemon: error parsing arguments\n");
 		goto out_clean;
 	}
 
 	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-i", 
-							  &instance_specified, &start_parameters->instance);
-
+			&instance_specified, &start_parameters->instance);
 	if (!CO_OK(rc)) {
 		syntax();
 		goto out;
 	}
 
 	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-u", 
-							  &unit_specified, &start_parameters->index);
-
+			&unit_specified, &start_parameters->index);
 	if (!CO_OK(rc)) {
 		syntax();
 		goto out;
 	}
+
+	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-f", 
+			&start_parameters->filename_specified, 
+			start_parameters->filename, sizeof(start_parameters->filename));
+	if (!CO_OK(rc)) 
+		return rc;
+
+	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-m", 
+			&start_parameters->mode_specified,
+			start_parameters->mode, sizeof(start_parameters->mode));
+	if (!CO_OK(rc)) 
+		return rc;
 
 	rc = co_cmdline_params_check_for_no_unparsed_parameters(cmdline, PTRUE);
 	if (!CO_OK(rc)) {
@@ -286,15 +170,14 @@ handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 		goto out;
 	}
 
-	if ((start_parameters->index < 0) || (start_parameters->index >= CO_MODULE_MAX_SERIAL)) 
-	{
-		co_terminal_print("Invalid index: %d\n", start_parameters->index);
-		return CO_RC(ERROR);
+	if (start_parameters->index < 0 || start_parameters->index >= CO_MODULE_MAX_SERIAL) {
+		co_terminal_print("colinux-serial-daemon: Invalid index: %d\n", start_parameters->index);
+		return CO_RC(INVALID_PARAMETER);
 	}
 
-	if (start_parameters->instance == -1) {
-		co_terminal_print("coLinux instance not specificed\n");
-		return CO_RC(ERROR);
+	if (start_parameters->instance == 0) {
+		co_terminal_print("colinux-serial-daemon: coLinux instance not specificed\n");
+		return CO_RC(INVALID_PARAMETER);
 	}
 
 out:
@@ -304,56 +187,155 @@ out_clean:
 	return rc;
 }
 
-static void terminal_print_hook_func(char *str)
+static co_rc_t coserial_main(int argc, char *argv[])
 {
-	struct {
-		co_message_t message;
-		char data[strlen(str)+1];
-	} message;
-	
-	message.message.from = CO_MODULE_SERIAL0 + daemon_parameters->index;
-	message.message.to = CO_MODULE_CONSOLE;
-	message.message.priority = CO_PRIORITY_DISCARDABLE;
-	message.message.type = CO_MESSAGE_TYPE_STRING;
-	message.message.size = strlen(str)+1;
-	memcpy(message.data, str, strlen(str)+1);
+	co_rc_t rc;
+	co_module_t module;
+	HANDLE out_handle, in_handle;
+	int select_time;
 
-	if (daemon_overlapped.write_handle != NULL)
-		co_win32_overlapped_write_async(&daemon_overlapped, &message, sizeof(message));
+	rc = handle_paramters(&g_daemon_parameters, argc, argv);
+	if (!CO_OK(rc))
+		return rc;
+
+	rc = co_reactor_create(&g_reactor);
+	if (!CO_OK(rc))
+		return rc;
+	
+	co_debug("connecting to monitor\n");
+
+	module = CO_MODULE_SERIAL0 + g_daemon_parameters.index;
+	rc = co_user_monitor_open(g_reactor, monitor_receive,
+				  g_daemon_parameters.instance,
+				  &module, 1,
+				  &g_monitor_handle);
+	if (!CO_OK(rc))
+		return rc;
+
+	if (g_daemon_parameters.filename_specified == PTRUE) {
+		char name [strlen(g_daemon_parameters.filename) + 4+1];
+		DCB dcb;
+		COMMTIMEOUTS commtimeouts = {
+			1,	/* ReadIntervalTimeout */
+			0,	/* ReadTotalTimeoutMultiplier */
+			0,	/* ReadTotalTimeoutConstant */
+			0,	/* WriteTotalTimeoutMultiplier */
+			0 };	/* WriteTotalTimeoutConstant */
+
+		if (g_daemon_parameters.filename[0] != '\\') {
+			/* short windows name */
+			if (strncasecmp(g_daemon_parameters.filename, "COM", 3) != 0)
+				co_terminal_print("warning: host serial device '%s' is not a COM port\n",
+						    g_daemon_parameters.filename);
+			snprintf(name, sizeof(name), "\\\\.\\%s", g_daemon_parameters.filename);
+		} else {
+			/* windows full name device */
+			strncpy(name, g_daemon_parameters.filename, sizeof(name));
+		}
+
+		co_debug("open device '%s'", name);
+		out_handle = \
+		in_handle = CreateFile (name,
+				GENERIC_READ | GENERIC_WRITE, 0, NULL,
+				OPEN_EXISTING,
+				FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
+		if (in_handle == INVALID_HANDLE_VALUE) {
+			co_terminal_print_last_error(g_daemon_parameters.filename);
+			return CO_RC(ERROR);
+		}
+
+		if (g_daemon_parameters.mode_specified == PTRUE) {
+			co_debug("set mode: %s", g_daemon_parameters.mode);
+
+			if (!GetCommState(in_handle, &dcb)) {
+				co_terminal_print_last_error("GetCommState");
+				return CO_RC(ERROR);
+			}
+		
+			/* Set defaults. user can overwrite ot */
+			dcb.fOutxCtsFlow = FALSE; /* Disable Handshake */
+			dcb.fDtrControl = DTR_CONTROL_ENABLE;
+			dcb.fRtsControl = RTS_CONTROL_ENABLE;
+
+			if (!BuildCommDCB(g_daemon_parameters.mode, &dcb)) {
+				/*co_terminal_print_last_error("colinux-serial-daemon: BuildCommDCB");*/
+				co_terminal_print("colinux-serial-daemon: error in mode parameter '%s'\n",
+							g_daemon_parameters.mode);
+				return CO_RC(ERROR);
+			}
+
+			if (!SetCommState(in_handle, &dcb)) {
+				co_terminal_print_last_error("SetCommState");
+				return CO_RC(ERROR);
+			}
+		} else {
+			if (!EscapeCommFunction(in_handle, SETDTR)) {
+				co_terminal_print_last_error("Warning EscapeCommFunction DTR");
+				/* return CO_RC(ERROR); */
+			}
+
+			if (!EscapeCommFunction(in_handle, SETRTS)) {
+				co_terminal_print_last_error("Warning EscapeCommFunction RTS");
+				/* return CO_RC(ERROR); */
+			}
+		}
+
+		if (!SetCommTimeouts(in_handle, &commtimeouts)) {
+			co_terminal_print_last_error("SetCommTimeouts");
+			return CO_RC(ERROR);
+		}
+
+		if (!SetupComm(in_handle, 2048, 2048)) {
+			co_terminal_print_last_error("SetupComm");
+			return CO_RC(ERROR);
+		}
+
+		select_time = -1;
+	} else {
+		co_debug("std input/output");
+		out_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+		in_handle  = GetStdHandle(STD_INPUT_HANDLE);
+		select_time = 100;
+	}
+
+	co_debug("connected\n");
+
+	rc = co_winnt_reactor_packet_user_create(g_reactor, 
+						 out_handle, in_handle,
+						 std_receive, &g_reactor_handle);
+	if (!CO_OK(rc))
+		return rc;
+
+	co_terminal_print("colinux-serial-daemon: running\n");
+
+	while (CO_OK(rc)) {
+		rc = co_reactor_select(g_reactor, select_time);
+		if (CO_RC_GET_CODE(rc) == CO_RC_BROKEN_PIPE)
+			return CO_RC(OK); /* Normal, if linux shut down */
+
+		if (!g_daemon_parameters.filename_specified)
+			if ( _kbhit() )
+				send_userinput();
+	}
+
+	return -1;
 }
 
 int main(int argc, char *argv[])
 {	
 	co_rc_t rc;
-	HANDLE daemon_handle = 0;
-	int exit_code = 0;
-	co_daemon_handle_t daemon_handle_;
-	start_parameters_t start_parameters;
 
 	co_debug_start();
 
-	co_set_terminal_print_hook(terminal_print_hook_func);
+	rc = coserial_main(argc, argv);
 
-	rc = handle_paramters(&start_parameters, argc, argv);
-	if (!CO_OK(rc)) {
-		exit_code = -1;
-		goto out;
-	}
+	if (!CO_OK(rc))
+		co_terminal_print("colinux-serial-daemon: exitcode %08x\n", rc);
 
-	daemon_parameters = &start_parameters;
-
-	rc = co_os_daemon_pipe_open(daemon_parameters->instance, 
-				    CO_MODULE_SERIAL0 + daemon_parameters->index, &daemon_handle_);
-	if (!CO_OK(rc)) {
-		co_terminal_print("Error opening a pipe to the daemon\n");
-		goto out;
-	}
-
-	daemon_handle = daemon_handle_->handle;
-	exit_code = wait_loop(daemon_handle);
-	co_os_daemon_pipe_close(daemon_handle_);
-
-out:
 	co_debug_end();
-	return exit_code;
+
+	if (!CO_OK(rc))
+		return -1;
+
+	return 0;
 }

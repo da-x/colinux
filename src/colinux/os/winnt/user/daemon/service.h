@@ -13,11 +13,10 @@
 
 #include "cmdline.h"
 
-extern co_rc_t co_winnt_daemon_install_as_service(const char *service_name, 
-						  co_start_parameters_t *start_parameters);
+extern void co_winnt_change_directory_for_service(int argc, char **argv);
+extern co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char *original_commandline);
 extern int co_winnt_daemon_remove_service(const char *service_name);
-extern bool_t co_winnt_daemon_initialize_service(co_start_parameters_t *start_parameters, 
-						 const char *service_name);
+extern bool_t co_winnt_daemon_initialize_service(co_start_parameters_t *start_parameters);
 
 extern void co_ntevent_print(const char *format, ...);
 

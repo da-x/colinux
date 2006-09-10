@@ -18,85 +18,9 @@
 #include "manager.h"
 #include "monitor.h"
 #include "pages.h"
+#include "reversedpfns.h"
 
 co_manager_t *co_global_manager = NULL;
-
-static co_rc_t alloc_reversed_pfns(co_manager_t *manager)
-{
-	unsigned long map_size, covered_physical;
-	unsigned long reversed_page_count;
-	co_rc_t rc = CO_RC(OK);
-	int i, j;
-
-	co_debug("allocating reversed physical mapping\n");
-	manager->reversed_page_count = manager->hostmem_pages / PTRS_PER_PTE;
-	map_size = sizeof(co_pfn_t) * manager->reversed_page_count;
-
-	co_debug("allocating top level pages map (%d bytes)\n", map_size);
-	manager->reversed_map_pfns = (co_pfn_t *)co_os_malloc(map_size);
-	if (manager->reversed_map_pfns == NULL)
-		return CO_RC(ERROR);
-
-	co_memset(manager->reversed_map_pfns, 0, map_size);
-	
-	co_debug("allocating %d top level pages\n", manager->reversed_page_count);
-	for (i=0; i < manager->reversed_page_count; i++) {
-		co_pfn_t pfn;
-
-		rc = co_manager_get_page(manager, &pfn);
-		if (!CO_OK(rc))
-			return rc;
-
-		manager->reversed_map_pfns[i] = pfn;
-	}
-
-	manager->reversed_map_pgds_count = 
-		(((unsigned long)(CO_VPTR_BASE - CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP) 
-		  / PTRS_PER_PTE)  / PTRS_PER_PGD) / sizeof(linux_pgd_t);
-
-	co_debug("using %d table entries for reversed physical mapping\n", manager->reversed_map_pgds_count);
-	manager->reversed_map_pgds = (unsigned long *)(co_os_malloc(manager->reversed_map_pgds_count*sizeof(linux_pgd_t)));
-	if (!manager->reversed_map_pgds) {
-		if (!CO_OK(rc)) /* TODO: handle error */
-			return rc;
-	}
-
-	covered_physical = 0;
-	reversed_page_count = 0;
-	for (i=0; i < manager->reversed_map_pgds_count; i++) {
-		co_pfn_t pfn;
-		linux_pte_t *pte;
-	
-		if (covered_physical >= manager->hostmem_pages) {
-			manager->reversed_map_pgds[i] = 0; 
-			continue;
-		}
-		
-		rc = co_manager_get_page(manager, &pfn);
-		if (!CO_OK(rc))
-			return rc;
-
-		pte = (typeof(pte))(co_os_map(manager, pfn));
-		for (j=0; j < PTRS_PER_PTE; j++) {
-			co_pfn_t rpfn;
-			if (reversed_page_count >= manager->reversed_page_count) {
-				pte[j] = 0;
-				continue;
-			}
-
-			rpfn = manager->reversed_map_pfns[reversed_page_count];
-			pte[j] = (rpfn << CO_ARCH_PAGE_SHIFT) | (_PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED);
-			reversed_page_count++;
-		}
-		co_os_unmap(manager, pte, pfn);
-
-		manager->reversed_map_pgds[i] = (pfn << CO_ARCH_PAGE_SHIFT) | _KERNPG_TABLE; 
-
-		covered_physical += (PTRS_PER_PTE * PTRS_PER_PGD);
-	}
-
-	return CO_RC(OK);
-}
 
 static void set_hostmem_usage_limit(co_manager_t *manager)
 {
@@ -118,16 +42,24 @@ co_rc_t co_manager_load(co_manager_t *manager)
 	co_rc_t rc;
 
 	co_memset(manager, 0, sizeof(*manager));
-
+	
 	co_debug("loaded to host kernel\n");
 
-	rc = co_os_physical_memory_pages(&manager->hostmem_pages);
+	co_list_init(&manager->opens);
+	co_list_init(&manager->monitors);
+
+	rc = co_os_mutex_create(&manager->lock);
 	if (!CO_OK(rc))
 		return rc;
 
+	rc = co_os_physical_memory_pages(&manager->hostmem_pages);
+	if (!CO_OK(rc))
+		goto out_err_mutex;
+
 	if (manager->hostmem_pages > 0x100000) {
 		co_debug("error, machines with more than 4GB are not currently supported\n");
-		return CO_RC(ERROR);
+		rc = CO_RC(ERROR);
+		goto out_err_mutex;
 	}
 
 	co_debug("machine has %d MB of RAM\n", (manager->hostmem_pages >> 8));
@@ -138,7 +70,7 @@ co_rc_t co_manager_load(co_manager_t *manager)
 
 	rc = co_debug_init(&manager->debug);
 	if (!CO_OK(rc))
-		return rc;
+		goto out_err_mutex;
 
 	manager->state = CO_MANAGER_STATE_INITIALIZED_DEBUG;
 
@@ -154,12 +86,13 @@ co_rc_t co_manager_load(co_manager_t *manager)
 
 	manager->state = CO_MANAGER_STATE_INITIALIZED_OSDEP;
 
-	rc = alloc_reversed_pfns(manager);
+	rc = co_manager_alloc_reversed_pfns(manager);
 	if (!CO_OK(rc))
 		goto out_err_os;
 
 	manager->state = CO_MANAGER_STATE_INITIALIZED;
 	return rc;
+
 
 	manager->state = CO_MANAGER_STATE_NOT_INITIALIZED;
 
@@ -173,57 +106,19 @@ out_err_arch:
 out_err_debug:
 	co_debug_free(&manager->debug);
 
+out_err_mutex:
+	co_os_mutex_destroy(manager->lock);
 	return rc;
-}
-
-static void free_reversed_pfns(co_manager_t *manager)
-{
-	int i;
-
-	if (manager->reversed_map_pfns) {
-		for (i=0; i < manager->reversed_page_count; i++)
-			co_os_put_page(manager, manager->reversed_map_pfns[i]);	
-
-		co_os_free(manager->reversed_map_pfns);
-	}
-
-	if (manager->reversed_map_pgds) {
-		for (i=0; i < manager->reversed_map_pgds_count; i++) {
-			if (manager->reversed_map_pgds[i] != 0) {
-				co_os_put_page(manager, manager->reversed_map_pgds[i] >> CO_ARCH_PAGE_SHIFT);
-			}
-		}
-
-		co_os_free(manager->reversed_map_pgds);
-	}
-}
-
-co_rc_t co_manager_set_reversed_pfn(co_manager_t *manager, co_pfn_t real_pfn, co_pfn_t pseudo_pfn)
-{
-	int entry, top_level;
-	co_pfn_t *reversed_pfns;
-	co_pfn_t mapped_pfn;
-
-	top_level = real_pfn / PTRS_PER_PTE;
-	if (top_level >= manager->reversed_page_count)
-		return CO_RC(ERROR);
-		
-	entry = real_pfn % PTRS_PER_PTE;
-
-	mapped_pfn = manager->reversed_map_pfns[top_level];
-	reversed_pfns = (typeof(reversed_pfns))(co_os_map(manager, mapped_pfn));
-	reversed_pfns[entry] = pseudo_pfn;
-	co_os_unmap(manager, reversed_pfns, mapped_pfn);
-
-	return CO_RC(OK);
 }
 
 void co_manager_unload(co_manager_t *manager)
 {
 	co_debug("unloaded from host kernel\n");
 
-	if (manager->state >= CO_MANAGER_STATE_INITIALIZED)
-		free_reversed_pfns(manager);
+	if (manager->state >= CO_MANAGER_STATE_INITIALIZED) {
+		co_manager_free_reversed_pfns(manager);
+		co_os_mutex_destroy(manager->lock);
+	}
 
 	if (manager->state >= CO_MANAGER_STATE_INITIALIZED_OSDEP)
 		co_os_manager_free(manager->osdep);
@@ -237,60 +132,155 @@ void co_manager_unload(co_manager_t *manager)
 	manager->state = CO_MANAGER_STATE_NOT_INITIALIZED;
 }
 
-static co_rc_t create_private_data(void **private_data, co_manager_per_fd_state_t **fd_state_out)
+co_rc_t co_manager_send(co_manager_t *manager, co_manager_open_desc_t opened, co_message_t *message)
 {
-	co_manager_per_fd_state_t **fd_state;
+	bool_t ret;
+	co_rc_t rc = CO_RC_OK;
 
-	fd_state = (typeof(fd_state))private_data;
+	co_os_mutex_acquire(opened->lock);
 
-	if (*fd_state) {
-		*fd_state_out = *fd_state;
-		return CO_RC(OK);
-	}
+	ret = co_os_manager_userspace_try_send_direct(manager, opened, message);
+	if (!ret)
+		rc = co_message_dup_to_queue(message, &opened->out_queue);
 
-	*fd_state = (co_manager_per_fd_state_t *)co_os_malloc(sizeof(co_manager_per_fd_state_t));
-	if (!*fd_state)
+	co_os_mutex_release(opened->lock);
+
+	return rc;
+}
+
+co_rc_t co_manager_send_eof(co_manager_t *manager, co_manager_open_desc_t opened)
+{
+	opened->active = PFALSE;
+	
+	return co_os_manager_userspace_eof(manager, opened);
+}
+
+co_rc_t co_manager_open(co_manager_t *manager, co_manager_open_desc_t *opened_out)
+{
+	co_manager_open_desc_t opened;
+	co_rc_t rc;
+
+	opened = (typeof(opened))co_os_malloc(sizeof(*opened));
+	if (!opened)
 		return CO_RC(OUT_OF_MEMORY);
 
-	(*fd_state)->monitor = NULL;
-	(*fd_state)->debug_section = NULL;
+	co_memset(opened, 0, sizeof(*opened));
+	
+	rc = co_os_mutex_create(&opened->lock);
+	if (!CO_OK(rc))
+		return rc;
 
-	*fd_state_out = *fd_state;
+	rc = co_os_manager_userspace_open(opened);
+	if (!CO_OK(rc)) {
+		co_os_mutex_destroy(opened->lock);
+		co_os_free(opened);
+		return rc;
+	}
+
+	opened->monitor = NULL;
+	opened->debug_section = NULL;
+	opened->ref_count = 1;
+	opened->active = PTRUE;
+
+	co_queue_init(&opened->out_queue);
+
+	co_os_mutex_acquire(manager->lock);
+	co_list_add_head(&opened->node, &manager->opens);
+	manager->num_opens++;
+	co_os_mutex_release(manager->lock);
+
+	*opened_out = opened;
 
 	return CO_RC(OK);
 }
 
-co_rc_t co_manager_cleanup(co_manager_t *manager, void **private_data)
+static co_rc_t co_manager_close_(co_manager_t *manager, co_manager_open_desc_t opened)
 {
-	co_manager_per_fd_state_t *fd_state;
+	co_os_manager_userspace_close(opened);
 
-	fd_state = ((typeof(fd_state))(*private_data));
-	if (!fd_state)
-		return CO_RC(OK);
-
-	if (fd_state->monitor != NULL) {
-		co_monitor_t *mon = fd_state->monitor;
-		co_debug("process exited abnormally, removing attached monitor\n");
-		fd_state->monitor = NULL;
-		co_monitor_destroy(mon, PFALSE);
+	if (opened->monitor != NULL) {
+		co_monitor_t *mon = opened->monitor;
+		opened->monitor = NULL;
+		co_monitor_refdown(mon, PFALSE, opened->monitor_owner);
 	}
 
-	if (fd_state->debug_section != NULL) {
-		co_debug_fold(&manager->debug, fd_state->debug_section);
-		fd_state->debug_section = NULL;
+	if (opened->debug_section != NULL) {
+		co_debug_fold(&manager->debug, opened->debug_section);
+		opened->debug_section = NULL;
 	}
 
-	co_os_free(fd_state);
+	co_os_mutex_acquire(manager->lock);
+	co_list_del(&opened->node);
+	manager->num_opens--;
+	co_os_mutex_release(manager->lock);
 
-	*private_data = NULL;
-	
+	co_os_mutex_destroy(opened->lock);
+	co_queue_flush(&opened->out_queue);
+	co_os_free(opened);
+
 	return CO_RC(OK);
+}
+
+/* must be called only when manager->lock is locked */
+co_rc_t co_manager_open_ref(co_manager_open_desc_t opened)
+{
+	co_rc_t rc = CO_RC(OK);
+
+	co_os_mutex_acquire(opened->lock);
+	if (opened->ref_count == 0)
+		rc = CO_RC(ERROR);
+	else
+		opened->ref_count++;
+	co_os_mutex_release(opened->lock);
+
+	return rc;
+}
+
+co_rc_t co_manager_close(co_manager_t *manager, co_manager_open_desc_t opened)
+{
+	bool_t close;
+
+	co_os_mutex_acquire(opened->lock);
+	opened->ref_count--;
+	close = (opened->ref_count == 0);
+	co_os_mutex_release(opened->lock);
+
+	if (close) {
+		return co_manager_close_(manager, opened);
+	}
+
+	return CO_RC(OK);
+}
+
+co_rc_t co_manager_open_desc_deactive_and_close(co_manager_t *manager, co_manager_open_desc_t opened)
+{
+	co_rc_t rc;
+
+	opened->active = PFALSE;
+	if (opened->monitor != NULL) {
+		co_monitor_t *mon = opened->monitor;
+		int index;
+
+		co_os_mutex_acquire(mon->connected_modules_write_lock);
+		for (index=0; index < CO_MONITOR_MODULES_COUNT; index++) {
+			if (mon->connected_modules[index] != opened)
+				continue;
+			
+			mon->connected_modules[index] = NULL;
+			co_manager_close(manager, opened);
+		}
+		co_os_mutex_release(mon->connected_modules_write_lock);
+	}
+	
+	rc = co_manager_close(manager, opened);
+	
+	return rc;
 }
 
 co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl, 
 			 void *io_buffer, unsigned long in_size,
 			 unsigned long out_size, unsigned long *return_size,
-			 void **private_data)
+			 co_manager_open_desc_t opened)
 {
 	co_rc_t rc = CO_RC_OK;
 	co_monitor_t *cmon = NULL;
@@ -323,18 +313,13 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 	}
 
 	case CO_MANAGER_IOCTL_DEBUG: {
-		co_manager_per_fd_state_t *fd_state = NULL;
+		co_debug_write_vector_t vec;
 
-		rc = create_private_data(private_data, &fd_state);
-
-		if (CO_OK(rc)) {
-			co_debug_write_vector_t vec;
-			vec.vec_size = 0;
-			vec.size = in_size;
-			vec.ptr = io_buffer;
-			
-			co_debug_write_log(&co_global_manager->debug, &fd_state->debug_section,  &vec, 1);
-		}
+		vec.vec_size = 0;
+		vec.size = in_size;
+		vec.ptr = io_buffer;
+		
+		co_debug_write_log(&manager->debug, &opened->debug_section, &vec, 1);
 
 		return CO_RC(OK);
 	}
@@ -372,25 +357,91 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 	}
 
 	switch (ioctl) {
-	case CO_MANAGER_IOCTL_CREATE: {
+	case CO_MANAGER_IOCTL_CREATE: {		
 		co_manager_ioctl_create_t *params = (typeof(params))(io_buffer);
+		if (opened->monitor)
+			return CO_RC(ERROR);
+			
+		rc = co_monitor_create(manager, params, &cmon);
+		if (CO_OK(rc)) {
+			opened->monitor = cmon;
+			opened->monitor_owner = PTRUE;
+		}
 
-		params->rc = co_monitor_create(manager, params, &cmon);
-		co_debug_system("%x\n", params->rc);
-		if (CO_OK(params->rc)) {
-			co_manager_per_fd_state_t *fd_state = NULL;
+		params->rc = rc;
+		*return_size = sizeof(*params);
+		break;
+	}
+	case CO_MANAGER_IOCTL_MONITOR_LIST: {
+		co_manager_ioctl_monitor_list_t *params = (typeof(params))(io_buffer);
+		co_monitor_t *monitor = NULL;
+		co_rc_t rc = CO_RC(OK);
+		int i = 0;
 
-			params->rc = create_private_data(private_data, &fd_state);
-			if (CO_OK(params->rc))
-				fd_state->monitor = cmon;
+		co_os_mutex_acquire(manager->lock);
+		co_list_each_entry(monitor, &manager->monitors, node) {
+			if (i >= CO_MAX_MONITORS) {
+				/* We don't enforce a limit on create, so just
+				 * break from the loop and return the first ones
+				 */
+				break;
+			}
+			params->ids[i++] = monitor->id;
+		}
+		co_os_mutex_release(manager->lock);
+		params->count = i;
+
+		params->rc = rc;
+		*return_size = sizeof(*params);
+		break;
+	}
+	case CO_MANAGER_IOCTL_ATTACH: {
+		co_manager_ioctl_attach_t *params = (typeof(params))(io_buffer);
+		co_monitor_t *monitor = NULL;
+		co_rc_t rc = CO_RC(ERROR);
+
+		co_os_mutex_acquire(manager->lock);
+		co_list_each_entry(monitor, &manager->monitors, node) {
+			if (monitor->id == params->id) {
+				monitor->refcount++;
+				opened->monitor = monitor;
+				rc = CO_RC(OK);
+				break;
+			}
+		}
+		co_os_mutex_release(manager->lock);
+
+		if (!CO_OK(rc)) {
+			opened->monitor = NULL;
+		}
+
+		if (opened->monitor) {
+			int index;
+			co_module_t module;
+			co_manager_open_desc_t old_opened;
+
+			cmon = opened->monitor;
+
+			co_os_mutex_acquire(cmon->connected_modules_write_lock);
+
+			for (index=0; index < params->num_modules; index++) {
+				module = params->modules[index];
+				old_opened = cmon->connected_modules[module];
+				if (old_opened)
+					co_manager_close(manager, old_opened);
+				cmon->connected_modules[module] = opened;
+				opened->ref_count++;			
+			}
+
+			co_os_mutex_release(cmon->connected_modules_write_lock);
 		}
 
 		*return_size = sizeof(*params);
+		params->rc = rc;
 		break;
 	}
 	case CO_MANAGER_IOCTL_MONITOR: {
 		co_manager_ioctl_monitor_t *params = (typeof(params))(io_buffer);
-		co_manager_per_fd_state_t *fd_state;
 
 		*return_size = sizeof(*params);
 
@@ -400,16 +451,15 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 			break;
 		}
 		
-		fd_state = ((typeof(fd_state))(*private_data));
-		if (!fd_state || !fd_state->monitor) {
+		if (!opened->monitor) {
 			params->rc = CO_RC(MONITOR_NOT_LOADED);
 			break;
 		}
 		
 		in_size -= sizeof(*params);
 
-		cmon = fd_state->monitor;
-		params->rc = co_monitor_ioctl(cmon, params, in_size, out_size, return_size, fd_state);
+		params->rc = co_monitor_ioctl(opened->monitor, params, in_size, 
+					      out_size, return_size, opened);
 		break;
 
 	}

@@ -89,9 +89,9 @@ struct ip {
 		ip_v:4;			/* version */
 #endif
 	u_int8_t ip_tos;			/* type of service */
-	int16_t	ip_len;			/* total length */
+	u_int16_t	ip_len;			/* total length */
 	u_int16_t	ip_id;			/* identification */
-	int16_t	ip_off;			/* fragment offset field */
+	u_int16_t	ip_off;			/* fragment offset field */
 #define	IP_DF 0x4000			/* don't fragment flag */
 #define	IP_MF 0x2000			/* more fragments flag */
 #define	IP_OFFMASK 0x1fff		/* mask for fragmenting bits */
@@ -253,9 +253,9 @@ struct	ipasfrag {
         u_int8_t ipf_mff;		/* XXX overlays ip_tos: use low bit
 					 * to avoid destroying tos (PPPDTRuu);
 					 * copied from (ip_off&IP_MF) */
-	int16_t	ip_len;
+	u_int16_t	ip_len;
 	u_int16_t	ip_id;
-	int16_t	ip_off;
+	u_int16_t	ip_off;
 	u_int8_t	ip_ttl;
 	u_int8_t	ip_p;
 	u_int16_t	ip_sum;

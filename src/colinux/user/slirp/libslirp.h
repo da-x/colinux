@@ -4,9 +4,14 @@
 #ifdef _WIN32
 #include <winsock2.h>
 int inet_aton(const char *cp, struct in_addr *ia);
+#include <stdint.h>
 #else
 #include <sys/select.h>
 #include <arpa/inet.h>
+#endif
+
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 void slirp_init(void);
@@ -28,5 +33,9 @@ int slirp_add_exec(int do_pty, const char *args, int addr_low_byte,
                    int guest_port);
 
 extern const char *tftp_prefix;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -13,6 +13,7 @@
 
 #include "monitor.h"
 #include "pages.h"
+#include "reversedpfns.h"
 
 /*
  * co_manager_get_page - allocate a page from the host,

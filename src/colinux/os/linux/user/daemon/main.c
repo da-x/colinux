@@ -21,15 +21,14 @@
 #include <colinux/user/debug.h>
 #include <colinux/os/user/manager.h>
 #include <colinux/os/user/misc.h>
-#include <colinux/os/user/pipe.h>
 
 COLINUX_DEFINE_MODULE("colinux-daemon");
 
 static co_daemon_t *colinux_daemon = NULL;
 
-void sighup_handler(int sig)
+static void sighup_handler(int sig)
 {
-	co_terminal_print("Receieved SIGHUP\n");	
+	co_terminal_print("daemon: received SIGHUP\n");
 
 	colinux_daemon->send_ctrl_alt_del = PTRUE;
 }
