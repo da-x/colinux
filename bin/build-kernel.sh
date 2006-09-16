@@ -213,7 +213,8 @@ build_kernel()
 	mkdir -p `dirname $COLINUX_BUILD_LOG`
 
 	# Full user control for compile (kernel developers)
-	if [ "$1" != "--no-download" -a "$COLINUX_KERNEL_UNTAR" = "yes" ]; then
+	if [ "$1" != "--no-download" -a "$COLINUX_KERNEL_UNTAR" = "yes" \
+	     -o ! -d "$COLINUX_TARGET_KERNEL_SOURCE" ]; then
 
 		# do not check files, if rebuild forced
 		test "$1" = "--rebuild" || check_md5sums

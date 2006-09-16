@@ -106,8 +106,9 @@ Options:
   --logfile=ARG           logfile for build process, open append.
                           use \$\$ for process id and separate files.
                           [\$TOPDIR/log/build-colinux-\$\$.log]
-  --kernel-untar          Untar and overwrite kernel tree, if exist.  Is good
+  --kernel-untar          Untar can overwrite kernel tree, if exist.  Is good
                           for clean builds or automation builds.
+  --disable-kernel-untar  Never overwrite kernel sources. (default)
   --no-create             Test only this configure, no files create.
   --verbose               More messages in configure.
   --gcc-guest-build       Build C compiler from source of gnu cross compiler,
