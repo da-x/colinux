@@ -52,8 +52,10 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 
 		cobd = &conf->block_devs[index];
 
-		if (cobd->enabled)
-			co_terminal_print("warning cobd%d double defined\n", index);
+		if (cobd->enabled) {
+			co_terminal_print("cobd%d double defined\n", index);
+			return CO_RC(INVALID_PARAMETER);
+		}
 		cobd->enabled = PTRUE;
 
 		co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
@@ -135,7 +137,8 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 
 				cobd = &conf->block_devs[index];
 				if (!cobd->enabled) {
-					co_terminal_print("warning alias on disabled cobd%d\n", index);
+					co_terminal_print("alias on unused cobd%d\n", index);
+					return CO_RC(INVALID_PARAMETER);
 				}
 				
 				if (cobd->alias_used) {
@@ -373,8 +376,10 @@ static co_rc_t parse_args_networking(co_command_line_params_t cmdline, co_config
 		if (!exists)
 			break;
 
-		if (conf->net_devs[index].enabled)
-			co_terminal_print("warning eth%d double defined\n", index);
+		if (conf->net_devs[index].enabled) {
+			co_terminal_print("eth%d double defined\n", index);
+			return CO_RC(INVALID_PARAMETER);
+		}
 
 		rc = parse_args_networking_device(conf, index, param);
 		if (!CO_OK(rc))
@@ -388,8 +393,10 @@ static co_rc_t parse_args_cofs_device(co_config_t *conf, int index, const char *
 {
 	co_cofsdev_desc_t *cofs = &conf->cofs_devs[index];
 
-	if (cofs->enabled)
+	if (cofs->enabled) {
 		co_terminal_print("warning cofs%d double defined\n", index);
+		return CO_RC(INVALID_PARAMETER);
+	}
 	cofs->enabled = PTRUE;
 
 	co_snprintf(cofs->pathname, sizeof(cofs->pathname), "%s", param);
@@ -436,8 +443,10 @@ static co_rc_t parse_args_serial_device(co_config_t *conf, int index, const char
 		{ 0, NULL }
 	};
 
-	if (serial->enabled)
-		co_terminal_print("warning ttys%d double defined\n", index);
+	if (serial->enabled) {
+		co_terminal_print("ttys%d double defined\n", index);
+		return CO_RC(INVALID_PARAMETER);
+	}
 	serial->enabled = PTRUE;
 
 	split_comma_separated(param, array);
@@ -500,8 +509,10 @@ static co_rc_t parse_args_execute(co_config_t *conf, int index, const char *para
 		{ 0, NULL }
 	};
 
-	if (execute->enabled)
+	if (execute->enabled) {
 		co_terminal_print("warning exec%d double defined\n", index);
+		return CO_RC(INVALID_PARAMETER);
+	}
 	execute->enabled = PTRUE;
 	execute->pid = 0;
 
