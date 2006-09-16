@@ -213,8 +213,7 @@ build_kernel()
 	mkdir -p `dirname $COLINUX_BUILD_LOG`
 
 	# Full user control for compile (kernel developers)
-	if [ "$1" != "--no-download" -a "$COLINUX_KERNEL_UNTAR" = "yes" \
-	     -o ! -s "$COLINUX_TARGET_KERNEL_SOURCE/include/linux/cooperative.h" ]; then
+	if [ "$1" != "--no-download" -a "$COLINUX_KERNEL_UNTAR" = "yes" ]; then
 
 		# do not check files, if rebuild forced
 		test "$1" = "--rebuild" || check_md5sums
@@ -226,6 +225,10 @@ build_kernel()
 		# Extract, patch and configure Kernel
 		extract_kernel
 		patch_kernel_source
+	fi
+
+	if [ ! -s "$COLINUX_TARGET_KERNEL_SOURCE/include/linux/cooperative.h" ]; then
+		error_exit 10 "$COLINUX_TARGET_KERNEL_SOURCE/include/linux/cooperative.h: Missing. Source not usable, please check \$COLINUX_TARGET_KERNEL_SOURCE"
 	fi
 
 	if [ ! -f $COLINUX_TARGET_KERNEL_BUILD/.config ]; then

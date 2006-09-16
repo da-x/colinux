@@ -30,7 +30,7 @@
   * Print human readable error, if wrong linux.sys installed.
   * Print error on console, if initrd can't load.
   * SLiRP:
-    - Get DNS dymanicly from host. Refresh if expire 10 Sec.
+    - Gets DNS dymanicly from host. Refresh if expire 10 Sec.
       This should better work for dialup connections.
     - SLiRP ping, if destination supports UDP echo/7 (WSAECONNRESET hack).
     - Multiple redirection as parameter ':count'
@@ -47,7 +47,7 @@
     - Allow to use ccache (http://ccache.samba.org/).
     - Use quilt for kernel patches, if quilt installed, fallback if not.
     - Build scripts ash/dash compliant (more POSIX-compliant)
-     bin/make.py colinux
+    Python bin/make.py colinux
      - Automatic awareness of changes in header files.
      - Doesn't require 'make clean' between compilation of 
        different coLinux ports.
