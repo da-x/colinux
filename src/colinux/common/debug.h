@@ -16,8 +16,6 @@
 
 #include <stdarg.h>
 
-extern void co_debug_system(const char *fmt, ...);
-
 extern char _colinux_module[0x30];
 extern const char *colinux_obj_filenames[];
 
@@ -46,6 +44,10 @@ typedef enum {
 	CO_DEBUG_LIST
 #undef X
 } co_debug_facility_t;
+
+extern void co_debug_system(const char *fmt, ...);
+extern void co_debug_level_system(const char *module, co_debug_facility_t facility, int level,
+			const char *filename, int line, const char *func, const char *text);
 
 extern void co_debug_(const char *module, co_debug_facility_t facility, int level, 
 		      const char *filename, int line, const char *func,

@@ -50,3 +50,9 @@ void co_debug_end(void)
 	if (saved_handle != NULL)
 		co_os_manager_close(saved_handle);
 }
+
+void co_debug_level_system(const char *module, co_debug_facility_t facility, int level,
+		    const char *filename, int line, const char *func, const char *text)
+{
+        /* dummy */
+}

@@ -105,6 +105,7 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 	va_end(ap);
 	sub_tlv->length = co_strlen(sub_tlv->value) + 1;
 
+	co_debug_level_system(module, facility, level, filename, line, func, sub_tlv->value);
 	co_debug_buf(buffer, (&sub_tlv->value[sub_tlv->length]) - buffer);
 }
 

@@ -22,3 +22,9 @@ void co_debug_system(const char *fmt, ...)
 	printk("%s", buf);
 	va_end(ap);
 }
+
+void co_debug_level_system(const char *module, co_debug_facility_t facility, int level,
+		    const char *filename, int line, const char *func, const char *text)
+{
+	/* Dummy */
+}
