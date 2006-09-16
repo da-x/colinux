@@ -117,7 +117,7 @@ run anything.
 	a. Running as an service.  
 		colinux-daemon.exe @default.conf --install-service "Cooperative Linux"
 	   Also, to remove the service:
-		colinux-daemon.exe --remove-service "Cooopeative Linux".
+		colinux-daemon.exe --remove-service "Cooperative Linux".
 	   Then go to the Service Manager and start the "Cooperative Linux"
 	   service,
 	   OR
@@ -151,7 +151,7 @@ Linux.
 
     -a #
 
-	Allows you to specify the instance of Coooperative Linux
+	Allows you to specify the instance of Cooperative Linux
 	that you will be connecting to.
 
     @filename
