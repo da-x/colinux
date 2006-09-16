@@ -51,7 +51,7 @@
 
 ; This version number should match the version
 ; number given in SOURCES.
-   DriverVer=12/03/2005,8.00.00.0003
+   DriverVer=08/31/2006,8.00.00.0004
 
 [Strings]
    DeviceDescription = "TAP-Win32 Adapter V8 (coLinux)"

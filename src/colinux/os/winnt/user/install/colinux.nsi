@@ -211,6 +211,7 @@ Section "coLinux Virtual Ethernet Driver (TAP-Win32)" SeccoLinuxNet
   File "premaid\netdriver\OemWin2k.inf"
   File "premaid\netdriver\tap0801co.sys"
   File "premaid\netdriver\tapcontrol.exe"
+  File "premaid\netdriver\tap.cat"
 
   SetOutPath "$INSTDIR"
   File "premaid\coLinux-net-daemon.exe"

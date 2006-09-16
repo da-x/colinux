@@ -224,7 +224,7 @@ typedef unsigned long in_addr_t;
 #define PACKAGE_TARNAME "openvpn"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.1_beta7" /* AUTO_VERSION */
+#define PACKAGE_VERSION "2.1_beta14-1" /* AUTO_VERSION */
 
 /* Define to the full name and version of this package. */
 #ifdef DEBUG_LABEL
