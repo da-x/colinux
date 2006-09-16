@@ -1,3 +1,11 @@
+* Version 0.8.0
+  * Stop starting with error, if double defined device (cobd,cofs,eth,exec)
+  * TAP device version 8.4, fixed crashing Vista.
+  * Update tapinstall.exe from DDK 3790.183 (build Mar 24 2005)
+  * colinux-debug-daemon: Only connect to driver, if args -s settings.
+  * Leveled debug output to Dbgview.exe (www.sysinternals.com).
+    Needs to enable facility/level with colinux-debug-daemon before.
+  
 * Version 0.7.1
   * initrd: Automatic use cofs31 as path to file vmlinux-modules.tar.gz.
   * Warn about double configured index for cobd, eth, cofs, ttys, exec.

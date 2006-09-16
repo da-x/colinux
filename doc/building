@@ -238,21 +238,21 @@ Source tree after building cross compiler and colinux binaries:
     |       +--_install/                        $COLINUX_TARGET_MODULE_PATH
     |          +-- lib
     |              +-- modules
-    |                  +-- 2.x.y-co-0.7.1/
+    |                  +-- 2.x.y-co-0.8.0/
     |                      +-- kernel/
     |                      |   +-- ... Some modules.ko ...
     |                      +-- modules.dep
     +-- dist/					$COLINUX_INSTALL_DIR
-    |   +-- daemons-0.7.1.zip			(Binaries for target)
+    |   +-- daemons-0.8.0.zip			(Binaries for target)
     |   |   +-- colinux-console-fltk.exe
     |   |   +-- colinux-console-nt.exe
     |   |   +-- colinux-daemon.exe
     |   |   +-- colinux-net-daemon.exe
     |   |   +-- colinux-*.exe			(Some more colinux daemons)
     |   |   +-- linux.sys			(Windows colinux driver)
-    |   +-- vmlinux-0.7.1.zip
+    |   +-- vmlinux-0.8.0.zip
     |   |   +-- vmlinux				(kernel)
-    |   +-- modules-2.x.y-co-0.7.1.tgz		(Modules for target kernel)
+    |   +-- modules-2.x.y-co-0.8.0.tgz		(Modules for target kernel)
     +-- download/				$SOURCE_DIR
     |   ... Source files ...			(source store here)
     +-- log/					$COLINUX_BUILD_LOG
