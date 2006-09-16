@@ -212,16 +212,15 @@ EOF
   --logfile=*)
     logfile="$optarg" ;;
 
-  -no-create | --no-create | --no-creat | --no-crea | --no-cre \
-  | --no-cr | --no-c)
+  --no-create)
     no_create=yes ;;
 
-  -no-kernel-untar | --no-kernel-untar | --no-kernel | \
-  -disable-kernel-untar | --disable-kernel-untar)
+  --no-kernel-untar | \
+  --disable-kernel-untar)
     kernel_untar=no ;;
 
-  -kernel-untar | --kernel-untar | \
-  -enable-kernel-untar | --enable-kernel-untar)
+  --kernel-untar | \
+  --enable-kernel-untar)
     kernel_untar=yes ;;
 
   --gcc-guest*)
@@ -337,16 +336,16 @@ if [ "$target_os" = "linux" ] ; then
  echo " UNAME_RELEASE=$UNAME_RELEASE"
 
  # Search Linux-Host kernel sourcs:
- # 1. /lib/modules/$UNAME_RELEASE/source
- # 2. /lib/modules/$UNAME_RELEASE/build
+ # 1. /lib/modules/$UNAME_RELEASE/build
+ # 2. /lib/modules/$UNAME_RELEASE/source
  # 3. /usr/src/linux
  # 4. /usr/src/linux-$UNAME_RELEASE
 
  if [ "$hostkerneldir" = "NONE" ] ; then
-  if [ -d /lib/modules/$UNAME_RELEASE/source ] ; then
-    hostkerneldir="/lib/modules/$UNAME_RELEASE/source"
-  elif [ -d /lib/modules/$UNAME_RELEASE/build ] ; then
+  if [ -d /lib/modules/$UNAME_RELEASE/build ] ; then
     hostkerneldir="/lib/modules/$UNAME_RELEASE/build"
+  elif [ -d /lib/modules/$UNAME_RELEASE/source ] ; then
+    hostkerneldir="/lib/modules/$UNAME_RELEASE/source"
   elif [ -d /usr/src/linux ] ; then
     hostkerneldir="/usr/src/linux"
   elif [ -d /usr/src/linux-$UNAME_RELEASE ] ; then
@@ -363,13 +362,21 @@ if [ "$hostkerneldir" != "NONE" ] ; then
     { echo "configure: error: missing host kernel source in $hostkerneldir" 1>&2; exit 1; }
   fi
 
-  HOST_VERSION=`grep "^VERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
+  if [ -f $hostkerneldir/.kernelrelease ]; then
+    set `sed -e 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\(.*\)$/\1 \2 \3/' < $hostkerneldir/.kernelrelease`
+    HOST_VERSION="$1"
+    HOST_PATCHLEVEL="$2"
+    HOST_SUBLEVEL="$3"
+    HOST_EXTRAVERSION=`sed -e 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\(.*\)$/\4/' < $hostkerneldir/.kernelrelease`
+  else
+    HOST_VERSION=`grep "^VERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
+    HOST_PATCHLEVEL=`grep "^PATCHLEVEL = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
+    HOST_SUBLEVEL=`grep "^SUBLEVEL = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
+    HOST_EXTRAVERSION=`grep "^EXTRAVERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9\.]*\)\(.*\)$/\2/'`
+  fi
   echo " HOST_VERSION=$HOST_VERSION"
-  HOST_PATCHLEVEL=`grep "^PATCHLEVEL = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
   echo " HOST_PATCHLEVEL=$HOST_PATCHLEVEL"
-  HOST_SUBLEVEL=`grep "^SUBLEVEL = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
   echo " HOST_SUBLEVEL=$HOST_SUBLEVEL"
-  HOST_EXTRAVERSION=`grep "^EXTRAVERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9\.]*\)\(.*\)$/\2/'`
   test -n "$HOST_EXTRAVERSION" && echo " HOST_EXTRAVERSION=$HOST_EXTRAVERSION"
 
   # Hostkernel must be >= 2.6 (compile external module)
