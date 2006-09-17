@@ -21,8 +21,8 @@ distdir="\$USER_TOPDIR/dist"
 downloaddir=NONE
 builddir="\$USER_TOPDIR/build"
 logfile="\$USER_TOPDIR/log/build-colinux-\$\$.log"
-targetkernelsource="\$BUILD_DIR/linux-$KERNEL_VERSION-source"
-targetkernelbuild="\$BUILD_DIR/linux-$KERNEL_VERSION-build"
+targetkernelsource="\$BUILD_DIR/linux-\$KERNEL_VERSION-source"
+targetkernelbuild="\$BUILD_DIR/linux-\$KERNEL_VERSION-build"
 targetkerneldir=NONE
 targetmoduledir="$targetkernelbuild/_install"
 hostkerneldir=NONE
@@ -99,7 +99,7 @@ Directories:
   --targetmoduledir=DIR   Modules output for target kernel (Guest)
                           [$targetmoduledir]
   --hostkerneldir=DIR     path to your host kernel (only for linux as host)
-                          [\usr\src\linux]
+                          [/usr/src/linux]
 
 Options:
   --configfile=FILE       outputfile for batch build [$configfile]
@@ -319,7 +319,7 @@ esac
 # Splitted target kernel directories?
 case $targetkerneldir in
 NONE)
-  targetkerneldir="\$BUILD_DIR/linux-$KERNEL_VERSION"
+  targetkerneldir="\$BUILD_DIR/linux-\$KERNEL_VERSION"
   ;;
 *)
   targetkernelsource="\$COLINUX_TARGET_KERNEL_PATH"
@@ -674,12 +674,12 @@ PREFIX="$prefix"
 # Overwrite kernelversion.  Check series files for available versions.
 # default: empty
 #
-# KERNEL_VERSION=$KERNEL_VERSION
+KERNEL_VERSION=$KERNEL_VERSION
 
 # Path to guest kernel, need for colinux daemons build processing (obsolate)
 # default: \$BUILD_DIR/linux-\$KERNEL_VERSION
 #
-COLINUX_TARGET_KERNEL_PATH="$targetkerneldir"
+# COLINUX_TARGET_KERNEL_PATH="$targetkerneldir"
 
 # Directory target kernel source path for unpacking source (Guest kernel)
 # default: \$BUILD_DIR/linux-\$KERNEL_VERSION-source
