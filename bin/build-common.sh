@@ -93,21 +93,17 @@ WINPCAP_SRC=WpdPack
 WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_$WINPCAP_VERSION.zip
 
 
-# Kernel version we are targeting
-# Remember: Please update also conf/kernel-config, if changing kernel version!
-# Read version from filename of file patch/series-2.6.11,
+# Default Kernel version we are targeting,
 # can overwrite in CFG file.
+# Check files "patch/series-*" to get available versions.
+# Remember: Please update also conf/kernel-*-config
+DEFAULT_KERNEL_VERSION="2.6.12"
+
 # KERNEL_VERSION: full kernel version (e.g. 2.6.11)
 # KERNEL_DIR: sub-dir in www.kernel.org for the download (e.g. v2.6)
 #
 if [ -z "$KERNEL_VERSION" ] ; then
-  # Check multiple patchfiles
-  if [ 1 -ne `ls $TOPDIR/patch/series-* | wc -l` ] ; then
-    echo "WARNING: Can only handle one patchfile for automatic version detection"
-    echo "Please set $""KERNEL_VERSION in user-build.cfg"
-    exit -1
-  fi
-  KERNEL_VERSION=`ls $TOPDIR/patch/series-* | sed -r -e 's/^.+\-([0-9\.]+)$/\1/'`
+  KERNEL_VERSION=$DEFAULT_KERNEL_VERSION
 fi
 KERNEL_DIR=`echo $KERNEL_VERSION | sed -r -e 's/^([0-9]+)\.([0-9]+)\..+$/v\1.\2/'`
 

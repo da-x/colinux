@@ -671,8 +671,8 @@ BUILD_DIR="$builddir"
 #
 PREFIX="$prefix"
 
-# Overwrite kernelversion, if multiple diff files in patchdir.
-# default: empty (automatic detect from series file name)
+# Overwrite kernelversion.  Check series files for available versions.
+# default: empty
 #
 # KERNEL_VERSION=$KERNEL_VERSION
 
