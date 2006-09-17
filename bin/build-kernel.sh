@@ -138,27 +138,10 @@ patch_kernel_source()
 	cd -
 }
 
-patch_kernel_build()
-{
-	mkdir -p "$COLINUX_TARGET_KERNEL_BUILD" || exit 1
-	# A minor hack for now.  Allowing linux config to be 'version specific' 
-	#  in the future, but keeping backwards compatability.
-	if [ ! -f "$TOPDIR/conf/linux-$KERNEL_VERSION-config" ]; then
-		ln -s "linux-config" "$TOPDIR/conf/linux-$KERNEL_VERSION-config"
-	fi
-	cp "$TOPDIR/conf/linux-$KERNEL_VERSION-config" "$COLINUX_TARGET_KERNEL_BUILD/.config"
-
-	# patches on config in buildir
-	for name in "$TOPDIR"/patch/config-*.patch
-	do
-		echo "reading $name"
-		patch -p1 -f -d "$COLINUX_TARGET_KERNEL_BUILD" < $name \
-		|| error_exit 10 "$name patch failed"
-	done
-}
-
 configure_kernel()
 {
+	echo "Configuring Kernel $KERNEL_VERSION"
+
 	# Is this a patched kernel?
 	if [ ! -f "$COLINUX_TARGET_KERNEL_SOURCE/include/linux/cooperative.h" ]
 	then
@@ -174,7 +157,10 @@ EOF
 		exit 1
 	fi
 
-	echo "Configuring Kernel $KERNEL_VERSION"
+	# Create "build" directory and copy version specific config
+	mkdir -p "$COLINUX_TARGET_KERNEL_BUILD" || exit 1
+	cp "$TOPDIR/conf/linux-$KERNEL_VERSION-config" "$COLINUX_TARGET_KERNEL_BUILD/.config"
+
 	cd "$COLINUX_TARGET_KERNEL_SOURCE" || exit 1
 	make O="$COLINUX_TARGET_KERNEL_BUILD" silentoldconfig >>$COLINUX_BUILD_LOG 2>&1 \
 	|| error_exit 1 "Kernel $KERNEL_VERSION config failed (check 'make oldconfig' on kerneltree)"
@@ -233,7 +219,6 @@ build_kernel()
 	fi
 
 	if [ ! -f $COLINUX_TARGET_KERNEL_BUILD/.config ]; then
-		patch_kernel_build
 		configure_kernel
 	fi
 

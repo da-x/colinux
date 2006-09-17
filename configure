@@ -363,7 +363,7 @@ if [ "$hostkerneldir" != "NONE" ] ; then
   fi
 
   if [ -f $hostkerneldir/.kernelrelease ]; then
-    set `sed -e 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\(.*\)$/\1 \2 \3/' < $hostkerneldir/.kernelrelease`
+    set -- `sed -e 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\(.*\)$/\1 \2 \3/' < $hostkerneldir/.kernelrelease`
     HOST_VERSION="$1"
     HOST_PATCHLEVEL="$2"
     HOST_SUBLEVEL="$3"
@@ -484,7 +484,8 @@ check_exec_tool()
 gcc_helper()
 {
 	if [ "$gcc_guest_build" = "yes" ]; then
-		echo "  Can't use local gcc for kernel, build guest '${gcc_guest_target_prefix}gcc' later"
+		echo "  Can't use local gcc/binutils for kernel."
+		echo "  Build guest '${gcc_guest_target_prefix}gcc' later"
 		return
 	fi
 
@@ -592,9 +593,9 @@ case $colinux_os in
   ;;
   *) # for Winnt as host
     # Check GCC for kernel
-    check_exec_tool --warn "gcc for kernel" "${gcc_guest_target_prefix}gcc -dumpversion" \
+    check_exec_tool --warn "${gcc_guest_target_prefix}gcc for kernel" "${gcc_guest_target_prefix}gcc -dumpversion" \
        "$GCC_NEEDED" "$GCC_NEEDED" || gcc_helper
-    check_exec_tool --warn "binutils for kernel" "${gcc_guest_target_prefix}as --version" \
+    check_exec_tool --warn "${gcc_guest_target_prefix}binutils for kernel" "${gcc_guest_target_prefix}as --version" \
        "$BINUTILS_NEEDED" "$BINUTILS_NEEDED" || gcc_helper
 
     # Locate users depmod and check for module-init-tools
