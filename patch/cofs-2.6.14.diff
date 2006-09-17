@@ -1,0 +1,3391 @@
+Implements host filesystem support
+
+Index: linux-2.6.14-source/fs/Kconfig
+===================================================================
+--- linux-2.6.14-source.orig/fs/Kconfig
++++ linux-2.6.14-source/fs/Kconfig
+@@ -968,6 +968,19 @@
+ 	  containing the directory /) cannot be compiled as a module.
+ 
+ 
++config COFUSE_FS
++	tristate "Cooperative Host file system support (COFUSE)"
++	depends on COOPERATIVE
++	default y
++	help
++	  In Cooperative mode, this file system allows you to mount an host
++	  directory structure to a local mountpoint.
++	  COFUSE (Cooperative FUSE) is based on the original FUSE
++	  (File System in User Space).
++
++	  To compile the cofuse support as a module, choose M here: the
++	  module will be called cofusefs.
++
+ 
+ config EFS_FS
+ 	tristate "EFS file system support (read only) (EXPERIMENTAL)"
+Index: linux-2.6.14-source/fs/Makefile
+===================================================================
+--- linux-2.6.14-source.orig/fs/Makefile
++++ linux-2.6.14-source/fs/Makefile
+@@ -101,3 +101,5 @@
+ obj-$(CONFIG_HOSTFS)		+= hostfs/
+ obj-$(CONFIG_HPPFS)		+= hppfs/
+ obj-$(CONFIG_DEBUG_FS)		+= debugfs/
++obj-$(CONFIG_COFUSE_FS)		+= cofusefs/
++
+Index: linux-2.6.14-source/fs/cofusefs/Makefile
+===================================================================
+--- /dev/null
++++ linux-2.6.14-source/fs/cofusefs/Makefile
+@@ -0,0 +1,8 @@
++#
++# Makefile for the Linux cofuse filesystem routines.
++#
++
++obj-$(CONFIG_COFUSE_FS) += cofusefs.o
++
++cofusefs-objs := inode.o dir.o file.o util.o dev.o
++
+Index: linux-2.6.14-source/fs/cofusefs/dev.c
+===================================================================
+--- /dev/null
++++ linux-2.6.14-source/fs/cofusefs/dev.c
+@@ -0,0 +1,889 @@
++/*
++    FUSE: Filesystem in Userspace
++    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
++
++    This program can be distributed under the terms of the GNU GPL.
++    See the file COPYING.
++*/
++
++#include "fuse_i.h"
++
++#include <linux/poll.h>
++#include <linux/proc_fs.h>
++#include <linux/file.h>
++
++#ifndef CONFIG_COOPERATIVE
++
++/* If more requests are outstanding, then the operation will block */
++#define MAX_OUTSTANDING 10
++
++static struct proc_dir_entry *proc_fs_fuse;
++struct proc_dir_entry *proc_fuse_dev;
++static kmem_cache_t *fuse_req_cachep;
++
++static struct fuse_req *request_new(void)
++{
++	struct fuse_req *req;
++
++	req = (struct fuse_req *) kmem_cache_alloc(fuse_req_cachep, SLAB_NOFS);
++	if(req) {
++		INIT_LIST_HEAD(&req->list);
++		req->issync = 0;
++		req->locked = 0;
++		req->interrupted = 0;
++		req->sent = 0;
++		req->finished = 0;
++		req->in = NULL;
++		req->out = NULL;
++		init_waitqueue_head(&req->waitq);
++	}
++
++	return req;
++}
++
++static void request_free(struct fuse_req *req)
++{
++	kmem_cache_free(fuse_req_cachep, req);
++}
++
++static int request_restartable(enum fuse_opcode opcode)
++{
++	switch(opcode) {
++	case FUSE_LOOKUP:
++	case FUSE_GETATTR:
++	case FUSE_READLINK:
++	case FUSE_GETDIR:
++	case FUSE_OPEN:
++	case FUSE_READ:
++	case FUSE_WRITE:
++		return 1;
++
++	default:
++		return 0;
++	}
++}
++
++/* Called with fuse_lock held.  Releases, and then reaquires it. */
++static void request_wait_answer(struct fuse_req *req)
++{
++	int intr;
++
++	spin_unlock(&fuse_lock);
++	intr = wait_event_interruptible(req->waitq, req->finished);
++	spin_lock(&fuse_lock);
++	if(!intr)
++		return;
++
++	/* Request interrupted... Wait for it to be unlocked */
++	if(req->locked) {
++		req->interrupted = 1;
++		spin_unlock(&fuse_lock);
++		wait_event(req->waitq, !req->locked);
++		spin_lock(&fuse_lock);
++	}
++
++	/* Operations which modify the filesystem cannot safely be
++	   restarted, because it is uncertain whether the operation has
++	   completed or not... */
++	if(req->sent && !request_restartable(req->in->h.opcode))
++		req->out->h.error = -EINTR;
++	else
++		req->out->h.error = -ERESTARTSYS;
++}
++
++static int get_unique(struct fuse_conn *fc)
++{
++	do fc->reqctr++;
++	while(!fc->reqctr);
++	return fc->reqctr;
++}
++
++/* Must be called with fuse_lock held, and unlocks it */
++static void request_end(struct fuse_conn *fc, struct fuse_req *req)
++{
++	fuse_reqend_t endfunc = req->end;
++
++	if(!endfunc) {
++		wake_up(&req->waitq);
++		spin_unlock(&fuse_lock);
++	} else {
++		spin_unlock(&fuse_lock);
++		endfunc(fc, req->in, req->out, req->data);
++		request_free(req);
++		up(&fc->outstanding);
++	}
++}
++
++void request_send(struct fuse_conn *fc, struct fuse_in *in,
++		  struct fuse_out *out)
++{
++	struct fuse_req *req;
++
++	out->h.error = -ERESTARTSYS;
++	if(down_interruptible(&fc->outstanding))
++		return;
++
++	out->h.error = -ENOMEM;
++	req = request_new();
++	if(req) {
++		req->in = in;
++		req->out = out;
++		req->issync = 1;
++		req->end = NULL;
++
++		spin_lock(&fuse_lock);
++		out->h.error = -ENOTCONN;
++		if(fc->file) {
++			in->h.unique = get_unique(fc);
++			list_add_tail(&req->list, &fc->pending);
++			wake_up(&fc->waitq);
++			request_wait_answer(req);
++			list_del(&req->list);
++		}
++		spin_unlock(&fuse_lock);
++		request_free(req);
++	}
++
++	up(&fc->outstanding);
++}
++
++
++static inline void destroy_request(struct fuse_req *req)
++{
++	if(req) {
++		kfree(req->in);
++		request_free(req);
++	}
++}
++
++/* This one is currently only used for sending FORGET and RELEASE,
++   which are kernel initiated request.  So the outstanding semaphore
++   is not used.  */
++int request_send_noreply(struct fuse_conn *fc, struct fuse_in *in)
++{
++	struct fuse_req *req;
++
++	req = request_new();
++	if(!req)
++		return -ENOMEM;
++
++	req->in = in;
++	req->issync = 0;
++
++	spin_lock(&fuse_lock);
++	if(!fc->file) {
++		spin_unlock(&fuse_lock);
++		request_free(req);
++		return -ENOTCONN;
++	}
++
++	list_add_tail(&req->list, &fc->pending);
++	wake_up(&fc->waitq);
++	spin_unlock(&fuse_lock);
++	return 0;
++}
++
++int request_send_nonblock(struct fuse_conn *fc, struct fuse_in *in,
++			  struct fuse_out *out, fuse_reqend_t end, void *data)
++{
++	int err;
++	struct fuse_req *req;
++
++	BUG_ON(!end);
++
++	if(down_trylock(&fc->outstanding))
++		return -EWOULDBLOCK;
++
++	err = -ENOMEM;
++	req = request_new();
++	if(req) {
++		req->in = in;
++		req->out = out;
++		req->issync = 1;
++		req->end = end;
++		req->data = data;
++
++		spin_lock(&fuse_lock);
++		err = -ENOTCONN;
++		if(fc->file) {
++			in->h.unique = get_unique(fc);
++			list_add_tail(&req->list, &fc->pending);
++			wake_up(&fc->waitq);
++			spin_unlock(&fuse_lock);
++			return 0;
++		}
++		spin_unlock(&fuse_lock);
++		request_free(req);
++	}
++	up(&fc->outstanding);
++	return err;
++}
++
++static void request_wait(struct fuse_conn *fc)
++{
++	DECLARE_WAITQUEUE(wait, current);
++
++	add_wait_queue_exclusive(&fc->waitq, &wait);
++	while(fc->sb != NULL && list_empty(&fc->pending)) {
++		set_current_state(TASK_INTERRUPTIBLE);
++		if(signal_pending(current))
++			break;
++
++		spin_unlock(&fuse_lock);
++		schedule();
++		spin_lock(&fuse_lock);
++	}
++	set_current_state(TASK_RUNNING);
++	remove_wait_queue(&fc->waitq, &wait);
++}
++
++static inline int copy_in_one(const void *src, size_t srclen, char **dstp,
++			      size_t *dstlenp)
++{
++	if(*dstlenp < srclen) {
++		printk("fuse_dev_read: buffer too small\n");
++		return -EINVAL;
++	}
++
++	if(copy_to_user(*dstp, src, srclen))
++		return -EFAULT;
++
++	*dstp += srclen;
++	*dstlenp -= srclen;
++
++	return 0;
++}
++
++static inline int copy_in_args(struct fuse_in *in, char *buf, size_t nbytes)
++{
++	int err;
++	int i;
++	size_t orignbytes = nbytes;
++
++	err = copy_in_one(&in->h, sizeof(in->h), &buf, &nbytes);
++	if(err)
++		return err;
++
++	for(i = 0; i < in->numargs; i++) {
++		struct fuse_in_arg *arg = &in->args[i];
++		err = copy_in_one(arg->value, arg->size, &buf, &nbytes);
++		if(err)
++			return err;
++	}
++
++	return orignbytes - nbytes;
++}
++
++static ssize_t fuse_dev_read(struct file *file, char *buf, size_t nbytes,
++			     loff_t *off)
++{
++	ssize_t ret;
++	struct fuse_conn *fc = DEV_FC(file);
++	struct fuse_req *req = NULL;
++
++	spin_lock(&fuse_lock);
++	request_wait(fc);
++	if(fc->sb != NULL && !list_empty(&fc->pending)) {
++		req = list_entry(fc->pending.next, struct fuse_req, list);
++		list_del_init(&req->list);
++		req->locked = 1;
++	}
++	spin_unlock(&fuse_lock);
++	if(fc->sb == NULL)
++		return -ENODEV;
++	if(req == NULL)
++		return -EINTR;
++
++	ret = copy_in_args(req->in, buf, nbytes);
++	spin_lock(&fuse_lock);
++	if(req->issync) {
++		if(ret < 0) {
++			req->out->h.error = -EPROTO;
++			req->finished = 1;
++		} else {
++			list_add_tail(&req->list, &fc->processing);
++			req->sent = 1;
++		}
++		req->locked = 0;
++		if(ret < 0 || req->interrupted)
++			/* Unlocks fuse_lock: */
++			request_end(fc, req);
++		else
++			spin_unlock(&fuse_lock);
++	} else {
++		spin_unlock(&fuse_lock);
++		destroy_request(req);
++	}
++	return ret;
++}
++
++static struct fuse_req *request_find(struct fuse_conn *fc, unsigned int unique)
++{
++	struct list_head *entry;
++	struct fuse_req *req = NULL;
++
++	list_for_each(entry, &fc->processing) {
++		struct fuse_req *tmp;
++		tmp = list_entry(entry, struct fuse_req, list);
++		if(tmp->in->h.unique == unique) {
++			req = tmp;
++			break;
++		}
++	}
++
++	return req;
++}
++
++static void process_getdir(struct fuse_req *req)
++{
++	struct fuse_getdir_out *arg;
++	arg = (struct fuse_getdir_out *) req->out->args[0].value;
++	arg->file = fget(arg->fd);
++}
++
++static inline int copy_out_one(struct fuse_out_arg *arg, const char **srcp,
++			       size_t *srclenp, int allowvar)
++{
++	size_t dstlen = arg->size;
++	if(*srclenp < dstlen) {
++		if(!allowvar) {
++			printk("fuse_dev_write: write is short\n");
++			return -EINVAL;
++		}
++		dstlen = *srclenp;
++	}
++
++	if(dstlen) {
++		if(copy_from_user(arg->value, *srcp, dstlen))
++			return -EFAULT;
++	}
++
++	*srcp += dstlen;
++	*srclenp -= dstlen;
++	arg->size = dstlen;
++
++	return 0;
++}
++
++static inline int copy_out_args(struct fuse_out *out, const char *buf,
++				size_t nbytes)
++{
++	int err;
++	int i;
++
++	buf += sizeof(struct fuse_out_header);
++	nbytes -= sizeof(struct fuse_out_header);
++
++	if(!out->h.error) {
++		for(i = 0; i < out->numargs; i++) {
++			struct fuse_out_arg *arg = &out->args[i];
++			int allowvar;
++
++			if(out->argvar && i == out->numargs - 1)
++				allowvar = 1;
++			else
++				allowvar = 0;
++
++			err = copy_out_one(arg, &buf, &nbytes, allowvar);
++			if(err)
++				return err;
++		}
++	}
++
++	if(nbytes != 0) {
++		printk("fuse_dev_write: write is long\n");
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++static inline int copy_out_header(struct fuse_out_header *oh, const char *buf,
++				  size_t nbytes)
++{
++	if(nbytes < sizeof(struct fuse_out_header)) {
++		printk("fuse_dev_write: write is short\n");
++		return -EINVAL;
++	}
++
++	if(copy_from_user(oh, buf, sizeof(struct fuse_out_header)))
++		return -EFAULT;
++
++	return 0;
++}
++
++#ifdef KERNEL_2_6
++static int fuse_invalidate(struct fuse_conn *fc, struct fuse_user_header *uh)
++{
++	struct inode *inode = ilookup(fc->sb, uh->ino);
++	if (!inode)
++		return -ENOENT;
++	invalidate_inode_pages(inode->i_mapping);
++	iput(inode);
++	return 0;
++}
++#else
++static int fuse_invalidate(struct fuse_conn *fc, struct fuse_user_header *uh)
++{
++	struct inode *inode = iget(fc->sb, uh->ino);
++	int err = -ENOENT;
++	if(inode) {
++		if(inode->u.generic_ip) {
++			invalidate_inode_pages(inode);
++			err = 0;
++		}
++		iput(inode);
++	}
++	return err;
++}
++#endif
++
++static int fuse_user_request(struct fuse_conn *fc, const char *buf,
++			     size_t nbytes)
++{
++	struct fuse_user_header uh;
++	int err;
++
++	if (nbytes < sizeof(struct fuse_user_header)) {
++		printk("fuse_dev_write: write is short\n");
++		return -EINVAL;
++	}
++
++	if(copy_from_user(&uh, buf, sizeof(struct fuse_out_header)))
++		return -EFAULT;
++
++	switch(uh.opcode) {
++	case FUSE_INVALIDATE:
++		err = fuse_invalidate(fc, &uh);
++		break;
++
++	default:
++		err = -ENOSYS;
++	}
++	return err;
++}
++
++
++static ssize_t fuse_dev_write(struct file *file, const char *buf,
++			      size_t nbytes, loff_t *off)
++{
++	int err;
++	struct fuse_conn *fc = DEV_FC(file);
++	struct fuse_req *req;
++	struct fuse_out_header oh;
++
++	if(!fc->sb)
++		return -EPERM;
++
++	err = copy_out_header(&oh, buf, nbytes);
++	if(err)
++		return err;
++
++	if (!oh.unique)	{
++		err = fuse_user_request(fc, buf, nbytes);
++		goto out;
++	}
++
++        if (oh.error <= -512 || oh.error > 0) {
++                printk("fuse_dev_write: bad error value\n");
++                return -EINVAL;
++        }
++
++	spin_lock(&fuse_lock);
++	req = request_find(fc, oh.unique);
++	if(req != NULL) {
++		list_del_init(&req->list);
++		req->locked = 1;
++	}
++	spin_unlock(&fuse_lock);
++	if(!req)
++		return -ENOENT;
++
++	req->out->h = oh;
++	err = copy_out_args(req->out, buf, nbytes);
++
++	spin_lock(&fuse_lock);
++	if(err)
++		req->out->h.error = -EPROTO;
++	else {
++		/* fget() needs to be done in this context */
++		if(req->in->h.opcode == FUSE_GETDIR && !oh.error)
++			process_getdir(req);
++	}
++	req->finished = 1;
++	req->locked = 0;
++	/* Unlocks fuse_lock: */
++	request_end(fc, req);
++
++  out:
++	if(!err)
++		return nbytes;
++	else
++		return err;
++}
++
++
++static unsigned int fuse_dev_poll(struct file *file, poll_table *wait)
++{
++	struct fuse_conn *fc = DEV_FC(file);
++	unsigned int mask = POLLOUT | POLLWRNORM;
++
++	if(!fc->sb)
++		return -EPERM;
++
++	poll_wait(file, &fc->waitq, wait);
++
++	spin_lock(&fuse_lock);
++	if (!list_empty(&fc->pending))
++                mask |= POLLIN | POLLRDNORM;
++	spin_unlock(&fuse_lock);
++
++	return mask;
++}
++
++static struct fuse_conn *new_conn(void)
++{
++	struct fuse_conn *fc;
++
++	fc = kmalloc(sizeof(*fc), GFP_KERNEL);
++	if(fc != NULL) {
++		fc->sb = NULL;
++		fc->file = NULL;
++		fc->flags = 0;
++		fc->uid = 0;
++		fc->oldrelease = 0;
++		init_waitqueue_head(&fc->waitq);
++		INIT_LIST_HEAD(&fc->pending);
++		INIT_LIST_HEAD(&fc->processing);
++		sema_init(&fc->outstanding, MAX_OUTSTANDING);
++		fc->reqctr = 1;
++	}
++	return fc;
++}
++
++static int fuse_dev_open(struct inode *inode, struct file *file)
++{
++	struct fuse_conn *fc;
++
++	fc = new_conn();
++	if(!fc)
++		return -ENOMEM;
++
++	fc->file = file;
++	file->private_data = fc;
++
++	return 0;
++}
++
++static void end_requests(struct fuse_conn *fc, struct list_head *head)
++{
++	while(!list_empty(head)) {
++		struct fuse_req *req;
++		req = list_entry(head->next, struct fuse_req, list);
++		list_del_init(&req->list);
++		if(req->issync) {
++			req->out->h.error = -ECONNABORTED;
++			req->finished = 1;
++			/* Unlocks fuse_lock: */
++			request_end(fc, req);
++			spin_lock(&fuse_lock);
++		} else
++			destroy_request(req);
++	}
++}
++
++static int fuse_dev_release(struct inode *inode, struct file *file)
++{
++	struct fuse_conn *fc = DEV_FC(file);
++
++	spin_lock(&fuse_lock);
++	fc->file = NULL;
++	end_requests(fc, &fc->pending);
++	end_requests(fc, &fc->processing);
++	release_conn(fc);
++	spin_unlock(&fuse_lock);
++	return 0;
++}
++
++static struct file_operations fuse_dev_operations = {
++	.owner		= THIS_MODULE,
++	.read		= fuse_dev_read,
++	.write		= fuse_dev_write,
++	.poll		= fuse_dev_poll,
++	.open		= fuse_dev_open,
++	.release	= fuse_dev_release,
++};
++
++int fuse_dev_init()
++{
++	int ret;
++
++	proc_fs_fuse = NULL;
++	proc_fuse_dev = NULL;
++
++	fuse_req_cachep = kmem_cache_create("cofuser_request",
++					     sizeof(struct fuse_req),
++					     0, 0, NULL, NULL);
++	if(!fuse_req_cachep)
++		return -ENOMEM;
++
++	ret = -ENOMEM;
++	proc_fs_fuse = proc_mkdir("fuse", proc_root_fs);
++	if(!proc_fs_fuse) {
++		printk("fuse: failed to create directory in /proc/fs\n");
++		goto err;
++	}
++
++	proc_fs_fuse->owner = THIS_MODULE;
++	proc_fuse_dev = create_proc_entry("dev", S_IFSOCK | 0600, proc_fs_fuse);
++	if(!proc_fuse_dev) {
++		printk("fuse: failed to create entry in /proc/fs/fuse\n");
++		goto err;
++	}
++
++	proc_fuse_dev->proc_fops = &fuse_dev_operations;
++
++	return 0;
++
++  err:
++	fuse_dev_cleanup();
++	return ret;
++}
++
++void fuse_dev_cleanup()
++{
++	if (cooperative_mode_enabled()) {
++		kmem_cache_destroy(fuse_req_cachep);
++		return;
++	}
++
++	if(proc_fs_fuse) {
++		remove_proc_entry("dev", proc_fs_fuse);
++		remove_proc_entry("fuse", proc_root_fs);
++	}
++
++	kmem_cache_destroy(fuse_req_cachep);
++}
++
++#else
++
++struct fuse_conn *cofs_volumes[CO_MODULE_MAX_COFS] = {NULL, };
++
++static void cofuse_request_start(unsigned long *flags, struct fuse_conn *fc, struct fuse_in *in)
++{
++	co_passage_page_assert_valid();
++
++	co_passage_page_acquire(flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_FILESYSTEM;
++	co_passage_page->params[1] = fc->cofs_unit;
++	co_passage_page->params[2] = in->h.opcode;
++	co_passage_page->params[3] = in->h.ino;
++	co_passage_page->params[4] = 0;
++}
++
++static void cofuse_request_end(unsigned long flags, struct fuse_out *out)
++{
++	unsigned long ret;
++	ret = co_passage_page->params[4];
++	co_passage_page_release(flags);
++	out->h.error = ret;
++}
++
++void request_send(struct fuse_conn *fc, struct fuse_in *in,
++		  struct fuse_out *out)
++{
++	unsigned long flags;
++	char *str;
++
++	switch ((unsigned long)in->h.opcode) {
++	case FUSE_STATFS: {
++		struct fuse_statfs_out *arg;
++
++		arg = (struct fuse_statfs_out *)out->args[0].value;
++
++		cofuse_request_start(&flags, fc, in);
++		co_switch_wrapper();
++		*arg = *(struct fuse_statfs_out *)&co_passage_page->params[5];
++		cofuse_request_end(flags, out);
++		return;
++	}
++
++	case FUSE_OPEN: {
++		struct fuse_open_in *opin = (struct fuse_open_in *)in->args[0].value;
++
++		cofuse_request_start(&flags, fc, in);
++		co_passage_page->params[5] = opin->flags;
++		co_switch_wrapper();
++		cofuse_request_end(flags, out);
++		return;
++	}
++
++	case FUSE_WRITE: {
++		struct fuse_write_in *write_in = (struct fuse_write_in *)in->args[0].value;
++		unsigned long long *offset_passage = (unsigned long long *)&co_passage_page->params[5];
++
++		cofuse_request_start(&flags, fc, in);
++		*offset_passage = write_in->offset;
++		co_passage_page->params[7] = write_in->size;
++		co_passage_page->params[8] = (unsigned long)in->args[1].value;
++		co_switch_wrapper();
++		cofuse_request_end(flags, out);
++		return;
++	}
++
++	case FUSE_READ: {
++		struct fuse_read_in *read_in = (struct fuse_read_in *)in->args[0].value;
++		unsigned long long *offset_passage = (unsigned long long *)&co_passage_page->params[5];
++
++		cofuse_request_start(&flags, fc, in);
++		*offset_passage = read_in->offset;
++		co_passage_page->params[7] = read_in->size;
++		co_passage_page->params[8] = (unsigned long)out->args[0].value;
++		co_switch_wrapper();
++		cofuse_request_end(flags, out);
++		return;
++	}
++
++	case FUSE_LOOKUP: {
++		struct fuse_lookup_out *arg;
++
++		arg = (struct fuse_lookup_out *)out->args[0].value;
++		str = (char *)&co_passage_page->params[30];
++
++		cofuse_request_start(&flags, fc, in);
++		memcpy(str, (char *)in->args[0].value, in->args[0].size);
++		co_switch_wrapper();
++		*arg = *(struct fuse_lookup_out *)&co_passage_page->params[5];
++		cofuse_request_end(flags, out);
++		return;
++	}
++
++	case FUSE_RENAME: {
++		struct fuse_rename_in *arg;
++		char *str2;
++
++		arg = (struct fuse_rename_in *)in->args[0].value;
++		str = (char *)(&co_passage_page->params[30]);
++		str2 = str + in->args[1].size;
++
++		cofuse_request_start(&flags, fc, in);
++		co_passage_page->params[5] = arg->newdir;
++		memcpy(str, (char *)in->args[1].value, in->args[1].size);
++		memcpy(str2, (char *)in->args[2].value, in->args[2].size);
++		co_switch_wrapper();
++		cofuse_request_end(flags, out);
++		return;
++	}
++
++	case FUSE_MKNOD: {
++		struct fuse_mknod_in *inarg;
++		struct fuse_mknod_out *outarg;
++		char *str;
++
++		inarg = (struct fuse_mknod_in *)(in->args[0].value);
++		outarg = (struct fuse_mknod_out *)(out->args[0].value);
++
++		cofuse_request_start(&flags, fc, in);
++		co_passage_page->params[5] = inarg->mode;
++		co_passage_page->params[6] = inarg->rdev;
++		str = (char *)&co_passage_page->params[30];
++		memcpy(str, (char *)in->args[1].value, in->args[1].size);
++		co_switch_wrapper();
++		outarg->ino = co_passage_page->params[7];
++		outarg->attr = *(struct fuse_attr *)(&co_passage_page->params[8]);
++		cofuse_request_end(flags, out);
++		return;
++	}
++
++	case FUSE_SETATTR: {
++		struct fuse_setattr_in *inarg;
++		struct fuse_setattr_out *outarg;
++		struct fuse_attr *attr;
++
++		inarg = (struct fuse_setattr_in *)(in->args[0].value);
++		outarg = (struct fuse_setattr_out *)(out->args[0].value);
++		attr = (struct fuse_attr *)(&co_passage_page->params[6]);
++
++		cofuse_request_start(&flags, fc, in);
++		co_passage_page->params[5] = inarg->valid;
++		*attr = inarg->attr;
++		co_switch_wrapper();
++		outarg->attr = *attr;
++		cofuse_request_end(flags, out);
++		return;
++	}
++
++	case FUSE_MKDIR: {
++		struct fuse_mkdir_in *arg;
++
++		arg = (struct fuse_mkdir_in *)(in->args[0].value);
++		str = (char *)&co_passage_page->params[30];
++
++		cofuse_request_start(&flags, fc, in);
++		co_passage_page->params[5] = arg->mode;
++		memcpy(str, (char *)in->args[1].value, in->args[1].size);
++		co_switch_wrapper();
++		cofuse_request_end(flags, out);
++		return;
++	}
++
++	case FUSE_UNLINK:
++	case FUSE_RMDIR: {
++		str = (char *)&co_passage_page->params[30];
++
++		cofuse_request_start(&flags, fc, in);
++		memcpy(str, (char *)in->args[0].value, in->args[0].size);
++		co_switch_wrapper();
++		cofuse_request_end(flags, out);
++		return;
++	}
++
++	case FUSE_GETATTR: {
++		struct fuse_getattr_out *arg;
++		arg = (struct fuse_getattr_out *)out->args[0].value;
++
++		co_passage_page_assert_valid();
++		cofuse_request_start(&flags, fc, in);
++		co_switch_wrapper();
++		*arg = *(struct fuse_getattr_out *)&co_passage_page->params[5];
++		cofuse_request_end(flags, out);
++		return;
++	}
++	}
++
++	/* printk("cofuse: request_send %d\n", in->h.opcode); */
++	out->h.error = -EIO;
++}
++
++int request_send_noreply(struct fuse_conn *fc, struct fuse_in *in)
++{
++	return -EIO;
++}
++
++int request_send_nonblock(struct fuse_conn *fc, struct fuse_in *in,
++			  struct fuse_out *out, fuse_reqend_t end, void *data)
++{
++	/* printk("cofuse: request_send_nonblock %d\n", in->h.opcode); */
++	request_send(fc, in, out);
++	end(fc, in, out, data);
++	return 0;
++}
++
++int fuse_dev_init()
++{
++	return 0;
++}
++
++void fuse_dev_cleanup()
++{
++}
++
++#endif
++
++/*
++ * Local Variables:
++ * indent-tabs-mode: t
++ * c-basic-offset: 8
++ * End:
++ */
+Index: linux-2.6.14-source/fs/cofusefs/dir.c
+===================================================================
+--- /dev/null
++++ linux-2.6.14-source/fs/cofusefs/dir.c
+@@ -0,0 +1,961 @@
++/*
++    FUSE: Filesystem in Userspace
++    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
++
++    This program can be distributed under the terms of the GNU GPL.
++    See the file COPYING.
++*/
++
++#include "fuse_i.h"
++
++#include <linux/pagemap.h>
++#include <linux/slab.h>
++#include <linux/file.h>
++
++static struct inode_operations fuse_dir_inode_operations;
++static struct inode_operations fuse_file_inode_operations;
++static struct inode_operations fuse_symlink_inode_operations;
++
++static struct file_operations fuse_dir_operations;
++
++static struct dentry_operations fuse_dentry_operations;
++
++/* FIXME: This should be user configurable */
++#define FUSE_REVALIDATE_TIME (1 * HZ)
++
++#ifndef KERNEL_2_6
++#define new_decode_dev(x) (x)
++#define new_encode_dev(x) (x)
++#endif
++
++static void change_attributes(struct inode *inode, struct fuse_attr *attr)
++{
++	if(S_ISREG(inode->i_mode) && i_size_read(inode) != attr->size) {
++#ifdef KERNEL_2_6
++		invalidate_inode_pages(inode->i_mapping);
++#else
++		invalidate_inode_pages(inode);
++#endif
++	}
++
++	inode->i_mode    = (inode->i_mode & S_IFMT) + (attr->mode & 07777);
++	inode->i_nlink   = attr->nlink;
++	inode->i_uid     = attr->uid;
++	inode->i_gid     = attr->gid;
++	i_size_write(inode, attr->size);
++	inode->i_blksize = PAGE_CACHE_SIZE;
++	inode->i_blocks  = attr->blocks;
++#ifdef KERNEL_2_6
++	inode->i_atime.tv_sec   = attr->atime;
++	inode->i_atime.tv_nsec  = 0;
++	inode->i_mtime.tv_sec   = attr->mtime;
++	inode->i_mtime.tv_nsec  = 0;
++	inode->i_ctime.tv_sec   = attr->ctime;
++	inode->i_ctime.tv_nsec  = 0;
++#else
++	inode->i_atime   = attr->atime;
++	inode->i_mtime   = attr->mtime;
++	inode->i_ctime   = attr->ctime;
++#endif
++}
++
++static void fuse_init_inode(struct inode *inode, struct fuse_attr *attr)
++{
++	inode->i_mode = attr->mode & S_IFMT;
++	i_size_write(inode, attr->size);
++	if(S_ISREG(inode->i_mode)) {
++		inode->i_op = &fuse_file_inode_operations;
++		fuse_init_file_inode(inode);
++	}
++	else if(S_ISDIR(inode->i_mode)) {
++		inode->i_op = &fuse_dir_inode_operations;
++		inode->i_fop = &fuse_dir_operations;
++	}
++	else if(S_ISLNK(inode->i_mode)) {
++		inode->i_op = &fuse_symlink_inode_operations;
++	}
++	else {
++		inode->i_op = &fuse_file_inode_operations;
++		init_special_inode(inode, inode->i_mode,
++				   new_decode_dev(attr->rdev));
++	}
++	inode->u.generic_ip = inode;
++}
++
++struct inode *fuse_iget(struct super_block *sb, ino_t ino,
++			struct fuse_attr *attr, int version)
++{
++	struct inode *inode;
++
++	inode = iget(sb, ino);
++	if(inode) {
++		if(!inode->u.generic_ip)
++			fuse_init_inode(inode, attr);
++
++		change_attributes(inode, attr);
++		inode->i_version = version;
++	}
++
++	return inode;
++}
++
++static int fuse_do_lookup(struct inode *dir, struct dentry *entry,
++			  struct fuse_lookup_out *outarg, int *version)
++{
++	struct fuse_conn *fc = INO_FC(dir);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++
++	if (entry->d_name.len > FUSE_NAME_MAX)
++		return -ENAMETOOLONG;
++
++	in.h.opcode = FUSE_LOOKUP;
++	in.h.ino = dir->i_ino;
++	in.numargs = 1;
++	in.args[0].size = entry->d_name.len + 1;
++	in.args[0].value = entry->d_name.name;
++	out.numargs = 1;
++	out.args[0].size = sizeof(struct fuse_lookup_out);
++	out.args[0].value = outarg;
++	request_send(fc, &in, &out);
++
++	*version = out.h.unique;
++	return out.h.error;
++}
++
++static int fuse_lookup_iget(struct inode *dir, struct dentry *entry,
++			    struct inode **inodep)
++{
++	int err;
++	struct fuse_lookup_out outarg;
++	int version;
++	struct inode *inode = NULL;
++
++	err = fuse_do_lookup(dir, entry, &outarg, &version);
++	if(!err) {
++		inode = fuse_iget(dir->i_sb, outarg.ino, &outarg.attr, version);
++		if(!inode)
++			return -ENOMEM;
++	} else if(err != -ENOENT)
++		return err;
++
++	entry->d_time = jiffies;
++	entry->d_op = &fuse_dentry_operations;
++	*inodep = inode;
++	return 0;
++}
++
++static void uncache_dir(struct inode *dir)
++{
++	struct dentry *entry = d_find_alias(dir);
++	if (!entry)
++		dir->i_nlink = 0;
++	else {
++		entry->d_time = jiffies - FUSE_REVALIDATE_TIME - 1;
++		dput(entry);
++	}
++}
++
++/* create needs to return a positive entry, so this is actually an
++   mknod+lookup */
++static int _fuse_mknod(struct inode *dir, struct dentry *entry, int mode,
++		      dev_t rdev)
++{
++	struct fuse_conn *fc = INO_FC(dir);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	struct fuse_mknod_in inarg;
++	struct fuse_mknod_out outarg;
++	struct inode *inode;
++
++	memset(&inarg, 0, sizeof(inarg));
++	inarg.mode = mode;
++	inarg.rdev = new_encode_dev(rdev);
++
++	in.h.opcode = FUSE_MKNOD;
++	in.h.ino = dir->i_ino;
++	in.numargs = 2;
++	in.args[0].size = sizeof(inarg);
++	in.args[0].value = &inarg;
++	in.args[1].size = entry->d_name.len + 1;
++	in.args[1].value = entry->d_name.name;
++	out.numargs = 1;
++	out.args[0].size = sizeof(outarg);
++	out.args[0].value = &outarg;
++	request_send(fc, &in, &out);
++
++	if(out.h.error)
++		return out.h.error;
++
++	inode = fuse_iget(dir->i_sb, outarg.ino, &outarg.attr, out.h.unique);
++	if(!inode)
++		return -ENOMEM;
++
++	/* Don't allow userspace to do really stupid things... */
++	if((inode->i_mode ^ mode) & S_IFMT) {
++		iput(inode);
++		printk("fuse_mknod: inode has wrong type\n");
++		return -EPROTO;
++	}
++
++	d_instantiate(entry, inode);
++	uncache_dir(dir);
++	return 0;
++}
++
++static int _fuse_create(struct inode *dir, struct dentry *entry, int mode)
++{
++	return _fuse_mknod(dir, entry, mode, 0);
++}
++
++/* knfsd needs the new entry instantiated in mkdir/symlink/link. this
++   should rather be done like mknod: attributes returned in out arg to
++   save a call to userspace */
++static int lookup_new_entry(struct inode *dir, struct dentry *entry)
++{
++	struct inode *inode;
++	int err = fuse_lookup_iget(dir, entry, &inode);
++	if(err || !inode) {
++		printk("fuse_mkdir: failed to look up new entry\n");
++		return err ? err : -ENOENT;
++	}
++	d_instantiate(entry, inode);
++	uncache_dir(dir);
++	return 0;
++}
++
++static int fuse_mkdir(struct inode *dir, struct dentry *entry, int mode)
++{
++	struct fuse_conn *fc = INO_FC(dir);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	struct fuse_mkdir_in inarg;
++
++	memset(&inarg, 0, sizeof(inarg));
++	inarg.mode = mode;
++
++	in.h.opcode = FUSE_MKDIR;
++	in.h.ino = dir->i_ino;
++	in.numargs = 2;
++	in.args[0].size = sizeof(inarg);
++	in.args[0].value = &inarg;
++	in.args[1].size = entry->d_name.len + 1;
++	in.args[1].value = entry->d_name.name;
++	request_send(fc, &in, &out);
++	if(out.h.error)
++		return out.h.error;
++
++	return lookup_new_entry(dir, entry);
++}
++
++static int fuse_symlink(struct inode *dir, struct dentry *entry,
++			const char *link)
++{
++	struct fuse_conn *fc = INO_FC(dir);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	unsigned int len = strlen(link) + 1;
++
++	if (len > FUSE_SYMLINK_MAX)
++		return -ENAMETOOLONG;
++
++	in.h.opcode = FUSE_SYMLINK;
++	in.h.ino = dir->i_ino;
++	in.numargs = 2;
++	in.args[0].size = entry->d_name.len + 1;
++	in.args[0].value = entry->d_name.name;
++	in.args[1].size = len;
++	in.args[1].value = link;
++	request_send(fc, &in, &out);
++	if(out.h.error)
++		return out.h.error;
++
++	return lookup_new_entry(dir, entry);
++}
++
++static int fuse_remove(struct inode *dir, struct dentry *entry,
++		       enum fuse_opcode op)
++{
++	struct fuse_conn *fc = INO_FC(dir);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++
++	in.h.opcode = op;
++	in.h.ino = dir->i_ino;
++	in.numargs = 1;
++	in.args[0].size = entry->d_name.len + 1;
++	in.args[0].value = entry->d_name.name;
++	request_send(fc, &in, &out);
++
++	return out.h.error;
++}
++
++static int fuse_unlink(struct inode *dir, struct dentry *entry)
++{
++	int err = fuse_remove(dir, entry, FUSE_UNLINK);
++	if(!err) {
++		/* FIXME: the new i_nlink could be returned by the
++                   unlink operation */
++		err = fuse_do_getattr(entry->d_inode);
++		if(err == -ENOENT)
++			entry->d_inode->i_nlink = 0;
++
++		uncache_dir(dir);
++		return 0;
++	}
++	return err;
++}
++
++static int fuse_rmdir(struct inode *dir, struct dentry *entry)
++{
++	int err = fuse_remove(dir, entry, FUSE_RMDIR);
++	if(!err) {
++		entry->d_inode->i_nlink = 0;
++		uncache_dir(dir);
++	}
++	return err;
++}
++
++static int fuse_rename(struct inode *olddir, struct dentry *oldent,
++		       struct inode *newdir, struct dentry *newent)
++{
++	struct fuse_conn *fc = INO_FC(olddir);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	struct fuse_rename_in inarg;
++
++	memset(&inarg, 0, sizeof(inarg));
++	inarg.newdir = newdir->i_ino;
++
++	in.h.opcode = FUSE_RENAME;
++	in.h.ino = olddir->i_ino;
++	in.numargs = 3;
++	in.args[0].size = sizeof(inarg);
++	in.args[0].value = &inarg;
++	in.args[1].size = oldent->d_name.len + 1;
++	in.args[1].value = oldent->d_name.name;
++	in.args[2].size = newent->d_name.len + 1;
++	in.args[2].value = newent->d_name.name;
++	request_send(fc, &in, &out);
++
++	if (!out.h.error) {
++		uncache_dir(olddir);
++		if (olddir != newdir)
++			uncache_dir(newdir);
++	}
++
++	return out.h.error;
++}
++
++static int fuse_link(struct dentry *entry, struct inode *newdir,
++		     struct dentry *newent)
++{
++	struct inode *inode = entry->d_inode;
++	struct fuse_conn *fc = INO_FC(inode);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	struct fuse_link_in inarg;
++
++	memset(&inarg, 0, sizeof(inarg));
++	inarg.newdir = newdir->i_ino;
++
++	in.h.opcode = FUSE_LINK;
++	in.h.ino = inode->i_ino;
++	in.numargs = 2;
++	in.args[0].size = sizeof(inarg);
++	in.args[0].value = &inarg;
++	in.args[1].size = newent->d_name.len + 1;
++	in.args[1].value = newent->d_name.name;
++	request_send(fc, &in, &out);
++	if(out.h.error)
++		return out.h.error;
++
++	/* Invalidate old entry, so attributes are refreshed */
++	d_invalidate(entry);
++	return lookup_new_entry(newdir, newent);
++}
++
++int fuse_do_getattr(struct inode *inode)
++{
++	struct fuse_conn *fc = INO_FC(inode);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	struct fuse_getattr_out arg;
++
++	in.h.opcode = FUSE_GETATTR;
++	in.h.ino = inode->i_ino;
++	out.numargs = 1;
++	out.args[0].size = sizeof(arg);
++	out.args[0].value = &arg;
++	request_send(fc, &in, &out);
++
++	if(!out.h.error)
++		change_attributes(inode, &arg.attr);
++
++	return out.h.error;
++}
++
++static int fuse_revalidate(struct dentry *entry)
++{
++	struct inode *inode = entry->d_inode;
++	struct fuse_conn *fc = INO_FC(inode);
++
++	if(inode->i_ino == FUSE_ROOT_INO) {
++		if(!(fc->flags & FUSE_ALLOW_OTHER) &&
++		   current->fsuid != fc->uid)
++			return -EACCES;
++	} else if(time_before_eq(jiffies, entry->d_time + FUSE_REVALIDATE_TIME))
++		return 0;
++
++	return fuse_do_getattr(inode);
++}
++
++static int _fuse_permission(struct inode *inode, int mask)
++{
++	struct fuse_conn *fc = INO_FC(inode);
++
++	if(!(fc->flags & FUSE_ALLOW_OTHER) && current->fsuid != fc->uid)
++		return -EACCES;
++	else if(fc->flags & FUSE_DEFAULT_PERMISSIONS) {
++		int err = generic_permission(inode, mask, NULL);
++
++		/* If permission is denied, try to refresh file
++		   attributes.  This is also needed, because the root
++		   node will at first have no permissions */
++
++		if(err == -EACCES) {
++		 	err = fuse_do_getattr(inode);
++			if(!err)
++			 	err = generic_permission(inode, mask, NULL);
++		}
++
++		/* FIXME: Need some mechanism to revoke permissions:
++		   currently if the filesystem suddenly changes the
++		   file mode, we will not be informed abot that, and
++		   continue to allow access to the file/directory.
++
++		   This is actually not so grave, since the user can
++		   simply keep access to the file/directory anyway by
++		   keeping it open... */
++
++		return err;
++	}
++	else
++		return 0;
++}
++
++static int parse_dirfile(char *buf, size_t nbytes, struct file *file,
++			 void *dstbuf, filldir_t filldir)
++{
++	while(nbytes >= FUSE_NAME_OFFSET) {
++		struct fuse_dirent *dirent = (struct fuse_dirent *) buf;
++		size_t reclen = FUSE_DIRENT_SIZE(dirent);
++		int over;
++
++		if(dirent->namelen > NAME_MAX) {
++			printk("fuse_readdir: name too long\n");
++			return -EPROTO;
++		}
++		if(reclen > nbytes)
++			break;
++
++		over = filldir(dstbuf, dirent->name, dirent->namelen,
++			      file->f_pos, dirent->ino, dirent->type);
++		if(over)
++			break;
++
++		buf += reclen;
++		file->f_pos += reclen;
++		nbytes -= reclen;
++	}
++
++	return 0;
++}
++
++#ifndef CONFIG_COOPERATIVE
++
++#define DIR_BUFSIZE 2048
++static int fuse_readdir(struct file *file, void *dstbuf, filldir_t filldir)
++{
++	struct file *cfile = file->private_data;
++	char *buf;
++	int ret;
++
++	if(!cfile)
++		return -EISDIR;
++
++	buf = kmalloc(DIR_BUFSIZE, GFP_KERNEL);
++	if(!buf)
++		return -ENOMEM;
++
++	ret = kernel_read(cfile, file->f_pos, buf, DIR_BUFSIZE);
++	if(ret < 0)
++		printk("fuse_readdir: failed to read container file\n");
++	else
++		ret = parse_dirfile(buf, ret, file, dstbuf, filldir);
++
++	kfree(buf);
++	return ret;
++}
++
++#else
++
++#define DIR_BUFSIZE 4096
++
++typedef struct {
++	struct fuse_conn *fc;
++	int inode;
++} readdir_data_t;
++
++static int fuse_readdir(struct file *file, void *dstbuf, filldir_t filldir)
++{
++	readdir_data_t *rd = file->private_data;
++	unsigned long flags;
++	int ret, size;
++	char *buf;
++
++	buf = kmalloc(DIR_BUFSIZE, GFP_KERNEL);
++	if (!buf)
++		return -ENOMEM;
++
++	co_passage_page_assert_valid();
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_FILESYSTEM;
++	co_passage_page->params[1] = rd->fc->cofs_unit;
++	co_passage_page->params[2] = FUSE_DIR_READ;
++	co_passage_page->params[3] = rd->inode;
++	co_passage_page->params[5] = DIR_BUFSIZE;
++	co_passage_page->params[6] = (unsigned long)buf;
++	co_passage_page->params[8] = file->f_pos;
++
++	co_switch_wrapper();
++
++	ret = co_passage_page->params[4];
++	size = co_passage_page->params[7];
++
++	co_passage_page_release(flags);
++
++	if (ret) {
++		printk("fuse_readdir: host returned error: %x\n", ret);
++		kfree(buf);
++		return ret;
++	}
++
++	parse_dirfile(buf, size, file, dstbuf, filldir);
++
++	ret = 0;
++	kfree(buf);
++	return ret;
++}
++
++#endif
++
++static char *read_link(struct dentry *dentry)
++{
++	struct inode *inode = dentry->d_inode;
++	struct fuse_conn *fc = INO_FC(inode);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	char *link;
++
++	link = (char *) __get_free_page(GFP_KERNEL);
++	if(!link)
++		return ERR_PTR(-ENOMEM);
++
++	in.h.opcode = FUSE_READLINK;
++	in.h.ino = inode->i_ino;
++	out.argvar = 1;
++	out.numargs = 1;
++	out.args[0].size = PAGE_SIZE - 1;
++	out.args[0].value = link;
++	request_send(fc, &in, &out);
++	if(out.h.error) {
++		free_page((unsigned long) link);
++		return ERR_PTR(out.h.error);
++	}
++
++	link[out.args[0].size] = '\0';
++	return link;
++}
++
++static void free_link(char *link)
++{
++	if(!IS_ERR(link))
++		free_page((unsigned long) link);
++}
++
++static int fuse_readlink(struct dentry *dentry, char *buffer, int buflen)
++{
++	int ret;
++	char *link;
++
++	link = read_link(dentry);
++	ret = vfs_readlink(dentry, buffer, buflen, link);
++	free_link(link);
++	return ret;
++}
++
++static int fuse_follow_link(struct dentry *dentry, struct nameidata *nd)
++{
++	int ret;
++	char *link;
++
++	link = read_link(dentry);
++	ret = vfs_follow_link(nd, link);
++	free_link(link);
++	return ret;
++}
++
++#ifndef CONFIG_COOPERATIVE
++
++static int fuse_dir_open(struct inode *inode, struct file *file)
++{
++	struct fuse_conn *fc = INO_FC(inode);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	struct fuse_getdir_out outarg;
++
++	in.h.opcode = FUSE_GETDIR;
++	in.h.ino = inode->i_ino;
++	out.numargs = 1;
++	out.args[0].size = sizeof(outarg);
++	out.args[0].value = &outarg;
++	request_send(fc, &in, &out);
++	if(!out.h.error) {
++		struct file *cfile = outarg.file;
++		struct inode *inode;
++		if(!cfile) {
++			printk("fuse_getdir: invalid file\n");
++			return -EPROTO;
++		}
++		inode = cfile->f_dentry->d_inode;
++		if(!S_ISREG(inode->i_mode)) {
++			printk("fuse_getdir: not a regular file\n");
++			fput(cfile);
++			return -EPROTO;
++		}
++
++		file->private_data = cfile;
++	}
++
++	return out.h.error;
++}
++
++static int fuse_dir_release(struct inode *inode, struct file *file)
++{
++	struct file *cfile = file->private_data;
++
++	if(cfile)
++		fput(cfile);
++
++	return 0;
++}
++
++#else
++
++static int fuse_dir_open(struct inode *inode, struct file *file)
++{
++	struct fuse_conn *fc = INO_FC(inode);
++	unsigned long flags;
++	readdir_data_t *rd;
++	int ret;
++
++	rd = kmalloc(sizeof(*rd), GFP_KERNEL);
++	if (!rd)
++		return -ENOMEM;
++
++	rd->fc = fc;
++	rd->inode = inode->i_ino;
++
++	co_passage_page_assert_valid();
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_FILESYSTEM;
++	co_passage_page->params[1] = fc->cofs_unit;
++	co_passage_page->params[2] = FUSE_DIR_OPEN;
++	co_passage_page->params[3] = inode->i_ino;
++	co_passage_page->params[4] = 0;
++
++	co_switch_wrapper();
++
++	ret = co_passage_page->params[4];
++
++	co_passage_page_release(flags);
++
++	if (ret) {
++		printk("fuse_readdir: host returned error: %x\n", ret);
++		kfree(rd);
++	} else {
++		file->private_data = (void *)rd;
++	}
++
++	return ret;
++}
++
++static int fuse_dir_release(struct inode *inode, struct file *file)
++{
++	readdir_data_t *rd = file->private_data;
++	unsigned long flags;
++	int ret;
++
++	co_passage_page_assert_valid();
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_FILESYSTEM;
++	co_passage_page->params[1] = rd->fc->cofs_unit;
++	co_passage_page->params[2] = FUSE_DIR_RELEASE;
++	co_passage_page->params[3] = rd->inode;
++	co_passage_page->params[4] = 0;
++
++	co_switch_wrapper();
++
++	ret = co_passage_page->params[4];
++
++	co_passage_page_release(flags);
++
++	if (ret) {
++		printk("fuse_readdir: host returned error: %x\n", ret);
++	}
++
++	kfree(rd);
++
++	return ret;
++}
++
++#endif
++
++static unsigned int iattr_to_fattr(struct iattr *iattr,
++				   struct fuse_attr *fattr)
++{
++	unsigned int ivalid = iattr->ia_valid;
++	unsigned int fvalid = 0;
++
++	memset(fattr, 0, sizeof(*fattr));
++
++	if(ivalid & ATTR_MODE)
++		fvalid |= FATTR_MODE,   fattr->mode = iattr->ia_mode;
++	if(ivalid & ATTR_UID)
++		fvalid |= FATTR_UID,    fattr->uid = iattr->ia_uid;
++	if(ivalid & ATTR_GID)
++		fvalid |= FATTR_GID,    fattr->gid = iattr->ia_gid;
++	if(ivalid & ATTR_SIZE)
++		fvalid |= FATTR_SIZE,   fattr->size = iattr->ia_size;
++	/* You can only _set_ these together (they may change by themselves) */
++	if((ivalid & (ATTR_ATIME | ATTR_MTIME)) == (ATTR_ATIME | ATTR_MTIME)) {
++		fvalid |= FATTR_UTIME;
++#ifdef KERNEL_2_6
++		fattr->atime = iattr->ia_atime.tv_sec;
++		fattr->mtime = iattr->ia_mtime.tv_sec;
++#else
++		fattr->atime = iattr->ia_atime;
++		fattr->mtime = iattr->ia_mtime;
++#endif
++	}
++
++	return fvalid;
++}
++
++static int fuse_setattr(struct dentry *entry, struct iattr *attr)
++{
++	struct inode *inode = entry->d_inode;
++	struct fuse_conn *fc = INO_FC(inode);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	struct fuse_setattr_in inarg;
++	struct fuse_setattr_out outarg;
++
++	/* FIXME: need to fix race between truncate and writepage */
++	if (attr->ia_valid & ATTR_SIZE)
++		fuse_sync_inode(inode);
++
++	memset(&inarg, 0, sizeof(inarg));
++	inarg.valid = iattr_to_fattr(attr, &inarg.attr);
++
++	in.h.opcode = FUSE_SETATTR;
++	in.h.ino = inode->i_ino;
++	in.numargs = 1;
++	in.args[0].size = sizeof(inarg);
++	in.args[0].value = &inarg;
++	out.numargs = 1;
++	out.args[0].size = sizeof(outarg);
++	out.args[0].value = &outarg;
++	request_send(fc, &in, &out);
++
++	if(!out.h.error) {
++		if(attr->ia_valid & ATTR_SIZE &&
++		   outarg.attr.size < i_size_read(inode))
++			vmtruncate(inode, outarg.attr.size);
++
++		change_attributes(inode, &outarg.attr);
++	}
++	return out.h.error;
++}
++
++static int _fuse_dentry_revalidate(struct dentry *entry)
++{
++	if(!entry->d_inode)
++		return 0;
++	else if(time_after(jiffies, entry->d_time + FUSE_REVALIDATE_TIME)) {
++		struct inode *inode = entry->d_inode;
++		struct fuse_lookup_out outarg;
++		int version;
++		int ret;
++
++		ret = fuse_do_lookup(entry->d_parent->d_inode, entry, &outarg,
++				     &version);
++		if(ret)
++			return 0;
++
++		if(outarg.ino != inode->i_ino)
++			return 0;
++
++		change_attributes(inode, &outarg.attr);
++		inode->i_version = version;
++		entry->d_time = jiffies;
++	}
++	return 1;
++}
++
++#ifdef KERNEL_2_6
++
++#define fuse_mknod _fuse_mknod
++
++static int fuse_getattr(struct vfsmount *mnt, struct dentry *entry,
++			struct kstat *stat)
++{
++	struct inode *inode = entry->d_inode;
++	int err = fuse_revalidate(entry);
++	if(!err)
++		generic_fillattr(inode, stat);
++
++	return err;
++}
++
++static struct dentry *fuse_lookup(struct inode *dir, struct dentry *entry,
++				   struct nameidata *nd)
++{
++	struct inode *inode;
++	int err = fuse_lookup_iget(dir, entry, &inode);
++	if (err)
++		return ERR_PTR(err);
++	return d_splice_alias(inode, entry);
++}
++
++static int fuse_create(struct inode *dir, struct dentry *entry, int mode,
++		       struct nameidata *nd)
++{
++	return _fuse_create(dir, entry, mode);
++}
++
++static int fuse_permission(struct inode *inode, int mask,
++			    struct nameidata *nd)
++{
++	return _fuse_permission(inode, mask);
++}
++
++static int fuse_dentry_revalidate(struct dentry *entry, struct nameidata *nd)
++{
++	return _fuse_dentry_revalidate(entry);
++}
++#else /* KERNEL_2_6 */
++
++#define fuse_create _fuse_create
++#define fuse_permission _fuse_permission
++
++static struct dentry *fuse_lookup(struct inode *dir, struct dentry *entry)
++{
++	struct inode *inode;
++	struct dentry *alias;
++
++	int err = fuse_lookup_iget(dir, entry, &inode);
++	if(err)
++		return ERR_PTR(err);
++
++	if(inode && S_ISDIR(inode->i_mode) &&
++	   (alias = d_find_alias(inode)) != NULL) {
++		dput(alias);
++		iput(inode);
++		printk("fuse: cannot assign an existing directory\n");
++		return ERR_PTR(-EPROTO);
++	}
++
++	d_add(entry, inode);
++	return NULL;
++}
++
++static int fuse_mknod(struct inode *dir, struct dentry *entry, int mode,
++		      int rdev)
++{
++	return _fuse_mknod(dir, entry, mode, rdev);
++}
++
++static int fuse_dentry_revalidate(struct dentry *entry, int flags)
++{
++	return _fuse_dentry_revalidate(entry);
++}
++#endif /* KERNEL_2_6 */
++
++
++static struct inode_operations fuse_dir_inode_operations =
++{
++	.lookup		= fuse_lookup,
++	.create		= fuse_create,
++	.mknod		= fuse_mknod,
++	.mkdir		= fuse_mkdir,
++	.symlink	= fuse_symlink,
++	.unlink		= fuse_unlink,
++	.rmdir		= fuse_rmdir,
++	.rename		= fuse_rename,
++	.link		= fuse_link,
++	.setattr	= fuse_setattr,
++	.permission	= fuse_permission,
++#ifdef KERNEL_2_6
++	.getattr	= fuse_getattr,
++#else
++	.revalidate	= fuse_revalidate,
++#endif
++};
++
++static struct file_operations fuse_dir_operations = {
++	.read		= generic_read_dir,
++	.readdir	= fuse_readdir,
++	.open		= fuse_dir_open,
++	.release	= fuse_dir_release,
++};
++
++static struct inode_operations fuse_file_inode_operations = {
++	.setattr	= fuse_setattr,
++	.permission	= fuse_permission,
++#ifdef KERNEL_2_6
++	.getattr	= fuse_getattr,
++#else
++	.revalidate	= fuse_revalidate,
++#endif
++};
++
++static struct inode_operations fuse_symlink_inode_operations =
++{
++	.setattr	= fuse_setattr,
++	.readlink	= fuse_readlink,
++	.follow_link	= fuse_follow_link,
++#ifdef KERNEL_2_6
++	.getattr	= fuse_getattr,
++#else
++	.revalidate	= fuse_revalidate,
++#endif
++};
++
++static struct dentry_operations fuse_dentry_operations = {
++	.d_revalidate	= fuse_dentry_revalidate,
++};
++
++/*
++ * Local Variables:
++ * indent-tabs-mode: t
++ * c-basic-offset: 8
++ * End:
++ */
+Index: linux-2.6.14-source/fs/cofusefs/file.c
+===================================================================
+--- /dev/null
++++ linux-2.6.14-source/fs/cofusefs/file.c
+@@ -0,0 +1,542 @@
++/*
++    FUSE: Filesystem in Userspace
++    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
++
++    This program can be distributed under the terms of the GNU GPL.
++    See the file COPYING.
++*/
++#include "fuse_i.h"
++
++#include <linux/pagemap.h>
++#include <linux/slab.h>
++#ifdef KERNEL_2_6
++#include <linux/backing-dev.h>
++#include <linux/writeback.h>
++#endif
++
++#ifndef KERNEL_2_6
++#define PageUptodate(page) Page_Uptodate(page)
++#endif
++
++static int fuse_open(struct inode *inode, struct file *file)
++{
++	struct fuse_conn *fc = INO_FC(inode);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	struct fuse_open_in inarg;
++	int err;
++
++	err = generic_file_open(inode, file);
++	if(err)
++		return err;
++
++	/* If opening the root node, no lookup has been performed on
++	   it, so the attributes must be refreshed */
++	if(inode->i_ino == FUSE_ROOT_INO) {
++		int err = fuse_do_getattr(inode);
++		if(err)
++		 	return err;
++	}
++
++	memset(&inarg, 0, sizeof(inarg));
++	inarg.flags = file->f_flags & ~O_EXCL;
++
++	in.h.opcode = FUSE_OPEN;
++	in.h.ino = inode->i_ino;
++	in.numargs = 1;
++	in.args[0].size = sizeof(inarg);
++	in.args[0].value = &inarg;
++	request_send(fc, &in, &out);
++	if(!out.h.error && !(fc->flags & FUSE_KERNEL_CACHE)) {
++#ifdef KERNEL_2_6
++		invalidate_inode_pages(inode->i_mapping);
++#else
++		invalidate_inode_pages(inode);
++#endif
++	}
++
++	return out.h.error;
++}
++
++void fuse_sync_inode(struct inode *inode)
++{
++#ifdef KERNEL_2_6
++	filemap_fdatawrite(inode->i_mapping);
++	filemap_fdatawait(inode->i_mapping);
++#else
++#ifndef NO_MM
++	filemap_fdatasync(inode->i_mapping);
++	filemap_fdatawait(inode->i_mapping);
++#endif
++#endif
++}
++
++static int fuse_release_old(struct inode *inode, struct file *file)
++{
++	struct fuse_conn *fc = INO_FC(inode);
++	struct fuse_in *in = NULL;
++	struct fuse_open_in *inarg = NULL;
++	unsigned int s = sizeof(struct fuse_in) + sizeof(struct fuse_open_in);
++
++	in = kmalloc(s, GFP_NOFS);
++	if(!in)
++		return -ENOMEM;
++	memset(in, 0, s);
++	inarg = (struct fuse_open_in *) (in + 1);
++	inarg->flags = file->f_flags & ~O_EXCL;
++
++	in->h.opcode = FUSE_RELEASE;
++	in->h.ino = inode->i_ino;
++	in->numargs = 1;
++	in->args[0].size = sizeof(struct fuse_open_in);
++	in->args[0].value = inarg;
++	if(!request_send_noreply(fc, in))
++		return 0;
++
++	kfree(in);
++	return 0;
++}
++
++static int fuse_release(struct inode *inode, struct file *file)
++{
++	struct fuse_conn *fc = INO_FC(inode);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	struct fuse_open_in inarg;
++
++	if(file->f_mode & FMODE_WRITE)
++		fuse_sync_inode(inode);
++
++	if (fc->oldrelease)
++		return fuse_release_old(inode, file);
++
++	memset(&inarg, 0, sizeof(inarg));
++	inarg.flags = file->f_flags & ~O_EXCL;
++
++	in.h.opcode = FUSE_RELEASE2;
++	in.h.ino = inode->i_ino;
++	in.numargs = 1;
++	in.args[0].size = sizeof(inarg);
++	in.args[0].value = &inarg;
++	request_send(fc, &in, &out);
++	if (out.h.error == -ENOSYS) {
++		fc->oldrelease = 1;
++		return fuse_release_old(inode, file);
++	}
++	return 0;
++}
++
++static int fuse_fsync(struct file *file, struct dentry *de, int datasync)
++{
++	struct inode *inode = de->d_inode;
++	struct fuse_conn *fc = INO_FC(inode);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	struct fuse_fsync_in inarg;
++
++	memset(&inarg, 0, sizeof(inarg));
++	inarg.datasync = datasync;
++
++	in.h.opcode = FUSE_FSYNC;
++	in.h.ino = inode->i_ino;
++	in.numargs = 1;
++	in.args[0].size = sizeof(inarg);
++	in.args[0].value = &inarg;
++	request_send(fc, &in, &out);
++	return out.h.error;
++
++	/* FIXME: need to ensure, that all write requests issued
++           before this request are completed.  Should userspace take
++           care of this? */
++}
++
++static int fuse_readpage(struct file *file, struct page *page)
++{
++	struct inode *inode = page->mapping->host;
++	struct fuse_conn *fc = INO_FC(inode);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	struct fuse_read_in inarg;
++	char *buffer;
++
++	buffer = kmap(page);
++
++	memset(&inarg, 0, sizeof(inarg));
++	inarg.offset = (unsigned long long) page->index << PAGE_CACHE_SHIFT;
++	inarg.size = PAGE_CACHE_SIZE;
++
++	in.h.opcode = FUSE_READ;
++	in.h.ino = inode->i_ino;
++	in.numargs = 1;
++	in.args[0].size = sizeof(inarg);
++	in.args[0].value = &inarg;
++	out.argvar = 1;
++	out.numargs = 1;
++	out.args[0].size = PAGE_CACHE_SIZE;
++	out.args[0].value = buffer;
++
++	request_send(fc, &in, &out);
++	if(!out.h.error) {
++		size_t outsize = out.args[0].size;
++		if(outsize < PAGE_CACHE_SIZE)
++			memset(buffer + outsize, 0, PAGE_CACHE_SIZE - outsize);
++		flush_dcache_page(page);
++		SetPageUptodate(page);
++	}
++
++	kunmap(page);
++	unlock_page(page);
++
++	return out.h.error;
++}
++
++static int fuse_is_block_uptodate(struct address_space *mapping,
++		struct inode *inode, size_t bl_index)
++{
++	size_t index = bl_index << FUSE_BLOCK_PAGE_SHIFT;
++	size_t end_index = ((bl_index + 1) << FUSE_BLOCK_PAGE_SHIFT) - 1;
++	size_t file_end_index = i_size_read(inode) >> PAGE_CACHE_SHIFT;
++
++	if (end_index > file_end_index)
++		end_index = file_end_index;
++
++	for (; index <= end_index; index++) {
++		struct page *page = find_get_page(mapping, index);
++
++		if (!page)
++			return 0;
++
++		if (!PageUptodate(page)) {
++			page_cache_release(page);
++			return 0;
++		}
++
++		page_cache_release(page);
++	}
++
++	return 1;
++}
++
++
++static int fuse_cache_block(struct address_space *mapping,
++		struct inode *inode, char *bl_buf,
++		size_t bl_index)
++{
++	size_t start_index = bl_index << FUSE_BLOCK_PAGE_SHIFT;
++	size_t end_index = ((bl_index + 1) << FUSE_BLOCK_PAGE_SHIFT) - 1;
++	size_t file_end_index = i_size_read(inode) >> PAGE_CACHE_SHIFT;
++
++	int i;
++
++	if (end_index > file_end_index)
++		end_index = file_end_index;
++
++	for (i = 0; start_index + i <= end_index; i++) {
++		size_t index = start_index + i;
++		struct page *page;
++		char *buffer;
++
++		page = grab_cache_page(mapping, index);
++		if (!page)
++			return -1;
++
++		if (!PageUptodate(page)) {
++			buffer = kmap(page);
++			memcpy(buffer, bl_buf + i * PAGE_CACHE_SIZE,
++					PAGE_CACHE_SIZE);
++			flush_dcache_page(page);
++			SetPageUptodate(page);
++			kunmap(page);
++		}
++
++		unlock_page(page);
++		page_cache_release(page);
++	}
++
++	return 0;
++}
++
++static int fuse_file_read_block(struct inode *inode, char *bl_buf,
++		size_t bl_index)
++{
++	struct fuse_conn *fc = INO_FC(inode);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	struct fuse_read_in inarg;
++
++	memset(&inarg, 0, sizeof(inarg));
++	inarg.offset = (unsigned long long) bl_index << FUSE_BLOCK_SHIFT;
++	inarg.size = FUSE_BLOCK_SIZE;
++
++	in.h.opcode = FUSE_READ;
++	in.h.ino = inode->i_ino;
++	in.numargs = 1;
++	in.args[0].size = sizeof(inarg);
++	in.args[0].value = &inarg;
++	out.argvar = 1;
++	out.numargs = 1;
++	out.args[0].size = FUSE_BLOCK_SIZE;
++	out.args[0].value = bl_buf;
++
++	request_send(fc, &in, &out);
++
++	if (!out.h.error) {
++		size_t outsize = out.args[0].size;
++		if (outsize < FUSE_BLOCK_SIZE)
++			memset(bl_buf + outsize, 0, FUSE_BLOCK_SIZE - outsize);
++	}
++
++	return out.h.error;
++}
++
++static void fuse_file_bigread(struct address_space *mapping,
++			      struct inode *inode, loff_t pos, size_t count)
++{
++	size_t bl_index = pos >> FUSE_BLOCK_SHIFT;
++	size_t bl_end_index = (pos + count) >> FUSE_BLOCK_SHIFT;
++	size_t bl_file_end_index = i_size_read(inode) >> FUSE_BLOCK_SHIFT;
++
++	if (bl_end_index > bl_file_end_index)
++		bl_end_index = bl_file_end_index;
++
++	while (bl_index <= bl_end_index) {
++		int res;
++		char *bl_buf = kmalloc(FUSE_BLOCK_SIZE, GFP_NOFS);
++		if (!bl_buf)
++			break;
++		res = fuse_is_block_uptodate(mapping, inode, bl_index);
++		if (!res)
++			res = fuse_file_read_block(inode, bl_buf, bl_index);
++		if (!res)
++			fuse_cache_block(mapping, inode, bl_buf, bl_index);
++		kfree(bl_buf);
++		bl_index++;
++	}
++}
++
++static ssize_t fuse_file_read(struct file *filp, char *buf,
++		size_t count, loff_t * ppos)
++{
++	struct address_space *mapping = filp->f_dentry->d_inode->i_mapping;
++	struct inode *inode = mapping->host;
++	struct fuse_conn *fc = INO_FC(inode);
++
++	if(fc->flags & FUSE_LARGE_READ) {
++		/* Don't allow this to get mixed up with writes */
++		down(&inode->i_sem);
++		fuse_file_bigread(mapping, inode, *ppos, count);
++		up(&inode->i_sem);
++	}
++
++	return generic_file_read(filp, buf, count, ppos);
++}
++
++static int write_buffer(struct inode *inode, struct page *page,
++			unsigned offset, size_t count)
++{
++	struct fuse_conn *fc = INO_FC(inode);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	struct fuse_write_in inarg;
++	char *buffer;
++
++	buffer = kmap(page);
++
++	memset(&inarg, 0, sizeof(inarg));
++	inarg.offset = ((unsigned long long) page->index << PAGE_CACHE_SHIFT) +
++		offset;
++	inarg.size = count;
++
++	in.h.opcode = FUSE_WRITE;
++	in.h.ino = inode->i_ino;
++	in.numargs = 2;
++	in.args[0].size = sizeof(inarg);
++	in.args[0].value = &inarg;
++	in.args[1].size = count;
++	in.args[1].value = buffer + offset;
++	request_send(fc, &in, &out);
++	kunmap(page);
++	if(out.h.error)
++		SetPageError(page);
++
++	return out.h.error;
++}
++
++static int get_write_count(struct inode *inode, struct page *page)
++{
++	unsigned long end_index;
++	loff_t size = i_size_read(inode);
++	int count;
++
++	end_index = size >> PAGE_CACHE_SHIFT;
++	if(page->index < end_index)
++		count = PAGE_CACHE_SIZE;
++	else {
++		count = size & (PAGE_CACHE_SIZE - 1);
++		if(page->index > end_index || count == 0)
++			return 0;
++	}
++	return count;
++}
++
++#ifdef KERNEL_2_6
++
++static void write_buffer_end(struct fuse_conn *fc, struct fuse_in *in,
++			     struct fuse_out *out, void *_page)
++{
++	struct page *page = (struct page *) _page;
++
++	if(out->h.error) {
++		SetPageError(page);
++		if(out->h.error == -ENOSPC)
++			set_bit(AS_ENOSPC, &page->mapping->flags);
++		else
++			set_bit(AS_EIO, &page->mapping->flags);
++	}
++	end_page_writeback(page);
++	kunmap(page);
++	kfree(in);
++}
++
++static int write_buffer_nonblock(struct inode *inode, struct page *page,
++				 unsigned offset, size_t count)
++{
++	int err;
++	struct fuse_conn *fc = INO_FC(inode);
++	struct fuse_in *in = NULL;
++	struct fuse_out *out = NULL;
++	struct fuse_write_in *inarg = NULL;
++	char *buffer;
++	unsigned int s = sizeof(struct fuse_in) + sizeof(struct fuse_out) +
++		sizeof(struct fuse_write_in);
++
++	in = kmalloc(s, GFP_NOFS);
++	if(!in)
++		return -ENOMEM;
++	memset(in, 0, s);
++	out = (struct fuse_out *)(in + 1);
++	inarg = (struct fuse_write_in *)(out + 1);
++
++	buffer = kmap(page);
++
++	inarg->offset = ((unsigned long long) page->index << PAGE_CACHE_SHIFT) + offset;
++	inarg->size = count;
++
++	in->h.opcode = FUSE_WRITE;
++	in->h.ino = inode->i_ino;
++	in->numargs = 2;
++	in->args[0].size = sizeof(struct fuse_write_in);
++	in->args[0].value = inarg;
++	in->args[1].size = count;
++	in->args[1].value = buffer + offset;
++	err = request_send_nonblock(fc, in, out, write_buffer_end, page);
++	if(err) {
++		if(err != -EWOULDBLOCK)
++			SetPageError(page);
++		kunmap(page);
++		kfree(in);
++	}
++	return err;
++}
++
++static int fuse_writepage(struct page *page, struct writeback_control *wbc)
++{
++	int err;
++	struct inode *inode = page->mapping->host;
++	unsigned count = get_write_count(inode, page);
++
++	err = -EINVAL;
++	if(count) {
++		/* FIXME: check sync_mode, and wait for previous writes (or
++		   signal userspace to do this) */
++		if(wbc->nonblocking) {
++			SetPageWriteback(page);
++			err = write_buffer_nonblock(inode, page, 0, count);
++			if (err)
++				ClearPageWriteback(page);
++			if(err == -EWOULDBLOCK) {
++				__set_page_dirty_nobuffers(page);
++				err = 0;
++			}
++		} else
++			err = write_buffer(inode, page, 0, count);
++	}
++
++	unlock_page(page);
++	return err;
++}
++#else
++static int fuse_writepage(struct page *page)
++{
++	int err;
++	struct inode *inode = page->mapping->host;
++	int count = get_write_count(inode, page);
++	err = -EINVAL;
++	if(count)
++		err = write_buffer(inode, page, 0, count);
++
++	unlock_page(page);
++	return err;
++}
++#endif
++
++static int fuse_prepare_write(struct file *file, struct page *page,
++			      unsigned offset, unsigned to)
++{
++	/* No op */
++	return 0;
++}
++
++static int fuse_commit_write(struct file *file, struct page *page,
++			     unsigned offset, unsigned to)
++{
++	int err;
++	struct inode *inode = page->mapping->host;
++
++	err = write_buffer(inode, page, offset, to - offset);
++	if(!err) {
++		loff_t pos = (page->index << PAGE_CACHE_SHIFT) + to;
++		if(pos > i_size_read(inode))
++			i_size_write(inode, pos);
++	}
++	return err;
++}
++
++static struct file_operations fuse_file_operations = {
++	.read		= fuse_file_read,
++	.write		= generic_file_write,
++	.mmap		= generic_file_mmap,
++	.open		= fuse_open,
++	.release	= fuse_release,
++	.fsync		= fuse_fsync,
++#ifdef KERNEL_2_6
++	.sendfile	= generic_file_sendfile,
++#endif
++};
++
++static struct address_space_operations fuse_file_aops  = {
++	.readpage =		fuse_readpage,
++	.writepage =		fuse_writepage,
++	.prepare_write =	fuse_prepare_write,
++	.commit_write =		fuse_commit_write,
++};
++
++void fuse_init_file_inode(struct inode *inode)
++{
++#ifdef KERNEL_2_6
++	struct fuse_conn *fc = INO_FC(inode);
++	/* Readahead somehow defeats big reads on 2.6 (says Michael
++           Grigoriev) */
++	if(fc->flags & FUSE_LARGE_READ)
++		inode->i_mapping->backing_dev_info->ra_pages = 0;
++#endif
++	inode->i_fop = &fuse_file_operations;
++	inode->i_data.a_ops = &fuse_file_aops;
++}
++
++/*
++ * Local Variables:
++ * indent-tabs-mode: t
++ * c-basic-offset: 8
++ * End:
++ */
+Index: linux-2.6.14-source/fs/cofusefs/fuse_i.h
+===================================================================
+--- /dev/null
++++ linux-2.6.14-source/fs/cofusefs/fuse_i.h
+@@ -0,0 +1,297 @@
++/*
++    COFUSE: Filesystem in an host of Cooperative Linux
++    Copyright (C) 2004 Dan Aloni <da-x@colinux.org>
++
++    based on FUSE: Filesystem in Userspace
++    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
++
++    This program can be distributed under the terms of the GNU GPL.
++    See the file COPYING.
++*/
++
++
++#include <linux/version.h>
++#include <linux/config.h>
++
++#ifndef CONFIG_COOPERATIVE
++#include <linux/cofuse.h>
++#else
++#include <linux/cooperative_internal.h>
++#endif
++
++#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0) && LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
++#error Kernel version 2.5.* not supported
++#endif
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
++#define KERNEL_2_6
++#endif
++
++#ifndef KERNEL_2_6
++#include <linux/config.h>
++#ifdef CONFIG_MODVERSIONS
++#define MODVERSIONS
++#include <linux/modversions.h>
++#endif
++#include <config.h>
++#ifndef HAVE_I_SIZE_FUNC
++#define i_size_read(inode) ((inode)->i_size)
++#define i_size_write(inode, size) do { (inode)->i_size = size; } while(0)
++#endif
++#endif
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/fs.h>
++#include <linux/list.h>
++#include <linux/spinlock.h>
++
++/** Read combining parameters */
++#define FUSE_BLOCK_SHIFT 16
++#define FUSE_BLOCK_SIZE 65536
++#define FUSE_BLOCK_MASK 0xffff0000
++
++#define FUSE_BLOCK_PAGE_SHIFT (FUSE_BLOCK_SHIFT - PAGE_CACHE_SHIFT)
++
++/**
++ * A Fuse connection.
++ *
++ * This structure is created, when the client device is opened, and is
++ * destroyed, when the client device is closed _and_ the filesystem is
++ * unmounted.
++ */
++struct fuse_conn {
++	/** The superblock of the mounted filesystem */
++	struct super_block *sb;
++
++#ifndef CONFIG_COOPERATIVE
++	/** The opened client device */
++	struct file *file;
++#else
++	int cofs_unit;
++#endif
++	/** The user id for this mount */
++	uid_t uid;
++
++	/** The fuse mount flags for this mount */
++	unsigned int flags;
++
++	/** Is the new (synchronous) release not supported by
++	    userspace? */
++	unsigned int oldrelease;
++
++	char opt_pathname[0x80];
++
++#ifndef CONFIG_COOPERATIVE
++	/** Readers of the connection are waiting on this */
++	wait_queue_head_t waitq;
++
++	/** The list of pending requests */
++	struct list_head pending;
++
++	/** The list of requests being processed */
++	struct list_head processing;
++
++	/** Controls the maximum number of outstanding requests */
++	struct semaphore outstanding;
++
++	/** The next unique request id */
++	int reqctr;
++#endif
++};
++
++/** One input argument of a request */
++struct fuse_in_arg {
++	unsigned int size;
++	const void *value;
++};
++
++/** The request input */
++struct fuse_in {
++	struct fuse_in_header h;
++	unsigned int numargs;
++	struct fuse_in_arg args[3];
++};
++
++/** One output argument of a request */
++struct fuse_out_arg {
++	unsigned int size;
++	void *value;
++};
++
++/** The request output */
++struct fuse_out {
++	struct fuse_out_header h;
++	unsigned int argvar;
++	unsigned int numargs;
++	struct fuse_out_arg args[3];
++};
++
++#define FUSE_IN_INIT { {0, 0, 0, current->fsuid, current->fsgid}, 0}
++#define FUSE_OUT_INIT { {0, 0}, 0, 0}
++
++struct fuse_req;
++typedef void (*fuse_reqend_t)(struct fuse_conn *, struct fuse_in *,
++			      struct fuse_out *, void *data);
++
++/**
++ * A request to the client
++ */
++struct fuse_req {
++	/** The request list */
++	struct list_head list;
++
++	/** True if the request is synchronous */
++	unsigned int issync:1;
++
++	/** The request is locked */
++	unsigned int locked:1;
++
++	/** The request has been interrupted while it was locked */
++	unsigned int interrupted:1;
++
++	/* The request has been sent to the client */
++	unsigned int sent:1;
++
++	/* The request is finished */
++	unsigned int finished:1;
++
++	/** The request input */
++	struct fuse_in *in;
++
++	/** The request output */
++	struct fuse_out *out;
++
++	/** Used to wake up the task waiting for completion of request*/
++	wait_queue_head_t waitq;
++
++	/** Request completion callback */
++	fuse_reqend_t end;
++
++	/** User data */
++	void *data;
++};
++
++#ifdef KERNEL_2_6
++#define SB_FC(sb) ((sb)->s_fs_info)
++#else
++#define SB_FC(sb) ((sb)->u.generic_sbp)
++#endif
++#define INO_FC(inode) SB_FC((inode)->i_sb)
++#define DEV_FC(file) ((struct fuse_conn *) (file)->private_data)
++
++
++/**
++ * The proc entry for the client device ("/proc/fs/fuse/dev")
++ */
++extern struct proc_dir_entry *proc_fuse_dev;
++
++/**
++ * The lock to protect fuses structures
++ */
++extern spinlock_t cofuse_lock;
++
++
++/**
++ * Get a filled in inode
++ */
++struct inode *cofuse_iget(struct super_block *sb, ino_t ino,
++	   	  	  struct fuse_attr *attr, int version);
++
++
++/**
++ * Initialise operations on regular file
++ */
++void cofuse_init_file_inode(struct inode *inode);
++
++/**
++ * Check if the connection can be released, and if yes, then free the
++ * connection structure
++ */
++void cofuse_release_conn(struct fuse_conn *fc);
++
++/**
++ * Initialize the client device
++ */
++int cofuse_dev_init(void);
++
++/**
++ * Cleanup the client device
++ */
++void cofuse_dev_cleanup(void);
++
++/**
++ * Initialize the fuse filesystem
++ */
++int cofuse_fs_init(void);
++
++/**
++ * Cleanup the fuse filesystem
++ */
++void cofuse_fs_cleanup(void);
++
++/**
++ * Send a request
++ *
++ */
++void cofuse_request_send(struct fuse_conn *fc, struct fuse_in *in,
++    			 struct fuse_out *out);
++
++/**
++ * Send a request for which a reply is not expected
++ */
++int cofuse_request_send_noreply(struct fuse_conn *fc, struct fuse_in *in);
++
++
++/**
++ * Send a synchronous request without blocking
++ */
++int cofuse_request_send_nonblock(struct fuse_conn *fc, struct fuse_in *in,
++	  		         struct fuse_out *out, fuse_reqend_t end, void *data);
++
++/**
++ * Get the attributes of a file
++ */
++int cofuse_do_getattr(struct inode *inode);
++
++/**
++ * Write dirty pages
++ */
++void cofuse_sync_inode(struct inode *inode);
++
++/*
++ * Local Variables:
++ * indent-tabs-mode: t
++ * c-basic-offset: 8
++ * End:
++ */
++
++#define COFUSE_VERSION "0.1"
++#define FUSE_VERSION COFUSE_VERSION
++
++#define fuse_init_file_inode cofuse_init_file_inode
++#define fuse_do_getattr cofuse_do_getattr
++#define fuse_sync_inode cofuse_sync_inode
++#define fuse_lock cofuse_lock
++
++#define request_send cofuse_request_send
++#define request_send_noreply cofuse_request_send_noreply
++#define request_send_nonblock cofuse_request_send_nonblock
++#define release_conn cofuse_release_conn
++#define fuse_iget cofuse_iget
++#define fuse_dev_init cofuse_dev_init
++#define fuse_dev_cleanup cofuse_dev_cleanup
++#define fuse_fs_init cofuse_fs_init
++#define fuse_fs_cleanup cofuse_fs_cleanup
++
++extern struct fuse_conn *cofs_volumes[CO_MODULE_MAX_COFS];
++
++/** Data passed to mount */
++struct cofuse_mount_data {
++	struct fuse_mount_data *fuse;
++	int uid;
++	int gid;
++	unsigned long file_mode;
++	unsigned long dir_mode;
++	unsigned long flags;
++	char name[0x80];
++};
+Index: linux-2.6.14-source/fs/cofusefs/inode.c
+===================================================================
+--- /dev/null
++++ linux-2.6.14-source/fs/cofusefs/inode.c
+@@ -0,0 +1,545 @@
++/*
++    FUSE: Filesystem in Userspace
++    Copyright (C) 2001	Miklos Szeredi (miklos@szeredi.hu)
++
++    This program can be distributed under the terms of the GNU GPL.
++    See the file COPYING.
++*/
++
++#include "fuse_i.h"
++
++#include <linux/pagemap.h>
++#include <linux/sched.h>
++#include <linux/slab.h>
++#include <linux/file.h>
++#include <linux/ctype.h>
++#include <linux/proc_fs.h>
++#ifdef KERNEL_2_6
++#include <linux/statfs.h>
++#endif
++
++#define FUSE_SUPER_MAGIC 0x65735546
++
++#ifndef KERNEL_2_6
++#define kstatfs statfs
++#endif
++
++#ifndef FS_BINARY_MOUNTDATA
++#define FS_BINARY_MOUNTDATA 0
++#endif
++
++static void fuse_read_inode(struct inode *inode)
++{
++	/* No op */
++}
++
++static void fuse_clear_inode(struct inode *inode)
++{
++	unsigned long flags;
++	struct fuse_conn *fc = INO_FC(inode);
++
++#ifndef CONFIG_COOPERATIVE
++	struct fuse_in *in = NULL;
++	struct fuse_forget_in *inarg = NULL;
++	unsigned int s = sizeof(struct fuse_in) + sizeof(struct fuse_forget_in);
++
++	if(fc == NULL)
++		return;
++
++	in = kmalloc(s, GFP_NOFS);
++	if(!in)
++		return;
++	memset(in, 0, s);
++	inarg = (struct fuse_forget_in *) (in + 1);
++	inarg->version = inode->i_version;
++
++	in->h.opcode = FUSE_FORGET;
++	in->h.ino = inode->i_ino;
++	in->numargs = 1;
++	in->args[0].size = sizeof(struct fuse_forget_in);
++	in->args[0].value = inarg;
++
++	if(!request_send_noreply(fc, in))
++		return;
++
++	kfree(in);
++#else
++	if (FUSE_ROOT_INO == inode->i_ino)
++		return;
++
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_FILESYSTEM;
++	co_passage_page->params[1] = fc->cofs_unit;
++	co_passage_page->params[2] = FUSE_FORGET;
++	co_passage_page->params[3] = inode->i_ino;
++	co_switch_wrapper();
++	co_passage_page_release(flags);
++#endif
++}
++
++static void fuse_put_super(struct super_block *sb)
++{
++	struct fuse_conn *fc = SB_FC(sb);
++
++	spin_lock(&fuse_lock);
++	fc->sb = NULL;
++	fc->uid = 0;
++	fc->flags = 0;
++	/* Flush all readers on this fs */
++#ifndef CONFIG_COOPERATIVE
++	wake_up_all(&fc->waitq);
++#endif
++	release_conn(fc);
++	SB_FC(sb) = NULL;
++	spin_unlock(&fuse_lock);
++}
++
++static void convert_fuse_statfs(struct kstatfs *stbuf, struct fuse_kstatfs *attr)
++{
++	stbuf->f_type	 = FUSE_SUPER_MAGIC;
++	stbuf->f_bsize	 = attr->block_size;
++	stbuf->f_blocks	 = attr->blocks;
++	stbuf->f_bfree	 = stbuf->f_bavail = attr->blocks_free;
++	stbuf->f_files	 = attr->files;
++	stbuf->f_ffree	 = attr->files_free;
++	/* Is this field necessary?  Most filesystems ignore it...
++	stbuf->f_fsid.val[0] = (FUSE_SUPER_MAGIC>>16)&0xffff;
++	stbuf->f_fsid.val[1] =	FUSE_SUPER_MAGIC     &0xffff; */
++	stbuf->f_namelen = attr->namelen;
++}
++
++static int fuse_statfs(struct super_block *sb, struct kstatfs *buf)
++{
++	struct fuse_conn *fc = SB_FC(sb);
++	struct fuse_in in = FUSE_IN_INIT;
++	struct fuse_out out = FUSE_OUT_INIT;
++	struct fuse_statfs_out outarg;
++
++	in.numargs = 0;
++	in.h.opcode = FUSE_STATFS;
++	out.numargs = 1;
++	out.args[0].size = sizeof(outarg);
++	out.args[0].value = &outarg;
++	request_send(fc, &in, &out);
++	if(!out.h.error)
++		convert_fuse_statfs(buf, &outarg.st);
++
++	return out.h.error;
++}
++
++#ifndef CONFIG_COOPERATIVE
++
++static struct fuse_conn *get_conn(struct fuse_mount_data *d)
++{
++	struct fuse_conn *fc = NULL;
++	struct file *file;
++	struct inode *ino;
++
++	if(d == NULL) {
++		printk("fuse_read_super: Bad mount data\n");
++		return NULL;
++	}
++
++	if(d->version != FUSE_KERNEL_VERSION) {
++		printk("fuse_read_super: Bad version: %i\n", d->version);
++		return NULL;
++	}
++
++	file = fget(d->fd);
++	ino = NULL;
++	if(file)
++		ino = file->f_dentry->d_inode;
++
++	if(!ino || !proc_fuse_dev || proc_fuse_dev->low_ino != ino->i_ino) {
++		printk("fuse_read_super: Bad file: %i\n", d->fd);
++		goto out;
++	}
++
++	fc = file->private_data;
++
++  out:
++	fput(file);
++	return fc;
++}
++
++#else
++
++static int _atoi(const char *s, const char **out)
++{
++	/* lib/spprintf.h */
++
++        int i=0;
++
++        while (isdigit(*s))
++                i = i*10 + *(s++) - '0';
++
++	*out = s;
++
++        return i;
++}
++
++static struct fuse_conn *co_get_conn(struct cofuse_mount_data *d)
++{
++	int index;
++	int ret;
++	unsigned long flags;
++	struct fuse_conn *conn = NULL;
++	const char *name, *next;
++
++	if (d == NULL) {
++		printk("cofuse_read_super: Bad mount data\n");
++		return NULL;
++	}
++
++	name = d->name;
++
++	if (strncmp("cofs", name, 4) == 0)
++		name += 4;
++
++	index = _atoi(name, &next);
++	if (index < 0  || index >= CO_MODULE_MAX_COFS) {
++		printk("cofuse_read_super: Invalid index %d\n", index);
++		return NULL;
++	}
++
++	if (cofs_volumes[index])
++		return cofs_volumes[index];
++
++	conn = kmalloc(sizeof(struct fuse_conn), GFP_KERNEL);
++	if (!conn)
++		return NULL;
++
++	memset(conn, 0, sizeof(*conn));
++
++	if (*next == ':') {
++		snprintf(conn->opt_pathname, sizeof(conn->opt_pathname), "%s", next+1);
++	}
++
++	conn->cofs_unit = index;
++
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_FILESYSTEM;
++	co_passage_page->params[1] = conn->cofs_unit;
++	co_passage_page->params[2] = FUSE_MOUNT;
++	co_passage_page->params[5] = d->uid;
++	co_passage_page->params[6] = d->gid;
++	co_passage_page->params[7] = d->dir_mode;
++	co_passage_page->params[8] = d->file_mode;
++	memcpy(&co_passage_page->params[30], conn->opt_pathname, strlen(conn->opt_pathname) + 1);
++	co_switch_wrapper();
++	ret = co_passage_page->params[4];
++	co_passage_page_release(flags);
++
++	if (ret) {
++		kfree(conn);
++		conn = NULL;
++	}
++
++	return conn;
++}
++
++#endif
++
++static struct inode *get_root_inode(struct super_block *sb, unsigned int mode)
++{
++	struct fuse_attr attr;
++	memset(&attr, 0, sizeof(attr));
++
++	attr.mode = mode;
++	return fuse_iget(sb, 1, &attr, 0);
++}
++
++
++#ifdef KERNEL_2_6
++
++static struct dentry *fuse_get_dentry(struct super_block *sb, void *vobjp)
++{
++	__u32 *objp = vobjp;
++	unsigned long ino = objp[0];
++	/* __u32 generation = objp[1]; */
++	struct inode *inode;
++	struct dentry *entry;
++
++	if(ino == 0)
++		return ERR_PTR(-ESTALE);
++
++	inode = ilookup(sb, ino);
++	if(!inode)
++		return ERR_PTR(-ESTALE);
++
++	entry = d_alloc_anon(inode);
++	if(!entry) {
++		iput(inode);
++		return ERR_PTR(-ENOMEM);
++	}
++
++	return entry;
++}
++
++static struct export_operations fuse_export_operations = {
++	.get_dentry	= fuse_get_dentry,
++};
++#endif
++
++static struct super_operations fuse_super_operations = {
++	.read_inode	= fuse_read_inode,
++	.clear_inode	= fuse_clear_inode,
++	.put_super	= fuse_put_super,
++	.statfs		= fuse_statfs,
++};
++
++static int fuse_read_super(struct super_block *sb, void *data, int silent)
++{
++	struct fuse_conn *fc;
++	struct inode *root;
++#ifndef CONFIG_COOPERATIVE
++	struct fuse_mount_data *d = data;
++#else
++	struct cofuse_mount_data *co_d = data;
++	struct fuse_mount_data *d = co_d->fuse;
++#endif
++	sb->s_blocksize = PAGE_CACHE_SIZE;
++	sb->s_blocksize_bits = PAGE_CACHE_SHIFT;
++	sb->s_magic = FUSE_SUPER_MAGIC;
++	sb->s_op = &fuse_super_operations;
++	sb->s_maxbytes = MAX_LFS_FILESIZE;
++#ifdef KERNEL_2_6
++	sb->s_export_op = &fuse_export_operations;
++#endif
++
++#ifndef CONFIG_COOPERATIVE
++	fc = get_conn(d);
++#else
++	fc = co_get_conn(co_d);
++#endif
++	if(fc == NULL)
++		return -EINVAL;
++	spin_lock(&fuse_lock);
++	if(fc->sb != NULL) {
++		printk("fuse_read_super: connection already mounted\n");
++		spin_unlock(&fuse_lock);
++		return -EINVAL;
++	}
++	fc->sb = sb;
++	fc->flags = d->flags;
++	fc->uid = d->uid;
++	spin_unlock(&fuse_lock);
++
++	/* fc is needed in fuse_init_file_inode which could be called
++	   from get_root_inode */
++	SB_FC(sb) = fc;
++
++	root = get_root_inode(sb, d->rootmode);
++	if(root == NULL) {
++		printk("fuse_read_super: failed to get root inode\n");
++		return -EINVAL;
++	}
++
++	sb->s_root = d_alloc_root(root);
++	if(!sb->s_root) {
++		printk("fuse_read_super: failed to allocate root\n");
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++#ifdef CONFIG_COOPERATIVE
++/*
++ * cofuse_getopt and cofuse_parse_options were
++ * addopted from smb
++ */
++
++struct option {
++	const char *name;
++	unsigned long flag;
++	int val;
++};
++
++/**
++ *      cofuse_getopt - option parser
++ *      based on smb_getopt from fs/smbfs
++ *
++ *      @caller: name of the caller, for error messages
++ *      @options: the options string
++ *      @opts: an array of &struct option entries controlling parser operations
++ *      @optopt: output; will contain the current option
++ *      @optarg: output; will contain the value (if one exists)
++ *      @flag: output; may be NULL; should point to a long for or'ing flags
++ *      @value: output; may be NULL; will be overwritten with the integer value
++ *              of the current argument.
++ *
++ *      Helper to parse options on the format used by mount ("a=b,c=d,e,f").
++ *      Returns opts->val if a matching entry in the 'opts' array is found,
++ *      0 when no more tokens are found, -1 if an error is encountered.
++ */
++static int cofuse_getopt(char *caller, char **options, struct option *opts,
++			 char **optopt, char **optarg, unsigned long *flag,
++			 unsigned long *value)
++{
++        char *token;
++        char *val;
++        int i;
++
++        do {
++                if ((token = strsep(options, ",")) == NULL)
++                        return 0;
++        } while (*token == '\0');
++        *optopt = token;
++
++        *optarg = NULL;
++        if ((val = strchr (token, '=')) != NULL) {
++                *val++ = 0;
++                if (value)
++                        *value = simple_strtoul(val, NULL, 0);
++                *optarg = val;
++        }
++
++        for (i = 0; opts[i].name != NULL; i++) {
++                if (!strcmp(opts[i].name, token)) {
++                        if (!opts[i].flag && (!val || !*val)) {
++                                printk("%s: the %s option requires an argument\n",
++                                       caller, token);
++                                return -1;
++                        }
++
++                        if (flag && opts[i].flag)
++                                *flag |= opts[i].flag;
++
++                        return opts[i].val;
++                }
++        }
++        printk("%s: Unrecognized mount option %s\n", caller, token);
++        return -1;
++}
++
++static struct option opts[] = {
++	{ "uid",	0, 'u' },
++	{ "gid",	0, 'g' },
++	{ "fmask",	0, 'f' },
++	{ "dmask",	0, 'd' },
++	{ NULL,		0, 0}
++};
++
++/*
++ * parse_options - based on parse_options from fs/smbfs
++ */
++static int parse_options(struct cofuse_mount_data *mnt, char *options)
++{
++        int c;
++        unsigned long flags;
++        unsigned long value;
++        char *optarg;
++        char *optopt;
++
++        flags = 0;
++        while ((c = cofuse_getopt("cofuse", &options, opts,
++				  &optopt, &optarg, &flags, &value)) > 0)
++	{
++                switch (c) {
++                case 1:
++                        /* got a "flag" option */
++                        break;
++                case 'u':
++                        mnt->uid = value;
++                        break;
++                case 'g':
++                        mnt->gid = value;
++                        break;
++                case 'f':
++                        mnt->file_mode = (value & S_IRWXUGO) | S_IFREG;
++                        break;
++                case 'd':
++                        mnt->dir_mode = (value & S_IRWXUGO) | S_IFDIR;
++                        break;
++                default:
++                        printk("cofs: Unrecognized mount option %s\n", optopt);
++                        return -1;
++                }
++        }
++
++        mnt->flags = flags;
++        return c;
++}
++#endif
++
++#ifdef KERNEL_2_6
++static struct super_block *fuse_get_sb(struct file_system_type *fs_type,
++				       int flags, const char *dev_name,
++				       void *raw_data)
++{
++#ifdef CONFIG_COOPERATIVE
++	struct cofuse_mount_data co_md = {0, };
++	struct fuse_mount_data md = {0, };
++	int ret;
++
++	co_md.uid = current->uid;
++	co_md.gid = current->gid;
++	co_md.dir_mode = FUSE_S_IRWXU | FUSE_S_IRGRP | FUSE_S_IXGRP |
++		FUSE_S_IROTH | FUSE_S_IXOTH | S_IFDIR;
++	co_md.file_mode = FUSE_S_IRWXU | FUSE_S_IRGRP | FUSE_S_IXGRP |
++		FUSE_S_IROTH | FUSE_S_IXOTH | S_IFREG;
++
++	ret = parse_options(&co_md, raw_data);
++	if (ret == -1)
++		return ERR_PTR(-EINVAL);
++
++	md.rootmode = S_IFDIR | S_IRWXU | S_IRUGO | S_IXUGO;
++	md.flags = FUSE_ALLOW_OTHER | FUSE_DEFAULT_PERMISSIONS;
++
++	co_md.fuse = &md;
++	snprintf(co_md.name, sizeof(co_md.name), "%s", dev_name);
++
++	return get_sb_nodev(fs_type, flags, &co_md, fuse_read_super);
++#else
++	return get_sb_nodev(fs_type, flags, raw_data, fuse_read_super);
++#endif
++}
++
++static struct file_system_type fuse_fs_type = {
++	.owner		= THIS_MODULE,
++	.name		= "cofs",
++	.get_sb		= fuse_get_sb,
++	.kill_sb	= kill_anon_super,
++	.fs_flags	= FS_BINARY_MOUNTDATA,
++};
++#else
++static struct super_block *fuse_read_super_compat(struct super_block *sb,
++						  void *data, int silent)
++{
++	int err = fuse_read_super(sb, data, silent);
++	if(err)
++		return NULL;
++	else
++		return sb;
++}
++
++static DECLARE_FSTYPE(fuse_fs_type, "cofs", fuse_read_super_compat, 0);
++#endif
++
++int fuse_fs_init()
++{
++	int res;
++
++	res = register_filesystem(&fuse_fs_type);
++	if(res)
++		printk("fuse: failed to register filesystem\n");
++
++	return res;
++}
++
++void fuse_fs_cleanup()
++{
++	unregister_filesystem(&fuse_fs_type);
++}
++
++/*
++ * Local Variables:
++ * indent-tabs-mode: t
++ * c-basic-offset: 8
++ * End:
++ */
+Index: linux-2.6.14-source/fs/cofusefs/util.c
+===================================================================
+--- /dev/null
++++ linux-2.6.14-source/fs/cofusefs/util.c
+@@ -0,0 +1,78 @@
++/*
++    FUSE: Filesystem in Userspace
++    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
++
++    This program can be distributed under the terms of the GNU GPL.
++    See the file COPYING.
++*/
++
++#include "fuse_i.h"
++
++#include <linux/init.h>
++#include <linux/slab.h>
++
++MODULE_AUTHOR("Miklos Szeredi <miklos@szeredi.hu>");
++MODULE_DESCRIPTION("Filesystem in Userspace");
++#ifdef MODULE_LICENSE
++MODULE_LICENSE("GPL");
++#endif
++
++spinlock_t fuse_lock = SPIN_LOCK_UNLOCKED;
++
++/* Must be called with the fuse lock held */
++void release_conn(struct fuse_conn *fc)
++{
++#ifdef CONFIG_COOPERATIVE
++	if (cooperative_mode_enabled()) {
++		cofs_volumes[fc->cofs_unit] = NULL;
++		kfree(fc);
++		return;
++	}
++#else
++	if(fc->sb == NULL && fc->file == NULL) {
++		kfree(fc);
++	}
++#endif
++}
++
++int __init cofuse_init(void)
++{
++	int res;
++
++	printk(KERN_DEBUG "cofuse init %s (API version %i.%i)\n",
++	       FUSE_VERSION,
++	       FUSE_KERNEL_VERSION, FUSE_KERNEL_MINOR_VERSION);
++
++	res = fuse_fs_init();
++	if(res)
++		goto err;
++
++	res = fuse_dev_init();
++	if(res)
++		goto err_fs_cleanup;
++
++	return 0;
++
++  err_fs_cleanup:
++	fuse_fs_cleanup();
++  err:
++	return res;
++}
++
++void __exit cofuse_exit(void)
++{
++	printk(KERN_DEBUG "cofuse exit\n");
++
++	fuse_fs_cleanup();
++	fuse_dev_cleanup();
++}
++
++module_init(cofuse_init);
++module_exit(cofuse_exit);
++
++/*
++ * Local Variables:
++ * indent-tabs-mode: t
++ * c-basic-offset: 8
++ * End:
++ */

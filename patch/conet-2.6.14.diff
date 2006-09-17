@@ -1,0 +1,345 @@
+Implements network support
+
+Index: linux-2.6.14-source/drivers/net/Kconfig
+===================================================================
+--- linux-2.6.14-source.orig/drivers/net/Kconfig
++++ linux-2.6.14-source/drivers/net/Kconfig
+@@ -105,6 +105,10 @@
+ 
+ 	  If you don't know what to use this for, you don't need it.
+ 
++config COOPERATIVE_CONET
++	tristate 'Cooperative Virtual Ethernet driver support'
++	depends on COOPERATIVE
++
+ config NET_SB1000
+ 	tristate "General Instruments Surfboard 1000"
+ 	depends on PNP
+Index: linux-2.6.14-source/drivers/net/Makefile
+===================================================================
+--- linux-2.6.14-source.orig/drivers/net/Makefile
++++ linux-2.6.14-source/drivers/net/Makefile
+@@ -157,6 +157,7 @@
+ 
+ # This is also a 82596 and should probably be merged
+ obj-$(CONFIG_LP486E) += lp486e.o
++obj-$(CONFIG_COOPERATIVE_CONET) += conet.o
+ 
+ obj-$(CONFIG_ETH16I) += eth16i.o
+ obj-$(CONFIG_ZORRO8390) += zorro8390.o 8390.o
+Index: linux-2.6.14-source/drivers/net/conet.c
+===================================================================
+--- /dev/null
++++ linux-2.6.14-source/drivers/net/conet.c
+@@ -0,0 +1,311 @@
++/*
++ *  Copyright (C) 2003-2004 Dan Aloni <da-x@gmx.net>
++ *  Copyright (C) 2004 Pat Erley
++ *  Copyright (C) 2004 George Boutwell
++ *
++ *  Cooperative Linux Network Device implementation
++ */
++
++#include <linux/config.h>
++#include <linux/version.h>
++#include <linux/module.h>
++
++#include <linux/kernel.h>
++
++#include <linux/netdevice.h>
++#include <linux/etherdevice.h>
++#include <linux/skbuff.h>
++#include <linux/ethtool.h>
++
++#include <linux/cooperative_internal.h>
++#include <asm/irq.h>
++
++struct conet_priv {
++	struct net_device_stats stats;
++	int status;
++	int unit;
++	int enabled;
++	int handling;
++};
++
++struct net_device *conet_dev[CO_MODULE_MAX_CONET];
++
++irqreturn_t conet_interrupt(int irq, void *dev_id, struct pt_regs *reg_ptr);
++
++static int conet_get_mac(int unit, char *address)
++{
++	unsigned long flags = 0;
++	co_network_request_t *net_request;
++	int result = 0;
++
++	co_passage_page_assert_valid();
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_NETWORK;
++	net_request = (typeof(net_request))&co_passage_page->params[1];
++	net_request->unit = unit;
++	net_request->type = CO_NETWORK_GET_MAC;
++	co_switch_wrapper();
++	memcpy(address, net_request->mac_address, ETH_ALEN);
++	result = net_request->result;
++	co_passage_page_release(flags);
++
++	return result;
++}
++
++int conet_open(struct net_device *dev)
++{
++	struct conet_priv *priv = (struct conet_priv *)dev->priv;
++
++	if (priv->enabled)
++		return 0;
++
++	conet_get_mac(priv->unit, dev->dev_addr);
++
++	priv->enabled = 1;
++
++	netif_start_queue(dev);
++
++	return 0;
++}
++
++int conet_stop(struct net_device *dev)
++{
++	struct conet_priv *priv = (struct conet_priv *)dev->priv;
++
++	priv->enabled = 0;
++
++	netif_stop_queue(dev); /* can't transmit any more */
++
++	return 0;
++}
++
++int conet_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
++{
++	int len;
++	char *data;
++	struct conet_priv *priv = (struct conet_priv *)dev->priv;
++
++	len = skb->len < ETH_ZLEN ? ETH_ZLEN : skb->len;
++	data = skb->data;
++
++	dev->trans_start = jiffies; /* save the timestamp */
++
++	co_send_message(CO_MODULE_LINUX,
++			CO_MODULE_CONET0 + priv->unit,
++			CO_PRIORITY_DISCARDABLE,
++			CO_MESSAGE_TYPE_OTHER,
++			len,
++			data);
++
++	priv->stats.tx_bytes+=skb->len;
++	priv->stats.tx_packets++;
++
++	dev_kfree_skb(skb);
++
++	return 0;
++}
++
++static void conet_rx(struct net_device *dev, co_linux_message_t *message)
++{
++	struct sk_buff *skb;
++	struct conet_priv *priv = (struct conet_priv *)dev->priv;
++	int len;
++	unsigned char *buf;
++
++	len = message->size;
++	if (len > 0x10000) {
++		printk("conet rx: buggy network reception\n");
++		priv->stats.rx_dropped++;
++		return;
++	}
++
++	buf = message->data;
++
++	/*
++	 * The packet has been retrieved from the transmission
++	 * medium. Build an skb around it, so upper layers can handle it
++	 */
++	skb = dev_alloc_skb(len+2);
++	if (!skb) {
++		printk("conet rx: low on mem - packet dropped\n");
++		priv->stats.rx_dropped++;
++		return;
++	}
++
++	memcpy(skb_put(skb, len), buf, len);
++
++	/* Write metadata, and then pass to the receive level */
++	skb->dev = dev;
++	skb->protocol = eth_type_trans(skb, dev);
++	skb->ip_summed = CHECKSUM_NONE; /* make the kernel calculate and verify
++                                           the checksum */
++
++	priv->stats.rx_bytes += len;
++	priv->stats.rx_packets++;
++
++	netif_rx(skb);
++	return;
++}
++
++irqreturn_t conet_interrupt(int irq, void *dev_id, struct pt_regs *reg_ptr)
++{
++	co_message_node_t *node_message;
++	while (co_get_message(&node_message, CO_DEVICE_NETWORK)) {
++		struct net_device *dev;
++		struct conet_priv *priv;
++		co_linux_message_t *message;
++
++		message = (co_linux_message_t *)&node_message->msg.data;
++		if (message->unit < 0  ||  message->unit >= CO_MODULE_MAX_CONET) {
++			printk("conet interrupt: buggy network reception: %lx\n", message->unit);
++			return IRQ_HANDLED;
++		}
++
++		dev = conet_dev[message->unit];
++		if (!dev) {
++			co_free_message(node_message);
++			continue;
++		}
++
++		if (!netif_running(dev)) {
++			co_free_message(node_message);
++			continue;
++		}
++
++		priv = (struct conet_priv *)dev->priv;
++		if (priv->handling) {
++			co_free_message(node_message);
++			continue;
++		}
++
++		priv->handling = 1;
++		conet_rx(dev, message);
++		co_free_message(node_message);
++		priv->handling = 0;
++	}
++
++	return IRQ_HANDLED;
++}
++
++struct net_device_stats* conet_get_stats(struct net_device *dev)
++{
++	return (struct net_device_stats *)dev->priv;
++}
++
++int conet_init(struct net_device *dev)
++{
++	struct conet_priv *priv = (struct conet_priv *)dev->priv;
++
++	memset(&priv->stats, 0, sizeof(priv->stats));
++
++	ether_setup(dev);
++
++	dev->open            = conet_open;
++	dev->stop            = conet_stop;
++	dev->hard_start_xmit = conet_hard_start_xmit;
++	dev->get_stats       = conet_get_stats;
++	dev->irq             = NETWORK_IRQ;
++
++	SET_MODULE_OWNER(dev);
++
++	return 0;
++}
++
++void conet_uninit(struct net_device *dev)
++{
++}
++
++static struct net_device *conet_create(int unit)
++{
++	struct net_device *dev;
++	struct conet_priv *priv;
++	int result = 0;
++
++	dev = kmalloc(sizeof(struct net_device), GFP_KERNEL);
++	if (!dev) {
++		return ERR_PTR(-ENOMEM);
++	}
++
++	memset(dev, 0, sizeof(struct net_device));
++
++	priv = kmalloc(sizeof(struct conet_priv), GFP_KERNEL);
++	if (priv == NULL) {
++		kfree(dev);
++		return ERR_PTR(-ENOMEM);
++	}
++
++	memset(priv, 0, sizeof(struct conet_priv));
++	priv->unit = unit;
++
++	dev->priv = priv;
++	dev->init = conet_init;
++	dev->uninit = conet_uninit;
++	strcpy(dev->name, "eth%d");
++
++	result = register_netdev(dev);
++	if (result) {
++		printk("conet: error %d registering device \"%s\"\n", result, dev->name);
++		kfree(dev->priv);
++		kfree(dev);
++		return ERR_PTR(-ENODEV);
++	}
++
++	printk("conet%d: initialized\n", priv->unit);
++
++	return dev;
++}
++
++static void conet_destroy(struct net_device *dev)
++{
++	struct conet_priv *priv = (struct conet_priv *) dev->priv;
++
++	printk("conet%d: freed\n", priv->unit);
++
++	unregister_netdev(dev);
++	kfree(dev->priv);
++	kfree(dev);
++}
++
++static int __init conet_init_module(void)
++{
++	int unit = 0, result;
++	struct net_device *dev;
++	char mac_address[6];
++
++	result = request_irq(NETWORK_IRQ, &conet_interrupt, 0, "conet", NULL);
++
++	printk("conet: loaded (max %d devices)\n", CO_MODULE_MAX_CONET);
++
++	for (unit=0; unit < CO_MODULE_MAX_CONET; unit++) {
++		conet_dev[unit] = NULL;
++
++		result = conet_get_mac(unit, mac_address);
++		if (!result)
++			continue;
++
++		dev = conet_create(unit);
++		if (!IS_ERR(dev))
++			conet_dev[unit] = dev;
++	}
++
++	return result;
++}
++
++static void __exit conet_cleanup_module(void)
++{
++	int unit = 0;
++
++	free_irq(NETWORK_IRQ, NULL);
++
++	for (unit=0; unit < CO_MODULE_MAX_CONET; unit++) {
++		if (!conet_dev[unit])
++			continue;
++
++		conet_destroy(conet_dev[unit]);
++	}
++}
++
++module_init(conet_init_module);
++module_exit(conet_cleanup_module);

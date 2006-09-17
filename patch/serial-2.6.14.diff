@@ -1,0 +1,48 @@
+Serial support
+
+
+Index: linux-2.6.14-source/drivers/char/Makefile
+===================================================================
+--- linux-2.6.14-source.orig/drivers/char/Makefile
++++ linux-2.6.14-source/drivers/char/Makefile
+@@ -25,6 +25,7 @@
+ obj-$(CONFIG_CYCLADES)		+= cyclades.o
+ obj-$(CONFIG_STALLION)		+= stallion.o
+ obj-$(CONFIG_ISTALLION)		+= istallion.o
++obj-$(CONFIG_COOPERATIVE)     	+= cocd.o
+ obj-$(CONFIG_DIGIEPCA)		+= epca.o
+ obj-$(CONFIG_SPECIALIX)		+= specialix.o
+ obj-$(CONFIG_MOXA_INTELLIO)	+= moxa.o
+Index: linux-2.6.14-source/arch/i386/kernel/cooperative.c
+===================================================================
+--- linux-2.6.14-source.orig/arch/i386/kernel/cooperative.c
++++ linux-2.6.14-source/arch/i386/kernel/cooperative.c
+@@ -176,6 +176,15 @@
+ 		break;
+ 	}
+ 
++	case CO_DEVICE_SERIAL: {
++		co_queue_incoming_message(node_message);
++
++		local_irq_save(flags);
++		cocd_interrupt();
++		local_irq_restore(flags);
++		break;
++	}
++
+ 	default:
+ 		co_free_message(node_message);
+ 		break;
+Index: linux-2.6.14-source/include/linux/cooperative_internal.h
+===================================================================
+--- linux-2.6.14-source.orig/include/linux/cooperative_internal.h
++++ linux-2.6.14-source/include/linux/cooperative_internal.h
+@@ -46,6 +46,8 @@
+ extern co_message_t *co_get_message_save(unsigned long *flags);
+ extern void co_send_message_restore(unsigned long flags);
+ 
++extern void cocd_interrupt(void);
++
+ extern void co_handle_incoming_messages(struct pt_regs *regs);
+ extern void co_handle_incoming_message(co_message_node_t *message, struct pt_regs *orig_regs);
+ extern void co_queue_incoming_message(co_message_node_t *message);
