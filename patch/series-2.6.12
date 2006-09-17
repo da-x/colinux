@@ -1,2 +1,3 @@
 linux-2.6.12.diff
-linux-cloop-module.patch
+cloop-core.diff
+cloop-2.6.12.diff

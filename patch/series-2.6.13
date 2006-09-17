@@ -4,4 +4,5 @@ coconsole-2.6.13.diff
 conet-2.6.13.diff 
 driver-2.6.13.diff 
 cofs-2.6.13.diff 
-linux-cloop-module.patch
+cloop-core.diff
+cloop-2.6.12.diff
