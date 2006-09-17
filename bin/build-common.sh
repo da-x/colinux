@@ -97,7 +97,7 @@ WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_$WINPCAP_VERSION.zip
 # can overwrite in CFG file.
 # Check files "patch/series-*" to get available versions.
 # Remember: Please update also conf/kernel-*-config
-DEFAULT_KERNEL_VERSION="2.6.12"
+DEFAULT_KERNEL_VERSION="2.6.13"
 
 # KERNEL_VERSION: full kernel version (e.g. 2.6.11)
 # KERNEL_DIR: sub-dir in www.kernel.org for the download (e.g. v2.6)

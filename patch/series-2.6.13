@@ -1,0 +1,7 @@
+base-2.6.13.diff 
+serial-2.6.13.diff 
+coconsole-2.6.13.diff 
+conet-2.6.13.diff 
+driver-2.6.13.diff 
+cofs-2.6.13.diff 
+linux-cloop-module.patch
