@@ -10,11 +10,14 @@ ifneq ($(USER_CFG),)
 HOSTOS := $(shell . $(USER_CFG); echo $$COLINUX_HOST_OS)
 
 # Target directories
-export COLINUX_TARGET_KERNEL_SOURCE := $(shell . $(USER_CFG); \
+export COLINUX_TARGET_KERNEL_SOURCE := \
+    $(shell cd bin; . ./build-common.sh --get-vars; cd ..; \
     echo $$COLINUX_TARGET_KERNEL_SOURCE)
-export COLINUX_TARGET_KERNEL_BUILD := $(shell . $(USER_CFG); \
+export COLINUX_TARGET_KERNEL_BUILD := \
+    $(shell cd bin; . ./build-common.sh --get-vars; cd ..; \
     echo $$COLINUX_TARGET_KERNEL_BUILD)
-export COLINUX_TARGET_KERNEL_PATH := $(shell . $(USER_CFG); \
+export COLINUX_TARGET_KERNEL_PATH := \
+    $(shell cd bin; . ./build-common.sh --get-vars; cd ..; \
     echo $$COLINUX_TARGET_KERNEL_PATH)
 
 else
