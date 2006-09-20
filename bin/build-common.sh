@@ -30,6 +30,13 @@
 # Updated by Sam Lantinga <slouken@libsdl.org>
 #####################################################################
 
+
+# Default Kernel version we are targeting, can overwrite in CFG file.
+# Remember: Please update also conf/kernel-*-config
+#
+# Read version from filename patch/series-*, using the newest we found.
+KERNEL_VERSION=`ls -1 ../patch/series-* | sed -n -r -e 's/^.+-([0-9\.]+)$/\1/p' | tail -n1`
+
 # Use User config, if exist
 if [ -f user-build.cfg ] ; then
 	# Users directories
@@ -93,18 +100,8 @@ WINPCAP_SRC=WpdPack
 WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_$WINPCAP_VERSION.zip
 
 
-# Default Kernel version we are targeting,
-# can overwrite in CFG file.
-# Check files "patch/series-*" to get available versions.
-# Remember: Please update also conf/kernel-*-config
-DEFAULT_KERNEL_VERSION="2.6.14"
-
 # KERNEL_VERSION: full kernel version (e.g. 2.6.11)
 # KERNEL_DIR: sub-dir in www.kernel.org for the download (e.g. v2.6)
-#
-if [ -z "$KERNEL_VERSION" ] ; then
-  KERNEL_VERSION=$DEFAULT_KERNEL_VERSION
-fi
 KERNEL_DIR=`echo $KERNEL_VERSION | sed -r -e 's/^([0-9]+)\.([0-9]+)\..+$/v\1.\2/'`
 
 KERNEL=linux-$KERNEL_VERSION
@@ -137,8 +134,9 @@ KERNEL_CHECKSUM="$MD5DIR/.build-kernel.md5"
 # coLinux kernel we are targeting
 if [ -z "$KERNEL_VERSION" -o -z "$KERNEL_DIR" ] ; then
     # What's wrong here?
+    echo "Failed: \$KERNEL_VERSION or \$KERNEL_DIR"
     echo "Can't find the kernel patch, probably wrong script,"
-    echo "or file patch/linux-*.diff don't exist?"
+    echo "or file patch/series-* don't exist?"
     exit -1
 fi
 
