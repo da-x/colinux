@@ -1,0 +1,13 @@
+base-2.6.15.diff
+timer-2.6.15.diff
+coconsole-2.6.15.diff
+serial-core.diff
+serial-2.6.15.diff
+conet-2.6.15.diff
+cobd-2.6.15.diff
+kbd-2.6.15.diff
+mouse-2.6.15.diff
+cofs-core.diff
+cofs-2.6.15.diff
+cloop-core.diff
+cloop-2.6.15.diff

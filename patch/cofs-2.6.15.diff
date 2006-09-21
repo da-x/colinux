@@ -1,0 +1,50 @@
+Implements host filesystem support
+
+
+Index: linux-2.6.15-source/fs/Kconfig
+===================================================================
+--- linux-2.6.15-source.orig/fs/Kconfig
++++ linux-2.6.15-source/fs/Kconfig
+@@ -969,6 +969,19 @@
+ 	  containing the directory /) cannot be compiled as a module.
+ 
+ 
++config COFUSE_FS
++	tristate "Cooperative Host file system support (COFUSE)"
++	depends on COOPERATIVE
++	default y
++	help
++	  In Cooperative mode, this file system allows you to mount an host
++	  directory structure to a local mountpoint.
++	  COFUSE (Cooperative FUSE) is based on the original FUSE
++	  (File System in User Space).
++
++	  To compile the cofuse support as a module, choose M here: the
++	  module will be called cofusefs.
++
+ 
+ config EFS_FS
+ 	tristate "EFS file system support (read only) (EXPERIMENTAL)"
+Index: linux-2.6.15-source/fs/Makefile
+===================================================================
+--- linux-2.6.15-source.orig/fs/Makefile
++++ linux-2.6.15-source/fs/Makefile
+@@ -101,3 +101,5 @@
+ obj-$(CONFIG_HOSTFS)		+= hostfs/
+ obj-$(CONFIG_HPPFS)		+= hppfs/
+ obj-$(CONFIG_DEBUG_FS)		+= debugfs/
++obj-$(CONFIG_COFUSE_FS)		+= cofusefs/
++
+Index: linux-2.6.15-source/fs/cofusefs/Makefile
+===================================================================
+--- /dev/null
++++ linux-2.6.15-source/fs/cofusefs/Makefile
+@@ -0,0 +1,8 @@
++#
++# Makefile for the Linux cofuse filesystem routines.
++#
++
++obj-$(CONFIG_COFUSE_FS) += cofusefs.o
++
++cofusefs-objs := inode.o dir.o file.o util.o dev.o
++

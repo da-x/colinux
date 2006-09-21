@@ -54,10 +54,6 @@
      installation of one or more TAP devices.
    * Add nice wizards for the newbies.
 
- * Linux patch:
-   * Make it impossible to compile in stuff like PCI with CONFIG_COOPERATIVE 
-     enabled.   
-
  * Miscellaneous enhancements and fixes:
    * Lack of entropy - empty /dev/random
    * Make coLinux work on Windows NT 4 SP*.
