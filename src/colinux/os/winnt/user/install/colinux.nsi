@@ -524,6 +524,7 @@ Section "Uninstall"
   Delete "$INSTDIR\netdriver\OemWin2k.inf"
   Delete "$INSTDIR\netdriver\tap0801co.sys"
   Delete "$INSTDIR\netdriver\tapcontrol.exe"
+  Delete "$INSTDIR\netdriver\tap.cat"
   
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
