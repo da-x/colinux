@@ -56,6 +56,7 @@ create_md5sums()
 	md5sum -b \
 	    src/colinux/VERSION \
 	    conf/linux-$KERNEL_VERSION-config \
+	    patch/series-$KERNEL_VERSION \
 	    "$COLINUX_TARGET_KERNEL_BUILD/.config" \
 	    "$COLINUX_TARGET_KERNEL_BUILD/vmlinux" \
 	    "$COLINUX_TARGET_MODULE_PATH/lib/modules/$COMPLETE_KERNEL_NAME/modules.dep" \
@@ -63,12 +64,11 @@ create_md5sums()
 	|| error_exit 10 "can not create md5sum"
 
 	# Md5sums for patches
-	cd patch
-	for name in `cat series-$KERNEL_VERSION` config-*.patch
+	for name in `cat patch/series-$KERNEL_VERSION`
 	do
-		if [ -e "$name" ]
+		if [ -e "patch/$name" ]
 		then
-			md5sum -b $name >> $KERNEL_CHECKSUM
+			md5sum -b patch/$name >> $KERNEL_CHECKSUM
 		fi
 	done
 
