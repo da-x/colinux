@@ -1,5 +1,9 @@
 * Version 0.8.0
-  * Stop starting with error, if double defined device (cobd,cofs,eth,exec)
+  * Kernel has been updated to 2.6.15
+    (Thanks to Anders Eriksson)
+  * Holds multiple kernel versions in patch series files
+    (2.6.12, 2.6.13, 2.6.14, 2.6.15)
+  * Stop with error, if double defined device (cobd,cofs,eth,exec)
   * TAP device version 8.4, fixed crashing Vista.
   * Update tapinstall.exe from DDK 3790.183 (build Mar 24 2005)
   * colinux-debug-daemon: Only connect to driver, if args -s settings.

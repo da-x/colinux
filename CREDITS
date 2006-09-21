@@ -8,41 +8,48 @@ Creator and chief maintainer:
     basic design. 
 
 Additional developers and contributors:
-    Jun Okajima (Digital Infra Inc.) - Developer and maintainer of cofbdev 
-    Cooperative Frame Buffer device, not yet merged
-    
-    Pat Erley 
-    random patches
-    
     Alejandro R. Sedeno <asedeno@mit.edu> 
     pcap support, bridged networking
-    
+
+    Anders Eriksson C (KI/EAB) <anders.c.eriksson@ericsson.com>
+    kernel updates
+
     Ballard, Jonathan H. <californiakidd@users.sourceforge.net>
     various patches, native nt console
-    
-    Thomas Fritzsche <tf@noto.de> 
-    scripting
-    
+
+    Daniel R. Slater <dan_slater@yahoo.com> 
+    patches for Windows service support
+
     George Boutwell <george.boutwell@gmail.com>
-    scripting, various patches
+    scripting, various patches, maintainer of stable versions
 
     Henry Nestler <Henry@BigFoot.de>
     lots of scripting, kernel, code, etc patches
-    
+
     Jaroslaw Kowalski <jaak@zd.com.pl>
     support for installing as a Windows service
-    
-    Daniel R. Slater <dan_slater@yahoo.com> 
-    patches for Windows service support
-    
+
+    Jun Okajima (Digital Infra Inc.) - Developer and maintainer of cofbdev 
+    Cooperative Frame Buffer device, not yet merged
+
+    Pat Erley 
+    random patches
+
     Regis NEBOR <rnebor@hotmail.com>
     NSIS installer script
+
+    Thomas Fritzsche <tf@noto.de> 
+    scripting
 
 Incoroprated code from the following contributers / projects:
     slirp, QEMU 
     Copyright (c) 2004 Fabrice Bellard
     Copyright (c) 1995 Danny Gasparovski.
     See: src/colinux/user/slirp/COPYRIGHT
+
+    tap-win32, OpenVPN
+    Copyright (C) 2002-2005 OpenVPN Solutions LLC
+    See: src/colinux/os/winnt/kernel/tap-win32/i386/tap.cat
    
 Producer:
     Kuniyasu Suzaki, Senior Reseacher, AIST
