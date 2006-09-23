@@ -141,6 +141,34 @@ Section
   ;Check old daemon for removing driver
   IfFileExists "$R2\colinux-daemon.exe" 0 no_old_linux_sys
 
+  ;Runs any monitor?
+check_running_monitors:
+  DetailPrint "Check running monitors"
+  nsExec::ExecToStack '"$R2\colinux-daemon.exe" --status-driver'
+  Pop $R0 # return value/error/timeout
+  Pop $R1 # Log
+
+  ;Remove, if no monitor is running
+  Push $R1
+  Push "current number of monitors: 0"
+  Call StrStr
+  Pop $R0
+  Pop $R1
+  IntCmp $R0 -1 0 remove_linux_sys remove_linux_sys
+
+  ;remove anyway, if no can detect running status
+  Push $R1
+  Push "current number of monitors:"
+  Call StrStr
+  Pop $R0
+  Pop $R1
+  IntCmp $R0 -1 remove_linux_sys
+
+  MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "Any coLinux is running.$\nPlease stop it, before continue" IDRETRY check_running_monitors
+  DetailPrint "Abort"
+  Abort
+
+remove_linux_sys:
   DetailPrint "Uninstall old linux driver"
   nsExec::ExecToStack '"$R2\colinux-daemon.exe" --remove-driver'
   Pop $R0 # return value/error/timeout
