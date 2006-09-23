@@ -126,6 +126,30 @@ SectionGroup "coLinux" SecGrpcoLinux
 
 Section
 
+  ;-------------------------------------------Uninstall with old driver--
+  ;----------------------------------------------------------------------
+
+  ;get the old install folder
+  ReadRegStr $R2 HKCU "Software\coLinux" ""
+  StrCmp $R2 "" no_old_linux_sys
+
+  ;path without ""
+  StrCpy $R1 $R2 1
+  StrCmp $R1 '"' 0 +2
+    StrCpy $R2 $R2 -1 1
+
+  ;Check old daemon for removing driver
+  IfFileExists "$R2\colinux-daemon.exe" 0 no_old_linux_sys
+
+  DetailPrint "Uninstall old linux driver"
+  nsExec::ExecToStack '"$R2\colinux-daemon.exe" --remove-driver'
+  Pop $R0 # return value/error/timeout
+
+no_old_linux_sys:
+
+  ;------------------------------------------------------------REGISTRY--
+  ;----------------------------------------------------------------------
+
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayName" "coLinux ${VERSION}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayIcon" "$INSTDIR\colinux-daemon.exe,0"
@@ -466,7 +490,7 @@ SectionEnd
   LangString DESC_SeccoLinuxNet ${LANG_ENGLISH} "Install coLinux Virtual Ethernet Driver, which allows to create a network link between Linux and Windows"
   LangString DESC_SeccoLinuxNetSLiRP ${LANG_ENGLISH} "Install coLinux Virtual Ethernet Driver, which allows to create a network link between Linux and Windows"
   LangString DESC_SeccoLinuxBridgedNet ${LANG_ENGLISH} "Install coLinux Bridge Ethernet support, which allows to join the coLinux machine to an existing network"
-  LangString DESC_SeccoLinuxSerial ${LANG_ENGLISH} "Install coLinux Virtual Serail Driver, which allows to use serial Devices between Linux and Windows"
+  LangString DESC_SeccoLinuxSerial ${LANG_ENGLISH} "Install coLinux Virtual Serial Driver, which allows to use serial Devices between Linux and Windows"
   LangString DESC_SeccoLinuxDebug ${LANG_ENGLISH} "Install coLinux Debugging, which allows to create extensive debug log for troubleshooting problems"
   LangString DESC_SecImage ${LANG_ENGLISH} "Download an image from sourceforge. Also provide useful links on how to use it"
 
