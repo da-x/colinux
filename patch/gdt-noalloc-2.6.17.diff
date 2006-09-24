@@ -1,0 +1,126 @@
+Colinux don't run with runtime allocated GDT.
+Functions cpu_init and co_early_cpu_init must have the same GDT setup.
+After this patch coLinux use the oldy GDT descriptors from head.S.
+
+Reverts all changes on GDT stuff back from vanilla kernel 2.6.15:
+o arch/i386/kernel/head.S: cpu_gdt_table, cpu_gdt_descr
+o arch/i386/kernel/cpu/common.c: cpu_init(), cpu_gdt_table, cpu_gdt_descr
+o include/asm-i386/desc.h: cpu_gdt_table, cpu_gdt_descr
+
+Index: linux-2.6.17-source/arch/i386/kernel/cpu/common.c
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/cpu/common.c
++++ linux-2.6.17-source/arch/i386/kernel/cpu/common.c
+@@ -19,8 +19,8 @@
+ 
+ #include "cpu.h"
+ 
+-DEFINE_PER_CPU(struct Xgt_desc_struct, cpu_gdt_descr);
+-EXPORT_PER_CPU_SYMBOL(cpu_gdt_descr);
++DEFINE_PER_CPU(struct desc_struct, cpu_gdt_table[GDT_ENTRIES]);
++EXPORT_PER_CPU_SYMBOL(cpu_gdt_table);
+ 
+ DEFINE_PER_CPU(unsigned char, cpu_16bit_stack[CPU_16BIT_STACK_SIZE]);
+ EXPORT_PER_CPU_SYMBOL(cpu_16bit_stack);
+@@ -592,9 +592,8 @@
+ 	int cpu = smp_processor_id();
+ 	struct tss_struct * t = &per_cpu(init_tss, cpu);
+ 	struct thread_struct *thread = &current->thread;
+-	struct desc_struct *gdt;
++	struct desc_struct *gdt = get_cpu_gdt_table(cpu);
+ 	__u32 stk16_off = (__u32)&per_cpu(cpu_16bit_stack, cpu);
+-	struct Xgt_desc_struct *cpu_gdt_descr = &per_cpu(cpu_gdt_descr, cpu);
+ 
+ 	if (cpu_test_and_set(cpu, cpu_initialized)) {
+ 		printk(KERN_WARNING "CPU#%d already initialized!\n", cpu);
+@@ -612,25 +611,6 @@
+ 	}
+ 
+ 	/*
+-	 * This is a horrible hack to allocate the GDT.  The problem
+-	 * is that cpu_init() is called really early for the boot CPU
+-	 * (and hence needs bootmem) but much later for the secondary
+-	 * CPUs, when bootmem will have gone away
+-	 */
+-	if (NODE_DATA(0)->bdata->node_bootmem_map) {
+-		gdt = (struct desc_struct *)alloc_bootmem_pages(PAGE_SIZE);
+-		/* alloc_bootmem_pages panics on failure, so no check */
+-		memset(gdt, 0, PAGE_SIZE);
+-	} else {
+-		gdt = (struct desc_struct *)get_zeroed_page(GFP_KERNEL);
+-		if (unlikely(!gdt)) {
+-			printk(KERN_CRIT "CPU%d failed to allocate GDT\n", cpu);
+-			for (;;)
+-				local_irq_enable();
+-		}
+-	}
+-
+-	/*
+ 	 * Initialize the per-CPU GDT with the boot GDT,
+ 	 * and set up the GDT descriptor:
+ 	 */
+@@ -642,10 +622,10 @@
+ 		((((__u64)stk16_off) << 32) & 0xff00000000000000ULL) |
+ 		(CPU_16BIT_STACK_SIZE - 1);
+ 
+-	cpu_gdt_descr->size = GDT_SIZE - 1;
+- 	cpu_gdt_descr->address = (unsigned long)gdt;
++	cpu_gdt_descr[cpu].size = GDT_SIZE - 1;
++ 	cpu_gdt_descr[cpu].address = (unsigned long)gdt;
+ 
+-	load_gdt(cpu_gdt_descr);
++	load_gdt(&cpu_gdt_descr[cpu]);
+ 	load_idt(&idt_descr);
+ 
+ 	/*
+Index: linux-2.6.17-source/include/asm-i386/desc.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/desc.h
++++ linux-2.6.17-source/include/asm-i386/desc.h
+@@ -15,6 +15,9 @@
+ #include <asm/mmu.h>
+ 
+ extern struct desc_struct cpu_gdt_table[GDT_ENTRIES];
++DECLARE_PER_CPU(struct desc_struct, cpu_gdt_table[GDT_ENTRIES]);
++
++#define get_cpu_gdt_table(_cpu) (per_cpu(cpu_gdt_table,_cpu))
+ 
+ DECLARE_PER_CPU(unsigned char, cpu_16bit_stack[CPU_16BIT_STACK_SIZE]);
+ 
+@@ -24,14 +27,7 @@
+ 	unsigned short pad;
+ } __attribute__ ((packed));
+ 
+-extern struct Xgt_desc_struct idt_descr;
+-DECLARE_PER_CPU(struct Xgt_desc_struct, cpu_gdt_descr);
+-
+-
+-static inline struct desc_struct *get_cpu_gdt_table(unsigned int cpu)
+-{
+-	return (struct desc_struct *)per_cpu(cpu_gdt_descr, cpu).address;
+-}
++extern struct Xgt_desc_struct idt_descr, cpu_gdt_descr[NR_CPUS];
+ 
+ #define load_TR_desc() __asm__ __volatile__("ltr %w0"::"q" (GDT_ENTRY_TSS*8))
+ #define load_LDT_desc() __asm__ __volatile__("lldt %w0"::"q" (GDT_ENTRY_LDT*8))
+Index: linux-2.6.17-source/arch/i386/kernel/head.S
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/head.S
++++ linux-2.6.17-source/arch/i386/kernel/head.S
+@@ -450,6 +450,7 @@
+ 
+ .globl boot_gdt_descr
+ .globl idt_descr
++.globl cpu_gdt_descr
+ 
+ 	ALIGN
+ # early boot GDT descriptor (must use 1:1 address mapping)
+@@ -469,6 +470,8 @@
+ 	.word GDT_ENTRIES*8-1
+ 	.long cpu_gdt_table
+ 
++	.fill NR_CPUS-1,8,0		# space for the other GDT descriptors
++
+ /*
+  * The boot_gdt_table must mirror the equivalent in setup.S and is
+  * used only for booting.

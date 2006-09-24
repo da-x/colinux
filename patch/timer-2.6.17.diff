@@ -1,0 +1,250 @@
+Index: linux-2.6.17-source/arch/i386/kernel/time.c
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/time.c
++++ linux-2.6.17-source/arch/i386/kernel/time.c
+@@ -46,6 +46,7 @@
+ #include <linux/bcd.h>
+ #include <linux/efi.h>
+ #include <linux/mca.h>
++#include <linux/cooperative_internal.h>
+ 
+ #include <asm/io.h>
+ #include <asm/smp.h>
+@@ -125,8 +126,9 @@
+ void do_gettimeofday(struct timeval *tv)
+ {
+ 	unsigned long seq;
+-	unsigned long usec, sec;
+-	unsigned long max_ntp_tick;
++	unsigned long sec;
++	long usec;
++	long max_ntp_tick;
+ 
+ 	do {
+ 		unsigned long lost;
+@@ -160,6 +162,13 @@
+ 		sec++;
+ 	}
+ 
++	if (cooperative_mode_enabled()) {
++		while (usec < 0) {
++			usec += 1000000;
++			sec--;
++		}
++	}
++
+ 	tv->tv_sec = sec;
+ 	tv->tv_usec = usec;
+ }
+@@ -204,6 +213,9 @@
+ 
+ 	WARN_ON(irqs_disabled());
+ 
++	if (cooperative_mode_enabled())
++		return -1;
++
+ 	/* gets recalled with irq locally disabled */
+ 	spin_lock_irq(&rtc_lock);
+ 	if (efi_enabled)
+@@ -316,6 +328,9 @@
+ {
+ 	unsigned long retval;
+ 
++	if (cooperative_mode_enabled())
++		return co_get_host_time();
++
+ 	spin_lock(&rtc_lock);
+ 
+ 	if (efi_enabled)
+@@ -345,7 +360,7 @@
+ 	 * This code is run on a timer.  If the clock is set, that timer
+ 	 * may not expire at the correct time.  Thus, we adjust...
+ 	 */
+-	if (!ntp_synced())
++	if (!ntp_synced() || cooperative_mode_enabled())
+ 		/*
+ 		 * Not synced, exit, do not restart a timer (if one is
+ 		 * running, let it run out).
+Index: linux-2.6.17-source/arch/i386/kernel/timers/Makefile
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/timers/Makefile
++++ linux-2.6.17-source/arch/i386/kernel/timers/Makefile
+@@ -7,3 +7,4 @@
+ obj-$(CONFIG_X86_CYCLONE_TIMER)	+= timer_cyclone.o
+ obj-$(CONFIG_HPET_TIMER)	+= timer_hpet.o
+ obj-$(CONFIG_X86_PM_TIMER)	+= timer_pm.o
++obj-$(CONFIG_COOPERATIVE)	+= timer_cooperative.o
+Index: linux-2.6.17-source/arch/i386/kernel/timers/timer.c
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/timers/timer.c
++++ linux-2.6.17-source/arch/i386/kernel/timers/timer.c
+@@ -13,6 +13,9 @@
+ #endif
+ /* list of timers, ordered by preference, NULL terminated */
+ static struct init_timer_opts* __initdata timers[] = {
++#ifdef CONFIG_COOPERATIVE
++	&timer_cooperative_init,
++#endif
+ #ifdef CONFIG_X86_CYCLONE_TIMER
+ 	&timer_cyclone_init,
+ #endif
+Index: linux-2.6.17-source/arch/i386/kernel/timers/timer_cooperative.c
+===================================================================
+--- /dev/null
++++ linux-2.6.17-source/arch/i386/kernel/timers/timer_cooperative.c
+@@ -0,0 +1,141 @@
++/*
++ *  Cooperative mode timer.
++ *
++ *  Dan Aloni <da-x@colinux.org>, 2003-2004 (C).
++ */
++
++#include <linux/init.h>
++#include <linux/errno.h>
++
++#include <asm/timer.h>
++#include <asm/cooperative.h>
++#include <asm/div64.h>
++#include <asm/param.h>
++
++#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
++
++static unsigned long long first_time;
++static unsigned long frequencey;
++static unsigned long long last_mark, last_mark_quotient;
++static unsigned long long last_time;
++
++static unsigned long long query_host_highprec_time(void)
++{
++	unsigned long flags;
++	unsigned long long this_time;
++	unsigned long long diff;
++
++	co_passage_page_assert_valid();
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_GET_HIGH_PREC_TIME;
++	co_switch_wrapper();
++
++	this_time = *(unsigned long long *)(&co_passage_page->params[0]);
++	frequencey = *(unsigned long *)(&co_passage_page->params[2]);
++	diff = ((long long)this_time - (long long)last_time);
++
++	/*
++	 * There shouldn't be any particularly large difference between
++	 * the current and last host timestamps. For sanity, reset the
++         * global reference variables if we encounter any difference
++	 * larger than one second.
++	 */
++
++	if (diff < 0 || diff > frequencey) {
++		first_time = this_time;
++		last_mark_quotient = last_mark = 0;
++	}
++
++	last_time = this_time;
++	co_passage_page_release(flags);
++
++	return this_time;
++}
++
++static unsigned long long monotonic_clock_cooperative(void)
++{
++	return 0;
++}
++
++static long get_offset_cooperative(void)
++{
++	unsigned long flags;
++	unsigned long long this_time;
++	unsigned long reminder = 0, result;
++	long long diff, lldiff;
++	long signed_result;
++
++	local_irq_save(flags);
++
++	this_time = query_host_highprec_time() - first_time;
++
++	diff = ((long long)this_time - (long long)(last_mark));
++	if (diff < 0)
++		lldiff = -diff;
++	else
++		lldiff = diff;
++
++	lldiff *= 1000000;
++	result = div_ll_X_l_rem(lldiff, frequencey, &reminder);
++
++	signed_result = result;
++	if (diff < 0)
++		signed_result = -signed_result;
++
++	local_irq_restore(flags);
++	return signed_result;
++}
++
++static void mark_offset_cooperative(void)
++{
++	unsigned long flags;
++	local_irq_save(flags);
++
++	last_mark += frequencey / HZ;
++	last_mark_quotient += frequencey % HZ;
++	if (frequencey > HZ) {
++		last_mark += 1;
++		last_mark_quotient -= HZ;
++	}
++
++	local_irq_restore(flags);
++}
++
++static void delay_cooperative(unsigned long loops)
++{
++	/*
++	 * A bogos delay loop for creating BogoMIPS...
++	 */
++
++	loops = loops / 10000;
++	while (loops) {
++		query_host_highprec_time();
++		loops -= 1;
++	}
++}
++
++static int __init init_cooperative_timer(char* override)
++{
++	first_time = query_host_highprec_time();
++
++	/* Always pick this timer */
++	return 0;
++}
++
++/************************************************************/
++
++/* tsc timer_opts struct */
++struct timer_opts timer_cooperative = {
++	.name = 		"cooperative",
++	.mark_offset =		mark_offset_cooperative,
++	.get_offset =		get_offset_cooperative,
++	.monotonic_clock =	monotonic_clock_cooperative,
++	.delay = 		delay_cooperative,
++};
++
++struct init_timer_opts __initdata timer_cooperative_init = {
++	.init =	init_cooperative_timer,
++	.opts = &timer_cooperative,
++};
+Index: linux-2.6.17-source/include/asm-i386/timer.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/timer.h
++++ linux-2.6.17-source/include/asm-i386/timer.h
+@@ -54,6 +54,9 @@
+ #ifdef CONFIG_X86_CYCLONE_TIMER
+ extern struct init_timer_opts timer_cyclone_init;
+ #endif
++#ifdef CONFIG_COOPERATIVE
++extern struct init_timer_opts timer_cooperative_init;
++#endif
+ 
+ extern unsigned long calibrate_tsc(void);
+ extern unsigned long read_timer_tsc(void);

@@ -1,0 +1,3289 @@
+Colinux base
+
+
+Index: linux-2.6.17-source/CREDITS
+===================================================================
+--- linux-2.6.17-source.orig/CREDITS
++++ linux-2.6.17-source/CREDITS
+@@ -16,6 +16,13 @@
+ S: (ask for current address)
+ S: Finland
+ 
++N: Dan Aloni
++E: da-x@colinux.org
++W: http://www.colinux.org
++D: Cooperative Linux
++D: Various kernel patches
++S: Israel
++
+ N: Dragos Acostachioaie
+ E: dragos@iname.com
+ W: http://www.arbornet.org/~dragos
+Index: linux-2.6.17-source/Makefile
+===================================================================
+--- linux-2.6.17-source.orig/Makefile
++++ linux-2.6.17-source/Makefile
+@@ -274,7 +274,11 @@
+ 
+ AS		= $(CROSS_COMPILE)as
+ LD		= $(CROSS_COMPILE)ld
++ifeq ($(GCCTRACE),Y)
++CC              = $(COLINUX_ROOT)/bin/tracewrapper.py $(CROSS_COMPILE)gcc
++else
+ CC		= $(CROSS_COMPILE)gcc
++endif
+ CPP		= $(CC) -E
+ AR		= $(CROSS_COMPILE)ar
+ NM		= $(CROSS_COMPILE)nm
+Index: linux-2.6.17-source/arch/i386/Kconfig
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/Kconfig
++++ linux-2.6.17-source/arch/i386/Kconfig
+@@ -55,6 +55,7 @@
+ 
+ config SMP
+ 	bool "Symmetric multi-processing support"
++	depends on !COOPERATIVE
+ 	---help---
+ 	  This enables support for systems with more than one CPU. If you have
+ 	  a system with only one CPU, like most personal computers, say N. If
+@@ -267,6 +268,10 @@
+ 	  to use it. If you say Y here even though your machine doesn't have
+ 	  an IO-APIC, then the kernel will still run with no slowdown at all.
+ 
++config X86_UP_COPIC
++	bool 'Cooperative PIC (COPIC) support'
++	depends on COOPERATIVE
++
+ config X86_LOCAL_APIC
+ 	bool
+ 	depends on X86_UP_APIC || ((X86_VISWS || SMP) && !X86_VOYAGER)
+@@ -321,6 +326,7 @@
+ 
+ config TOSHIBA
+ 	tristate "Toshiba Laptop support"
++	depends on !COOPERATIVE
+ 	---help---
+ 	  This adds a driver to safely access the System Management Mode of
+ 	  the CPU on Toshiba portables with a genuine Toshiba BIOS. It does
+@@ -336,6 +342,7 @@
+ 
+ config I8K
+ 	tristate "Dell laptop support"
++	depends on !COOPERATIVE
+ 	---help---
+ 	  This adds a driver to safely access the System Management Mode
+ 	  of the CPU on the Dell Inspiron 8000. The System Management Mode
+@@ -356,7 +363,7 @@
+ 
+ config X86_REBOOTFIXUPS
+ 	bool "Enable X86 board specific fixups for reboot"
+-	depends on X86
++	depends on X86 && !COOPERATIVE
+ 	default n
+ 	---help---
+ 	  This enables chipset and/or board specific fixups to be done
+@@ -451,14 +458,14 @@
+ 
+ config HIGHMEM4G
+ 	bool "4GB"
+-	depends on !X86_NUMAQ
++	depends on !X86_NUMAQ && !COOPERATIVE
+ 	help
+ 	  Select this if you have a 32-bit processor and between 1 and 4
+ 	  gigabytes of physical RAM.
+ 
+ config HIGHMEM64G
+ 	bool "64GB"
+-	depends on X86_CMPXCHG64
++	depends on X86_CMPXCHG64 && !COOPERATIVE
+ 	help
+ 	  Select this if you have a 32-bit processor and more than 4
+ 	  gigabytes of physical RAM.
+@@ -562,7 +569,7 @@
+ 
+ config ARCH_SPARSEMEM_ENABLE
+ 	def_bool y
+-	depends on (NUMA || (X86_PC && EXPERIMENTAL))
++	depends on (NUMA || (X86_PC && EXPERIMENTAL && !COOPERATIVE))
+ 	select SPARSEMEM_STATIC
+ 
+ config ARCH_SELECT_MEMORY_MODEL
+@@ -762,12 +769,15 @@
+ 	  enable suspend on SMP systems. CPUs can be controlled through
+ 	  /sys/devices/system/cpu.
+ 
++config COOPERATIVE
++	bool 'Cooperative Mode'
++	default y
+ 
+ endmenu
+ 
+ 
+ menu "Power management options (ACPI, APM)"
+-	depends on !X86_VOYAGER
++	depends on !X86_VOYAGER && !COOPERATIVE
+ 
+ source kernel/power/Kconfig
+ 
+@@ -926,6 +936,7 @@
+ endmenu
+ 
+ menu "Bus options (PCI, PCMCIA, EISA, MCA, ISA)"
++	depends on !COOPERATIVE
+ 
+ config PCI
+ 	bool "PCI support" if !X86_VISWS
+Index: linux-2.6.17-source/arch/i386/Kconfig.cpu
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/Kconfig.cpu
++++ linux-2.6.17-source/arch/i386/Kconfig.cpu
+@@ -311,5 +311,5 @@
+ 
+ config X86_TSC
+ 	bool
+-	depends on (MWINCHIP3D || MWINCHIP2 || MCRUSOE || MEFFICEON || MCYRIXIII || MK7 || MK6 || MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M686 || M586MMX || M586TSC || MK8 || MVIAC3_2 || MGEODEGX1 || MGEODE_LX) && !X86_NUMAQ
++	depends on (MWINCHIP3D || MWINCHIP2 || MCRUSOE || MEFFICEON || MCYRIXIII || MK7 || MK6 || MPENTIUM4 || MPENTIUMM || MPENTIUMIII || MPENTIUMII || M686 || M586MMX || M586TSC || MK8 || MVIAC3_2 || MGEODEGX1 || MGEODE_LX) && !X86_NUMAQ && !COOPERATIVE
+ 	default y
+Index: linux-2.6.17-source/arch/i386/kernel/Makefile
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/Makefile
++++ linux-2.6.17-source/arch/i386/kernel/Makefile
+@@ -17,6 +17,7 @@
+ obj-$(CONFIG_X86_MSR)		+= msr.o
+ obj-$(CONFIG_X86_CPUID)		+= cpuid.o
+ obj-$(CONFIG_MICROCODE)		+= microcode.o
++obj-$(CONFIG_COOPERATIVE)       += cooperative.o
+ obj-$(CONFIG_APM)		+= apm.o
+ obj-$(CONFIG_X86_SMP)		+= smp.o smpboot.o
+ obj-$(CONFIG_X86_TRAMPOLINE)	+= trampoline.o
+Index: linux-2.6.17-source/arch/i386/kernel/cooperative.c
+===================================================================
+--- /dev/null
++++ linux-2.6.17-source/arch/i386/kernel/cooperative.c
+@@ -0,0 +1,357 @@
++#include <linux/kernel.h>
++#include <linux/string.h>
++#include <linux/interrupt.h>
++#include <linux/mm.h>
++
++#include <linux/cooperative_internal.h>
++#include <asm/cooperative_internal.h>
++#include <asm/smp.h>
++#include <asm/desc.h>
++#include <asm/mmu_context.h>
++#include <asm/debugreg.h>
++#include <asm/i387.h>
++
++CO_TRACE_STOP;
++
++
++/*
++ * The next asm code is the first Linux code that runs in the
++ * coLinux kernel context. It receives %ecx which contains the
++ * address of the passage page. The passage page code sets %ecx
++ * to this value in its context restore part.
++ */
++
++asm(
++	""
++	".section .text\n"
++	".globl co_start\n"
++	"co_start:\n"
++	"       call co_start_arch\n"
++	".previous\n"
++	"");
++
++static int co_passage_page_holding_count = 0;
++
++static void co_early_cpu_init(void)
++{
++	/*
++	 * On the first switch to Linux we must set up a valid TR because
++	 * the passage page code assumes such one exists. This is basically
++	 * copied code from cpu_init().
++	 *
++	 * P.S this is protected by CO_TRACE_STOP so that we don't
++	 * have a monitor context switch.
++	 */
++	int cpu = smp_processor_id();
++	struct tss_struct * t = &per_cpu(init_tss, cpu);
++	struct thread_struct *thread = &current->thread;
++	struct desc_struct *gdt = get_cpu_gdt_table(cpu);
++
++	/*
++	 * Initialize the per-CPU GDT with the boot GDT,
++	 * and set up the GDT descriptor:
++	 */
++	memcpy(gdt, cpu_gdt_table, GDT_SIZE);
++	cpu_gdt_descr[cpu].size = GDT_SIZE - 1;
++	cpu_gdt_descr[cpu].address = (unsigned long)gdt;
++
++	load_gdt(&cpu_gdt_descr[cpu]);
++	load_idt(&idt_descr);
++
++	/*
++	 * Delete NT
++	 */
++	__asm__("pushfl ; andl $0xffffbfff,(%esp) ; popfl");
++
++	/*
++	 * Set up and load the per-CPU TSS and LDT
++	 */
++	atomic_inc(&init_mm.mm_count);
++	current->active_mm = &init_mm;
++	enter_lazy_tlb(&init_mm, current);
++
++	load_esp0(t, thread);
++	set_tss_desc(cpu,t);
++	gdt[GDT_ENTRY_TSS].b &= 0xfffffdff;
++
++	load_TR_desc();
++	load_LDT(&init_mm.context);
++
++#ifdef CONFIG_DOUBLEFAULT
++	/* Set up doublefault TSS pointer in the GDT */
++	__set_tss_desc(cpu, GDT_ENTRY_DOUBLEFAULT_TSS, &doublefault_tss);
++	gdt[GDT_ENTRY_DOUBLEFAULT_TSS].b &= 0xfffffdff;
++#endif
++
++	/* Clear %fs and %gs. */
++	asm volatile ("xorl %eax, %eax; movl %eax, %fs; movl %eax, %gs");
++
++	write_cr4(mmu_cr4_features);
++}
++
++asm(
++	""
++	".section .text\n"
++	".globl co_arch_start_kernel\n"
++	"co_arch_start_kernel:\n"
++	"       call co_startup_entry\n"
++	".previous\n"
++	"");
++
++void co_start_arch(void)
++{
++	co_early_cpu_init();
++	co_start_kernel();
++}
++
++extern void ctrl_alt_del(void);
++
++void co_handle_jiffies(long count)
++{
++	unsigned long flags;
++	struct pt_regs regs;
++
++	if (count > HZ) {
++		xtime.tv_sec += count / HZ;
++		count -= ((count / HZ) * HZ);
++	}
++
++	while (count > 0) {
++		local_irq_save(flags);
++		regs.orig_eax = TIMER_IRQ;
++		do_IRQ(&regs);
++		local_irq_restore(flags);
++
++		count--;
++	}
++}
++
++void co_handle_incoming_message(co_message_node_t *node_message, struct pt_regs *orig_regs)
++{
++	unsigned long flags;
++	struct pt_regs regs = {0, };
++	co_linux_message_t *message;
++
++	if (orig_regs != NULL) {
++		regs.xcs = orig_regs->xcs;
++	}
++
++	message = (co_linux_message_t *)&node_message->msg.data;
++
++	BUG_ON((unsigned long)message->device >= (unsigned long)CO_DEVICES_TOTAL);
++
++	switch (message->device) {
++	case CO_DEVICE_POWER: {
++		co_linux_message_power_t *type = (co_linux_message_power_t *)message->data;
++		switch (type->type) {
++		case CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL: {
++			ctrl_alt_del();
++			break;
++		}
++		}
++		co_free_message(node_message);
++		break;
++	}
++
++	case CO_DEVICE_KEYBOARD: {
++		co_queue_incoming_message(node_message);
++
++		local_irq_save(flags);
++		regs.orig_eax = KEYBOARD_IRQ;
++		do_IRQ(&regs);
++		local_irq_restore(flags);
++		break;
++	}
++
++	case CO_DEVICE_NETWORK: {
++		co_queue_incoming_message(node_message);
++
++		local_irq_save(flags);
++		regs.orig_eax = NETWORK_IRQ;
++		do_IRQ(&regs);
++		local_irq_restore(flags);
++		break;
++	}
++
++	case CO_DEVICE_SERIAL: {
++		co_queue_incoming_message(node_message);
++
++		local_irq_save(flags);
++		cocd_interrupt();
++		local_irq_restore(flags);
++		break;
++	}
++
++	default:
++		co_free_message(node_message);
++		break;
++	}
++}
++
++void co_switch_wrapper_protected(void)
++{
++	kernel_fpu_begin();
++
++	{
++
++	/*
++	 * We don't trust the passage page code to safely restore %gs and %fs.
++	 *
++	 * This wrapper ensures that if %fs or %gs are invalid, the processes
++	 * exits with a segmentation fault rather than bringing down the
++	 * machine.
++	 **/
++	unsigned long fs = 0;
++	unsigned long gs = 0;
++
++        asm volatile("mov %%fs,%0": "=m" (fs));
++        asm volatile("mov %%gs,%0": "=m" (gs));
++
++	/*
++	 * Nullify the registers so the passage page code restores to
++	 * null segment values on return.
++	 */
++        asm volatile("movl %0, %%fs;  movl %0, %%gs" : : "r" (0));
++
++	/* And switch... */
++	co_switch();
++
++	/*
++	 * Safely restore the registers.
++	 */
++	loadsegment(fs, fs);
++	loadsegment(gs, gs);
++
++	}
++
++	kernel_fpu_end();
++}
++
++void co_switch_wrapper(void)
++{
++	/* taken from irq.c: debugging check for stack overflow */
++	long esp;
++
++	__asm__ __volatile__("andl %%esp,%0" : "=r" (esp) : "0" (THREAD_SIZE - 1));
++	if (unlikely(esp < (sizeof(struct thread_info) + STACK_WARN))) {
++		printk("co_switch_wrapper: stack overflow: %ld\n", esp - sizeof(struct thread_info));
++		co_terminate(CO_TERMINATE_STACK_OVERFLOW);
++	}
++
++	co_switch_wrapper_protected();
++}
++
++void co_passage_page_acquire(unsigned long *flags)
++{
++	local_irq_save(*flags);
++	co_passage_page_holding_count++;
++}
++
++void co_passage_page_ref_down(void)
++{
++	co_passage_page_holding_count--;
++}
++
++void co_passage_page_ref_up(void)
++{
++	co_passage_page_holding_count++;
++}
++
++int co_passage_page_held(void)
++{
++	return co_passage_page_holding_count;
++}
++
++void co_passage_page_release(unsigned long flags)
++{
++	co_passage_page_holding_count--;
++	local_irq_restore(flags);
++}
++
++void co_debug(const char *fmt, ...)
++{
++}
++
++#define MAX_TRACE_POINTS 1024
++
++typedef struct {
++	unsigned char *code;
++	unsigned char original_byte;
++	int off;
++} co_tracepoint_t;
++
++co_tracepoint_t tracepoints[MAX_TRACE_POINTS];
++static int active_tracepoints = 0;
++
++void co_kernel_breakpoint(struct pt_regs * regs)
++{
++	int i = 0;
++	unsigned char *code = (unsigned char *)regs->eip;
++	if (!code)
++		return;
++
++	for (i=0; i < active_tracepoints; i++) {
++		if (tracepoints[i].code == code - 1) {
++			co_debug("TRACEPOINT: %x\n", code - 1);
++			break;
++		}
++	}
++
++	if (i == active_tracepoints) {
++		/* Bad, we don't know this tracepoint */
++		co_terminate(CO_TERMINATE_INVALID_OPERATION);
++		return;
++	}
++
++	*tracepoints[i].code = tracepoints[i].original_byte;
++	regs->eflags |= (1 << 8); /* Enable TF */
++	regs->eip = (unsigned long)(code - 1);
++	tracepoints[i].off = 1;
++}
++
++void co_kernel_set_breakpoints(void)
++{
++	int i;
++
++	for (i=0; i < active_tracepoints; i++)
++		if (tracepoints[i].code  &&  tracepoints[i].off) {
++			*tracepoints[i].code = 0xcc;
++			tracepoints[i].off = 0;
++		}
++}
++
++int co_kernel_debug(struct pt_regs *regs, long error_code, unsigned int condition)
++{
++	/* if not a single step trap */
++	if (!(condition & DR_STEP))
++		return 0;
++
++	/* if userspace */
++	if (regs->xcs & 3)
++		return 0;
++
++	regs->eflags &= ~(1 << 8); /* Disable TF */
++
++	co_kernel_set_breakpoints();
++
++	return 1;
++}
++
++void co_kernel_tracepoint_add(unsigned char *code)
++{
++	if (active_tracepoints >= MAX_TRACE_POINTS)
++		return;
++
++	tracepoints[active_tracepoints].code = code;
++	tracepoints[active_tracepoints].original_byte = *code;
++	tracepoints[active_tracepoints].off = 0;
++	active_tracepoints++;
++	*code = 0xcc;
++}
++
++co_arch_info_t co_arch_info = {
++	.kernel_cs = __KERNEL_CS,
++	.kernel_ds = __KERNEL_DS,
++};
++
++CO_TRACE_CONTINUE;
+Index: linux-2.6.17-source/arch/i386/kernel/cpu/common.c
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/cpu/common.c
++++ linux-2.6.17-source/arch/i386/kernel/cpu/common.c
+@@ -5,6 +5,7 @@
+ #include <linux/module.h>
+ #include <linux/percpu.h>
+ #include <linux/bootmem.h>
++#include <linux/cooperative_internal.h>
+ #include <asm/semaphore.h>
+ #include <asm/processor.h>
+ #include <asm/i387.h>
+@@ -420,7 +421,7 @@
+ 	}
+ 
+ 	/* SEP disabled? */
+-	if (disable_x86_sep)
++	if (cooperative_mode_enabled() || disable_x86_sep)
+ 		clear_bit(X86_FEATURE_SEP, c->x86_capability);
+ 
+ 	if (disable_pse)
+@@ -581,6 +582,7 @@
+ 	disable_pse = 1;
+ #endif
+ }
++
+ /*
+  * cpu_init() initializes state that is per-CPU. Some data is already
+  * initialized (naturally) in the bootstrap process, such as the GDT
+Index: linux-2.6.17-source/arch/i386/kernel/entry.S
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/entry.S
++++ linux-2.6.17-source/arch/i386/kernel/entry.S
+@@ -141,7 +141,7 @@
+ 	ALIGN
+ ret_from_exception:
+ 	preempt_stop
+-ret_from_intr:
++ENTRY(ret_from_intr)
+ 	GET_THREAD_INFO(%ebp)
+ 	movl EFLAGS(%esp), %eax		# mix EFLAGS and CS
+ 	movb CS(%esp), %al
+Index: linux-2.6.17-source/arch/i386/kernel/head.S
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/head.S
++++ linux-2.6.17-source/arch/i386/kernel/head.S
+@@ -240,6 +240,7 @@
+  */
+ 	call setup_idt
+ 
++ENTRY(co_startup_entry)
+ checkCPUtype:
+ 
+ 	movl $-1,X86_CPUID		#  -1 for no CPUID initially
+@@ -433,7 +434,7 @@
+ .data
+ 
+ ENTRY(stack_start)
+-	.long init_thread_union+THREAD_SIZE
++	.long init_thread_union+THREAD_SIZE-100
+ 	.long __BOOT_DS
+ 
+ ready:	.byte 0
+Index: linux-2.6.17-source/arch/i386/kernel/i387.c
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/i387.c
++++ linux-2.6.17-source/arch/i386/kernel/i387.c
+@@ -11,6 +11,7 @@
+ #include <linux/config.h>
+ #include <linux/sched.h>
+ #include <linux/module.h>
++#include <linux/cooperative_internal.h>
+ #include <asm/processor.h>
+ #include <asm/i387.h>
+ #include <asm/math_emu.h>
+@@ -38,6 +39,10 @@
+ 		if (mask == 0) mask = 0x0000ffbf;
+ 	} 
+ 	mxcsr_feature_mask &= mask;
++
++	if (cooperative_mode_enabled())
++		return;
++
+ 	stts();
+ }
+ 
+Index: linux-2.6.17-source/arch/i386/kernel/i8259.c
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/i8259.c
++++ linux-2.6.17-source/arch/i386/kernel/i8259.c
+@@ -11,6 +11,7 @@
+ #include <linux/kernel_stat.h>
+ #include <linux/sysdev.h>
+ #include <linux/bitops.h>
++#include <linux/cooperative_internal.h>
+ 
+ #include <asm/8253pit.h>
+ #include <asm/atomic.h>
+@@ -26,6 +27,85 @@
+ 
+ #include <io_ports.h>
+ 
++#ifdef CONFIG_COOPERATIVE
++
++CO_TRACE_STOP;
++
++void proxy_interrupt_handler(unsigned long interrupt, struct pt_regs regs)
++{
++	unsigned long flags;
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_FORWARD_INTERRUPT;
++	co_passage_page->params[0] = interrupt + 0x20;
++	co_passage_page->params[1] = regs.eip;
++	co_passage_page->params[2] = (unsigned long)(&((&interrupt)[10]));
++	co_passage_page->host_state.flags &= ~(1 << 9); /* Turn IF off */
++	co_switch_wrapper();
++	co_callback(flags, &regs);
++}
++
++CO_TRACE_CONTINUE;
++
++#define IRQLIST_16(x) \
++	IRQ(x,0) IRQ(x,1) IRQ(x,2) IRQ(x,3) \
++	IRQ(x,4) IRQ(x,5) IRQ(x,6) IRQ(x,7) \
++	IRQ(x,8) IRQ(x,9) IRQ(x,a) IRQ(x,b) \
++	IRQ(x,c) IRQ(x,d) IRQ(x,e) IRQ(x,f)
++
++#define IRQLIST_224 \
++	IRQLIST_16(0x0) IRQLIST_16(0x1) IRQLIST_16(0x2) IRQLIST_16(0x3) \
++	IRQLIST_16(0x4) IRQLIST_16(0x5) IRQLIST_16(0x6) IRQLIST_16(0x7) \
++	IRQLIST_16(0x8) IRQLIST_16(0x9) IRQLIST_16(0xa) IRQLIST_16(0xb) \
++	IRQLIST_16(0xc) IRQLIST_16(0xd)
++
++#define IRQ(x,y) \
++	extern asmlinkage void IRQ_proxy_##x##y##_interrupt(void);
++IRQLIST_224;
++#undef IRQ
++
++#define BIRQ(id)						\
++asm(								\
++    "\n"__ALIGN_STR"\n"						\
++    ".section .text\n"						\
++    ".globl IRQ_proxy_" #id "_interrupt\n"			\
++    "IRQ_proxy_" #id "_interrupt:\n"				\
++    "push %eax\n\t"						\
++    "cld;\n\t"							\
++    "pushl %es;\n\t"						\
++    "pushl %ds;\n\t"						\
++    "pushl %eax;\n\t"						\
++    "pushl %ebp;\n\t"						\
++    "pushl %edi;\n\t"						\
++    "pushl %esi;\n\t"						\
++    "pushl %edx;\n\t"						\
++    "pushl %ecx;\n\t"						\
++    "pushl %ebx;\n\t"						\
++    "movl $123, %edx;\n\t"			         	\
++    "movl %edx, %ds;\n\t"					\
++    "movl %edx, %es;\n\t"					\
++    "pushl $" #id "\n\t"					\
++    "call proxy_interrupt_handler\n\t"				\
++    "popl %ebx\n\t"						\
++    "jmp ret_from_intr\n"					\
++    ".previous\n"						\
++    );		                    				\
++
++#define IRQ(x,y) BIRQ(x##y)
++IRQLIST_224;
++#undef IRQ
++
++#define IRQ(x,y) &IRQ_proxy_##x##y##_interrupt,
++void (*proxy_interrupt[NR_IRQS])(void) = {
++    IRQLIST_224
++};
++#undef IRQ
++
++#undef IRQLIST_16
++#undef IRQLIST_224
++
++#endif
++
+ /*
+  * This is the 'legacy' 8259A Programmable Interrupt Controller,
+  * present in the majority of PC/AT boxes.
+@@ -372,6 +452,9 @@
+ {
+ 	int i;
+ 
++	if (cooperative_mode_enabled())
++		return;
++
+ #ifdef CONFIG_X86_LOCAL_APIC
+ 	init_bsp_APIC();
+ #endif
+@@ -396,6 +479,65 @@
+ 	}
+ }
+ 
++#ifdef CONFIG_X86_UP_COPIC
++
++/*
++ * Not like you have any other choice other than using
++ * COPIC in Cooperative mode.
++ */
++
++static void end_COPIC_irq(unsigned int irq)
++{
++}
++
++#define shutdown_COPIC_irq	disable_COPIC_irq
++
++static void mask_and_ack_COPIC(unsigned int irq)
++{
++}
++
++static unsigned int startup_COPIC_irq(unsigned int irq)
++{
++	return 0;
++}
++
++void disable_COPIC_irq(unsigned int irq)
++{
++}
++
++void enable_COPIC_irq(unsigned int irq)
++{
++}
++
++static struct hw_interrupt_type co_pic_irq_type = {
++	"CO-PIC",
++	startup_COPIC_irq,
++	shutdown_COPIC_irq,
++	enable_COPIC_irq,
++	disable_COPIC_irq,
++	mask_and_ack_COPIC,
++	end_COPIC_irq,
++	NULL
++};
++
++void __init init_COPIC_irqs(void)
++{
++	int i;
++
++	for (i = 0; i < NR_IRQS; i++) {
++		irq_desc[i].status = IRQ_DISABLED;
++		irq_desc[i].action = 0;
++		irq_desc[i].depth = 1;
++
++		irq_desc[i].handler = &co_pic_irq_type;
++	}
++
++}
++
++#else
++#define init_COPIC_irqs() do {} while (0);
++#endif
++
+ void __init init_IRQ(void)
+ {
+ 	int i;
+@@ -403,6 +545,22 @@
+ 	/* all the set up before the call gates are initialised */
+ 	pre_intr_init_hook();
+ 
++	if (cooperative_mode_enabled()) {
++		printk("Setting proxy interrupt vectors\n");
++
++		init_COPIC_irqs();
++
++		for (i = 0; i < (NR_VECTORS - FIRST_EXTERNAL_VECTOR); i++) {
++			int vector = FIRST_EXTERNAL_VECTOR + i;
++			if (i >= NR_IRQS)
++				break;
++			if (vector != SYSCALL_VECTOR)
++				set_intr_gate(vector, proxy_interrupt[i]);
++		}
++
++		return;
++	}
++
+ 	/*
+ 	 * Cover the whole vector space, no vector can escape
+ 	 * us. (some of these will be overridden and become
+Index: linux-2.6.17-source/arch/i386/kernel/ioport.c
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/ioport.c
++++ linux-2.6.17-source/arch/i386/kernel/ioport.c
+@@ -16,6 +16,7 @@
+ #include <linux/stddef.h>
+ #include <linux/slab.h>
+ #include <linux/thread_info.h>
++#include <linux/cooperative_internal.h>
+ 
+ /* Set EXTENT bits starting at BASE in BITMAP to value TURN_ON. */
+ static void set_bitmap(unsigned long *bitmap, unsigned int base, unsigned int extent, int new_value)
+@@ -62,6 +63,9 @@
+ 	struct tss_struct * tss;
+ 	unsigned long *bitmap;
+ 
++	if (cooperative_mode_enabled())
++		return -EPERM;
++
+ 	if ((from + num <= from) || (from + num > IO_BITMAP_BITS))
+ 		return -EINVAL;
+ 	if (turn_on && !capable(CAP_SYS_RAWIO))
+@@ -138,6 +142,9 @@
+ 	unsigned int old = (regs->eflags >> 12) & 3;
+ 	struct thread_struct *t = &current->thread;
+ 
++	if (cooperative_mode_enabled())
++		return -EPERM;
++
+ 	if (level > 3)
+ 		return -EINVAL;
+ 	/* Trying to gain more privileges? */
+Index: linux-2.6.17-source/arch/i386/kernel/process.c
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/process.c
++++ linux-2.6.17-source/arch/i386/kernel/process.c
+@@ -53,6 +53,7 @@
+ #endif
+ 
+ #include <linux/err.h>
++#include <linux/cooperative_internal.h>
+ 
+ #include <asm/tlbflush.h>
+ #include <asm/cpu.h>
+@@ -187,6 +188,9 @@
+ 			rmb();
+ 			idle = pm_idle;
+ 
++			if (cooperative_mode_enabled())
++				idle = co_idle_processor;
++
+ 			if (!idle)
+ 				idle = default_idle;
+ 
+@@ -211,6 +215,9 @@
+ 	put_cpu();
+ 
+ 	cpus_clear(map);
++
++	if (cooperative_mode_enabled())
++		co_terminate(CO_TERMINATE_INVALID_OPERATION);
+ 	for_each_online_cpu(cpu) {
+ 		per_cpu(cpu_idle_state, cpu) = 1;
+ 		cpu_set(cpu, map);
+Index: linux-2.6.17-source/arch/i386/kernel/reboot.c
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/reboot.c
++++ linux-2.6.17-source/arch/i386/kernel/reboot.c
+@@ -18,6 +18,7 @@
+ #include <asm/desc.h>
+ #include "mach_reboot.h"
+ #include <linux/reboot_fixups.h>
++#include <linux/cooperative_internal.h>
+ 
+ /*
+  * Power off function, if any
+@@ -203,6 +204,11 @@
+ {
+ 	unsigned long flags;
+ 
++	if (cooperative_mode_enabled()) {
++		co_terminate(CO_TERMINATE_REBOOT);
++		return;
++	}
++
+ 	local_irq_disable();
+ 
+ 	/* Write zero to CMOS register number 0x0f, which the BIOS POST
+@@ -347,15 +353,24 @@
+ void machine_restart(char * __unused)
+ {
+ 	machine_shutdown();
++	if (cooperative_mode_enabled()) {
++		co_terminate(CO_TERMINATE_REBOOT);
++		return;
++	}
+ 	machine_emergency_restart();
+ }
+ 
+ void machine_halt(void)
+ {
++	co_terminate(CO_TERMINATE_HALT);
+ }
+ 
+ void machine_power_off(void)
+ {
++	if (cooperative_mode_enabled()) {
++		co_terminate(CO_TERMINATE_POWEROFF);
++		return;
++	}
+ 	if (pm_power_off) {
+ 		machine_shutdown();
+ 		pm_power_off();
+Index: linux-2.6.17-source/arch/i386/kernel/setup.c
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/setup.c
++++ linux-2.6.17-source/arch/i386/kernel/setup.c
+@@ -43,6 +43,7 @@
+ #include <linux/efi.h>
+ #include <linux/init.h>
+ #include <linux/edd.h>
++#include <linux/cooperative_internal.h>
+ #include <linux/nodemask.h>
+ #include <linux/kexec.h>
+ #include <linux/crash_dump.h>
+@@ -123,6 +124,9 @@
+ /* user-defined highmem size */
+ static unsigned int highmem_pages = -1;
+ 
++/* colinux start_va */
++static long start_va = 0;
++
+ /*
+  * Setup options
+  */
+@@ -713,8 +717,17 @@
+ 	int len = 0;
+ 	int userdef = 0;
+ 
+-	/* Save unparsed command line copy for /proc/cmdline */
+-	saved_command_line[COMMAND_LINE_SIZE-1] = '\0';
++	if (cooperative_mode_enabled()) {
++		/*
++		 * Better to have 'root=/dev/cobd0' here.
++		 */
++		from = co_boot_params.co_boot_parameters;
++		snprintf(saved_command_line, COMMAND_LINE_SIZE, "%s",
++			 co_boot_params.co_boot_parameters);
++	} else {
++		/* Save unparsed command line copy for /proc/cmdline */
++		saved_command_line[COMMAND_LINE_SIZE-1] = '\0';
++	}
+ 
+ 	for (;;) {
+ 		if (c != ' ')
+@@ -1083,6 +1096,7 @@
+ 	return max_low_pfn;
+ }
+ 
++#ifndef CONFIG_COOPERATIVE
+ /*
+  * Free all available memory for boot time allocation.  Used
+  * as a callback function by efi_memory_walk()
+@@ -1155,6 +1169,7 @@
+ 	if (addr)
+ 		reserve_bootmem(addr, PAGE_SIZE);	
+ }
++#endif /* !CONFIG_COOPERATIVE */
+ 
+ #ifndef CONFIG_NEED_MULTIPLE_NODES
+ void __init setup_bootmem_allocator(void);
+@@ -1166,9 +1181,16 @@
+ 	 */
+ 	min_low_pfn = PFN_UP(init_pg_tables_end);
+ 
+-	find_max_pfn();
++	if (cooperative_mode_enabled()) {
++		max_low_pfn = max_pfn = co_boot_params.co_memory_size / PAGE_SIZE;
++		min_low_pfn = PFN_UP(__pa((unsigned long)&_end)) + 0x10;
++		start_va = (unsigned long)__va(min_low_pfn << PAGE_SHIFT);
++		co_alloc_pages(start_va, 0x20);
++	} else {
++		find_max_pfn();
+ 
+-	max_low_pfn = find_max_low_pfn();
++		max_low_pfn = find_max_low_pfn();
++	}
+ 
+ #ifdef CONFIG_HIGHMEM
+ 	highstart_pfn = highend_pfn = max_pfn;
+@@ -1191,17 +1213,23 @@
+ 	unsigned long zones_size[MAX_NR_ZONES] = {0, 0, 0};
+ 	unsigned int max_dma, low;
+ 
+-	max_dma = virt_to_phys((char *)MAX_DMA_ADDRESS) >> PAGE_SHIFT;
+-	low = max_low_pfn;
++	if (!cooperative_mode_enabled()) {
++		max_dma = virt_to_phys((char *)MAX_DMA_ADDRESS) >> PAGE_SHIFT;
++		low = max_low_pfn;
+ 
+-	if (low < max_dma)
+-		zones_size[ZONE_DMA] = low;
+-	else {
+-		zones_size[ZONE_DMA] = max_dma;
+-		zones_size[ZONE_NORMAL] = low - max_dma;
++		if (low < max_dma)
++			zones_size[ZONE_DMA] = low;
++		else {
++			zones_size[ZONE_DMA] = max_dma;
++			zones_size[ZONE_NORMAL] = low - max_dma;
+ #ifdef CONFIG_HIGHMEM
+-		zones_size[ZONE_HIGHMEM] = highend_pfn - low;
++			zones_size[ZONE_HIGHMEM] = highend_pfn - low;
+ #endif
++		}
++	} else {
++		zones_size[ZONE_DMA] = 0;
++		zones_size[ZONE_NORMAL] = max_low_pfn;
++		zones_size[ZONE_HIGHMEM] = 0;
+ 	}
+ 	free_area_init(zones_size);
+ }
+@@ -1218,8 +1246,14 @@
+ 	 */
+ 	bootmap_size = init_bootmem(min_low_pfn, max_low_pfn);
+ 
++	if (cooperative_mode_enabled()) {
++		unsigned long bootmem_end =
++			start_va + bootmap_size + (0x10 << PAGE_SHIFT);
++		unsigned long physical_end =
++			__PAGE_OFFSET + (max_low_pfn << PAGE_SHIFT);
++		free_bootmem(__pa(bootmem_end), physical_end - bootmem_end);
++	} else {
+ 	register_bootmem_low_pages(max_low_pfn);
+-
+ 	/*
+ 	 * Reserve the bootmem bitmap itself as well. We do this in two
+ 	 * steps (first step was init_bootmem()) because this catches
+@@ -1244,7 +1278,7 @@
+ 	if (boot_cpu_data.x86_vendor == X86_VENDOR_AMD &&
+ 	    boot_cpu_data.x86 == 6)
+ 	     reserve_bootmem(0xa0000 - 4096, 4096);
+-
++	}
+ #ifdef CONFIG_SMP
+ 	/*
+ 	 * But first pinch a few for the stack/trampoline stuff
+@@ -1267,6 +1301,7 @@
+ #endif
+ 
+ #ifdef CONFIG_BLK_DEV_INITRD
++#ifndef CONFIG_COOPERATIVE
+ 	if (LOADER_TYPE && INITRD_START) {
+ 		if (INITRD_START + INITRD_SIZE <= (max_low_pfn << PAGE_SHIFT)) {
+ 			reserve_bootmem(INITRD_START, INITRD_SIZE);
+@@ -1282,6 +1317,16 @@
+ 			initrd_start = 0;
+ 		}
+ 	}
++#else /* !CONFIG_COOPERATIVE */
++	if (co_boot_params.co_initrd != NULL) {
++		printk(KERN_INFO "initrd enabled: start: 0x%x  size: 0x%08lx\n",
++		       (unsigned int)co_boot_params.co_initrd, (long unsigned int)co_boot_params.co_initrd_size);
++		initrd_start = (unsigned long)co_boot_params.co_initrd;
++		initrd_end = (unsigned long)co_boot_params.co_initrd + co_boot_params.co_initrd_size;
++
++		reserve_bootmem(virt_to_phys(co_boot_params.co_initrd), co_boot_params.co_initrd_size);
++	}
++#endif /* !CONFIG_COOPERATIVE */
+ #endif
+ #ifdef CONFIG_KEXEC
+ 	if (crashk_res.start != crashk_res.end)
+@@ -1348,6 +1393,7 @@
+ 	}
+ }
+ 
++#ifndef CONFIG_COOPERATIVE
+ /*
+  * Request address space for all standard resources
+  *
+@@ -1422,6 +1468,7 @@
+ 	printk("Allocating PCI resources starting at %08lx (gap: %08lx:%08lx)\n",
+ 		pci_mem_start, gapstart, gapsize);
+ }
++#endif
+ 
+ static char * __init machine_specific_memory_setup(void);
+ 
+@@ -1484,7 +1531,7 @@
+ 	ARCH_SETUP
+ 	if (efi_enabled)
+ 		efi_init();
+-	else {
++ 	else if (!cooperative_mode_enabled()) {
+ 		printk(KERN_INFO "BIOS-provided physical RAM map:\n");
+ 		print_memory_map(machine_specific_memory_setup());
+ 	}
+@@ -1539,7 +1586,9 @@
+ 	 * NOTE: at this point the bootmem allocator is fully available.
+ 	 */
+ 
++#ifndef CONFIG_COOPERATIVE
+ 	dmi_scan_machine();
++#endif
+ 
+ #ifdef CONFIG_X86_GENERICARCH
+ 	generic_apic_probe(*cmdline_p);
+@@ -1573,10 +1622,14 @@
+ 		get_smp_config();
+ #endif
+ 
++#ifndef CONFIG_COOPERATIVE
+ 	register_memory();
++#endif
+ 
+ #ifdef CONFIG_VT
+-#if defined(CONFIG_VGA_CONSOLE)
++#ifdef CONFIG_COOPERATIVE_CONSOLE
++	conswitchp = &colinux_con;
++#elif defined(CONFIG_VGA_CONSOLE)
+ 	if (!efi_enabled || (efi_mem_type(0xa0000) != EFI_CONVENTIONAL_MEMORY))
+ 		conswitchp = &vga_con;
+ #elif defined(CONFIG_DUMMY_CONSOLE)
+Index: linux-2.6.17-source/arch/i386/kernel/traps.c
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/traps.c
++++ linux-2.6.17-source/arch/i386/kernel/traps.c
+@@ -51,7 +51,8 @@
+ #include <asm/smp.h>
+ #include <asm/arch_hooks.h>
+ #include <asm/kdebug.h>
+-
++#include <linux/cooperative_internal.h>
++#include <asm/cooperative_internal.h>
+ #include <linux/module.h>
+ 
+ #include "mach_traps.h"
+@@ -460,6 +461,12 @@
+ 	}
+ 
+ 	kernel_trap: {
++		if (cooperative_mode_enabled()) {
++			if (trapnr == 3) {
++				co_kernel_breakpoint(regs);
++				return;
++			}
++		}
+ 		if (!fixup_exception(regs))
+ 			die(str, regs, error_code);
+ 		return;
+@@ -787,6 +794,12 @@
+ 
+ 	get_debugreg(condition, 6);
+ 
++	if (cooperative_mode_enabled() &&
++	    co_kernel_debug(regs, error_code, condition))
++	{
++		return;
++	}
++
+ 	if (notify_die(DIE_DEBUG, "debug", regs, condition, error_code,
+ 					SIGTRAP) == NOTIFY_STOP)
+ 		return;
+Index: linux-2.6.17-source/arch/i386/kernel/vmlinux.lds.S
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/kernel/vmlinux.lds.S
++++ linux-2.6.17-source/arch/i386/kernel/vmlinux.lds.S
+@@ -18,6 +18,7 @@
+   . = __KERNEL_START;
+   phys_startup_32 = startup_32 - LOAD_OFFSET;
+   /* read-only */
++  _kernel_start = .;		/* colinux kernel entry */
+   _text = .;			/* Text and read-only data */
+   .text : AT(ADDR(.text) - LOAD_OFFSET) {
+ 	*(.text)
+Index: linux-2.6.17-source/arch/i386/mm/fault.c
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/mm/fault.c
++++ linux-2.6.17-source/arch/i386/mm/fault.c
+@@ -267,7 +267,7 @@
+ 	 * an interrupt in the middle of a task switch..
+ 	 */
+ 	pgd_paddr = read_cr3();
+-	pmd_k = vmalloc_sync_one(__va(pgd_paddr), address);
++	pmd_k = vmalloc_sync_one(__va(CO_P_TO_PP((unsigned long)pgd_paddr)), address);
+ 	if (!pmd_k)
+ 		return -1;
+ 	pte_k = pte_offset_kernel(pmd_k, address);
+@@ -531,7 +531,8 @@
+ 		printk("%08lx\n", regs->eip);
+ 	}
+ 	page = read_cr3();
+-	page = ((unsigned long *) __va(page))[address >> 22];
++	page = ((unsigned long *) __va(CO_P_TO_PP(page)))[address >> 22];
++	page = CO_P_TO_PP(page);
+ 	if (oops_may_print())
+ 		printk(KERN_ALERT "*pde = %08lx\n", page);
+ 	/*
+@@ -545,6 +546,7 @@
+ 		page &= PAGE_MASK;
+ 		address &= 0x003ff000;
+ 		page = ((unsigned long *) __va(page))[address >> PAGE_SHIFT];
++		page = CO_P_TO_PP(page);
+ 		printk(KERN_ALERT "*pte = %08lx\n", page);
+ 	}
+ #endif
+Index: linux-2.6.17-source/arch/i386/mm/init.c
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/mm/init.c
++++ linux-2.6.17-source/arch/i386/mm/init.c
+@@ -27,6 +27,7 @@
+ #include <linux/slab.h>
+ #include <linux/proc_fs.h>
+ #include <linux/efi.h>
++#include <linux/cooperative_internal.h>
+ #include <linux/memory_hotplug.h>
+ #include <linux/initrd.h>
+ 
+@@ -47,7 +48,9 @@
+ DEFINE_PER_CPU(struct mmu_gather, mmu_gathers);
+ unsigned long highstart_pfn, highend_pfn;
+ 
++#ifndef CONFIG_COOPERATIVE
+ static int noinline do_test_wp_bit(void);
++#endif
+ 
+ /*
+  * Creates a middle page table and puts a pointer to it in the
+@@ -81,7 +84,7 @@
+ {
+ 	if (pmd_none(*pmd)) {
+ 		pte_t *page_table = (pte_t *) alloc_bootmem_low_pages(PAGE_SIZE);
+-		set_pmd(pmd, __pmd(__pa(page_table) | _PAGE_TABLE));
++		set_pmd(pmd, __pmd(CO_PP_TO_P(__pa(page_table)) | _PAGE_TABLE));
+ 		if (page_table != pte_offset_kernel(pmd, 0))
+ 			BUG();	
+ 
+@@ -142,7 +145,8 @@
+  * of max_low_pfn pages, by creating page tables starting from address 
+  * PAGE_OFFSET.
+  */
+-static void __init kernel_physical_mapping_init(pgd_t *pgd_base)
++#ifndef CONFIG_COOPERATIVE
++static void __init TODO_HN__kernel_physical_mapping_init(pgd_t *pgd_base)
+ {
+ 	unsigned long pfn;
+ 	pgd_t *pgd;
+@@ -183,6 +187,7 @@
+ 		}
+ 	}
+ }
++#endif /* !CONFIG_COOPERATIVE */
+ 
+ static inline int page_kills_ppro(unsigned long pagenr)
+ {
+@@ -348,6 +353,7 @@
+ 		set_pgd(pgd_base + i, __pgd(__pa(empty_zero_page) | _PAGE_PRESENT));
+ #endif
+ 
++#ifndef CONFIG_COOPERATIVE
+ 	/* Enable PSE if available */
+ 	if (cpu_has_pse) {
+ 		set_in_cr4(X86_CR4_PSE);
+@@ -362,6 +368,7 @@
+ 
+ 	kernel_physical_mapping_init(pgd_base);
+ 	remap_numa_kva();
++#endif /* !CONFIG_COOPERATIVE */
+ 
+ 	/*
+ 	 * Fixed mappings, only the page table structure has to be
+@@ -532,6 +539,7 @@
+  * but fortunately the switch to using exceptions got rid of all that.
+  */
+ 
++#ifndef CONFIG_COOPERATIVE
+ static void __init test_wp_bit(void)
+ {
+ 	printk("Checking if this processor honours the WP bit even in supervisor mode... ");
+@@ -550,6 +558,7 @@
+ 		printk("Ok.\n");
+ 	}
+ }
++#endif /* !CONFIG_COOPERATIVE */
+ 
+ static void __init set_max_mapnr_init(void)
+ {
+@@ -632,8 +641,10 @@
+ 	if (!cpu_has_pae)
+ 		panic("cannot execute a PAE-enabled kernel on a PAE-less CPU!");
+ #endif
++#ifndef CONFIG_COOPERATIVE
+ 	if (boot_cpu_data.wp_works_ok < 0)
+ 		test_wp_bit();
++#endif
+ 
+ 	/*
+ 	 * Subtle. SMP is doing it's boot stuff late (because it has to
+@@ -699,6 +710,7 @@
+  * This function cannot be __init, since exceptions don't work in that
+  * section.  Put this after the callers, so that it cannot be inlined.
+  */
++#ifndef CONFIG_COOPERATIVE
+ static int noinline do_test_wp_bit(void)
+ {
+ 	char tmp_reg;
+@@ -721,6 +733,7 @@
+ 	
+ 	return flag;
+ }
++#endif /* !CONFIG_COOPERATIVE */
+ 
+ #ifdef CONFIG_DEBUG_RODATA
+ 
+Index: linux-2.6.17-source/arch/i386/mm/ioremap.c
+===================================================================
+--- linux-2.6.17-source.orig/arch/i386/mm/ioremap.c
++++ linux-2.6.17-source/arch/i386/mm/ioremap.c
+@@ -11,6 +11,7 @@
+ #include <linux/vmalloc.h>
+ #include <linux/init.h>
+ #include <linux/slab.h>
++#include <linux/cooperative_internal.h>
+ #include <linux/module.h>
+ #include <asm/io.h>
+ #include <asm/fixmap.h>
+@@ -191,7 +192,14 @@
+ void __iomem *ioremap_nocache (unsigned long phys_addr, unsigned long size)
+ {
+ 	unsigned long last_addr;
+-	void __iomem *p = __ioremap(phys_addr, size, _PAGE_PCD);
++	void __iomem *p;
++
++	if (cooperative_mode_enabled()) {
++		panic("ioremap_nocache %ld:%ld\n", phys_addr, size);
++		return NULL;
++	}
++
++	p = __ioremap(phys_addr, size, _PAGE_PCD);
+ 	if (!p) 
+ 		return p; 
+ 
+Index: linux-2.6.17-source/include/asm-i386/bug.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/bug.h
++++ linux-2.6.17-source/include/asm-i386/bug.h
+@@ -12,11 +12,16 @@
+ #ifdef CONFIG_BUG
+ #define HAVE_ARCH_BUG
+ #ifdef CONFIG_DEBUG_BUGVERBOSE
++#ifdef CONFIG_COOPERATIVE
++extern void co_terminate_bug(int code, int line, const char *file);
++#define BUG() do { co_terminate_bug(0, __LINE__, __FILE__); } while(0)
++#else
+ #define BUG()				\
+  __asm__ __volatile__(	"ud2\n"		\
+ 			"\t.word %c0\n"	\
+ 			"\t.long %c1\n"	\
+ 			 : : "i" (__LINE__), "i" (__FILE__))
++#endif
+ #else
+ #define BUG() __asm__ __volatile__("ud2\n")
+ #endif
+Index: linux-2.6.17-source/include/asm-i386/bugs.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/bugs.h
++++ linux-2.6.17-source/include/asm-i386/bugs.h
+@@ -39,6 +39,7 @@
+ 
+ __setup("mca-pentium", mca_pentium);
+ 
++#ifdef CONFIG_MATH_EMULATION
+ static int __init no_387(char *s)
+ {
+ 	boot_cpu_data.hard_math = 0;
+@@ -47,6 +48,7 @@
+ }
+ 
+ __setup("no387", no_387);
++#endif
+ 
+ static double __initdata x = 4195835.0;
+ static double __initdata y = 3145727.0;
+Index: linux-2.6.17-source/include/asm-i386/cooperative.h
+===================================================================
+--- /dev/null
++++ linux-2.6.17-source/include/asm-i386/cooperative.h
+@@ -0,0 +1,194 @@
++/*
++ *  linux/include/asm/cooperative.h
++ *
++ *  Copyright (C) 2004 Dan Aloni
++ *
++ *  This file defines the lower level interfaces between the Cooperative Linux
++ *  kernel and the host OS driver. It's for both external inclusion from the
++ *  and internal inclusion in the kernel sources.
++ */
++
++#ifndef __LINUX_ASM_COOPERATIVE_H__
++#define __LINUX_ASM_COOPERATIVE_H__
++
++typedef struct {
++	unsigned short size;
++	struct x86_idt_entry *table;
++} __attribute__((packed)) x86_idt_t;
++
++typedef struct {
++	unsigned short limit;
++	struct x86_dt_entry *base;
++} __attribute__((packed)) x86_gdt_t;
++
++typedef struct {
++	unsigned char border2[0x4];
++
++	unsigned long cs;
++        #define CO_ARCH_STATE_STACK_CS "0x04"
++
++	unsigned long ds;
++        #define CO_ARCH_STATE_STACK_DS "0x08"
++
++	unsigned long es;
++        #define CO_ARCH_STATE_STACK_ES "0x0C"
++
++	unsigned long cr3;
++        #define CO_ARCH_STATE_STACK_CR3 "0x10"
++
++	unsigned long cr4;
++        #define CO_ARCH_STATE_STACK_CR4 "0x14"
++
++	unsigned long cr2;
++        #define CO_ARCH_STATE_STACK_CR2 "0x18"
++
++	unsigned long cr0;
++        #define CO_ARCH_STATE_STACK_CR0 "0x1C"
++
++	x86_gdt_t gdt;
++        #define CO_ARCH_STATE_STACK_GDT "0x20"
++
++	unsigned long fs;
++        #define CO_ARCH_STATE_STACK_FS  "0x26"
++
++	unsigned long gs;
++        #define CO_ARCH_STATE_STACK_GS  "0x2A"
++
++	unsigned short ldt;
++        #define CO_ARCH_STATE_STACK_LDT "0x2E"
++
++	x86_idt_t idt;
++        #define CO_ARCH_STATE_STACK_IDT "0x30"
++
++	unsigned short tr;
++        #define CO_ARCH_STATE_STACK_TR  "0x36"
++
++	unsigned long return_eip;
++        #define CO_ARCH_STATE_STACK_RETURN_EIP  "0x38"
++
++	unsigned long flags;
++        #define CO_ARCH_STATE_STACK_FLAGS "0x3C"
++
++	unsigned long esp;
++        #define CO_ARCH_STATE_STACK_ESP "0x40"
++
++	unsigned long ss;
++        #define CO_ARCH_STATE_STACK_SS "0x44"
++
++	unsigned long dr0;
++        #define CO_ARCH_STATE_STACK_DR0 "0x48"
++
++	unsigned long dr1;
++        #define CO_ARCH_STATE_STACK_DR1 "0x4C"
++
++	unsigned long dr2;
++        #define CO_ARCH_STATE_STACK_DR2 "0x50"
++
++	unsigned long dr3;
++        #define CO_ARCH_STATE_STACK_DR3 "0x54"
++
++	unsigned long dr6;
++        #define CO_ARCH_STATE_STACK_DR6 "0x58"
++
++	unsigned long dr7;
++        #define CO_ARCH_STATE_STACK_DR7 "0x5C"
++
++	union {
++		unsigned long temp_cr3;
++		unsigned long other_map;
++	} __attribute__((packed));
++        #define CO_ARCH_STATE_STACK_TEMP_CR3 "0x60"
++        #define CO_ARCH_STATE_STACK_OTHERMAP "0x60"
++
++	unsigned long relocate_eip;
++        #define CO_ARCH_STATE_STACK_RELOCATE_EIP "0x64"
++
++	unsigned long pad1;
++        #define CO_ARCH_STATE_STACK_RELOCATE_EIP_AFTER "0x68"
++
++	unsigned long va;
++        #define CO_ARCH_STATE_STACK_VA "0x6C"
++
++	unsigned char fxstate[0x200];
++        #define CO_ARCH_STATE_STACK_FXSTATE "0x70"
++} __attribute__((packed)) co_arch_state_stack_t;
++
++#define CO_MAX_PARAM_SIZE 0x400
++
++typedef struct co_arch_passage_page_normal_address_space {
++	unsigned long pgd[0x400];
++	unsigned long pte[2][0x400];
++} co_arch_passage_page_normal_address_space_t;
++
++typedef struct co_arch_passage_page_pae_address_space {
++	unsigned long long main[0x200];
++	unsigned long long pgd[2][0x200];
++	unsigned long long pte[2][0x200];
++} co_arch_passage_page_pae_address_space_t;
++
++typedef struct co_arch_passage_page {
++	union {
++		struct {
++			union {
++				struct {
++					union {
++						unsigned long self_physical_address;
++						unsigned long temp_pgd_physical;
++					} __attribute__((packed));
++					unsigned long dr0;
++					unsigned long dr1;
++					unsigned long dr2;
++					unsigned long dr3;
++					unsigned long dr6;
++					unsigned long dr7;
++					unsigned char code[0x230];
++				} __attribute__((packed));
++				unsigned char pad[0x250]; /* Be careful! see NOTE below */
++			} __attribute__((packed));
++
++			/* Machine states */
++
++			/*
++			 * NOTE: *_state fields must be aligned at 16 bytes boundary since
++			 * the fxsave/fxload instructions expect an aligned arugment.
++			 */
++
++			co_arch_state_stack_t host_state;
++			co_arch_state_stack_t linuxvm_state;
++
++			/* Control parameters */
++			unsigned long operation;
++			unsigned long params[];
++		} __attribute__((packed));
++		unsigned char first_page[0x1000];
++	};
++
++	/* page tables for passage address spaces */
++	union {
++		co_arch_passage_page_normal_address_space_t guest_normal;
++		co_arch_passage_page_normal_address_space_t temp_space;
++	} __attribute__((packed));
++	union {
++		co_arch_passage_page_normal_address_space_t host_normal;
++		co_arch_passage_page_pae_address_space_t host_pae;
++	} __attribute__((packed));
++} co_arch_passage_page_t;
++
++/*
++ * Address space layout:
++ */
++
++#define CO_VPTR_BASE                         (0xffc00000)
++#define CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP   (CO_VPTR_BASE - 0x1000000)
++#define CO_VPTR_PSEUDO_RAM_PAGE_TABLES       (CO_VPTR_BASE - 0x1100000)
++#define CO_VPTR_PASSAGE_PAGE                 (CO_VPTR_BASE - 0x1101000)
++#define CO_VPTR_IO_AREA_SIZE                 (0x10000)
++#define CO_VPTR_IO_AREA_START                (CO_VPTR_BASE - 0x1200000)
++#define CO_VPTR_SELF_MAP                     (CO_VPTR_BASE - 0x1400000)
++
++typedef struct {
++	unsigned long kernel_cs;
++	unsigned long kernel_ds;
++} __attribute__((packed)) co_arch_info_t;
++
++#endif
+Index: linux-2.6.17-source/include/asm-i386/cooperative_internal.h
+===================================================================
+--- /dev/null
++++ linux-2.6.17-source/include/asm-i386/cooperative_internal.h
+@@ -0,0 +1,33 @@
++/*
++ *  linux/include/asm/cooperative_internal.h
++ *
++ *  Copyright (C) 2004 Dan Aloni
++ */
++
++#ifndef __LINUX_ASM_COOPERATIVE_INTERNAL_H__
++#define __LINUX_ASM_COOPERATIVE_INTERNAL_H__
++
++#include <linux/config.h>
++#include <asm/ptrace.h>
++
++#ifdef CONFIG_COOPERATIVE
++
++extern void co_kernel_breakpoint(struct pt_regs * regs);
++extern int co_kernel_debug(struct pt_regs * regs, long error_code, unsigned int condition);
++
++fastcall unsigned int do_IRQ(struct pt_regs *regs);
++
++#else
++
++static inline void co_kernel_breakpoint(struct pt_regs * regs)
++{
++}
++
++static inline int co_kernel_debug(struct pt_regs * regs, long error_code, unsigned int condition)
++{
++	return 0;
++}
++
++#endif
++
++#endif
+Index: linux-2.6.17-source/include/asm-i386/dma.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/dma.h
++++ linux-2.6.17-source/include/asm-i386/dma.h
+@@ -268,6 +268,7 @@
+  *
+  * Assumes DMA flip-flop is clear.
+  */
++#ifndef CONFIG_COOPERATIVE
+ static __inline__ int get_dma_residue(unsigned int dmanr)
+ {
+ 	unsigned int io_port = (dmanr<=3)? ((dmanr&3)<<1) + 1 + IO_DMA1_BASE
+@@ -281,6 +282,7 @@
+ 	
+ 	return (dmanr<=3)? count : (count<<1);
+ }
++#endif
+ 
+ 
+ /* These are in kernel/dma.c: */
+Index: linux-2.6.17-source/include/asm-i386/fixmap.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/fixmap.h
++++ linux-2.6.17-source/include/asm-i386/fixmap.h
+@@ -31,6 +31,7 @@
+ #include <linux/threads.h>
+ #include <asm/kmap_types.h>
+ #endif
++#include <asm/cooperative.h>
+ 
+ /*
+  * Here we define all the compile-time 'special' virtual
+Index: linux-2.6.17-source/include/asm-i386/io.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/io.h
++++ linux-2.6.17-source/include/asm-i386/io.h
+@@ -117,6 +117,9 @@
+ 
+ static inline void __iomem * ioremap(unsigned long offset, unsigned long size)
+ {
++#ifdef CONFIG_COOPERATIVE
++	panic("ioremap %ld:%ld\n", offset, size);
++#endif
+ 	return __ioremap(offset, size, 0);
+ }
+ 
+@@ -284,7 +287,7 @@
+ 
+ #endif /* __KERNEL__ */
+ 
+-#ifdef SLOW_IO_BY_JUMPING
++#if defined(SLOW_IO_BY_JUMPING) || defined(CONFIG_COOPERATIVE)
+ #define __SLOW_DOWN_IO "jmp 1f; 1: jmp 1f; 1:"
+ #else
+ #define __SLOW_DOWN_IO "outb %%al,$0x80;"
+Index: linux-2.6.17-source/include/asm-i386/mach-default/irq_vectors.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/mach-default/irq_vectors.h
++++ linux-2.6.17-source/include/asm-i386/mach-default/irq_vectors.h
+@@ -67,6 +67,11 @@
+ 
+ #define TIMER_IRQ 0
+ 
++#ifdef CONFIG_COOPERATIVE
++#define KEYBOARD_IRQ 1
++#define NETWORK_IRQ 2
++#endif
++
+ /*
+  * 16 8259A IRQ's, 208 potential APIC interrupt sources.
+  * Right now the APIC is mostly only used for SMP.
+Index: linux-2.6.17-source/include/asm-i386/mach-default/irq_vectors_limits.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/mach-default/irq_vectors_limits.h
++++ linux-2.6.17-source/include/asm-i386/mach-default/irq_vectors_limits.h
+@@ -5,7 +5,7 @@
+ #define NR_IRQS FIRST_SYSTEM_VECTOR
+ #define NR_IRQ_VECTORS NR_IRQS
+ #else
+-#ifdef CONFIG_X86_IO_APIC
++#if defined(CONFIG_X86_IO_APIC) || defined(CONFIG_X86_UP_COPIC)
+ #define NR_IRQS 224
+ # if (224 >= 32 * NR_CPUS)
+ # define NR_IRQ_VECTORS NR_IRQS
+Index: linux-2.6.17-source/include/asm-i386/mc146818rtc.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/mc146818rtc.h
++++ linux-2.6.17-source/include/asm-i386/mc146818rtc.h
+@@ -4,6 +4,7 @@
+ #ifndef _ASM_MC146818RTC_H
+ #define _ASM_MC146818RTC_H
+ 
++#include <linux/config.h>
+ #include <asm/io.h>
+ #include <asm/system.h>
+ #include <linux/mc146818rtc.h>
+@@ -80,6 +81,8 @@
+ #define current_lock_cmos_reg() 0
+ #endif
+ 
++#ifndef CONFIG_COOPERATIVE
++
+ /*
+  * The yet supported machines all access the RTC index register via
+  * an ISA port access but the way to access the date register differs ...
+@@ -89,6 +92,11 @@
+ unsigned char rtc_cmos_read(unsigned char addr);
+ void rtc_cmos_write(unsigned char val, unsigned char addr);
+ 
++#else
++#define CMOS_READ(addr) (0)
++#define CMOS_WRITE(val, addr) do {} while(0)
++#endif
++
+ #define RTC_IRQ 8
+ 
+ #endif /* _ASM_MC146818RTC_H */
+Index: linux-2.6.17-source/include/asm-i386/mmzone.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/mmzone.h
++++ linux-2.6.17-source/include/asm-i386/mmzone.h
+@@ -6,7 +6,9 @@
+ #ifndef _ASM_MMZONE_H_
+ #define _ASM_MMZONE_H_
+ 
++#include <linux/config.h>
+ #include <asm/smp.h>
++#include <asm/cooperative.h>
+ 
+ #ifdef CONFIG_NUMA
+ extern struct pglist_data *node_data[];
+Index: linux-2.6.17-source/include/asm-i386/page.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/page.h
++++ linux-2.6.17-source/include/asm-i386/page.h
+@@ -13,6 +13,7 @@
+ #ifndef __ASSEMBLY__
+ 
+ #include <linux/config.h>
++#include <asm/cooperative.h>
+ 
+ #ifdef CONFIG_X86_USE_3DNOW
+ 
+@@ -118,6 +119,19 @@
+ #endif
+ #define __KERNEL_START		(__PAGE_OFFSET + __PHYSICAL_START)
+ 
++#ifdef CONFIG_COOPERATIVE
++#define CO_PA(pfn)		(((unsigned long *)CO_VPTR_PSEUDO_RAM_PAGE_TABLES)[pfn])
++#define CO_VA_PFN(pa)		(((unsigned long *)CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP)[((pa) >> PAGE_SHIFT)])
++#define CO_PFN_PP_TO_P(pfn)	(CO_PA(pfn) >> PAGE_SHIFT)
++#define CO_PFN_P_TO_PP(pfn)	(CO_VA_PFN(pfn << PAGE_SHIFT))
++#define CO_PP_TO_P(pa)	        ((CO_PFN_PP_TO_P(pa >> PAGE_SHIFT) << PAGE_SHIFT) | (pa & ~PAGE_MASK))
++#define CO_P_TO_PP(pa)	        ((CO_PFN_P_TO_PP(pa >> PAGE_SHIFT) << PAGE_SHIFT) | (pa & ~PAGE_MASK))
++#else
++#define CO_PFN_P_TO_PP(pfn)	pfn
++#define CO_PFN_PP_TO_P(pfn)	pfn
++#define CO_PP_TO_P(pa)        	pa
++#define CO_P_TO_PP(pa)	        pa
++#endif
+ 
+ #define PAGE_OFFSET		((unsigned long)__PAGE_OFFSET)
+ #define VMALLOC_RESERVE		((unsigned long)__VMALLOC_RESERVE)
+Index: linux-2.6.17-source/include/asm-i386/pgalloc.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/pgalloc.h
++++ linux-2.6.17-source/include/asm-i386/pgalloc.h
+@@ -5,13 +5,14 @@
+ #include <asm/fixmap.h>
+ #include <linux/threads.h>
+ #include <linux/mm.h>		/* for struct page */
++#include <asm/cooperative.h>
+ 
+ #define pmd_populate_kernel(mm, pmd, pte) \
+-		set_pmd(pmd, __pmd(_PAGE_TABLE + __pa(pte)))
++		set_pmd(pmd, __pmd(_PAGE_TABLE + CO_PP_TO_P(__pa(pte))))
+ 
+ #define pmd_populate(mm, pmd, pte) 				\
+ 	set_pmd(pmd, __pmd(_PAGE_TABLE +			\
+-		((unsigned long long)page_to_pfn(pte) <<	\
++       (CO_PFN_PP_TO_P((unsigned long long)page_to_pfn(pte)) << \
+ 			(unsigned long long) PAGE_SHIFT)))
+ /*
+  * Allocate and free page tables.
+Index: linux-2.6.17-source/include/asm-i386/pgtable-2level.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/pgtable-2level.h
++++ linux-2.6.17-source/include/asm-i386/pgtable-2level.h
+@@ -8,6 +8,9 @@
+ #define pgd_ERROR(e) \
+ 	printk("%s:%d: bad pgd %08lx.\n", __FILE__, __LINE__, pgd_val(e))
+ 
++#include <linux/config.h>
++#include <asm/cooperative.h>
++
+ /*
+  * Certain architectures need to do special things when PTEs
+  * within a page table are directly modified.  Thus, the following
+@@ -25,9 +28,9 @@
+ #define pte_same(a, b)		((a).pte_low == (b).pte_low)
+ #define pte_page(x)		pfn_to_page(pte_pfn(x))
+ #define pte_none(x)		(!(x).pte_low)
+-#define pte_pfn(x)		((unsigned long)(((x).pte_low >> PAGE_SHIFT)))
+-#define pfn_pte(pfn, prot)	__pte(((pfn) << PAGE_SHIFT) | pgprot_val(prot))
+-#define pfn_pmd(pfn, prot)	__pmd(((pfn) << PAGE_SHIFT) | pgprot_val(prot))
++#define pte_pfn(x)		CO_PFN_P_TO_PP((unsigned long)(((x).pte_low >> PAGE_SHIFT)))
++#define pfn_pte(pfn, prot)	__pte((CO_PFN_PP_TO_P(pfn) << PAGE_SHIFT) | pgprot_val(prot))
++#define pfn_pmd(pfn, prot)	__pmd((CO_PFN_PP_TO_P(pfn) << PAGE_SHIFT) | pgprot_val(prot))
+ 
+ /*
+  * All present user pages are user-executable:
+Index: linux-2.6.17-source/include/asm-i386/pgtable.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/pgtable.h
++++ linux-2.6.17-source/include/asm-i386/pgtable.h
+@@ -25,6 +25,8 @@
+ #include <linux/list.h>
+ #include <linux/spinlock.h>
+ 
++#include <asm/cooperative.h>
++
+ struct mm_struct;
+ struct vm_area_struct;
+ 
+@@ -367,10 +369,10 @@
+ #define pte_offset_kernel(dir, address) \
+ 	((pte_t *) pmd_page_kernel(*(dir)) +  pte_index(address))
+ 
+-#define pmd_page(pmd) (pfn_to_page(pmd_val(pmd) >> PAGE_SHIFT))
++#define pmd_page(pmd) (pfn_to_page(CO_P_TO_PP(pmd_val(pmd)) >> PAGE_SHIFT))
+ 
+ #define pmd_page_kernel(pmd) \
+-		((unsigned long) __va(pmd_val(pmd) & PAGE_MASK))
++		((unsigned long) __va(CO_P_TO_PP(pmd_val(pmd)) & PAGE_MASK))
+ 
+ /*
+  * Helper function that returns the kernel pagetable entry controlling
+Index: linux-2.6.17-source/include/asm-i386/processor.h
+===================================================================
+--- linux-2.6.17-source.orig/include/asm-i386/processor.h
++++ linux-2.6.17-source/include/asm-i386/processor.h
+@@ -212,7 +212,7 @@
+ 	return edx;
+ }
+ 
+-#define load_cr3(pgdir) write_cr3(__pa(pgdir))
++#define load_cr3(pgdir) write_cr3(CO_PP_TO_P(__pa(pgdir)))
+ 
+ /*
+  * Intel CPU features in CR4
+@@ -229,6 +229,7 @@
+ #define X86_CR4_OSFXSR		0x0200	/* enable fast FPU save and restore */
+ #define X86_CR4_OSXMMEXCPT	0x0400	/* enable unmasked SSE exceptions */
+ 
++#ifdef __KERNEL__
+ /*
+  * Save the cr4 feature set we're using (ie
+  * Pentium 4MB enable and PPro Global page
+@@ -254,6 +255,7 @@
+ 	cr4 &= ~mask;
+ 	write_cr4(cr4);
+ }
++#endif /* __KERNEL__ */
+ 
+ /*
+  *      NSC/Cyrix CPU configuration register indexes
+Index: linux-2.6.17-source/include/linux/cooperative.h
+===================================================================
+--- /dev/null
++++ linux-2.6.17-source/include/linux/cooperative.h
+@@ -0,0 +1,340 @@
++/*
++ *  linux/include/linux/cooperative.h
++ *
++ *  Copyright (C) 2004 Dan Aloni
++ *
++ *  This file defines the interfaces between the Cooperative Linux kernel
++ *  and the host OS driver. It's for both external inclusion from the
++ *  and internal inclusion in the kernel sources.
++ */
++
++#ifndef __LINUX_COOPERATIVE_H__
++#define __LINUX_COOPERATIVE_H__
++
++#ifdef __KERNEL__
++#ifndef CO_KERNEL
++#define CO_COLINUX_KERNEL
++#define CO_KERNEL
++#endif
++#endif
++
++#include <asm/cooperative.h>
++
++#define CO_LINUX_API_VERSION    10
++
++#pragma pack(0)
++
++#define CO_BOOTPARAM_STRING_LENGTH 0x100
++
++typedef enum {
++	CO_OPERATION_EMPTY=0,
++	CO_OPERATION_START,
++	CO_OPERATION_IDLE,
++	CO_OPERATION_TERMINATE,
++	CO_OPERATION_MESSAGE_TO_MONITOR,
++	CO_OPERATION_MESSAGE_FROM_MONITOR,
++	CO_OPERATION_FORWARD_INTERRUPT,
++	CO_OPERATION_DEVICE,
++	CO_OPERATION_GET_TIME,
++	CO_OPERATION_DEBUG_LINE,
++	CO_OPERATION_GET_HIGH_PREC_TIME,
++	CO_OPERATION_TRACE_POINT,
++	CO_OPERATION_FREE_PAGES,
++	CO_OPERATION_ALLOC_PAGES,
++	CO_OPERATION_PRINTK,
++} co_operation_t;
++
++#define CO_MODULE_MAX_CONET    16
++#define CO_MODULE_MAX_COBD     32
++#define CO_MODULE_MAX_COFS     32
++#define CO_MODULE_MAX_SERIAL   64
++
++typedef enum {
++	CO_MODULE_LINUX,
++	CO_MODULE_MONITOR,
++	CO_MODULE_DAEMON,
++	CO_MODULE_IDLE,
++	CO_MODULE_KERNEL_SWITCH,
++	CO_MODULE_USER_SWITCH,
++	CO_MODULE_CONSOLE,
++	CO_MODULE_PRINTK,
++
++	CO_MODULE_CONET0,
++	CO_MODULE_CONET_END=CO_MODULE_CONET0+CO_MODULE_MAX_CONET-1,
++
++	CO_MODULE_COBD0,
++	CO_MODULE_COBD_END=CO_MODULE_COBD0+CO_MODULE_MAX_COBD-1,
++
++	CO_MODULE_COFS0,
++	CO_MODULE_COFS_END=CO_MODULE_COFS0+CO_MODULE_MAX_COFS-1,
++
++	CO_MODULE_SERIAL0,
++	CO_MODULE_SERIAL_END=CO_MODULE_SERIAL0+CO_MODULE_MAX_SERIAL-1,
++
++	CO_MODULES_MAX,
++} co_module_t;
++
++typedef enum {
++	CO_PRIORITY_DISCARDABLE=0,
++	CO_PRIORITY_IMPORTANT,
++} co_priority_t;
++
++typedef enum {
++	CO_MESSAGE_TYPE_STRING=0,
++	CO_MESSAGE_TYPE_OTHER=1,
++} co_message_type_t;
++
++typedef struct {
++	co_module_t from;
++	co_module_t to;
++	co_priority_t priority;
++	co_message_type_t type;
++	unsigned long size;
++	char data[0];
++} __attribute__((packed)) co_message_t;
++
++typedef enum {
++	CO_DEVICE_BLOCK=0,
++	CO_DEVICE_CONSOLE,
++	CO_DEVICE_KEYBOARD,
++	CO_DEVICE_NETWORK,
++	CO_DEVICE_TIMER,
++	CO_DEVICE_POWER,
++	CO_DEVICE_SERIAL,
++	CO_DEVICE_FILESYSTEM,
++
++	CO_DEVICES_TOTAL,
++} co_device_t;
++
++typedef struct {
++	unsigned char code;
++	int down;
++} co_scan_code_t;
++
++typedef enum {
++	CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL=0,
++} co_linux_message_power_type_t;
++
++typedef struct {
++	co_linux_message_power_type_t type;
++} __attribute__((packed)) co_linux_message_power_t;
++
++typedef struct {
++	unsigned long tick_count;
++} __attribute__((packed)) co_linux_message_idle_t;
++
++typedef struct {
++	co_device_t device;
++	unsigned long unit;
++	unsigned long size;
++	char data[];
++} __attribute__((packed)) co_linux_message_t;
++
++typedef enum {
++	CO_TERMINATE_END=0,
++	CO_TERMINATE_REBOOT,
++	CO_TERMINATE_POWEROFF,
++	CO_TERMINATE_PANIC,
++	CO_TERMINATE_HALT,
++	CO_TERMINATE_FORCED_OFF,
++	CO_TERMINATE_FORCED_END,
++	CO_TERMINATE_INVALID_OPERATION,
++	CO_TERMINATE_STACK_OVERFLOW,
++	CO_TERMINATE_BUG,
++} co_termination_reason_t;
++
++typedef void (*co_switcher_t)(co_arch_passage_page_t *page,
++			      unsigned char *from,
++			      unsigned char *to);
++
++#define co_passage_page_func_low(_from_,_to_)	\
++	(((co_switcher_t)(co_passage_page->code))	\
++	 (co_passage_page,				\
++	  (char *)&_from_.border2,			\
++	  (char *)&_to_.border2))
++
++#define co_passage_page_func(_from_,_to_)				\
++	co_passage_page_func_low(co_passage_page->_from_, co_passage_page->_to_)
++
++#ifdef CO_KERNEL
++# ifdef CO_COLINUX_KERNEL
++#  define co_passage_page  ((co_arch_passage_page_t *)(CO_VPTR_PASSAGE_PAGE))
++#  define co_current (co_passage_page->linuxvm_state)
++#  define co_other (co_passage_page->host_state)
++# else
++#  define co_passage_page  (cmon->passage_page)
++#  define co_other (co_passage_page->linuxvm_state)
++#  define co_current (co_passage_page->host_state)
++# endif
++
++# define co_switch() co_passage_page_func_low(co_current, co_other)
++#endif
++
++/*
++ * Defines operations on various virtual devices.
++ */
++
++typedef enum {
++	CO_OPERATION_CONSOLE_STARTUP=0,
++	CO_OPERATION_CONSOLE_INIT=1,
++	CO_OPERATION_CONSOLE_DEINIT,
++	CO_OPERATION_CONSOLE_CLEAR,
++	CO_OPERATION_CONSOLE_PUTC,
++	CO_OPERATION_CONSOLE_PUTCS,
++	CO_OPERATION_CONSOLE_CURSOR_DRAW,
++	CO_OPERATION_CONSOLE_CURSOR_ERASE,
++	CO_OPERATION_CONSOLE_CURSOR_MOVE,
++	CO_OPERATION_CONSOLE_SCROLL_UP,
++	CO_OPERATION_CONSOLE_SCROLL_DOWN,
++	CO_OPERATION_CONSOLE_BMOVE,
++	CO_OPERATION_CONSOLE_SWITCH,
++	CO_OPERATION_CONSOLE_BLANK,
++	CO_OPERATION_CONSOLE_FONT_OP,
++	CO_OPERATION_CONSOLE_SET_PALETTE,
++	CO_OPERATION_CONSOLE_SCROLLDELTA,
++	CO_OPERATION_CONSOLE_SET_ORIGIN,
++	CO_OPERATION_CONSOLE_SAVE_SCREEN,
++	CO_OPERATION_CONSOLE_INVERT_REGION,
++} co_operation_console_t;
++
++
++typedef char co_console_code;
++typedef unsigned short co_console_character;
++typedef unsigned short co_console_unit;
++
++typedef struct {
++	co_console_unit x;
++	co_console_unit y;
++	co_console_unit height;
++} __attribute__((packed)) co_cursor_pos_t;
++
++typedef struct {
++	co_operation_console_t type;
++	union {
++		struct {
++			co_console_unit top;
++			co_console_unit bottom;
++			co_console_unit lines;
++		} scroll;
++		struct {
++			co_console_unit y;
++			co_console_unit x;
++			co_console_unit count;
++			co_console_character data[];
++		} putcs;
++		struct {
++			co_console_unit x;
++			co_console_unit y;
++			co_console_character charattr;
++		} putc;
++		struct {
++			co_console_unit top;
++			co_console_unit left;
++			co_console_unit bottom;
++			co_console_unit right;
++			co_console_character charattr;
++		} clear;
++		struct {
++			co_console_unit y;
++			co_console_unit x;
++			co_console_unit count;
++		} invert;
++		struct {
++			co_console_unit row;
++			co_console_unit column;
++			co_console_unit top;
++			co_console_unit left;
++			co_console_unit bottom;
++			co_console_unit right;
++		} bmove;
++		co_cursor_pos_t cursor;
++	};
++} __attribute__((packed)) co_console_message_t;
++
++typedef struct {
++	unsigned long messages_waiting;
++	char buffer[];
++} co_io_buffer_t;
++
++typedef struct {
++	unsigned long index;
++	unsigned long flags;
++	unsigned long func;
++	unsigned long pid;
++} __attribute__((packed)) co_trace_point_info_t;
++
++typedef enum {
++	CO_BLOCK_OPEN=0,
++	CO_BLOCK_STAT,
++	CO_BLOCK_READ,
++	CO_BLOCK_WRITE,
++	CO_BLOCK_CLOSE,
++	CO_BLOCK_GET_ALIAS,
++} co_block_request_type_t;
++
++typedef enum {
++	CO_NETWORK_GET_MAC=0,
++} co_network_request_type_t;
++
++#ifdef CO_KERNEL
++/* If we are compiling kernel code (Linux or Host Driver) */
++# ifdef CO_COLINUX_KERNEL
++/* Inside Linux, vm_ptr_t considered a valid pointer in its virtual address space */
++typedef void *vm_ptr_t;
++#  else
++/* But inside the host, the type is considered not to be a pointer in its own address space */
++typedef unsigned long vm_ptr_t;
++# endif
++
++typedef struct {
++	co_block_request_type_t type;
++	long rc;
++	union {
++		struct {
++			unsigned long long offset;
++			unsigned long long size;
++			unsigned long long disk_size;
++			vm_ptr_t address;
++		};
++		struct {
++			char alias[20];
++		};
++	};
++} __attribute__((packed)) co_block_request_t;
++
++typedef struct {
++	co_network_request_type_t type;
++	unsigned long unit;
++	char mac_address[6];
++	char _pad[2];
++	int result;
++} __attribute__((packed)) co_network_request_t;
++
++#endif
++
++typedef struct {
++	unsigned long api_version;
++	unsigned long compiler_major;
++	unsigned long compiler_minor;
++} __attribute__((packed)) co_info_t;
++
++typedef struct {
++	unsigned long co_core_end;		// co_passage_page->params[0]
++	unsigned long co_memory_size;		// co_passage_page->params[1]
++	void *co_initrd;			// co_passage_page->params[2]
++	unsigned long co_initrd_size;		// co_passage_page->params[3]
++	long result;				// co_passage_page->params[4]  (new)
++	unsigned long filler[5];		// compatible old api: empty 5,6,7,8,9
++	char co_boot_parameters[CO_BOOTPARAM_STRING_LENGTH]; // co_passage_page->params[10]
++} __attribute__((packed)) co_boot_params_t;
++
++#ifndef COLINUX_TRACE
++#define CO_TRACE_STOP
++#define CO_TRACE_CONTINUE
++#endif
++
++#pragma pack()
++
++#include "cooperative_fs.h"
++
++#endif
+Index: linux-2.6.17-source/include/linux/cooperative_fs.h
+===================================================================
+--- /dev/null
++++ linux-2.6.17-source/include/linux/cooperative_fs.h
+@@ -0,0 +1,267 @@
++/*
++    FUSE: Filesystem in Userspace
++    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
++
++    This program can be distributed under the terms of the GNU GPL.
++    See the file COPYING.
++*/
++
++/* This file defines the kernel interface of FUSE */
++
++#pragma pack(0)
++
++/** Version number of this interface */
++#define FUSE_KERNEL_VERSION 2
++
++/** Minor version number of this interface */
++#define FUSE_KERNEL_MINOR_VERSION 2
++
++/** The inode number of the root inode */
++#define FUSE_ROOT_INO 1
++
++/** Data passed to mount */
++struct fuse_mount_data {
++	/** The file type of the root inode */
++	unsigned int rootmode;
++
++	/** The user ID of the user initiating this mount */
++	unsigned int uid;
++
++	/** FUSE specific mount flags */
++	unsigned int flags;
++};
++
++/* FUSE mount flags: */
++
++/** If the FUSE_DEFAULT_PERMISSIONS flag is given, the filesystem
++module will check permissions based on the file mode.  Otherwise no
++permission checking is done in the kernel */
++#define FUSE_DEFAULT_PERMISSIONS (1 << 0)
++
++/** If the FUSE_ALLOW_OTHER flag is given, then not only the user
++    doing the mount will be allowed to access the filesystem */
++#define FUSE_ALLOW_OTHER         (1 << 1)
++
++/** If the FUSE_KERNEL_CACHE flag is given, then files will be cached
++    until the INVALIDATE operation is invoked */
++#define FUSE_KERNEL_CACHE        (1 << 2)
++
++/** Allow FUSE to combine reads into 64k chunks.  This is useful if
++    the filesystem is better at handling large chunks.  NOTE: in
++    current implementation the raw throughput is worse for large reads
++    than for small. */
++#define FUSE_LARGE_READ          (1 << 3)
++
++struct fuse_attr {
++	unsigned long long  size;
++	unsigned int        mode;
++	unsigned int        nlink;
++	unsigned int        uid;
++	unsigned int        gid;
++	unsigned int        rdev;
++	unsigned long       _dummy;
++	unsigned long       blocks;
++	unsigned long       atime;
++	unsigned long       mtime;
++	unsigned long       ctime;
++};
++
++struct fuse_kstatfs {
++    long block_size;
++    long blocks;
++    long blocks_free;
++    long files;
++    long files_free;
++    long namelen;
++};
++
++#define FATTR_MODE	(1 << 0)
++#define FATTR_UID	(1 << 1)
++#define FATTR_GID	(1 << 2)
++#define FATTR_SIZE	(1 << 3)
++#define FATTR_UTIME	(1 << 4)
++
++enum fuse_opcode {
++	FUSE_LOOKUP	= 1,
++	FUSE_FORGET	= 2,  /* no reply */
++	FUSE_GETATTR	= 3,
++	FUSE_SETATTR	= 4,
++	FUSE_READLINK	= 5,
++	FUSE_SYMLINK	= 6,
++	FUSE_GETDIR	= 7,
++	FUSE_MKNOD	= 8,
++	FUSE_MKDIR	= 9,
++	FUSE_UNLINK	= 10,
++	FUSE_RMDIR	= 11,
++	FUSE_RENAME	= 12,
++	FUSE_LINK	= 13,
++	FUSE_OPEN	= 14,
++	FUSE_READ	= 15,
++	FUSE_WRITE	= 16,
++	FUSE_STATFS	= 17,
++	FUSE_RELEASE    = 18, /* no reply */
++	FUSE_INVALIDATE = 19, /* user initiated */
++	FUSE_FSYNC      = 20,
++	FUSE_RELEASE2   = 21,  /* reply needed after all */
++
++	/* Cooperative Linux does things a little differently: */
++	FUSE_DIR_OPEN    = 22,
++	FUSE_DIR_READ    = 23,
++	FUSE_DIR_RELEASE = 24,
++
++	FUSE_MOUNT       = 25,
++};
++
++/* Conservative buffer size for the client */
++#define FUSE_MAX_IN 8192
++
++#define FUSE_NAME_MAX 1024
++#define FUSE_SYMLINK_MAX 4096
++
++struct fuse_lookup_out {
++	struct fuse_attr attr;
++	unsigned long ino;
++};
++
++struct fuse_forget_in {
++	int version;
++};
++
++struct fuse_getattr_out {
++	struct fuse_attr attr;
++};
++
++struct fuse_getdir_out {
++	int fd;
++	void *file; /* Used by kernel only */
++};
++
++/* FIXME: 2.6 needs 32 bit rdev */
++struct fuse_mknod_in {
++	unsigned short mode;
++	unsigned short rdev;
++};
++
++struct fuse_mknod_out {
++	struct fuse_attr attr;
++	unsigned long ino;
++};
++
++struct fuse_mkdir_in {
++	unsigned short mode;
++};
++
++struct fuse_rename_in {
++	unsigned long newdir;
++};
++
++struct fuse_link_in {
++	unsigned long newdir;
++};
++
++struct fuse_setattr_in {
++	struct fuse_attr attr;
++	unsigned int valid;
++};
++
++struct fuse_setattr_out {
++	struct fuse_attr attr;
++};
++
++struct fuse_open_in {
++	unsigned int flags;
++};
++
++struct fuse_read_in {
++	unsigned long long offset;
++	unsigned int size;
++};
++
++struct fuse_write_in {
++	unsigned long long offset;
++	unsigned int size;
++};
++
++struct fuse_statfs_out {
++	struct fuse_kstatfs st;
++};
++
++struct fuse_fsync_in {
++	int datasync;
++};
++
++struct fuse_in_header {
++	int unique;
++	enum fuse_opcode opcode;
++	unsigned long ino;
++	unsigned int uid;
++	unsigned int gid;
++};
++
++struct fuse_out_header {
++	int unique;
++	int error;
++};
++
++struct fuse_user_header {
++	int unique; /* zero */
++	enum fuse_opcode opcode;
++	unsigned long ino;
++};
++
++struct fuse_dirent {
++	unsigned long ino;
++	unsigned short namelen;
++	unsigned char type;
++	char name[256];
++};
++
++#define FUSE_S_IFMT   00170000
++#define FUSE_S_IFSOCK 0140000
++#define FUSE_S_IFLNK  0120000
++#define FUSE_S_IFREG  0100000
++#define FUSE_S_IFBLK  0060000
++#define FUSE_S_IFDIR  0040000
++#define FUSE_S_IFCHR  0020000
++#define FUSE_S_IFIFO  0010000
++#define FUSE_S_ISUID  0004000
++#define FUSE_S_ISGID  0002000
++#define FUSE_S_ISVTX  0001000
++
++#define FUSE_S_IRWXU 00700
++#define FUSE_S_IRUSR 00400
++#define FUSE_S_IWUSR 00200
++#define FUSE_S_IXUSR 00100
++
++#define FUSE_S_IRWXG 00070
++#define FUSE_S_IRGRP 00040
++#define FUSE_S_IWGRP 00020
++#define FUSE_S_IXGRP 00010
++
++#define FUSE_S_IRWXO 00007
++#define FUSE_S_IROTH 00004
++#define FUSE_S_IWOTH 00002
++#define FUSE_S_IXOTH 00001
++
++#define FUSE_DT_UNKNOWN	        0
++#define FUSE_DT_FIFO		1
++#define FUSE_DT_CHR		2
++#define FUSE_DT_DIR		4
++#define FUSE_DT_BLK		6
++#define FUSE_DT_REG		8
++#define FUSE_DT_LNK		10
++#define FUSE_DT_SOCK		12
++#define FUSE_DT_WHT		14
++
++#define FUSE_NAME_OFFSET ((unsigned int) ((struct fuse_dirent *) 0)->name)
++#define FUSE_DIRENT_ALIGN(x) (((x) + sizeof(long) - 1) & ~(sizeof(long) - 1))
++#define FUSE_DIRENT_SIZE(d) \
++	FUSE_DIRENT_ALIGN(FUSE_NAME_OFFSET + (d)->namelen)
++#pragma pack()
++
++/*
++ * Local Variables:
++ * indent-tabs-mode: t
++ * c-basic-offset: 8
++ * End:
++ */
+Index: linux-2.6.17-source/include/linux/cooperative_internal.h
+===================================================================
+--- /dev/null
++++ linux-2.6.17-source/include/linux/cooperative_internal.h
+@@ -0,0 +1,81 @@
++/*
++ *  linux/include/linux/cooperative.h
++ *
++ *  Copyright (C) 2004 Dan Aloni
++ *
++ *  This header gathers the functions and variables in Cooperative Mode
++ *  when CONFIG_COOPERATIVE is defined.
++ */
++#ifndef __LINUX_COOPERATIVE_LINUX_H__
++#define __LINUX_COOPERATIVE_LINUX_H__
++
++#include <linux/config.h>
++#include <linux/cooperative.h>
++#include <linux/list.h>
++#include <asm/ptrace.h>
++
++#ifdef CONFIG_COOPERATIVE
++
++typedef struct {
++	struct list_head node;
++	co_message_t msg;
++} co_message_node_t;
++
++extern void co_debug(const char *fmt, ...);
++extern void co_printk(const char *line);
++
++extern void co_callback(unsigned long flags, struct pt_regs *regs);
++extern void co_switch_wrapper(void);
++extern void co_idle_processor(void);
++extern void co_terminate(co_termination_reason_t reason);
++extern void co_terminate_bug(int code, int line, const char *file);
++extern void co_free_pages(unsigned long vaddr, int order);
++extern int co_alloc_pages(unsigned long vaddr, int order);
++extern void co_start_kernel(void);
++extern void co_arch_start_kernel(void);
++extern void co_handle_jiffies(long count);
++
++extern void co_send_message(co_module_t from,
++			    co_module_t to,
++			    co_priority_t priority,
++			    co_message_type_t type,
++			    unsigned long size,
++			    const char *data);
++extern unsigned long co_get_host_time(void);
++extern co_message_t *co_send_message_save(unsigned long *flags);
++extern co_message_t *co_get_message_save(unsigned long *flags);
++extern void co_send_message_restore(unsigned long flags);
++
++extern void cocd_interrupt(void);
++
++extern void co_handle_incoming_messages(struct pt_regs *regs);
++extern void co_handle_incoming_message(co_message_node_t *message, struct pt_regs *orig_regs);
++extern void co_queue_incoming_message(co_message_node_t *message);
++extern int co_get_message(co_message_node_t **message, co_device_t device);
++extern void co_free_message(co_message_node_t *message);
++
++extern int co_passage_page_held(void);
++extern void co_passage_page_acquire(unsigned long *flags);
++extern void co_passage_page_release(unsigned long flags);
++extern void co_passage_page_ref_down(void);
++extern void co_passage_page_ref_up(void);
++
++#define co_passage_page_assert_valid() do {	\
++	if (co_passage_page_held())		\
++            BUG();				\
++} while (0);
++
++extern co_boot_params_t co_boot_params;
++
++#define co_io_buffer ((co_io_buffer_t *)CO_VPTR_IO_AREA_START)
++#define cooperative_mode_enabled()     1
++
++#else
++
++#define co_printk(line)                do {} while (0)
++#define co_terminate(reason)           do {} while (0)
++#define cooperative_mode_enabled()     0
++
++#endif
++
++#endif
+Index: linux-2.6.17-source/kernel/Makefile
+===================================================================
+--- linux-2.6.17-source.orig/kernel/Makefile
++++ linux-2.6.17-source/kernel/Makefile
+@@ -38,6 +38,7 @@
+ obj-$(CONFIG_SECCOMP) += seccomp.o
+ obj-$(CONFIG_RCU_TORTURE_TEST) += rcutorture.o
+ obj-$(CONFIG_RELAY) += relay.o
++obj-$(CONFIG_COOPERATIVE) += cooperative.o
+ 
+ ifneq ($(CONFIG_SCHED_NO_NO_OMIT_FRAME_POINTER),y)
+ # According to Alan Modra <alan@linuxcare.com.au>, the -fno-omit-frame-pointer is
+Index: linux-2.6.17-source/kernel/cooperative.c
+===================================================================
+--- /dev/null
++++ linux-2.6.17-source/kernel/cooperative.c
+@@ -0,0 +1,411 @@
++/*
++ *  linux/kernel/cooperative.c
++ *
++ *  Cooperative mode (coLinux) support routines.
++ *
++ *  Dan Aloni <da-x@colinux.org>, 2003-2004 (C).
++ *
++ */
++
++#include <linux/kernel.h>
++#include <linux/module.h>
++#include <linux/string.h>
++#include <linux/interrupt.h>
++#include <linux/mm.h>
++#include <linux/slab.h>
++#include <linux/cooperative_internal.h>
++
++CO_TRACE_STOP;
++
++co_boot_params_t co_boot_params;
++
++typedef struct {
++	struct list_head list;
++	int num_messages;
++} co_message_queue_t;
++
++int co_messages_active = 0;
++co_message_queue_t co_outgoing_messages;
++co_message_queue_t co_incoming_messages;
++co_message_queue_t *co_incoming_queued_messages;
++
++void co_start_kernel(void)
++{
++        memcpy(&co_boot_params, co_passage_page->params, sizeof(co_boot_params));
++
++	co_arch_start_kernel();
++
++	/* should never be reached */
++	co_terminate(CO_TERMINATE_END);
++}
++
++co_message_t *co_send_message_save(unsigned long *flags)
++{
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(flags);
++
++	if (co_io_buffer->messages_waiting) {
++		co_passage_page_release(*flags);
++		return NULL;
++	}
++
++	co_passage_page->operation = CO_OPERATION_MESSAGE_TO_MONITOR;
++	co_io_buffer->messages_waiting = 1;
++	return ((co_message_t *)co_io_buffer->buffer);
++}
++
++void co_send_message_restore(unsigned long flags)
++{
++	co_switch_wrapper();
++	co_passage_page_release(flags);
++}
++
++void co_send_message_s(co_message_t *message, const char *data)
++{
++	unsigned long flags;
++	co_message_t *buffer;
++
++	if ((sizeof(co_message_t) + message->size) > CO_VPTR_IO_AREA_SIZE - sizeof(co_io_buffer_t))
++		return;
++
++	if (co_passage_page_held())
++		return;
++
++	buffer = (co_message_t *)co_io_buffer->buffer;
++
++	co_passage_page_acquire(&flags);
++	if (co_io_buffer->messages_waiting) {
++		co_passage_page_release(flags);
++		return;
++	}
++
++	co_passage_page->operation = CO_OPERATION_MESSAGE_TO_MONITOR;
++	co_io_buffer->messages_waiting = 1;
++	*buffer = *message;
++	memcpy(buffer->data, data, message->size);
++	co_switch_wrapper();
++	co_passage_page_release(flags);
++}
++
++void co_send_message(co_module_t from,
++		     co_module_t to,
++		     co_priority_t priority,
++		     co_message_type_t type,
++		     unsigned long size,
++		     const char *data)
++{
++	co_message_t params;
++
++	params.from = from;
++	params.to = to;
++	params.priority = priority;
++	params.type = type;
++	params.size = size;
++
++	co_send_message_s(&params, data);
++}
++
++static void co_message_add_to_incoming(co_message_t *message, unsigned long size)
++{
++	co_message_node_t *message_copy;
++
++	message_copy = kmalloc(size + sizeof(co_message_node_t) - sizeof(co_message_t),
++			       GFP_ATOMIC);
++	if (!message_copy)
++		return;
++
++	memcpy(&message_copy->msg, message, size);
++	list_add_tail(&message_copy->node, &co_incoming_messages.list);
++}
++
++static unsigned long temp_storage_size = 0;
++static unsigned char temp_storage[CO_VPTR_IO_AREA_SIZE];
++
++void co_callback(unsigned long flags, struct pt_regs *regs)
++{
++	long io_size;
++	unsigned long new_jiffies;
++
++	if (co_passage_page->operation != CO_OPERATION_MESSAGE_FROM_MONITOR) {
++		co_passage_page_release(flags);
++		return;
++	}
++
++	io_size = co_passage_page->params[0];
++	new_jiffies = co_passage_page->params[1];
++
++	if (co_messages_active  &&  io_size > 0  &&  io_size <= CO_VPTR_IO_AREA_SIZE) {
++		temp_storage_size = io_size;
++		memcpy(temp_storage, co_io_buffer->buffer, io_size);
++	}
++
++	co_io_buffer->messages_waiting = 0;
++
++	if (temp_storage_size) {
++		unsigned char *io_buffer = temp_storage;
++		unsigned char *io_buffer_end = &temp_storage[temp_storage_size];
++		co_passage_page_ref_down();
++
++		while (io_buffer < io_buffer_end) {
++			co_message_t *message = (co_message_t *)io_buffer;
++			co_linux_message_t *linux_message = (co_linux_message_t *)message->data;
++			unsigned long size = message->size + sizeof(*message);
++
++			BUG_ON((unsigned long)message->from >= (unsigned long)CO_MODULES_MAX);
++			BUG_ON((unsigned long)message->to >= (unsigned long)CO_MODULES_MAX);
++			BUG_ON((unsigned long)linux_message->device >= (unsigned long)CO_DEVICES_TOTAL);
++
++			co_message_add_to_incoming(message, size);
++			io_buffer += size;
++		}
++		co_passage_page_ref_up();
++		temp_storage_size = 0;
++	}
++
++	co_passage_page_release(flags);
++
++	co_handle_jiffies(new_jiffies);
++	co_handle_incoming_messages(regs);
++}
++
++void co_handle_incoming_messages(struct pt_regs *regs)
++{
++	unsigned long flags;
++
++	if (!co_messages_active)
++		return;
++
++	local_irq_save(flags);
++
++	if (list_empty(&co_incoming_messages.list)) {
++		local_irq_restore(flags);
++		return;
++	}
++
++	for (;;) {
++		co_message_node_t *message = NULL;
++
++		/*
++		 * Pop a message from the incoming queue.
++		 */
++		if (!list_empty(&co_incoming_messages.list)) {
++			message = list_entry(co_incoming_messages.list.next,
++					     co_message_node_t, node);
++			BUG_ON((unsigned long)message->msg.from >= (unsigned long)CO_MODULES_MAX);
++			BUG_ON((unsigned long)message->msg.to >= (unsigned long)CO_MODULES_MAX);
++			list_del(&message->node);
++		}
++
++		if (!message)
++			break;
++
++		/*
++		 * Let the interrupt routine of the arch dependant code
++		 * handle the message, and be responsible to free it.
++		 */
++		co_handle_incoming_message(message, regs);
++	}
++
++	local_irq_restore(flags);
++}
++
++void co_idle_processor(void)
++{
++	unsigned long flags;
++
++	co_passage_page_assert_valid();
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_IDLE;
++	co_switch_wrapper();
++	co_callback(flags, NULL);
++}
++
++void co_printk(const char *line)
++{
++	unsigned long flags;
++	int size;
++	char *dest;
++
++	co_passage_page_assert_valid();
++
++	co_passage_page_acquire(&flags);
++	size = strlen(line);
++	co_passage_page->operation = CO_OPERATION_PRINTK;
++	co_passage_page->params[0] = size;
++	if (size > 120)
++		size = 120;
++	dest = (char *)(&co_passage_page->params[1]);
++	memcpy(dest, line, size);
++	dest[size] = '\0';
++	co_switch_wrapper();
++	co_passage_page_release(flags);
++}
++
++void co_debug_line(char *line)
++{
++}
++
++void co_terminate_bug(int code, int line, const char *file)
++{
++	unsigned long flags;
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_TERMINATE;
++	co_passage_page->params[0] = CO_TERMINATE_BUG;
++	co_passage_page->params[1] = code;
++	co_passage_page->params[2] = line;
++	co_passage_page->params[3] = strlen(file);
++	strcpy((char *)&co_passage_page->params[4], file);
++	co_switch_wrapper();
++	/* This doesn't really return. This code shouldn't be running. */
++	co_passage_page_release(flags);
++}
++
++void co_terminate(co_termination_reason_t reason)
++{
++	unsigned long flags;
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_TERMINATE;
++	co_passage_page->params[0] = reason;
++	co_switch_wrapper();
++	/* This doesn't really return. This code shouldn't be running. */
++	co_passage_page_release(flags);
++}
++
++unsigned long co_get_host_time(void)
++{
++	unsigned long flags;
++	unsigned long time;
++
++	co_passage_page_assert_valid();
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_GET_TIME;
++	co_switch_wrapper();
++	time = co_passage_page->params[0];
++	co_passage_page_release(flags);
++
++	return time;
++}
++
++void co_queue_incoming_message(co_message_node_t *node_message)
++{
++	co_linux_message_t *message;
++	co_message_queue_t *queue;
++	unsigned long flags;
++
++	if (!co_messages_active)
++		return;
++
++	message = (co_linux_message_t *)&node_message->msg.data;
++	if (message->device < 0 || (message->device >= CO_DEVICES_TOTAL))
++		return;
++
++	queue = &co_incoming_queued_messages[message->device];
++
++	/* Add to the queue */
++	local_irq_save(flags);
++	list_add(&node_message->node, &queue->list);
++	queue->num_messages++;
++	local_irq_restore(flags);
++}
++
++int co_get_message(co_message_node_t **message, co_device_t device)
++{
++	co_message_queue_t *queue;
++	co_message_node_t *node;
++	unsigned long flags;
++
++	if (!co_messages_active)
++		return 0;
++
++	local_irq_save(flags);
++	queue = &co_incoming_queued_messages[device];
++	if (list_empty(&queue->list)) {
++		local_irq_restore(flags);
++		return 0;
++	}
++
++	node = list_entry(queue->list.prev, co_message_node_t, node);
++	list_del(&node->node);
++	queue->num_messages--;
++	local_irq_restore(flags);
++
++	*message = node;
++	return 1;
++}
++
++void co_free_message(co_message_node_t *message)
++{
++	kfree(message);
++}
++
++co_info_t co_info = {
++	.api_version = CO_LINUX_API_VERSION,
++	.compiler_major = __GNUC__,
++	.compiler_minor = __GNUC_MINOR__,
++};
++
++static int __init initcall_message_queues(void)
++{
++	int queue_index;
++
++	INIT_LIST_HEAD(&co_outgoing_messages.list);
++	INIT_LIST_HEAD(&co_incoming_messages.list);
++
++	co_incoming_queued_messages =
++		kmalloc(sizeof(co_message_queue_t) * CO_DEVICES_TOTAL, GFP_KERNEL);
++	if (!co_incoming_queued_messages)
++		panic("unable to allocate message queues\n");
++
++	for (queue_index=0; queue_index < CO_DEVICES_TOTAL; queue_index++) {
++		co_message_queue_t *queue = &co_incoming_queued_messages[queue_index];
++		queue->num_messages = 0;
++		INIT_LIST_HEAD(&queue->list);
++	}
++
++	co_messages_active = 1;
++
++	return 0;
++}
++
++
++void co_free_pages(unsigned long vaddr, int order)
++{
++	unsigned long flags;
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_FREE_PAGES;
++	co_passage_page->params[0] = vaddr;
++	co_passage_page->params[1] = order;
++	co_switch_wrapper();
++	co_passage_page_release(flags);
++}
++
++int co_alloc_pages(unsigned long vaddr, int order)
++{
++	unsigned long flags;
++	long result;
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_ALLOC_PAGES;
++	co_passage_page->params[0] = vaddr;
++	co_passage_page->params[1] = order;
++	co_switch_wrapper();
++	result = (long)co_passage_page->params[4];
++	co_passage_page_release(flags);
++
++	if (result < 0)
++		return -ENOMEM;
++
++	return 0;
++}
++
++__initcall(initcall_message_queues);
++
++EXPORT_SYMBOL(co_terminate);
++EXPORT_SYMBOL(co_terminate_bug);
++
++CO_TRACE_CONTINUE;
+Index: linux-2.6.17-source/kernel/panic.c
+===================================================================
+--- linux-2.6.17-source.orig/kernel/panic.c
++++ linux-2.6.17-source/kernel/panic.c
+@@ -18,6 +18,7 @@
+ #include <linux/sysrq.h>
+ #include <linux/interrupt.h>
+ #include <linux/nmi.h>
++#include <linux/cooperative_internal.h>
+ #include <linux/kexec.h>
+ 
+ int panic_on_oops;
+@@ -80,6 +81,10 @@
+ 	printk(KERN_EMERG "Kernel panic - not syncing: %s\n",buf);
+ 	bust_spinlocks(0);
+ 
++	if (cooperative_mode_enabled()) {
++		co_terminate(CO_TERMINATE_PANIC);
++	}
++
+ 	/*
+ 	 * If we have crashed and we have a crash kernel loaded let it handle
+ 	 * everything else.
+Index: linux-2.6.17-source/kernel/printk.c
+===================================================================
+--- linux-2.6.17-source.orig/kernel/printk.c
++++ linux-2.6.17-source/kernel/printk.c
+@@ -34,6 +34,8 @@
+ 
+ #include <asm/uaccess.h>
+ 
++#include <linux/cooperative_internal.h>
++
+ #define __LOG_BUF_LEN	(1 << CONFIG_LOG_BUF_SHIFT)
+ 
+ /* printk's without a loglevel use this.. */
+@@ -508,6 +510,8 @@
+ 	/* Emit the output into the temporary buffer */
+ 	printed_len = vscnprintf(printk_buf, sizeof(printk_buf), fmt, args);
+ 
++	co_printk(printk_buf);
++
+ 	/*
+ 	 * Copy the output into log_buf.  If the caller didn't provide
+ 	 * appropriate log level tags, we insert them here
+Index: linux-2.6.17-source/mm/bootmem.c
+===================================================================
+--- linux-2.6.17-source.orig/mm/bootmem.c
++++ linux-2.6.17-source/mm/bootmem.c
+@@ -17,6 +17,7 @@
+ #include <linux/bootmem.h>
+ #include <linux/mmzone.h>
+ #include <linux/module.h>
++#include <linux/cooperative_internal.h>
+ #include <asm/dma.h>
+ #include <asm/io.h>
+ #include "internal.h"
+@@ -287,6 +288,23 @@
+ 	for (i = start; i < start+areasize; i++)
+ 		if (unlikely(test_and_set_bit(i, bdata->node_bootmem_map)))
+ 			BUG();
++
++	if (cooperative_mode_enabled()) {
++		unsigned long alloc_address = (unsigned long)ret;
++		unsigned long alloc_size = size;
++		int result;
++
++		alloc_size += (alloc_address & (~PAGE_MASK));
++		alloc_address &= PAGE_MASK;
++		alloc_size = (alloc_size + PAGE_SIZE - 1) >> PAGE_SHIFT;
++
++		result = co_alloc_pages(alloc_address, alloc_size);
++		if (result) {
++			free_bootmem((unsigned long)ret, size);
++			return NULL;
++		}
++	}
++
+ 	memset(ret, 0, size);
+ 	return ret;
+ }
+Index: linux-2.6.17-source/mm/filemap.c
+===================================================================
+--- linux-2.6.17-source.orig/mm/filemap.c
++++ linux-2.6.17-source/mm/filemap.c
+@@ -2022,7 +2022,11 @@
+ 		maxlen = cur_iov->iov_len - iov_base;
+ 		if (maxlen > bytes)
+ 			maxlen = bytes;
+-		fault_in_pages_readable(buf, maxlen);
++
++		/* coLinux: Was writev bug in 2.6.10 */
++		if (access_ok(VERIFY_READ, buf, bytes)) {
++			fault_in_pages_readable(buf, maxlen);
++		}
+ 
+ 		page = __grab_cache_page(mapping,index,&cached_page,&lru_pvec);
+ 		if (!page) {
+Index: linux-2.6.17-source/mm/page_alloc.c
+===================================================================
+--- linux-2.6.17-source.orig/mm/page_alloc.c
++++ linux-2.6.17-source/mm/page_alloc.c
+@@ -37,6 +37,7 @@
+ #include <linux/nodemask.h>
+ #include <linux/vmalloc.h>
+ #include <linux/mempolicy.h>
++#include <linux/cooperative_internal.h>
+ 
+ #include <asm/tlbflush.h>
+ #include <asm/div64.h>
+@@ -214,10 +215,45 @@
+ 	}
+ }
+ 
++static int co_persistent_alloc_pages(unsigned long address, int order)
++{
++	int result, retries_left;
++
++	retries_left = 10;
++
++	while (retries_left > 0) {
++		result = co_alloc_pages(address, order);
++		if (result) {
++			unsigned long cache_size;
++			/*
++			 * Whoops, we have allocated too much of the
++			 * host OS's memory, time to free some cache.
++			 * cache.
++			 */
++			cache_size = get_page_cache_size()-total_swapcache_pages;
++			cache_size /= 2;
++			if (cache_size < ((1 << order)*2))
++				cache_size = (1 << order)*2;
++			shrink_all_memory(cache_size);
++		} else
++			return 0;
++		retries_left--;
++	}
++
++	return result;
++
++}
++
+ static inline void prep_zero_page(struct page *page, int order, gfp_t gfp_flags)
+ {
+ 	int i;
+ 
++	if (cooperative_mode_enabled()) {
++		int result;
++		result = co_persistent_alloc_pages((unsigned long)page_address(page), 1 << order);
++		BUG_ON(result != 0);
++	}
++
+ 	BUG_ON((gfp_flags & (__GFP_WAIT | __GFP_HIGHMEM)) == __GFP_HIGHMEM);
+ 	/*
+ 	 * clear_highpage() will use KM_USER0, so it's a bug to use __GFP_ZERO
+@@ -337,6 +373,9 @@
+ 	unsigned long page_idx;
+ 	int order_size = 1 << order;
+ 
++	if (cooperative_mode_enabled())
++		co_free_pages((unsigned long)page_address(page), order_size);
++
+ 	if (unlikely(PageCompound(page)))
+ 		destroy_compound_page(page, order);
+ 
+@@ -1073,6 +1112,13 @@
+ 		show_mem();
+ 	}
+ got_pg:
++	if (cooperative_mode_enabled()) {
++		int result = co_persistent_alloc_pages((unsigned long)page_address(page), 1 << order);
++		if (result) {
++			__free_pages(page, order);
++			return NULL;
++		}
++	}
+ 	return page;
+ }
+ 
+Index: linux-2.6.17-source/mm/vmscan.c
+===================================================================
+--- linux-2.6.17-source.orig/mm/vmscan.c
++++ linux-2.6.17-source/mm/vmscan.c
+@@ -1288,7 +1288,7 @@
+ 	wake_up_interruptible(&pgdat->kswapd_wait);
+ }
+ 
+-#ifdef CONFIG_PM
++#if defined(CONFIG_PM) || defined(CONFIG_COOPERATIVE)
+ /*
+  * Try to free `nr_pages' of memory, system-wide.  Returns the number of freed
+  * pages.
+Index: linux-2.6.17-source/drivers/char/mem.c
+===================================================================
+--- linux-2.6.17-source.orig/drivers/char/mem.c
++++ linux-2.6.17-source/drivers/char/mem.c
+@@ -25,6 +25,7 @@
+ #include <linux/device.h>
+ #include <linux/highmem.h>
+ #include <linux/crash_dump.h>
++#include <linux/cooperative_internal.h>
+ #include <linux/backing-dev.h>
+ #include <linux/bootmem.h>
+ #include <linux/pipe_fs_i.h>
+@@ -114,6 +115,11 @@
+ 	ssize_t read, sz;
+ 	char *ptr;
+ 
++	if (cooperative_mode_enabled()) {
++		/* Reading kmem is bad news in cooperative */
++		return -ENOMEM;
++	}
++
+ 	if (!valid_phys_addr_range(p, count))
+ 		return -EFAULT;
+ 	read = 0;
+@@ -172,6 +178,11 @@
+ 	unsigned long copied;
+ 	void *ptr;
+ 
++	if (cooperative_mode_enabled()) {
++		/* Writing kmem is bad news in cooperative */
++		return -ENOMEM;
++	}
++
+ 	if (!valid_phys_addr_range(p, count))
+ 		return -EFAULT;
+ 
+@@ -329,6 +340,11 @@
+ 	ssize_t low_count, read, sz;
+ 	char * kbuf; /* k-addr because vread() takes vmlist_lock rwlock */
+ 
++	if (cooperative_mode_enabled()) {
++		/* Reading kmem is bad news in cooperative */
++		return -ENOMEM;
++	}
++
+ 	read = 0;
+ 	if (p < (unsigned long) high_memory) {
+ 		low_count = count;
+@@ -478,6 +494,11 @@
+ 	ssize_t written;
+ 	char * kbuf; /* k-addr because vwrite() takes vmlist_lock rwlock */
+ 
++	if (cooperative_mode_enabled()) {
++		/* Writing kmem is bad news in cooperative */
++		return -ENOMEM;
++	}
++
+ 	if (p < (unsigned long) high_memory) {
+ 
+ 		wrote = count;
+Index: linux-2.6.17-source/include/linux/elf.h
+===================================================================
+--- linux-2.6.17-source.orig/include/linux/elf.h
++++ linux-2.6.17-source/include/linux/elf.h
+@@ -3,7 +3,10 @@
+ 
+ #include <linux/types.h>
+ #include <linux/auxvec.h>
++
++#ifdef __KERNEL__
+ #include <asm/elf.h>
++#endif /* __KERNEL__ */
+ 
+ #ifndef elf_read_implies_exec
+   /* Executables for which elf_read_implies_exec() returns TRUE will
