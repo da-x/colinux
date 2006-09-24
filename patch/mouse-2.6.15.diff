@@ -27,7 +27,7 @@ Index: linux-2.6.15-source/drivers/input/mouse/Kconfig
 +          If unsure, say Y.
 +
 +          To compile this driver as a module, choose M here: the
-+          module will be called psmouse.
++          module will be called comouse.
 +
  config MOUSE_SERIAL
  	tristate "Serial mouse"

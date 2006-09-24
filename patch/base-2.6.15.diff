@@ -883,9 +883,9 @@ Index: linux-2.6.15-source/arch/i386/kernel/reboot.c
  void machine_power_off(void)
  {
 +	if (cooperative_mode_enabled()) {
-+                co_terminate(CO_TERMINATE_POWEROFF);
-+                return;
-+        }
++		co_terminate(CO_TERMINATE_POWEROFF);
++		return;
++	}
  	machine_shutdown();
  
  	if (pm_power_off)
@@ -2487,7 +2487,7 @@ Index: linux-2.6.15-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.15-source/kernel/cooperative.c
-@@ -0,0 +1,412 @@
+@@ -0,0 +1,411 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2521,7 +2521,6 @@ Index: linux-2.6.15-source/kernel/cooperative.c
 +
 +void co_start_kernel(void)
 +{
-+
 +        memcpy(&co_boot_params, co_passage_page->params, sizeof(co_boot_params));
 +
 +	co_arch_start_kernel();
@@ -3163,27 +3162,6 @@ Index: linux-2.6.15-source/drivers/char/mem.c
  	if (p < (unsigned long) high_memory) {
  
  		wrote = count;
-Index: linux-2.6.15-source/arch/i386/kernel/cpu/intel.c
-===================================================================
---- linux-2.6.15-source.orig/arch/i386/kernel/cpu/intel.c
-+++ linux-2.6.15-source/arch/i386/kernel/cpu/intel.c
-@@ -7,6 +7,7 @@
- #include <linux/smp.h>
- #include <linux/thread_info.h>
- #include <linux/module.h>
-+#include <linux/cooperative_internal.h>
- 
- #include <asm/processor.h>
- #include <asm/msr.h>
-@@ -124,7 +125,7 @@
- 	l2 = init_intel_cacheinfo(c);
- 
- 	/* SEP CPUID bug: Pentium Pro reports SEP but doesn't have it until model 3 mask 3 */
--	if ((c->x86<<8 | c->x86_model<<4 | c->x86_mask) < 0x633)
-+	if (cooperative_mode_enabled() || (c->x86<<8 | c->x86_model<<4 | c->x86_mask) < 0x633)
- 		clear_bit(X86_FEATURE_SEP, c->x86_capability);
- 
- 	/* Names for the Pentium II/Celeron processors 
 Index: linux-2.6.15-source/include/asm-i386/bugs.h
 ===================================================================
 --- linux-2.6.15-source.orig/include/asm-i386/bugs.h

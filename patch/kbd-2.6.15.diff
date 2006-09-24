@@ -68,7 +68,6 @@ Index: linux-2.6.15-source/drivers/input/serio/Makefile
  obj-$(CONFIG_SERIO_LIBPS2)	+= libps2.o
  obj-$(CONFIG_SERIO_RAW)		+= serio_raw.o
 +obj-$(CONFIG_SERIO_COKBD)	+= cokbd.o
-\ No newline at end of file
 Index: linux-2.6.15-source/drivers/input/serio/cokbd.c
 ===================================================================
 --- /dev/null
