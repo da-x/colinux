@@ -1,11 +1,11 @@
 * Version 0.8.0
-  * Kernel has been updated to 2.6.15
-    (Thanks to Anders Eriksson)
+  * Kernel has been updated to 2.6.17
+    (Thanks to Anders Eriksson for 2.6.13, 2.6.14, 2.6.15)
   * Holds multiple kernel versions in patch series files
-    (2.6.12, 2.6.13, 2.6.14, 2.6.15)
+    (2.6.12, 2.6.13, 2.6.14, 2.6.15, 2.6.17)
   * Stop with error, if double defined device (cobd,cofs,eth,exec)
   * TAP device version 8.4, fixed crashing Vista.
-  * Update tapinstall.exe from DDK 3790.183 (build Mar 24 2005)
+  * Update tapinstall.exe from DDK 3790.1830 (build Mar 24 2005)
   * colinux-debug-daemon: Only connect to driver, if args -s settings.
   * Leveled debug output to Dbgview.exe (www.sysinternals.com).
     Needs to enable facility/level with colinux-debug-daemon before.
@@ -42,7 +42,7 @@
   * Print human readable error, if wrong linux.sys installed.
   * Print error on console, if initrd can't load.
   * SLiRP:
-    - Gets DNS dymanicly from host. Refresh if expire 10 Sec.
+    - Gets DNS dynamically from host. Refresh if expire 10 Sec.
       This should better work for dialup connections.
     - SLiRP ping, if destination supports UDP echo/7 (WSAECONNRESET hack).
     - Multiple redirection as parameter ':count'
