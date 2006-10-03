@@ -947,7 +947,23 @@ Index: linux-2.6.17-source/arch/i386/kernel/setup.c
  /*
   * Setup options
   */
-@@ -713,8 +717,17 @@
+@@ -176,6 +180,7 @@
+ 	.flags	= IORESOURCE_BUSY | IORESOURCE_MEM
+ };
+ 
++#ifndef CONFIG_COOPERATIVE
+ static struct resource system_rom_resource = {
+ 	.name	= "System ROM",
+ 	.start	= 0xf0000,
+@@ -364,6 +369,7 @@
+ 		start = adapter_rom_resources[i++].end & ~2047UL;
+ 	}
+ }
++#endif /* !CONFIG_COOPERATIVE */
+ 
+ static void __init limit_regions(unsigned long long size)
+ {
+@@ -713,8 +719,17 @@
  	int len = 0;
  	int userdef = 0;
  
@@ -967,7 +983,7 @@ Index: linux-2.6.17-source/arch/i386/kernel/setup.c
  
  	for (;;) {
  		if (c != ' ')
-@@ -1083,6 +1096,7 @@
+@@ -1083,6 +1098,7 @@
  	return max_low_pfn;
  }
  
@@ -975,7 +991,7 @@ Index: linux-2.6.17-source/arch/i386/kernel/setup.c
  /*
   * Free all available memory for boot time allocation.  Used
   * as a callback function by efi_memory_walk()
-@@ -1155,6 +1169,7 @@
+@@ -1155,6 +1171,7 @@
  	if (addr)
  		reserve_bootmem(addr, PAGE_SIZE);	
  }
@@ -983,7 +999,7 @@ Index: linux-2.6.17-source/arch/i386/kernel/setup.c
  
  #ifndef CONFIG_NEED_MULTIPLE_NODES
  void __init setup_bootmem_allocator(void);
-@@ -1166,9 +1181,16 @@
+@@ -1166,9 +1183,16 @@
  	 */
  	min_low_pfn = PFN_UP(init_pg_tables_end);
  
@@ -1002,64 +1018,51 @@ Index: linux-2.6.17-source/arch/i386/kernel/setup.c
  
  #ifdef CONFIG_HIGHMEM
  	highstart_pfn = highend_pfn = max_pfn;
-@@ -1191,17 +1213,23 @@
+@@ -1189,6 +1213,7 @@
+ void __init zone_sizes_init(void)
+ {
  	unsigned long zones_size[MAX_NR_ZONES] = {0, 0, 0};
++#ifndef CONFIG_COOPERATIVE
  	unsigned int max_dma, low;
  
--	max_dma = virt_to_phys((char *)MAX_DMA_ADDRESS) >> PAGE_SHIFT;
--	low = max_low_pfn;
-+	if (!cooperative_mode_enabled()) {
-+		max_dma = virt_to_phys((char *)MAX_DMA_ADDRESS) >> PAGE_SHIFT;
-+		low = max_low_pfn;
- 
--	if (low < max_dma)
--		zones_size[ZONE_DMA] = low;
--	else {
--		zones_size[ZONE_DMA] = max_dma;
--		zones_size[ZONE_NORMAL] = low - max_dma;
-+		if (low < max_dma)
-+			zones_size[ZONE_DMA] = low;
-+		else {
-+			zones_size[ZONE_DMA] = max_dma;
-+			zones_size[ZONE_NORMAL] = low - max_dma;
- #ifdef CONFIG_HIGHMEM
--		zones_size[ZONE_HIGHMEM] = highend_pfn - low;
-+			zones_size[ZONE_HIGHMEM] = highend_pfn - low;
+ 	max_dma = virt_to_phys((char *)MAX_DMA_ADDRESS) >> PAGE_SHIFT;
+@@ -1203,6 +1228,11 @@
+ 		zones_size[ZONE_HIGHMEM] = highend_pfn - low;
  #endif
-+		}
-+	} else {
-+		zones_size[ZONE_DMA] = 0;
-+		zones_size[ZONE_NORMAL] = max_low_pfn;
-+		zones_size[ZONE_HIGHMEM] = 0;
  	}
++#else /* !CONFIG_COOPERATIVE */
++	zones_size[ZONE_DMA] = 0;
++	zones_size[ZONE_NORMAL] = max_low_pfn;
++	zones_size[ZONE_HIGHMEM] = 0;
++#endif /* !CONFIG_COOPERATIVE */
  	free_area_init(zones_size);
  }
-@@ -1218,8 +1246,14 @@
+ #else
+@@ -1218,6 +1248,15 @@
  	 */
  	bootmap_size = init_bootmem(min_low_pfn, max_low_pfn);
  
-+	if (cooperative_mode_enabled()) {
++#ifdef CONFIG_COOPERATIVE
++	{
 +		unsigned long bootmem_end =
 +			start_va + bootmap_size + (0x10 << PAGE_SHIFT);
 +		unsigned long physical_end =
 +			__PAGE_OFFSET + (max_low_pfn << PAGE_SHIFT);
 +		free_bootmem(__pa(bootmem_end), physical_end - bootmem_end);
-+	} else {
++	}
++#else /* CONFIG_COOPERATIVE */
  	register_bootmem_low_pages(max_low_pfn);
--
+ 
  	/*
- 	 * Reserve the bootmem bitmap itself as well. We do this in two
- 	 * steps (first step was init_bootmem()) because this catches
-@@ -1244,7 +1278,7 @@
+@@ -1244,6 +1283,7 @@
  	if (boot_cpu_data.x86_vendor == X86_VENDOR_AMD &&
  	    boot_cpu_data.x86 == 6)
  	     reserve_bootmem(0xa0000 - 4096, 4096);
--
-+	}
++#endif /* CONFIG_COOPERATIVE */
+ 
  #ifdef CONFIG_SMP
  	/*
- 	 * But first pinch a few for the stack/trampoline stuff
-@@ -1267,6 +1301,7 @@
+@@ -1267,6 +1307,7 @@
  #endif
  
  #ifdef CONFIG_BLK_DEV_INITRD
@@ -1067,7 +1070,7 @@ Index: linux-2.6.17-source/arch/i386/kernel/setup.c
  	if (LOADER_TYPE && INITRD_START) {
  		if (INITRD_START + INITRD_SIZE <= (max_low_pfn << PAGE_SHIFT)) {
  			reserve_bootmem(INITRD_START, INITRD_SIZE);
-@@ -1282,6 +1317,16 @@
+@@ -1282,6 +1323,16 @@
  			initrd_start = 0;
  		}
  	}
@@ -1084,23 +1087,23 @@ Index: linux-2.6.17-source/arch/i386/kernel/setup.c
  #endif
  #ifdef CONFIG_KEXEC
  	if (crashk_res.start != crashk_res.end)
-@@ -1348,6 +1393,7 @@
+@@ -1308,6 +1359,7 @@
  	}
  }
  
 +#ifndef CONFIG_COOPERATIVE
  /*
-  * Request address space for all standard resources
-  *
-@@ -1422,6 +1468,7 @@
+  * Request address space for all standard RAM and ROM resources
+  * and also for regions reported as reserved by the e820.
+@@ -1422,6 +1474,7 @@
  	printk("Allocating PCI resources starting at %08lx (gap: %08lx:%08lx)\n",
  		pci_mem_start, gapstart, gapsize);
  }
-+#endif
++#endif /* !CONFIG_COOPERATIVE */
  
  static char * __init machine_specific_memory_setup(void);
  
-@@ -1484,7 +1531,7 @@
+@@ -1484,7 +1537,7 @@
  	ARCH_SETUP
  	if (efi_enabled)
  		efi_init();
@@ -1109,7 +1112,7 @@ Index: linux-2.6.17-source/arch/i386/kernel/setup.c
  		printk(KERN_INFO "BIOS-provided physical RAM map:\n");
  		print_memory_map(machine_specific_memory_setup());
  	}
-@@ -1539,7 +1586,9 @@
+@@ -1539,7 +1592,9 @@
  	 * NOTE: at this point the bootmem allocator is fully available.
  	 */
  
@@ -1119,7 +1122,7 @@ Index: linux-2.6.17-source/arch/i386/kernel/setup.c
  
  #ifdef CONFIG_X86_GENERICARCH
  	generic_apic_probe(*cmdline_p);
-@@ -1573,10 +1622,14 @@
+@@ -1573,10 +1628,14 @@
  		get_smp_config();
  #endif
  
