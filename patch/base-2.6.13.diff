@@ -625,7 +625,17 @@ Index: linux-2.6.13-source/arch/i386/kernel/i8259.c
  /*
   * This is the 'legacy' 8259A Programmable Interrupt Controller,
   * present in the majority of PC/AT boxes.
-@@ -375,6 +455,9 @@
+@@ -270,6 +350,9 @@
+ 
+ static int i8259A_shutdown(struct sys_device *dev)
+ {
++	if (cooperative_mode_enabled())
++		return 0;
++
+ 	/* Put the i8259A into a quiescent state that
+ 	 * the kernel initialization code can get it
+ 	 * out of.
+@@ -375,6 +458,9 @@
  {
  	int i;
  
@@ -635,7 +645,7 @@ Index: linux-2.6.13-source/arch/i386/kernel/i8259.c
  #ifdef CONFIG_X86_LOCAL_APIC
  	init_bsp_APIC();
  #endif
-@@ -399,6 +482,65 @@
+@@ -399,6 +485,65 @@
  	}
  }
  
@@ -701,7 +711,7 @@ Index: linux-2.6.13-source/arch/i386/kernel/i8259.c
  void __init init_IRQ(void)
  {
  	int i;
-@@ -406,6 +548,22 @@
+@@ -406,6 +551,22 @@
  	/* all the set up before the call gates are initialised */
  	pre_intr_init_hook();
  

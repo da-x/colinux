@@ -677,7 +677,17 @@ Index: linux-2.6.15-source/arch/i386/kernel/i8259.c
  DEFINE_SPINLOCK(i8259A_lock);
  
  static void end_8259A_irq (unsigned int irq)
-@@ -372,6 +454,9 @@
+@@ -267,6 +349,9 @@
+ 
+ static int i8259A_shutdown(struct sys_device *dev)
+ {
++	if (cooperative_mode_enabled())
++		return 0;
++
+ 	/* Put the i8259A into a quiescent state that
+ 	 * the kernel initialization code can get it
+ 	 * out of.
+@@ -372,6 +457,9 @@
  {
  	int i;
  
@@ -687,7 +697,7 @@ Index: linux-2.6.15-source/arch/i386/kernel/i8259.c
  #ifdef CONFIG_X86_LOCAL_APIC
  	init_bsp_APIC();
  #endif
-@@ -396,6 +481,65 @@
+@@ -396,6 +484,65 @@
  	}
  }
  
@@ -753,7 +763,7 @@ Index: linux-2.6.15-source/arch/i386/kernel/i8259.c
  void __init init_IRQ(void)
  {
  	int i;
-@@ -403,6 +547,22 @@
+@@ -403,6 +550,22 @@
  	/* all the set up before the call gates are initialised */
  	pre_intr_init_hook();
  
