@@ -202,6 +202,17 @@ check_binutils_guest()
 		if [ $ver = $BINUTILS_VERSION ]
 		then
 			echo "found"
+
+			# Must exist with prefix for kernel build
+			for name in ar as ld nm objdump objcopy strip
+			do
+				if ! which ${COLINUX_GCC_GUEST_TARGET}-$name >/dev/null 2>/dev/null
+				then
+					ln -s `which $name` $COLINUX_GCC_GUEST_PATH/${COLINUX_GCC_GUEST_TARGET}-$name
+					echo " softlink for ${COLINUX_GCC_GUEST_TARGET}-$name"
+				fi
+			done
+
 			return 0
 		fi
 
