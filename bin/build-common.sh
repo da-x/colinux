@@ -116,7 +116,7 @@ if [ -z "$COLINUX_TARGET_KERNEL_SOURCE" -a -z "$COLINUX_TARGET_KERNEL_BUILD" ]
 then
 	if [ -z "$COLINUX_TARGET_KERNEL_PATH" ]
 	then
-		# Source and buld in differ directories
+		# Source and build in differ directories
 		COLINUX_TARGET_KERNEL_SOURCE="$BUILD_DIR/$KERNEL-source"
 		COLINUX_TARGET_KERNEL_BUILD="$BUILD_DIR/$KERNEL-build"
 	else

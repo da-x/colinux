@@ -140,6 +140,8 @@ patch_kernel_source()
 
 configure_kernel()
 {
+	local OPT
+
 	echo "Configuring Kernel $KERNEL_VERSION"
 
 	# Is this a patched kernel?
@@ -162,7 +164,11 @@ EOF
 	cp "$TOPDIR/conf/linux-$KERNEL_VERSION-config" "$COLINUX_TARGET_KERNEL_BUILD/.config"
 
 	cd "$COLINUX_TARGET_KERNEL_SOURCE" || exit 1
-	make O="$COLINUX_TARGET_KERNEL_BUILD" silentoldconfig >>$COLINUX_BUILD_LOG 2>&1 \
+	if [ "$COLINUX_TARGET_KERNEL_SOURCE" != "$COLINUX_TARGET_KERNEL_BUILD" ]
+	then
+		OPT="O=\"$COLINUX_TARGET_KERNEL_BUILD\""
+	fi
+	make $OPT silentoldconfig >>$COLINUX_BUILD_LOG 2>&1 \
 	|| error_exit 1 "Kernel $KERNEL_VERSION config failed (check 'make oldconfig' on kerneltree)"
 }
 
