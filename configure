@@ -360,20 +360,22 @@ fi
 
 if [ "$hostkerneldir" != "NONE" ] ; then
   if [ ! -f $hostkerneldir/Makefile ] ; then
-    { echo "configure: error: missing host kernel source in $hostkerneldir" 1>&2; exit 1; }
+    { echo "configure: error: missing configured host kernel in $hostkerneldir" 1>&2; exit 1; }
   fi
 
-  if [ -f $hostkerneldir/.kernelrelease ]; then
-    set -- `sed -e 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\(.*\)$/\1 \2 \3/' < $hostkerneldir/.kernelrelease`
+  HOST_KERNELRELEASE=`cd $hostkerneldir; make kernelrelease 2>/dev/null | tail -n1`
+  if [ -n "$HOST_KERNELRELEASE" ]; then
+    set -- `echo "$HOST_KERNELRELEASE" | sed -e 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\(.*\)$/\1 \2 \3 \4/'`
     HOST_VERSION="$1"
     HOST_PATCHLEVEL="$2"
     HOST_SUBLEVEL="$3"
-    HOST_EXTRAVERSION=`sed -e 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\(.*\)$/\4/' < $hostkerneldir/.kernelrelease`
+    HOST_EXTRAVERSION="$4"
   else
     HOST_VERSION=`grep "^VERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
     HOST_PATCHLEVEL=`grep "^PATCHLEVEL = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
     HOST_SUBLEVEL=`grep "^SUBLEVEL = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
     HOST_EXTRAVERSION=`grep "^EXTRAVERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9\.]*\)\(.*\)$/\2/'`
+    HOST_KERNELRELEASE="$HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL$HOST_EXTRAVERSION"
   fi
   echo " HOST_VERSION=$HOST_VERSION"
   echo " HOST_PATCHLEVEL=$HOST_PATCHLEVEL"
@@ -385,7 +387,7 @@ if [ "$hostkerneldir" != "NONE" ] ; then
     { echo "configure: error: host kernel $HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL is to old! Need 2.6.x" 1>&2; exit 1; }
   fi
 
-  if [ "$HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL$HOST_EXTRAVERSION" != "`uname -r`" ] ; then
+  if [ "$HOST_KERNELRELEASE" != "`uname -r`" ] ; then
     echo -e "\n WARNING! Running kernel is not same as host kernel - You can not run colinux on this machine!\n"
   fi
 fi
