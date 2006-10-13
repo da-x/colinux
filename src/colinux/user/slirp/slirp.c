@@ -37,29 +37,28 @@ fd_set *global_readfds, *global_writefds, *global_xfds;
 
 static int get_dns_addr(struct in_addr *pdns_addr)
 {
-    FIXED_INFO *FixedInfo=NULL;
+    FIXED_INFO *FixedInfo;
     ULONG    BufLen;
     DWORD    ret;
     IP_ADDR_STRING *pIPAddr;
     struct in_addr tmp_addr;
     
     FixedInfo = (FIXED_INFO *)GlobalAlloc(GPTR, sizeof(FIXED_INFO));
+    if (!FixedInfo)
+	return -1;
+
     BufLen = sizeof(FIXED_INFO);
    
     if (ERROR_BUFFER_OVERFLOW == GetNetworkParams(FixedInfo, &BufLen)) {
-        if (FixedInfo) {
-            GlobalFree(FixedInfo);
-            FixedInfo = NULL;
-        }
+        GlobalFree(FixedInfo);
         FixedInfo = GlobalAlloc(GPTR, BufLen);
+	if (!FixedInfo)
+	    return -1;
     }
 	
     if ((ret = GetNetworkParams(FixedInfo, &BufLen)) != ERROR_SUCCESS) {
         printf("GetNetworkParams failed. ret = %08x\n", (u_int)ret );
-        if (FixedInfo) {
-            GlobalFree(FixedInfo);
-            FixedInfo = NULL;
-        }
+        GlobalFree(FixedInfo);
         return -1;
     }
      
@@ -76,10 +75,7 @@ static int get_dns_addr(struct in_addr *pdns_addr)
             pIPAddr = pIPAddr ->Next;
     }
 #endif
-    if (FixedInfo) {
-        GlobalFree(FixedInfo);
-        FixedInfo = NULL;
-    }
+    GlobalFree(FixedInfo);
     return 0;
 }
 
@@ -153,7 +149,7 @@ struct in_addr cached_dns_addr (void)
 }
 
 #ifdef _WIN32
-void slirp_cleanup(void)
+static void slirp_cleanup(void)
 {
     WSACleanup();
 }
