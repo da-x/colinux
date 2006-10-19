@@ -41,6 +41,11 @@ co_rc_t co_manager_load(co_manager_t *manager)
 {
 	co_rc_t rc;
 
+	if (manager != co_global_manager) {
+    		co_debug("colinux: manager ptr != global var\n");
+    		co_debug("colinux: Mostly a problem with CONFIG_REGPARM enabled in host kernel\n");
+		return CO_RC(ERROR);
+	}
 	co_memset(manager, 0, sizeof(*manager));
 	
 	co_debug("loaded to host kernel\n");
