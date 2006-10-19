@@ -208,6 +208,7 @@ check_binutils_guest()
 			do
 				if ! which ${COLINUX_GCC_GUEST_TARGET}-$name >/dev/null 2>/dev/null
 				then
+					mkdir -p $COLINUX_GCC_GUEST_PATH
 					ln -s `which $name` $COLINUX_GCC_GUEST_PATH/${COLINUX_GCC_GUEST_TARGET}-$name
 					echo " softlink for ${COLINUX_GCC_GUEST_TARGET}-$name"
 				fi
