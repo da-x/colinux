@@ -35,7 +35,7 @@
 # Remember: Please update also conf/kernel-*-config
 #
 # Read version from filename patch/series-*, using the newest we found.
-KERNEL_VERSION=`ls -1 ../patch/series-* | sed -n -r -e 's/^.+-([0-9\.]+)$/\1/p' | tail -n1`
+KERNEL_VERSION=`ls ../patch/series-* | sed -n -r -e 's/^.+-([0-9\.]+)$/\1/' -e '$p'`
 
 # Use User config, if exist
 if [ -f user-build.cfg ] ; then
