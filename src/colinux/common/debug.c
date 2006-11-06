@@ -84,7 +84,7 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 	packet_size += sizeof(co_debug_type_t) + sizeof(unsigned long);
 	packet_size += sizeof(co_debug_type_t) + sizeof(unsigned char);
 	packet_size += sizeof(co_debug_type_t) + sizeof(unsigned char);
-	packet_size += sizeof(co_debug_type_t) + 80;
+	packet_size += sizeof(co_debug_type_t) + 120;
 
 	char buffer[packet_size];
 
