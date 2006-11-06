@@ -149,11 +149,6 @@ Command Line Parameters
 The following command line paramaters may be useful in operating Cooperative 
 Linux.
 
-    -a #
-
-	Allows you to specify the instance of Cooperative Linux
-	that you will be connecting to.
-
     @filename
 
 	Allows you to choose a specific configuration file to 
