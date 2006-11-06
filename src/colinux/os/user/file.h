@@ -13,8 +13,8 @@
 
 #include <colinux/common/common.h>
 
-extern co_rc_t co_os_file_load(co_pathname_t *pathname, 
-			       char **out_buf, unsigned long *out_size);
+extern co_rc_t co_os_file_load(co_pathname_t pathname,
+			       char **out_buf, unsigned long *out_size, unsigned long max_size);
 extern void co_os_file_free(char *buf);
 
 #endif

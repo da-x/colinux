@@ -67,7 +67,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 
 	rc = co_monitor_get_pfn(cmon, cmon->import.kernel_swapper_pg_dir, &swapper_pg_dir_pfn);
 	if (!CO_OK(rc)) {
-		co_debug("error getting swapper_pg_dir pfn (%x)\n", rc);
+		co_debug_error("error getting swapper_pg_dir pfn (%x)\n", rc);
 		goto out_error;
 	}	
 	
@@ -75,26 +75,26 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 
 	rc = co_monitor_arch_passage_page_alloc(cmon);
 	if (!CO_OK(rc)) {
-		co_debug("error allocating passage page (%d)\n", rc);
+		co_debug_error("error allocating passage page (%d)\n", rc);
 		goto out_error;
 	}
 
 	rc = co_monitor_arch_passage_page_init(cmon);
 	if (!CO_OK(rc)) {
-		co_debug("error initializing the passage page (%d)\n", rc);
+		co_debug_error("error initializing the passage page (%d)\n", rc);
 		goto out_error;
 	}
 
 	pp_pagetables_pgd = CO_VPTR_PSEUDO_RAM_PAGE_TABLES >> PGDIR_SHIFT;
 	pfns = cmon->pp_pfns[pp_pagetables_pgd];
 	if (pfns == NULL) {
-		co_debug("CO_VPTR_PSEUDO_RAM_PAGE_TABLES is not mapped, huh? (%x)\n");
+		co_debug_error("CO_VPTR_PSEUDO_RAM_PAGE_TABLES is not mapped, huh? (%x)\n");
 		goto out_error;
 	}
 
 	rc = co_monitor_create_ptes(cmon, cmon->import.kernel_swapper_pg_dir, CO_ARCH_PAGE_SIZE, pfns);
 	if (!CO_OK(rc)) {
-		co_debug("error initializing swapper_pg_dir (%x)\n", rc);
+		co_debug_error("error initializing swapper_pg_dir (%x)\n", rc);
 		goto out_error;
 	}
 
@@ -105,19 +105,19 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 					     sizeof(linux_pgd_t)*cmon->manager->reversed_map_pgds_count, 
 					     (void *)cmon->manager->reversed_map_pgds);
 	if (!CO_OK(rc)) {
-		co_debug("error adding reversed physical mapping (%x)\n", rc);
+		co_debug_error("error adding reversed physical mapping (%x)\n", rc);
 		goto out_error;
 	}	
 
 	rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP, CO_ARCH_PAGE_SIZE, pfns);
 	if (!CO_OK(rc)) {
-		co_debug("error initializing self_map (%x)\n", rc);
+		co_debug_error("error initializing self_map (%x)\n", rc);
 		goto out_error;
 	}
 
 	rc = co_monitor_get_pfn(cmon, CO_VPTR_SELF_MAP, &self_map_pfn);
 	if (!CO_OK(rc)) {
-		co_debug("error getting self_map pfn (%x)\n", rc);
+		co_debug_error("error getting self_map pfn (%x)\n", rc);
 		goto out_error;
 	}
 
@@ -131,7 +131,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		&self_map_pfn);
 
 	if (!CO_OK(rc)) {
-		co_debug("error getting self_map pfn (%x)\n", rc);
+		co_debug_error("error getting self_map pfn (%x)\n", rc);
 		goto out_error;
 	}	
 
@@ -145,7 +145,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		&passage_page_pfn);
 
 	if (!CO_OK(rc)) {
-		co_debug("error mapping passage page into the self map (%x)\n", rc);
+		co_debug_error("error mapping passage page into the self map (%x)\n", rc);
 		goto out_error;
 	}	
 
@@ -156,7 +156,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		&self_map_pfn);
 	
 	if (!CO_OK(rc)) {
-		co_debug("error initializing self_map (%x)\n", rc);
+		co_debug_error("error initializing self_map (%x)\n", rc);
 		goto out_error;
 	}	
 
@@ -172,7 +172,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP + io_buffer_offset,
 					    sizeof(linux_pte_t), &io_buffer_pfn);
 		if (!CO_OK(rc)) {
-			co_debug("error initializing io buffer (%x, %d)\n", rc, io_buffer_page);
+			co_debug_error("error initializing io buffer (%x, %d)\n", rc, io_buffer_page);
 			goto out_error;
 		}
 		
@@ -649,7 +649,7 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 			dev->dev.free = free_file_blockdevice;
 		} else {
 			co_monitor_free(cmon, dev);
-			co_debug("cobd%d: cannot enable %d (%x)\n", i, rc);
+			co_debug_error("cobd%d: cannot enable %d (%x)\n", i, rc);
 			goto error_1;
 		}
 	}
@@ -809,7 +809,7 @@ static co_rc_t load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_t *p
 	co_debug("initrd address: %x (0x%x pages)\n", address, pages);
 
 	if (address <= cmon->core_end + 0x100000) {
-		co_debug("initrd is too close to the kernel code, not enough memory)\n");
+		co_debug_error("initrd is too close to the kernel code, not enough memory)\n");
 
 		/* We are too close to the kernel code, not enough memory */
 		return CO_RC(ERROR);
@@ -817,7 +817,7 @@ static co_rc_t load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_t *p
 
 	rc = co_monitor_copy_region(cmon, address, params->size, params->buf);
 	if (!CO_OK(rc)) {
-		co_debug("initrd copy failed (%x)\n", rc);
+		co_debug_error("initrd copy failed (%x)\n", rc);
 		return rc;
 	}
 
@@ -833,13 +833,13 @@ static co_rc_t start(co_monitor_t *cmon)
 	co_rc_t rc;
 
 	if (cmon->state != CO_MONITOR_STATE_INITIALIZED) {
-		co_debug("invalid state\n");
+		co_debug_error("invalid state\n");
 		return CO_RC(ERROR);
 	}
 		
 	rc = guest_address_space_init(cmon);
 	if (!CO_OK(rc)) {
-		co_debug("error initializing coLinux context (%d)\n", rc);
+		co_debug_error("error initializing coLinux context (%d)\n", rc);
 		return rc;
 	}
 
@@ -1005,13 +1005,13 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 
         rc = co_os_timer_create(&timer_callback, cmon, 10, &cmon->timer);
         if (!CO_OK(rc)) {
-                co_debug("creating host OS timer (%d)\n", rc);
+                co_debug_error("creating host OS timer (%x)\n", rc);
                 goto out_free_pp;
         }
 
 	rc = load_configuration(cmon);
 	if (!CO_OK(rc)) {
-		co_debug("loading monitor configuration (%d)\n", rc);
+		co_debug_error("loading monitor configuration (%x)\n", rc);
 		goto out_destroy_timer;
 	}
 

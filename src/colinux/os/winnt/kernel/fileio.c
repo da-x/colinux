@@ -172,8 +172,8 @@ static co_rc_t transfer_file_block(co_monitor_t *cmon,
 	}
 
 	if (status != STATUS_SUCCESS) {
-		co_debug("block io failed: %x %x (reason: %x)", linuxvm, size,
-			   status);
+		co_debug_error("block io failed: %x %x (reason: %x)",
+				linuxvm, size, status);
 		rc = status_convert(status);
 	}
 

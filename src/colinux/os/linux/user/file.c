@@ -17,7 +17,7 @@
 #include <colinux/os/alloc.h>
 #include <colinux/os/user/file.h>
 
-co_rc_t co_os_file_load(co_pathname_t *pathname, char **out_buf, unsigned long *out_size)
+co_rc_t co_os_file_load(co_pathname_t pathname, char **out_buf, unsigned long *out_size, unsigned long max_size)
 {
 	int fd, ret;
 	char *buf;
@@ -32,6 +32,9 @@ co_rc_t co_os_file_load(co_pathname_t *pathname, char **out_buf, unsigned long *
 		close(fd);
 		return CO_RC(ERROR);
 	}
+
+	if (max_size && st.st_size > max_size)
+		st.st_size = max_size;
 
 	buf = (char *)malloc(st.st_size);
 	if (buf == NULL)  {

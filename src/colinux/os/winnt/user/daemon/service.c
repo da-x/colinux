@@ -78,12 +78,12 @@ static char * co_winnt_get_path_from_exe(void)
 	static char exe_name[512];
 
 	if (!GetModuleFileName(0, exe_name, sizeof(exe_name))) {
-		co_debug("daemon: cannot determine exe name.\n");
+		co_debug_error("daemon: cannot determine exe name.\n");
 		return NULL;
 	}
 
 	if (!PathRemoveFileSpec(exe_name)) {
-		co_debug("daemon: cannot get path from exe name.\n");
+		co_debug_error("daemon: cannot get path from exe name.\n");
 		return NULL;
 	}
 

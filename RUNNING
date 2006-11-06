@@ -170,6 +170,12 @@ Linux.
 	Don't launch and attach a coLinux console on startup.  This is
 	default for running as service.
 
+    -v level
+
+	Prints messages about booting process.  Level 1 is informative,
+	level 2 performs more checks, level 3 prints details on errors,
+	10 is for debugging.  Default is 0.
+
     --install-service servicename
 
 	Allows you to install Cooperative Linux as a service. Also 

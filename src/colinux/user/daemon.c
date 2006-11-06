@@ -63,35 +63,35 @@ void co_daemon_syntax()
 	co_daemon_print_header();
 	co_terminal_print("syntax: \n");
 	co_terminal_print("\n");
-	co_terminal_print("    colinux-daemon [-h] [-d] [-t name] [configuration and boot parameter] @params.txt\n");
+	co_terminal_print("    colinux-daemon [-d] [-h] [k] [-t name] [-v level] [configuration and boot parameter] @params.txt\n");
 	co_terminal_print("\n");
-	co_terminal_print("      -h             Show this help text\n");
-	co_terminal_print("      -d             Don't launch and attach a coLinux console on\n");
-	co_terminal_print("                     startup\n");
-	co_terminal_print("      -k             Suppress kernel messages\n");
-	co_terminal_print("      -t name        When spawning a console, this is the type of \n");
-	co_terminal_print("                     console (e.g, nt, fltk, etc...)\n");
-	co_terminal_print("      @params.txt    Take more command line params from the given text file (can be multi-line)\n");
+	co_terminal_print("  -d             Don't launch and attach a coLinux console on startup\n");
+	co_terminal_print("  -h             Show this help text\n");
+	co_terminal_print("  -k             Suppress kernel messages\n");
+	co_terminal_print("  -t name        When spawning a console, this is the type of console\n");
+	co_terminal_print("                 (e.g, nt, fltk, etc...)\n");
+	co_terminal_print("  -v level       Verbose messages, level 1 prints booting details, 2 or\n");
+	co_terminal_print("                 more checks configs, 3 prints errors, default is 0 (off)\n");
+	co_terminal_print("  @params.txt    Take more command line params from the given text file\n");
+	co_terminal_print("                 (can be multi-line)\n");
 	co_terminal_print("\n");
-	co_terminal_print("      Configuration and boot parameters:\n");
+	co_terminal_print("Configuration and boot parameters:\n");
 	co_terminal_print("\n");
-	co_terminal_print("        When specifying kernel=vmlinux (where vmlinux is the kernel image file\n");
-	co_terminal_print("        the -c option is not needed. Instead, you pass all configuration via\n");
-	co_terminal_print("        the command line, for example:\n");
+	co_terminal_print("Params should start with kernel=vmlinux (is the kernel image file\n");
+	co_terminal_print("the '@' option is not needed. Instead, you pass all configuration\n");
+	co_terminal_print("via the command line, for example:\n");
 	co_terminal_print("\n");
-	co_terminal_print("          colinux-daemon kernel=vmlinux cobd0=root_fs root=/dev/cobd0 hda1=:cobd0 \\ \n");
-	co_terminal_print("          eth0=tuntap,\"Local Area Connection\"\n");
+	co_terminal_print("  colinux-daemon kernel=vmlinux cobd0=root_fs hda1=:cobd0 root=/dev/cobd0 eth0=slirp\n");
+	co_terminal_print(" \n");
 	co_terminal_print("\n");
-	co_terminal_print("      Use of new aliases automatically allocates cobd(s), for example:\n");
+	co_terminal_print("Use of new aliases automatically allocates cobd(s), for example:\n");
 	co_terminal_print("\n");
-	co_terminal_print("          colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1 \\\n");
-	co_terminal_print("          eth0=pcap-bridge,\"Local Area Connection\"\n");
+	co_terminal_print("  colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1 \\\n");
+	co_terminal_print("  eth0=pcap-bridge,\"Local Area Connection\"\n");
 	co_terminal_print("\n");
-	co_terminal_print("      See README.txt for more details about command-line usage.\n");
-	co_terminal_print("\n");
-	co_terminal_print("      Unhandled paramters are forwarded to the kernel's boot parameters string.\n");
-	co_terminal_print("\n");
-	co_terminal_print("     See colinux-daemon's documentation for more options.\n");
+	co_terminal_print("Unhandled paramters are forwarded to the kernel's boot parameters string.\n");
+	co_terminal_print("See README.txt for more details about command-line usage.\n");
+	co_terminal_print("See colinux-daemon's documentation for more options.\n");
 	co_terminal_print("\n");
 }
 
@@ -99,10 +99,8 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 {
 	co_rc_t rc;
 	bool_t dont_launch_console = PFALSE;
-
-	start_parameters->show_help = PFALSE;
-	start_parameters->config_specified = PFALSE;
-	start_parameters->suppress_printk = PFALSE;
+	bool_t verbose_specified = PFALSE;
+	int verbose_level = 0;
 
 	co_snprintf(start_parameters->console, sizeof(start_parameters->console), "fltk");
 
@@ -129,6 +127,12 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 
 	if (!CO_OK(rc)) 
 		return rc;
+
+	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-v",
+							  &verbose_specified, &verbose_level);
+
+	if (co_global_debug_levels.misc_level < verbose_level)
+		co_global_debug_levels.misc_level = verbose_level;
 
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-h", &start_parameters->show_help);
 
@@ -177,7 +181,7 @@ co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **
 
 	rc = co_load_config_file(daemon);
 	if (!CO_OK(rc)) {
-		co_debug("error loading configuration\n");
+		co_debug_error("error loading configuration\n");
 		goto out_free;
 	}
 
@@ -213,14 +217,14 @@ co_rc_t co_daemon_load_symbol_and_data(co_daemon_t *daemon,
 	if (sym) 
 		*address_out = co_elf_get_symbol_value(sym);
 	else {
-		co_debug("symbol %s not found\n", symbol_name);
+		co_debug_error("symbol %s not found\n", symbol_name);
 		return CO_RC(ERROR);
 		
 	}
 	
 	data = co_elf_get_symbol_data(daemon->elf_data, sym);
 	if (data == NULL) {
-		co_debug("data of symbol %s not found\n");
+		co_debug_error("data of symbol %s not found\n");
 		return CO_RC(ERROR);
 	}
 	
@@ -242,7 +246,7 @@ co_rc_t co_daemon_load_symbol(co_daemon_t *daemon,
 	if (sym) 
 		*address_out = co_elf_get_symbol_value(sym);
 	else {
-		co_debug("symbol %s not found\n", symbol_name);
+		co_debug_error("symbol %s not found\n", symbol_name);
 		rc = CO_RC(ERROR);
 	}
 
@@ -288,10 +292,9 @@ co_rc_t co_load_initrd(co_daemon_t *daemon)
 
 	co_debug("reading initrd from (%s)\n", daemon->config.initrd_path);
 
-	rc = co_os_file_load(&daemon->config.initrd_path, &initrd, &initrd_size);
+	rc = co_os_file_load(daemon->config.initrd_path, &initrd, &initrd_size, 0);
 	if (!CO_OK(rc)) {
-		co_terminal_print("error loading initrd file '%s'\n",
-				  daemon->config.initrd_path);
+		co_terminal_print("error loading initrd file\n");
 		return rc;
 	}
 
@@ -441,10 +444,9 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 	unsigned long size;
 	co_manager_ioctl_status_t status;
 
-	rc = co_os_file_load(&daemon->config.vmlinux_path, &daemon->buf, &size);
+	rc = co_os_file_load(daemon->config.vmlinux_path, &daemon->buf, &size, 0);
 	if (!CO_OK(rc)) {
-		co_terminal_print("error loading vmlinux file '%s'\n", 
-		      &daemon->config.vmlinux_path);
+		co_terminal_print("error loading vmlinux file\n");
 		goto out;
 	}
 
@@ -458,7 +460,7 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 
 	rc = co_daemon_monitor_create(daemon);
 	if (!CO_OK(rc)) {
-		co_debug("error initializing\n");
+		co_debug_error("error initializing\n");
 		goto out_free_vmlinux;
 	}
 
@@ -534,9 +536,9 @@ co_rc_t co_daemon_handle_printk(co_daemon_t *daemon, co_message_t *message)
 			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
 						"root= kernel boot paramter or the file / device mapped to the root\n");
 			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
-						"file system is not found or inaccessible. Please Check your.\n");
+						"file system is not found or inaccessible.\n");
 			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
-						"coLinux configuration.\n");
+						"Please Check your coLinux configuration and use option \"-v 3\".\n");
 		}
 	}
 
@@ -746,7 +748,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	daemon->message_monitor->reactor_user->private_data = (void *)daemon;
 
 	if (daemon->start_parameters->launch_console) {
-		co_terminal_print("colinux: launching console\n");
+		co_debug_info("colinux: launching console");
 		rc = co_launch_process(NULL, "colinux-console-%s -a %d", daemon->start_parameters->console, daemon->id);
 		if (!CO_OK(rc)) {
 			co_terminal_print("error launching console\n");

@@ -86,7 +86,7 @@ static co_rc_t co_os_file_block_detect_size_binary_search(HANDLE handle, unsigne
 	}
 
 	if (test_buffer_size >= test_buffer_size_max) {
-		co_debug("%s: size is zero\n", __FUNCTION__);
+		co_debug_error("%s: size is zero\n", __FUNCTION__);
 		*out_size = 0;
 		co_os_free(test_buffer);
 		return CO_RC(ERROR);

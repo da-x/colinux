@@ -71,12 +71,12 @@ co_rc_t co_kill_process(int pid)
 		if (err == ERROR_INVALID_PARAMETER)
 			return CO_RC(OK); /* Process is not running */
 
-		co_debug("error (%d) open process %d\n", err, pid);
+		co_debug_error("error (%d) open process %d\n", err, pid);
 		return CO_RC(ERROR);
 	}
 
 	if (!TerminateProcess(hProcess, 0)) {
-		co_debug("error (%d) in temination of pid %d\n", GetLastError(), pid);
+		co_debug_error("error (%d) in temination of pid %d\n", GetLastError(), pid);
 		rc = CO_RC(ERROR);
 	}
 	

@@ -57,7 +57,7 @@ co_rc_t co_manager_load(co_manager_t *manager)
 		goto out_err_mutex;
 
 	if (manager->hostmem_pages > 0x100000) {
-		co_debug("error, machines with more than 4GB are not currently supported\n");
+		co_debug_error("error, machines with more than 4GB are not currently supported\n");
 		rc = CO_RC(ERROR);
 		goto out_err_mutex;
 	}
@@ -446,7 +446,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 		*return_size = sizeof(*params);
 
 		if (in_size < sizeof(*params)) {
-			co_debug("monitor ioctl too small! (%d < %d)\n", in_size, sizeof(*params));
+			co_debug_error("monitor ioctl too small! (%d < %d)\n", in_size, sizeof(*params));
 			params->rc = CO_RC(MONITOR_NOT_LOADED);
 			break;
 		}

@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <colinux/os/user/misc.h>
 #include <colinux/user/manager.h>
 
 #include "debug.h"
@@ -54,5 +55,11 @@ void co_debug_end(void)
 void co_debug_level_system(const char *module, co_debug_facility_t facility, int level,
 		    const char *filename, int line, const char *func, const char *text)
 {
-        /* dummy */
+	if (facility == CO_DEBUG_FACILITY_misc) {
+		int len = strlen(text);
+		char *format = (len > 0 && text[len-1] == '\n') ? "%s" : "%s\n";
+
+		/* Warning: co_terminal_print here, would be recursive */
+		fprintf(stderr, format, text);
+	}
 }

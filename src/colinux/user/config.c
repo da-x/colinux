@@ -31,6 +31,43 @@ typedef struct {
  * novice users.
  */
 
+static co_rc_t check_cobd_file (co_pathname_t pathname, int index)
+{
+	co_rc_t rc;
+	char *buf;
+	unsigned long size;
+	static const char magic_bz2 [3] = "BZh";		/* bzip2 compressed data */
+	static const char magic_7z  [6] = "7z\274\257\047\034";	/* 7z archive data */
+
+	if (co_global_debug_levels.misc_level < 2)
+		return CO_RC(OK);  /* verbose is not enabled */
+
+	co_remove_quotation_marks(pathname);
+
+	if (co_strncmp(pathname, "\\Device\\", 8) == 0  ||
+	    co_strncmp(pathname, "\\DosDevices\\", 12) == 0) 
+		return CO_RC(OK);  /* Can't check partitions or raw devices */
+
+	rc = co_os_file_load(pathname, &buf, &size, 1024);
+	if (!CO_OK(rc)) {
+		co_terminal_print("cobd%d: error reading file\n", index);
+		return rc;
+	}
+
+	if (size != 1024) {
+		co_terminal_print("cobd%d: file to small (%s)\n", index, pathname);
+		rc = CO_RC(INVALID_PARAMETER);
+	} else
+	if (memcmp(buf, magic_bz2, sizeof(magic_bz2)) == 0 ||
+	    memcmp(buf, magic_7z, sizeof(magic_7z)) == 0) {
+		co_terminal_print("cobd%d: Image file must be unpack before (%s)\n", index, pathname);
+		rc = CO_RC(INVALID_PARAMETER);
+	}
+
+	co_os_file_free(buf);
+	return rc;
+}
+
 static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_config_t *conf)
 {
 	bool_t exists;
@@ -59,8 +96,14 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 		cobd->enabled = PTRUE;
 
 		co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
+
+		rc = check_cobd_file(cobd->pathname, index);
+		if (!CO_OK(rc))
+			return rc;
+
 		co_canonize_cobd_path(&cobd->pathname);
-		co_terminal_print("mapping cobd%d to %s\n", index, cobd->pathname);
+		co_debug_info("mapping cobd%d to %s", index, cobd->pathname);
+
 	} while (1);
 
 	return CO_RC(OK);
@@ -71,6 +114,7 @@ static co_rc_t allocate_by_alias(co_config_t *conf, const char *prefix, const ch
 {
 	co_block_dev_desc_t *cobd;
 	int i;
+	co_rc_t rc;
 
 	for (i=0; i < CO_MODULE_MAX_COBD; i++) {
 		cobd = &conf->block_devs[i];
@@ -86,12 +130,17 @@ static co_rc_t allocate_by_alias(co_config_t *conf, const char *prefix, const ch
 
 	cobd->enabled = PTRUE;
 	co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
+
+	rc = check_cobd_file (cobd->pathname, i);
+	if (!CO_OK(rc))
+		return rc;
+
 	co_canonize_cobd_path(&cobd->pathname);
 
 	cobd->alias_used = PTRUE;
 	co_snprintf(cobd->alias, sizeof(cobd->alias), "%s%s", prefix, suffix);
 
-	co_terminal_print("selected cobd%d for %s, mapping to '%s'\n", i, cobd->alias, cobd->pathname);
+	co_debug_info("selected cobd%d for %s, mapping to '%s'", i, cobd->alias, cobd->pathname);
 
 	return CO_RC(OK);
 }
@@ -149,7 +198,7 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 				cobd->alias_used = PTRUE;
 				co_snprintf(cobd->alias, sizeof(cobd->alias), "%s%s", prefix, suffix);
 
-				co_terminal_print("mapping %s%s to %s\n", prefix, suffix, &param[1]);
+				co_debug_info("mapping %s%s to %s", prefix, suffix, &param[1]);
 				
 			} else {
 				rc = allocate_by_alias(conf, prefix, suffix, param);
@@ -248,16 +297,16 @@ static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, co
 		net_dev->manual_mac_address = PTRUE;
 	}
 
-	co_terminal_print("configured TAP at '%s' device as eth%d\n",
+	co_debug_info("configured TAP at '%s' device as eth%d",
 				net_dev->desc, index);
 
 	if (*mac_address)
-		co_terminal_print("MAC address: %s\n", mac_address);
+		co_debug_info("MAC address: %s", mac_address);
 	else
-		co_terminal_print("MAC address: auto generated\n");
+		co_debug_info("MAC address: auto generated");
 
 	if (*host_ip)
-		co_terminal_print("Host IP address: %s (currently ignored)\n", host_ip);
+		co_debug_info("Host IP address: %s (currently ignored)", host_ip);
 
 	return CO_RC(OK);
 }
@@ -291,21 +340,21 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 		net_dev->manual_mac_address = PTRUE;
 	}
 
-	co_terminal_print("configured PCAP bridge at '%s' device as eth%d\n", 
+	co_debug_info("configured PCAP bridge at '%s' device as eth%d",
 			net_dev->desc, index);
 
 	if (*mac_address)
-		co_terminal_print("MAC address: %s\n", mac_address);
+		co_debug_info("MAC address: %s", mac_address);
 	else
-		co_terminal_print("MAC address: auto generated\n");
+		co_debug_info("MAC address: auto generated");
 
-	if (strlen(promisc_mode) > 0) {
+	if (*promisc_mode) {
 		if (strcmp(promisc_mode, "nopromisc") == 0) {
 			net_dev->promisc_mode = 0;
-			co_terminal_print("Pcap mode: nopromisc\n");
+			co_debug_info("Pcap mode: nopromisc");
 		} else if (strcmp(promisc_mode, "promisc") == 0) {
 			net_dev->promisc_mode = 1;
-			co_terminal_print("Pcap mode: promisc\n");
+			co_debug_info("Pcap mode: promisc");
 		} else {
 			co_terminal_print("error: PCAP bridge option only allowed 'promisc' or 'nopromisc'\n");
 			return CO_RC(INVALID_PARAMETER);
@@ -331,10 +380,10 @@ static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, 
 	net_dev->type = CO_NETDEV_TYPE_SLIRP;
 	net_dev->enabled = PTRUE;
 
-	co_terminal_print("configured Slirp as eth%d\n", index);
+	co_debug_info("configured Slirp as eth%d", index);
 
 	if (*net_dev->redir)
-		co_terminal_print("redirections %s\n", net_dev->redir);
+		co_debug_info("redirections %s", net_dev->redir);
 
 	return CO_RC(OK);
 }
@@ -401,7 +450,7 @@ static co_rc_t parse_args_cofs_device(co_config_t *conf, int index, const char *
 
 	co_snprintf(cofs->pathname, sizeof(cofs->pathname), "%s", param);
 	co_canonize_cobd_path(&cofs->pathname);
-	co_terminal_print("mapping cofs%d to %s\n", index, cofs->pathname);
+	co_debug_info("mapping cofs%d to %s", index, cofs->pathname);
 
 	return CO_RC(OK);
 }
@@ -456,7 +505,7 @@ static co_rc_t parse_args_serial_device(co_config_t *conf, int index, const char
 		return CO_RC(INVALID_PARAMETER);
 	}
 
-	co_terminal_print("mapping ttys%d to %s\n", index, name);
+	co_debug_info("mapping ttys%d to %s", index, name);
 	serial->desc = strdup(name);
 	if (!serial->desc)
 		return CO_RC(OUT_OF_MEMORY);
@@ -510,7 +559,7 @@ static co_rc_t parse_args_execute(co_config_t *conf, int index, const char *para
 	};
 
 	if (execute->enabled) {
-		co_terminal_print("warning exec%d double defined\n", index);
+		co_terminal_print("exec%d double defined\n", index);
 		return CO_RC(INVALID_PARAMETER);
 	}
 	execute->enabled = PTRUE;
@@ -576,7 +625,7 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 	if (!exists)
 		conf->ram_size = 32;
 		
-	co_terminal_print("configuring %d MB of virtual RAM\n", conf->ram_size);
+	co_debug_info("configuring %d MB of virtual RAM", conf->ram_size);
 
 	rc = parse_args_config_cobd(cmdline, conf);
 	if (!CO_OK(rc))
@@ -602,7 +651,7 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 
 	if (conf->initrd_enabled) {
 		co_remove_quotation_marks(conf->initrd_path);
-		co_terminal_print("using '%s' as initrd image\n", conf->initrd_path);
+		co_debug_info("using '%s' as initrd image", conf->initrd_path);
 
 		/* Is last cofs free for automatic set? */
 		if (!conf->cofs_devs[CO_MODULE_MAX_COFS-1].enabled) {
@@ -654,11 +703,9 @@ co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_paramete
 		return CO_RC(OK);
 
 	co_remove_quotation_marks(conf->vmlinux_path);
-	co_terminal_print("using '%s' as kernel image\n", conf->vmlinux_path);
+	co_debug_info("using '%s' as kernel image", conf->vmlinux_path);
 
 	rc = parse_config_args(cmdline, conf);
-	if (!CO_OK(rc))
-		co_terminal_print("daemon: error parsing configuration parameters\n");
 	
 	rc_ = co_cmdline_params_format_remaining_parameters(cmdline, conf->boot_parameters_line,
 							    sizeof(conf->boot_parameters_line));
@@ -666,8 +713,8 @@ co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_paramete
 		return rc_;
 	
 	if (CO_OK(rc)) {
-		co_terminal_print("kernel boot parameters: '%s'\n", conf->boot_parameters_line);
-		co_terminal_print("\n");
+		co_debug_info("kernel boot parameters: '%s'\n", conf->boot_parameters_line);
+		co_debug_info("\n");
 		start_parameters->config_specified = PTRUE;
 	}
 

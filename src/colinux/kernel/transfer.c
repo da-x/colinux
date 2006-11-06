@@ -41,12 +41,12 @@ co_rc_t co_monitor_host_linuxvm_transfer(
 	co_rc_t rc;
 
 	if ((vaddr < CO_ARCH_KERNEL_OFFSET) || (vaddr >= cmon->end_physical)) {
-		co_debug("monitor: transfer: off bounds: %x\n", vaddr);
+		co_debug_error("monitor: transfer: off bounds: %x\n", vaddr);
 		return CO_RC(TRANSFER_OFF_BOUNDS);
 	}
 
 	if ((vaddr + size < CO_ARCH_KERNEL_OFFSET) || (vaddr + size > cmon->end_physical)) {
-		co_debug("monitor: transfer: end off bounds: %x\n", vaddr + size);
+		co_debug_error("monitor: transfer: end off bounds: %x\n", vaddr + size);
 		return CO_RC(TRANSFER_OFF_BOUNDS);
 	}	
 

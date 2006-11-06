@@ -14,6 +14,8 @@ Its command line syntax is as follows:
     -k             Suppress kernel messages
     -t name        When spawning a console, this is the type of 
                    console (e.g, nt, fltk, etc...)
+    -v level       Verbose messages, level 1 prints booting details, 2 or
+                   more checks configs, 3 prints errors, default is 0 (off)
     @params.txt    Take more command line params from the given text file (can be multi-line)
 
 The following options are specific to Windows NT/XP/2000:

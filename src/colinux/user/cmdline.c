@@ -109,9 +109,9 @@ static co_rc_t get_params_list(char *filename, int *count, char ***list_output)
 	char *buf;
 	unsigned long size;
 
-	rc = co_os_file_load((co_pathname_t *)filename, &buf, &size);
+	rc = co_os_file_load(filename, &buf, &size, 0);
 	if (!CO_OK(rc)) {
-		co_terminal_print("error loading %s\n", filename);
+		co_terminal_print("error loading config file '%s'\n", filename);
 		return rc;
 	}
 	
