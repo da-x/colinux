@@ -11,7 +11,7 @@ VERSION_FILE=$1
 TARGET_FILE=$2
 
 # Get kernel version
-KERNEL_VERSION=`cd bin; . ./build-common.sh --get-vars; echo \$KERNEL_VERSION`
+KERNEL_VERSION=`. bin/build-common.sh --get-vars KERNEL_VERSION`
 
 # coLinux full version with "-preXX", if exist
 PRE_VERSION=`cat $VERSION_FILE`

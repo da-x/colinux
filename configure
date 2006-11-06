@@ -11,7 +11,7 @@
 #	./configure --help
 
 # Some defaults from config file (Kernel version and dir, binutil version)
-cd bin; . ./build-common.sh --get-vars; cd ..
+. bin/build-common.sh --get-vars
 
 # Some default values
 target=i686-pc-mingw32
