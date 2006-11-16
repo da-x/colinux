@@ -45,9 +45,10 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 	}
 
 	param_array = (char **)co_os_malloc(sizeof(char *)*param_count + 1);
-	if (param_array == NULL)
-		return CO_RC(OUT_OF_MEMORY);
-
+	if (param_array == NULL) {
+		free(param_array);
+		return CO_RC(ERROR);
+	}
 	memset(param_array, 0, sizeof(char *)*param_count + 1);
 
 	i = 0;

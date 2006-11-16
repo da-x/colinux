@@ -18,6 +18,7 @@
 #include "elf_load.h"
 #include "monitor.h"
 #include "cmdline.h"
+#include "console/daemon.h"
 
 typedef struct co_daemon_start_parameters {
 	co_pathname_t config_path;
@@ -27,7 +28,6 @@ typedef struct co_daemon_start_parameters {
 	char console[0x20];
 
 	/* optionally gathered from command line */
-	bool_t suppress_printk;
 	bool_t cmdline_config;
 	co_config_t config;
 } co_start_parameters_t;
@@ -38,13 +38,16 @@ typedef struct co_daemon {
 	co_config_t config;
 	co_elf_data_t *elf_data;
 	co_user_monitor_t *monitor;
-	co_user_monitor_t *message_monitor;
+	co_console_t *console;
+	struct co_connected_module *console_module;
+	co_message_switch_t message_switch;
+	co_list_t connected_modules;
+	co_queue_t up_queue;
 	bool_t running;
 	bool_t idle;
 	char *buf;
 	bool_t send_ctrl_alt_del;
 	co_monitor_user_kernel_shared_t *shared;
-	bool_t next_reboot_will_shutdown;
 } co_daemon_t;
 
 typedef enum {
@@ -53,6 +56,15 @@ typedef enum {
 } co_connected_module_state_t;
 
 #define CO_CONNECTED_MODULE_NAME_SIZE 0x30
+
+typedef struct co_connected_module {
+	co_module_t id;
+	co_list_t node;
+	co_daemon_t *daemon;
+	co_connected_module_state_t state;
+	struct co_os_pipe_connection *connection;
+	char name[CO_CONNECTED_MODULE_NAME_SIZE];
+} co_connected_module_t;
 
 extern void co_daemon_syntax(void);
 extern void co_daemon_print_header(void);

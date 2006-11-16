@@ -77,9 +77,8 @@ typedef struct co_netdev_desc {
 	/* Slirp Parameters */
 	char redir[CO_NETDEV_REDIRDIR_STR_SIZE];
 
-	/* Bridged Parameters */
+	/* Bridged P Parameters */
 	/* http://www.winpcap.org/docs/docs31/html/group__wpcapfunc.html#ga1 */
-	/* promiscuous mode (nonzero means promiscuous) */
 	int promisc_mode;
 } co_netdev_desc_t;
 
@@ -114,46 +113,6 @@ typedef struct co_cofsdev_desc_t {
 	co_cofs_type_t type;
 } co_cofsdev_desc_t;
 
-#define CO_SERIAL_DESC_STR_SIZE 0x40
-#define CO_SERIAL_MODE_STR_SIZE 0x100
-
-typedef struct co_serialdev_desc {
-	/*
-	 * Determines whether we use this device slot or not.
-	 */
-	bool_t enabled;
-
-	/* Device name on host side */
-	char *desc;
-
-	/*
-	 * Individual mode setting
-	 */
-	char *mode;
-
-} co_serialdev_desc_t;
-
-#define CO_MODULE_MAX_EXECUTE 8
-#define CO_EXECUTE_PROG_STR_SIZE 0x100
-#define CO_EXECUTE_ARGS_STR_SIZE 0x200
-
-typedef struct co_execute_desc {
-	/*
-	 * Determines whether we use this device slot or not.
-	 */
-	bool_t enabled;
-
-	/* Executable program name */
-	char *prog;
-
-	/* Optional args */
-	char *args;
-
-	/* PID, if program running */
-	int pid;
-
-} co_execute_desc_t;
-
 /*
  * Per-machine coLinux configuration
  */
@@ -187,16 +146,6 @@ typedef struct co_config {
 	 * File systems
 	 */
 	co_cofsdev_desc_t cofs_devs[CO_MODULE_MAX_COFS];
-
-	/*
-	 * Serial devices
-	 */
-	co_serialdev_desc_t serial_devs[CO_MODULE_MAX_SERIAL];
-
-	/*
-	 * Executable programs
-	 */
-	co_execute_desc_t executes[CO_MODULE_MAX_EXECUTE];
 
 	/*
 	 * Parameters passed to the kernel at boot.

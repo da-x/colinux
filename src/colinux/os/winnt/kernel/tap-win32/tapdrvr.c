@@ -8,12 +8,13 @@
  *  Copyright (C) Damion K. Wilson, 2003, and is released under the
  *  GPL version 2 (see below).
  *
- *  All other source code is Copyright (C) 2002-2005 OpenVPN Solutions LLC,
+ *  All other source code is Copyright (C) James Yonan, 2003-2004,
  *  and is released under the GPL version 2 (see below).
  *
  *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 2
- *  as published by the Free Software Foundation.
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -35,8 +36,7 @@
 // By default we operate as a "tap" virtual ethernet
 // 802.3 interface, but we can emulate a "tun"
 // interface (point-to-point IPv4) through the
-// TAP_IOCTL_CONFIG_POINT_TO_POINT or
-// TAP_IOCTL_CONFIG_TUN ioctl.
+// TAP_IOCTL_CONFIG_POINT_TO_POINT ioctl.
 //======================================================
 
 #define NDIS_MINIPORT_DRIVER
@@ -47,27 +47,11 @@
 #define NTSTRSAFE_LIB
 
 // Debug info output
-#define ALSO_DBGPRINT           1
-#define DEBUGP_AT_DISPATCH      0
-
-//========================================================
-// Check for truncated IPv4 packets, log errors if found.
-//========================================================
-#define PACKET_TRUNCATION_CHECK 0 // JYFIXME
-
-//========================================================
-// EXPERIMENTAL -- Configure TAP device object to be
-// accessible from non-administrative accounts, based
-// on an advanced properties setting.
-//
-// Duplicates the functionality of OpenVPN's
-// --allow-nonadmin directive.
-//========================================================
-#define ENABLE_NONADMIN 1         // JYFIXME
+#define ALSO_DBGPRINT      1
+#define DEBUGP_AT_DISPATCH 0
 
 #include <ndis.h>
 #include <ntstrsafe.h>
-#include <ntddk.h>
 
 #include "lock.h"
 #include "constants.h"
@@ -291,10 +275,6 @@ NDIS_STATUS AdapterCreate
   UINT l_Index;
   NDIS_STATUS status;
 
-#if ENABLE_NONADMIN
-  BOOLEAN enable_non_admin = FALSE;
-#endif
-
   //====================================
   // Make sure adapter type is supported
   //====================================
@@ -431,25 +411,6 @@ NDIS_STATUS AdapterCreate
 	    }
 	}
 
-#if ENABLE_NONADMIN
-	/* Read AllowNonAdmin setting from registry */
-	{
-	  NDIS_STRING key = NDIS_STRING_CONST("AllowNonAdmin");
-	  NdisReadConfiguration (&status, &parm, configHandle,
-				 &key, NdisParameterInteger);
-	  if (status == NDIS_STATUS_SUCCESS)
-	    {
-	      if (parm->ParameterType == NdisParameterInteger)
-		{
-		  if (parm->ParameterData.IntegerData)
-		    {
-			enable_non_admin = TRUE;
-		    }
-		}
-	    }
-	}
-#endif
-
 	/* Read optional MAC setting from registry */
 	{
 	  NDIS_STRING key = NDIS_STRING_CONST("MAC");
@@ -518,11 +479,6 @@ NDIS_STATUS AdapterCreate
     }
 
   l_Adapter->m_InterfaceIsRunning = TRUE;
-
-#if ENABLE_NONADMIN
-  if (enable_non_admin)
-    AllowNonAdmin (&l_Adapter->m_Extension);
-#endif
 
   return NDIS_STATUS_SUCCESS;
 }
@@ -1056,7 +1012,7 @@ NDIS_STATUS AdapterQuery
       break;
       
     case OID_GEN_LINK_SPEED:
-      l_Query.m_Long = 1000000; // rate / 100 bps
+      l_Query.m_Long = 100000;
       break;
 
     case OID_802_3_PERMANENT_ADDRESS:
@@ -1393,38 +1349,17 @@ AdapterTransmit (IN NDIS_HANDLE p_AdapterContext,
 
   __try
   {
-    l_Index = 0;
-    while (l_NDIS_Buffer && l_Index < l_PacketLength)
+    for (l_Index = 0; l_NDIS_Buffer && l_Index < l_PacketLength;
+	 l_Index += l_BufferLength)
       {
-	ULONG newlen;
 	NdisQueryBuffer (l_NDIS_Buffer, (PVOID *) & l_Buffer,
 			 &l_BufferLength);
-	newlen = l_Index + l_BufferLength;
-	if (newlen > l_PacketLength)
-	  {
-	    NOTE_ERROR ();
-	    goto no_queue; /* overflow */
-	  }
 	NdisMoveMemory (l_PacketBuffer->m_Data + l_Index, l_Buffer,
 			l_BufferLength);
-	l_Index = newlen;
 	NdisGetNextBuffer (l_NDIS_Buffer, &l_NDIS_Buffer);
-      }
-    if (l_Index != l_PacketLength)
-      {
-	NOTE_ERROR ();
-	goto no_queue; /* underflow */
       }
 
     DUMP_PACKET ("AdapterTransmit", l_PacketBuffer->m_Data, l_PacketLength);
-
-    //=====================================================
-    // If IPv4 packet, check whether or not packet
-    // was truncated.
-    //=====================================================
-#if PACKET_TRUNCATION_CHECK
-    IPv4PacketSizeVerify (l_PacketBuffer->m_Data, l_PacketLength, FALSE, "TX", &l_Adapter->m_TxTrunc);
-#endif
 
     //=====================================================
     // Are we running in DHCP server masquerade mode?
@@ -1447,7 +1382,6 @@ AdapterTransmit (IN NDIS_HANDLE p_AdapterContext,
 			    (PARP_PACKET) l_PacketBuffer->m_Data,
 			    l_Adapter->m_dhcp_addr,
 			    l_Adapter->m_dhcp_server_ip,
-			    ~0,
 			    l_Adapter->m_dhcp_server_mac))
 	      goto no_queue;
 	  }
@@ -1484,7 +1418,7 @@ AdapterTransmit (IN NDIS_HANDLE p_AdapterContext,
     // In Point-To-Point mode, check to see whether
     // packet is ARP or IPv4 (if neither, then drop).
     //===============================================
-    if (l_Adapter->m_tun)
+    if (l_Adapter->m_PointToPoint)
       {
 	ETH_HEADER *e;
 
@@ -1505,8 +1439,7 @@ AdapterTransmit (IN NDIS_HANDLE p_AdapterContext,
 	    ProcessARP (l_Adapter,
 			(PARP_PACKET) l_PacketBuffer->m_Data,
 			l_Adapter->m_localIP,
-			l_Adapter->m_remoteNetwork,
-			l_Adapter->m_remoteNetmask,
+			l_Adapter->m_remoteIP,
 			l_Adapter->m_TapToUser.dest);
 
 	  default:
@@ -1526,7 +1459,7 @@ AdapterTransmit (IN NDIS_HANDLE p_AdapterContext,
 	      goto no_queue;
 
 	    // Packet looks like IPv4, queue it.
-	    l_PacketBuffer->m_SizeFlags |= TP_TUN;
+	    l_PacketBuffer->m_SizeFlags |= TP_POINT_TO_POINT;
 	  }
       }
 
@@ -1737,25 +1670,15 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 		NULL,
 		NULL,
 		STRSAFE_FILL_BEHIND_NULL | STRSAFE_IGNORE_NULLS,
-#if PACKET_TRUNCATION_CHECK
-		"State=%s Err=[%s/%d] #O=%d Tx=[%d,%d,%d] Rx=[%d,%d,%d] IrpQ=[%d,%d,%d] PktQ=[%d,%d,%d]",
-#else
 		"State=%s Err=[%s/%d] #O=%d Tx=[%d,%d] Rx=[%d,%d] IrpQ=[%d,%d,%d] PktQ=[%d,%d,%d]",
-#endif
 		state,
 		g_LastErrorFilename,
 		g_LastErrorLineNumber,
 		(int)l_Adapter->m_Extension.m_NumTapOpens,
 		(int)l_Adapter->m_Tx,
 		(int)l_Adapter->m_TxErr,
-#if PACKET_TRUNCATION_CHECK
-		(int)l_Adapter->m_TxTrunc,
-#endif
 		(int)l_Adapter->m_Rx,
 		(int)l_Adapter->m_RxErr,
-#if PACKET_TRUNCATION_CHECK
-		(int)l_Adapter->m_RxTrunc,
-#endif
 		(int)l_Adapter->m_Extension.m_IrpQueue->size,
 		(int)l_Adapter->m_Extension.m_IrpQueue->max_size,
 		(int)IRP_QUEUE_SIZE,
@@ -1786,65 +1709,21 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 	    }
 #endif
 
-	  case TAP_IOCTL_CONFIG_TUN:
-	    {
-	      if (l_IrpSp->Parameters.DeviceIoControl.InputBufferLength >=
-		  (sizeof (IPADDR) * 3))
-		{
-		  MACADDR dest;
-
-		  l_Adapter->m_tun = FALSE;
-
-		  GenerateRelatedMAC (dest, l_Adapter->m_MAC, 1);
-
-		  l_Adapter->m_localIP =       ((IPADDR*) (p_IRP->AssociatedIrp.SystemBuffer))[0];
-		  l_Adapter->m_remoteNetwork = ((IPADDR*) (p_IRP->AssociatedIrp.SystemBuffer))[1];
-		  l_Adapter->m_remoteNetmask = ((IPADDR*) (p_IRP->AssociatedIrp.SystemBuffer))[2];
-
-		  // sanity check on network/netmask
-		  if ((l_Adapter->m_remoteNetwork & l_Adapter->m_remoteNetmask) != l_Adapter->m_remoteNetwork)
-		    {
-		      NOTE_ERROR ();
-		      p_IRP->IoStatus.Status = l_Status = STATUS_INVALID_PARAMETER;
-		      break;
-		    }
-
-		  COPY_MAC (l_Adapter->m_TapToUser.src, l_Adapter->m_MAC);
-		  COPY_MAC (l_Adapter->m_TapToUser.dest, dest);
-		  COPY_MAC (l_Adapter->m_UserToTap.src, dest);
-		  COPY_MAC (l_Adapter->m_UserToTap.dest, l_Adapter->m_MAC);
-
-		  l_Adapter->m_TapToUser.proto = l_Adapter->m_UserToTap.proto = htons (ETH_P_IP);
-
-		  l_Adapter->m_tun = TRUE;
-
-		  CheckIfDhcpAndTunMode (l_Adapter);
-
-		  p_IRP->IoStatus.Information = 1; // Simple boolean value
-		}
-	      else
-		{
-		  NOTE_ERROR ();
-		  p_IRP->IoStatus.Status = l_Status = STATUS_INVALID_PARAMETER;
-		}
-	      
-	      break;
-	    }
-
-	  case TAP_IOCTL_CONFIG_POINT_TO_POINT: // Obsoleted by TAP_IOCTL_CONFIG_TUN
+	  case TAP_IOCTL_CONFIG_POINT_TO_POINT:
 	    {
 	      if (l_IrpSp->Parameters.DeviceIoControl.InputBufferLength >=
 		  (sizeof (IPADDR) * 2))
 		{
 		  MACADDR dest;
 
-		  l_Adapter->m_tun = FALSE;
+		  l_Adapter->m_PointToPoint = FALSE;
 
 		  GenerateRelatedMAC (dest, l_Adapter->m_MAC, 1);
 
-		  l_Adapter->m_localIP =       ((IPADDR*) (p_IRP->AssociatedIrp.SystemBuffer))[0];
-		  l_Adapter->m_remoteNetwork = ((IPADDR*) (p_IRP->AssociatedIrp.SystemBuffer))[1];
-		  l_Adapter->m_remoteNetmask = ~0;
+		  l_Adapter->m_localIP =
+		    ((IPADDR*) (p_IRP->AssociatedIrp.SystemBuffer))[0];
+		  l_Adapter->m_remoteIP =
+		    ((IPADDR*) (p_IRP->AssociatedIrp.SystemBuffer))[1];
 
 		  COPY_MAC (l_Adapter->m_TapToUser.src, l_Adapter->m_MAC);
 		  COPY_MAC (l_Adapter->m_TapToUser.dest, dest);
@@ -1853,9 +1732,9 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 
 		  l_Adapter->m_TapToUser.proto = l_Adapter->m_UserToTap.proto = htons (ETH_P_IP);
 
-		  l_Adapter->m_tun = TRUE;
+		  l_Adapter->m_PointToPoint = TRUE;
 
-		  CheckIfDhcpAndTunMode (l_Adapter);
+		  CheckIfDhcpAndPointToPointMode (l_Adapter);
 
 		  p_IRP->IoStatus.Information = 1; // Simple boolean value
 		}
@@ -1913,7 +1792,7 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 		  l_Adapter->m_dhcp_enabled = TRUE;
 		  l_Adapter->m_dhcp_server_arp = TRUE;
 
-		  CheckIfDhcpAndTunMode (l_Adapter);
+		  CheckIfDhcpAndPointToPointMode (l_Adapter);
 
 		  p_IRP->IoStatus.Information = 1; // Simple boolean value
 		}
@@ -2101,7 +1980,7 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 	    p_IRP->IoStatus.Status = l_Status = STATUS_UNSUCCESSFUL;
 	    p_IRP->IoStatus.Information = 0;
 	  }
-	else if (!l_Adapter->m_tun && ((l_IrpSp->Parameters.Write.Length) >= ETHERNET_HEADER_SIZE))
+	else if (!l_Adapter->m_PointToPoint && ((l_IrpSp->Parameters.Write.Length) >= ETHERNET_HEADER_SIZE))
 	  {
 	    __try
 	      {
@@ -2110,18 +1989,6 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 		DUMP_PACKET ("IRP_MJ_WRITE ETH",
 			     (unsigned char *) p_IRP->AssociatedIrp.SystemBuffer,
 			     l_IrpSp->Parameters.Write.Length);
-
-    //=====================================================
-    // If IPv4 packet, check whether or not packet
-    // was truncated.
-    //=====================================================
-#if PACKET_TRUNCATION_CHECK
-		IPv4PacketSizeVerify ((unsigned char *) p_IRP->AssociatedIrp.SystemBuffer,
-				      l_IrpSp->Parameters.Write.Length,
-				      FALSE,
-				      "RX",
-				      &l_Adapter->m_RxTrunc);
-#endif
 
 		NdisMEthIndicateReceive
 		  (l_Adapter->m_MiniportAdapterHandle,
@@ -2145,7 +2012,7 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 		p_IRP->IoStatus.Information = 0;
 	      }
 	  }
-	else if (l_Adapter->m_tun && ((l_IrpSp->Parameters.Write.Length) >= IP_HEADER_SIZE))
+	else if (l_Adapter->m_PointToPoint && ((l_IrpSp->Parameters.Write.Length) >= IP_HEADER_SIZE))
 	  {
 	    __try
 	      {
@@ -2155,18 +2022,6 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 			      &l_Adapter->m_UserToTap,
 			      (unsigned char *) p_IRP->AssociatedIrp.SystemBuffer,
 			      l_IrpSp->Parameters.Write.Length);
-
-    //=====================================================
-    // If IPv4 packet, check whether or not packet
-    // was truncated.
-    //=====================================================
-#if PACKET_TRUNCATION_CHECK
-		IPv4PacketSizeVerify ((unsigned char *) p_IRP->AssociatedIrp.SystemBuffer,
-				      l_IrpSp->Parameters.Write.Length,
-				      TRUE,
-				      "RX",
-				      &l_Adapter->m_RxTrunc);
-#endif
 
 		NdisMEthIndicateReceive
 		  (l_Adapter->m_MiniportAdapterHandle,
@@ -2343,7 +2198,7 @@ CompleteIRP (IN PIRP p_IRP,
   // component.
   //-------------------------------------------
 
-  if (p_PacketBuffer->m_SizeFlags & TP_TUN)
+  if (p_PacketBuffer->m_SizeFlags & TP_POINT_TO_POINT)
     {
       offset = ETHERNET_HEADER_SIZE;
       len = (int) (p_PacketBuffer->m_SizeFlags & TP_SIZE_MASK) - ETHERNET_HEADER_SIZE;
@@ -2525,16 +2380,16 @@ SetMediaStatus (TapAdapterPointer p_Adapter, BOOLEAN state)
 
 
 //======================================================
-// If DHCP mode is used together with tun
-// mode, consider the fact that the P2P remote subnet
-// might enclose the DHCP masq server address.
+// If DHCP mode is used together with Point-to-point
+// mode, consider the fact that the P2P remote endpoint
+// might be equal to the DHCP masq server address.
 //======================================================
 VOID
-CheckIfDhcpAndTunMode (TapAdapterPointer p_Adapter)
+CheckIfDhcpAndPointToPointMode (TapAdapterPointer p_Adapter)
 {
-  if (p_Adapter->m_tun && p_Adapter->m_dhcp_enabled)
+  if (p_Adapter->m_PointToPoint && p_Adapter->m_dhcp_enabled)
     {
-      if ((p_Adapter->m_dhcp_server_ip & p_Adapter->m_remoteNetmask) == p_Adapter->m_remoteNetwork)
+      if (p_Adapter->m_dhcp_server_ip == p_Adapter->m_remoteIP)
 	{
 	  COPY_MAC (p_Adapter->m_dhcp_server_mac, p_Adapter->m_TapToUser.dest);
 	  p_Adapter->m_dhcp_server_arp = FALSE;
@@ -2550,8 +2405,7 @@ BOOLEAN
 ProcessARP (TapAdapterPointer p_Adapter,
 	    const PARP_PACKET src,
 	    const IPADDR adapter_ip,
-	    const IPADDR ip_network,
-	    const IPADDR ip_netmask,
+	    const IPADDR ip,
 	    const MACADDR mac)
 {
   //-----------------------------------------------
@@ -2567,8 +2421,7 @@ ProcessARP (TapAdapterPointer p_Adapter,
       && src->m_PROTO_AddressType == htons (ETH_P_IP)
       && src->m_PROTO_AddressSize == sizeof (IPADDR)
       && src->m_ARP_IP_Source == adapter_ip
-      && (src->m_ARP_IP_Destination & ip_netmask) == ip_network
-      && src->m_ARP_IP_Destination != adapter_ip)
+      && src->m_ARP_IP_Destination == ip)
     {
       ARP_PACKET *arp = (ARP_PACKET *) MemAlloc (sizeof (ARP_PACKET), TRUE);
       if (arp)
@@ -2590,7 +2443,7 @@ ProcessARP (TapAdapterPointer p_Adapter,
 	  COPY_MAC (arp->m_MAC_Destination, p_Adapter->m_MAC);
 	  COPY_MAC (arp->m_ARP_MAC_Source, mac);
 	  COPY_MAC (arp->m_ARP_MAC_Destination, p_Adapter->m_MAC);
-	  arp->m_ARP_IP_Source = src->m_ARP_IP_Destination;
+	  arp->m_ARP_IP_Source = ip;
 	  arp->m_ARP_IP_Destination = adapter_ip;
 
 	  DUMP_PACKET ("ProcessARP",
@@ -2656,10 +2509,9 @@ InjectPacket (TapAdapterPointer p_Adapter,
 VOID ResetTapAdapterState (TapAdapterPointer p_Adapter)
 {
   // Point-To-Point
-  p_Adapter->m_tun = FALSE;
+  p_Adapter->m_PointToPoint = FALSE;
   p_Adapter->m_localIP = 0;
-  p_Adapter->m_remoteNetwork = 0;
-  p_Adapter->m_remoteNetmask = 0;
+  p_Adapter->m_remoteIP = 0;
   NdisZeroMemory (&p_Adapter->m_TapToUser, sizeof (p_Adapter->m_TapToUser));
   NdisZeroMemory (&p_Adapter->m_UserToTap, sizeof (p_Adapter->m_UserToTap));
 
@@ -2675,124 +2527,6 @@ VOID ResetTapAdapterState (TapAdapterPointer p_Adapter)
   p_Adapter->m_dhcp_bad_requests = 0;
   NdisZeroMemory (p_Adapter->m_dhcp_server_mac, sizeof (MACADDR));
 }
-
-#if ENABLE_NONADMIN
-
-//===================================================================
-// Set TAP device handle to be accessible without admin privileges.
-//===================================================================
-VOID AllowNonAdmin (TapExtensionPointer p_Extension)
-{
-  NTSTATUS stat;
-  SECURITY_DESCRIPTOR sd;
-  OBJECT_ATTRIBUTES oa;
-  IO_STATUS_BLOCK isb;
-  HANDLE hand = NULL;
-
-  NdisZeroMemory (&sd, sizeof (sd));
-  NdisZeroMemory (&oa, sizeof (oa));
-  NdisZeroMemory (&isb, sizeof (isb));
-
-  if (!p_Extension->m_CreatedUnicodeLinkName)
-    {
-      DEBUGP (("[TAP] AllowNonAdmin: UnicodeLinkName is uninitialized\n"));
-      NOTE_ERROR ();
-      return;
-    }
-
-  stat = RtlCreateSecurityDescriptor (&sd, SECURITY_DESCRIPTOR_REVISION);
-  if (stat != STATUS_SUCCESS)
-    {
-      DEBUGP (("[TAP] AllowNonAdmin: RtlCreateSecurityDescriptor failed\n"));
-      NOTE_ERROR ();
-      return;
-    }
-
-  InitializeObjectAttributes (
-    &oa,
-    &p_Extension->m_UnicodeLinkName,
-    OBJ_KERNEL_HANDLE,
-    NULL,
-    NULL
-    );
-
-  stat = ZwOpenFile (
-    &hand,
-    WRITE_DAC,
-    &oa,
-    &isb,
-    0,
-    0
-    );
-  if (stat != STATUS_SUCCESS)
-    {
-      DEBUGP (("[TAP] AllowNonAdmin: ZwOpenFile failed, status=0x%08x\n", (unsigned int)stat));
-      NOTE_ERROR ();
-      return;
-    }
-
-  stat = ZwSetSecurityObject (hand, DACL_SECURITY_INFORMATION, &sd);
-  if (stat != STATUS_SUCCESS)
-    {
-      DEBUGP (("[TAP] AllowNonAdmin: ZwSetSecurityObject failed\n"));
-      NOTE_ERROR ();
-      return;
-    }
-
-  stat = ZwClose (hand);
-  if (stat != STATUS_SUCCESS)
-    {
-      DEBUGP (("[TAP] AllowNonAdmin: ZwClose failed\n"));
-      NOTE_ERROR ();
-      return;
-    }
-
-  DEBUGP (("[TAP] AllowNonAdmin: SUCCEEDED\n"));
-}
-
-#endif
-
-#if PACKET_TRUNCATION_CHECK
-
-VOID
-IPv4PacketSizeVerify (const UCHAR *data, ULONG length, BOOLEAN tun, const char *prefix, LONG *counter)
-{
-  const IPHDR *ip;
-  int len = length;
-
-  if (tun)
-    {
-      ip = (IPHDR *) data;
-    }
-  else
-    {
-      if (length >= sizeof (ETH_HEADER))
-	{
-	  const ETH_HEADER *eth = (ETH_HEADER *) data;
-
-	  if (eth->proto != htons (ETH_P_IP))
-	    return;
-
-	  ip = (IPHDR *) (data + sizeof (ETH_HEADER));
-	  len -= sizeof (ETH_HEADER);
-	}
-      else
-	return;
-    }
-
-  if (len >= sizeof (IPHDR))
-    {
-      const int totlen = ntohs (ip->tot_len);
-
-      DEBUGP (("[TAP] IPv4PacketSizeVerify %s len=%d totlen=%d\n", prefix, len, totlen));
-
-      if (len != totlen)
-	++(*counter);
-    }
-}
-
-#endif
-
 //======================================================================
 //                                    End of Source
 //======================================================================

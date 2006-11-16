@@ -1,4 +1,4 @@
 #!/bin/sh
 
-. ./build-common.sh
-build_all $@
+# (Contens are moved)
+. ./build-common.sh --build-all $@

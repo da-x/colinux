@@ -1,7 +1,8 @@
 #
-# Makefile for the coLinux Linux kernel module.
+# Makefile for the Linux filesystems.
 #
-# Based on a makefile by Christoph Hellwig <hch@infradead.org>.
+# 14 Sep 2000, Christoph Hellwig <hch@infradead.org>
+# Rewritten to use lists instead of if-statements.
 # 
 
 ifneq ($(COLINUX_HOST_KERNEL_DIR),)
@@ -35,18 +36,8 @@ MODULE_OBJECT := $(MODULE_NAME).ko
 MODULE_ROOT := $(KERNEL_DIR)/kernel/drivers
 TOP_DIR ?= $(KERNEL_BUILD)
 
-ifeq ($(COLINUX_TARGET_KERNEL_BUILD),)
-COLINUX_TARGET_KERNEL_BUILD := $(COLINUX_TARGET_KERNEL_PATH)
-endif
-
 EXTRA_CFLAGS += -DCO_KERNEL -DCO_HOST_API -D__KERNEL__ -DMODULE \
- -I$(COLINUX_PWD) \
- -I$(COLINUX_TARGET_KERNEL_BUILD)/include \
- $(if $(COLINUX_TARGET_KERNEL_SOURCE), \
- -I$(COLINUX_TARGET_KERNEL_BUILD)/include2 \
- -I$(COLINUX_TARGET_KERNEL_SOURCE)/include) \
- $(CFLAGS)
-
+-I$(COLINUX_PWD) -I$(COLINUX_TARGET_KERNEL_PATH)/include $(CFLAGS)
 ifneq ($(COLINUX_NDEBUG),Y)
 EXTRA_CFLAGS += -DCOLINUX_DEBUG 
 endif

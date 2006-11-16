@@ -13,6 +13,7 @@
 #include <colinux/common/libc.h>
 #include <colinux/os/user/file.h>
 #include <colinux/os/user/misc.h>
+#include <colinux/os/user/pipe.h>
 #include <colinux/os/user/exec.h>
 #include <colinux/os/alloc.h>
 #include <colinux/os/timer.h>
@@ -27,22 +28,36 @@
 #include "manager.h"
 #include "monitor.h"
 #include "config.h"
-#include "reactor.h"
 
 co_rc_t co_load_config_file(co_daemon_t *daemon)
 {
 	co_rc_t rc;
+	char *buf = NULL;
+	unsigned long size = 0 ;
 
 	if (daemon->start_parameters->cmdline_config) {
 		daemon->config = daemon->start_parameters->config;
 		return CO_RC(OK);
 	}
 
-	co_terminal_print_color(CO_TERM_COLOR_YELLOW, "XML configuration files are obsolete. Please pass command line\n");
-	co_terminal_print_color(CO_TERM_COLOR_YELLOW, "options, or use '@' to pass a command-line compatible configuration\n");
-	co_terminal_print_color(CO_TERM_COLOR_YELLOW, "file (e.g. @config.txt)\n\n");
+	co_debug("loading configuration from %s\n", daemon->config.config_path);
 
-	rc = CO_RC(ERROR);
+	rc = co_os_file_load(&daemon->config.config_path, &buf, &size);
+	if (!CO_OK(rc)) {
+		co_terminal_print("error loading configuration file '%s'\n",
+				  daemon->config.config_path);
+		return rc;
+	}
+	
+	if (size == 0) {
+		rc = CO_RC_ERROR;
+		co_terminal_print("error, configuration file size is 0\n");
+	} else {
+		buf[size-1] = '\0';
+		rc = co_load_config(buf, &daemon->config);
+	}
+
+	co_os_file_free(buf);
 	return rc;
 }
 
@@ -63,15 +78,16 @@ void co_daemon_syntax()
 	co_daemon_print_header();
 	co_terminal_print("syntax: \n");
 	co_terminal_print("\n");
-	co_terminal_print("    colinux-daemon [-h] [-d] [-t name] [configuration and boot parameter] @params.txt\n");
+	co_terminal_print("    colinux-daemon [-h] [-d] [-t name]\n");
+	co_terminal_print("                   ([-c config.xml]|[configuration and boot parameters])\n");
 	co_terminal_print("\n");
 	co_terminal_print("      -h             Show this help text\n");
+	co_terminal_print("      -c config.xml  Specify configuration file\n");
+	co_terminal_print("                     (default: colinux.default.xml)\n");
 	co_terminal_print("      -d             Don't launch and attach a coLinux console on\n");
 	co_terminal_print("                     startup\n");
-	co_terminal_print("      -k             Suppress kernel messages\n");
 	co_terminal_print("      -t name        When spawning a console, this is the type of \n");
 	co_terminal_print("                     console (e.g, nt, fltk, etc...)\n");
-	co_terminal_print("      @params.txt    Take more command line params from the given text file (can be multi-line)\n");
 	co_terminal_print("\n");
 	co_terminal_print("      Configuration and boot parameters:\n");
 	co_terminal_print("\n");
@@ -91,8 +107,6 @@ void co_daemon_syntax()
 	co_terminal_print("\n");
 	co_terminal_print("      Unhandled paramters are forwarded to the kernel's boot parameters string.\n");
 	co_terminal_print("\n");
-	co_terminal_print("     See colinux-daemon's documentation for more options.\n");
-	co_terminal_print("\n");
 }
 
 co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_parameters_t *start_parameters)
@@ -102,7 +116,6 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 
 	start_parameters->show_help = PFALSE;
 	start_parameters->config_specified = PFALSE;
-	start_parameters->suppress_printk = PFALSE;
 
 	co_snprintf(start_parameters->console, sizeof(start_parameters->console), "fltk");
 
@@ -121,11 +134,6 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 		return rc;
 
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-d", &dont_launch_console);
-
-	if (!CO_OK(rc)) 
-		return rc;
-
-	rc = co_cmdline_params_argumentless_parameter(cmdline, "-k", &start_parameters->suppress_printk);
 
 	if (!CO_OK(rc)) 
 		return rc;
@@ -165,25 +173,35 @@ co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **
 
 	daemon = (co_daemon_t *)co_os_malloc(sizeof(co_daemon_t));
 	if (daemon == NULL) {
-		rc = CO_RC(OUT_OF_MEMORY);
+		rc = CO_RC(ERROR);
 		goto out;
 	}
 
 	memset(daemon, 0, sizeof(*daemon));
 
+	co_list_init(&daemon->connected_modules);
+	co_queue_init(&daemon->up_queue);
+
 	daemon->start_parameters = start_parameters;
 	memcpy(daemon->config.config_path, start_parameters->config_path, 
 	       sizeof(start_parameters->config_path));
 
+	rc = co_console_create(80, 25, 25, &daemon->console);
+	if (!CO_OK(rc))
+		goto out_free;
+
 	rc = co_load_config_file(daemon);
 	if (!CO_OK(rc)) {
 		co_debug("error loading configuration\n");
-		goto out_free;
+		goto out_free_console;
 	}
 
 	*co_daemon_out = daemon;
 	return rc;
 
+out_free_console:
+	co_console_destroy(daemon->console);
+	
 out_free:
 	co_os_free(daemon);
 
@@ -194,6 +212,8 @@ out:
 void co_daemon_destroy(co_daemon_t *daemon)
 {
 	co_debug("daemon cleanup\n");
+	if (daemon->console != NULL)
+		co_console_destroy(daemon->console);
 	co_os_free(daemon);
 }
 
@@ -279,12 +299,12 @@ void co_daemon_prepare_net_macs(co_daemon_t *daemon)
 
 co_rc_t co_load_initrd(co_daemon_t *daemon)
 {
-	co_rc_t rc;
+	co_rc_t rc = CO_RC(OK);
 	char *initrd;
 	unsigned long initrd_size; 
 
 	if (!daemon->config.initrd_enabled)
-		return CO_RC(OK);
+		return rc;
 
 	co_debug("reading initrd from (%s)\n", daemon->config.initrd_path);
 
@@ -421,7 +441,6 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 		return CO_RC(ERROR); 
 
 	daemon->shared->userspace_msgwait_count = 0;
-	daemon->id = create_params.id;
 
 	rc = co_load_initrd(daemon);
 
@@ -431,6 +450,8 @@ out:
 
 void co_daemon_monitor_destroy(co_daemon_t *daemon)
 {
+	co_queue_flush(&daemon->up_queue);
+	co_user_monitor_destroy(daemon->monitor);
 	co_user_monitor_close(daemon->monitor);
 	daemon->monitor = NULL;
 }
@@ -439,7 +460,6 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 {
 	co_rc_t rc;
 	unsigned long size;
-	co_manager_ioctl_status_t status;
 
 	rc = co_os_file_load(&daemon->config.vmlinux_path, &daemon->buf, &size);
 	if (!CO_OK(rc)) {
@@ -458,14 +478,9 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 
 	rc = co_daemon_monitor_create(daemon);
 	if (!CO_OK(rc)) {
-		co_debug("error initializing\n");
+		co_terminal_print("error initializing\n");
 		goto out_free_vmlinux;
 	}
-
-	// Don't start, if API_VERSION mismatch
-	rc = co_manager_status(daemon->monitor->handle, &status);
-	if (!CO_OK(rc))
-		goto out_destroy;
 
 	rc = co_elf_image_load(daemon);
 	if (!CO_OK(rc)) {
@@ -485,37 +500,76 @@ out:
 	return rc;
 }
 
-void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon)
+co_rc_t co_daemon_handle_console(void *data, co_message_t *message)
 {
-	struct {
-		co_message_t message;
-		co_linux_message_t linux_msg;
-		co_linux_message_power_t data;
-	} message;
+	co_daemon_t *daemon = (typeof(daemon))(data);
+	co_rc_t rc = CO_RC(OK);
 
-	if (daemon->next_reboot_will_shutdown)
-		co_terminal_print_color(CO_TERM_COLOR_YELLOW, "colinux: Linux VM goes shutdown, please wait!\n");
-	else
-		co_terminal_print("colinux: Linux VM reboot\n");
+	if (daemon->console != NULL) {
+		rc = co_console_op(daemon->console, ((co_console_message_t *)message->data));
+		co_os_free(message);
+	}
 
-	message.message.from = CO_MODULE_DAEMON;
-	message.message.to = CO_MODULE_LINUX;
-	message.message.priority = CO_PRIORITY_IMPORTANT;
-	message.message.type = CO_MESSAGE_TYPE_OTHER;
-	message.message.size = sizeof(message.linux_msg) + sizeof(message.data);
-	message.linux_msg.device = CO_DEVICE_POWER;
-	message.linux_msg.unit = 0;
-	message.linux_msg.size = sizeof(message.data);
-	message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
-
-	co_user_monitor_message_send(daemon->message_monitor, &message.message);
+	return rc;
 }
 
-co_rc_t co_daemon_handle_printk(co_daemon_t *daemon, co_message_t *message)
+co_rc_t co_daemon_handle_console_connection(co_connected_module_t *module)
+{
+	co_console_t *console;
+	co_rc_t rc = CO_RC(OK);
+
+	console = module->daemon->console;
+
+	if (console != NULL) {
+		struct {
+			co_message_t message;
+			co_daemon_console_message_t console;
+			char data[0];
+		} *message;
+
+		module->daemon->console_module = module;
+		module->daemon->console = NULL;
+
+		co_console_pickle(console);
+
+		message = (typeof(message))(co_os_malloc(sizeof(*message)+console->size));
+
+		if (message) {
+			message->message.to = CO_MODULE_CONSOLE;
+			message->message.from = CO_MODULE_DAEMON;
+			message->message.size = sizeof(message->console) + console->size;
+			message->message.type = CO_MESSAGE_TYPE_STRING;
+			message->message.priority = CO_PRIORITY_IMPORTANT;
+			message->console.type = CO_DAEMON_CONSOLE_MESSAGE_ATTACH;
+			message->console.size = console->size;
+
+			memcpy(message->data, console, console->size);
+
+			rc = co_os_pipe_server_send(module->connection, (char *)message, 
+						    sizeof(*message) + console->size);
+
+			co_os_free(message);
+		}
+
+		co_console_unpickle(console);
+		co_console_destroy(console);
+	}
+
+	return rc;
+}
+
+co_rc_t co_daemon_handle_console_disconnection(co_connected_module_t *connection)
+{
+	connection->daemon->console_module = NULL;
+
+	return CO_RC(OK);
+}
+
+co_rc_t co_daemon_handle_printk(void *data, co_message_t *message)
 {
 	if (message->type == CO_MESSAGE_TYPE_STRING) {
 		char *string_start = message->data;
-               
+		
 		if (string_start[0] == '<'  &&  
 		    string_start[1] >= '0'  &&  string_start[1] <= '9'  &&
 		    string_start[2] == '>')
@@ -523,12 +577,8 @@ co_rc_t co_daemon_handle_printk(co_daemon_t *daemon, co_message_t *message)
 			string_start += 3;
 		}
 
-		if (!daemon->start_parameters->suppress_printk) {
-			co_terminal_print_color(CO_TERM_COLOR_WHITE, 
-						"%s", string_start);
-		}
-
-		if (co_strstr(string_start, "VFS: Unable to mount root fs on")) {
+		co_terminal_print("%s", string_start);
+		if (co_strstr(string_start, "Kernel panic: VFS: Unable to mount root fs on") == string_start) {
 			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
 						"colinux: kernel panic suggests that either you forget to supply a\n");
 			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
@@ -540,39 +590,263 @@ co_rc_t co_daemon_handle_printk(co_daemon_t *daemon, co_message_t *message)
 		}
 	}
 
+	co_os_free(message);
 	return CO_RC(OK);
 }
 
-static co_rc_t message_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
+void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon)
 {
-	co_message_t *message;
-	unsigned long message_size;
-	long size_left = size;
-	long position = 0;
-	co_daemon_t *daemon = (typeof(daemon))(user->private_data);
+	struct {
+		co_message_t message;
+		co_linux_message_t linux_msg;
+		co_linux_message_power_t data;
+	} message;
 
-	while (size_left > 0) {
-		message = (typeof(message))(&buffer[position]);
-		message_size = message->size + sizeof(*message);
-		size_left -= message_size;
-		if (size_left >= 0) {
-			switch(message->to) {
-			case CO_MODULE_PRINTK:
-				co_daemon_handle_printk(daemon, message);
-			default:
-				break;
-			}
+	message.message.from = CO_MODULE_DAEMON;
+	message.message.to = CO_MODULE_LINUX;
+	message.message.priority = CO_PRIORITY_IMPORTANT;
+	message.message.type = CO_MESSAGE_TYPE_OTHER;
+	message.message.size = sizeof(message.linux_msg) + sizeof(message.data);
+	message.linux_msg.device = CO_DEVICE_POWER;
+	message.linux_msg.unit = 0;
+	message.linux_msg.size = sizeof(message.data);
+	message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
+
+	co_message_switch_dup_message(&daemon->message_switch, &message.message);
+}
+
+co_rc_t co_daemon_handle_daemon(void *data, co_message_t *message)
+{
+	co_daemon_t *daemon = (typeof(daemon))(data);
+
+	if (message->from == CO_MODULE_MONITOR) {
+		struct {
+			co_message_t message;
+			co_daemon_message_t payload;
+			char data[0];
+		} *daemon_message;
+		
+		daemon_message = (typeof(daemon_message))(message);
+
+		switch (daemon_message->payload.type) {
+		case CO_MONITOR_MESSAGE_TYPE_TERMINATED: {
+			co_debug("monitor terminated, reason %d\n", daemon_message->payload.terminated.reason);
+			daemon->running = PFALSE;
+			break;
 		}
-		position += message_size;
+		case CO_MONITOR_MESSAGE_TYPE_DEBUG_LINE: {
+			co_debug("DEBUG: %s", daemon_message->data);
+			break;
+		}
+		case CO_MONITOR_MESSAGE_TYPE_TRACE_POINT: {
+			co_daemon_trace_point((co_trace_point_info_t *)&daemon_message->data);
+			break;
+		}
+		}
+	} else if (message->from == CO_MODULE_CONSOLE) {
+		struct {
+			co_message_t message;
+			co_daemon_console_message_t console;
+			char data[0];
+		} *console_message;
+
+		console_message = (typeof(console_message))message;
+
+		if (console_message->console.type == CO_DAEMON_CONSOLE_MESSAGE_DETACH) {
+			co_console_t *console;
+
+			console = (co_console_t *)co_os_malloc(console_message->console.size);
+			if (console) {
+				memcpy(console, console_message->data, console_message->console.size);
+				co_console_unpickle(console);				
+				daemon->console = console;
+			}
+
+		} else if (console_message->console.type == CO_DAEMON_CONSOLE_MESSAGE_TERMINATE) {
+			co_debug("termination requested by console\n");
+			daemon->running = PFALSE;
+
+		} else if (console_message->console.type == CO_DAEMON_CONSOLE_MESSAGE_CTRL_ALT_DEL) {
+			co_daemon_send_ctrl_alt_del(daemon);
+		}
 	}
 
+	co_os_free(message);
 	return CO_RC(OK);
+}
+
+co_rc_t co_daemon_handle_idle(void *data, co_message_t *message)
+{
+	co_daemon_t *daemon = (typeof(daemon))(data);
+
+	daemon->idle = PTRUE;
+
+	co_os_free(message);
+
+	return CO_RC(OK);
+}
+
+co_rc_t co_daemon_pipe_cb_connected(co_os_pipe_connection_t *conn,
+				    void *data, 
+				    void **data_client)
+{	
+	co_daemon_t *daemon = (typeof(daemon))data;
+	co_connected_module_t *module;
+
+	module = co_os_malloc(sizeof(co_connected_module_t));
+	if (module == NULL)
+		return CO_RC(ERROR);
+
+	module->daemon = daemon;
+	module->state = CO_CONNECTED_MODULE_STATE_NEW;
+	module->connection = conn;
+
+	co_list_add_head(&module->node, &daemon->connected_modules);
+	
+	*data_client = module;
+
+	return CO_RC(OK);
+}
+
+co_rc_t co_daemon_pipe_cb_packet_send(void *data, co_message_t *message)
+{
+	co_connected_module_t *module = (typeof(module))(data);
+	co_rc_t rc;
+
+	rc = co_os_pipe_server_send(module->connection, (char *)message, sizeof(*message) + message->size);
+
+	co_os_free(message);
+
+	return rc;
+}
+
+co_rc_t co_daemon_pipe_cb_packet(co_os_pipe_connection_t *conn, 
+				 void **client_data,
+				 char *packet_data,
+				 unsigned long packet_size)
+{
+	co_connected_module_t *module = (typeof(module))(*client_data);
+	co_rc_t rc = CO_RC(OK);
+
+	switch (module->state) {
+		case CO_CONNECTED_MODULE_STATE_NEW: {
+			co_module_t id;
+			if (packet_size != sizeof(co_module_t)) {
+				rc = CO_RC(ERROR);
+				break;
+			}
+
+			id = *((co_module_t *)packet_data);
+				
+			if (!((id == CO_MODULE_CONSOLE) ||
+			      (CO_MODULE_CONET0 <= id  &&  id < CO_MODULE_CONET_END) ||
+			      (CO_MODULE_SERIAL0 <= id  &&  id < CO_MODULE_SERIAL_END)))
+			{
+				rc = CO_RC(ERROR);
+				break;
+			}
+				
+			module->id = id;
+			module->state = CO_CONNECTED_MODULE_STATE_IDENTIFIED;
+
+			if (id == CO_MODULE_CONSOLE)
+				co_snprintf(module->name, sizeof(module->name), "console");
+			else if (CO_MODULE_CONET0 <= id  &&  id < CO_MODULE_CONET_END)
+				co_snprintf(module->name, sizeof(module->name), "conet%d", id - CO_MODULE_CONET0);
+			else
+				co_snprintf(module->name, sizeof(module->name), "serial%d", id - CO_MODULE_SERIAL0);
+
+			co_debug("module connected: %s\n", module->name);
+
+			if (module->id == CO_MODULE_CONSOLE)
+				co_daemon_handle_console_connection(module);
+
+			rc = co_message_switch_set_rule(&module->daemon->message_switch, id, 
+							co_daemon_pipe_cb_packet_send, module);
+
+			if (CO_OK(rc)) {
+				struct {
+					co_message_t message;
+					co_switch_message_t switchm;
+				} message;
+						
+				message.message.from = CO_MODULE_DAEMON;
+				message.message.to = CO_MODULE_KERNEL_SWITCH;
+				message.message.priority = CO_PRIORITY_DISCARDABLE;
+				message.message.type = CO_MESSAGE_TYPE_OTHER;
+				message.message.size = sizeof(message.switchm);
+				message.switchm.type = CO_SWITCH_MESSAGE_SET_REROUTE_RULE;
+				message.switchm.destination = module->id;
+				message.switchm.reroute_destination = CO_MODULE_USER_SWITCH;
+
+				co_message_switch_dup_message(&module->daemon->message_switch, &message.message);
+			}
+			break;
+		}
+		case CO_CONNECTED_MODULE_STATE_IDENTIFIED: {
+			co_message_t *message = (co_message_t *)packet_data;
+
+			/* Validate mesasge size */
+			if (message->size + sizeof(*message) != packet_size) {
+				co_debug("invalid message: %d != %d\n", message->size + sizeof(*message), 
+					 packet_size);
+				break;
+			}
+
+			/* Prevent module impersonation */
+			if (message->from != module->id) {
+				co_debug("invalid message id: %d != %d\n", 
+					 message->from, module->id);
+				break;
+			}
+
+			co_message_switch_dup_message(&module->daemon->message_switch, message);
+			break;
+		}
+	default:
+		rc = CO_RC(ERROR);
+		break;
+	}
+
+	return rc;
+}
+
+void co_daemon_pipe_cb_disconnected(co_os_pipe_connection_t *conn,
+				    void **client_data)
+{
+	co_connected_module_t *module = (typeof(module))(*client_data);
+
+	if (module->state == CO_CONNECTED_MODULE_STATE_IDENTIFIED) {
+		struct {
+			co_message_t message;
+			co_switch_message_t switchm;
+		} message;
+
+		message.message.from = CO_MODULE_DAEMON;
+		message.message.to = CO_MODULE_KERNEL_SWITCH;
+		message.message.priority = CO_PRIORITY_DISCARDABLE;
+		message.message.type = CO_MESSAGE_TYPE_OTHER;
+		message.message.size = sizeof(message.switchm);
+		message.switchm.type = CO_SWITCH_MESSAGE_FREE_RULE;
+		message.switchm.destination = module->id;
+		
+		co_message_switch_dup_message(&module->daemon->message_switch, &message.message);
+		co_message_switch_free_rule(&module->daemon->message_switch, module->id);
+
+		co_debug("module disconnected: %s\n", module->name);
+
+		if (module->id == CO_MODULE_CONSOLE)
+			co_daemon_handle_console_disconnection(module);
+	}
+	
+	co_list_del(&module->node);
+	co_os_free(module);
 }
 
 co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 {
 	int i;
-	co_rc_t rc;
+	co_rc_t rc = CO_RC(OK);
 
 	for (i=0; i < CO_MODULE_MAX_CONET; i++) { 
 		co_netdev_desc_t *net_dev;
@@ -584,8 +858,9 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 
 		co_debug("launching daemon for conet%d\n", i);
 
-		if (*net_dev->desc != 0)
+		if (strlen(net_dev->desc) != 0) {
 			co_snprintf(interface_name, sizeof(interface_name), "-n \"%s\"", net_dev->desc);
+		}
 
 		switch (net_dev->type) 
 		{
@@ -594,18 +869,18 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 
 			co_build_mac_address(mac_address, sizeof(mac_address), net_dev->mac_address);
 
-			rc = co_launch_process(NULL, "colinux-bridged-net-daemon -i %d -u %d %s -mac %s -p %d",
+			rc = co_launch_process("colinux-bridged-net-daemon -c %d -i %d %s -mac %s -p %d",
 					daemon->id, i, interface_name, mac_address, net_dev->promisc_mode);
 			break;
 		}
 
 		case CO_NETDEV_TYPE_TAP: {
-			rc = co_launch_process(NULL, "colinux-net-daemon -i %d -u %d %s", daemon->id, i, interface_name);
+			rc = co_launch_process("colinux-net-daemon -c %d %s -i %d", daemon->id, interface_name, i);
 			break;
 		}
 
 		case CO_NETDEV_TYPE_SLIRP: {
-			rc = co_launch_process(NULL, "colinux-slirp-net-daemon -i %d -u %d%s%s",
+			rc = co_launch_process("colinux-slirp-net-daemon -c %d -i %d%s%s",
 				daemon->id, i, (*net_dev->redir)?" -r ":"", net_dev->redir);
 			break;
 		}
@@ -615,109 +890,10 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 			break;
 		}
 
-		if (!CO_OK(rc))
+		if (!CO_OK(rc)) {
 			co_terminal_print("WARNING: error launching network daemon!\n");
-	}
-
-	return CO_RC(OK);
-}
-
-static co_rc_t co_daemon_launch_serial_daemons(co_daemon_t *daemon)
-{
-	int i;
-	co_rc_t rc;
-	co_serialdev_desc_t *serial;
-
-	for (i = 0, serial = daemon->config.serial_devs; i < CO_MODULE_MAX_SERIAL; i++, serial++) {
-		char mode_param[CO_SERIAL_MODE_STR_SIZE + 10] = {0, };
-
-		if (serial->enabled == PFALSE)
-			continue;
-
-		co_debug("launching daemon for ttys%d\n", i);
-
-		if (serial->mode)
-			co_snprintf(mode_param, sizeof(mode_param), " -m \"%s\"", serial->mode);
-
-		rc = co_launch_process(NULL, "colinux-serial-daemon -i %d -u %d -f %s%s",
-			    daemon->id, i,
-			    serial->desc,	/* -f COM1 */
-			    mode_param);	/* -m 9600,n,8,2 */
-
-		if (!CO_OK(rc))
-			co_terminal_print("WARNING: error launching serial daemon!\n");
-	}
-
-	return CO_RC(OK);
-}
-
-static co_rc_t co_daemon_launch_executes(co_daemon_t *daemon)
-{
-	int i;
-	co_rc_t rc;
-	co_execute_desc_t *execute;
-
-	for (i = 0, execute = daemon->config.executes; i < CO_MODULE_MAX_EXECUTE; i++, execute++) {
-
-		if (execute->enabled == PFALSE)
-			continue;
-
-		co_debug("launching exec%d", i);
-
-		rc = co_launch_process(&execute->pid,
-				(execute->args) ? "%s %s" : "%s",
-				execute->prog, execute->args);
-
-		if (!CO_OK(rc))
-			co_terminal_print("WARNING: error launching exec%d '%s'!\n", i, execute->prog);
-	}
-
-	return CO_RC(OK);
-}
-
-static co_rc_t co_daemon_kill_executes(co_daemon_t *daemon)
-{
-	int i;
-	co_rc_t rc;
-	co_execute_desc_t *execute;
-
-	for (i = 0, execute = daemon->config.executes; i < CO_MODULE_MAX_EXECUTE; i++, execute++) {
-
-		if (execute->enabled == PFALSE || execute->pid == 0)
-			continue;
-
-		co_debug("killing exec%d", i);
-
-		rc = co_kill_process(execute->pid);
-
-		if (!CO_OK(rc))
-			co_terminal_print("WARNING: error killing '%s'!\n", execute->prog);
-
-		execute->pid = 0;
-	}
-
-	return CO_RC(OK);
-}
-
-static co_rc_t co_daemon_restart(co_daemon_t *daemon)
-{
-	co_rc_t rc = co_user_monitor_reset(daemon->monitor);
-
-	if (!CO_OK(rc)) {
-		co_terminal_print("colinux: reset unsuccessful\n");
-		return rc;
-	}
-
-	rc = co_elf_image_load(daemon);
-	if (!CO_OK(rc)) {
-		co_terminal_print("colinux: error reloading vmlinux\n");
-		return rc;
-	}
-
-	rc = co_load_initrd(daemon);
-	if (!CO_OK(rc)) {
-		co_terminal_print("colinux: error reloading initrd\n");
-		return rc;
+			rc = CO_RC(OK);
+		}
 	}
 
 	return rc;
@@ -726,120 +902,122 @@ static co_rc_t co_daemon_restart(co_daemon_t *daemon)
 co_rc_t co_daemon_run(co_daemon_t *daemon)
 {
 	co_rc_t rc;
-	co_reactor_t reactor;
-	co_module_t modules[] = {CO_MODULE_PRINTK, };
-	bool_t restarting = PFALSE;
+	co_os_pipe_server_t *ps;
+	co_id_t id = 0;
 
-	rc = co_reactor_create(&reactor);
+	rc = co_user_monitor_start(daemon->monitor);
 	if (!CO_OK(rc))
 		return rc;
 
-	co_terminal_print("PID: %d\n", daemon->id);
+	rc = co_os_pipe_server_create(
+		co_daemon_pipe_cb_connected,
+		co_daemon_pipe_cb_packet,
+		co_daemon_pipe_cb_disconnected,
+		daemon, &ps, &id);
 
-	rc = co_user_monitor_open(reactor, message_receive,
-				  daemon->id, modules, sizeof(modules)/sizeof(co_module_t),
-				  &daemon->message_monitor);
+	if (!CO_OK(rc))
+		return rc;
+
+	co_debug("colinux: allocated id %d\n", id);
+	
+	daemon->id = id;
+
+	co_message_switch_init(&daemon->message_switch, CO_MODULE_USER_SWITCH);
+
+	rc = co_message_switch_set_rule(&daemon->message_switch, CO_MODULE_PRINTK, 
+					co_daemon_handle_printk, daemon);
 
 	if (!CO_OK(rc))
 		goto out;
 
-	daemon->message_monitor->reactor_user->private_data = (void *)daemon;
+	rc = co_message_switch_set_rule(&daemon->message_switch, CO_MODULE_DAEMON, 
+					co_daemon_handle_daemon, daemon);
+
+
+	if (!CO_OK(rc))
+		goto out;
+
+	rc = co_message_switch_set_rule(&daemon->message_switch, CO_MODULE_CONSOLE,
+					co_daemon_handle_console, daemon);
+
+	if (!CO_OK(rc))
+		goto out;
+
+
+	rc = co_message_switch_set_rule(&daemon->message_switch, CO_MODULE_IDLE, 
+					co_daemon_handle_idle, daemon);
+
+
+	if (!CO_OK(rc))
+		goto out;
+
+	rc = co_message_switch_set_rule_queue(&daemon->message_switch, CO_MODULE_LINUX, 
+					      &daemon->up_queue);
+	
+	if (!CO_OK(rc))
+		goto out;
+
+	rc = co_message_switch_set_rule_queue(&daemon->message_switch, CO_MODULE_KERNEL_SWITCH, 
+					      &daemon->up_queue);
+	
+	if (!CO_OK(rc))
+		goto out;
+
+	co_debug("launching net daemons\n");
+	rc = co_daemon_launch_net_daemons(daemon);
+	if (!CO_OK(rc))
+		goto out;
 
 	if (daemon->start_parameters->launch_console) {
-		co_terminal_print("colinux: launching console\n");
-		rc = co_launch_process(NULL, "colinux-console-%s -a %d", daemon->start_parameters->console, daemon->id);
+		co_debug("launching console\n");
+		rc = co_launch_process("colinux-console-%s -a %d", daemon->start_parameters->console, id);
 		if (!CO_OK(rc)) {
 			co_terminal_print("error launching console\n");
 			goto out;
 		}
 	}
 
-	rc = co_daemon_launch_net_daemons(daemon);
-	if (!CO_OK(rc)) {
-		co_terminal_print("error launching network daemons\n");
-		goto out;
+	daemon->running = PTRUE;
+
+	while (daemon->running) {
+		co_monitor_ioctl_run_t *params;
+		unsigned long write_size = 0;
+		char buf[0x10000];
+		char *param_data;
+		int i;
+		
+		params = (typeof(params))buf;
+		params->num_messages = 0;
+
+		co_message_write_queue(&daemon->up_queue, params->data, 
+				       ((((char *)buf) + sizeof(buf)) - params->data), 
+				       &params->num_messages, &write_size);
+
+		rc = co_user_monitor_run(daemon->monitor, params, sizeof(*params) + write_size, sizeof(buf));
+
+		param_data = params->data;
+
+		for (i=0; i < params->num_messages; i++) {
+			co_message_t *message = (typeof(message))param_data;
+			
+			rc = co_message_switch_dup_message(&daemon->message_switch, message);
+			
+			param_data += message->size + sizeof(*message);
+		}
+
+		rc = co_os_pipe_server_service(ps, daemon->idle ? PTRUE : PFALSE);
+
+		daemon->idle = PFALSE;
+
+		if (daemon->send_ctrl_alt_del) {
+			co_daemon_send_ctrl_alt_del(daemon);
+			daemon->send_ctrl_alt_del = PFALSE;
+		}
 	}
 
-	rc = co_daemon_launch_serial_daemons(daemon);
-	if (!CO_OK(rc))
-		goto out;
-
-	rc = co_daemon_launch_executes(daemon);
-	if (!CO_OK(rc))
-		goto out;
-
-	co_terminal_print("colinux: booting\n");
-
-	daemon->next_reboot_will_shutdown = PFALSE;
-	do {
-		restarting = PFALSE;
-
-		rc = co_user_monitor_start(daemon->monitor);
-		if (!CO_OK(rc))
-			goto out;
-		
-		daemon->running = PTRUE;
-		while (daemon->running) {
-			co_monitor_ioctl_run_t params;
-			rc = co_user_monitor_run(daemon->monitor, &params);
-			if (!CO_OK(rc))
-				break;
-			co_reactor_select(reactor, 0);
-		}
-
-		if (CO_RC_GET_CODE(rc) == CO_RC_INSTANCE_TERMINATED) {
-			co_monitor_ioctl_get_state_t params;
-			co_termination_reason_t reason;
-
-			co_terminal_print("colinux: Linux VM terminated\n");
-
-			rc = co_user_monitor_get_state(daemon->monitor, &params);
-			if (!CO_OK(rc)) {
-				co_terminal_print("colinux: unable to get reason for termination (bug?), aborting\n");
-				break;
-			}
-
-			reason = params.termination_reason;
-
-			switch (reason) {
-			case CO_TERMINATE_REBOOT:
-				if (daemon->next_reboot_will_shutdown) {
-					co_terminal_print("colinux: shutting down after reboot.\n");
-					break;
-				}
-
-				co_terminal_print("colinux: rebooted.\n");
-				rc = co_daemon_restart(daemon);
-				if (CO_OK(rc))
-					restarting = PTRUE;
-
-				break;
-
-			case CO_TERMINATE_POWEROFF:
-				co_terminal_print("colinux: powered off, exiting.\n");
-				break;
-
-			case CO_TERMINATE_HALT:
-				co_terminal_print("colinux: halted, exiting.\n");
-				break;
-
-			case CO_TERMINATE_BUG:
-				co_terminal_print("colinux: BUG at %s:%d\n", params.bug_info.file, params.bug_info.line);
-				break;
-
-			default:
-				co_terminal_print("colinux: terminated with code %d - abnormal exit, aborting\n", reason);
-				break;
-			}
-		}
-	} while (restarting);
-
-	co_daemon_kill_executes(daemon);
-
-	co_user_monitor_close(daemon->message_monitor);
-
 out:
-	co_reactor_destroy(reactor);
+	co_message_switch_free(&daemon->message_switch);
+	co_os_pipe_server_destroy(ps);
 
 	return rc;
 }

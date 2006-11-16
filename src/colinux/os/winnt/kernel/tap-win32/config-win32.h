@@ -5,11 +5,12 @@
  *             packet encryption, packet authentication, and
  *             packet compression.
  *
- *  Copyright (C) 2002-2005 OpenVPN Solutions LLC <info@openvpn.net>
+ *  Copyright (C) 2002-2004 James Yonan <jim@yonan.net>
  *
  *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 2
- *  as published by the Free Software Foundation.
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -49,10 +50,10 @@ typedef unsigned long in_addr_t;
 #endif
 
 /* Append a label to program startup title */
-/*#define DEBUG_LABEL "DEBUG1"*/
+//#define DEBUG_LABEL "DEBUG1"
 
 /* Should we print debug info from driver? */
-/*#define TAP_WIN32_DEBUG*/
+//#define TAP_WIN32_DEBUG
 
 /*
  * Minimum TAP-Win32 version number expected by userspace
@@ -62,41 +63,8 @@ typedef unsigned long in_addr_t;
 #define TAP_WIN32_MIN_MAJOR 8
 #define TAP_WIN32_MIN_MINOR 1
 
-/* Allow --askpass and --auth-user-pass passwords to be read from a file */
-/* #undef ENABLE_PASSWORD_SAVE */
-
-/* Enable client/server capability */
-#define ENABLE_CLIENT_SERVER 1
-
-/* Enable client capability only */
-/* #undef ENABLE_CLIENT_ONLY */
-
-/* Enable management server capability */
-#define ENABLE_MANAGEMENT 1
-
-/* Enable PKCS#11 support */
-#define USE_PKCS11 1
-
-/* Enable HTTP proxy support */
-#define ENABLE_HTTP_PROXY 1
-
-/* Enable Socks proxy support */
-#define ENABLE_SOCKS 1
-
-/* Enable internal fragmentation support */
-#define ENABLE_FRAGMENT 1
-
-/* Enable smaller executable size */
-/* #undef ENABLE_SMALL */
-
-/* Enable debugging support */
-#define ENABLE_DEBUG 1
-
-/* if defined, will allow usage of the --plugin directive */
-#define USE_LOAD_LIBRARY
-
-/* Dimension size to use for empty array declaration */
-#define EMPTY_ARRAY_SIZE 0
+/* Enable multiclient server capability */
+#define MULTICLIENT_SERVER_ENABLED 1
 
 /* Define to 1 if you have the <openssl/engine.h> header file. */
 #define HAVE_OPENSSL_ENGINE_H 1
@@ -120,9 +88,7 @@ typedef unsigned long in_addr_t;
 #define HAVE_CHDIR 1
 
 /* Define to 1 if your compiler supports GNU GCC-style variadic macros */
-#ifndef _MSC_VER /* Defines MSFT compiler version. Defined as 1200 for MSVC++ 6.0. */
 #define HAVE_CPP_VARARG_MACRO_GCC 1
-#endif
 
 /* Define to 1 if you have the <ctype.h> header file. */
 #define HAVE_CTYPE_H 1
@@ -159,9 +125,7 @@ typedef unsigned long in_addr_t;
 #define HAVE_STDARG_H 1
 
 /* Define to 1 if you have the <stdint.h> header file. */
-#ifndef _MSC_VER
 #define HAVE_STDINT_H 1
-#endif
 
 /* Define to 1 if you have the <stdio.h> header file. */
 #define HAVE_STDIO_H 1
@@ -182,17 +146,13 @@ typedef unsigned long in_addr_t;
 #define HAVE_SYSTEM 1
 
 /* Define to 1 if you have the <sys/file.h> header file. */
-#ifndef _MSC_VER
 #define HAVE_SYS_FILE_H 1
-#endif
 
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #define HAVE_SYS_STAT_H 1
 
 /* Define to 1 if you have the <sys/time.h> header file. */
-#ifndef _MSC_VER
 #define HAVE_SYS_TIME_H 1
-#endif
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
@@ -201,9 +161,7 @@ typedef unsigned long in_addr_t;
 #define HAVE_TIME 1
 
 /* Define to 1 if you have the <unistd.h> header file. */
-#ifndef _MSC_VER
 #define HAVE_UNISTD_H 1
-#endif
 
 /* Define to 1 if you have the `vsnprintf' function. */
 #define HAVE_VSNPRINTF 1
@@ -224,7 +182,7 @@ typedef unsigned long in_addr_t;
 #define PACKAGE_TARNAME "openvpn"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "2.1_beta7" /* AUTO_VERSION */
+#define PACKAGE_VERSION "2.0_beta7" /* AUTO_VERSION */
 
 /* Define to the full name and version of this package. */
 #ifdef DEBUG_LABEL
@@ -246,28 +204,16 @@ typedef unsigned long in_addr_t;
 #define STDC_HEADERS 1
 
 /* A string representing our target */
-#ifdef _MSC_VER
-#define TARGET_ALIAS "Win32-MSVC++"
-#else
 #define TARGET_ALIAS "Win32-MinGW"
-#endif
 
 /* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
-#ifndef _MSC_VER
 #define TIME_WITH_SYS_TIME 1
-#endif
 
 /* Use OpenSSL crypto library */
 #define USE_CRYPTO 1
 
 /* Use LZO compression library */
 #define USE_LZO 1
-
-/* LZO version number */
-#define LZO_VERSION_NUM "2"
-
-/* Use lzo/ directory prefix for LZO header files (for LZO 2.0) */
-#define LZO_HEADER_DIR 1
 
 /* Use OpenSSL SSL library */
 #define USE_SSL 1
@@ -297,22 +243,4 @@ typedef unsigned long in_addr_t;
 /* Windows doesn't support PTHREAD yet */
 #ifdef USE_PTHREAD
 #error The Windows version of OpenVPN does not support PTHREAD yet
-#endif
-
-#ifdef _MSC_VER
-/* MSVC++ hacks */
-#include <io.h>
-#include <direct.h>
-#define vsnprintf _vsnprintf
-#define vsnwprintf _vsnwprintf
-#define snwprintf _snwprintf
-#define write _write
-#define open _open
-#define read _read
-#define close _close
-#define chdir _chdir
-#define S_IRUSR 0
-#define S_IWUSR 0
-typedef int intptr_t;
-#undef S_NORMAL
 #endif

@@ -39,7 +39,7 @@ co_rc_t co_message_switch_set_rule(co_message_switch_t *ms, co_module_t destinat
 
 	rule = (co_switch_rule_t *)co_os_malloc(sizeof(*rule));
 	if (rule == NULL)
-		return CO_RC(OUT_OF_MEMORY);
+		return CO_RC(ERROR);
 
 	rule->type = CO_SWITCH_RULE_TYPE_CALLBACK;
 	rule->destination = destination;
@@ -59,7 +59,7 @@ co_rc_t co_message_switch_set_rule_reroute(co_message_switch_t *ms, co_module_t 
 
 	rule = (co_switch_rule_t *)co_os_malloc(sizeof(*rule));
 	if (rule == NULL)
-		return CO_RC(OUT_OF_MEMORY);
+		return CO_RC(ERROR);
 
 	rule->type = CO_SWITCH_RULE_TYPE_REROUTE;
 	rule->destination = destination;
@@ -221,7 +221,7 @@ co_rc_t co_message_dup(co_message_t *message, co_message_t **dup_message_out)
 	
 	allocated = (co_message_t *)co_os_malloc(size);
 	if (allocated == NULL)
-		return CO_RC(OUT_OF_MEMORY);
+		return CO_RC(ERROR);
 
 	memcpy(allocated, message, size);
 
@@ -230,26 +230,6 @@ co_rc_t co_message_dup(co_message_t *message, co_message_t **dup_message_out)
 	return CO_RC(OK);
 }
 
-co_rc_t co_message_dup_to_queue(co_message_t *message, co_queue_t *queue)
-{
-	co_message_t *dup_message;
-	co_rc_t rc;
-	
-	rc = co_message_dup(message, &dup_message);
-	if (CO_OK(rc)) {
-		co_message_queue_item_t *queue_item = NULL;
-		
-		rc = co_queue_malloc(queue, sizeof(co_message_queue_item_t), (void **)&queue_item);
-		if (!CO_OK(rc)) {
-			co_os_free(dup_message);
-		} else {			
-			queue_item->message = dup_message;
-			co_queue_add_head(queue, queue_item);
-		}
-	}
-
-	return rc;
-}
 
 co_rc_t co_message_switch_dup_message(co_message_switch_t *ms, co_message_t *message)
 {

@@ -25,9 +25,9 @@ extern "C" {
 #include <colinux/user/debug.h>
 #include <colinux/user/monitor.h>
 #include <colinux/user/manager.h>
-#include <colinux/user/reactor.h>
 #include <colinux/common/console.h>
 #include <colinux/os/user/daemon.h>
+#include "daemon.h"
 }
 
 #include "widget.h"
@@ -90,8 +90,8 @@ protected:
 	console_widget_t *widget;
 	console_main_window_t *window;
 	co_console_start_parameters_t start_parameters;
-	co_reactor_t reactor;
-	co_user_monitor_t *message_monitor;
+	unsigned char poll_buffer[0x1000];
+	co_daemon_handle_t daemon_handle;
 
 	Fl_Menu_Bar *menu;
 	Fl_Text_Display *text_widget;
@@ -100,8 +100,6 @@ protected:
 	void menu_item_activate(Fl_Callback *cb);
 	void menu_item_deactivate(Fl_Callback *cb);
 	void global_resize_constraint();
-
-	static co_rc_t message_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size);
 };
 
 extern void console_idle(void *data);

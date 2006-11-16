@@ -9,15 +9,15 @@
  */
 
 #include "console.h"
-#include "main.h"
 
 extern "C" {
 #include <colinux/user/debug.h>
 }
 
-console_window_t *global_window = 0;
+static console_window_t *global_window = 0;
 
-void co_user_console_handle_scancode(co_scan_code_t sc)
+void
+co_user_console_handle_scancode(co_scan_code_t sc)
 {
 	if (!global_window)
 		return;
@@ -25,42 +25,42 @@ void co_user_console_handle_scancode(co_scan_code_t sc)
 	global_window->handle_scancode(sc);
 }
 
-int co_user_console_main(int argc, char **argv)
+int
+co_user_console_main(int argc, char **argv)
 {
 	co_rc_t rc;
+	console_window_t window;
+
+	global_window = &window;
 
 	co_debug_start();
 	
-	rc = global_window->parse_args(argc, argv);
+	rc = window.parse_args(argc, argv);
 	if (!CO_OK(rc)) {
 		co_debug("The console program was unable to parse the parameters.\n");
 		goto co_user_console_main_error;
 	}
 
-	rc = global_window->start();
+	rc = window.start();
 	if (!CO_OK(rc)) {
 		co_debug("The console program could not start.\n");
 		goto co_user_console_main_error;
 	}
 
 	do {
-		rc = global_window->loop();
-	} while (CO_OK(rc) && global_window->is_attached());
+		rc = window.loop();
+	} while (CO_OK(rc) && window.online());
 
-	if (global_window->is_attached())
-		global_window->detach();
+	window.online(false);
 
 	if (CO_OK(rc)) {
 		co_debug_end();
 		return 0;
 	}
 
-co_user_console_main_error:
+      co_user_console_main_error:
 	co_debug("The console program encountered an error: %08x\n", rc);
 
 	co_debug_end();
-
-	global_window = 0;
-
 	return -1;
 }

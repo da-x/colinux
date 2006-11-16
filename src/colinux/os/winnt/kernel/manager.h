@@ -62,14 +62,6 @@ struct co_osdep_manager {
 	unsigned long pages_mapped;
 };
 
-#define fixme_IoSetCancelRoutine(Irp, func) \
-	Irp->CancelRoutine = func;
-
-
-struct co_manager_open_desc_os {
-	PIRP irp;
-};
-
 extern void co_winnt_free_all_pages(co_osdep_manager_t osdep);
 
 #endif

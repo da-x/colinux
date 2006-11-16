@@ -22,7 +22,7 @@ void co_debug_start(void)
 	if (handle != NULL)
 		return;
 
-	handle = co_os_manager_open_quite();
+	handle = co_os_manager_open();
 	if (handle) {
 		co_rc_t rc;
 		co_manager_ioctl_debug_levels_t levels = {{0}, };

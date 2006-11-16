@@ -1,49 +1,39 @@
 #include <colinux/common/libc.h>
 #include <colinux/kernel/filesystem.h>
-#include <colinux/os/alloc.h>
 #include <colinux/os/kernel/filesystem.h>
 
-co_rc_t co_os_fs_inode_to_path(co_filesystem_t *fs, co_inode_t *dir, char **out_name, int add)
+co_rc_t co_os_fs_inode_to_path(co_filesystem_t *fs, co_inode_t *dir, co_pathname_t *out_name)
 {
 	co_inode_t *dir_scan = dir;
-	int len;
-	int depth = 0;
-	const int max_depth = 256;
-	char *names[max_depth];
-	char *fullname, *adding;
-	int namelen = add;
+	char *terminal = &((*out_name)[sizeof(co_pathname_t)-1]);
+	char *end = terminal;
+	char *beginning = &(*out_name)[0];
+	char *start_adding = beginning;
 
-	while (dir_scan  &&  dir_scan->name  &&  depth < max_depth) {
-		names[depth++] = dir_scan->name;
-		namelen += co_strlen(dir_scan->name) + 1;
+	co_snprintf(start_adding, terminal - start_adding, "%s", &fs->base_path[0]);
+	start_adding += co_strlen(start_adding);
+
+	*terminal = '\0';
+	while (dir_scan  &&  dir_scan->name) {
+		char *scan_name = dir_scan->name;
+		int size = co_strlen(scan_name);
+		terminal -= size;
+		if (terminal < start_adding) {
+			/* path too long */
+			return CO_RC(ERROR);
+		}
+		co_memcpy(terminal, scan_name, size);
+		terminal--;
+		if (terminal < start_adding) {
+			/* path too long */
+			return CO_RC(ERROR);
+		}
+		*terminal = '\\';
 		dir_scan = dir_scan->parent;
 	}
 
-	len = co_strlen(fs->base_path);
-	fullname = co_os_malloc(len + namelen + 2);
-	if (!fullname)
-		return CO_RC(OUT_OF_MEMORY);
+	co_memmove(start_adding, terminal, end - terminal + 1);
 
-	co_memcpy(fullname, fs->base_path, len);
-	adding = fullname + len;
-
-	while (depth-- > 0) {
-		*adding++ = '\\';
-		len = co_strlen(names[depth]);
-		co_memcpy(adding, names[depth], len);
-		adding += len;
-	}
-
-	/* impl. 'co_os_fs_add_last_component' directly here */
-	if (add > 0) {
-		if (adding > fullname  &&  *(adding-1) != '\\') {
-			*adding++ = '\\';
-		}
-	}
-
-	*adding = '\0';
-
-	*out_name = fullname;
 	return CO_RC(OK);
 }
 
@@ -62,21 +52,19 @@ int co_os_fs_add_last_component(co_pathname_t *dirname)
 }
 
 co_rc_t co_os_fs_dir_inode_to_path(co_filesystem_t *fs, co_inode_t *dir,
-				   char **out_name, char *name)
+				   co_pathname_t *out_name, char *name)
 {
 	co_rc_t rc;
 	int len;
 
-	len = 1;
-	if (name)
-		len += co_strlen(name);
-
-	rc = co_os_fs_inode_to_path(fs, dir, out_name, len);
+	rc = co_os_fs_inode_to_path(fs, dir, out_name);
 	if (!CO_OK(rc))
 		return rc;
 
-	if (name)
-		co_memcpy(&(*out_name)[co_strlen(*out_name)], name, len);
+	len = co_os_fs_add_last_component(out_name);
+	if (name) {
+		co_snprintf(&(*out_name)[len], sizeof(*out_name) - len, "%s", name);
+	}
 
 	return CO_RC(OK);
 }

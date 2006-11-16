@@ -31,7 +31,7 @@
 #include "driver.h"
 #include "service.h"
 
-static co_rc_t co_win32_manager_is_installed(bool_t *installed)
+co_rc_t co_win32_manager_is_installed(bool_t *installed)
 {
 	co_rc_t rc;
 
@@ -51,7 +51,7 @@ static co_rc_t co_win32_manager_is_installed(bool_t *installed)
  */
 co_rc_t co_winnt_install_driver(void) 
 {
-	co_rc_t rc;
+	co_rc_t rc = CO_RC_OK;
 	bool_t installed = PFALSE;
 	co_manager_handle_t handle;
 
@@ -74,7 +74,7 @@ co_rc_t co_winnt_install_driver(void)
 	handle = co_os_manager_open();
 	if (handle == NULL) {
 		co_terminal_print("error opening kernel driver\n");
-		return CO_RC(ERROR_ACCESSING_DRIVER);
+		return CO_RC(ERROR);
 	}
 	
 	return CO_RC(OK);
@@ -82,7 +82,7 @@ co_rc_t co_winnt_install_driver(void)
 
 co_rc_t co_winnt_remove_driver(void) 
 {
-	co_rc_t rc;
+	co_rc_t rc = CO_RC_OK;
 	bool_t installed = PFALSE;
 	co_manager_handle_t handle;
 	co_manager_ioctl_status_t status = {0, };
@@ -93,27 +93,27 @@ co_rc_t co_winnt_remove_driver(void)
 
 	if (!installed) {
 		co_terminal_print("driver not installed\n");
-		return CO_RC(ERROR_ACCESSING_DRIVER);
+		return CO_RC(OK);
 	}
 
 	handle = co_os_manager_open();
 	if (!handle) {
 		co_terminal_print("couldn't get driver handle, removing anyway\n");
 		co_winnt_driver_remove_lowlevel();
-		return CO_RC(ERROR_ACCESSING_DRIVER);
+		return CO_RC(ERROR);
 	}		
 	rc = co_manager_status(handle, &status);
 	if (!CO_OK(rc)) {
 		if (CO_RC_GET_CODE(rc) == CO_RC_VERSION_MISMATCHED) {
-			co_terminal_print("driver version is %d while expected version %d\n", 
+			co_ntevent_print("driver version is %d while expected version %d\n", 
 					 status.periphery_api_version, CO_LINUX_PERIPHERY_API_VERSION);
 		} else {
-			co_terminal_print("detected a old buggy driver version\n");
+			co_ntevent_print("detected a old buggy driver version\n");
 		}
 
 		co_os_manager_close(handle);
 		co_winnt_driver_remove_lowlevel();
-		return rc;
+		return CO_RC(ERROR);
 	}		
 
 	if (status.monitors_count != 0) {
@@ -129,7 +129,7 @@ co_rc_t co_winnt_remove_driver(void)
 
 co_rc_t co_winnt_status_driver(int verbose)
 {
-	co_rc_t rc;
+	co_rc_t rc = CO_RC_OK;
 	bool_t installed = PFALSE;
 	co_manager_handle_t handle;
 	co_manager_ioctl_status_t status = {0, };
@@ -175,7 +175,7 @@ co_rc_t co_winnt_status_driver(int verbose)
 	return rc;
 }
 
-static co_rc_t co_winnt_install_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LPCTSTR  DriverName, IN LPCTSTR ServiceExe)
+co_rc_t co_winnt_install_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LPCTSTR  DriverName, IN LPCTSTR ServiceExe)
 { 
 	SC_HANDLE  schService; 
  
@@ -205,7 +205,7 @@ static co_rc_t co_winnt_install_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LP
 	return CO_RC(OK); 
 } 
  
-static co_rc_t co_winnt_remove_driver_lowlevel(IN SC_HANDLE  SchSCManager, IN LPCTSTR DriverName) 
+co_rc_t co_winnt_remove_driver_lowlevel(IN SC_HANDLE  SchSCManager, IN LPCTSTR DriverName) 
 { 
 	SC_HANDLE  schService; 
 	co_rc_t   rc;
@@ -227,7 +227,7 @@ static co_rc_t co_winnt_remove_driver_lowlevel(IN SC_HANDLE  SchSCManager, IN LP
 	return rc; 
 } 
  
-static co_rc_t co_winnt_start_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LPCTSTR DriverName) 
+co_rc_t co_winnt_start_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LPCTSTR DriverName) 
 { 
 	SC_HANDLE  schService; 
 	co_rc_t   ret;
@@ -239,17 +239,19 @@ static co_rc_t co_winnt_start_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LPCT
 		return CO_RC(ERROR_ACCESSING_DRIVER); 
 	} 
  
-	if (StartService(schService, 0, NULL)) {
+	if (StartService(schService, 0, NULL))
 		ret = CO_RC(OK);
-	} else {
+	else
 		ret = CO_RC(ERROR_STARTING_DRIVER);
 
+	if (!ret) {
 		err = GetLastError(); 
-#if 1
+
+#if (0) 
 		if (err == ERROR_SERVICE_ALREADY_RUNNING) 
-			co_terminal_print("failure: StartService, ERROR_SERVICE_ALREADY_RUNNING\n"); 
+			co_winnt_debug("failure: StartService, ERROR_SERVICE_ALREADY_RUNNING\n"); 
 		else 
-			co_terminal_print("failure: StartService (0x%02x)\n", err);
+			co_winnt_debug("failure: StartService (0x%02x)\n", err);
 #endif
 	} 
  
@@ -258,7 +260,7 @@ static co_rc_t co_winnt_start_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LPCT
 	return ret; 
 } 
  
-static co_rc_t co_winnt_stop_driver_lowlevel(IN SC_HANDLE  SchSCManager, IN LPCTSTR DriverName)
+co_rc_t co_winnt_stop_driver_lowlevel(IN SC_HANDLE  SchSCManager, IN LPCTSTR DriverName)
 { 
 	SC_HANDLE       schService; 
 	SERVICE_STATUS  serviceStatus; 
@@ -280,7 +282,7 @@ static co_rc_t co_winnt_stop_driver_lowlevel(IN SC_HANDLE  SchSCManager, IN LPCT
 	return rc; 
 } 
 
-static co_rc_t co_winnt_unload_driver_lowlevel_by_name(char *name) 
+co_rc_t co_winnt_unload_driver_lowlevel_by_name(char *name) 
 { 
 	SC_HANDLE   schSCManager; 
 	co_rc_t rc;
@@ -309,7 +311,7 @@ static co_rc_t co_winnt_unload_driver_lowlevel_by_name(char *name)
 	return rc;
 } 
 
-static co_rc_t co_winnt_load_driver_lowlevel_by_name(char *name, char *path) 
+co_rc_t co_winnt_load_driver_lowlevel_by_name(char *name, char *path) 
 { 
 	SC_HANDLE   schSCManager; 
 	char fullpath[0x100] = {0,};

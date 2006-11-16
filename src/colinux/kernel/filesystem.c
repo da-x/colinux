@@ -673,146 +673,122 @@ void co_monitor_unregister_filesystems(co_monitor_t *cmon)
 static co_rc_t flat_mode_inode_rename(co_filesystem_t *filesystem, co_inode_t *old_inode, co_inode_t *new_inode, 
 			     char *oldname, char *newname)
 {
-	char *old_dirname = NULL, *new_dirname = NULL;
+	co_pathname_t old_dirname, new_dirname;
 	co_rc_t rc;
 
 	rc = co_os_fs_dir_inode_to_path(filesystem, old_inode, &old_dirname, oldname);
-	if (CO_OK(rc)) {
-		rc = co_os_fs_dir_inode_to_path(filesystem, new_inode, &new_dirname, newname);
-		if (CO_OK(rc)) {
-			rc = co_os_file_rename(old_dirname, new_dirname);
-			co_os_free(new_dirname);
-		}
-		co_os_free(old_dirname);
-	}
+	if (!CO_OK(rc))
+		return rc;
 
-	return rc;
+	rc = co_os_fs_dir_inode_to_path(filesystem, new_inode, &new_dirname, newname);
+	if (!CO_OK(rc))
+		return rc;
+
+	return co_os_file_rename(old_dirname, new_dirname);
 }
 
 static co_rc_t flat_mode_getattr(co_filesystem_t *fs, co_inode_t *dir,
 				 char *name, struct fuse_attr *attr)
 {
-	char *filename;
+	co_pathname_t filename;
 	co_rc_t rc;
 
 	rc = co_os_fs_dir_inode_to_path(fs, dir, &filename, name);
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_os_fs_get_attr(fs, filename, attr);
-	co_os_free(filename);
-
-	return rc;
+	return co_os_fs_get_attr(fs, filename, attr);
 }
 
 static co_rc_t flat_mode_getdir(co_filesystem_t *fs, co_inode_t *dir, co_filesystem_dir_names_t *names)
 {
-	char *dirname;
+	co_pathname_t dirname;
 	co_rc_t rc;
 
-	rc = co_os_fs_inode_to_path(fs, dir, &dirname, 1);
+	rc = co_os_fs_inode_to_path(fs, dir, &dirname);
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_os_file_getdir(dirname, names);
-	co_os_free(dirname);
+	co_os_fs_add_last_component(&dirname);
 
-	return rc;
+	return co_os_file_getdir(dirname, names);
 }
 
 static co_rc_t flat_mode_inode_read_write(co_monitor_t *linuxvm, co_filesystem_t *filesystem, co_inode_t *inode, 
 				  unsigned long long offset, unsigned long size,
 				  vm_ptr_t src_buffer, bool_t read)
 {
-	char *filename;
+	co_pathname_t filename;
 	co_rc_t rc;
 
-	rc = co_os_fs_inode_to_path(filesystem, inode, &filename, 0);
+	rc = co_os_fs_inode_to_path(filesystem, inode, &filename);
 	if (!CO_OK(rc))
 		return rc;
 	
-	rc = co_os_file_read_write(linuxvm, filename, offset, size, src_buffer, read);
-	co_os_free(filename);
-
-	return rc;
+	return co_os_file_read_write(linuxvm, filename, offset, size, src_buffer, read);
 }
 
 static co_rc_t flat_mode_inode_mknod(co_filesystem_t *filesystem, co_inode_t *inode, unsigned long mode, 
 			     unsigned long rdev, char *name, int *ino, struct fuse_attr *attr)
 {
-	char *filename;
+	co_pathname_t filename;
 	co_rc_t rc;
 
 	rc = co_os_fs_dir_inode_to_path(filesystem, inode, &filename, name);
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_os_file_mknod(filename);
-	co_os_free(filename);
-
-	return rc;
+	return co_os_file_mknod(filename);
 }
 
 static co_rc_t flat_mode_inode_set_attr(co_filesystem_t *filesystem, co_inode_t *inode,
 				unsigned long valid, struct fuse_attr *attr)
 {
-	char *filename;
+	co_pathname_t filename;
 	co_rc_t rc;
 
-	rc = co_os_fs_inode_to_path(filesystem, inode, &filename, 0);
+	rc = co_os_fs_inode_to_path(filesystem, inode, &filename);
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_os_file_set_attr(filename, valid, attr);
-	co_os_free(filename);
-
-	return rc;
+	return co_os_file_set_attr(filename, valid, attr);
 } 
 
 static co_rc_t flat_mode_inode_mkdir(co_filesystem_t *filesystem, co_inode_t *inode, unsigned long mode, 
 			     char *name)
 {
-	char *dirname;
+	co_pathname_t dirname;
 	co_rc_t rc;
 
 	rc = co_os_fs_dir_inode_to_path(filesystem, inode, &dirname, name);
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_os_file_mkdir(dirname);
-	co_os_free(dirname);
-
-	return rc;
+	return co_os_file_mkdir(dirname);
 }
 
 static co_rc_t flat_mode_inode_unlink(co_filesystem_t *filesystem, co_inode_t *inode, char *name)
 {
-	char *filename;
+	co_pathname_t filename;
 	co_rc_t rc;
 
 	rc = co_os_fs_dir_inode_to_path(filesystem, inode, &filename, name);
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_os_file_unlink(filename);
-	co_os_free(filename);
-
-	return rc;
+	return co_os_file_unlink(filename);
 }
 
 static co_rc_t flat_mode_inode_rmdir(co_filesystem_t *filesystem, co_inode_t *inode, char *name)
 {
-	char *dirname;
+	co_pathname_t dirname;
 	co_rc_t rc;
 
 	rc = co_os_fs_dir_inode_to_path(filesystem, inode, &dirname, name);
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_os_file_rmdir(dirname);
-	co_os_free(dirname);
-
-	return rc;
+	return co_os_file_rmdir(dirname);
 }
 
 

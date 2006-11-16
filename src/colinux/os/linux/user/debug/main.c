@@ -18,17 +18,12 @@
 #include <colinux/user/debug/main.h>
 
 COLINUX_DEFINE_MODULE("colinux-debug-daemon");
+
 int main(int argc, char *argv[]) 
 {
-	co_rc_t rc;
+	int ret;
 
-	rc = co_debug_main(argc, argv);
+	ret = co_debug_main(argc, argv);
 
-	if (!CO_OK(rc)) {
-		if (geteuid() != 0)
-			printf ("Please run as root\n");
-		return -1;
-	}
-
-	return 0;
+	return ret;
 }

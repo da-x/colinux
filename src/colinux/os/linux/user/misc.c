@@ -25,15 +25,6 @@
 #include <colinux/os/user/misc.h>
 
 
-static char const co_term_color_yellow[]=
-	{ "\033[33;1;40m" };	/* brown foreground, bold, black background */
-static char const co_term_color_white[]=
-	{ "\033[37;1;40m" };	/* white foreground, bold, black background */
-static char const co_term_color_normal[]=
-	{ "\033[0m" };		/* reset all attributes to their defaults */
-static char const * co_term_color_current = co_term_color_normal;
-
-
 static void co_terminal_printv(const char *format, va_list ap)
 {
 	char buf[0x100];
@@ -54,12 +45,6 @@ void co_terminal_print(const char *format, ...)
 {
 	va_list ap;
 
-	if (co_term_color_current != co_term_color_normal) {
-		
-		co_term_color_current = co_term_color_normal;
-		printf (co_term_color_current);
-	}
-
 	va_start(ap, format);
 	co_terminal_printv(format, ap);
 	va_end(ap);
@@ -68,25 +53,8 @@ void co_terminal_print(const char *format, ...)
 void co_terminal_print_color(co_terminal_color_t color, const char *format, ...)
 {
 	va_list ap;
-	char const * str;
-
-	/* use simple VT100 sequences, see: man console_codes */
-	switch (color) {
-	case CO_TERM_COLOR_YELLOW:
-		str = co_term_color_yellow;
-		break;
-	case CO_TERM_COLOR_WHITE:
-		str = co_term_color_white;
-		break;
-	default:
-		str = co_term_color_current;
-	}
-
-	if (co_term_color_current != str) {
-		/* change to new color */
-		co_term_color_current = str;
-		printf (co_term_color_current);
-	}
+	
+	/* FIXME: colors (ncurses? */
 
 	va_start(ap, format);
 	co_terminal_printv(format, ap);

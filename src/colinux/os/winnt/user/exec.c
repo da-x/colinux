@@ -15,10 +15,10 @@
 #include <colinux/os/user/exec.h>
 #include <colinux/os/user/misc.h>
 
-co_rc_t co_launch_process(int *pid, char *command_line, ...)
+co_rc_t co_launch_process(char *command_line, ...)
 {
 	BOOL ret;
-	char buf[0x200];
+	char buf[0x100];
 	va_list ap;
 	STARTUPINFO si;
 	PROCESS_INFORMATION pi;
@@ -45,42 +45,12 @@ co_rc_t co_launch_process(int *pid, char *command_line, ...)
 			    &pi);             // Pointer to PROCESS_INFORMATION structure.
 
 	if (!ret) {
-		co_terminal_print("error in execution (%d)\n", GetLastError());
+		co_terminal_print("error in execution '%s' (%d)\n", buf, GetLastError());
 		return CO_RC(ERROR);
 	}
-
-	if (pid)
-		*pid = pi.dwProcessId;
 
 	CloseHandle(pi.hProcess);
 	CloseHandle(pi.hThread);
 
 	return CO_RC(OK);
-}
-
-
-co_rc_t co_kill_process(int pid)
-{
-	HANDLE hProcess;
-	co_rc_t rc = CO_RC(OK);
-
-	hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
-	if (!hProcess) {
-		DWORD err = GetLastError();
-
-		if (err == ERROR_INVALID_PARAMETER)
-			return CO_RC(OK); /* Process is not running */
-
-		co_debug("error (%d) open process %d\n", err, pid);
-		return CO_RC(ERROR);
-	}
-
-	if (!TerminateProcess(hProcess, 0)) {
-		co_debug("error (%d) in temination of pid %d\n", GetLastError(), pid);
-		rc = CO_RC(ERROR);
-	}
-	
-	CloseHandle(hProcess);
-	
-	return rc;
 }

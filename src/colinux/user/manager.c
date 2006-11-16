@@ -79,20 +79,6 @@ void co_manager_debug(co_manager_handle_t handle, const char *buf, long size)
 			    (void *)buf, size, &ret, sizeof(ret), &returned);
 }
 
-co_rc_t co_manager_attach(co_manager_handle_t handle, co_manager_ioctl_attach_t *params)
-{
-	co_rc_t rc;
-	unsigned long returned = 0;
-
-	rc = co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_ATTACH,
-				 params, sizeof(*params), params, sizeof(*params), &returned);
-	if (!CO_OK(rc))
-		return rc;
-
-	return params->rc;
-}
-
-
 co_rc_t co_manager_debug_reader(co_manager_handle_t handle, co_manager_ioctl_debug_reader_t *debug_reader)
 {
 	co_rc_t rc;
@@ -101,12 +87,8 @@ co_rc_t co_manager_debug_reader(co_manager_handle_t handle, co_manager_ioctl_deb
 	rc = co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_DEBUG_READER,
 				 debug_reader, sizeof(*debug_reader), debug_reader, sizeof(*debug_reader), &returned);
 
-	if (!CO_OK(rc))
-		return rc;
-
-	return debug_reader->rc;
+	return rc;
 }
-
 
 co_rc_t co_manager_debug_levels(co_manager_handle_t handle, co_manager_ioctl_debug_levels_t *levels)
 {
@@ -115,23 +97,6 @@ co_rc_t co_manager_debug_levels(co_manager_handle_t handle, co_manager_ioctl_deb
 
 	rc = co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_DEBUG_LEVELS,
 				 levels, sizeof(*levels), levels, sizeof(*levels), &returned);
-
-	return rc;
-}
-
-/**
- * Ask manager for the list of monitors running.
- *
- * The driver will fill the array with the PIDs of the registered
- * monitors.
- */
-co_rc_t co_manager_monitor_list(co_manager_handle_t handle, co_manager_ioctl_monitor_list_t *list)
-{
-	co_rc_t rc;
-	unsigned long returned = 0;
-
-	rc = co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_MONITOR_LIST,
- 				 list, sizeof(*list), list, sizeof(*list), &returned);
 
 	return rc;
 }

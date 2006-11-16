@@ -9,7 +9,6 @@
  */ 
 
 #include <stdio.h>
-#include <string.h>
 
 #include "select_monitor.h"
 #include "console.h"
@@ -57,36 +56,27 @@ void select_monitor_widget_t::populate(console_window_t *console_window)
 	resizable(browser);
 
 	end();
+	show();
 
 	load_monitors_list();
-	show();
 }
 
 void select_monitor_widget_t::load_monitors_list()
 {
-	co_manager_handle_t handle;
-	co_manager_ioctl_monitor_list_t	list;
-	co_rc_t	rc;
+	int i = 0;
 
-	memset(id_map, 0, sizeof(id_map));
-	id_map_count = 0;
+	if (id_map)
+		delete []id_map;
+
+	id_map = new co_id_t[CO_MAX_MONITORS];
+	id_map_size = 0;
+
 	browser->clear();
 
-	handle = co_os_manager_open();
-	if (handle == NULL)
-		return;
-
-	rc = co_manager_monitor_list(handle, &list);
-	co_os_manager_close(handle);
-	if (!CO_OK(rc))
-		return;
-
-	for (unsigned i = 0; i < list.count; ++i) {
-		char buf[32];
-		id_map[i] = list.ids[i];
-		snprintf( buf, sizeof(buf), "Monitor%d (pid=%d)\t", i, (int)id_map[i]);
-		browser->add(buf);
-	}
+	char buf[0x100];
 	
-	id_map_count = list.count;
+	snprintf(buf, sizeof(buf), "Monitor%d\t", i);
+	
+	id_map[id_map_size] = 0;
+	id_map_size++;
 }

@@ -165,7 +165,6 @@ static int global_event_hook(const XEvent& thisevent)
 		if ((sc.down == 0) && (scan_code_state[sc.code] == 0)) {
 			sc_down = sc;
 			sc_down.down = 1;
-
 			co_user_console_handle_scancode(sc_down);
 		}
 		else {

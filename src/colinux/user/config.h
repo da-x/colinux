@@ -16,6 +16,7 @@
 
 #include "macaddress.h"
 
-extern co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_parameters_t *start_parameters);
+co_rc_t co_load_config(char *text, co_config_t *out_config);
+co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_parameters_t *start_parameters);
 
 #endif

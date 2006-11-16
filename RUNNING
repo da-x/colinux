@@ -1,4 +1,4 @@
-Cooperative Linux $CO_VERSION README
+Cooperative Linux 0.6.4 README
 ----------------------------------------------------------------------------
 
   Instructions for running Cooperative Linux for Windows (see source for 
@@ -21,32 +21,24 @@ http://www.sourceforge.net/projects/colinux
 
 NOTES ON UPGRADING:
 
- 1. XML config files have been removed.  Use the command-line 
-    syntax in a name=value per line plain text file instead:
+ 1) If upgrading, please backup or copy your current default.colinux.XMfile
+      before installing!
 
-	kernel=vlinux
-	initrd=initrd.gz
-	mem=32
-	cobd0=fs\root_fs
-	cobd1=fs\swap_fs
-	eth0=tuntap
-	root=/dev/cobd0
-	ro
+ 2) If you are upgrading from 0.6.1 to 0.6.4 the kernel version has 
+changed (2.4.x in 0.6.1 and 2.6.x in 0.6.4), make sure you get 
+module-init-tools if you want to work with modules in this new version. 
+See other 2.6 upgrade resources for information about other changes.
 
- 2. Gentoo users need to be careful, Gentoo tends to use devfs when
-    upgrading from 0.6.1 and so block device names change from cobdX to cobd/X
-    and render the image unbootable.  For more details and solutions see the
-    2.6 related information on the Wiki (http://wiki.colinux.org/)
-
- 3. The file initrd contains no modules.  Modules are only in the file
-    vmlinux-modules.tar.gz.  The initrd extracts modules over device cofs31
-    automaticly, if you configure it as "initrd=initrd.gz" in config file.
-    After modules are installed, you can remove the initrd from config.
+ 3) Gentoo users need to be careful, Gentoo tends to use devfs when 
+upgrading from 0.6.2 and so block device names change from cobdX to cobd/X 
+and render the image unbootable.  For more details and solutions see the
+2.6 related information on the Wiki 
+(http://wiki.colinux.org/)
 
 RUNNING:
 
-To run Cooperative Linux, please follow these instructions before trying to
-run anything.
+To run Cooperative Linux, please follow these instructions before trying to run 
+anything.
 
 1. Run the downloaded installer file to begin the installation. 
    
@@ -61,14 +53,14 @@ run anything.
 	then be either shared or bridged with a physical network connection. 
 	Note that this requires Internet Connection Sharing or Bridging 
 	(Windows XP or higher) or a 3rd party Internet connection 
-	sharing application. See the Wiki at http://wiki.colinux.org/ for
+        sharing application. See the Wiki at http://wiki.colinux.org/ for
 	more information/help. The TAP method autmatically chooses the TAP 
-	first TAP adapter it finds, if this is not correct for you, you 
-	can specify the specific adapter by name ("TAP-Colinux").
+        first TAP adapter it finds, if this is not correct for you, you 
+        can specify the specific adapter by name (name="TAP1"). 
 
   	b. Bridging - This method allows the Cooperative Linux network 
 	interface to directly interoperate with one of your built in networking 
-	interfaces. You'll need to edit the configuration file to reflect 
+	interfaces. You'll need to edit the configuration XML file to reflect 
 	that type="bridged" and the 'name' parameter needs to be set to a 
 	substring of the network connection name that you will be bridging 
 	with (e.g. name="Local Area Connection"). See the Wiki at 
@@ -102,12 +94,11 @@ run anything.
    (or the bzip utilities in Cygwin, etc). The image MUST be extracted from 
    the .bz2 archive before use!
 
-5. Edit the config file to point to whatever root file system you 
-   downloaded. 
+5. Edit the XML file to point to whatever root file system you downloaded. 
    
-6. The installation directory should include vmlinux, default.conf, the 
-   supplied linux.sys driver and executables, and probably the root 
-   filesystem image. Be sure to review the config file for any additional 
+6. The installation directory should include vmlinux, default.config.xml, the 
+   supplied linux.sys driver, executables and dlls, and probably the root 
+   filesystem image. Be sure to review the XML file for any additional 
    configuration that may be needed.
 
 7. Run coLinux. The current directory should be the installation directory, 
@@ -115,7 +106,7 @@ run anything.
    in the XML config file..
 
 	a. Running as an service.  
-		colinux-daemon.exe @default.conf --install-service "Cooperative Linux"
+		colinux-daemon.exe -c config.xml --install-service "Cooperative Linux"
 	   Also, to remove the service:
 		colinux-daemon.exe --remove-service "Cooopeative Linux".
 	   Then go to the Service Manager and start the "Cooperative Linux"
@@ -126,13 +117,12 @@ run anything.
 		colinux-console-fltk.exe OR
 		colinux-console-nt.exe
 	b. As an regular application.
-		colinux-daemon.exe @default.conf
+		colinux-daemon.exe -c config.xml
 	   See colinux-daemon --help for details about possible 
 	   command-line arguments.
    
    The console window opens and you would see a Linux machine booting in 
    that window.
-
 
 Post Installation
 -----------------
@@ -149,186 +139,104 @@ Command Line Parameters
 The following command line paramaters may be useful in operating Cooperative 
 Linux.
 
-    -a #
+	-a #
+		Allows you to specify the instance of Coooperative Linux
+		that you will be connecting to.
 
-	Allows you to specify the instance of Coooperative Linux
-	that you will be connecting to.
+	-c filename.XML
+		Allows you to choose a specific XML configuration file to use.
 
-    @filename
+	-t consoletype
+		Allows you to specify either the FLTK (default) or NT (-t nt) 
+		console to use on startup. 
 
-	Allows you to choose a specific configuration file to 
-	use, can have multilple @filename on the command-line,
-	last on the command-line take precedence and overrides
-	prior.
+	--install-service servicename
+		Allows you to install Cooperative Linux as a service. Also 
+		use the -c parameter to specify your configuration file when 
+		doing this. <servicename> is whatever you want it to be called.
 
-    -k
+	--remove-service servicename
+		Allows you to remove the Cooperative Linux service. 
 
-	suppresses Kernel messages (good for debugging other daemons)
-
-    -t consoletype
-
-	Allows you to specify either the FLTK (default) or NT (-t nt) 
-	console to use on startup. 
-
-    -d
-    
-	Don't launch and attach a coLinux console on startup.  This is
-	default for running as service.
-
-    --install-service servicename
-
-	Allows you to install Cooperative Linux as a service. Also 
-	use the -c parameter to specify your configuration file when 
-	doing this. <servicename> is whatever you want it to be called.
-
-    --remove-service servicename
-
-	Allows you to remove the Cooperative Linux service. 
-
-    --install-driver
-
-	This command to install the driver portion of Cooperative 
-	Linux. BIG NOTE: This already happens during the installation 
-	of coLinux, on most cases you don't need to run it at all.
+	--install-drvier
+		This command to install the driver portion of Cooperative 
+		Linux. BIG NOTE: This already happens during the installation 
+                of coLinux, on most cases you don't need to run it at all.
 	
-    --remove-driver
-
-	This command will remove the driver portion of Cooperative
-	Linux. BIG NOTE: This already happens during the uninstall
-	of coLinux, on most cases you don't need to run it at all.
-
-    --status-driver
-
-	Show status about the installed/running driver.
+	--remove-driver
+		This command will remove the driver portion of Cooperative
+		Linux. BIG NOTE: This already happens during the uninstall
+                of coLinux, on most cases you don't need to run it at all.
 
 OR
 
-    If the first command-line argument on the command line is 
+	If the first command-line argument on the command line is 
 kernel= you will be able to give all the configuration on the 
 command-line, in this "mode" the command-line arguments are:
 
-    kernel=<path to vmlinux file>
+	kernel=<path to vmlinux file>
+		This specifies the path to the vmlinux file, typically
+                kernel=vmlinux works.
 
-	This specifies the path to the vmlinux file, typically
-	kernel=vmlinux works.
+	initrd=<path to initrd file>
+		This specifies the path to the initrd file, typeically
+ 		initrd=initrd.gz
 
-    initrd=<path to initrd file>
+	mem=<mem size>
+		This specifies the memory size, assumes MB is the the
+		unit type, so 64 is same as 64MB. Default if you leave
+		this parameter out is 1/4 of your RAM if your RAM is >= 
+		128, otherwise it's 16.  Default value is generally ok.
 
-	This specifies the path to the initrd file, typecally
-	initrd=initrd.gz
+	cobdX=<path to image file>
+		Use any number of these to specify the block device's
+                image files
 
-    mem=<mem size>
+	alias=<path to image file> | :cobdX
+		Use any number of these to specify an alias (hda1, etc)
+                for an block device's image file.  <path to image file>
+                can be to an partition using standard 
+                \Device\HarddiskX\PartitionY format.
 
-	This specifies the memory size, assumes MB is the the
-	unit type, so 64 is same as 64MB. Default if you leave
-	this parameter out is 1/4 of your RAM if your RAM is >= 
-	128, otherwise it's 16.  Default value is generally ok.
+	cofsX=<path to windows directory>
+		Use any number of these to specify a Cooperative 
+		Host filesystem device (mount Host directory to coLinux
+		local mount point). There are some limitations in it's
+		use currently (namely non-ASCII files).
 
-    cobdX=<path to image file>
+	ethX=tap | pcap-bridge,<network connection name>,<MAC>,<promisc> 
+		Use any number of these to specify network interfaces,
+		<network connection name> and <MAC> are optional.
+		<promisc> is optional only for pcap-bridge, default is
+		'promisc'. Some cases works only with 'nopromisc'.
+	OR
 
-	Use any number of these to specify the block device's
-	image files
+	ethX=slirp,<MAC>,<redirections>
+		Use any number of these to specify network interfaces,
+		<MAC> and <redirections> are options.  <redirections> 
+		take the form tcp|upd:host_port:linux_port, multiple 
+		redirections are seperated by /, ie tcp:2222:22/tcp:8080:80
 
-    alias=<path to image file> | :cobdX
+	root=<root device>
+		This is the device (as coLinux gues sees it) to the root
+		device.
 
-	Use any number of these to specify an alias (hda1, etc)
-	for an block device's image file.  <path to image file>
-	can be to an partition using standard 
-	\Device\HarddiskX\PartitionY format.
-
-    cofsX=<path to windows directory>
-
-	Use any number of these to specify a Cooperative 
-	Host filesystem device (mount Host directory to coLinux
-	local mount point). There are some limitations in it's
-	use currently (namely non-ASCII files).
-
-    ethX=tuntap | pcap-bridge | slirp,<options>
-
-	Use any number X of these to specify network interfaces.
-	The first argument select the interface type on host side,
-	follow by any more options.
-
-    ethX=tuntap,<network connection name>,<MAC>
-
-	Use any number X of these to specify network interfaces,
-	<network connection name> and <MAC> are optional.
-	Network connection name is the name of TAP adapter,
-	installed on your host system, mostly named
-	"Local Connection 1".  Without name coLinux use the first
-	adapter.  Let the name empty, if you have only one
-	TAP driver installed.
-
-    ethX=pcap-bridge,<network connection name>,<MAC>,<promisc>
-
-	Use any number X of these to specify network interfaces,
-	Networkname must be a name of your real ethernet or
-	wireless card.  It is typical "Local Connection".
-
-	<MAC> and <promisc> are optional.
-
-	Default is 'promisc', Promiscuous mode allow to receive packets
-	that not directly adressed to that adapter (sniffing mode).  This
-	works for Ethernet adapters.  Some cases (Wireless cards) works
-	only with 'nopromisc'.
-
-    ethX=slirp,<MAC>,<redirections>
-
-	Use any number X of these to specify network interfaces,
-	<MAC> is curently not supported, <redirections> are optional.
-
-	<redirections> take the form tcp|upd:hostport:linuxport[:count],
-	multiple redirections are seperated by /, ie tcp:2222:22/tcp:8080:80
-	<Redirections> must begin with protocol ("tcp" or "udp") then an
-	":" seperator, the port on Windows host, followed by ":" seperator,
-	and the port for the coLinux guest.  Optional third ":" seperator
-	counts for port array.  More redirections have the same form and
-	are seperated by "/".
-
-    ttysX=<serial device name>,<mode parameters>
-
-	Use any number X of these to specify serial interface (ttys0),
-	and host specific device name (COM1).  <mode parameter>
-	sets baudrate, data format and line disciplin., ie
-	"BAUD=115200 PARITY=n DATA=8 STOP=1 dtr=on rts=on"
-	Refer host system help (MODE -?) for more options.
-
-    execX=<executable program>,<parameters>
-
-	Use any number X of these to specify order of launching a
-	program and terminamte at stopping linux. Use Quotation
-	marks, if more as one parameter.
-
-    root=<root device>
-
-	This is the device (as coLinux gues sees it) to the root
-	device.
-
-    ANY additional parameters are passed to the coLinux kernel as is 
-    (unmodified).  For sample "init 5" runs linux on specific runlevel.
-
-    Read the file "colinux-daemon.txt" in your colinux installation
-    directore for samples, and see the example.conf.
+	ANY additional parameters are passed to the coLinux kernel as is 
+	(unmodified).
 
 
 Common Problems
 ---------------
 
-    "Unable to mount root fs"
-	Generally this means that the root filesystem image is 
-	missing, was specified incorrectly, or not uncompressed.
-
-	Check the device name and index (cobd0, hda1).
-	Verify, that the filename behind (cobd0=...) exist and is
-	readable from current working directory, try it with a
-	simple "DIR ..." on command prompt.
+	"Unable to mount root fs"
+		Generally this means that the root filesystem image is 
+		missing, was specified incorrectly, or not uncompressed.
 
   Additional problems not know at time of release are typically 
 documented on the Wiki (http://wiki.colinux.org/), look 
 there for known problems.  If your problem isn't listed, report on the 
 colinux-devel@sourceforge.net mailing list or file an Bug report at 
 http://www.sourceforge.net/projects/colinux
-
 
 Developing, Helping out the Project
 -----------------------------------

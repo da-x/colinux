@@ -68,9 +68,6 @@ void co_terminal_print_color(co_terminal_color_t color, const char *format, ...)
 		case CO_TERM_COLOR_YELLOW:
 			wAttributes = FOREGROUND_RED | FOREGROUND_GREEN |  FOREGROUND_INTENSITY;
 			break;
-		case CO_TERM_COLOR_WHITE:
-			wAttributes = FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_GREEN |  FOREGROUND_INTENSITY;
-			break;
 		default:
 			wAttributes = wOldAttributes;
 			break;
@@ -135,9 +132,4 @@ bool_t co_winnt_is_winxp_or_better(void)
 	}
 
 	return bRetVal;
-}
-
-co_id_t co_os_current_id(void)
-{
-	return (co_id_t)(GetCurrentProcessId());
 }

@@ -113,16 +113,17 @@ int co_utf8_mbstrlen(const char *src)
 		if (*ip & 0x80) {
 			size = utf8_mbtowc(&op, ip, maxlen);
 			if (size == -1) {
-				ip++;
+				ip += 1;
 				maxlen--;
 			} else {
 				ip += size;
 				maxlen -= size;
 			}
-		} else {
-			ip++;
-			maxlen--;
+			continue;
 		}
+		
+		ip++;
+		maxlen--;
 	}
 
 	return length;
@@ -154,14 +155,18 @@ co_rc_t co_utf8_mbstowcs(co_wchar_t *dest, const char *src, int maxlen)
 			size = utf8_mbtowc(op, ip, maxlen);
 			if (size == -1) {
 				*op = '?';
-				ip++;
+				ip += 1;
+				maxlen--;
 			} else {
 				ip += size;
+				maxlen -= 1;
 			}
-		} else {
-			*op = *ip++;
+			
+			op++;
+			continue;
 		}
-		op++;
+		
+		*op++ = *ip++;
 		maxlen--;
 	}
 

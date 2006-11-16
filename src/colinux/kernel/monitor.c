@@ -20,7 +20,6 @@
 #include <colinux/os/kernel/misc.h>
 #include <colinux/os/kernel/monitor.h>
 #include <colinux/os/kernel/time.h>
-#include <colinux/os/kernel/wait.h>
 #include <colinux/os/timer.h>
 #include <colinux/os/current/kernel/main.h>
 #include <colinux/arch/passage.h>
@@ -57,6 +56,43 @@ co_rc_t co_monitor_free(co_monitor_t *cmon, void *ptr)
 
 	return CO_RC(OK);
 }
+
+#if (0)
+static void colinux_dump_page(unsigned long *page)
+{
+	int i = 0;
+
+	while (i < PTRS_PER_PTE) {
+		co_debug("%08x:  %08x %08x %08x %08x\n", 4*i, page[i], page[i+1], page[i+2], page[i+3]);
+		i += 4;
+	}
+}
+
+static co_rc_t colinux_dump_page_at_pfn(co_monitor_t *cmon, co_pfn_t pfn)
+{
+	unsigned long *page;
+
+	page = (unsigned long *)co_os_map(cmon->manager, pfn);	
+	co_debug("dump of PFN %d\n", pfn);
+	colinux_dump_page(page);
+	co_os_unmap(cmon->manager, page, pfn);
+
+	return CO_RC(OK);
+}
+
+static co_rc_t colinux_dump_page_at_address(co_monitor_t *cmon, vm_ptr_t address)
+{
+	co_rc_t rc;
+	co_pfn_t pfn = 0;
+
+	co_debug("dump of address %08x\n", address);
+	rc = co_monitor_get_pfn(cmon, address, &pfn);
+	if (!CO_OK(rc))
+		return rc;
+
+	return colinux_dump_page_at_pfn(cmon, pfn);
+}
+#endif
 
 static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 {
@@ -168,13 +204,13 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 
 	for (io_buffer_page=0; io_buffer_page < io_buffer_num_pages; io_buffer_page++) {
 		unsigned long io_buffer_pfn = co_os_virt_to_phys((void *)io_buffer_host_address) >> CO_ARCH_PAGE_SHIFT;
-		
-		rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP + io_buffer_offset,
+
+		rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP + io_buffer_offset, 
 					    sizeof(linux_pte_t), &io_buffer_pfn);
 		if (!CO_OK(rc)) {
 			co_debug("error initializing io buffer (%x, %d)\n", rc, io_buffer_page);
 			goto out_error;
-		}
+		}	
 		
 		io_buffer_offset += sizeof(linux_pte_t);
 		io_buffer_host_address += CO_ARCH_PAGE_SIZE;
@@ -257,25 +293,21 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 {	
 	co_rc_t rc;
 	unsigned char *io_buffer, *io_buffer_end;
-	co_queue_t *queue;
 
 	co_passage_page->params[0] = 0;
 
 	if (!cmon->io_buffer)
 		return CO_RC(ERROR);
 
-	if (cmon->io_buffer->messages_waiting)
-		return CO_RC(OK);
+	cmon->io_buffer->messages_waiting = 0;
 
 	io_buffer = cmon->io_buffer->buffer;
 	io_buffer_end = io_buffer + CO_VPTR_IO_AREA_SIZE - sizeof(co_io_buffer_t);
 
-	co_os_mutex_acquire(cmon->linux_message_queue_mutex);
-	
 	cmon->io_buffer->messages_waiting = 0;
-
-	queue = &cmon->linux_message_queue;
-	while (co_queue_size(queue) != 0)
+	
+	co_queue_t *queue = &cmon->linux_message_queue;
+	while (co_queue_size(queue) != 0) 
 	{
 		co_message_queue_item_t *message_item;
 		rc = co_queue_peek_tail(queue, (void **)&message_item);
@@ -284,9 +316,6 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 		
 		co_message_t *message = message_item->message;
 		unsigned long size = message->size + sizeof(*message);
-
-		if (message->from == CO_MODULE_CONET0)
-			co_debug_lvl(network, 14, "message sent to linux: %x", message);
 		
 		if (io_buffer + size > io_buffer_end) {
 			break;
@@ -296,37 +325,12 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 		if (!CO_OK(rc))
 			return rc;
 
-		if ((unsigned long)message->from >= (unsigned long)CO_MODULES_MAX) {
-			co_debug_system("BUG! %s:%d\n", __FILE__, __LINE__);
-			co_queue_free(queue, message_item);
-			co_os_free(message);
-			break;
-		}
-
-		if ((unsigned long)message->to >= (unsigned long)CO_MODULES_MAX){
-			co_debug_system("BUG! %s:%d\n", __FILE__, __LINE__);
-			co_queue_free(queue, message_item);
-			co_os_free(message);
-			break;
-		}
-
-		co_linux_message_t *linux_message = (co_linux_message_t *)message->data;
-		if ((unsigned long)linux_message->device >= (unsigned long)CO_DEVICES_TOTAL){
-			co_debug_system("BUG! %s:%d %d %d\n", __FILE__, __LINE__,
-					message->to, message->from);
-			co_queue_free(queue, message_item);
-			co_os_free(message);
-			break;
-		}
-
 		cmon->io_buffer->messages_waiting += 1;
 		co_queue_free(queue, message_item);
 		co_memcpy(io_buffer, message, size);
 		io_buffer += size;
 		co_os_free(message);
 	}
-
-	co_os_mutex_release(cmon->linux_message_queue_mutex);
 
 	co_passage_page->params[0] = io_buffer - (unsigned char *)&cmon->io_buffer->buffer;
 
@@ -365,29 +369,104 @@ static co_rc_t callback_return(co_monitor_t *cmon)
 	return CO_RC(OK);
 }
 
+void co_monitor_debug_line(co_monitor_t *cmon, const char *text)
+{
+	struct {
+		co_message_t message;
+		co_daemon_message_t payload;
+		char data[0];
+	} *message = NULL;
+	unsigned long size;
+
+	size = sizeof(message->payload) + co_strlen(text) + 1;
+	message = (typeof(message))co_os_malloc(size + sizeof(message->message));
+	if (message == NULL)
+		return;
+
+	message->message.from = CO_MODULE_MONITOR;
+	message->message.to = CO_MODULE_DAEMON;
+	message->message.priority = CO_PRIORITY_IMPORTANT;
+	message->message.type = CO_MESSAGE_TYPE_STRING;
+	message->message.size = size;
+	message->payload.type = CO_MONITOR_MESSAGE_TYPE_DEBUG_LINE;
+	co_memcpy(message->data, text, co_strlen(text)+1);
+
+	co_message_switch_message(&cmon->message_switch, &message->message);
+}
+
+void co_monitor_trace_point_info(co_monitor_t *cmon, co_trace_point_info_t *info)
+{
+	struct {
+		co_message_t message;
+		co_daemon_message_t payload;
+		co_trace_point_info_t data;
+	} *message = NULL;
+	unsigned long size;
+
+	size = sizeof(message->payload) + sizeof(message->data);
+	message = (typeof(message))co_os_malloc(size + sizeof(message->message));
+	if (message == NULL)
+		return;
+
+	message->message.from = CO_MODULE_MONITOR;
+	message->message.to = CO_MODULE_DAEMON;
+	message->message.priority = CO_PRIORITY_DISCARDABLE;
+	message->message.type = CO_MESSAGE_TYPE_OTHER;
+	message->message.size = size;
+	message->payload.type = CO_MONITOR_MESSAGE_TYPE_TRACE_POINT;
+	message->data = *info;
+
+	co_message_switch_message(&cmon->message_switch, &message->message);
+}
+
+bool_t co_monitor_trace_point(co_monitor_t *cmon)
+{
+	co_trace_point_info_t *info = ((co_trace_point_info_t *)&(co_passage_page->params[0]));
+
+	if (info->index < 3000000)
+		return PTRUE;
+
+	co_monitor_trace_point_info(cmon, info);
+
+	return PFALSE;
+}
+
+
 static bool_t co_terminate(co_monitor_t *cmon)
 {
-	co_os_timer_deactivate(cmon->timer);
+	struct {
+		co_message_t message;
+		co_daemon_message_t payload;
+	} message;
+		
+	co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_TERMINATE)\n");
+	co_debug("linux terminated (%d)\n", co_passage_page->params[0]);
 
-	cmon->termination_reason = co_passage_page->params[0];
+	/* Prints kernel BUG */
+	if (co_passage_page->params[0] == CO_TERMINATE_BUG)
+	{
+		unsigned int len = co_passage_page->params[3];
+		
+		if (len > 255)
+			len = 255; /* sanity */
 
-	if (cmon->termination_reason == CO_TERMINATE_BUG) {
-		int len;
-		char *str = (char *)&co_passage_page->params[4];
-		cmon->bug_info.code = co_passage_page->params[1];
-		cmon->bug_info.line = co_passage_page->params[2];
-
-		len = co_strlen(str);
-		if (len < sizeof(cmon->bug_info.file)-1)
-			co_snprintf(cmon->bug_info.file, sizeof(cmon->bug_info.file), "%s", str);
-		else
-			/* show the end of filename */
-			co_snprintf(cmon->bug_info.file, sizeof(cmon->bug_info.file),
-				    "...%s", str + len - sizeof(cmon->bug_info.file)-1 - 3);
-
-		co_debug_system("BUG%d at %s:%d\n", cmon->bug_info.code,
-				cmon->bug_info.file, cmon->bug_info.line);
+		char file_name [len+1]; /* Buffer on stack */
+			
+		co_memcpy (file_name, &co_passage_page->params[4], len);
+		file_name [len] = 0;
+		co_debug("%s(%d): Kernel BUG %d\n",
+			file_name, co_passage_page->params[2], co_passage_page->params[1]);
 	}
+		
+	message.message.from = CO_MODULE_MONITOR;
+	message.message.to = CO_MODULE_DAEMON;
+	message.message.priority = CO_PRIORITY_IMPORTANT;
+	message.message.type = CO_MESSAGE_TYPE_OTHER;
+	message.message.size = sizeof(message.payload);
+	message.payload.type = CO_MONITOR_MESSAGE_TYPE_TERMINATED;
+	message.payload.terminated.reason = co_passage_page->params[0];
+
+	co_message_switch_dup_message(&cmon->message_switch, &message.message);
 
 	cmon->state = CO_MONITOR_STATE_TERMINATED;
 
@@ -396,20 +475,25 @@ static bool_t co_terminate(co_monitor_t *cmon)
 
 static bool_t co_idle(co_monitor_t *cmon)
 {
-	bool_t next_iter = PTRUE;
-	co_queue_t *queue;
+	co_message_t message;
 
-	co_os_wait_sleep(cmon->idle_wait);
+	co_debug_lvl(context_switch, 15, "switching from linux (CO_OPERATION_IDLE)\n");
+		
+	message.from = CO_MODULE_MONITOR;
+	message.to = CO_MODULE_IDLE;
+	message.priority = CO_PRIORITY_DISCARDABLE;
+	message.type = CO_MESSAGE_TYPE_STRING;
+	message.size = 0;
 
-	queue = &cmon->linux_message_queue;
-	if (co_queue_size(queue) == 0)
-		next_iter = PFALSE;
+	co_message_switch_dup_message(&cmon->message_switch, &message);
 
-	return next_iter;
+	return PFALSE;
 }
 
 static void co_free_pages(co_monitor_t *cmon, vm_ptr_t address, int num_pages)
 {
+	//co_debug_system("free_pages: %x %x\n", address, num_pages);
+#if (1)
 	unsigned long scan_address;
 	int j;
 
@@ -418,10 +502,13 @@ static void co_free_pages(co_monitor_t *cmon, vm_ptr_t address, int num_pages)
 		co_monitor_free_and_unmap_page(cmon, scan_address);
 		scan_address += CO_ARCH_PAGE_SIZE;
 	}
+#endif
 }
 
 static co_rc_t co_alloc_pages(co_monitor_t *cmon, vm_ptr_t address, int num_pages)
 {
+#if (1)
+	//co_debug_system("alloc_pages: %x %x\n", address, num_pages);
 	unsigned long scan_address;
 	co_rc_t rc = CO_RC(OK);
 	int i;
@@ -431,73 +518,14 @@ static co_rc_t co_alloc_pages(co_monitor_t *cmon, vm_ptr_t address, int num_page
 		rc = co_monitor_alloc_and_map_page(cmon, scan_address);
 		if (!CO_OK(rc))
 			break;
-		
 		scan_address += CO_ARCH_PAGE_SIZE;
 	}
 
-	if (!CO_OK(rc)) {
-		num_pages = i;
-		scan_address = address;
-		for (i=0; i < num_pages; i++) {
-			co_monitor_free_and_unmap_page(cmon, scan_address);
-			scan_address += CO_ARCH_PAGE_SIZE;
-		}
-	}
-
 	return rc;
+#else
+	return CO_RC(OK);
+#endif
 }
-
-static void incoming_message(co_monitor_t *cmon, co_message_t *message)
-{
-	co_manager_open_desc_t opened;
-	co_rc_t rc;
-
-	if (message->to == CO_MODULE_CONET0)
-		co_debug_lvl(network, 14, "message received: %x %x", cmon, message);
-	
-	co_os_mutex_acquire(cmon->connected_modules_write_lock);
-	opened = cmon->connected_modules[message->to];
-	if (opened != NULL)
-		rc = co_manager_open_ref(opened);
-	else
-		rc = CO_RC(ERROR);
-	co_os_mutex_release(cmon->connected_modules_write_lock);
-	
-	if (CO_OK(rc)) {
-		co_manager_send(cmon->manager, opened, message);
-		co_manager_close(cmon->manager, opened);
-	}
-
-	if (message->to == CO_MODULE_CONET0)
-		co_debug_lvl(network, 14, "message received end: %x %x", cmon, message);
-
-	switch (message->to) {
-	case CO_MODULE_CONSOLE:
-		if (message->from == CO_MODULE_LINUX) {
-			co_console_op(cmon->console, (co_console_message_t *)message->data);
-		}
-		break;
-	default:
-		break;
-	}
-}
-
-co_rc_t co_monitor_message_from_user(co_monitor_t *monitor, co_manager_open_desc_t opened, co_message_t *message)
-{
-	co_rc_t rc = CO_RC(OK);
-
-	if (message->to == CO_MODULE_LINUX) {
-		co_os_mutex_acquire(monitor->linux_message_queue_mutex);
-		rc = co_message_dup_to_queue(message, &monitor->linux_message_queue);
-		co_os_mutex_release(monitor->linux_message_queue_mutex);
-		co_os_wait_wakeup(monitor->idle_wait);
-	} else {
-		rc = CO_RC(ERROR);
-	}
-
-	return rc;
-}
-
 
 /*
  * iteration - returning PTRUE means that the driver will return 
@@ -521,7 +549,7 @@ static bool_t iteration(co_monitor_t *cmon)
 		co_monitor_arch_real_hardware_interrupt(cmon);
 	else
 		co_monitor_arch_enable_interrupts();
-
+	
 	switch (co_passage_page->operation) {
 	case CO_OPERATION_FREE_PAGES: {
 		co_free_pages(cmon, co_passage_page->params[0], co_passage_page->params[1]);
@@ -541,11 +569,9 @@ static bool_t iteration(co_monitor_t *cmon)
 
 		if (cmon->timer_interrupt) {
 			cmon->timer_interrupt = PFALSE;
-			/* Return to userspace once in a while */
-			return PFALSE;
+			return PTRUE;
 		}
-
-		return PTRUE;
+		return PFALSE;
 	}
 	case CO_OPERATION_TERMINATE: 
 		return co_terminate(cmon);
@@ -553,43 +579,31 @@ static bool_t iteration(co_monitor_t *cmon)
 	case CO_OPERATION_IDLE:
 		return co_idle(cmon);
 
+        case CO_OPERATION_DEBUG_LINE: {
+		char *p = (char *)&co_passage_page->params[0];
+		p[0x200] = '\0';
+		co_monitor_debug_line(cmon, p);
+                return PFALSE;
+        }
+
+        case CO_OPERATION_TRACE_POINT: {
+		return co_monitor_trace_point(cmon);
+        }
+
 	case CO_OPERATION_MESSAGE_TO_MONITOR: {
 		co_message_t *message;
+		co_rc_t rc;
 		
 		co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_MESSAGE_TO_MONITOR)\n");
 
 		message = (co_message_t *)cmon->io_buffer->buffer;
-		if (message  &&  message->to < CO_MONITOR_MODULES_COUNT)
-			incoming_message(cmon, message);
+		if (message && message->to < CO_MAX_MONITORS)
+			rc = co_message_switch_dup_message(&cmon->message_switch, message);
 
 		cmon->io_buffer->messages_waiting = 0;
 
 		return PTRUE;
 	}
-
-	case CO_OPERATION_PRINTK: {
-		unsigned long size = co_passage_page->params[0];
-		char *ptr = (char *)&co_passage_page->params[1];
-		co_message_t *co_message;
-
-		if (size > 200) 
-			size = 200; /* sanity, see co_terminal_printv */
-
-		co_message = co_os_malloc(1 + size + sizeof(*co_message));
-		if (co_message) {
-			co_message->from = CO_MODULE_LINUX;
-			co_message->to = CO_MODULE_PRINTK;
-			co_message->priority = CO_PRIORITY_DISCARDABLE;
-			co_message->type = CO_MESSAGE_TYPE_STRING;
-			co_message->size = size + 1; 
-			co_memcpy(co_message->data, ptr, size + 1);
-			incoming_message(cmon, co_message);
-			co_os_free(co_message);
-		}
-
-		return PTRUE;
-	}
-
 	case CO_OPERATION_DEVICE: {
 		unsigned long device = co_passage_page->params[0];
 		co_debug_lvl(context_switch, 14, "switching from linux (CO_OPERATION_DEVICE)\n");
@@ -605,10 +619,28 @@ static bool_t iteration(co_monitor_t *cmon)
 		co_os_get_timestamp_freq((co_timestamp_t *)&co_passage_page->params[2]);
 		return PTRUE;
 	}
+	case CO_OPERATION_PRINTK: {
+		unsigned long size = co_passage_page->params[0];
+		if (size > 200) 
+			size = 200; /* sanity, see co_terminal_printv */
 
-        case CO_OPERATION_DEBUG_LINE: 
-        case CO_OPERATION_TRACE_POINT: 
-                return PTRUE;
+		char *ptr = (char *)&co_passage_page->params[1];
+		co_message_t *co_message;
+
+		co_message = co_os_malloc(1 + size + sizeof(*co_message));
+		if (co_message) {
+			co_message->from = CO_MODULE_LINUX;
+			co_message->to = CO_MODULE_PRINTK;
+			co_message->priority = CO_PRIORITY_DISCARDABLE;
+			co_message->type = CO_MESSAGE_TYPE_STRING;
+			co_message->size = size + 1;
+			co_memcpy(co_message->data, ptr, size);
+			*(char *)(co_message->data + size) = 0;
+			co_message_switch_message(&cmon->message_switch, co_message);
+		}
+		return PTRUE;
+	}
+
 
 	default:
 		co_debug_lvl(context_switch, 5, "unknown operation %d not handled\n", co_passage_page->operation);
@@ -680,16 +712,11 @@ static void timer_callback(void *data)
         co_monitor_t *cmon = (co_monitor_t *)data;
 
         cmon->timer_interrupt = PTRUE;
-
-	co_os_wait_wakeup(cmon->idle_wait);
 }
 
 static void free_pseudo_physical_memory(co_monitor_t *monitor)
 {
 	int i, j;
-
-	if (!monitor->pp_pfns) 
-		return;
 
 	co_debug("freeing page frames for pseudo physical RAM\n");
 
@@ -725,8 +752,8 @@ static co_rc_t alloc_pp_ram_mapping(co_monitor_t *monitor)
 	co_memset(monitor->pp_pfns, 0, sizeof(co_pfn_t *)*PTRS_PER_PGD);
 
 	full_page_tables_size = CO_ARCH_PAGE_SIZE * (monitor->memory_size >> CO_ARCH_PMD_SHIFT);
-	partial_page_table_size = sizeof(unsigned long) *
-		((monitor->memory_size & ~CO_ARCH_PMD_MASK) >> (CO_ARCH_PAGE_SHIFT));
+	partial_page_table_size = sizeof(unsigned long) * 
+                                  ((monitor->memory_size & ~CO_ARCH_PMD_MASK) >> CO_ARCH_PAGE_SHIFT);
 
 	rc = co_monitor_scan_and_create_pfns(
 		monitor, 
@@ -768,10 +795,185 @@ static co_rc_t alloc_shared_page(co_monitor_t *cmon)
 
 static void free_shared_page(co_monitor_t *cmon)
 {
-	if (cmon->shared_user_address) {
-		co_os_userspace_unmap(cmon->shared_user_address, cmon->shared_handle, 1);
-	}
+	co_os_userspace_unmap(cmon->shared_user_address, cmon->shared_handle, 1);
 	co_os_free_pages(cmon->shared, 1);
+}
+
+co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *params, co_monitor_t **cmon_out)
+{
+	co_symbols_import_t *import = &params->import;
+	co_monitor_t *cmon;
+	co_rc_t rc = CO_RC_OK;
+
+	manager->monitors_count++;
+
+	cmon = co_os_malloc(sizeof(*cmon));
+	if (!cmon) {
+		rc = CO_RC(OUT_OF_MEMORY);
+		goto out;
+	}
+
+	co_memset(cmon, 0, sizeof(*cmon));
+	cmon->manager = manager;
+	cmon->state = CO_MONITOR_STATE_INITIALIZED;
+	cmon->console_state = CO_MONITOR_CONSOLE_STATE_DETACHED;
+	cmon->io_buffer = (co_io_buffer_t *)(co_os_malloc(CO_VPTR_IO_AREA_SIZE));
+	if (cmon->io_buffer == NULL)
+		goto out_free_monitor;
+	co_memset(cmon->io_buffer, 0, CO_VPTR_IO_AREA_SIZE);
+
+	rc = alloc_shared_page(cmon);
+	if (!CO_OK(rc))
+		goto out_free_buffer;
+
+	params->shared_user_address = cmon->shared_user_address;
+	co_message_switch_init(&cmon->message_switch, CO_MODULE_KERNEL_SWITCH);
+
+	rc = co_queue_init(&cmon->user_message_queue);
+	if (!CO_OK(rc))
+		goto out_free_shared_page;
+
+	rc = co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_PRINTK, &cmon->user_message_queue);
+	if (!CO_OK(rc))
+		goto out_free_user_message_queue;
+
+	rc = co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_DAEMON, &cmon->user_message_queue);
+	if (!CO_OK(rc))
+		goto out_free_user_message_queue;
+
+	rc = co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_IDLE, &cmon->user_message_queue);
+	if (!CO_OK(rc))
+		goto out_free_user_message_queue;
+
+	rc = co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_USER_SWITCH, &cmon->user_message_queue);
+	if (!CO_OK(rc))
+		goto out_free_user_message_queue;
+
+	rc = co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_CONSOLE, &cmon->user_message_queue);
+	if (!CO_OK(rc))
+		goto out_free_user_message_queue;
+
+	rc = co_queue_init(&cmon->linux_message_queue);
+	if (!CO_OK(rc))
+		goto out_free_user_message_queue;
+
+	rc = co_message_switch_set_rule_queue(&cmon->message_switch, CO_MODULE_LINUX, &cmon->linux_message_queue);
+	if (!CO_OK(rc))
+		goto out_free_user_message_queue;
+
+	rc = co_monitor_os_init(cmon);
+	if (!CO_OK(rc))
+		goto out_free_linux_message_queue;
+
+	cmon->core_vaddr = import->kernel_start;
+	cmon->core_pages = (import->kernel_end - import->kernel_start + CO_ARCH_PAGE_SIZE - 1) >> CO_ARCH_PAGE_SHIFT;
+	cmon->core_end = cmon->core_vaddr + (cmon->core_pages << CO_ARCH_PAGE_SHIFT);
+	cmon->import = params->import;
+	cmon->config = params->config;
+	cmon->info = params->info;
+	cmon->arch_info = params->arch_info;
+
+	if (cmon->config.ram_size == 0) {
+		/* Use default RAM sizes */
+	
+		/*
+		 * FIXME: Be careful with that. We don't want to exhaust the host OS's memory
+		 * pools because it can destablized it. 
+		 *
+		 * We need to find the minimum requirement for size of the coLinux RAM 
+		 * for achieving the best performance assuming that the host OS is 
+		 * caching away the coLinux swap device into the host system's other
+		 * RAM.
+		 */
+
+		if (cmon->manager->hostmem_amount >= 128*1024*1024) {
+			/* Use quarter */
+			cmon->memory_size = cmon->manager->hostmem_amount/(1024*1024*4);
+		} else {
+			cmon->memory_size = 16;
+		}
+	} else {
+		cmon->memory_size = cmon->config.ram_size;
+	}
+
+	co_debug("configured to %d MB\n", cmon->memory_size);
+
+	if (cmon->memory_size < 8)
+		cmon->memory_size = 8;
+	else if (cmon->memory_size > 1000)		/* 1000 = 1024 - 8*4 */
+		cmon->memory_size = 1000;		/* 24 MB = 8 Pages a 4 K reserved */
+
+	co_debug("after adjustments: %d MB\n", cmon->memory_size);
+
+	cmon->memory_size <<= 20; /* Megify */
+	
+	if (cmon->manager->hostmem_used + cmon->memory_size > cmon->manager->hostmem_usage_limit) {
+		rc = CO_RC(HOSTMEM_USE_LIMIT_REACHED);
+		params->actual_memsize_used = cmon->memory_size;
+		goto out_free_os_dep;
+	}
+
+	cmon->manager->hostmem_used += cmon->memory_size;
+
+	cmon->physical_frames = cmon->memory_size >> CO_ARCH_PAGE_SHIFT;
+	cmon->end_physical = CO_ARCH_KERNEL_OFFSET + cmon->memory_size;
+	cmon->passage_page_vaddr = CO_VPTR_PASSAGE_PAGE;
+
+	rc = alloc_pp_ram_mapping(cmon);
+        if (!CO_OK(rc)) {
+		goto out_revert_used_mem;
+	}
+
+        rc = co_os_timer_create(&timer_callback, cmon, 10, &cmon->timer);
+        if (!CO_OK(rc)) {
+                co_debug("creating host OS timer (%d)\n", rc);
+                goto out_free_pp;
+        }
+
+	rc = load_configuration(cmon);
+	if (!CO_OK(rc)) {
+		co_debug("loading monitor configuration (%d)\n", rc);
+		goto out_destroy_timer;
+	}
+
+	cmon->state = CO_MONITOR_STATE_INITIALIZED;
+
+	*cmon_out = cmon;
+
+	return CO_RC(OK);
+
+/* error path */
+out_destroy_timer:
+        co_os_timer_destroy(cmon->timer);
+
+out_free_pp:
+	free_pseudo_physical_memory(cmon);
+
+out_revert_used_mem:
+	cmon->manager->hostmem_used -= cmon->memory_size;
+
+out_free_os_dep:
+	co_monitor_os_exit(cmon);
+
+out_free_linux_message_queue:
+	co_queue_flush(&cmon->linux_message_queue);
+
+out_free_user_message_queue:
+	co_queue_flush(&cmon->user_message_queue);
+
+out_free_shared_page:
+	free_shared_page(cmon);
+	co_message_switch_free(&cmon->message_switch);
+
+out_free_buffer:
+	co_os_free(cmon->io_buffer);
+
+out_free_monitor:
+	co_os_free(cmon);
+
+out:
+	manager->monitors_count--;
+	return rc;
 }
 
 static co_rc_t load_section(co_monitor_t *cmon, co_monitor_ioctl_load_section_t *params)
@@ -827,6 +1029,40 @@ static co_rc_t load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_t *p
 	return rc;
 }
 
+co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
+{
+	co_manager_t *manager;
+	
+	co_debug("cleaning up\n");
+	co_debug("before free: %d blocks\n", cmon->blocks_allocated);
+
+	manager = cmon->manager;
+
+	if (cmon->state >= CO_MONITOR_STATE_RUNNING)
+                co_os_timer_deactivate(cmon->timer);
+
+	if (!user_context)
+		cmon->shared_user_address = NULL;
+
+	co_monitor_unregister_and_free_block_devices(cmon);
+	free_pseudo_physical_memory(cmon);
+	manager->hostmem_used -= cmon->memory_size;
+	co_os_free(cmon->io_buffer);
+	free_shared_page(cmon);
+	co_monitor_os_exit(cmon);
+	co_queue_flush(&cmon->linux_message_queue);
+	co_queue_flush(&cmon->user_message_queue);
+	co_message_switch_free(&cmon->message_switch);
+        co_os_timer_destroy(cmon->timer);
+
+	co_debug("after free: %d blocks\n", cmon->blocks_allocated);
+
+	co_os_free(cmon);
+
+	manager->monitors_count--;
+
+	return CO_RC_OK;
+}
 
 static co_rc_t start(co_monitor_t *cmon)
 {
@@ -857,7 +1093,7 @@ static co_rc_t start(co_monitor_t *cmon)
 	co_memcpy(&co_passage_page->params[10], cmon->config.boot_parameters_line, 
 	       sizeof(cmon->config.boot_parameters_line));
 
-	cmon->state = CO_MONITOR_STATE_STARTED;
+	cmon->state = CO_MONITOR_STATE_RUNNING;
 
 	return CO_RC(OK);
 }
@@ -867,432 +1103,66 @@ static co_rc_t run(co_monitor_t *cmon,
 		   unsigned long out_size,
 		   unsigned long *return_size)
 {
-	*return_size = sizeof(*params);
+	char *params_data;
+	int i;
+
+	co_debug_lvl(context_switch, 13, "running with %d messages\n", params->num_messages);
+
+	co_monitor_os_before_iterations(cmon);
+
+	/* Get messages from userspace */
+	params_data = params->data;
+
+	for (i=0; i < params->num_messages; i++) {
+		co_message_t *message = (typeof(message))params_data;
+
+		co_message_switch_dup_message(&cmon->message_switch, message);
+		
+		params_data += message->size + sizeof(*message);
+	}
 
 	if (cmon->state == CO_MONITOR_STATE_RUNNING) {
 		bool_t ret;
 		do {
 			ret = iteration(cmon);
 		} while (ret);
+	}
+
+	/* Flush messages to userspace */
+	*return_size = sizeof(*params);
+	params->num_messages = 0;
+
+	int num_messages = co_queue_size(&cmon->user_message_queue);
+
+	co_debug_lvl(context_switch, 13, "returns with %d messages\n", num_messages);
+
+	co_monitor_os_after_iterations(cmon);
+
+	if (num_messages == 0)
 		return CO_RC(OK);
-	} else if (cmon->state == CO_MONITOR_STATE_STARTED) {
-		cmon->state = CO_MONITOR_STATE_RUNNING;
-		iteration(cmon);
-		return CO_RC(OK);
-	}
-	
-	if (cmon->state == CO_MONITOR_STATE_TERMINATED)
-		return CO_RC(INSTANCE_TERMINATED);
 
-	return CO_RC(ERROR);
-}
+	*return_size = 0;
 
-
-co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *params, co_monitor_t **cmon_out)
-{
-	co_symbols_import_t *import = &params->import;
-	co_monitor_t *cmon;
-	co_rc_t rc = CO_RC_OK;
-
-	cmon = co_os_malloc(sizeof(*cmon));
-	if (!cmon) {
-		rc = CO_RC(OUT_OF_MEMORY);
-		goto out;
-	}
-
-	co_memset(cmon, 0, sizeof(*cmon));
-
-	cmon->manager = manager;
-	cmon->state = CO_MONITOR_STATE_EMPTY;
-	cmon->id = co_os_current_id();
-
-	rc = co_console_create(80, 25, 0, &cmon->console);
-	if (!CO_OK(rc))
-		goto out_free_monitor;
-	
-	rc = co_os_mutex_create(&cmon->connected_modules_write_lock);
-	if (!CO_OK(rc))
-		goto out_free_console;
-
-	rc = co_os_mutex_create(&cmon->linux_message_queue_mutex);
-	if (!CO_OK(rc))
-		goto out_free_mutex1;
-
-	rc = co_os_wait_create(&cmon->idle_wait);
-	if (!CO_OK(rc))
-		goto out_free_mutex2;
-
-	params->id = cmon->id;
-
-	cmon->io_buffer = (co_io_buffer_t *)(co_os_malloc(CO_VPTR_IO_AREA_SIZE));
-	if (cmon->io_buffer == NULL) {
-		rc = CO_RC(OUT_OF_MEMORY);
-		goto out_free_wait;
-	}
-	co_memset(cmon->io_buffer, 0, CO_VPTR_IO_AREA_SIZE);
-
-	rc = alloc_shared_page(cmon);
-	if (!CO_OK(rc))
-		goto out_free_buffer;
-
-	params->shared_user_address = cmon->shared_user_address;
-	rc = co_queue_init(&cmon->linux_message_queue);
-	if (!CO_OK(rc))
-		goto out_free_shared_page;
-
-	rc = co_monitor_os_init(cmon);
-	if (!CO_OK(rc))
-		goto out_free_linux_message_queue;
-
-	cmon->core_vaddr = import->kernel_start;
-	cmon->core_pages = (import->kernel_end - import->kernel_start + CO_ARCH_PAGE_SIZE - 1) >> CO_ARCH_PAGE_SHIFT;
-	cmon->core_end = cmon->core_vaddr + (cmon->core_pages << CO_ARCH_PAGE_SHIFT);
-	cmon->import = params->import;
-	cmon->config = params->config;
-	cmon->info = params->info;
-	cmon->arch_info = params->arch_info;
-
-	if (cmon->config.ram_size == 0) {
-		/* Use default RAM sizes */
-	
-		/*
-		 * FIXME: Be careful with that. We don't want to exhaust the host OS's memory
-		 * pools because it can destablized it. 
-		 *
-		 * We need to find the minimum requirement for size of the coLinux RAM 
-		 * for achieving the best performance assuming that the host OS is 
-		 * caching away the coLinux swap device into the host system's other
-		 * RAM.
-		 */
-
-		if (cmon->manager->hostmem_amount >= 128*1024*1024) {
-			/* Use quarter */
-			cmon->memory_size = cmon->manager->hostmem_amount/(1024*1024*4);
-		} else {
-			cmon->memory_size = 16;
-		}
-	} else {
-		cmon->memory_size = cmon->config.ram_size;
-	}
-
-	co_debug("configured to %d MB\n", cmon->memory_size);
-
-	if (cmon->memory_size < 8)
-		cmon->memory_size = 8;
-	else if (cmon->memory_size > 1000)	/* 1000 = 1024 - 8*4 */
-		cmon->memory_size = 1000;	/* 24MB = 8 Pages a 4K reserved */
-
-	co_debug("after adjustments: %d MB\n", cmon->memory_size);
-
-	cmon->memory_size <<= 20; /* Megify */
-	
-	if (cmon->manager->hostmem_used + cmon->memory_size > cmon->manager->hostmem_usage_limit) {
-		rc = CO_RC(HOSTMEM_USE_LIMIT_REACHED);
-		params->actual_memsize_used = cmon->memory_size;
-		goto out_free_os_dep;
-	}
-
-	cmon->manager->hostmem_used += cmon->memory_size;
-
-	cmon->physical_frames = cmon->memory_size >> CO_ARCH_PAGE_SHIFT;
-	cmon->end_physical = CO_ARCH_KERNEL_OFFSET + cmon->memory_size;
-	cmon->passage_page_vaddr = CO_VPTR_PASSAGE_PAGE;
-
-	rc = alloc_pp_ram_mapping(cmon);
-        if (!CO_OK(rc)) {
-		goto out_revert_used_mem;
-	}
-
-        rc = co_os_timer_create(&timer_callback, cmon, 10, &cmon->timer);
-        if (!CO_OK(rc)) {
-                co_debug("creating host OS timer (%d)\n", rc);
-                goto out_free_pp;
-        }
-
-	rc = load_configuration(cmon);
-	if (!CO_OK(rc)) {
-		co_debug("loading monitor configuration (%d)\n", rc);
-		goto out_destroy_timer;
-	}
-
-	co_os_mutex_acquire(manager->lock);
-	cmon->refcount = 1;
-	manager->monitors_count++;
-	cmon->listed_in_manager = PTRUE;
-	co_list_add_head(&cmon->node, &manager->monitors);
-	co_os_mutex_release(manager->lock);
-
-	cmon->state = CO_MONITOR_STATE_INITIALIZED;
-
-	*cmon_out = cmon;
-
-	return CO_RC(OK);
-
-/* error path */
-out_destroy_timer:
-        co_os_timer_destroy(cmon->timer);
-
-out_free_pp:
-	free_pseudo_physical_memory(cmon);
-
-out_revert_used_mem:
-	cmon->manager->hostmem_used -= cmon->memory_size;
-
-out_free_os_dep:
-	co_monitor_os_exit(cmon);
-
-out_free_linux_message_queue:
-	co_queue_flush(&cmon->linux_message_queue);
-
-out_free_shared_page:
-	free_shared_page(cmon);
-
-out_free_buffer:
-	co_os_free(cmon->io_buffer);
-
-out_free_wait:
-	co_os_wait_destroy(cmon->idle_wait);
-
-out_free_mutex2:
-	co_os_mutex_destroy(cmon->connected_modules_write_lock);
-
-out_free_mutex1:
-	co_os_mutex_destroy(cmon->linux_message_queue_mutex);
-
-out_free_console:
-	co_console_destroy(cmon->console);
-
-out_free_monitor:
-	co_os_free(cmon);
-
-out:
-	return rc;
-}
-
-
-static co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
-{
-	co_manager_t *manager;
-
-	manager = cmon->manager;
-
-	co_debug("cleaning up\n");
-	co_debug("before free: %d blocks\n", cmon->blocks_allocated);
-
-	if (cmon->state == CO_MONITOR_STATE_RUNNING ||
-	    cmon->state == CO_MONITOR_STATE_STARTED)
-	{
-                co_os_timer_deactivate(cmon->timer);
-	}
-
-	if (!user_context)
-		cmon->shared_user_address = NULL;
-
-	co_monitor_unregister_and_free_block_devices(cmon);
-	co_monitor_unregister_filesystems(cmon);
-	free_pseudo_physical_memory(cmon);
-	manager->hostmem_used -= cmon->memory_size;
-	co_os_free(cmon->io_buffer);
-	free_shared_page(cmon);
-	co_monitor_os_exit(cmon);
-	co_queue_flush(&cmon->linux_message_queue);
-        co_os_timer_destroy(cmon->timer);
-	co_os_mutex_destroy(cmon->connected_modules_write_lock);
-	co_os_mutex_destroy(cmon->linux_message_queue_mutex);
-	co_console_destroy(cmon->console);
-	cmon->console = NULL;
-
-	co_debug("after free: %d blocks\n", cmon->blocks_allocated);
-	co_os_free(cmon);
-
-	return CO_RC_OK;
-}
-
-static void send_monitor_end_messages(co_monitor_t *cmon)
-{
-	co_manager_open_desc_t opened;
-	int i;
-	
-	co_os_mutex_acquire(cmon->connected_modules_write_lock);
-	for (i = 0; i <  CO_MONITOR_MODULES_COUNT; i++) {
-		opened = cmon->connected_modules[i];
-		if (!opened)
-			continue;
-
-		co_manager_send_eof(cmon->manager, opened);
-		cmon->connected_modules[i] = NULL;
-		co_manager_close(cmon->manager, opened);
-	}
-	co_os_mutex_release(cmon->connected_modules_write_lock);
-}
-
-co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monitor_owner)
-{
-	co_manager_t *manager;
-	int new_count;
-	bool_t destroy = PFALSE;
-	bool_t end_messages = PFALSE;
-
-	manager = cmon->manager;
-
-	co_os_mutex_acquire(manager->lock);
-	new_count = cmon->refcount;
-	if (new_count > 0) {
-		cmon->refcount--;
-
-		if (monitor_owner  &&  cmon->listed_in_manager) {
-			cmon->listed_in_manager = PFALSE;
-			manager->monitors_count--;
-			co_list_del(&cmon->node);
-		}
-
-		if (monitor_owner)
-			end_messages = PTRUE;
-
-		if (cmon->refcount == 0) {
-			destroy = PTRUE;
-		}
-	}
-	co_os_mutex_release(manager->lock);
-
-	if (end_messages)
-		send_monitor_end_messages(cmon);
-
-	if (destroy) {
-		return co_monitor_destroy(cmon, monitor_owner);
-	}
-
-	return CO_RC(OK);
-}
-
-static co_rc_t co_monitor_user_reset(co_monitor_t *monitor)
-{
-	co_rc_t rc;
-
-	monitor->state = CO_MONITOR_STATE_EMPTY;
-
-	co_os_mutex_acquire(monitor->linux_message_queue_mutex);
-	co_queue_flush(&monitor->linux_message_queue);
-	co_os_mutex_release(monitor->linux_message_queue_mutex);
-
-	free_pseudo_physical_memory(monitor);
-	rc = alloc_pp_ram_mapping(monitor);
-	if (!CO_OK(rc))
-		goto out;
-
-	co_monitor_unregister_and_free_block_devices(monitor);
-	co_monitor_unregister_filesystems(monitor);
-
-	rc = load_configuration(monitor);
-	if (!CO_OK(rc)) {
-		free_pseudo_physical_memory(monitor);
-		goto out; 
-	}
-
-	co_os_mutex_acquire(monitor->manager->lock);
-	if (!monitor->listed_in_manager) {
-		monitor->listed_in_manager = PTRUE;
-		co_list_add_head(&monitor->node, &monitor->manager->monitors);
-	}
-	co_os_mutex_release(monitor->manager->lock);
-
-	co_memset(monitor->io_buffer, 0, CO_VPTR_IO_AREA_SIZE);
-
-	monitor->state = CO_MONITOR_STATE_INITIALIZED;
-	monitor->termination_reason = CO_TERMINATE_END;
-
-out:	
-	return rc;
-}
-
-static co_rc_t co_monitor_user_get_state(co_monitor_t *monitor, co_monitor_ioctl_get_state_t *params)
-{
-	params->monitor_state = monitor->state;
-	params->termination_reason = monitor->termination_reason;
-	params->bug_info = monitor->bug_info;
-
-	return CO_RC(OK);
-}
-
-static co_rc_t co_monitor_user_get_console(co_monitor_t *monitor, co_monitor_ioctl_get_console_t *params)
-{
-	co_message_t *co_message = NULL;
-	co_console_message_t *message = NULL;
-	unsigned long size;
-	int y;
-
-	message = NULL;
-	size = (((char *)(&message->putcs + 1)) - ((char *)message)) + 
-		(monitor->console->x * sizeof(co_console_cell_t));
-
-	params->x = monitor->console->x;
-	params->y = monitor->console->y;
-							  
-	co_message = co_os_malloc(size + sizeof(*co_message));
-	if (!co_message)
-		return CO_RC(OUT_OF_MEMORY);
-
-	message = (co_console_message_t *)co_message->data;
-	co_message->from = CO_MODULE_LINUX;
-	co_message->to = CO_MODULE_CONSOLE;
-	co_message->priority = CO_PRIORITY_DISCARDABLE;
-	co_message->type = CO_MESSAGE_TYPE_STRING;
-	co_message->size = size; 
-	message->type = CO_OPERATION_CONSOLE_PUTCS;
-	message->putcs.x = 0;
-	message->putcs.count = monitor->console->x;
-
-	for (y=0; y < monitor->console->y; y++) {
-		co_memcpy(&message->putcs.data, 
-			  &monitor->console->screen[y*monitor->console->x], 
-			  monitor->console->x * sizeof(unsigned short));
-		message->putcs.y = y;
-		incoming_message(monitor, co_message);
-	}
-
-	co_os_free(co_message);
+	co_message_write_queue(&cmon->user_message_queue, params->data, 
+			       out_size - sizeof(*params), &params->num_messages,
+			       return_size);
+		
+	*return_size += sizeof(*params);
 
 	return CO_RC(OK);
 }
 
 co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buffer,
 			 unsigned long in_size, unsigned long out_size, 
-			 unsigned long *return_size, co_manager_open_desc_t opened_manager)
+			 unsigned long *return_size, co_manager_per_fd_state_t *fd_state)
 {
 	co_rc_t rc = CO_RC_ERROR;
 
 	switch (io_buffer->op) {
-	case CO_MONITOR_IOCTL_CLOSE: {
-		co_monitor_refdown(cmon, PTRUE, opened_manager->monitor_owner);
-		opened_manager->monitor = NULL;
+	case CO_MONITOR_IOCTL_DESTROY: {
+		fd_state->monitor = NULL;
+		co_monitor_destroy(cmon, PTRUE);
 		return CO_RC_OK;
-	}
-	case CO_MONITOR_IOCTL_GET_CONSOLE: {
-		co_monitor_ioctl_get_console_t *params;
-
-		*return_size = sizeof(*params);
-		params = (typeof(params))(io_buffer);
-
-		return co_monitor_user_get_console(cmon, params);
-	}
-	default:
-		break;
-	}
-
-	if (!opened_manager->monitor_owner)
-		return rc;
-
-	switch (io_buffer->op) {
-	case CO_MONITOR_IOCTL_GET_STATE: {
-		co_monitor_ioctl_get_state_t *params;
-
-		*return_size = sizeof(*params);
-		params = (typeof(params))(io_buffer);
-
-		return co_monitor_user_get_state(cmon, params);
-	}
-	case CO_MONITOR_IOCTL_RESET: {
-		return co_monitor_user_reset(cmon);
 	}
 	case CO_MONITOR_IOCTL_LOAD_SECTION: {
 		return load_section(cmon, (co_monitor_ioctl_load_section_t *)io_buffer);
@@ -1312,3 +1182,4 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 
 	return rc;
 }
+

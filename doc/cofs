@@ -15,7 +15,7 @@ host OS directories inside Linux.
   virtually the same for all files and directories. Creation of special 
   files like symlinks, device nodes, and pipes are not supported.
 
-* UNIX meta data mode (not supported)
+* UNIX meta data mode
 
   Future versions of cofs support will introduce the UNIX meta data
   mode, which is similiar to hostfs. It will allow to have a true
@@ -77,14 +77,11 @@ or in the XML config file:
       Mount c:\ as /mnt/windows and give dax full access to all the
       files and directories.
 
+    mount -t cofs cofs0:Share -o uid=dax,gid=dax,dmask=0700,fmask=0700 /mnt/windows
+
+      Mount c:\Share as /mnt/windows and give dax exclusive full 
+      access to all the files and directories.
+
     An example fstab entry:
 
       cofs0:Share      /mnt/windows            cofs    defaults          0 0
-
-* Cofs31, initrd and vmlinux-modules.tar.gz:
-
-  While using initrd, cofs 31 is automatic added for the path of file
-  initrd.gz to locate the file vmlinux-modules.tar.gz in same directory.
-  User can overwrite cofs31, then initrd would not work and don't install
-  modules.
-

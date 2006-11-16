@@ -17,7 +17,6 @@ typedef void (*co_terminal_print_hook_func_t)(char *str);
 
 typedef enum {
 	CO_TERM_COLOR_YELLOW = 1,
-	CO_TERM_COLOR_WHITE = 2,
 } co_terminal_color_t;
 
 extern void co_terminal_print(const char *format, ...);

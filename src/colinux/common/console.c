@@ -36,7 +36,7 @@ co_rc_t co_console_create(long x, long y, long max_blacklog, co_console_t **cons
 
 	console = (typeof(console))(co_os_malloc(struct_size));
 	if (console == NULL)
-		return CO_RC(OUT_OF_MEMORY);
+		return CO_RC(ERROR);
 
 	memset(console, 0, struct_size);
 
