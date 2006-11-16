@@ -34,6 +34,7 @@ typedef struct co_win32_overlapped {
 	OVERLAPPED write_overlapped;
 	char buffer[0x10000];
 	unsigned long size;
+	unsigned long offset;
 } co_win32_overlapped_t;
 
 typedef struct start_parameters {
@@ -79,25 +80,31 @@ co_rc_t co_win32_overlapped_read_received(co_win32_overlapped_t *overlapped)
 		/* Received packet from daemon */
 		co_message_t *message;
 		char * buffer = overlapped->buffer;
-		long size_left = overlapped->size;
-		unsigned long message_size;
+		long size_left = overlapped->size + overlapped->offset;
 
-		do {
+		while (size_left > 0) {
 			message = (co_message_t *)buffer;
-			message_size = message->size + sizeof (co_message_t);
-			buffer += message_size;
-			size_left -= message_size;
 
-			/* Check buffer overrun */
-			if (size_left < 0) {
-				co_debug("Error: Message incomplete (%ld)\n", size_left);
-				return CO_RC(ERROR);
+			// Do not dereference message->size unless we have a complete header
+			if ( (size_left < sizeof (co_message_t)) ||
+			     (size_left < (message->size + sizeof (co_message_t))) ) {
+				// Copy partial message down to bottom of buffer and
+				// adjust offset so the next read splices the new data
+				// after the old data
+				memcpy(overlapped->buffer, buffer, size_left);
+				overlapped->offset = size_left;
+				co_debug("Preserving 0x%x trailing bytes\n", size_left);
+				return CO_RC(OK);
 			}
 
+			/* Send packet using serial deamon. */
 			co_win32_overlapped_write_async(&stdio_overlapped, message->data, message->size);
 
+			buffer    += message->size + sizeof (co_message_t);
+			size_left -= message->size + sizeof (co_message_t);
 		} while (size_left > 0);
 
+		overlapped->offset = 0;
 	} else {
 		/* Received packet from standard input */
 		struct {
@@ -129,8 +136,8 @@ co_rc_t co_win32_overlapped_read_async(co_win32_overlapped_t *overlapped)
 
 	while (TRUE) {
 		result = ReadFile(overlapped->read_handle,
-				  &overlapped->buffer,
-				  sizeof(overlapped->buffer),
+				  overlapped->buffer + overlapped->offset,
+				  sizeof(overlapped->buffer) - overlapped->offset,
 				  &overlapped->size,
 				  &overlapped->read_overlapped);
 
@@ -183,6 +190,7 @@ void co_win32_overlapped_init(co_win32_overlapped_t *overlapped, HANDLE read_han
 	overlapped->write_handle = write_handle;
 	overlapped->read_event = CreateEvent(NULL, FALSE, FALSE, NULL);
 	overlapped->write_event = CreateEvent(NULL, FALSE, FALSE, NULL);
+	overlapped->offset = 0;
 
 	overlapped->read_overlapped.Offset = 0; 
 	overlapped->read_overlapped.OffsetHigh = 0; 
