@@ -39,10 +39,6 @@ host OS directories inside Linux.
 
   XX is a number between 0 and 31.
 
-or in the XML config file:
-
-   <cofs_device index="0" type="<flat | meta>" path="\DosDevices\<path>" enabled="true" />
-
 * mount syntax:
 
     mount -t cofs (cofs)XX(:path) (-o options) /mnt/point
@@ -76,6 +72,11 @@ or in the XML config file:
 
       Mount c:\ as /mnt/windows and give dax full access to all the
       files and directories.
+
+    mount -t cofs cofs0:Share -o uid=dax,gid=dax,dmask=0700,fmask=0700 /mnt/windows
+
+      Mount c:\Share as /mnt/windows and give dax exclusive full 
+      access to all the files and directories.
 
     An example fstab entry:
 

@@ -54,8 +54,6 @@
 
  * Miscellaneous enhancements and fixes:
    * Lack of entropy - empty /dev/random
-   * Lack of /dev/rtc - compiles and loads but doesn't work (ie 
-incorrect clock information).
    * Make coLinux work on Windows NT 4 SP*.
    * Address all reported SMP issues.
    * The first search path for files specified in the XML, such as in 
