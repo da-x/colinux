@@ -60,16 +60,16 @@ static void co_debug_download(void)
 				rc = co_manager_debug_reader(handle, &debug_reader);
 				if (!CO_OK(rc)) {
 					fprintf(stderr, "log ended: %x\n", (int)rc);
-					return;
+					break;
 				}
 
 				fwrite(buffer, 1, debug_reader.filled, output_file);
 			}
+			co_os_free(buffer);
 		}
-		co_os_free(buffer);
+		co_os_manager_close(handle);
 	}
 
-	co_os_manager_close(handle);
 }
 
 static void co_debug_download_to_network(void)
@@ -86,17 +86,12 @@ static void co_debug_download_to_network(void)
 		return;
 
 	handle = co_os_manager_open();
-	if (!handle) {
-		co_udp_socket_close(sock);
-		return;
-	}
+	if (!handle)
+		goto error_out1;
 
 	char *buffer = (char *)co_os_malloc(BUFFER_SIZE);
-	if (!buffer) {
-		co_udp_socket_close(sock);
-		co_os_manager_close(handle);
-		return;
-	}
+	if (!buffer)
+		goto error_out2;
 
 	co_manager_ioctl_debug_reader_t debug_reader;
 	debug_reader.user_buffer = buffer;
@@ -106,7 +101,7 @@ static void co_debug_download_to_network(void)
 		rc = co_manager_debug_reader(handle, &debug_reader);
 		if (!CO_OK(rc)) {
 			fprintf(stderr, "log ended: %x\n", (int)rc);
-			return;
+			break;
 		}
 			
 		co_debug_tlv_t *tlv;
@@ -116,7 +111,7 @@ static void co_debug_download_to_network(void)
 		while (size > 0) {
 			tlv = (co_debug_tlv_t *)block;
 			if (size < sizeof(*tlv))
-				return;
+				goto error_out3;
 				
 			co_udp_socket_send(sock, (char *)tlv, tlv->length + sizeof(*tlv));
 					
@@ -124,8 +119,11 @@ static void co_debug_download_to_network(void)
 			size -= sizeof(*tlv) + tlv->length;
 		}
 	}
+error_out3:
 	co_os_free(buffer);
+error_out2:
 	co_os_manager_close(handle);
+error_out1:
 	co_udp_socket_close(sock);
 }
 
@@ -316,8 +314,8 @@ void co_debug_download_and_parse(void)
 				if (output_file != stdout)
 					fflush (output_file);
 			}
+			co_os_free(buffer);
 		}
-		co_os_free(buffer);
 		co_os_manager_close(handle);
 	}
 
@@ -457,7 +455,7 @@ static void syntax(void)
 	printf("\n");
 }
 
-int co_debug_main(int argc, char *argv[])
+co_rc_t co_debug_main(int argc, char *argv[])
 {
 	co_command_line_params_t cmdline;
 	co_rc_t rc;
@@ -512,5 +510,5 @@ int co_debug_main(int argc, char *argv[])
 	if (output_file != stdout) 
 		fclose(output_file);
 
-	return 0;
+	return CO_RC(OK);	
 }

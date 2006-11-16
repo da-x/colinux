@@ -2,7 +2,7 @@
 ;Written by NEBOR Regis
 ;Modified by Dan Aloni (c) 2004
 ;Modified 8/20/2004,2/4/2004 by George P Boutwell
-;Modified 1/11/2006 by Henry Nestler
+;Modified 7/10/2006 by Henry Nestler
 
 ;-------------------------------------
 ;Good look
@@ -122,8 +122,9 @@ FunctionEnd
 ;------------------------------------------------------------------------
 ;Installer Sections
 
+SectionGroup "coLinux" SecGrpcoLinux
 
-Section "coLinux" SeccoLinux
+Section
 
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayName" "coLinux ${VERSION}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "UninstallString" '"$INSTDIR\Uninstall.exe"'
@@ -138,29 +139,21 @@ Section "coLinux" SeccoLinux
   ; the uninstall section
 
   SetOutPath "$INSTDIR"
-  File "${DISTDIR}\colinux-console-fltk.exe"
-  File "${DISTDIR}\colinux-console-nt.exe"
-  File "${DISTDIR}\colinux-net-daemon.exe"
-  File "${DISTDIR}\colinux-slirp-net-daemon.exe"
-  File "${DISTDIR}\colinux-debug-daemon.exe"
-  File "${DISTDIR}\colinux-daemon.exe"
-  File "${DISTDIR}\README.txt"
-  File "${DISTDIR}\news.txt"
-  File "${DISTDIR}\cofs.txt"
-  File "${DISTDIR}\colinux-daemon.txt"
-  
-  ;Enable when working correctly
-  ;File "${DISTDIR}\colinux-serial-daemon.exe"
-  File "${DISTDIR}\linux.sys"
-  File "${DISTDIR}\vmlinux"
-  File /oname=vmlinux-modules.tar.gz "${DISTDIR}\modules-${KERNEL_VERSION}-co-${PRE_VERSION}.tar.gz"
+  File "premaid\coLinux-daemon.exe"
+  File "premaid\linux.sys"
+  File "premaid\README.txt"
+  File "premaid\news.txt"
+  File "premaid\cofs.txt"
+  File "premaid\colinux-daemon.txt"
+  File "premaid\vmlinux"
+  File "premaid\vmlinux-modules.tar.gz"
   ; initrd replaces vmlinux-modules.tar.gz as preferred way to ship modules.
   File "premaid\initrd.gz"
 
   ;Backup config file if present
   IfFileExists "$INSTDIR\default.colinux.xml" 0 +1
-  CopyFiles /SILENT "$INSTDIR\default.colinux.xml" "$INSTDIR\default.colinux.xml.old"
-  File "${DISTDIR}\default.colinux.xml"
+    CopyFiles /SILENT "$INSTDIR\example.conf" "$INSTDIR\example.conf.old"
+  File "premaid\example.conf"
 
   ; Remove kludge from older installations	
   Delete "$INSTDIR\packet.dll"
@@ -177,6 +170,36 @@ Section "coLinux" SeccoLinux
 
 SectionEnd
 
+Section "Native Windows Linux Console" SecNTConsole
+
+  ;---------------------------------------------------------------FILES--
+  ;----------------------------------------------------------------------
+  ; Our Files . If you adds something here, Remember to delete it in 
+  ; the uninstall section
+
+  SetOutPath "$INSTDIR"
+  File "premaid\coLinux-console-nt.exe"
+
+  ;--------------------------------------------------------------/FILES--
+  ;----------------------------------------------------------------------
+
+SectionEnd
+
+Section "Cross-platform Linux Console" SecFLTKConsole
+
+  ;---------------------------------------------------------------FILES--
+  ;----------------------------------------------------------------------
+  ; Our Files . If you adds something here, Remember to delete it in 
+  ; the uninstall section
+
+  SetOutPath "$INSTDIR"
+  File "premaid\coLinux-console-fltk.exe"
+
+  ;--------------------------------------------------------------/FILES--
+  ;----------------------------------------------------------------------
+
+SectionEnd
+
 Section "coLinux Virtual Ethernet Driver (TAP-Win32)" SeccoLinuxNet
 
   ;---------------------------------------------------------------FILES--
@@ -188,6 +211,25 @@ Section "coLinux Virtual Ethernet Driver (TAP-Win32)" SeccoLinuxNet
   File "premaid\netdriver\OemWin2k.inf"
   File "premaid\netdriver\tap0801co.sys"
   File "premaid\netdriver\tapcontrol.exe"
+
+  SetOutPath "$INSTDIR"
+  File "premaid\coLinux-net-daemon.exe"
+
+  ;--------------------------------------------------------------/FILES--
+  ;----------------------------------------------------------------------
+
+
+SectionEnd
+
+Section "coLinux Virtual Network Daemon (SLiRP)" SeccoLinuxNetSLiRP
+
+  ;---------------------------------------------------------------FILES--
+  ;----------------------------------------------------------------------
+  ; Our Files . If you adds something here, Remember to delete it in 
+  ; the uninstall section
+
+  SetOutPath "$INSTDIR"
+  File "premaid\coLinux-slirp-net-daemon.exe"
 
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
@@ -203,12 +245,47 @@ Section "coLinux Bridged Ethernet (WinPcap)" SeccoLinuxBridgedNet
   ; the uninstall section
 
   SetOutPath "$INSTDIR"
-  File "${DISTDIR}\coLinux-bridged-net-daemon.exe"
+  File "premaid\coLinux-bridged-net-daemon.exe"
 
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
 
 SectionEnd
+
+Section "coLinux Virtual Serial Device" SeccoLinuxSerial
+
+  ;---------------------------------------------------------------FILES--
+  ;----------------------------------------------------------------------
+  ; Our Files . If you adds something here, Remember to delete it in 
+  ; the uninstall section
+
+  SetOutPath "$INSTDIR"
+  File "premaid\coLinux-serial-daemon.exe"
+  
+  ;--------------------------------------------------------------/FILES--
+  ;----------------------------------------------------------------------
+
+
+SectionEnd
+
+Section "coLinux Debugging" SeccoLinuxDebug
+
+  ;---------------------------------------------------------------FILES--
+  ;----------------------------------------------------------------------
+  ; Our Files . If you adds something here, Remember to delete it in 
+  ; the uninstall section
+
+  SetOutPath "$INSTDIR"
+  File "premaid\coLinux-debug-daemon.exe"
+  ;File /oname=debugging.txt  "..\..\..\..\..\..\doc\debugging"
+  
+  ;--------------------------------------------------------------/FILES--
+  ;----------------------------------------------------------------------
+
+
+SectionEnd
+
+SectionGroupEnd
 
 Section "Root Filesystem image Download" SeccoLinuxImage
 
@@ -382,15 +459,25 @@ SectionEnd
 ;--------------------------------
 ;Descriptions
 
-  LangString DESC_SeccoLinux ${LANG_ENGLISH} "Install coLinux"
+  LangString DESC_SecGrpcoLinux ${LANG_ENGLISH} "Install coLinux"
+  LangString DESC_SecNTConsole ${LANG_ENGLISH} "Install native Windows (NT) coLinux console, which allows to view Linux console in an NT DOS Command-line console"
+  LangString DESC_SecFLTKConsole ${LANG_ENGLISH} "Install cross-platform coLinux console, which allows to view Linux console and manage coLinux from a cross-platform GUI program"
   LangString DESC_SeccoLinuxNet ${LANG_ENGLISH} "Install coLinux Virtual Ethernet Driver, which allows to create a network link between Linux and Windows"
+  LangString DESC_SeccoLinuxNetSLiRP ${LANG_ENGLISH} "Install coLinux Virtual Ethernet Driver, which allows to create a network link between Linux and Windows"
   LangString DESC_SeccoLinuxBridgedNet ${LANG_ENGLISH} "Install coLinux Bridge Ethernet support, which allows to join the coLinux machine to an existing network"
+  LangString DESC_SeccoLinuxSerial ${LANG_ENGLISH} "Install coLinux Virtual Serail Driver, which allows to use serial Devices between Linux and Windows"
+  LangString DESC_SeccoLinuxDebug ${LANG_ENGLISH} "Install coLinux Debugging, which allows to create extensive debug log for troubleshooting problems"
   LangString DESC_SecImage ${LANG_ENGLISH} "Download an image from sourceforge. Also provide useful links on how to use it"
 
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
-    !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinux} $(DESC_SeccoLinux)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecGrpcoLinux} $(DESC_SecGrpcoLinux)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecNTConsole} $(DESC_SecNTConsole)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecFLTKConsole} $(DESC_SecFLTKConsole)
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxNet} $(DESC_SeccoLinuxNet)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxNetSLiRP} $(DESC_SeccoLinuxNetSLiRP)
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxBridgedNet} $(DESC_SeccoLinuxBridgedNet)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxSerial} $(DESC_SeccoLinuxSerial)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxDebug} $(DESC_SeccoLinuxDebug)
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxImage} $(DESC_SecImage)  
   !insertmacro MUI_FUNCTION_DESCRIPTION_END
 
@@ -427,11 +514,11 @@ Section "Uninstall"
   Delete "$INSTDIR\vmlinux"
   Delete "$INSTDIR\initrd.gz"
   Delete "$INSTDIR\vmlinux-modules.tar.gz"
-  Delete "$INSTDIR\default.coLinux.xml"
   Delete "$INSTDIR\README.txt"
   Delete "$INSTDIR\news.txt"
   Delete "$INSTDIR\cofs.txt"
   Delete "$INSTDIR\colinux-daemon.txt"
+  Delete "$INSTDIR\example.conf"
 
   Delete "$INSTDIR\netdriver\OemWin2k.inf"
   Delete "$INSTDIR\netdriver\tap0801co.sys"

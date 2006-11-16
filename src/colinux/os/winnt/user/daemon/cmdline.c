@@ -67,7 +67,7 @@ co_rc_t co_winnt_daemon_parse_args(co_command_line_params_t cmdline, co_winnt_pa
 	rc = co_cmdline_params_one_optional_arugment_parameter(
 		cmdline, "--run-service", 
 		&winnt_parameters->run_service,
-		winnt_parameters->service_name,
+		winnt_parameters->service_name,  /* service name is obsolate at running time */
 		sizeof(winnt_parameters->service_name));
 
 	if (!CO_OK(rc)) 

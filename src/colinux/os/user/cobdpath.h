@@ -14,5 +14,6 @@
 #include <colinux/common/config.h>
 
 extern co_rc_t co_canonize_cobd_path(co_pathname_t *pathname);
+extern co_rc_t co_dirname (char *path);
 
 #endif

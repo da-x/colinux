@@ -1,7 +1,7 @@
 /*
  * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@colinux.org>, 2003 (c)
+ * Dan Aloni <da-x@colinux.org>, 2005 (c)
  * Ballard, Jonathan H.  <californiakidd@users.sourceforge.net>, 2004 (c)
  *
  * The code is licensed under the GPL. See the COPYING file at
@@ -16,8 +16,8 @@ extern "C" {
 #include <colinux/user/monitor.h>
 #include <colinux/user/manager.h>
 #include <colinux/common/console.h>
+#include <colinux/user/reactor.h>
 #include <colinux/os/user/daemon.h>
-#include "daemon.h"
 }
 
 #include "widget.h"
@@ -26,51 +26,40 @@ typedef struct co_console_start_parameters {
 	co_id_t attach_id;
 } co_console_start_parameters_t;
 
-typedef enum {
-	CO_CONSOLE_STATE_OFFLINE,
-	CO_CONSOLE_STATE_ONLINE,
-	CO_CONSOLE_STATE_DETACHED,
-	CO_CONSOLE_STATE_ATTACHED,
-} co_console_state_t;
-
 class console_window_t {
-      public:
+public:
 	console_window_t();
-	~console_window_t();
+	virtual ~console_window_t();
 
 	co_rc_t parse_args(int argc, char **argv);
 	co_rc_t start();
 	co_rc_t send_ctrl_alt_del();
 
 	co_rc_t attach();
-	co_rc_t attach_anyhow(const co_id_t id);
 	co_rc_t detach();
 
-	void event(co_message_t & message);
+	void event(co_message_t *message);
 
 	void handle_scancode(const co_scan_code_t sc) const;
+	co_rc_t send_ctrl_alt_del();
+	void syntax();
+
+	virtual const char *get_name();
 
 	void log(const char *format, ...) const;
+	bool_t is_attached() { return attached ; };
 
 	co_rc_t loop();
 
-	bool online() {
-		return state != CO_CONSOLE_STATE_OFFLINE;
-	}
-	co_rc_t online(const bool);
-
-      protected:
+protected:
 	co_console_start_parameters_t start_parameters;
-	co_console_state_t state;
 	console_widget_t *widget;
-	co_id_t attached_id;
-	co_daemon_handle_t daemon_handle;
+	co_id_t instance_id;
+	co_reactor_t reactor;
+	co_user_monitor_t *message_monitor;
+	bool_t attached;
 
-	co_rc_t attached();
-      public:
-	co_daemon_handle_t daemonHandle() {
-		return daemon_handle;
-	}
+	static co_rc_t message_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size);
 };
 
 #endif

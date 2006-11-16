@@ -13,7 +13,9 @@
 
 #include <linux/proc_fs.h>
 #include <colinux/os/alloc.h>
+#include <colinux/common/messages.h>
 #include <colinux/kernel/manager.h>
+#include <colinux/kernel/monitor.h>
 
 struct co_osdep_manager {
 	struct proc_dir_entry *proc_root;
@@ -21,5 +23,9 @@ struct co_osdep_manager {
 };
 
 extern co_manager_t *global_manager;
+
+struct co_manager_open_desc_os {
+        wait_queue_head_t waitq;
+};
 
 #endif

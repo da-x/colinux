@@ -81,7 +81,7 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned long index,
 		break;
 	}
 	case CO_BLOCK_GET_ALIAS: {
-		co_debug("cobd%d: %x, %d\n", index, dev, dev->conf);
+		co_debug("cobd%d: %x, %x\n", index, dev, dev->conf);
 		if (!dev->conf || !dev->conf->enabled || !dev->conf->alias_used)
 			return CO_RC(ERROR);
 		dev->conf->alias[sizeof(dev->conf->alias)-1] = '\0';

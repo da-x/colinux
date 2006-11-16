@@ -13,6 +13,7 @@
 
 #include <windows.h>
 #include <winsvc.h>
+#include <shlwapi.h>
 
 #include <colinux/user/daemon.h>
 #include <colinux/user/manager.h>
@@ -32,6 +33,8 @@
  */
 
 #define CO_DRIVER_DEPENDENCY_NAME CO_DRIVER_NAME "\0\0"
+
+#define MAX_CMD_LINE_PATCHED 1024
 
 /*
  *  ChangeServiceConfig2 is only supported on Windows 2000
@@ -70,29 +73,108 @@ void co_winnt_set_service_restart_options(SC_HANDLE schService)
 	}
 }
 
-co_rc_t co_winnt_daemon_install_as_service(const char *service_name, co_start_parameters_t *start_parameters) 
+static char * co_winnt_get_path_from_exe(void)
+{
+	static char exe_name[512];
+
+	if (!GetModuleFileName(0, exe_name, sizeof(exe_name))) {
+		co_debug("daemon: cannot determine exe name.\n");
+		return NULL;
+	}
+
+	if (!PathRemoveFileSpec(exe_name)) {
+		co_debug("daemon: cannot get path from exe name.\n");
+		return NULL;
+	}
+
+	return exe_name;
+}
+
+void co_winnt_change_directory_for_service(int argc, char **argv)
+{
+	char *p;
+	static const char run_service []= { "--run-service" };
+	
+	while (*argv && argc--) {
+		p = *argv++;
+		if (0 == strncmp(p, run_service, sizeof(run_service)-1)) {
+			p += sizeof(run_service)-1;
+
+			/* With path? */
+			if (*p == ':') {
+				/* remove the ':', let p point to path */
+				*p++ = '\0';
+			} else {
+				p = co_winnt_get_path_from_exe();
+			}
+
+			co_debug("cd '%s'\n", p);
+			if (SetCurrentDirectory(p) == 0)
+				co_terminal_print_last_error("daemon: Set working directory for service failed.\n");
+
+			return;
+		}
+	}
+}
+
+static void patch_command_line_for_service(char *destbuf, const char *srcbuf)
+{
+	char lastchar = 0;
+	char *destmax = destbuf + MAX_CMD_LINE_PATCHED;
+
+	while (*srcbuf && destbuf < destmax)
+	{
+		if (0 == strncmp(srcbuf, "--install-service", 17))
+		{
+			/* replace any instance of --install-service with --run-service */
+			srcbuf += 17;
+			strcpy(destbuf, "--run-service:");
+			destbuf = destbuf + strlen(destbuf);
+
+			/* Add current working directory for service run later */
+			GetCurrentDirectory(destmax-destbuf, destbuf);
+
+			if (0 == strcasecmp(destbuf, co_winnt_get_path_from_exe())) {
+				/* CWD is the path of exe. No need extra path. */
+				destbuf--;
+			} else {
+				destbuf = destbuf + strlen(destbuf);
+			}
+
+			continue;
+		}
+
+		*destbuf++ = lastchar = *srcbuf++;
+	}
+	*destbuf = 0;
+}
+
+co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char *original_commandline) 
 {
 	SC_HANDLE schService;
 	SC_HANDLE schSCManager;
 	char exe_name[512];
 	char command[1024];
+	char patched_commandline[MAX_CMD_LINE_PATCHED];
 	char error_message[1024];
 	char *service_user_name = NULL;
 
-	co_ntevent_print("daemon: installing service '%s'\n", service_name);
+	co_terminal_print("daemon: installing service '%s'\n", service_name);
 	if (!GetModuleFileName(0, exe_name, sizeof(exe_name))) {
-		co_ntevent_print("Cannot determin exe name. Install failed.\n");
+		co_terminal_print("Cannot determin exe name. Install failed.\n");
 		return CO_RC(ERROR);
 	}
 
 	schSCManager = OpenSCManager(0, 0, SC_MANAGER_ALL_ACCESS);
 	if (schSCManager == 0) {
-		co_ntevent_print("daemon: cannot open service control maanger. Install failed.\n");
+		co_terminal_print("daemon: cannot open service control maanger. Install failed.\n");
 		return CO_RC(ERROR);
 	}
 
-	co_snprintf(command, sizeof(command), "\"%s\" --run-service \"%s\" -d -c \"%s\"", exe_name, service_name, start_parameters->config_path);
-	co_ntevent_print("daemon: service command line: %s\n", command);
+	patch_command_line_for_service(patched_commandline, original_commandline);
+
+	co_snprintf(command, sizeof(command), "\"%s\" %s", exe_name, patched_commandline);
+	co_terminal_print("daemon: service command line: %s\n", command);
 
 #if (0)
 	/* broken somehow for recent TAP driver */
@@ -107,14 +189,14 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, co_start_pa
 
 	if (schService != 0) {	
 	        co_winnt_set_service_restart_options(schService);
-		co_ntevent_print("daemon: service installed.\n");
+		co_terminal_print("daemon: service installed.\n");
 		CloseServiceHandle(schService);
 		CloseServiceHandle(schSCManager);
 		return CO_RC(OK);
 	}
 
 	co_winnt_get_last_error(error_message, sizeof(error_message));
-	co_ntevent_print("daemon: failed to install service: %s\n", error_message);
+	co_terminal_print("daemon: failed to install service: %s\n", error_message);
 	CloseServiceHandle(schSCManager);
 
 	return CO_RC(ERROR);
@@ -124,47 +206,38 @@ int co_winnt_daemon_remove_service(const char *service_name)
 {
 	SC_HANDLE schService;
 	SC_HANDLE schSCManager;
-	char exe_name[512];
-	char command[1024];
 	char error_message[1024];
 
-	co_ntevent_print("daemon: removing service '%s'\n", service_name);
-	if (!GetModuleFileName(0, exe_name, sizeof(exe_name))) {
-		co_ntevent_print("daemon: cannot determine exe name. Remove failed.\n");
-		return CO_RC(ERROR);
-	}
-
-	co_snprintf(command, sizeof(command), "\"%s\" --run-service %s", exe_name, service_name);
+	co_terminal_print("daemon: removing service '%s'\n", service_name);
 
 	schSCManager = OpenSCManager(0, 0, SC_MANAGER_ALL_ACCESS);
 	if (schSCManager == 0) {
-		co_ntevent_print("daemon: cannot open service control manager. Remove failed.\n");
+		co_terminal_print("daemon: cannot open service control manager. Remove failed.\n");
 		return CO_RC(ERROR);
 	}
 
 	schService = OpenService(schSCManager, service_name, SERVICE_ALL_ACCESS);
 	if (schService == 0) {
 		co_winnt_get_last_error(error_message, sizeof(error_message));
-		co_ntevent_print("daemon: failed to remove service. OpenService() failed\n");
+		co_terminal_print("daemon: failed to remove service. OpenService() failed\n");
 		CloseServiceHandle(schSCManager);
 		return CO_RC(ERROR);
 	}
 
 	if (!DeleteService(schService))	{
 		co_winnt_get_last_error(error_message, sizeof(error_message));
-		co_ntevent_print("daemon: failed to remove service: %s\n", error_message);
+		co_terminal_print("daemon: failed to remove service: %s\n", error_message);
 		CloseServiceHandle(schService);
 		return CO_RC(ERROR);
 	}
 
 	CloseServiceHandle(schService);
 	CloseServiceHandle(schSCManager);
-	co_ntevent_print("daemon: service '%s' removed successfully.\n", service_name);
+	co_terminal_print("daemon: service '%s' removed successfully.\n", service_name);
 
 	return CO_RC(OK);
 }
 
-static const char *running_service_name;
 static co_start_parameters_t *daemon_start_parameters;
 static SERVICE_STATUS ssStatus;
 static SERVICE_STATUS_HANDLE   sshStatusHandle;
@@ -212,24 +285,9 @@ void WINAPI co_winnt_service_control_callback(DWORD dwCtrlCode)
 	co_winnt_sc_report_status(ssStatus.dwCurrentState, NO_ERROR, 0);
 }
 
-void WINAPI service_main(int _argc, char **_argv) 
+static void WINAPI service_main(int _argc, char **_argv) 
 {
-	char exe_name[512];
-	char *p;
-
-	if (!GetModuleFileName(0, exe_name, sizeof(exe_name))) {
-		co_terminal_print("daemon: cannot determine exe name. Install failed.\n");
-		return;
-	}
-
-	p = strrchr(exe_name, '\\');
-	if (p != 0) {	
-		*p = 0;
-		SetCurrentDirectory(exe_name);
-		OutputDebugString(exe_name);
-	}
-
-	sshStatusHandle = RegisterServiceCtrlHandler(running_service_name, co_winnt_service_control_callback);
+	sshStatusHandle = RegisterServiceCtrlHandler("", co_winnt_service_control_callback);
 
 	if (sshStatusHandle) {
 		ssStatus.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
@@ -243,15 +301,14 @@ void WINAPI service_main(int _argc, char **_argv)
 	}
 }
 
-bool_t co_winnt_daemon_initialize_service(co_start_parameters_t *start_parameters,  const char *service_name) 
+bool_t co_winnt_daemon_initialize_service(co_start_parameters_t *start_parameters) 
 {
 	SERVICE_TABLE_ENTRY dispatch_table[] = {
-		{ (char *)service_name, (LPSERVICE_MAIN_FUNCTION)service_main },
+		{ "", (LPSERVICE_MAIN_FUNCTION)service_main },
 		{ 0, 0 },
 	};
 
 	daemon_start_parameters = start_parameters;
-	running_service_name = service_name;
 
 	if (!StartServiceCtrlDispatcher(dispatch_table)) {
 		co_terminal_print_last_error("service: Failed to initialize");

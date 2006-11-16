@@ -109,6 +109,3 @@ incorrect clock information).
      of the 'static' keyword :).
    * The usual tidbits: comments, refactoring, etc.
 
- * Serial:
-   * Fix the Windows version of the serial daemon.
-

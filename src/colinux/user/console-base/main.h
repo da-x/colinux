@@ -11,6 +11,12 @@
 #ifndef __COLINUX_USER_CONSOLE_BASE_MAIN_H__
 #define __COLINUX_USER_CONSOLE_BASE_MAIN_H__
 
-#include "../console/main.h"
+extern "C" {
+#include <colinux/user/console/main.h>
+}
+
+#include "console.h"
+
+extern console_window_t *global_window;
 
 #endif

@@ -10,221 +10,206 @@
 
 #include <stdio.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 #include <string.h>
-#include <sys/poll.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/wait.h>
 #include <termios.h>
-#include <unistd.h>
 
-#include <colinux/os/alloc.h>
-#include <colinux/os/user/misc.h>
 #include <colinux/user/debug.h>
+#include <colinux/user/reactor.h>
+#include <colinux/user/monitor.h>
 #include <colinux/user/cmdline.h>
-#include <colinux/common/common.h>
-
-#include "../daemon.h"
-#include "../unix.h"
+#include <colinux/os/user/misc.h>
+#include <colinux/os/current/user/reactor.h>
 
 COLINUX_DEFINE_MODULE("colinux-serial-daemon");
 
-static co_rc_t poll_init_socket(struct pollfd *pfd, int fd)
+/*******************************************************************************
+ * Type Declarations
+ */
+
+typedef struct start_parameters {
+	bool_t show_help;
+	int index;
+	int instance;
+} start_parameters_t;
+
+/*******************************************************************************
+ * Globals
+ */
+static start_parameters_t g_daemon_parameters;
+static co_reactor_t g_reactor;
+static co_user_monitor_t *g_monitor_handle;
+static co_linux_reactor_packet_user_t g_reactor_handle;
+
+
+static co_rc_t monitor_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
 {
-	pfd->fd = fd;
-	pfd->events = POLLIN | POLLHUP | POLLERR; 
-	pfd->revents = 0;
+	co_message_t *message;
+	unsigned long message_size;
+	long size_left = size;
+	long position = 0;
 
-	return co_os_set_blocking(fd, PFALSE);
-}
-
-static co_rc_t daemon_events(co_daemon_handle_t daemon_handle, int write_fd, int revents)
-{
-	co_rc_t rc;
-	
-	if (revents & POLLIN) {
-		co_message_t *message = NULL;
-
-		rc = co_os_daemon_get_message_ready(daemon_handle, &message);
-		if (!CO_OK(rc))
-			return rc;
-
-		if (message) {
-			rc = co_os_sendn(write_fd, message->data, message->size);
-			co_os_free(message);
-
-			if (!CO_OK(rc))
-				return rc;
+	while (size_left > 0) {
+		message = (typeof(message))(&buffer[position]);
+		message_size = message->size + sizeof(*message);
+		size_left -= message_size;
+		if (size_left >= 0) {
+			g_reactor_handle->user.send(&g_reactor_handle->user, message->data, message->size);
 		}
-	}
-
-	if (revents & (POLLERR | POLLHUP)) {
-		co_terminal_print("coserial: daemon closed socket\n");
-		return CO_RC(ERROR);
+		position += message_size;
 	}
 
 	return CO_RC(OK);
 }
 
-static co_rc_t program_events(co_daemon_handle_t daemon_handle, int unit, int read_fd, int revents)
+static co_rc_t std_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
 {
-	co_rc_t rc = CO_RC(OK);
+	struct {
+		co_message_t message;
+		co_linux_message_t message_linux;
+		char data[size];
+	} message;
+
+	/* Received packet from standard input to linux serial */
+	message.message.from = CO_MODULE_SERIAL0 + g_daemon_parameters.index;
+	message.message.to = CO_MODULE_LINUX;
+	message.message.priority = CO_PRIORITY_DISCARDABLE;
+	message.message.type = CO_MESSAGE_TYPE_OTHER;
+	message.message.size = sizeof(message) - sizeof(message.message);
+	message.message_linux.device = CO_DEVICE_SERIAL;
+	message.message_linux.unit = g_daemon_parameters.index;
+	message.message_linux.size = size;
+	memcpy(message.data, buffer, size);
 	
-	if (revents & POLLIN) {
-		long read_size;
-		struct {
-			co_message_t message;
-			co_linux_message_t msg_linux;
-			char data[2000];
-		} message;
+	g_monitor_handle->reactor_user->send(g_monitor_handle->reactor_user,
+					     (unsigned char *)&message, sizeof(message));
 
-		read_size = read(read_fd, message.data, sizeof(message.data));
-		if (read_size <= 0)
-			return CO_RC(ERROR);
-
-		message.message.from = CO_MODULE_SERIAL0 + unit;
-		message.message.to = CO_MODULE_LINUX;
-		message.message.priority = CO_PRIORITY_DISCARDABLE;
-		message.message.type = CO_MESSAGE_TYPE_OTHER;
-		message.message.size = sizeof(message.msg_linux) + read_size;
-		message.msg_linux.device = CO_DEVICE_SERIAL;
-		message.msg_linux.unit = unit;
-		message.msg_linux.size = read_size;
-
-		rc = co_os_daemon_message_send(daemon_handle, &message.message);
-	}
-
-	if (revents & (POLLERR | POLLHUP)) {
-		return CO_RC(ERROR);
-	}
-
-	return rc;
+	return CO_RC(OK);
 }
 
-static co_rc_t wait_loop(co_daemon_handle_t daemon_handle, int unit, int read_fd, int write_fd)
-{
-	struct pollfd pollarray[2];
-	co_rc_t rc;
 
-	rc = poll_init_socket(&pollarray[0], daemon_handle->sock);
-	if (!CO_OK(rc))
-		return rc;
-
-	rc = poll_init_socket(&pollarray[1], read_fd);
-	if (!CO_OK(rc))
-		return rc;
-
-	while (1) {
-		int ret;
-		
-		pollarray[0].revents = 0;
-		pollarray[1].revents = 0;
-		ret = poll(pollarray, 2, -1);
-		if (ret < 0)
-			break;
-
-		if (pollarray[0].revents) {
-			rc = daemon_events(daemon_handle, write_fd, pollarray[0].revents);
-			if (!CO_OK(rc)) {
-				ret = -1;
-				break;
-			}
-		}
-
-		if (pollarray[1].revents) {
-			rc = program_events(daemon_handle, unit, read_fd, pollarray[1].revents);
-			if (!CO_OK(rc)) {
-				ret = -1;
-				break;
-			}
-		}
-	}
-
-	return rc;
-}
+/********************************************************************************
+ * parameters
+ */
 
 static void syntax(void)
 {
-	co_terminal_print("coserial daemon\n");
+	co_terminal_print("Cooperative Linux Virtual Serial Daemon\n");
+	co_terminal_print("Dan Aloni, 2005 (c)\n");
+	co_terminal_print("\n");
 	co_terminal_print("Syntax:\n");
-	co_terminal_print("       colinux-serial-daemon [-i colinux instance number] [-u unit]\n");
+	co_terminal_print("     colinux-serial-daemon -i pid [-u unit]\n");
 }
 
-co_rc_t daemon_mode(int unit, int instance)
+static co_rc_t 
+handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
 {
-	co_daemon_handle_t daemon_handle_;
-	co_rc_t rc = CO_RC(ERROR);
-	struct termios term;
-
-	rc = co_os_daemon_pipe_open(instance, CO_MODULE_SERIAL0 + unit, &daemon_handle_);
-	if (!CO_OK(rc)) {
-		co_terminal_print("coserial: error opening a pipe to the daemon\n");
-		goto out;
-	}
-
-	tcgetattr(0, &term);
-	cfmakeraw(&term);
-	tcsetattr(0, 0, &term);
-
-	tcgetattr(1, &term);
-	cfmakeraw(&term);
-	tcsetattr(1, 0, &term);
-
-	rc = wait_loop(daemon_handle_, unit, 0, 1);
-
-	co_os_daemon_pipe_close(daemon_handle_);
-out:
-	return rc;
-}
-
-static co_rc_t coserial_main(int argc, char *argv[])
-{
-	co_rc_t rc;
+	bool_t instance_specified, unit_specified;
 	co_command_line_params_t cmdline;
-	int unit = 0;
-	bool_t unit_specified = PFALSE;
-	int instance = 0;
-	bool_t instance_specified = PFALSE;
-	
-	co_debug_start();
+	co_rc_t rc;
+
+	/* Default settings */
+	start_parameters->index = 0;
+	start_parameters->instance = 0;
 
 	rc = co_cmdline_params_alloc(&argv[1], argc-1, &cmdline);
 	if (!CO_OK(rc)) {
-		co_terminal_print("coserial: error parsing arguments\n");
+		co_terminal_print("colinux-serial-daemon: error parsing arguments\n");
 		goto out_clean;
 	}
 
 	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-i", 
-							  &instance_specified, &instance);
-
+			&instance_specified, &start_parameters->instance);
 	if (!CO_OK(rc)) {
 		syntax();
 		goto out;
 	}
 
 	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-u", 
-							  &unit_specified, &unit);
-
+			&unit_specified, &start_parameters->index);
 	if (!CO_OK(rc)) {
 		syntax();
 		goto out;
 	}
 
 	rc = co_cmdline_params_check_for_no_unparsed_parameters(cmdline, PTRUE);
-	if (!CO_OK(rc))
+	if (!CO_OK(rc)) {
+		syntax();
 		goto out;
+	}
 
+	if (start_parameters->index < 0 || start_parameters->index >= CO_MODULE_MAX_SERIAL) {
+		co_terminal_print("colinux-serial-daemon: Invalid index: %d\n", start_parameters->index);
+		return CO_RC(INVALID_PARAMETER);
+	}
 
-	rc = daemon_mode(unit, instance);
+	if (start_parameters->instance == 0) {
+		co_terminal_print("colinux-serial-daemon: coLinux instance not specificed\n");
+		return CO_RC(INVALID_PARAMETER);
+	}
 
 out:
 	co_cmdline_params_free(cmdline);
 
 out_clean:
-	co_debug_end();
+	return rc;
+}
+
+static co_rc_t coserial_main(int argc, char *argv[])
+{
+	co_rc_t rc;
+	co_module_t module;
+	struct termios term;
+	struct termios term_in;
+	struct termios term_out;
+
+	rc = handle_paramters(&g_daemon_parameters, argc, argv);
+	if (!CO_OK(rc))
+		return rc;
+
+	rc = co_reactor_create(&g_reactor);
+	if (!CO_OK(rc))
+		return rc;
+	
+	co_debug("connecting to monitor\n");
+
+	module = CO_MODULE_SERIAL0 + g_daemon_parameters.index;
+	rc = co_user_monitor_open(g_reactor, monitor_receive,
+				  g_daemon_parameters.instance,
+				  &module, 1,
+				  &g_monitor_handle);
+	if (!CO_OK(rc))
+		return rc;
+
+	co_debug("connected\n");
+
+	rc = co_linux_reactor_packet_user_create(g_reactor, 
+						 STDIN_FILENO,
+						 std_receive, &g_reactor_handle);
+	if (!CO_OK(rc))
+		return rc;
+
+	co_terminal_print("colinux-serial-daemon: running\n");
+
+	tcgetattr(STDIN_FILENO, &term);
+	term_in = term;
+	cfmakeraw(&term);
+	tcsetattr(STDIN_FILENO, 0, &term);
+
+	tcgetattr(STDOUT_FILENO, &term);
+	term_out = term;
+	cfmakeraw(&term);
+	tcsetattr(STDOUT_FILENO, 0, &term);
+
+	while (CO_OK(rc)) {
+		rc = co_reactor_select(g_reactor, -1);
+		if (CO_RC_GET_CODE(rc) == CO_RC_BROKEN_PIPE) {
+			rc = CO_RC(OK); /* Normal, if linux shut down */
+			break;
+		}
+	}
+
+	tcsetattr(STDOUT_FILENO, 0, &term_out);
+	tcsetattr(STDIN_FILENO, 0, &term_in);
 
 	return rc;
 }
@@ -233,9 +218,17 @@ int main(int argc, char *argv[])
 {	
 	co_rc_t rc;
 
+	co_debug_start();
+
 	rc = coserial_main(argc, argv);
-	if (CO_OK(rc))
-		return 0;
-		
-	return -1;
+
+	if (!CO_OK(rc))
+		co_terminal_print("colinux-serial-daemon: exitcode %08x\n", rc);
+
+	co_debug_end();
+
+	if (!CO_OK(rc))
+		return -1;
+
+	return 0;
 }

@@ -74,7 +74,7 @@ static co_rc_t co_os_file_block_detect_size_binary_search(HANDLE handle, unsigne
 
 	test_buffer = (char *)co_os_malloc(test_buffer_size_max);
 	if (!test_buffer)
-		return CO_RC(ERROR);
+		return CO_RC(OUT_OF_MEMORY);
 
 	build_size.QuadPart = 0;
 

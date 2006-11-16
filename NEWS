@@ -1,3 +1,70 @@
+* Version 0.7.1
+  * initrd: Automatic use cofs31 as path to file vmlinux-modules.tar.gz.
+  * Warn about double configured index for cobd, eth, cofs, ttys, exec.
+  * Bug #1479042: Ignore bootparm "no387", while no emulation is enabled.
+  * cofs: Break out the limit of fullname length.  Basename length up
+    to 255.  Fullpath is limited by path depth of 256 directories.
+  * New: "execX=..." in configuration, launch external programs.
+  * Bug fix: Quotation marks detection in config file, samples:
+    eth0=tuntap,"LAN-Connection 14",00:11:22:33:44:55
+    cofs0="C:\My files"
+  * Bug fix: Crash at open /dev/ttyS*.
+    New: "ttysX=..." in configuration, launch coserial daemon.
+    New parameters "-f DeviceName -m Mode" for colinux-serial-daemon.
+    Serial daemon is light usable under WinNT, you can login on /dev/ttyS0
+    or redirect serial communication port (COM1 for sample).
+  * Bug fix: Buffer overrun, on Fontname for FLTK console or screen resize.
+  * Update libraries:
+    - MinGW from 3.7 to 3.9
+    - w32api from 3.2 to 3.4
+    - WinPcap from 3.1-beta4 to 3.1
+    - FLTK from 1.1.4 to 1.1.6
+    - Remove all XML libraries from source.
+  * TAP device version 8.3, usable without admin rights.
+  * Bridged allows empty name for autosearch connected LAN interface.
+  * Kernel has been updated from 2.6.11 to 2.6.12
+  * Service running:
+    - Shutdown the service, if Windows is shutting down.
+    - All files and config file no longer needs absolute path names on
+      '--install-service'.  Working directory stored for service run later.
+  * Print human readable error, if wrong linux.sys installed.
+  * Print error on console, if initrd can't load.
+  * SLiRP:
+    - Get DNS dymanicly from host. Refresh if expire 10 Sec.
+      This should better work for dialup connections.
+    - SLiRP ping, if destination supports UDP echo/7 (WSAECONNRESET hack).
+    - Multiple redirection as parameter ':count'
+      (Thanks to Bernd Brandstetter)
+    - UDP receive Buffer incrase to 32K (win32 default was 8K),
+      maximal size of a packet is 32767 bytes now.
+      (Thanks to Bernd Brandstetter)
+    - Remove honypot ports 517, 518 and 7648 from udp listen.
+      talk and Cu-Seeme are not implement, still remove the table to.
+  * Checkbox to view README.TXT after install finish.
+  * Bug #1151757: COFS disallow mutiple mounts.
+  * Introduce a new build system:
+    - Target kernel dir splitt into source and objects.
+    - Allow to use ccache (http://ccache.samba.org/).
+    - Use quilt for kernel patches, if quilt installed, fallback if not.
+    - Build scripts ash/dash compliant (more POSIX-compliant)
+     bin/make.py colinux
+     - Automatic awareness of changes in header files.
+     - Doesn't require 'make clean' between compilation of 
+       different coLinux ports.
+     - Clean, flexible and easier to maintain.
+  * Add icons to the other executables.
+  * colinux-daemon:
+    - Obsoleted the use of XML files for configuration.
+    - Added support for @ at the command line for passing 
+      simple configuration files. See example.conf.
+    - Added '-k' option to suppress kernel messages on boot. This should
+      let you watch other daemon's output more easily.
+    - "set COLINUX_CONSOLE_EXIT_ON_DETACH=1" to close FLTK/NT console
+      after shutting down and detach coLinux.
+  * New option for colinux-debug-daemon: '-e exitcode'
+    Translate a given exitcode into error text, filename and line number.
+  * New: Console NT without -a connects to first monitor.
+
 * Version 0.6.4
     * Resolved SF Bug #1517979 and #1551076 - colinux-bridged-net-daemon.exe
       and other net daemons crashes under heavy load. (Mitch Bradley)

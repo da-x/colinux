@@ -39,7 +39,7 @@ co_rc_t co_queue_malloc(co_queue_t *queue, long bytes, void **ptr)
 
 	item = (co_queue_item_t *)co_os_malloc(bytes + sizeof(co_queue_item_t));
 	if (item == NULL)
-		return CO_RC(ERROR);
+		return CO_RC(OUT_OF_MEMORY);
 
 	*ptr = (void *)(&item->data);
 

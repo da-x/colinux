@@ -25,7 +25,6 @@ extern "C" {
 #include <colinux/user/monitor.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/alloc.h>
-#include <colinux/os/user/daemon.h>
 }
 
 #include "main.h"
@@ -112,14 +111,16 @@ int console_main_window_t::handle(int event)
 
 console_window_t::console_window_t()
 {
+	co_rc_t rc;
+
 	/* Default settings */
-	start_parameters.attach_id = 0; 
+	start_parameters.attach_id = CO_INVALID_ID;
 	attached_id = CO_INVALID_ID;
 	state =	CO_CONSOLE_STATE_DETACHED;
 	window = 0;
 	widget = 0;
-	daemon_handle = 0;
 	resized_on_attach = PTRUE;
+	rc = co_reactor_create(&reactor);
 }
 
 console_window_t::~console_window_t()
@@ -155,6 +156,32 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 	}
 
 	return CO_RC(OK);
+}
+
+/**
+ * Returns PID of first monitor.
+ *
+ * If none found, returns CO_INVALID_ID.
+ *
+ * TODO: Find first monitor not already attached.
+ *       Duplicate source in src/colinux/user/console-base/console.cpp
+ */
+static co_id_t find_first_monitor(void)
+{
+	co_manager_handle_t handle;
+	co_manager_ioctl_monitor_list_t	list;
+	co_rc_t	rc;
+
+	handle = co_os_manager_open();
+	if (handle == NULL)
+		return CO_INVALID_ID;
+
+	rc = co_manager_monitor_list(handle, &list);
+	co_os_manager_close(handle);
+	if (!CO_OK(rc) || list.count == 0)
+		return CO_INVALID_ID;
+
+	return list.ids[0];
 }
 
 co_rc_t console_window_t::start()
@@ -215,7 +242,7 @@ co_rc_t console_window_t::start()
 
 	tile->resizable(widget);
 	tile->end();
-	
+
 	window->resizable(tile);
 	window->end();
 	window->show();
@@ -228,13 +255,12 @@ co_rc_t console_window_t::start()
 	menu_item_deactivate(console_attach_cb);
 
 	// Default Font is "Terminal" with size 18
-	// Sample for WinNT environment:
-	// set COLINUX_CONSOLE_FONT=Lucida Console:12
-	// Change only font size:
-	// set COLINUX_CONSOLE_FONT=:12
+	// Sample WinNT environment: set COLINUX_CONSOLE_FONT=Lucida Console:12
+	// Change only font size:    set COLINUX_CONSOLE_FONT=:12
 	char * env_font = getenv ("COLINUX_CONSOLE_FONT");
 	if (env_font) {
 		char *p = strchr (env_font, ':');
+
 		if (p) {
 			int size = atoi (p+1);
 			if (size >= 4 && size <= 24) {
@@ -246,14 +272,15 @@ co_rc_t console_window_t::start()
 		
 		// Set new font style
 		if (strlen (env_font)) {
-			// Remember: env_font need a static buffer!
+			// Remember: set_font need a non stack buffer!
+			// Environment is global static.
 			Fl::set_font(FL_SCREEN, env_font);
 
 			// Now check font width
-			fl_font(FL_SCREEN, 18); // Use default Hight for test here
+			fl_font(FL_SCREEN, 18); // Use default High for test here
 			if ((int)fl_width('i') != (int)fl_width('W')) {
-				log("%s: is not fixed font. Using 'Terminal'\n", env_font);
 				Fl::set_font(FL_SCREEN, "Terminal"); // Restore standard font
+				log("%s: is not fixed font. Using 'Terminal'\n", env_font);
 			}
 		}
 	}
@@ -263,24 +290,71 @@ co_rc_t console_window_t::start()
 	if (start_parameters.attach_id != CO_INVALID_ID)
 		attached_id = start_parameters.attach_id;
 
+	if (attached_id == CO_INVALID_ID)
+		attached_id = find_first_monitor();
+
 	if (attached_id != CO_INVALID_ID)
-		return attach();
-	
+		attach(); /* Ignore errors, as we can attach latter */
+
+	return CO_RC(OK);
+}
+
+console_window_t *g_console;
+
+co_rc_t console_window_t::message_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
+{
+	co_message_t *message;
+	unsigned long message_size;
+	long size_left = size;
+	long position = 0;
+
+	while (size_left > 0) {
+		message = (typeof(message))(&buffer[position]);
+		message_size = message->size + sizeof(*message);
+		size_left -= message_size;
+		if (size_left >= 0) {
+			g_console->handle_message(message);
+		}
+		position += message_size;
+	}
+
 	return CO_RC(OK);
 }
 
 co_rc_t console_window_t::attach()
 {
 	co_rc_t rc = CO_RC(OK);  
+	co_module_t modules[] = {CO_MODULE_CONSOLE, };
+	co_monitor_ioctl_get_console_t get_console;
+	co_console_t *console;
 
 	if (state != CO_CONSOLE_STATE_DETACHED) {
 		rc = CO_RC(ERROR);
 		goto out;
 	}
 
-	rc = co_os_daemon_pipe_open(attached_id, CO_MODULE_CONSOLE, &daemon_handle);
+	g_console = this;
+
+	rc = co_user_monitor_open(reactor, message_receive,
+				  attached_id, modules, 
+				  sizeof(modules)/sizeof(co_module_t),
+				  &message_monitor);
+	if (!CO_OK(rc)) {
+		log("Monitor%d: Error connecting\n", attached_id);
+		return rc;
+	}
+
+	rc = co_user_monitor_get_console(message_monitor, &get_console);
+	if (!CO_OK(rc)) {
+		log("Monitor%d: Error getting console\n");
+		return rc;
+	}
+
+	rc = co_console_create(get_console.x, get_console.y, 0, &console);
 	if (!CO_OK(rc))
-		goto out;
+		return rc;
+
+	widget->set_console(console);
 
 	Fl::add_idle(console_idle, this);
 
@@ -331,40 +405,8 @@ co_rc_t console_window_t::attach_anyhow(co_id_t id)
 
 co_rc_t console_window_t::detach()
 {
-	co_console_t *console;
-
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return CO_RC(ERROR);
-
-	console = widget->get_console();
-	if (console == NULL)
-		return CO_RC(ERROR);
-
-	struct {
-		co_message_t message;
-		co_daemon_console_message_t console;
-		char data[0];
-	} *message;
-
-	co_console_pickle(console);
-
-	message = (typeof(message))(co_os_malloc(sizeof(*message)+console->size));
-	if (message) {
-		message->message.to = CO_MODULE_DAEMON;
-		message->message.from = CO_MODULE_CONSOLE;
-		message->message.size = sizeof(message->console) + console->size;
-		message->message.type = CO_MESSAGE_TYPE_STRING;
-		message->message.priority = CO_PRIORITY_IMPORTANT;
-		message->console.type = CO_DAEMON_CONSOLE_MESSAGE_DETACH;
-		message->console.size = console->size;
-		memcpy(message->data, console, console->size);
-		
-		co_os_daemon_message_send(daemon_handle, &message->message);
-		co_os_free(message);
-	}
-
-	co_console_unpickle(console);
-	co_console_destroy(console);
 
         menu_item_activate(console_select_cb);
         menu_item_deactivate(console_pause_cb);
@@ -373,11 +415,9 @@ co_rc_t console_window_t::detach()
         menu_item_deactivate(console_detach_cb);
         menu_item_activate(console_attach_cb);	
 
-	co_os_daemon_pipe_close(daemon_handle);
+	co_user_monitor_close(message_monitor);	
 
 	Fl::remove_idle(console_idle, this);
-
-	daemon_handle = 0;
 
 	state = CO_CONSOLE_STATE_DETACHED;
 
@@ -393,21 +433,6 @@ co_rc_t console_window_t::terminate()
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return CO_RC(ERROR);
 
-	struct {
-		co_message_t message;
-		co_daemon_console_message_t console;
-	} message;
-		
-	message.message.from = CO_MODULE_CONSOLE;
-	message.message.to = CO_MODULE_DAEMON;
-	message.message.priority = CO_PRIORITY_DISCARDABLE;
-	message.message.type = CO_MESSAGE_TYPE_OTHER;
-	message.message.size = sizeof(message) - sizeof(message.message);
-	message.console.type = CO_DAEMON_CONSOLE_MESSAGE_TERMINATE;
-	message.console.size = 0;
-
-	co_os_daemon_message_send(daemon_handle, &message.message);
-	
 	return detach();
 }
 
@@ -418,18 +443,21 @@ co_rc_t console_window_t::send_ctrl_alt_del()
 
 	struct {
 		co_message_t message;
-		co_daemon_console_message_t console;
+		co_linux_message_t linux_msg;
+		co_linux_message_power_t data;
 	} message;
-		
-	message.message.from = CO_MODULE_CONSOLE;
-	message.message.to = CO_MODULE_DAEMON;
+	
+	message.message.from = CO_MODULE_DAEMON;
+	message.message.to = CO_MODULE_LINUX;
 	message.message.priority = CO_PRIORITY_IMPORTANT;
 	message.message.type = CO_MESSAGE_TYPE_OTHER;
-	message.message.size = sizeof(message) - sizeof(message.message);
-	message.console.type = CO_DAEMON_CONSOLE_MESSAGE_CTRL_ALT_DEL;
-	message.console.size = 0;
-
-	co_os_daemon_message_send(daemon_handle, &message.message);
+	message.message.size = sizeof(message.linux_msg) + sizeof(message.data);
+	message.linux_msg.device = CO_DEVICE_POWER;
+	message.linux_msg.unit = 0;
+	message.linux_msg.size = sizeof(message.data);
+	message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
+	
+	co_user_monitor_message_send(message_monitor, &message.message);
 
 	return CO_RC(OK);
 }
@@ -465,24 +493,22 @@ void console_window_t::global_resize_constraint()
 
 void console_window_t::idle()
 {
+	co_rc_t rc;
+
 	global_resize_constraint();
-	
-	if (daemon_handle != NULL) {
-		co_rc_t rc = CO_RC(OK);
-		co_message_t *message = NULL;
+	rc = co_reactor_select(reactor, 1);
 
-		rc = co_os_daemon_message_receive(daemon_handle, &message, 10);
-		if (!CO_OK(rc)) {
-			if (CO_RC_GET_CODE(rc) == CO_RC_BROKEN_PIPE) {
-				log("Monitor%d: Broken pipe\n", attached_id);
-				detach(); 
+	if (!CO_OK(rc)) {
+		rc = detach();
+
+		// Option in environment: "COLINUX_CONSOLE_EXIT_ON_DETACH=1"
+		// Exit Console after detach
+		if (CO_OK(rc) && state != CO_CONSOLE_STATE_ATTACHED) {
+			char * str = getenv ("COLINUX_CONSOLE_EXIT_ON_DETACH");
+			if (str && atoi(str) != 0) {
+				log("Console exit after detach\n");
+				exit (0);
 			}
-			return;
-		}
-
-		if (message) {
-			handle_message(message);
-			co_os_daemon_message_deallocate(daemon_handle, message);
 		}
 	}
 }
@@ -515,32 +541,7 @@ void console_window_t::handle_message(co_message_t *message)
 		break;
 	}
 
-	case CO_MODULE_DAEMON: {
-		struct {
-			co_message_t message;
-			co_daemon_console_message_t console;
-			char data[0];
-		} *console_message;
-
-		console_message = (typeof(console_message))message;
-
-		if (console_message->console.type == CO_DAEMON_CONSOLE_MESSAGE_ATTACH) {
-			co_console_t *console;
-
-			console = (co_console_t *)co_os_malloc(console_message->console.size);
-			if (!console)
-				break;
-
-			memcpy(console, console_message->data, console_message->console.size);
-			co_console_unpickle(console);
-
-			widget->set_console(console);
-			widget->redraw();
-		}
-		
-		break;
-	}
-	default:{
+	default: {
 		if (message->type == CO_MESSAGE_TYPE_STRING) {
 			co_module_name_t module_name;
 
@@ -548,7 +549,7 @@ void console_window_t::handle_message(co_message_t *message)
 			log("%s: %s", co_module_repr(message->from, &module_name), message->data);
 		}
 		break;
-		    }
+	}
 	}
 }
 
@@ -564,7 +565,7 @@ void console_window_t::handle_scancode(co_scan_code_t sc)
 		co_linux_message_t	msg_linux;
 		co_scan_code_t		code;
 	} message;
-		
+
 	message.message.from = CO_MODULE_CONSOLE;
 	message.message.to = CO_MODULE_LINUX;
 	message.message.priority = CO_PRIORITY_DISCARDABLE;
@@ -575,7 +576,7 @@ void console_window_t::handle_scancode(co_scan_code_t sc)
 	message.msg_linux.size = sizeof(message.code);
 	message.code = sc;
 
-	co_os_daemon_message_send(daemon_handle, &message.message);
+	co_user_monitor_message_send(message_monitor, &message.message);
 }
 
 Fl_Menu_Item *console_window_t::find_menu_item_by_callback(Fl_Callback *cb)

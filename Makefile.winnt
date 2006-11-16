@@ -1,0 +1,39 @@
+# Makefile.winnt for coLinux (mingw32)
+
+# Host System architecture
+export COLINUX_HOST_OS := winnt
+
+# Host system variables and directories
+PREFIX := $(shell . $(USER_CFG); echo $$PREFIX)
+
+# Need some variables and PATH of cross compiler in make.
+export PATH := $(PATH):$(PREFIX)/bin
+
+.PHONY: all cross cross libs kernel download package installer
+all: cross libs kernel colinux
+
+#
+# Check tools and targets via md5sum
+#
+
+cross:
+	@cd bin && ./build-cross.sh
+
+libs:
+	@cd bin && ./build-colinux-libs.sh
+
+kernel:
+	@cd bin && ./build-kernel.sh
+
+# Download only all missing sources (for cross compile)
+download:
+	@cd bin && . ./build-common.sh --download-all
+
+# Create a pre-distributabel package as ZIP
+package:
+	@cd bin && . ./build-common.sh --package
+
+# Create installer (need wine and running X11)
+installer:
+	@cd src/colinux/os/winnt/user/install && . ./premaid.sh
+	@cd src && make installer

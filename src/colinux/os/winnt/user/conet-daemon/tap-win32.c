@@ -204,28 +204,28 @@ co_rc_t get_device_guid(
 				&len);
 
 			if (status != ERROR_SUCCESS || name_type != REG_SZ) {
-				printf("Error opening registry key: %s\\%s\\%s",
+				co_terminal_print("colinux-net-daemon: error opening registry key: %s\\%s\\%s",
 				       NETWORK_CONNECTIONS_KEY, connection_string, name_string);
 			        return CO_RC(ERROR);
 			}
 			else {
 				if (is_tap_win32_dev(enum_name)) {
-					co_terminal_print("found TAP device named \"%s\"\n", name_data);
+					co_terminal_print("colinux-net-daemon: found TAP device named \"%s\"\n", name_data);
 
+					stop = 1;
 					snprintf(name, name_size, "%s", enum_name);
 					if (actual_name) {
-						if (strcmp(actual_name, "") != 0) {
+						if (*actual_name) {
+							/* verify given name */
 							if (strcmp(name_data, actual_name) != 0) {
-								RegCloseKey (connection_key);
-								++i;
-								continue;
+								stop = 0;
 							}
 						}
 						else {
+							/* name is not given */
 							snprintf(actual_name, actual_name_size, "%s", name_data);
 						}
 					}
-					stop = 1;
 				}
 			}
 
@@ -264,7 +264,7 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 	if (!CO_OK(rc))
 		return CO_RC(NOT_FOUND);
 
-	co_terminal_print("opening TAP: \"%s\"\n", name_buffer);
+	co_terminal_print("colinux-net-daemon: opening TAP: \"%s\"\n", name_buffer);
 
 	/*
 	 * Open Windows TAP-Win32 adapter
@@ -285,7 +285,7 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 		);
 
 	if (handle == INVALID_HANDLE_VALUE) {
-		co_terminal_print_last_error("tap device open");
+		co_terminal_print_last_error("colinux-net-daemon: tap device open");
 		return CO_RC(ERROR);
 	}
 
@@ -294,12 +294,12 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 			       &version, sizeof (version), &version_len, NULL);
 
 	if (bret == FALSE) {
-		co_terminal_print_last_error("error getting driver version");
+		co_terminal_print_last_error("colinux-net-daemon: error getting driver version");
 		CloseHandle(handle);
 		return CO_RC(ERROR);
 	}
 
-	co_terminal_print("driver version %d.%d\n", version.major, version.minor);
+	co_terminal_print("colinux-net-daemon: TAP driver version %d.%d\n", version.major, version.minor);
 	
 	*phandle = handle;
 

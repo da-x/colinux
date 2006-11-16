@@ -16,7 +16,7 @@
 #include <colinux/os/user/exec.h>
 #include <colinux/os/user/misc.h>
 
-co_rc_t co_launch_process(char *command_line, ...)
+co_rc_t co_launch_process(int *pid, char *command_line, ...)
 {
 	char buf[0x100];
 	char buf2[0x100];
@@ -37,5 +37,14 @@ co_rc_t co_launch_process(char *command_line, ...)
 		return CO_RC(ERROR);
 	}
 
+
+	if (pid)
+		*pid = 0; /* dummy */
+
+	return CO_RC(OK);
+}
+
+co_rc_t co_kill_process(int pid)
+{
 	return CO_RC(OK);
 }

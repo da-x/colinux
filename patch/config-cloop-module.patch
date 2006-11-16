@@ -1,0 +1,11 @@
+diff -urN a/.config b/.config
+--- a/.config
++++ b/.config
+@@ -214,6 +214,7 @@
+ CONFIG_BLK_DEV_RAM_SIZE=4096
+ CONFIG_BLK_DEV_INITRD=y
+ CONFIG_BLK_DEV_COBD=y
++CONFIG_BLK_DEV_CLOOP=m
+ CONFIG_INITRAMFS_SOURCE=""
+ # CONFIG_LBD is not set
+ # CONFIG_CDROM_PKTCDVD is not set
