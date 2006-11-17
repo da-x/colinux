@@ -117,7 +117,7 @@ run anything.
 	a. Running as an service.  
 		colinux-daemon.exe @default.conf --install-service "Cooperative Linux"
 	   Also, to remove the service:
-		colinux-daemon.exe --remove-service "Cooopeative Linux".
+		colinux-daemon.exe --remove-service "Cooperative Linux".
 	   Then go to the Service Manager and start the "Cooperative Linux"
 	   service,
 	   OR
@@ -148,11 +148,6 @@ Command Line Parameters
 
 The following command line paramaters may be useful in operating Cooperative 
 Linux.
-
-    -a #
-
-	Allows you to specify the instance of Coooperative Linux
-	that you will be connecting to.
 
     @filename
 

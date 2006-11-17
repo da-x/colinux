@@ -63,7 +63,7 @@ if not settings.target_kernel_source:
 if not settings.target_kernel_source:
     print 
     print "COLINUX_TARGET_KERNEL_PATH not set. Please set this environment variable to the"
-    print "pathname of a coLinux-enabled kernel source tree, i.e, a Linux kenrel tree that"
+    print "pathname of a coLinux-enabled kernel source tree, i.e, a Linux kernel tree that"
     print "is patched with the patch file which is under the patch/ directory."
     raise BuildCancelError()
 
