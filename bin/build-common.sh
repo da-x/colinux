@@ -279,10 +279,11 @@ build_package()
 {
 	local name bname oname
 	local STRIP="$TARGET-strip --strip-all"
-	local SYMBOLS_ZIP=$COLINUX_INSTALL_DIR/symbols-$CO_VERSION.zip
-	local DAEMONS_ZIP=$COLINUX_INSTALL_DIR/daemons-$CO_VERSION.zip
-	local VMLINUX_ZIP=$COLINUX_INSTALL_DIR/vmlinux-$CO_VERSION.zip
-	local MODULES_TGZ=$COLINUX_INSTALL_DIR/modules-$COMPLETE_KERNEL_NAME.tgz
+	local DATE=`date +%G%m%d`
+	local SYMBOLS_ZIP=$COLINUX_INSTALL_DIR/daemons-$CO_VERSION-$DATE.dbg.zip
+	local DAEMONS_ZIP=$COLINUX_INSTALL_DIR/daemons-$CO_VERSION-$DATE.zip
+	local VMLINUX_ZIP=$COLINUX_INSTALL_DIR/vmlinux-$COMPLETE_KERNEL_NAME-$DATE.zip
+	local MODULES_TGZ=$COLINUX_INSTALL_DIR/modules-$COMPLETE_KERNEL_NAME-$DATE.tgz
 	local EXE_DIR="$TOPDIR/src/colinux/os/winnt/build"
 	
 	echo "Create ZIP packages into $COLINUX_INSTALL_DIR"
@@ -298,14 +299,11 @@ build_package()
 		bname=`basename $i .exe`
 		bname=`basename $bname .sys`
 		oname=$COLINUX_INSTALL_DIR/$name
-		
-		# Create map file with symbols, add to zip
-		map=$COLINUX_INSTALL_DIR/$bname.map
-		$TARGET-nm $i | sort | uniq > $map
-		zip -j $SYMBOLS_ZIP $map || exit $?
-		rm $map
 
-		# strip symbols and add exe file to zip
+		# Add file with debugging symbols into zip
+		zip -j "$SYMBOLS_ZIP" $i || exit $?
+		
+		# strip symbols and add file to zip
 		$STRIP -o $oname $i || exit $?
 		zip -j $DAEMONS_ZIP $oname || exit $?
 		rm $oname
@@ -348,6 +346,7 @@ build_package()
 		echo "Installing Modules $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
 		cd "$COLINUX_TARGET_MODULE_PATH"
 		tar czf $MODULES_TGZ lib/modules/$COMPLETE_KERNEL_NAME || exit $?
+		cd -
 	fi
 }
 
