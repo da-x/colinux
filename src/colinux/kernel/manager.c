@@ -94,8 +94,6 @@ co_rc_t co_manager_load(co_manager_t *manager)
 	return rc;
 
 
-	manager->state = CO_MANAGER_STATE_NOT_INITIALIZED;
-
 /* error path */
 out_err_os:
 	co_os_manager_free(manager->osdep);
@@ -108,6 +106,8 @@ out_err_debug:
 
 out_err_mutex:
 	co_os_mutex_destroy(manager->lock);
+
+	manager->state = CO_MANAGER_STATE_NOT_INITIALIZED;
 	return rc;
 }
 
