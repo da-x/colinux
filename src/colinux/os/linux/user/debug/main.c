@@ -18,6 +18,7 @@
 #include <colinux/user/debug/main.h>
 
 COLINUX_DEFINE_MODULE("colinux-debug-daemon");
+
 int main(int argc, char *argv[]) 
 {
 	co_rc_t rc;

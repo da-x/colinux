@@ -119,7 +119,6 @@ void co_winnt_change_directory_for_service(int argc, char **argv)
 
 static void patch_command_line_for_service(char *destbuf, const char *srcbuf)
 {
-	char lastchar = 0;
 	char *destmax = destbuf + MAX_CMD_LINE_PATCHED;
 
 	while (*srcbuf && destbuf < destmax)
@@ -144,7 +143,7 @@ static void patch_command_line_for_service(char *destbuf, const char *srcbuf)
 			continue;
 		}
 
-		*destbuf++ = lastchar = *srcbuf++;
+		*destbuf++ = *srcbuf++;
 	}
 	*destbuf = 0;
 }

@@ -128,14 +128,17 @@ ssize_t co_os_manager_read(struct file *file, char __user *buffer, size_t size, 
 	while (co_queue_size(queue) != 0)
 	{
 		co_message_queue_item_t *message_item;
+		co_message_t *message;
+		unsigned long size;
+
 		rc = co_queue_peek_tail(queue, (void **)&message_item);
 		if (!CO_OK(rc)) {
 			ret = -EIO;
 			break;
 		}
-		
-		co_message_t *message = message_item->message;
-		unsigned long size = message->size + sizeof(*message);
+
+		message = message_item->message;
+		size = message->size + sizeof(*message);
 		if (io_buffer + size > io_buffer_end) {
 			break;
 		}
