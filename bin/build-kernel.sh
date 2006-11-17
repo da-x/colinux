@@ -56,6 +56,7 @@ create_md5sums()
 	md5sum -b \
 	    src/colinux/VERSION \
 	    conf/linux-$KERNEL_VERSION-config \
+	    patch/series-$KERNEL_VERSION \
 	    "$COLINUX_TARGET_KERNEL_BUILD/.config" \
 	    "$COLINUX_TARGET_KERNEL_BUILD/vmlinux" \
 	    "$COLINUX_TARGET_MODULE_PATH/lib/modules/$COMPLETE_KERNEL_NAME/modules.dep" \
@@ -63,12 +64,11 @@ create_md5sums()
 	|| error_exit 10 "can not create md5sum"
 
 	# Md5sums for patches
-	cd patch
-	for name in `cat series-$KERNEL_VERSION` config-*.patch
+	for name in `cat patch/series-$KERNEL_VERSION`
 	do
-		if [ -e "$name" ]
+		if [ -e "patch/$name" ]
 		then
-			md5sum -b $name >> $KERNEL_CHECKSUM
+			md5sum -b patch/$name >> $KERNEL_CHECKSUM
 		fi
 	done
 
@@ -121,7 +121,7 @@ patch_kernel_source()
 	test -f "series"  || ln -s "$TOPDIR/patch/series-$KERNEL_VERSION" "series"
 	test -f "patches" || ln -s "$TOPDIR/patch" "patches"
 
-	if quilt --version >/dev/null
+	if quilt --version >/dev/null 2>&1
 	then
 		# use quilt for patching, don't trust users settings
 		unset QUILT_COMMAND_ARGS
@@ -138,27 +138,12 @@ patch_kernel_source()
 	cd -
 }
 
-patch_kernel_build()
-{
-	mkdir -p "$COLINUX_TARGET_KERNEL_BUILD" || exit 1
-	# A minor hack for now.  Allowing linux config to be 'version specific' 
-	#  in the future, but keeping backwards compatability.
-	if [ ! -f "$TOPDIR/conf/linux-$KERNEL_VERSION-config" ]; then
-		ln -s "linux-config" "$TOPDIR/conf/linux-$KERNEL_VERSION-config"
-	fi
-	cp "$TOPDIR/conf/linux-$KERNEL_VERSION-config" "$COLINUX_TARGET_KERNEL_BUILD/.config"
-
-	# patches on config in buildir
-	for name in "$TOPDIR"/patch/config-*.patch
-	do
-		echo "reading $name"
-		patch -p1 -f -d "$COLINUX_TARGET_KERNEL_BUILD" < $name \
-		|| error_exit 10 "$name patch failed"
-	done
-}
-
 configure_kernel()
 {
+	local OPT
+
+	echo "Configuring Kernel $KERNEL_VERSION"
+
 	# Is this a patched kernel?
 	if [ ! -f "$COLINUX_TARGET_KERNEL_SOURCE/include/linux/cooperative.h" ]
 	then
@@ -174,9 +159,16 @@ EOF
 		exit 1
 	fi
 
-	echo "Configuring Kernel $KERNEL_VERSION"
+	# Create "build" directory and copy version specific config
+	mkdir -p "$COLINUX_TARGET_KERNEL_BUILD" || exit 1
+	cp "$TOPDIR/conf/linux-$KERNEL_VERSION-config" "$COLINUX_TARGET_KERNEL_BUILD/.config"
+
 	cd "$COLINUX_TARGET_KERNEL_SOURCE" || exit 1
-	make O="$COLINUX_TARGET_KERNEL_BUILD" silentoldconfig >>$COLINUX_BUILD_LOG 2>&1 \
+	if [ "$COLINUX_TARGET_KERNEL_SOURCE" != "$COLINUX_TARGET_KERNEL_BUILD" ]
+	then
+		OPT="O=\"$COLINUX_TARGET_KERNEL_BUILD\""
+	fi
+	make $OPT silentoldconfig >>$COLINUX_BUILD_LOG 2>&1 \
 	|| error_exit 1 "Kernel $KERNEL_VERSION config failed (check 'make oldconfig' on kerneltree)"
 }
 
@@ -214,7 +206,7 @@ build_kernel()
 
 	# Full user control for compile (kernel developers)
 	if [ "$1" != "--no-download" -a "$COLINUX_KERNEL_UNTAR" = "yes" \
-	     -o ! -s "$COLINUX_TARGET_KERNEL_SOURCE/include/linux/cooperative.h" ]; then
+	     -o ! -d "$COLINUX_TARGET_KERNEL_SOURCE" ]; then
 
 		# do not check files, if rebuild forced
 		test "$1" = "--rebuild" || check_md5sums
@@ -228,8 +220,11 @@ build_kernel()
 		patch_kernel_source
 	fi
 
+	if [ ! -s "$COLINUX_TARGET_KERNEL_SOURCE/include/linux/cooperative.h" ]; then
+		error_exit 10 "$COLINUX_TARGET_KERNEL_SOURCE/include/linux/cooperative.h: Missing. Source not usable, please check \$COLINUX_TARGET_KERNEL_SOURCE"
+	fi
+
 	if [ ! -f $COLINUX_TARGET_KERNEL_BUILD/.config ]; then
-		patch_kernel_build
 		configure_kernel
 	fi
 

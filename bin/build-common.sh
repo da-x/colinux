@@ -30,13 +30,34 @@
 # Updated by Sam Lantinga <slouken@libsdl.org>
 #####################################################################
 
+# We need to find our self here, or in subdir bin
+# BINDIR is bin directory with scripts
+if [ -f bin/build-common.sh ]; then
+	BINDIR=`pwd`/bin
+elif [ -f build-common.sh ]; then
+	BINDIR=`pwd`
+else
+	echo "build-common.sh: Can't detect bin directory!" >&2
+	exit 1
+fi
+
+# TOPDIR is the directory with ./configure
+TOPDIR=`dirname $BINDIR`
+
+# Default Kernel version we are targeting, can overwrite in CFG file.
+# Remember: Please update also conf/kernel-*-config
+#
+# Read version from filename patch/series-*, using the newest we found.
+KERNEL_VERSION=`ls $TOPDIR/patch/series-* | sed -n -r -e 's/^.+-([0-9\.]+)$/\1/' -e '$p'`
+
 # Use User config, if exist
-if [ -f user-build.cfg ] ; then
+# you probably don't need to change anything from here down
+if [ -f $BINDIR/user-build.cfg ] ; then
 	# Users directories
-	. ./user-build.cfg
+	. $BINDIR/user-build.cfg
 else
 	# fall back to default config
-	. ./sample.user-build.cfg
+	. $BINDIR/sample.user-build.cfg
 fi
 
 # what flavor are we building?
@@ -44,13 +65,6 @@ TARGET=i686-pc-mingw32
 
 # Current developing build system
 BUILD=i686-pc-linux
-
-# you probably don't need to change anything from here down
-# BINDIR is bin directory with scripts
-BINDIR=`pwd`
-
-# TOPDIR is the directory with ./configure
-TOPDIR=`dirname $BINDIR`
 
 # Updated by Sam Lantinga <slouken@libsdl.org>
 # These are the files from the current MingW release
@@ -93,22 +107,8 @@ WINPCAP_SRC=WpdPack
 WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_$WINPCAP_VERSION.zip
 
 
-# Kernel version we are targeting
-# Remember: Please update also conf/kernel-config, if changing kernel version!
-# Read version from filename of file patch/series-2.6.11,
-# can overwrite in CFG file.
 # KERNEL_VERSION: full kernel version (e.g. 2.6.11)
 # KERNEL_DIR: sub-dir in www.kernel.org for the download (e.g. v2.6)
-#
-if [ -z "$KERNEL_VERSION" ] ; then
-  # Check multiple patchfiles
-  if [ 1 -ne `ls $TOPDIR/patch/series-* | wc -l` ] ; then
-    echo "WARNING: Can only handle one patchfile for automatic version detection"
-    echo "Please set $""KERNEL_VERSION in user-build.cfg"
-    exit -1
-  fi
-  KERNEL_VERSION=`ls $TOPDIR/patch/series-* | sed -r -e 's/^.+\-([0-9\.]+)$/\1/'`
-fi
 KERNEL_DIR=`echo $KERNEL_VERSION | sed -r -e 's/^([0-9]+)\.([0-9]+)\..+$/v\1.\2/'`
 
 KERNEL=linux-$KERNEL_VERSION
@@ -123,7 +123,7 @@ if [ -z "$COLINUX_TARGET_KERNEL_SOURCE" -a -z "$COLINUX_TARGET_KERNEL_BUILD" ]
 then
 	if [ -z "$COLINUX_TARGET_KERNEL_PATH" ]
 	then
-		# Source and buld in differ directories
+		# Source and build in differ directories
 		COLINUX_TARGET_KERNEL_SOURCE="$BUILD_DIR/$KERNEL-source"
 		COLINUX_TARGET_KERNEL_BUILD="$BUILD_DIR/$KERNEL-build"
 	else
@@ -141,13 +141,19 @@ KERNEL_CHECKSUM="$MD5DIR/.build-kernel.md5"
 # coLinux kernel we are targeting
 if [ -z "$KERNEL_VERSION" -o -z "$KERNEL_DIR" ] ; then
     # What's wrong here?
-    echo "Can't find the kernel patch, probably wrong script,"
-    echo "or file patch/linux-*.diff don't exist?"
+    cat >&2 <<EOF
+	Failed: \$KERNEL_VERSION or \$KERNEL_DIR
+	Can't find the kernel patch, probably wrong script,
+	or file patch/series-* don't exist?
+EOF
     exit -1
 fi
 
-# Get variables for configure only? Than end here.
+# Get variables for configure only? Then end here.
 if [ "$1" = "--get-vars" ]; then
+    if [ -n "$2" ]; then
+	eval "echo $"$2
+    fi
     return
 fi
 
@@ -200,7 +206,7 @@ download_file()
 	# Make sure wget is installed
 	if [ "x`which wget`" = "x" ]
 	then
-		echo "You need to install wget."
+		echo "You need to install wget." >&2
 		exit 1
 	fi
 
@@ -209,10 +215,11 @@ download_file()
 		mkdir -p "$SOURCE_DIR"
 		cd "$SOURCE_DIR"
 		echo "Downloading $1"
-		wget "$2/$1"
-		if [ ! -f $1 ]
+		if ! wget "$2/$1"
 		then
 			echo "Could not download $1"
+			# move broken download
+			test -f $1 && mv $1 $1.incomplete
 			exit 1
 		fi
   		cd "$BINDIR"
@@ -266,8 +273,8 @@ strip_kernel()
 		$STRIP $KEEP -o $2 $1 || exit $?
 	else
 		# Function not found by grep
-		echo -e "\nWARNING: $FROM_SOURCE" 1>&2
-		echo -e "Can't get symbols for stripping! Don't strip vmlinux\n" 1>&2
+		echo -e "\nWARNING: $FROM_SOURCE" >&2
+		echo -e "Can't get symbols for stripping! Don't strip vmlinux\n" >&2
 			
 		# Fallback into copy mode
 		cp -a $1 $2

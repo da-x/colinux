@@ -11,7 +11,7 @@
 #	./configure --help
 
 # Some defaults from config file (Kernel version and dir, binutil version)
-cd bin; . ./build-common.sh --get-vars; cd ..
+. bin/build-common.sh --get-vars
 
 # Some default values
 target=i686-pc-mingw32
@@ -21,10 +21,10 @@ distdir="\$USER_TOPDIR/dist"
 downloaddir=NONE
 builddir="\$USER_TOPDIR/build"
 logfile="\$USER_TOPDIR/log/build-colinux-\$\$.log"
-targetkernelsource="\$BUILD_DIR/linux-$KERNEL_VERSION-source"
-targetkernelbuild="\$BUILD_DIR/linux-$KERNEL_VERSION-build"
+targetkernelsource="\$BUILD_DIR/linux-\$KERNEL_VERSION-source"
+targetkernelbuild="\$BUILD_DIR/linux-\$KERNEL_VERSION-build"
 targetkerneldir=NONE
-targetmoduledir="$targetkernelbuild/_install"
+targetmoduledir="\$COLINUX_TARGET_KERNEL_BUILD/_install"
 hostkerneldir=NONE
 colinux_os=NONE
 configfile="bin/user-build.cfg"
@@ -99,15 +99,16 @@ Directories:
   --targetmoduledir=DIR   Modules output for target kernel (Guest)
                           [$targetmoduledir]
   --hostkerneldir=DIR     path to your host kernel (only for linux as host)
-                          [\usr\src\linux]
+                          [/usr/src/linux]
 
 Options:
   --configfile=FILE       outputfile for batch build [$configfile]
   --logfile=ARG           logfile for build process, open append.
                           use \$\$ for process id and separate files.
                           [\$TOPDIR/log/build-colinux-\$\$.log]
-  --kernel-untar          Untar and overwrite kernel tree, if exist.  Is good
+  --kernel-untar          Untar can overwrite kernel tree, if exist.  Is good
                           for clean builds or automation builds.
+  --disable-kernel-untar  Never overwrite kernel sources. (default)
   --no-create             Test only this configure, no files create.
   --verbose               More messages in configure.
   --gcc-guest-build       Build C compiler from source of gnu cross compiler,
@@ -211,16 +212,15 @@ EOF
   --logfile=*)
     logfile="$optarg" ;;
 
-  -no-create | --no-create | --no-creat | --no-crea | --no-cre \
-  | --no-cr | --no-c)
+  --no-create)
     no_create=yes ;;
 
-  -no-kernel-untar | --no-kernel-untar | --no-kernel | \
-  -disable-kernel-untar | --disable-kernel-untar)
+  --no-kernel-untar | \
+  --disable-kernel-untar)
     kernel_untar=no ;;
 
-  -kernel-untar | --kernel-untar | \
-  -enable-kernel-untar | --enable-kernel-untar)
+  --kernel-untar | \
+  --enable-kernel-untar)
     kernel_untar=yes ;;
 
   --gcc-guest*)
@@ -319,9 +319,10 @@ esac
 # Splitted target kernel directories?
 case $targetkerneldir in
 NONE)
-  targetkerneldir="\$BUILD_DIR/linux-$KERNEL_VERSION"
+  targetkerneldir_cfg="# COLINUX_TARGET_KERNEL_PATH=\"\$BUILD_DIR/linux-\$KERNEL_VERSION\""
   ;;
 *)
+  targetkerneldir_cfg="COLINUX_TARGET_KERNEL_PATH=\"$targetkerneldir\""
   targetkernelsource="\$COLINUX_TARGET_KERNEL_PATH"
   targetkernelbuild="\$COLINUX_TARGET_KERNEL_PATH"
   ;;
@@ -336,16 +337,16 @@ if [ "$target_os" = "linux" ] ; then
  echo " UNAME_RELEASE=$UNAME_RELEASE"
 
  # Search Linux-Host kernel sourcs:
- # 1. /lib/modules/$UNAME_RELEASE/source
- # 2. /lib/modules/$UNAME_RELEASE/build
+ # 1. /lib/modules/$UNAME_RELEASE/build
+ # 2. /lib/modules/$UNAME_RELEASE/source
  # 3. /usr/src/linux
  # 4. /usr/src/linux-$UNAME_RELEASE
 
  if [ "$hostkerneldir" = "NONE" ] ; then
-  if [ -d /lib/modules/$UNAME_RELEASE/source ] ; then
-    hostkerneldir="/lib/modules/$UNAME_RELEASE/source"
-  elif [ -d /lib/modules/$UNAME_RELEASE/build ] ; then
+  if [ -d /lib/modules/$UNAME_RELEASE/build ] ; then
     hostkerneldir="/lib/modules/$UNAME_RELEASE/build"
+  elif [ -d /lib/modules/$UNAME_RELEASE/source ] ; then
+    hostkerneldir="/lib/modules/$UNAME_RELEASE/source"
   elif [ -d /usr/src/linux ] ; then
     hostkerneldir="/usr/src/linux"
   elif [ -d /usr/src/linux-$UNAME_RELEASE ] ; then
@@ -359,16 +360,26 @@ fi
 
 if [ "$hostkerneldir" != "NONE" ] ; then
   if [ ! -f $hostkerneldir/Makefile ] ; then
-    { echo "configure: error: missing host kernel source in $hostkerneldir" 1>&2; exit 1; }
+    { echo "configure: error: missing configured host kernel in $hostkerneldir" 1>&2; exit 1; }
   fi
 
-  HOST_VERSION=`grep "^VERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
+  HOST_KERNELRELEASE=`cd $hostkerneldir; make kernelrelease 2>/dev/null | tail -n1`
+  if [ -n "$HOST_KERNELRELEASE" ]; then
+    set -- `echo "$HOST_KERNELRELEASE" | sed -e 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)\(.*\)$/\1 \2 \3 \4/'`
+    HOST_VERSION="$1"
+    HOST_PATCHLEVEL="$2"
+    HOST_SUBLEVEL="$3"
+    HOST_EXTRAVERSION="$4"
+  else
+    HOST_VERSION=`grep "^VERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
+    HOST_PATCHLEVEL=`grep "^PATCHLEVEL = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
+    HOST_SUBLEVEL=`grep "^SUBLEVEL = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
+    HOST_EXTRAVERSION=`grep "^EXTRAVERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9\.]*\)\(.*\)$/\2/'`
+    HOST_KERNELRELEASE="$HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL$HOST_EXTRAVERSION"
+  fi
   echo " HOST_VERSION=$HOST_VERSION"
-  HOST_PATCHLEVEL=`grep "^PATCHLEVEL = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
   echo " HOST_PATCHLEVEL=$HOST_PATCHLEVEL"
-  HOST_SUBLEVEL=`grep "^SUBLEVEL = " $hostkerneldir/Makefile | sed -e 's/\([^0-9]*\)\(.*\)$/\2/'`
   echo " HOST_SUBLEVEL=$HOST_SUBLEVEL"
-  HOST_EXTRAVERSION=`grep "^EXTRAVERSION = " $hostkerneldir/Makefile | sed -e 's/\([^0-9\.]*\)\(.*\)$/\2/'`
   test -n "$HOST_EXTRAVERSION" && echo " HOST_EXTRAVERSION=$HOST_EXTRAVERSION"
 
   # Hostkernel must be >= 2.6 (compile external module)
@@ -376,7 +387,7 @@ if [ "$hostkerneldir" != "NONE" ] ; then
     { echo "configure: error: host kernel $HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL is to old! Need 2.6.x" 1>&2; exit 1; }
   fi
 
-  if [ "$HOST_VERSION.$HOST_PATCHLEVEL.$HOST_SUBLEVEL$HOST_EXTRAVERSION" != "`uname -r`" ] ; then
+  if [ "$HOST_KERNELRELEASE" != "`uname -r`" ] ; then
     echo -e "\n WARNING! Running kernel is not same as host kernel - You can not run colinux on this machine!\n"
   fi
 fi
@@ -476,7 +487,8 @@ check_exec_tool()
 gcc_helper()
 {
 	if [ "$gcc_guest_build" = "yes" ]; then
-		echo "  Can't use local gcc for kernel, build guest '${gcc_guest_target_prefix}gcc' later"
+		echo "  Can't use local gcc/binutils for kernel."
+		echo "  Build guest '${gcc_guest_target_prefix}gcc' later"
 		return
 	fi
 
@@ -584,9 +596,9 @@ case $colinux_os in
   ;;
   *) # for Winnt as host
     # Check GCC for kernel
-    check_exec_tool --warn "gcc for kernel" "${gcc_guest_target_prefix}gcc -dumpversion" \
+    check_exec_tool --warn "${gcc_guest_target_prefix}gcc for kernel" "${gcc_guest_target_prefix}gcc -dumpversion" \
        "$GCC_NEEDED" "$GCC_NEEDED" || gcc_helper
-    check_exec_tool --warn "binutils for kernel" "${gcc_guest_target_prefix}as --version" \
+    check_exec_tool --warn "${gcc_guest_target_prefix}binutils for kernel" "${gcc_guest_target_prefix}as --version" \
        "$BINUTILS_NEEDED" "$BINUTILS_NEEDED" || gcc_helper
 
     # Locate users depmod and check for module-init-tools
@@ -662,15 +674,15 @@ BUILD_DIR="$builddir"
 #
 PREFIX="$prefix"
 
-# Overwrite kernelversion, if multiple diff files in patchdir.
-# default: empty (automatic detect from patch file name)
+# Overwrite kernelversion.  Check series files for available versions.
+# default: empty
 #
 # KERNEL_VERSION=$KERNEL_VERSION
 
 # Path to guest kernel, need for colinux daemons build processing (obsolate)
 # default: \$BUILD_DIR/linux-\$KERNEL_VERSION
 #
-COLINUX_TARGET_KERNEL_PATH="$targetkerneldir"
+$targetkerneldir_cfg
 
 # Directory target kernel source path for unpacking source (Guest kernel)
 # default: \$BUILD_DIR/linux-\$KERNEL_VERSION-source
@@ -693,7 +705,7 @@ COLINUX_TARGET_MODULE_PATH="$targetmoduledir"
 COLINUX_HOST_KERNEL_DIR="$hostkerneldir"
 
 # Install directory for target binaries (daemons, kernel and modules)
-# default: \$PREFIX/dist
+# default: \$USER_TOPDIR/dist
 #
 COLINUX_INSTALL_DIR="$distdir"
 
