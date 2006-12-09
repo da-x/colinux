@@ -14,6 +14,10 @@
 
 #include "manager.h"
 
+#ifdef CONFIG_REGPARM
+#error "colinux don't run, if CONFIG_REGPARM enabled in host kernel"
+#endif
+
 static int __init colinux_module_init(void)
 {
 	co_rc_t rc;

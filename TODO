@@ -97,6 +97,10 @@
    * Post more images on SourceForge. Send me URLs of ready images. I will
      not accept images that are tied to specific coLinux releases.
 
+ * Linux as host
+   * CoLinux don't run, if host kernel is configured with CONFIG_REGPARM.  In
+     function co_manager_load should 'manager == co_global_manager', but isn't.
+
  * Odd things to investigate:
    * Some iptables functionality not working? (see ML)
    * Spurious 'Floating Point Exception' with an athlon optimised vmlinux.
