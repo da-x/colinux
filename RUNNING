@@ -51,7 +51,7 @@ run anything.
 1. Run the downloaded installer file to begin the installation. 
    
 2. Choose an installation directory. It is better to choose c:\coLinux because
-   this way you don't need to edit the configuration XML since the pathnames
+   this way you don't need to edit the configuration file since the pathnames
    of block devices files are currently aboslute. However, note that any 
    directory should be acceptable.
 
@@ -105,17 +105,17 @@ run anything.
 5. Edit the config file to point to whatever root file system you 
    downloaded. 
    
-6. The installation directory should include vmlinux, default.conf, the 
+6. The installation directory should include vmlinux, example.conf, the 
    supplied linux.sys driver and executables, and probably the root 
    filesystem image. Be sure to review the config file for any additional 
    configuration that may be needed.
 
 7. Run coLinux. The current directory should be the installation directory, 
-   if not, then you man need to change paths (especially for vmlinux)
-   in the XML config file..
+   if not, then you need to change paths (especially for vmlinux) in the 
+   config file..
 
 	a. Running as an service.  
-		colinux-daemon.exe @default.conf --install-service "Cooperative Linux"
+		colinux-daemon.exe @example.conf --install-service "Cooperative Linux"
 	   Also, to remove the service:
 		colinux-daemon.exe --remove-service "Cooperative Linux".
 	   Then go to the Service Manager and start the "Cooperative Linux"
@@ -126,7 +126,7 @@ run anything.
 		colinux-console-fltk.exe OR
 		colinux-console-nt.exe
 	b. As an regular application.
-		colinux-daemon.exe @default.conf
+		colinux-daemon.exe @example.conf
 	   See colinux-daemon --help for details about possible 
 	   command-line arguments.
    
