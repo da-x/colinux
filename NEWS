@@ -65,6 +65,7 @@
     Translate a given exitcode into error text, filename and line number.
   * New: Console NT without -a connects to first monitor.
   * Linux as host: More tested host kernels: 2.6.17, 2.6.18
+  * Installer: NSIS version 2.22
 
 * Version 0.6.4
     * Resolved SF Bug #1517979 and #1551076 - colinux-bridged-net-daemon.exe

@@ -33,6 +33,8 @@ NOTES ON UPGRADING:
 	root=/dev/cobd0
 	ro
 
+    Locate for tool "colinux-xml2cfg.exe", a Colinux XML to CFG converter.
+
  2. Gentoo users need to be careful, Gentoo tends to use devfs when
     upgrading from 0.6.1 and so block device names change from cobdX to cobd/X
     and render the image unbootable.  For more details and solutions see the
