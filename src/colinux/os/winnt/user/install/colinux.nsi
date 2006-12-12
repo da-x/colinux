@@ -203,7 +203,7 @@ no_old_linux_sys:
   File "premaid\initrd.gz"
 
   ;Backup config file if present
-  IfFileExists "$INSTDIR\default.colinux.xml" 0 +1
+  IfFileExists "$INSTDIR\example.conf" 0 +1
     CopyFiles /SILENT "$INSTDIR\example.conf" "$INSTDIR\example.conf.old"
   File "premaid\example.conf"
 
