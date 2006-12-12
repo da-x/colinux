@@ -269,6 +269,26 @@ static void split_comma_separated(const char *source, comma_buffer_t *array)
 	}
 }
 
+static co_rc_t config_parse_mac_address(const char *text, co_netdev_desc_t *net_dev)
+{
+	co_rc_t rc;
+
+	if (*text) {
+		rc = co_parse_mac_address(text, net_dev->mac_address);
+		if (!CO_OK(rc)) {
+			co_terminal_print("error parsing MAC address: %s\n", text);
+			return rc;
+		}
+		net_dev->manual_mac_address = PTRUE;
+
+		co_debug_info("MAC address: %s\n", text);
+	} else {
+		co_debug("MAC address: auto generated");
+	}
+
+	return CO_RC(OK);
+}
+
 static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, const char *param)
 {
 	co_netdev_desc_t *net_dev = &conf->net_devs[index];
@@ -288,22 +308,12 @@ static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, co
 	net_dev->type = CO_NETDEV_TYPE_TAP;
 	net_dev->enabled = PTRUE;
 
-	if (*mac_address) {
-		rc = co_parse_mac_address(mac_address, net_dev->mac_address);
-		if (!CO_OK(rc)) {
-			co_terminal_print("error parsing MAC address: %s\n", mac_address);
-			return rc;
-		}
-		net_dev->manual_mac_address = PTRUE;
-	}
-
 	co_debug_info("configured TAP at '%s' device as eth%d",
 				net_dev->desc, index);
 
-	if (*mac_address)
-		co_debug_info("MAC address: %s", mac_address);
-	else
-		co_debug_info("MAC address: auto generated");
+	rc = config_parse_mac_address(mac_address, net_dev);
+	if (!CO_OK(rc))
+		return rc;
 
 	if (*host_ip)
 		co_debug_info("Host IP address: %s (currently ignored)", host_ip);
@@ -331,22 +341,12 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 	net_dev->enabled = PTRUE;
 	net_dev->promisc_mode = 1;
 
-	if (*mac_address) {
-		rc = co_parse_mac_address(mac_address, net_dev->mac_address);
-		if (!CO_OK(rc)) {
-			co_terminal_print("error parsing MAC address: %s\n", mac_address);
-			return rc;
-		}
-		net_dev->manual_mac_address = PTRUE;
-	}
-
 	co_debug_info("configured PCAP bridge at '%s' device as eth%d",
 			net_dev->desc, index);
 
-	if (*mac_address)
-		co_debug_info("MAC address: %s", mac_address);
-	else
-		co_debug_info("MAC address: auto generated");
+	rc = config_parse_mac_address(mac_address, net_dev);
+	if (!CO_OK(rc))
+		return rc;
 
 	if (*promisc_mode) {
 		if (strcmp(promisc_mode, "nopromisc") == 0) {
@@ -367,7 +367,8 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, const char *param)
 {
 	co_netdev_desc_t *net_dev = &conf->net_devs[index];
-	char mac_address[40]; /* currently ignored */
+	char mac_address[40];
+	co_rc_t rc;
 
 	comma_buffer_t array [] = {
 		{ sizeof(mac_address), mac_address },
@@ -381,6 +382,10 @@ static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, 
 	net_dev->enabled = PTRUE;
 
 	co_debug_info("configured Slirp as eth%d", index);
+
+	rc = config_parse_mac_address(mac_address, net_dev);
+	if (!CO_OK(rc))
+		return rc;
 
 	if (*net_dev->redir)
 		co_debug_info("redirections %s", net_dev->redir);

@@ -276,7 +276,7 @@ command-line, in this "mode" the command-line arguments are:
     ethX=slirp,<MAC>,<redirections>
 
 	Use any number X of these to specify network interfaces,
-	<MAC> is curently not supported, <redirections> are optional.
+	<MAC> and <redirections> are optional.
 
 	<redirections> take the form tcp|upd:hostport:linuxport[:count],
 	multiple redirections are seperated by /, ie tcp:2222:22/tcp:8080:80

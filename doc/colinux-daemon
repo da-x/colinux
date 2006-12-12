@@ -134,18 +134,18 @@ important when options don't depend on each other.
    Slirp, the simplest way to internet.  Inside coLinux can use a DHCP-Client.
 
 
-     eth0=slirp,"",tcp:22:22
+     eth0=slirp,,tcp:22:22
 
    Uses SLiRP networking, forwards the port 22 from host to linux (SSH)
 
 
-     eth0=slirp,"",tcp:2222:22
+     eth0=slirp,,tcp:2222:22
 
    Uses SLiRP networking, with port 2222 on host being redirected (or port
    forwarded) to coLinux guest 22.
 
 
-     eth0=slirp,"",tcp:2222:22/tcp:4000:80:3
+     eth0=slirp,,tcp:2222:22/tcp:4000:80:3
 
    Uses SLiRP networking, and forwards counts of ports
 	Host (windows)  --> guest (coLinux)
