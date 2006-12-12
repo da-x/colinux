@@ -2,7 +2,7 @@
 ;Written by NEBOR Regis
 ;Modified by Dan Aloni (c) 2004
 ;Modified 8/20/2004,2/4/2004 by George P Boutwell
-;Modified 7/10/2006 by Henry Nestler
+;Modified 12/10/2006 by Henry Nestler
 
 ;-------------------------------------
 ;Good look
@@ -86,24 +86,12 @@
 ;Custom Setup for image download
 
 ;Variables used to track user choice
-  Var GENTOO
-  Var DEBIAN
-  Var NOTHING
-  ; ....
-  ;Var OIMAGE
-  ; ....
   Var LOCATION
   Var RandomSeed
 
 ; StartDlImageFunc down for reference resolution
 
 Function EndDlImageFunc
-
-  ;Read a value from an InstallOptions INI file
-  !insertmacro MUI_INSTALLOPTIONS_READ $DEBIAN "iDl.ini" "Field 1" "State"
-  !insertmacro MUI_INSTALLOPTIONS_READ $GENTOO "iDl.ini" "Field 2" "State"
-  !insertmacro MUI_INSTALLOPTIONS_READ $NOTHING "iDl.ini" "Field 7" "State"
-  ;!insertmacro MUI_INSTALLOPTIONS_READ $OIMAGE "iDl.ini" "Field x" "State"
 
 FunctionEnd
 
@@ -340,79 +328,107 @@ SectionEnd
 
 SectionGroupEnd
 
+# Defines must sync with entries in file iDl.ini
+!define IDL_NOTHING 1
+!define IDL_ARCHLINUX 2
+!define IDL_DEBIAN 3
+!define IDL_FEDORA 4
+!define IDL_GENTOO 5
+!define IDL_LOCATION 6
+
 Section "Root Filesystem image Download" SeccoLinuxImage
 
    ;----------------------------------------------------------
    ; Random sourceforge download
-   
-    StrCmp $NOTHING "1" "" tryGentoo
-    Goto End
+    ;Read a value from an InstallOptions INI file and set the filenames
 
-    tryGentoo:
-    StrCmp $GENTOO "1" "" tryDebian
-    ;MessageBox MB_OK "Gentoo"
-    StrCpy $R0 "Gentoo-2005.1-stage3-ext3.bz2"
-    Goto tryDownload
+    !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_NOTHING}" "State"
+    StrCmp $R1 "1" End
 
-    tryDebian:
-    StrCmp $DEBIAN "1" "" End ; tryOImage
-    ;MessageBox MB_OK "Debian"
+    !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_ARCHLINUX}" "State"
+    StrCpy $R0 "ArchLinux-0.7.2-ext3-512mb.7z"
+    StrCmp $R1 "1" tryDownload
+
+    !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_DEBIAN}" "State"
     StrCpy $R0 "Debian-3.0r2.ext3-mit-backports.1gb.bz2"
+    StrCmp $R1 "1" tryDownload
 
-    ; ....
-    ;tryOImage:
-    ;StrCmp $OIMAGE "1" "" End or tryOther
-    ;MessageBox MB_OK "Gentoo"
-    ;StrCpy $R0 "nameOfImageXfile"
-    ;Goto tryDownload
-    ; ....
+    !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_FEDORA}" "State"
+    StrCpy $R0 "FedoraCore5-2006.8-ext3-2gb.7z"
+    StrCmp $R1 "1" tryDownload
+
+    !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_GENTOO}" "State"
+    StrCpy $R0 "Gentoo-colinux-stage3-x86-2004.3.bz2"
+    StrCmp $R1 "1" tryDownload
+    GoTo End
 
     tryDownload:
     StrCpy $R1 "colinux" ; project
 
-
-    !insertmacro MUI_INSTALLOPTIONS_READ $LOCATION "iDl.ini" "Field 4" "State"
-    StrCmp $LOCATION "Random" Random
-    StrCmp $LOCATION "Europe" Europe
+    !insertmacro MUI_INSTALLOPTIONS_READ $LOCATION "iDl.ini" "Field ${IDL_LOCATION}" "State"
+    StrCmp $LOCATION "SourceForge defaults" SFdefault  ;This is the preferred way and counts the stats
     StrCmp $LOCATION "Asia" Asia
+    StrCmp $LOCATION "Australia" Australia
+    StrCmp $LOCATION "Europe" Europe
     StrCmp $LOCATION "North America" NorthAmerica
+    StrCmp $LOCATION "South America" SouthAmerica
 
-    Random:
+    ;Random:
     ;MessageBox MB_OK "Random"
-    	Push "http://belnet.dl.sourceforge.net/sourceforge/$R1/$R0"
-	Push "http://cesnet.dl.sourceforge.net/sourceforge/$R1/$R0"
-	Push "http://heanet.dl.sourceforge.net/sourceforge/$R1/$R0"
-	;Push "http://switch.dl.sourceforge.net/sourceforge/$R1/$R0"
-	Push "http://keihanna.dl.sourceforge.net/sourceforge/$R1/$R0"
-	Push "http://easynews.dl.sourceforge.net/sourceforge/$R1/$R0"
-	Push "http://twtelecom.dl.sourceforge.net/sourceforge/$R1/$R0"
-	Push "http://flow.dl.sourceforge.net/sourceforge/$R1/$R0"
-	Push "http://aleron.dl.sourceforge.net/sourceforge/$R1/$R0"
-	Push "http://umn.dl.sourceforge.net/sourceforge/$R1/$R0"
-	Push "http://unc.dl.sourceforge.net/sourceforge/$R1/$R0"
+    	Push "http://belnet.dl.sourceforge.net/sourceforge/$R1/$R0"	;Europe
+	Push "http://heanet.dl.sourceforge.net/sourceforge/$R1/$R0"	;Europe
+	Push "http://easynews.dl.sourceforge.net/sourceforge/$R1/$R0"	;NorthAmerica
+	Push "http://twtelecom.dl.sourceforge.net/sourceforge/$R1/$R0"	;?? NorthAmerika
+	Push "http://flow.dl.sourceforge.net/sourceforge/$R1/$R0"	;??
+	Push "http://aleron.dl.sourceforge.net/sourceforge/$R1/$R0"	;?? NorthAmerika
+	Push "http://umn.dl.sourceforge.net/sourceforge/$R1/$R0"	;NorthAmerika
+        Push "http://jaist.dl.sourceforge.net/sourceforge/$R1/$R0"	;Asia
+        Push "http://optusnet.dl.sourceforge.net/sourceforge/$R1/$R0"	;Australia
+	Push "http://mesh.dl.sourceforge.net/sourceforge/$R1/$R0"	;Europe
 	Push 10
+    Goto DownloadRandom
+    Asia:
+    ;MessageBox MB_OK "Asia"
+        Push "http://jaist.dl.sourceforge.net/sourceforge/$R1/$R0"
+        Push "http://nchc.dl.sourceforge.net/sourceforge/$R1/$R0"
+        Push "http://keihanna.dl.sourceforge.net/sourceforge/$R1/$R0"  ;??
+        Push 3
+    Goto DownloadRandom
+    Australia:
+        Push "http://optusnet.dl.sourceforge.net/sourceforge/$R1/$R0"
+        Push 1
     Goto DownloadRandom
     Europe:
     ;MessageBox MB_OK "Europe"
         Push "http://belnet.dl.sourceforge.net/sourceforge/$R1/$R0"
-	Push "http://cesnet.dl.sourceforge.net/sourceforge/$R1/$R0"
-	Push "http://heanet.dl.sourceforge.net/sourceforge/$R1/$R0"
+        Push "http://puzzle.dl.sourceforge.net/sourceforge/$R1/$R0"
 	Push "http://switch.dl.sourceforge.net/sourceforge/$R1/$R0"
-	Push 4
-    Goto DownloadRandom
-    Asia:
-    ;MessageBox MB_OK "Asia"
-        Push "http://keihanna.dl.sourceforge.net/sourceforge/$R1/$R0"
-        Push 1
+	Push "http://mesh.dl.sourceforge.net/sourceforge/$R1/$R0"
+	Push "http://ohv.dl.sourceforge.net/sourceforge/$R1/$R0"
+	Push "http://heanet.dl.sourceforge.net/sourceforge/$R1/$R0"
+	Push "http://surfnet.dl.sourceforge.net/sourceforge/$R1/$R0"
+	Push "http://kent.dl.sourceforge.net/sourceforge/$R1/$R0"
+	Push "http://cesnet.dl.sourceforge.net/sourceforge/$R1/$R0"  ;??
+	Push 9
     Goto DownloadRandom
     NorthAmerica:
     ;MessageBox MB_OK "NorthAmerica"
-        Push "http://twtelecom.dl.sourceforge.net/sourceforge/$R1/$R0"
-        Push "http://aleron.dl.sourceforge.net/sourceforge/$R1/$R0"
         Push "http://easynews.dl.sourceforge.net/sourceforge/$R1/$R0"
+        Push "http://superb-west.dl.sourceforge.net/sourceforge/$R1/$R0"
+        Push "http://superb-east.dl.sourceforge.net/sourceforge/$R1/$R0"
         Push "http://umn.dl.sourceforge.net/sourceforge/$R1/$R0"
-        Push "http://unc.dl.sourceforge.net/sourceforge/$R1/$R0"
-        Push 5
+        Push "http://twtelecom.dl.sourceforge.net/sourceforge/$R1/$R0"  ;??
+        Push "http://aleron.dl.sourceforge.net/sourceforge/$R1/$R0"  ;??
+        Push "http://unc.dl.sourceforge.net/sourceforge/$R1/$R0"  ;??
+        Push 7
+    Goto DownloadRandom
+    SouthAmerica:
+        Push "http://ufpr.dl.sourceforge.net/sourceforge/$R1/$R0"
+        Push 1
+    Goto DownloadRandom
+    SFdefault:
+        Push "http://downloads.sourceforge.net/$R1/$R0?download"
+        Push 1
 
     DownloadRandom:
     	Push "$INSTDIR\$R0"
