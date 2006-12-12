@@ -64,7 +64,7 @@ typedef long co_rc_t;
 #include "debug.h"
 
 #ifndef COLINUX_FILE_ID           
-#define COLINUX_FILE_ID           0
+#define COLINUX_FILE_ID           -1
 #endif
 
 /* 
