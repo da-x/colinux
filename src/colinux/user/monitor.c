@@ -48,7 +48,7 @@ co_rc_t co_user_monitor_create(co_user_monitor_t **out_mon, co_manager_ioctl_cre
 	if (!CO_OK(rc)) {
 		co_os_free(mon);
 		co_os_manager_close(handle);
-		return params->rc;
+		return rc;
 	}
 
 	if (!CO_OK(params->rc)) {
