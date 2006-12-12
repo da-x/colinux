@@ -397,12 +397,6 @@ static co_rc_t co_debug_parse_args(co_command_line_params_t cmdline, co_debug_pa
 {
 	co_rc_t rc;
 
-	parameters->download_mode = PFALSE;
-	parameters->parse_mode = PFALSE;
-	parameters->output_filename_specified = PFALSE;
-	parameters->network_server_specified = PFALSE;
-	parameters->rc_specified = PFALSE;
-
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-d", &parameters->download_mode);
 	if (!CO_OK(rc)) 
 		return rc;
@@ -441,10 +435,9 @@ static void syntax(void)
 	printf("\n");
 	printf("    colinux-debug-daemon [-h] [-p] [-d] [-s levels] [-f filename] [-e exitcode]\n");
 	printf("\n");
-	printf("      -d              Download debug information on the fly\n");
+	printf("      -d              Download debug information on the fly from driver.\n");
+	printf("                      Without -d, uses standard input.\n");
 	printf("      -p              Parse the debug information and output an XML\n");
-	printf("                      Without -d, uses standard input, otherwise parses\n");
-	printf("                      the downloaded information\n");
 	printf("      -f [filename]   File to append the output instead of writing to\n");
 	printf("                      standard output. Write with flush every line.\n");
 	printf("      -s level=num,level2=num2,...\n");
@@ -493,7 +486,8 @@ co_rc_t co_debug_main(int argc, char *argv[])
 			return CO_RC(ERROR);
 	}
 
-	co_update_settings();
+	if (parameters.settings_change_specified)
+		co_update_settings();
 
 	if (parameters.download_mode  &&  parameters.network_server_specified) {
 		co_debug_download_to_network();

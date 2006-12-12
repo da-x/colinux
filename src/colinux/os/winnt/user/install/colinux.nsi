@@ -481,7 +481,7 @@ SectionEnd
   LangString DESC_SeccoLinuxNet ${LANG_ENGLISH} "Install coLinux Virtual Ethernet Driver, which allows to create a network link between Linux and Windows"
   LangString DESC_SeccoLinuxNetSLiRP ${LANG_ENGLISH} "Install coLinux Virtual Ethernet Driver, which allows to create a network link between Linux and Windows"
   LangString DESC_SeccoLinuxBridgedNet ${LANG_ENGLISH} "Install coLinux Bridge Ethernet support, which allows to join the coLinux machine to an existing network"
-  LangString DESC_SeccoLinuxSerial ${LANG_ENGLISH} "Install coLinux Virtual Serail Driver, which allows to use serial Devices between Linux and Windows"
+  LangString DESC_SeccoLinuxSerial ${LANG_ENGLISH} "Install coLinux Virtual Serial Driver, which allows to use serial Devices between Linux and Windows"
   LangString DESC_SeccoLinuxDebug ${LANG_ENGLISH} "Install coLinux Debugging, which allows to create extensive debug log for troubleshooting problems"
   LangString DESC_SecImage ${LANG_ENGLISH} "Download an image from sourceforge. Also provide useful links on how to use it"
 
