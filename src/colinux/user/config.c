@@ -229,7 +229,7 @@ static co_rc_t config_parse_mac_address(const char *text, co_netdev_desc_t *net_
 		}
 		net_dev->manual_mac_address = PTRUE;
 
-		co_terminal_print("MAC address: %s", text);
+		co_terminal_print("MAC address: %s\n", text);
 	} else {
 		co_debug("MAC address: auto generated");
 	}
