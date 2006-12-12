@@ -121,7 +121,7 @@ patch_kernel_source()
 	test -f "series"  || ln -s "$TOPDIR/patch/series-$KERNEL_VERSION" "series"
 	test -f "patches" || ln -s "$TOPDIR/patch" "patches"
 
-	if quilt --version >/dev/null
+	if quilt --version >/dev/null 2>&1
 	then
 		# use quilt for patching, don't trust users settings
 		unset QUILT_COMMAND_ARGS

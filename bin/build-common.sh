@@ -30,7 +30,7 @@
 # Updated by Sam Lantinga <slouken@libsdl.org>
 #####################################################################
 
-# We need to find our self here, or in subdur bin
+# We need to find our self here, or in subdir bin
 # BINDIR is bin directory with scripts
 if [ -f bin/build-common.sh ]; then
 	BINDIR=`pwd`/bin
@@ -215,7 +215,6 @@ download_file()
 		mkdir -p "$SOURCE_DIR"
 		cd "$SOURCE_DIR"
 		echo "Downloading $1"
-		wget "$2/$1"
 		if ! wget "$2/$1"
 		then
 			echo "Could not download $1"
