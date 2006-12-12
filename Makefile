@@ -43,10 +43,10 @@ dump:
 endif
 
 clean:
-	@cd src && make clean
-	find . \( -name '.tmp_versions' \
+	make -C src clean
+	find src \( -name '.tmp_versions' \
 		\) -type d -print | xargs rm -rf
-	find . \( -name '*.o' -o -name '*.pyc' \
+	find src bin \( -name '*.o' -o -name '*.pyc' \
 		-o -name '.*.cmd' -o -name 'colinux.mod.c' \
 		\) -type f -print | xargs rm -f
 
@@ -55,9 +55,9 @@ ifneq ($(USER_CFG),)
 	rm -f bin/user-build.cfg bin/user-build.cfg.old \
 	    $(shell . $(USER_CFG); echo $$BUILD_DIR)/.build-*.md5
 endif
-	find . \( -name 'premaid' \
+	find src \( -name 'premaid' \
 		\) -type d -print | xargs rm -rf
-	find . \( -name '*.orig' -o -name '*.rej' \
+	find src \( -name '*.orig' -o -name '*.rej' \
 		-o -name '.*.orig' -o -name '.*.rej' \
 		-o -name '*%' \
 		\) -type f -print | xargs rm -f
