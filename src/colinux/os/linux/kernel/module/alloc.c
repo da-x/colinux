@@ -62,6 +62,7 @@ co_rc_t co_os_userspace_map(void *address, unsigned long pages, void **user_addr
 #endif
 	);
 	if (IS_ERR(result)) {
+		co_debug("error: co_os_userspace_map: do_mmap_pgoff failed (%d)", result);
 		filp_close(filp, NULL);
 		return CO_RC(ERROR);
 	}
