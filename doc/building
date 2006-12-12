@@ -544,8 +544,9 @@ PATH=.:$PATH is needed, if the executables aren't installed in your e.g
 
 - Run colinux configure with path to this fltk
 
-  cd colinux-source/src
-  PATH=$HOME/i686-linux-local/bin:$PATH ./configure --target=i686-pc-linux ...
+  cd colinux-source
+  export PATH=$HOME/i686-linux-local/bin:$PATH
+  ./configure --target=i686-pc-linux ...
 
 - Run colinux build with path to FLTK libraries
 
@@ -555,5 +556,3 @@ PATH=.:$PATH is needed, if the executables aren't installed in your e.g
   export COLINUX_CFLAGS="-I$HOME/i686-pc-linux-local/include"
   export COLINUX_LFLAGS="-L$HOME/i686-pc-linux-local/lib"
   make HOSTOS=linux colinux
-
-
