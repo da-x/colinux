@@ -33,7 +33,7 @@ NOTES ON UPGRADING:
 	root=/dev/cobd0
 	ro
 
-    Locate for tool "colinux-xml2cfg.exe", a Colinux XML to CFG converter.
+    Locate for tool "colinux-xml2cfg.exe", a XML to CFG converter for coLinux.
 
  2. Gentoo users need to be careful, Gentoo tends to use devfs when
     upgrading from 0.6.1 and so block device names change from cobdX to cobd/X
@@ -105,14 +105,22 @@ run anything.
    the .bz2 archive before use!
 
 5. Edit the config file to point to whatever root file system you 
-   downloaded. 
+   downloaded and replace the file name 'root_fs' with yours.
    
 6. The installation directory should include vmlinux, example.conf, the 
    supplied linux.sys driver and executables, and probably the root 
    filesystem image. Be sure to review the config file for any additional 
    configuration that may be needed.
 
-7. Run coLinux. The current directory should be the installation directory, 
+7. If you have a 64bit Intel CPU with hardware support for NoExecute (DEP),
+   typical Xeon and Pentium 4, and running on Windows XP with SP2 or
+   Windows 2003, then replace the '/noexecute=OptIn' or '/noexecute=OptOut'
+   with '/noexecute=AlwaysOff' in your file C:\BOOT.INI please.
+
+   For AMD, you no need change this file.  AMD is runnnig fine.  Please
+   read more about this typical Intel problem in Wiki page 'NoExecuteDEP'.
+
+8. Run coLinux. The current directory should be the installation directory, 
    if not, then you need to change paths (especially for vmlinux) in the 
    config file..
 
@@ -122,16 +130,17 @@ run anything.
 		colinux-daemon.exe --remove-service "Cooperative Linux".
 	   Then go to the Service Manager and start the "Cooperative Linux"
 	   service,
-	   OR
+	   OR start from command prompt:
 		net start "Cooperative Linux"
 	   Last, got to the installation directory and double-click on
 		colinux-console-fltk.exe OR
 		colinux-console-nt.exe
+
 	b. As an regular application.
 		colinux-daemon.exe @example.conf
-	   See colinux-daemon --help for details about possible 
-	   command-line arguments.
-   
+	   See this file or run colinux-daemon --help for details about
+	   possible command-line arguments.
+
    The console window opens and you would see a Linux machine booting in 
    that window.
 
@@ -229,9 +238,13 @@ command-line, in this "mode" the command-line arguments are:
     alias=<path to image file> | :cobdX
 
 	Use any number of these to specify an alias (hda1, etc)
-	for an block device's image file.  <path to image file>
-	can be to an partition using standard 
-	\Device\HarddiskX\PartitionY format.
+	for an block device's image file.
+
+	<path to image file> can be to an partition using standard
+	\Device\HarddiskX\PartitionY format.  Harddisk starts by 0,
+	Partition starts by 1.  Be carefully with these accesses,
+	mount it read only at the first time and check the contains.
+	Don't mount a partition, where Windows is using in same time!
 
     cofsX=<path to windows directory>
 
@@ -239,6 +252,9 @@ command-line, in this "mode" the command-line arguments are:
 	Host filesystem device (mount Host directory to coLinux
 	local mount point). There are some limitations in it's
 	use currently (namely non-ASCII files).
+
+	<path to windows directory> can be any of the directory of
+	your Windows, for sample C:\colinux, D:\ (CDROM drive).
 
     ethX=tuntap | pcap-bridge | slirp,<options>
 
@@ -255,6 +271,10 @@ command-line, in this "mode" the command-line arguments are:
 	"Local Connection 1".  Without name coLinux use the first
 	adapter.  Let the name empty, if you have only one
 	TAP driver installed.
+	Set a MAC, if you wish a constant hardware identification
+	number.  Othercase colinux builds a random number.
+	Ipaddr sets the host ipaddress.  Netmask is optional for
+	non standard netmask.
 
     ethX=pcap-bridge,<network connection name>,<MAC>,<promisc>
 
@@ -306,6 +326,23 @@ command-line, in this "mode" the command-line arguments are:
 
     Read the file "colinux-daemon.txt" in your colinux installation
     directore for samples, and see the example.conf.
+
+
+Environment settings
+--------------------
+
+    COLINUX_CONSOLE_EXIT_ON_DETACH=1
+
+	If this set, then colinux FLTK/NT console will be close after
+	shutting down and detach coLinux.
+
+    COLINUX_CONSOLE_FONT=<Windows Font Name>:<Size>
+
+	Set the font type and size for FLTK console.  Only fixed fonts
+	are allowed.  For sample
+	  set COLINUX_CONSOLE_FONT=Lucida Console:12
+	Or, change font size only:
+	  set COLINUX_CONSOLE_FONT=:12
 
 
 Common Problems

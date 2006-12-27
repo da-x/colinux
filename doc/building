@@ -211,7 +211,7 @@ more examples for patching kernel and the quilt handling.
 For example:
     ~/# cd PathToColinux/patch
     ~/PathToColinux/patch# cat `cat series-2.6.12` > /tmp/sumary.patch
-    ~/# cd -
+    ~/PathToColinux/patch# cd
     ~/# wget http://www.kernel.org/pub/linux/kernel/2.6/linux-2.6.12.tar.bz2
     ~/# bunzip2 -dc linux-2.6.12.tar.bz2 | tar x
     ~/# cd linux-2.6.12
