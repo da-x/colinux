@@ -45,7 +45,9 @@ static co_rc_t check_cobd_file (co_pathname_t pathname, int index)
 	co_remove_quotation_marks(pathname);
 
 	if (co_strncmp(pathname, "\\Device\\", 8) == 0  ||
-	    co_strncmp(pathname, "\\DosDevices\\", 12) == 0) 
+	    co_strncmp(pathname, "\\DosDevices\\", 12) == 0 ||
+	    co_strncmp(pathname, "\\Volume{", 8) == 0 ||
+	    co_strncmp(pathname, "\\\\.\\", 4) == 0) 
 		return CO_RC(OK);  /* Can't check partitions or raw devices */
 
 	rc = co_os_file_load(pathname, &buf, &size, 1024);
