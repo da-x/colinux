@@ -39,11 +39,14 @@ co_rc_t co_os_userspace_map(void *address, unsigned long pages, void **user_addr
 	void *result;
 
 	filp = filp_open("/dev/kmem", O_RDWR | O_LARGEFILE, 0);
-	if (!filp)
+	if (!filp) {
+		co_debug("error: co_os_userspace_map: open /dev/kmem failed");
 		return CO_RC(ERROR);
+	}
 	
 	pa = co_os_virt_to_phys(address);
 	if (!pa) {
+		co_debug("error: co_os_userspace_map: co_os_virt_to_phys failed");
 		filp_close(filp, NULL);
 		return CO_RC(ERROR);
 	}
