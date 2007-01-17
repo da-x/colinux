@@ -531,11 +531,11 @@ SectionEnd
   LangString DESC_SecGrpcoLinux ${LANG_ENGLISH} "Install coLinux"
   LangString DESC_SecNTConsole ${LANG_ENGLISH} "Install native Windows (NT) coLinux console, which allows to view Linux console in an NT DOS Command-line console"
   LangString DESC_SecFLTKConsole ${LANG_ENGLISH} "Install cross-platform coLinux console, which allows to view Linux console and manage coLinux from a cross-platform GUI program"
-  LangString DESC_SeccoLinuxNet ${LANG_ENGLISH} "Install coLinux Virtual Ethernet Driver, which allows to create a network link between Linux and Windows"
-  LangString DESC_SeccoLinuxNetSLiRP ${LANG_ENGLISH} "Install coLinux Virtual Ethernet Driver, which allows to create a network link between Linux and Windows"
-  LangString DESC_SeccoLinuxBridgedNet ${LANG_ENGLISH} "Install coLinux Bridge Ethernet support, which allows to join the coLinux machine to an existing network"
-  LangString DESC_SeccoLinuxSerial ${LANG_ENGLISH} "Install coLinux Virtual Serial Driver, which allows to use serial Devices between Linux and Windows"
-  LangString DESC_SeccoLinuxDebug ${LANG_ENGLISH} "Install coLinux Debugging, which allows to create extensive debug log for troubleshooting problems"
+  LangString DESC_SeccoLinuxNet ${LANG_ENGLISH} "Install Virtual Ethernet Driver (TAP) as private network link between Linux and Windows"
+  LangString DESC_SeccoLinuxNetSLiRP ${LANG_ENGLISH} "Install SLiRP Ethernet Driver as virtual Gateway for outgoings TCP and UDP connections"
+  LangString DESC_SeccoLinuxBridgedNet ${LANG_ENGLISH} "Install Bridge Ethernet support, which allows to join the coLinux machine to an existing network"
+  LangString DESC_SeccoLinuxSerial ${LANG_ENGLISH} "Install Virtual Serial Driver, which allows to use serial Devices between Linux and Windows"
+  LangString DESC_SeccoLinuxDebug ${LANG_ENGLISH} "Install Debugging, which allows to create extensive debug log for troubleshooting problems"
   LangString DESC_SecImage ${LANG_ENGLISH} "Download an image from sourceforge. Also provide useful links on how to use it"
 
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
