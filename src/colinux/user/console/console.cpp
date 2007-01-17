@@ -13,7 +13,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+
 #include "console.h"
+#include "about.h"
 #include "select_monitor.h"
 
 #include <FL/Fl_Select_Browser.H>
@@ -521,11 +523,10 @@ void console_window_t::select_monitor()
 
 co_rc_t console_window_t::about()
 {
-	Fl_Double_Window *win = new Fl_Double_Window(400, 300);
-
-	/* TODO: Add some text here :) */
-
-	win->end();
+	// Show the "About Box" dialog
+	about_box * win = new about_box( );
+	win->set_modal( );
+	win->show( );
 
 	return CO_RC(OK);
 }
