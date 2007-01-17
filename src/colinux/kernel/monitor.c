@@ -831,6 +831,7 @@ static co_rc_t load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_t *p
 static co_rc_t start(co_monitor_t *cmon)
 {
 	co_rc_t rc;
+	co_boot_params_t *params;
 
 	if (cmon->state != CO_MONITOR_STATE_INITIALIZED) {
 		co_debug_error("invalid state\n");
@@ -849,13 +850,17 @@ static co_rc_t start(co_monitor_t *cmon)
 	co_os_timer_activate(cmon->timer);
 
 	co_passage_page->operation = CO_OPERATION_START;
-	co_passage_page->params[0] = cmon->core_end;
-	co_passage_page->params[1] = cmon->memory_size;
-	co_passage_page->params[2] = cmon->initrd_address;
-	co_passage_page->params[3] = cmon->initrd_size;
 
-	co_memcpy(&co_passage_page->params[10], cmon->config.boot_parameters_line, 
-	       sizeof(cmon->config.boot_parameters_line));
+	params = (co_boot_params_t *)co_passage_page->params;
+
+	params->co_core_end	= cmon->core_end;
+	params->co_memory_size	= cmon->memory_size;
+	params->co_initrd 	= (void *)cmon->initrd_address;
+	params->co_initrd_size	= cmon->initrd_size;
+
+	co_memcpy(&params->co_boot_parameters,
+		cmon->config.boot_parameters_line,
+		sizeof(cmon->config.boot_parameters_line));
 
 	cmon->state = CO_MONITOR_STATE_STARTED;
 
