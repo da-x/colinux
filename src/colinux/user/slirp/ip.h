@@ -75,10 +75,6 @@ typedef u_int32_t n_long;                 /* long as received from the net */
 
 /*
  * Structure of an internet header, naked of options.
- *
- * We declare ip_len and ip_off to be short, rather than u_short
- * pragmatically since otherwise unsigned comparisons can result
- * against negative integers quite easily, and fail in subtle ways.
  */
 struct ip {
 #ifdef WORDS_BIGENDIAN
@@ -212,7 +208,7 @@ struct ipovly {
 	caddr32_t	ih_next, ih_prev;	/* for protocol sequence q's */
 	u_int8_t	ih_x1;			/* (unused) */
 	u_int8_t	ih_pr;			/* protocol */
-	int16_t	ih_len;			/* protocol length */
+	u_int16_t	ih_len;			/* protocol length */
 	struct	in_addr ih_src;		/* source internet address */
 	struct	in_addr ih_dst;		/* destination internet address */
 };

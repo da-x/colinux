@@ -100,8 +100,10 @@ struct tcphdr {
  * With an IP MSS of 576, this is 536,
  * but 512 is probably more convenient.
  * This should be defined as MIN(512, IP_MSS - sizeof (struct tcpiphdr)).
+ *
+ * We make this 1460 because we only care about Ethernet in the qemu context.
  */
-#define	TCP_MSS	512
+#define	TCP_MSS	1460
 
 #define	TCP_MAXWIN	65535	/* largest value for (unscaled) window */
 
@@ -109,8 +111,14 @@ struct tcphdr {
 
 /*
  * User-settable options (used with setsockopt).
+ *
+ * We don't use the system headers on unix because we have conflicting
+ * local structures. We can't avoid the system definitions on Windows,
+ * so we undefine them.
  */
-/* #define	TCP_NODELAY	0x01 */	/* don't delay send to coalesce packets */
+#undef TCP_NODELAY
+#define	TCP_NODELAY	0x01	/* don't delay send to coalesce packets */
+#undef TCP_MAXSEG
 /* #define	TCP_MAXSEG	0x02 */	/* set maximum segment size */
 
 /*
