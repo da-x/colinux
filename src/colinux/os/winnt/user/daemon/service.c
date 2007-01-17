@@ -293,7 +293,9 @@ static void WINAPI service_main(int _argc, char **_argv)
 		ssStatus.dwServiceSpecificExitCode = 0;
 
 		co_winnt_sc_report_status(SERVICE_RUNNING, NO_ERROR, 3000);
+		co_ntevent_print("daemon: service running.\n");
 		co_winnt_daemon_main(daemon_start_parameters);
+		co_ntevent_print("daemon: service stopped.\n");
 		co_winnt_sc_report_status(SERVICE_STOPPED, 0, 0);
 	}
 }
