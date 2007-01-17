@@ -36,6 +36,8 @@ struct ex_list *exec_list;
 /* XXX: suppress those select globals */
 fd_set *global_readfds, *global_writefds, *global_xfds;
 
+char slirp_hostname[33];
+
 #ifdef _WIN32
 
 static int get_dns_addr(struct in_addr *pdns_addr)
