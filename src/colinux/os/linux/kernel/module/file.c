@@ -19,6 +19,7 @@ typedef struct {
 	co_monitor_file_block_dev_t *fdev;
 } co_os_transfer_file_block_data_t;
 
+static
 co_rc_t co_os_transfer_file_block(struct co_monitor *cmon, 
 				  void *host_data, void *linuxvm, unsigned long size, 
 				  co_monitor_transfer_dir_t dir)
@@ -70,6 +71,7 @@ co_rc_t co_os_transfer_file_block(struct co_monitor *cmon,
 	return rc;
 }
 
+static
 co_rc_t co_os_file_block_read(struct co_monitor *linuxvm,
 			      co_block_dev_t *dev, 
 			      co_monitor_file_block_dev_t *fdev,
@@ -92,6 +94,7 @@ co_rc_t co_os_file_block_read(struct co_monitor *linuxvm,
 }
 
 
+static
 co_rc_t co_os_file_block_write(struct co_monitor *linuxvm,
 			       co_block_dev_t *dev, 
 			       co_monitor_file_block_dev_t *fdev,
@@ -112,6 +115,7 @@ co_rc_t co_os_file_block_write(struct co_monitor *linuxvm,
 	return rc;
 }
 
+static
 co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned long long *size)
 {
 	struct file *filp;
@@ -141,6 +145,7 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 	return rc;
 }
 
+static
 co_rc_t co_os_file_block_open(struct co_monitor *linuxvm, co_monitor_file_block_dev_t *fdev)
 {
 	struct file *filp;
@@ -174,6 +179,7 @@ out:
 	return rc;
 }
 
+static
 co_rc_t co_os_file_block_close(co_monitor_file_block_dev_t *fdev)
 {
 	struct file *filp;

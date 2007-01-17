@@ -14,6 +14,7 @@
 
 #include "../../ioctl.h"
 
+static
 int co_os_manager_open(struct inode *inode, struct file *file)
 {
 	co_manager_open_desc_t opened;
@@ -33,7 +34,8 @@ int co_os_manager_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int co_os_manager_ioctl_buffer(co_linux_io_t *ioctl, char *buffer, struct file *file)
+static
+int co_os_manager_ioctl_buffer(co_linux_io_t *ioctl, char *buffer, struct file *file)
 {
 	co_rc_t rc;
 	unsigned long return_size = 0;
@@ -64,6 +66,7 @@ static int co_os_manager_ioctl_buffer(co_linux_io_t *ioctl, char *buffer, struct
 	return 0;
 }
 
+static
 int co_os_manager_ioctl(struct inode *inode, struct file *file, 
 			unsigned int cmd, unsigned long arg)
 {
@@ -101,6 +104,7 @@ int co_os_manager_ioctl(struct inode *inode, struct file *file,
 	return ret;
 }
 
+static
 ssize_t co_os_manager_read(struct file *file, char __user *buffer, size_t size, loff_t *poffset)
 {
 	char __user *io_buffer_start;
@@ -136,7 +140,6 @@ ssize_t co_os_manager_read(struct file *file, char __user *buffer, size_t size, 
 			ret = -EIO;
 			break;
 		}
-		
 
 		message = message_item->message;
 		size = message->size + sizeof(*message);
@@ -175,6 +178,7 @@ ssize_t co_os_manager_read(struct file *file, char __user *buffer, size_t size, 
 	return ret;
 }
 
+static
 ssize_t co_os_manager_write(struct file *file, const char __user *buffer, size_t size, loff_t *poffset)
 {
 	co_manager_open_desc_t opened = (typeof(opened))(file->private_data);
@@ -230,6 +234,7 @@ ssize_t co_os_manager_write(struct file *file, const char __user *buffer, size_t
 	return ret;
 }
 
+static
 unsigned int co_os_manager_poll(struct file *file, struct poll_table_struct *pollts)
 {
 	co_manager_open_desc_t opened = (typeof(opened))(file->private_data);
@@ -253,6 +258,7 @@ unsigned int co_os_manager_poll(struct file *file, struct poll_table_struct *pol
 	
 }
 
+static
 int co_os_manager_release(struct inode *inode, struct file *file)
 {
 	co_manager_open_desc_t opened = (typeof(opened))(file->private_data);
