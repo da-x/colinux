@@ -102,15 +102,6 @@ getouraddr()
 }
 #endif
 
-/* Check given address for localhost */		/* 127.0.0.1  localhost */
-#define LOCALHOST_NETMASK 0xff000000		/* 255.0.0.0  netmask Class A */
-#define LOCALHOST_NETWORK 0x7f000000		/* 127.0.0.0  network */
-int is_localhost(struct in_addr addr)
-{
-	return (addr.s_addr == 0 || 
-		((ntohl(addr.s_addr) & LOCALHOST_NETMASK) == LOCALHOST_NETWORK));
-}
-
 #if SIZEOF_CHAR_P == 8
 
 struct quehead_32 {
