@@ -505,7 +505,7 @@ tcp_connect(inso)
 
 	/* Translate connections from localhost to the alias hostname */
 	if (is_localhost(so->so_faddr))
-	   so->so_faddr = alias_addr; /* our addr */
+	   so->so_faddr = alias_addr;
 
 	/* Close the accept() socket, set right state */
 	if (inso->so_state & SS_FACCEPTONCE) {
@@ -841,7 +841,7 @@ tcp_emu(so, m)
 
 				/* Translate connections from localhost to the alias hostname */
 				if (is_localhost(ns->so_faddr.s_addr))
-					ns->so_faddr = alias_addr; /* our addr */
+					ns->so_faddr = alias_addr;
 
 				ns->so_iptos = tcp_tos(ns);
 				tp = sototcpcb(ns);

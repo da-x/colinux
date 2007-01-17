@@ -675,7 +675,7 @@ udp_listen(port, laddr, lport, flags)
 
 	/* Translate connections from localhost to the alias hostname */
 	if (is_localhost(addr.sin_addr))
-	   so->so_faddr = alias_addr; /* our addr */
+	   so->so_faddr = alias_addr;
 	else
 	   so->so_faddr = addr.sin_addr;
 	

@@ -82,6 +82,7 @@ inet_aton(cp, ia)
 }
 #endif
 
+#if 0
 /*
  * Get our IP address and put it in our_addr
  */
@@ -99,6 +100,7 @@ getouraddr()
 	
 	our_addr = *(struct in_addr *)he->h_addr;
 }
+#endif
 
 /* Check given address for localhost */		/* 127.0.0.1  localhost */
 #define LOCALHOST_NETMASK 0xff000000		/* 255.0.0.0  netmask Class A */
