@@ -136,8 +136,3 @@ bool_t co_winnt_is_winxp_or_better(void)
 
 	return bRetVal;
 }
-
-co_id_t co_os_current_id(void)
-{
-	return (co_id_t)(GetCurrentProcessId());
-}
