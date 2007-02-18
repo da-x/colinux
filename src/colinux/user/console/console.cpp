@@ -137,9 +137,7 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 	while (argc > 0) {
 		const char *option;
 
-		option = "-a";
-
-		if (strcmp(*param_scan, option) == 0) {
+		if (strcmp(*param_scan, (option = "-a")) == 0) {
 			param_scan++;
 			argc--;
 
@@ -151,6 +149,26 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 			}
 
 			start_parameters.attach_id = atoi(*param_scan);
+		} else
+		if (strcmp(*param_scan, (option = "-p")) == 0) {
+			co_rc_t rc;
+
+			param_scan++;
+			argc--;
+
+			if (argc <= 0) {
+				co_terminal_print(
+					"Parameter of command line option %s not specified\n",
+					option);
+				return CO_RC(ERROR);
+			}
+
+			rc = read_pid_from_file(*param_scan, &start_parameters.attach_id);
+			if (!CO_OK(rc)) {
+				co_terminal_print(
+					"error on reading PID from file '%s'\n", *param_scan);
+				return CO_RC(ERROR);
+			}
 		}
 
 		param_scan++;
@@ -158,32 +176,6 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 	}
 
 	return CO_RC(OK);
-}
-
-/**
- * Returns PID of first monitor.
- *
- * If none found, returns CO_INVALID_ID.
- *
- * TODO: Find first monitor not already attached.
- *       Duplicate source in src/colinux/user/console-base/console.cpp
- */
-static co_id_t find_first_monitor(void)
-{
-	co_manager_handle_t handle;
-	co_manager_ioctl_monitor_list_t	list;
-	co_rc_t	rc;
-
-	handle = co_os_manager_open();
-	if (handle == NULL)
-		return CO_INVALID_ID;
-
-	rc = co_manager_monitor_list(handle, &list);
-	co_os_manager_close(handle);
-	if (!CO_OK(rc) || list.count == 0)
-		return CO_INVALID_ID;
-
-	return list.ids[0];
 }
 
 co_rc_t console_window_t::start()

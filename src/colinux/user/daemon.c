@@ -68,6 +68,7 @@ void co_daemon_syntax()
 	co_terminal_print("  -d             Don't launch and attach a coLinux console on startup\n");
 	co_terminal_print("  -h             Show this help text\n");
 	co_terminal_print("  -k             Suppress kernel messages\n");
+	co_terminal_print("  -p pidfile     Write pid to file.\n");
 	co_terminal_print("  -t name        When spawning a console, this is the type of console\n");
 	co_terminal_print("                 (e.g, nt, fltk, etc...)\n");
 	co_terminal_print("  -v level       Verbose messages, level 1 prints booting details, 2 or\n");
@@ -109,6 +110,13 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 						      start_parameters->config_path,
 						      sizeof(start_parameters->config_path));
 	if (!CO_OK(rc)) 
+		return rc;
+
+	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-p",
+						      &start_parameters->pidfile_specified,
+						      start_parameters->pidfile,
+						      sizeof(start_parameters->pidfile));
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-t", 
@@ -731,6 +739,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	co_reactor_t reactor;
 	co_module_t modules[] = {CO_MODULE_PRINTK, };
 	bool_t restarting = PFALSE;
+	co_start_parameters_t *start_parameters = daemon->start_parameters;
 
 	rc = co_reactor_create(&reactor);
 	if (!CO_OK(rc))
@@ -747,9 +756,21 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 
 	daemon->message_monitor->reactor_user->private_data = (void *)daemon;
 
-	if (daemon->start_parameters->launch_console) {
+	if (start_parameters->pidfile_specified) {
+		char buf[32];
+		int size;
+
+		size = co_snprintf(buf, sizeof(buf), "%d\n", daemon->id);
+		rc = co_os_file_write(start_parameters->pidfile, buf, size);
+		if (!CO_OK(rc)) {
+			co_terminal_print("colinux: error creating PID file '%s'\n", start_parameters->pidfile);
+			return rc;
+		}
+	}
+
+	if (start_parameters->launch_console) {
 		co_debug_info("colinux: launching console");
-		rc = co_launch_process(NULL, "colinux-console-%s -a %d", daemon->start_parameters->console, daemon->id);
+		rc = co_launch_process(NULL, "colinux-console-%s -a %d", start_parameters->console, daemon->id);
 		if (!CO_OK(rc)) {
 			co_terminal_print("error launching console\n");
 			goto out;
@@ -841,6 +862,14 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	co_user_monitor_close(daemon->message_monitor);
 
 out:
+	if (start_parameters->pidfile_specified) {
+		co_rc_t rc1;
+
+		rc1 = co_os_file_unlink(start_parameters->pidfile);
+		if (!CO_OK(rc1))
+			co_debug("error removing PID file '%s'\n", start_parameters->pidfile);
+	}
+
 	co_reactor_destroy(reactor);
 
 	return rc;

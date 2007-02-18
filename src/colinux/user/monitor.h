@@ -48,4 +48,8 @@ extern co_rc_t co_user_monitor_message_send(co_user_monitor_t *umon,  co_message
 
 extern void co_user_monitor_close(co_user_monitor_t *umon);
 
+extern co_id_t find_first_monitor(void);
+
+extern co_rc_t read_pid_from_file(co_pathname_t pathname, co_id_t *id);
+
 #endif

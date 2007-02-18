@@ -9,6 +9,8 @@ targets['user-osdep.a'] = Target(
     inputs=[
     Input("manager.o"),
     Input("file.o"),
+    Input("file-write.o"),
+    Input("file-unlink.o"),
     Input("alloc.o"),
     Input("misc.o"),
     Input("osdep.o"),

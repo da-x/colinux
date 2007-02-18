@@ -30,6 +30,8 @@ typedef struct co_daemon_start_parameters {
 	bool_t suppress_printk;
 	bool_t cmdline_config;
 	co_config_t config;
+	bool_t pidfile_specified;
+	co_pathname_t pidfile;
 } co_start_parameters_t;
 
 typedef struct co_daemon {
