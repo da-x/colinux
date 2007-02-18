@@ -23,6 +23,7 @@ typedef enum {
 extern void co_terminal_print(const char *format, ...);
 extern void co_terminal_print_color(co_terminal_color_t color, const char *format, ...);
 extern void co_set_terminal_print_hook(co_terminal_print_hook_func_t func);
+extern void co_process_high_priority_set(void);
 extern int co_udp_socket_connect(const char *addr, unsigned short int port);
 extern int co_udp_socket_send(int sock, const char *buffer, unsigned long size);
 extern void co_udp_socket_close(int sock);

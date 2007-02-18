@@ -583,6 +583,7 @@ main(int argc, char *argv[])
 	int ret;
 
 	co_debug_start();
+	co_process_high_priority_set();
         
 	ret = conet_bridged_main(argc, argv);
 

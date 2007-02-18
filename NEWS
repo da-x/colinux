@@ -1,4 +1,5 @@
 * Version 0.8.0
+  * Network daemons TAP, Bridged and Slirp runs with process priority high.
   * New: colinux-daemon -p pidFile stores ID of coLinux in file pidFile.
     "colinux-console-fltk|nt -p pidFile" attach the monitor from stored
     ID.  With this mechanism can open a /named/ console without knowing

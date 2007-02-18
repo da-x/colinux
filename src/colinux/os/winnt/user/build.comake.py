@@ -19,5 +19,6 @@ targets['user-osdep.a'] = Target(
     Input("udp.o"),
     Input("cobdpath.o"),
     Input("reactor.o"),
+    Input("process.o"),
     ]
 )

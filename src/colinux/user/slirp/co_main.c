@@ -268,6 +268,7 @@ co_rc_t co_slirp_main(int argc, char *argv[])
 	co_module_t module;
 
 	co_debug_start();
+	co_process_high_priority_set();
 	slirp_init();
 
 	rc = co_cmdline_params_alloc(argv+1, argc-1, &cmdline);
