@@ -11,6 +11,7 @@
 #include <windows.h>
 
 #include <colinux/os/user/misc.h>
+#include <colinux/os/winnt/user/misc.h>
 
 void co_process_high_priority_set(void)
 {

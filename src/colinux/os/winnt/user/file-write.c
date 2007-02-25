@@ -42,7 +42,6 @@ co_rc_t co_os_file_write(co_pathname_t pathname, void *buf, unsigned long size)
 		rc = CO_RC(ERROR);
 	}
 
-out:
 	CloseHandle(handle);
 	return rc;
 }
