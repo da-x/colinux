@@ -1,4 +1,5 @@
 base-2.6.13.diff 
+bootparms-2.6.12.diff
 serial-core.diff
 serial-2.6.13.diff
 coconsole-2.6.13.diff 
