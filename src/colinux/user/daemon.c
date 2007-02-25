@@ -90,7 +90,7 @@ void co_daemon_syntax()
 	co_terminal_print("  colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1 \\\n");
 	co_terminal_print("  eth0=pcap-bridge,\"Local Area Connection\"\n");
 	co_terminal_print("\n");
-	co_terminal_print("Unhandled paramters are forwarded to the kernel's boot parameters string.\n");
+	co_terminal_print("Unhandled parameters are forwarded to the kernel's boot parameters string.\n");
 	co_terminal_print("See README.txt for more details about command-line usage.\n");
 	co_terminal_print("See colinux-daemon's documentation for more options.\n");
 	co_terminal_print("\n");

@@ -41,7 +41,7 @@ typedef struct co_win32_pcap {
 	u_char *buffer;
 } co_win32_pcap_t;
 
-/* Runtime paramters */
+/* Runtime parameters */
 
 typedef struct start_parameters {
 	bool_t show_help;
@@ -392,7 +392,7 @@ void co_net_syntax()
 }
 
 static co_rc_t 
-handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
+handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 {
 	char **param_scan = argv;
 	const char *option;
@@ -523,7 +523,7 @@ conet_bridged_main(int argc, char *argv[])
 	co_module_t modules[] = {CO_MODULE_CONET0, };
 	int exit_code = 0;
 
-	rc = handle_paramters(&start_parameters, argc, argv);
+	rc = handle_parameters(&start_parameters, argc, argv);
 	if (!CO_OK(rc)) 
 		return -1;
 

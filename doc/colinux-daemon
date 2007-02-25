@@ -41,7 +41,7 @@ The following options are specific to Windows NT/XP/2000:
 
        colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1
 
-    Unhandled paramters are forwarded to the kernel's boot parameters string.
+    Unhandled parameters are forwarded to the kernel's boot parameters string.
 
 The kernel= option enables this mode. Order of parameters is not
 important when options don't depend on each other.              
