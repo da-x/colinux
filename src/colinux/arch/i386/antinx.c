@@ -17,16 +17,11 @@
 #include "defs.h"
 #include "utils.h"
 
-
 /* Workarrount for Intel P4 and Xeon, that's crashing with DEP/noexecute. */
 /* http://download.intel.com/design/Pentium4/specupdt/249199.htm: */
 /* N76  Changes to CR3 Register do not Fence Pending Instruction Page Walks. */
 /* http://download.intel.com/design/Pentium4/manuals/253668.htm: */
 /* 3.12 TRANSLATION LOOKASIDE BUFFERS (TLBS) */
-/* Todo: */
-/* Should be optimised and call only on specifics Xeon and P4 models. */
-/* Instruction INVLPG should better use, but don't know parameters. */
-/* Why CO_ARCH_PAGE_NX is not set ones on init of passage page? */
 #define flush_tlb()							\
 	do {								\
 		unsigned int tmpreg;					\
@@ -37,25 +32,6 @@
 			: "=r" (tmpreg)					\
 			:: "memory");					\
 	} while (0)
-
-static void nx_protect_switch_wrapper(co_monitor_t *cmon)
-{
-	co_archdep_monitor_t archdep = cmon->archdep;
-	unsigned long long pts_save;
-
-	asm("cli");
-	
-	pts_save = (*archdep->fixed_pte) & CO_ARCH_PAGE_NX;
-	*archdep->fixed_pte &= ~CO_ARCH_PAGE_NX;
-	flush_tlb();
-		
-	co_switch();
-
-	*archdep->fixed_pte |= pts_save;
-	flush_tlb();
-	
-	/* interrupts are re-enabled by the caller */
-}
 
 co_rc_t co_arch_anti_nx_init(co_monitor_t *mon)
 {
@@ -133,14 +109,14 @@ co_rc_t co_arch_anti_nx_init(co_monitor_t *mon)
 		co_debug_lvl(misc, 11, "ptes = %08x\n", ptes);
 	}
 
+	co_debug_lvl(misc, 11, "unmask page NX and flush tlb\n");
+	*ptes &= ~CO_ARCH_PAGE_NX;
+	flush_tlb();
+
 	archdep->fixed_pte = ptes;
 	archdep->fixed_page_table_pfn = pfn;
 	archdep->fixed_page_table_mapping = page;
 	archdep->antinx_enabled = PTRUE;
-
-	co_host_switch_wrapper_func = nx_protect_switch_wrapper;
-
-	co_debug("nx_protect_switch_wrapper: flush_tlb is active\n");
 
 	return CO_RC(OK);
 
