@@ -44,9 +44,9 @@
     - FLTK from 1.1.4 to 1.1.6
     - Remove all XML libraries from source
   * Installer:
-    - Add new images ArchLinux and FedoraCore5
+    - Add new images ArchLinux and FedoraCore5.
+    - Gentoo image updated.
     - Add locations Australia and SouthAmerica
-    - Set SourceForge '?download' as default location
     - Used NSIS version 2.22
   * initrd:
     - Automatic use cofs31 as path to file vmlinux-modules.tar.gz.

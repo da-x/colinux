@@ -306,7 +306,7 @@ Section "Root Filesystem image Download" SeccoLinuxImage
     StrCmp $R1 "1" tryDownload
 
     !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_GENTOO}" "State"
-    StrCpy $R0 "Gentoo-colinux-stage3-x86-2004.3.bz2"
+    StrCpy $R0 "Gentoo-colinux-i686-2007-03-03.7z"
     StrCmp $R1 "1" tryDownload
     GoTo End
 
