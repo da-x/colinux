@@ -3,28 +3,30 @@
     - Obsoleted the use of XML files for configuration.
       XML config files have been removed.  Use the command-line 
       syntax in a name=value per line plain text file instead.  Please
-      read syntax from README.TXT and view into the file EXAMPLE.CONF
-      in coLinux install directory.
-    - Added support for @ at the command line for passing 
-      simple configuration files.
+      read syntax from colinux-daemon.txt and view into the file
+      example.conf in coLinux install directory.
+    - Added support for @ at the command line for passing simple
+      configuration files.
     - Added '-k' option to suppress kernel messages on boot. This should
       let you watch other daemon's output more easily.
-    - "set COLINUX_CONSOLE_EXIT_ON_DETACH=1" to close FLTK/NT console
-      after shutting down and detach coLinux.
     - Incrase the maximum numbers of monitors from 16 to 64.
     - Warn about double configured index for cobd, eth, cofs, ttys, exec.
     - Print human readable error, if wrong linux.sys installed.
     - Return errorlevel procedures (return from running, --install-driver,
       --status-driver, ...)  Errorcodes: 0=OK, 3=driver version mismatch,
-      14=driver no installed, 255=gerenral fail (-1)
+      14=driver no installed, 255=general fail (-1)
     - New: "execX=..." in configuration, launch external programs.
     - Bug fix: Quotation marks detection in config file and args, samples:
       eth0=tuntap,"LAN-Connection 14",00:11:22:33:44:55
       cofs0="C:\My files"
     - New: "ttysX=..." in configuration, launch coserial daemon.
-      Parameters "-f DeviceName -m Mode" for colinux-serial-daemon.
+      Internaly parameters "-f DeviceName -m Mode" for colinux-serial-daemon.
       Serial daemon is light usable under WinNT, you can login on /dev/ttyS0
       or redirect serial communication port (COM1 for sample).
+  * Console:
+    - "set COLINUX_CONSOLE_EXIT_ON_DETACH=1" to close FLTK/NT console
+      after shutting down and detach coLinux.
+    - Menu Monitor Select is usable to select ones from running instances.
   * Service running:
     - Shutdown the service, if Windows is shutting down.
     - All files and config file no longer needs absolute path names on
@@ -46,14 +48,15 @@
   * initrd:
     - Automatic use cofs31 as path to file vmlinux-modules.tar.gz.
     - Print error on console, if initrd can't load.
-    - Bugfix: 'root=/dev/...' must no longer the first bootparms.
+    - Bugfix: 'root=/dev/...' must no longer the first bootparm for initrd.
   * cofs:
-    - Break out the limit of fullname length.  Basename length up to
+    - Break out the limit of filename length.  Basename length up to
       255 chars.  Fullpath is limited by path depth of 256 directories.
     - Bug #1151757: COFS disallow mutiple mounts.
   * TAP-Win32 device driver
-    - version 8.3 update from openvpn-2.1_beta7
+    - version 8.4 update from openvpn-2.1_beta15a
     - usable without admin rights
+    - fixed crashing Vista
     - connection speed status 100 MBit/s (show/view only)
     - 'Check for truncated IPv4 packets' diabled
     - without linker debug symbols, without runtime debugging
@@ -87,6 +90,7 @@
       o Clean, flexible and easier to maintain.
   * Add icons to the other executables.
   * Linux as host: More positive tested host kernels: 2.6.17, 2.6.18
+  * Wiki moved from wiki.colinux.org to http://colinux.wikia.com
 
 * Version 0.6.4
     * Resolved SF Bug #1517979 and #1551076 - colinux-bridged-net-daemon.exe
