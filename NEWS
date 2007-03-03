@@ -35,6 +35,8 @@
   * Kernel:
     - has been updated from 2.6.11 to 2.6.12
     - Bug #1479042: Ignore bootparm "no387", while no emulation is enabled
+    - Bug #1665812: Disable /proc/kcore from kernel config.
+      Reading from this file would crash host system.
   * Updated libraries:
     - MinGW from 3.7 to 3.9
     - w32api from 3.2 to 3.4
