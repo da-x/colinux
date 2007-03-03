@@ -31,7 +31,7 @@
   VIAddVersionKey ProductVersion "${VERSION}"
   VIAddVersionKey FileVersion "${VERSION}"
   VIAddVersionKey FileDescription "An optimized virtual Linux system for Windows"
-  VIAddVersionKey LegalCopyright "Copyright @ 2004 ${PUBLISHER}"
+  VIAddVersionKey LegalCopyright "Copyright @ 2004-2007 ${PUBLISHER}"
   VIProductVersion "${LONGVERSION}"
 
   XPStyle on
