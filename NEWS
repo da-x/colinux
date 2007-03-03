@@ -23,6 +23,7 @@
       Internaly parameters "-f DeviceName -m Mode" for colinux-serial-daemon.
       Serial daemon is light usable under WinNT, you can login on /dev/ttyS0
       or redirect serial communication port (COM1 for sample).
+    - Workaround for Xeon and P4 with DEP/noexecute problems (flush_tlb).
   * Console:
     - "set COLINUX_CONSOLE_EXIT_ON_DETACH=1" to close FLTK/NT console
       after shutting down and detach coLinux.
