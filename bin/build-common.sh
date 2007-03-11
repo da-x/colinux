@@ -149,11 +149,8 @@ EOF
     exit -1
 fi
 
-# Get variables for configure only? Then end here.
+# Get variables only? Then end here.
 if [ "$1" = "--get-vars" ]; then
-    if [ -n "$2" ]; then
-	eval "echo $"$2
-    fi
     return
 fi
 
