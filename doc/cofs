@@ -10,7 +10,7 @@ host OS directories inside Linux.
 
   Mounting in flat mode (the default) under Windows, means that the 
   expected behavior of the mounted file system is similar to that of 
-  vfar or samba, which means there is no support for the regular 
+  vfat or samba, which means there is no support for the regular 
   UNIX meta data and all the UNIX attributes (mode, uid, gid) are
   virtually the same for all files and directories. Creation of special 
   files like symlinks, device nodes, and pipes are not supported.
@@ -27,7 +27,7 @@ host OS directories inside Linux.
 * Ports
 
   For the host OS side, cofs is only supported on the Windows port 
-  at the time this is written (October 23, 2004).
+  at the time this is writing (October 23, 2004).
 
   The planned Linux port will be designed to behave more like UML's
   hostfs in flat mode (with support for UNIX attributes), and UML's
@@ -43,8 +43,8 @@ host OS directories inside Linux.
 
     mount -t cofs (cofs)XX(:path) (-o options) /mnt/point
      
-  'cofs' as a prefix to the device name is optional and its purpose
-  it clarity. 
+  'cofs' as a prefix to the device name is optional and it is only for 
+  clarity. 
 
   The optional ':path' suffix can specify an inner path to mount 
   instead of the mapped root.
@@ -84,7 +84,7 @@ host OS directories inside Linux.
 
 * Cofs31, initrd and vmlinux-modules.tar.gz:
 
-  While using initrd, cofs 31 is automatic added for the path of file
+  While using initrd, cofs 31 is automatically added for the path of file
   initrd.gz to locate the file vmlinux-modules.tar.gz in same directory.
   User can overwrite cofs31, then initrd would not work and don't install
   modules.

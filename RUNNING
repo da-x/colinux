@@ -31,6 +31,7 @@ NOTES ON UPGRADING:
 	cobd1=fs\swap_fs
 	eth0=slirp
 	root=/dev/cobd0
+	ro
 
     Locate for tool "colinux-xml2cfg", a XML to CFG converter for coLinux.
 
@@ -160,7 +161,7 @@ run a very limited linux shell from the ramdisk file.  For this you not
 need to download a image file, and no need any networking.
 For such test use this command line:
 
-	colinux-daemon kernel=vlinux initrd=initrd.gz root=/dev/ram0
+	colinux-daemon kernel=vmlinux initrd=initrd.gz root=/dev/ram0
 
 Try some Linux commands: sh, ls, cd, pwd, uname -a, halt (shutting down).
 
@@ -184,18 +185,6 @@ Common Problems
 	Verify, that the filename behind (cobd0=...) exist and is
 	readable from current working directory, try it with a
 	simple "DIR ..." on command prompt.
-
-
-    "Crashing Intel CPU with Windows XP SP2 and Windows 2003 Server"
-
-	Some 64bit Intel CPU with hardware support for NoExecute (DEP),
-	typical Xeon and Pentium 4, and running on Windows XP with SP2 or
-	Windows 2003 Server will be crashing (reboot) on starting coLinux.
-	For this CPU replace the '/noexecute=OptIn' or '/noexecute=OptOut'
-	with '/noexecute=AlwaysOff' in your file C:\BOOT.INI please.
-
-	For AMD, you no need to change this file.  AMD is runnnig nice.  Please
-	read more about this typical Intel problem in Wiki page 'NoExecuteDEP'.
 
 
   Additional problems not know at time of release are typically 
@@ -229,7 +218,7 @@ bugs, etc.
 
 	Project Web-site
 		Source Forge Project website is at 
-		http://www.sourceforge.net/project/colinux
+		http://www.sourceforge.net/projects/colinux
 
 	WIKI
 		The community has contributed wonderful and helpful 
