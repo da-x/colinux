@@ -412,7 +412,7 @@ add_failed()
 # $2 Call for check
 # $3 Minimum version need, or empty string
 # $4 Maximum version supported, or empty string
-# '--warn' optional as first param, add to warning lis
+# '--warn' optional as first param, add to warning list
 # sample: "wget-1.8" "wget --version" "1.8.x"
 check_exec_tool()
 {
@@ -654,7 +654,7 @@ echo "Create $configfile"
 COLINUX_HOST_OS="$colinux_os"
 
 # Directory where we start for all subdirs in build processing
-# default: \$HOME/src/colinux-devel  (use only in this file)
+# default: \$HOME/colinux-devel  (use only in this file)
 #
 USER_TOPDIR="$topdir"
 
@@ -731,7 +731,7 @@ COLINUX_KERNEL_STRIP="no"
 COLINUX_DEPMOD=$depmod_cfg
 
 # "COLINUX_GCC_GUEST_TARGET" is running colinux guest system.
-# This compiler will use for building colinux kernel.
+# This compiler will use for building colinux kernel as CROSS_COMPILE.
 # Enable GUEST specific compiler, if your compiler from distribution
 # is not compatible with current cross gcc.
 # default: empty

@@ -5,7 +5,7 @@ Table of Contents
 
   1. Prerequisites
   2. Build systems
-  3. configure - make - make installer
+  3. configure && make && make installer
   3.1 configure
   3.2 make download
   3.3 make
@@ -24,8 +24,9 @@ Table of Contents
   5.1 OS build Dependencies
   5.2 For Microsoft Windows as host
   5.2.1 Complete download and building for Win32 under Linux (mingw32)
-  5.2.2 Configuration script compiling
-  5.2.3 Source tree sample for a mingw build process
+  5.2.2 Running script compiling
+  5.2.3 Create a pre-distributabel package as ZIP
+  5.2.4 Source tree sample for a mingw build process
   5.3 For Linux as host
   5.3.1 For Linux as host with different libraries (patched FLTK)
 
@@ -90,8 +91,8 @@ We suggest you: Start with "configure && make" and later use the shell
 scripts from bin directory.
 
 
-3. configure - make - make installer
-------------------------------------
+3. configure && make && make installer
+--------------------------------------
 
 3.1 configure
 
@@ -170,6 +171,7 @@ Some build steps are supported by separate call.  For sample compile colinux
 daemons without build kernel: 'make colinux'.  Optional targets can list with
 'make help'
 
+
 4. Build a coLinux kernel
 -------------------------
 
@@ -211,7 +213,7 @@ more examples for patching kernel and the quilt handling.
 For example:
     ~/# cd PathToColinux/patch
     ~/PathToColinux/patch# cat `cat series-2.6.12` > /tmp/sumary.patch
-    ~/# cd -
+    ~/PathToColinux/patch# cd
     ~/# wget http://www.kernel.org/pub/linux/kernel/2.6/linux-2.6.12.tar.bz2
     ~/# bunzip2 -dc linux-2.6.12.tar.bz2 | tar x
     ~/# cd linux-2.6.12
@@ -224,7 +226,7 @@ configuration file. Copy it to your kernel tree:
     ~/linux-2.6.12# cp PathToColinux/conf/linux-2.6.12-config .config
 
 Append colinux version information to kernel version name:
-    ~/linux-2.6.12# echo "-co-0.8.0-private" > localversion-cooperative
+    ~/linux-2.6.12# echo "-co-0.8.0" > localversion-cooperative
 
 Update config and build vmlinux:
     ~/linux-2.6.12# make oldconfig
@@ -266,7 +268,7 @@ Start from a clean build of kernel and test it, before you change any
 kernel source.
 
 Patching in your additional patch, use option --dry-run for testing.  After
-your additional patch is clean or only some minor are wrongs, you can run
+your additional patch is clean or only some minor are wrong, you can run
 patch without --dry-run.
 
 Watch for *.rej files.  If they exist, add the non patched lines by hand to
@@ -274,8 +276,7 @@ the listend files.  Than create a fixed diff from the *.orig file.  Replace
 wrong parts in your additional patch with the fixed diff parts.
 
 Edit the series file in patch directory and add your new patch file at the
-end.  Better way is, to use "quilt" and add your patch files via quilt
-command set.
+end.  Better way is, to use "quilt import" for your patch files.
 
 Run the "make oldconfig", answer for the new devices with the right option.
 If you are unshure, use 'N'.  Save the file ".config" as your new default
@@ -290,6 +291,10 @@ Run "make vmlinux modules" and check the new nernel.
 Compiling the operating system dependent support code is a little more
 complex. The current build system assumes a cross compiler toolchain is 
 installed for that purpose. 
+
+This is the second way to compile coLinux, it's more flexible.  But you
+need to setup all the paths and tools by hand.  These steps are for
+devolopers with more background.
 
 
 5.1. OS build Dependencies
@@ -311,11 +316,12 @@ Python build system
 To compile source for a Windows target, the compiler must be self compiled
 for this target. You can not download a binary of this compiler!
 
-This need a Compiler devel-libs and a lot of tools:
-(Versions from my installation. Others works also. Run ./configure script.)
+This needs a Compiler, devel-libraries and a lot of tools:
+(Versions from my installation. Others works also, ./configure checks it.)
     bison-1.75		need by binutils (yacc 91.7.30 have error YYEMPTY)
     flex-2.5.4		need by binutils (arlex.l: Permission denied)
-    gnu/gcc 3.3.1
+    gnu/gcc 3.4.5	for building guest kernel
+    binutils 2.16.91	for building guest kernel
     make-3.80
     module-init-tools-0.9.14
     patch-2.5.9
@@ -324,6 +330,8 @@ This need a Compiler devel-libs and a lot of tools:
     unzip-5.50.0	extracting winapi source
     wget-1.8.2		download source files
     zip-2.3		packing pre releases
+    glibc-devel
+    ncurses-devel
     ... and many more devel packets ...
 
 Create a new directory, extract colinux source in this directory, set 
@@ -331,31 +339,18 @@ scripts executable and ran the download script in "bin" directory.
 
     mkdir $HOME/colinux-devel
     cd $HOME/colinux-devel
-    tar xzf colinux-20040807.tar.gz
-    cd colinux-20040807/bin
+    tar xzf colinux-20061210.tar.gz
+    cd colinux-20061210/bin
     chmod +x *.sh
     ./build-all.sh --download-all
     
 Files will be downloaded into directory $HOME/colinux-devel/download.
 
-    cd $HOME/colinux-devel/colinux-20040807/bin
-    ./build-all.sh
 
-This is a complete build process for binutils, cross compiler, libraries,
-kernel and colinux daemons. (~40 Minutes on 1.8MHz Pentium)
-
-The build process based on build-all works completly at top-level
-directory colinux-devel. The cross-compiler was also installed in users 
-directory (not system wide). We never need root rights for installing 
-headers, libs or programs.
-
-Compiled executables for Windows host stored in directory mingw32/dist now.
-
-
-5.2.2 Configuration script compiling
+5.2.2 Running script compiling
 
 Edit bin/user-build.cfg and set some directories.
-It's unsafe to use a relative path in this build script. Mostly the BINDIR is
+It's unsafe to use a relative path in this build script. The BINDIR is mostly
 the bin directory, but not in all cases!
 
 build-all.sh --download-all	Download all missing files, step is optional
@@ -369,6 +364,15 @@ build-all.sh			Extract (OVERWRITE!) and compile all files
 ! If you have changed some kernel sources, set COLINUX_KERNEL_UNTAR="no" in !
 ! the file bin/user-build.cfg do save your work.  Or call "make menuconfig" !
 ! and "make vmlinux" into kernel directory manually                         !
+
+build-all.sh is a complete build process for binutils, cross compiler,
+libraries, kernel and colinux daemons. (~40 Minutes on 1.8MHz Pentium)
+
+The build process based on build-all works completly at top-level
+directory colinux-devel. The cross-compiler was also installed in users
+directory (not system wide). We never need root rights for installing
+headers, libs or programs.
+
 
 After Downloading a new version of colinux source, should only extract source
 at same top level directory and run the last scripts build-kernel.sh and
@@ -387,11 +391,27 @@ Single script can also use to recompile one step. For instance you can rebuild
 the win32k-api and fltk library by calling 'cd bin ; ./build-colinux-libs.sh'
 
 
-5.2.3 Source tree sample for a mingw build process
+5.2.3 Create a pre-distributabel package as ZIP
 
-Source tree before building the cross compiler:
+Run the common script to create a zip archives in directory 'dist' with all
+executables for Windows host:
+
+    . ./build-common.sh --package
+
+The target files should copy into a Windows host system, unpack the zip
+files and installing or update the colinux driver with these commands:
+
+  cd OldColinuxPath
+  colinux-daemon.exe --remove-driver
+  cd NewColinuxPath
+  colinux-daemon.exe --install-driver
+
+
+5.2.4 Source tree sample for a mingw build process
+
+Source tree before building, after download-all.sh:
 /colinux-devel
-    +-- colinux-20050322/
+    +-- colinux-20061210/
     |	+-- bin/
     |	|   +-- download-all.sh			(Download all files only)
     |	|   +-- build-all.sh			(Compile for Win32,
@@ -399,27 +419,27 @@ Source tree before building the cross compiler:
     |	+-- src/
     |	... ...
     +-- download/
-        +-- binutils-2.15.90-20040222-1-src.tar.gz
-        +-- colinux-20050322.tar.gz
+        +-- binutils-2.16.91-20060119-1-src.tar.gz
+        +-- colinux-20061210.tar.gz
         +-- fltk-1.1.6-source.tar.bz2
-        +-- gcc-core-3.3.1-20030804-1-src.tar.gz
-        +-- gcc-g++-3.3.1-20030804-1-src.tar.gz
+        +-- gcc-core-3.4.5-20060117-1-src.tar.gz
+        +-- gcc-g++-3.4.5-20060117-1-src.tar.gz
         +-- linux-2.x.y.tar.bz2			(version of colinux kernel)
-        +-- mingw-runtime-3.6.tar.gz
-        +-- w32api-3.3-src.tar.gz
-        +-- w32api-3.3.tar.gz
-        +-- wpdpack_3_0.zip
+        +-- mingw-runtime-3.9.tar.gz
+        +-- w32api-3.5-src.tar.gz
+        +-- w32api-3.5.tar.gz
+        +-- wpdpack_3_1.zip
 
 
 Source tree after building cross compiler and colinux binaries:
 /colinux-devel					$USER_TOPDIR
-    +-- colinux-20050322/
+    +-- colinux-20061210/
     |   ... Colinux sources
     +-- build/					$BUILD_DIR
-    |   +-- binutils-2.15.90-20040222-1/	(cross working dirs,
+    |   +-- binutils-2.16.91-20060119-1/	(cross working dirs,
     |   +-- fltk-1.1.4/				 deleted after build)
-    |   +-- gcc-3.3.1-20030804-1/
-    |   +-- w32api-3.3/
+    |   +-- gcc-3.4.5-20060117-1/
+    |   +-- w32api-3.5/
     |   +-- wpdpack/
     |   +-- linux-2.x.y-source/			$COLINUX_TARGET_KERNEL_SOURCE
     |   |   ... kernel sources
@@ -486,8 +506,9 @@ For building and runnning coLinux on Linux you need:
 
 1. Tree or headers of the designated host kernel available, in order to build 
    the kernel module (colinux.ko).
-   Currently works only with host kernel 2.6.x, testet up to 2.6.8.1,
-   2.6.10 - 2.6.18.
+   Currently works only with host kernel 2.6.x,
+   testet up to 2.6.8.1, 2.6.10 - 2.6.18.
+   2.6.19 as host kernel is not usable.
    Host kernel should not set CONFIG_REGPARM, coLinux can't run there.
 2. patched fltk-1.1.6 (see patch directory) installed in the 
    system (./configure ; make ; su -c "make install")
@@ -520,7 +541,7 @@ The steps are basically:
 This much like the Windows port except where the logic around the installation 
 of the driver is more simple.
 
-You shoult run colinx in a graphic environment, KDE, Gnome or after 'startx'.
+You should run colinux in a graphic environment, KDE, Gnome or after 'startx'.
 'xhost +' allows root (su) to use your user desktop (access control disabled).
 
 PATH=.:$PATH is needed, if the executables aren't installed in your e.g 
@@ -544,8 +565,9 @@ PATH=.:$PATH is needed, if the executables aren't installed in your e.g
 
 - Run colinux configure with path to this fltk
 
-  cd colinux-source/src
-  PATH=$HOME/i686-linux-local/bin:$PATH ./configure --target=i686-pc-linux ...
+  cd colinux-source
+  export PATH=$HOME/i686-linux-local/bin:$PATH
+  ./configure --target=i686-pc-linux ...
 
 - Run colinux build with path to FLTK libraries
 
@@ -555,5 +577,3 @@ PATH=.:$PATH is needed, if the executables aren't installed in your e.g
   export COLINUX_CFLAGS="-I$HOME/i686-pc-linux-local/include"
   export COLINUX_LFLAGS="-L$HOME/i686-pc-linux-local/lib"
   make HOSTOS=linux colinux
-
-

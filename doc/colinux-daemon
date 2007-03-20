@@ -1,203 +1,403 @@
-The Cooperative Linux Daemon hosts the Linux virtual machine as one process 
+colinux-daemon - help/manpage
+=============================
+
+The Cooperative Linux Daemon hosts the Linux virtual machine as one process
 under the host operating system.
 
-The daemon spits out the kernel's printk() messages along with its own prints. It
-also optionally launches the virtual VGA console, that can be used to interface
-with the virtual machine.
+The daemon spits out the kernel's printk() messages along with its own prints.
+It also optionally launches the virtual VGA console, that can be used to
+interface with the virtual machine.  For every network device it launches a
+network daemon.
 
-Its command line syntax is as follows:
 
-  colinux-daemon [-h] [-d] [k] [-t name] [configuration and boot parameter] [@params.txt]
+Command Line Parameters for installing/removing
+-----------------------------------------------
 
-    -h             Show this help text
-    -d             Don't launch and attach a coLinux console on startup
-    -k             Suppress kernel messages
-    -t name        When spawning a console, this is the type of 
-                   console (e.g, nt, fltk, etc...)
-    -v level       Verbose messages, level 1 prints booting details, 2 or
-                   more checks configs, 3 prints errors, default is 0 (off)
-    @params.txt    Take more command line params from the given text file (can be multi-line)
+The following options are specific to Windows NT/XP/2000.
 
-The following options are specific to Windows NT/XP/2000:
+    --install-service servicename startparameters
 
-      --install-service [name]     Install colinux-daemon.exe as an NT service
-                                   (default service name: Cooperative Linux)
-      --remove-service [name]      Remove colinux service
-                                   (default service name: Cooperative Linux)
-      --install-driver             Install the colinux-driver (linux.sys)
-      --remove-driver              Uninstall (remove) the colinux-driver (linux.sys)
-      --status-driver              Show status about the installed/running driver
+	Allows you to install Cooperative Linux as a service.
 
-  Configuration and boot parameter:
+	<servicename> is whatever you want it to be called.
+	<startparameters> is the list of colinux start options (see follows)
+	or the config file with options as '@configfile'.
 
-    Refer the file README.TXT in coLinux installation for the full list of
-    device parameters.
+	To run the service you should use the windows service managment
+	console or the command line tool "net start".
 
-    For example, a simple network-less setup:
+	Sample:
+	colinux-daemon @example.conf --install-service "coLinux"
+	net start "coLinux"
 
-       colinux-daemon kernel=vmlinux cobd0=root_fs root=/dev/cobd0 hda1=:cobd0
+    --remove-service servicename
 
-    Use of new aliases automatically allocates cobd(s), for example:
+	Allows you to remove the Cooperative Linux service.
+	Please shut down coLinux, before removing the service.
 
-       colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1
+	Sample:
+	net stop "coLinux"
+	colinux-daemon --remove-service "coLinux"
 
-    Unhandled parameters are forwarded to the kernel's boot parameters string.
+    --install-driver
 
-The kernel= option enables this mode. Order of parameters is not
-important when options don't depend on each other.              
+	This command installs the driver portion of Cooperative
+	Linux. NOTE: This already happens during the installation
+	of coLinux, in most cases you don't need to run it at all.
 
- Typical examples:
+	If the driver is already installed, this command would
+	reinstall the driver.
 
-     colinux-daemon kernel=vmlinux
+	This command is not compatible with any other parameters.
 
-   Boots a kernel without any block devices.
+    --remove-driver
 
+	This command will remove the driver portion of Cooperative
+	Linux. BIG NOTE: This already happens during the uninstall
+	of coLinux, in most cases you don't need to run it at all.
 
-     colinux-daemon kernel=vmlinux mem=32
+	Please shut down coLinux, before removing the driver.
+	This command is not compatible with any other parameters.
 
-   Boots the kernel with 32 MB of RAM.
+	You can also remove the linux.sys driver with standard Windows tools
+	and many mouse clicks.  Open your System settings - control panel -
+	hardware device	manager - under "View" options enable "view hidden
+	drivers" - open the non PnP drivers - locate and uninstall the device
+	entry "CoLinuxDriver" and reboot Windows.
 
+    --status-driver
 
-     colinux-daemon -d kernel=vmlinux mem=32
+	Show status about the installed/running driver.
+	This command is not compatible with any other parameters.
 
-   The '-d' option still works.
 
+Command Line Parameters for running
+-----------------------------------
 
-     colinux-daemon kernel=vmlinux cobd0=c:\coLinux\root_fs
+The following command line paramaters may be useful in operating Cooperative
+Linux for running from command line.
 
-   It automatically adds \DosDevices\ where needed. Make sure
-   you use double-slashes in the situations where shell escaping
-   forces you to.
+    @configfile
 
+	Allows you to choose a specific configuration file to
+	use, can have multiple @configfile on the command-line,
+	last on the command-line take precedence and overrides
+	earlier @configfile options
 
-     colinux-daemon kernel=vmlinux cobd0=c:\coLinux\root_fs root=/dev/cobd0 ro
+    -k
 
-   Of course we need to pass root= to the kernel. Note that every
-   parameter in that command line that is not handled by coLinux's
-   code is passed along as a kernel boot parameters.
+	suppresses Kernel messages (good for debugging other daemons)
 
+    -t consoletype
 
-     colinux-daemon kernel=vmlinux cobd0=root_fs root=/dev/cobd0
+	Allows you to specify either the FLTK (default) or NT (-t nt)
+	console to use on startup.
 
-   ... and resolve relative pathnames.
+    -d
 
+	Don't launch and attach a coLinux console on startup.  This is
+	the default for running as service.
 
-     colinux-daemon kernel=vmlinux cobd0=root_fs hda2=:cobd0 root=/dev/cobd0
+    -v level
 
-   Device node aliasing. The ':' tells the daemon that cobd0 is not a 
-   pathname - read the next example for understanding more.
+	Verbose messages, level 1 prints booting details, 2 or
+	more checks configs, 3 prints errors, default is 0 (off)
 
+    -h
 
-     colinux-daemon kernel=vmlinux hda1=root_fs root=/dev/hda1
+	Shows a short help text
 
-   This makes life a lot easier. If you map an device node
-   directly - it would automatically allocate a cobd and
-   make an alias for it!
 
-   This syntax reminds a bit of QEMU's syntax (it also has
-   hda=).
+Configuration and boot parameters
+---------------------------------
 
-     colinux-daemon kernel=vmlinux hda1=root_fs root=/dev/hda1 initrd=initrd.gz
+The following parameters can be written into the configfile or,
+if the first command-line argument on the command line is
+kernel= you will be able to give all the configuration on the
+command-line.  Order of parameters is not important when options
+don't depend on each other.  The parameters are case sensitive.
 
-   Upgrade your kernel modules for this snapshot.
+    kernel=<path to vmlinux file>
 
+	This specifies the path to the vmlinux file.
 
- Options for networking:
+	Example:
+	kernel=vmlinux
 
-     eth0=tuntap
+    initrd=<path to initrd file>
 
-   Use the first TAP device.
+	This specifies the path to the initrd file.
 
+	The file initrd.gz from coLinux installation upgrades your
+	kernel modules for this snapshot.  After first run of a new
+	coLinux version, you can remove this parameter from your config.
 
-     eth0=tuntap,"Local Area Network"
+	Example:
+	initrd=initrd.gz
 
-   You name it.
+    mem=<mem size>
 
+	This specifies the memory size, assumes MB is the the
+	unit type, so 64 is same as 64MB. Default if you leave
+	this parameter out is 1/4 of your RAM if your RAM is >=
+	128, otherwise it's 16.  Default value is generally ok.
 
-     eth0=tuntap,"Local Area Network",11:22:33:44:55:66
+    cobdX=<path to image file>
 
-   Set a MAC address.
+	Use any number <X> of these to specify the block device image file.
 
+	<path to image file> is typicali a filname of your image file,
+	for example the base root fs, you have extracted.
 
-     eth0=pcap-bridge,"Local Area Network"
+	It automatically adds \DosDevices\ where needed.  Make sure
+	you use double-slashes in the situations where command shell
+	escaping forces you to (the @configfile needs no escaping).
 
-   Uses PCAP bridging.
+	<path to image file> can be also a partition using standard
+	\Device\HarddiskX\PartitionY format.  Harddisk starts by 0,
+	Partition starts by 1.  Be carefully with these accesses,
+	mount it read only at the first time and check the contains.
+	Don't mount a partition, where Windows is using in same time!
+	Partitions should only use non beginners to make a "dualboot"
+	runable.
 
+	Example:
+	cobd0=rootfs.img
+	cobd1=C:\temp\swapfs.img
+	cobd2=\Device\Cdrom0
 
-     eth0=pcap-bridge,"Local Area Network",11:22:33:44:55:66,nopromisc
+    alias=<path to image file> | :cobdX
 
-   Uses PCAP bridging, defined  MAC address and disabled the Promiscuous mode.
+	This makes life a lot easier. If you map an device node
+	directly - it would automatically allocate a cobd and
+	make an alias for it!
 
+	This syntax is similar to QEMU's syntax (it also has hda=).
 
-     eth0=slirp
+	<alias> is any of the linux typicaly harddisks (hda1, sda1, etc).
+	<path to image file> is the same as above.
 
-   Slirp, the simplest way to internet.  Inside coLinux can use a DHCP-Client.
+	Example:
+	hda1=rootfs.img		# (cobdX maps automaticly from first free)
+	hdc=\Device\Cdrom0	# CDROM as raw device. Mount as iso9660.
 
+	OR:  Device node aliasing.
 
-     eth0=slirp,,tcp:22:22
+	The ':' tells the daemon that cobdX is not a pathname.  After you
+	have defined a "cobdX=..." priror, you can set an alias for this
+	codbX - read the next examples for understanding more.
 
-   Uses SLiRP networking, forwards the port 22 from host to linux (SSH)
+	Example:
+	cobd0=rootfs.img	# /dev/cobd0 is now the image file.
+	hda1=:cobd0		# /dev/hda1 and cobd0 are the same now.
 
+    cofsX=<path to windows directory>
 
-     eth0=slirp,,tcp:2222:22
+	Use any number <X> of these to specify a Cooperative Host filesystem
+	device (mount Host directory to coLinux	local mount point).  There
+	are some limitations with it, same as under Windows (':' colon and
+	'\' Backslash in names).
 
-   Uses SLiRP networking, with port 2222 on host being redirected (or port
-   forwarded) to coLinux guest 22.
+	<path to windows directory> can be any of the directory of your
+	Windows.  BIG NOTE: Be carefully with full drives (C:\), because
+	coLinux has admin rights on this mount point.  Read-only-mount is
+	a good idea.
 
+	Example:
+	cofs0=C:\coLinux	# (Directory)
+	cofs1=R:\		# (CDROM drive, USB drive etc.).
 
-     eth0=slirp,,tcp:2222:22/tcp:4000:80:3
+	More about using cofs and mount options you will find in file cofs.txt
+	in your installation.
 
-   Uses SLiRP networking, and forwards counts of ports
-	Host (windows)  --> guest (coLinux)
-	2222            --> 22
-	4000		--> 80
-	4001		--> 81
-	4002		--> 82
+    ethX=slirp | tuntap | pcap-bridge,<options>
 
+	Use any number <X> of these to specify network interfaces.
+	The first argument select the interface type on host side,
+	follow by any more options.
 
- Options for serial device:
+	Consult README.TXT about installation and use of network types,
+	and the page 'Network' in Wiki with lots of example combinations.
 
-     ttys0=COM1
+    ethX=slirp,<MAC>,<redirections>
 
-   Connect the serial device /dev/ttyS0 from linux to host system COM1.
-   Please set the line paremters for serial port on hostsystem, before
-   colinux starts, or use the follow optional parameters.
+	Slirp, the simplest way to internet. It needs no changes or installs
+	on the Windows side.  Slirp sends and receives only TCP and UDP packets
+	to the current active adapater over the Windows API (WinSock).  You can
+	not send and not receice IMCP messages, this means ping and traceroute
+	dont't work.  To check your network you must use some other commands,
+	for example wget, ftp, etc.
 
-     ttys0=COM1,"BAUD=115200 PARITY=n DATA=8 STOP=1 dtr=on rts=on"
+	Slirp works as "outgoing only" firewall from coLinux virtual machine
+	to the world.  In typicaly mode can not connect from outside to the
+	colinux guest.  Incommings can enable with the <redirections>.
 
-   Sets many more default parameters for the serial port.  Please refer you
-   manual or help system of host system for optional parameters ("MODE /?").
+	BIG HINT: In firewalls on your Windows host should allow the
+	outgoing connections for the programm colinux-serial-daemon.exe.
 
+	Use any number <X> of these to specify network interfaces,
+	<MAC> and <redirections> are optional.
+
+	<redirections> take the form tcp|upd:hostport:linuxport[:count],
+	multiple redirections are seperated by /, ie tcp:2222:22/tcp:8080:80
+	<Redirections> must begin with protocol ("tcp" or "udp") then an
+	":" seperator, the port on Windows host, followed by ":" seperator,
+	and the port for the coLinux guest.  Optional third ":" seperator
+	counts for port array.  More redirections have the same form and
+	are seperated by "/".
+
+	Example:
+	eth0=slirp			# Simplest slirp mode (outgoing only)
+	eth0=slirp,,tcp:22:22		# Forwards SSH from host to guest
+	eth0=slirp,,tcp:2222:22		# Forwards 2222 on host to guest 22
+	eth0=slirp,,tcp:2222:22/tcp:4000:80:3	# Forwards counts of ports
+						# Host --> guest (coLinux)
+						# 2222 --> 22
+						# 4000 --> 80
+						# 4001 --> 81
+						# 4002 --> 82
 
- Options for console device:
+	Inside coLinux use a DHCP-Client to get the parameters, or set static
+	parameters (hard coded, no others please):
 
-   FLTK console is configurable via environment settings.
+	# ifconfig eth0 10.0.2.15 netmask 255.255.255.0 broadcast 10.0.2.255
+	# route add default gw 10.0.2.2
+	# echo "nameserver 10.0.2.3" > /etc/resolv.conf
 
+    ethX=tuntap,<network connection name>,<MAC>
 
-     set COLINUX_CONSOLE_FONT=Lucida Console:12
+	Tuntap is a private network between the coLinux and host only.  This
+	is the fastest network connection between Windows host and coLinux
+	virtual machine.  The network should be configured with a subnet area
+	that is not used on your Windows host on other adapters.  You can
+	route the tuntap to outside on the real network, but this is more
+	complicated and needs a network specialist for Windows and Linux.
+	Beginners should use tunetap only in the typicaly way as SSH login
+	or VNC network connection between windows host and coLinux guest.
 
-   Sets fontname and size.  Allows only fixed width fonts.
+	Use any number <X> of these to specify network interfaces,
+	<network connection name> and <MAC> are optional.
 
+	<network connection name> is the name of TAP adapter, installed on
+	your host system, mostly named "Local Connection 1".  Without name
+	coLinux use the first TAP adapter.  Let the name empty, if you have
+	only one TAP driver installed.
+	Set a <MAC>, if you wish a constant hardware identification number.
+	Othercase colinux builds a random number.
 
-     set COLINUX_CONSOLE_FONT=Lucida Console
+	Example:
+	eth0=tuntap				# Use the first TAP device.
+	eth0=tuntap,"Local Area Network"	# You name it.
+	eth0=tuntap,,11:22:33:44:55:66		# Set a MAC address.
 
-   Sets fontname.
+    ethX=pcap-bridge,<network connection name>,<MAC>,<promisc>
 
+	Pcap-Bridge use an ethernet library to send and receice various
+	ethernet frames over your real network adapter card.  It's agents as
+	an additional network card on the one real exist card.  This allows
+	you, to connect coLinux virtual machine to the world.  In seeing from
+	outside your Windows host has an additional network card with a second
+	MAC, differ from your real card.  From coLinux machine you can do all
+	what you wand with an ethernet card (Ping, DHCP from router, TCP/IP,
+	IPX and many more protocols).  You must know: This type adds a virtual
+	network card in your network, and this not works in some IT security
+	policy.  Some wireless cards don't work with pcap-bridge, while the
+	MAC is differ on the same one connection channel.
+	Pcap-bridge don't work without a real netwoking connection.  This
+	means, you can not use this network type, if your real network adapter
+	is not connected (unplugged).
 
-     set COLINUX_CONSOLE_FONT=:12
+	Use any number <X> of these to specify network interfaces.
+	<network connection name> must be a name of your real ethernet or
+	wireless card.  Use Quotation marks for spaces in name.  It is typical
+	"Local Connection".  <MAC> and <promisc> are optional.
 
-   Sets only size. Default font "Terminal" is active.
+	Default is 'promisc', Promiscuous mode allow to receive packets
+	that not directly adressed to that adapter (sniffing mode).  This
+	works for Ethernet adapters.  Some cases (Wireless cards) works
+	only with 'nopromisc'.
 
+	Samples:
+	eth0=pcap-bridge,"Local Area Network"	# Uses PCAP bridging.
+	eth0=pcap-bridge,"Local Area Network",11:22:33:44:55:66,nopromisc
+						# Define a MAC address and
+						# disable the Promiscuous mode.
 
-     set COLINUX_CONSOLE_EXIT_ON_DETACH=1
+    ttysX=<serial device name>,<mode parameters>
 
-   Enable automatic close console after detach from colinux.
-   This is good option for closing console after linux shutting down.
+	Use any number <X> of these to specify serial interface (ttys0),
+	and host specific device name (COM1).  <mode parameter> sets
+	baudrate, data format and line disciplin.  Refer your host system
+	help (MODE -?) for more options.
 
+	Serial device supports only transmit and receice bytes.  Controls
+	(mode settings) are not supported from virtual machine side.  Inside
+	coLinux can only run with one baudrate and mode from startup setting.
 
- Options for executable programs:
+	Samples:
+	ttys0=COM1	# Connects the serial device /dev/ttyS0 from linux
+			# to host system COM1.  Please set the line
+			# parameters for serial port on hostsystem,
+			# before colinux starts.
 
-     exec0=C:\Programs\Xming\Xming.exe,":0 -clipboard -multiwindow -ac"
+	ttys0=COM1,"BAUD=115200 PARITY=n DATA=8 STOP=1 dtr=on rts=on"
+			# Sets many more default parameters for the serial
+			# port.  Please refer you manual or help system of
+			# host system for optional parameters ("MODE /?").
 
-   Program Xming.exe runs at start of colnux and terminate it, if colinux
-   is shutting down.
+    execX=<executable program>,<parameters>
+
+	Use any number <X> of these to specify order of launching a
+	program and terminamte at stopping linux.  Use Quotation
+	marks, if more as one parameter.
+
+	Example:
+	exec0=C:\Programs\Xming\Xming.exe,":0 -clipboard -multiwindow -ac"
+			# Program Xming.exe runs at start of colnux and
+			# terminate it, if colinux is shutting down.
+
+    root=<root device>
+
+	This is the device (as coLinux gues sees it) to the root
+	device.
+
+	Of course we need to pass root= to the kernel.
+
+	Example:
+	root=/dev/cobd0
+
+    ANY additional parameters are passed to the coLinux kernel as is
+    (unmodified) kernel boot parameters.
+    For example "init 5" runs linux on specific runlevel.
+
+    See the file "example.conf" in your colinux installation directory for
+    full example.
+
+
+Environment settings
+--------------------
+
+    COLINUX_NO_SMP_WORKAROUND=Y
+
+	Currently there's a bug on SMP that prevents coLinux from running
+	stable unless it is pinned to the first processor.
+
+	With 'COLINUX_NO_SMP_WORKAROUND=Y' coLinux runs on all processors.
+
+    COLINUX_CONSOLE_EXIT_ON_DETACH=1
+
+	If this set, then colinux FLTK/NT console will be close after
+	shutting down and detach coLinux.
+	This is good option for closing console after linux shutting down.
+
+    COLINUX_CONSOLE_FONT=<Windows Font Name>:<Size>
+
+	Set the font type and size for FLTK console.  Only fixed fonts
+	are allowed.
+
+	Example:
+	set COLINUX_CONSOLE_FONT=Lucida Console:12
+
+	Change font size only.  Default font "Terminal" is still active:
+	set COLINUX_CONSOLE_FONT=:12
+

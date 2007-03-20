@@ -1,14 +1,9 @@
  * Consoles:
-   * If the console crashes, we need to recover somehow.
    * Make the consoles scrollable/resizable.
    * Add select, copy and paste to and from console and to and from
      host-environment (not so much mouse but using keys). Is now
      overcome by using SSH + putty, but that makes the console less
      usefull.
-   * (optional) Support kermit or other 'telnet upload' protocol, to 
-     upload files from the console.
-   * Console re-attach is not needed, just make the daemon hold the pipe
-     open during the reboot.
    * Paste clipboard feature is superfluous, as it is already provided in
      the nt console by the OS.
    * Focus change handling.
@@ -78,6 +73,7 @@
 
  * cobd:
    * Reimplement as asynchronous.
+   * Add partitions table support.
 
  * Root file system images: 
    * Fix and improve the Debian image.
