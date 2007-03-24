@@ -33,10 +33,11 @@ def generate_options(compiler_def_type, libs=None, lflags=None):
     )
 
 user_dep = [Input('../user/user-all.a')]
-user_res = [Input('../user/daemon/res/daemon.res')]
+user_res = [Input('../user/daemon/res/colinux.res')]
+daemon_res = [Input('../user/daemon/res/daemon.res')]
 
 targets['colinux-daemon.exe'] = Target(
-    inputs = user_res + [
+    inputs = daemon_res + [
         Input('../user/daemon/daemon.o'),
     ] + user_dep,
     tool = Compiler(),
