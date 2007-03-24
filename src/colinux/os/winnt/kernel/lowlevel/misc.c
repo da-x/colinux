@@ -44,7 +44,7 @@ co_rc_t co_os_physical_memory_pages(unsigned long *pages)
 	 * Round to 16 MB boundars, since Windows doesn't return the 
 	 * exact amount but a bit lower.
 	 */
-	*pages = 0xff000 & ((*pages) + 0xfff);
+	*pages = ~0xfff & ((*pages) + 0xfff);
 
 	return rc;
 }
