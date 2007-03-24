@@ -166,12 +166,13 @@ no_old_linux_sys:
   ;------------------------------------------------------------REGISTRY--
   ;----------------------------------------------------------------------
 
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayName" "coLinux ${VERSION}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "UninstallString" '"$INSTDIR\Uninstall.exe"'
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayIcon" "$INSTDIR\colinux-daemon.exe,0"
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "NoModify" "1"
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "NoRepair" "1"
+  !define REGUNINSTAL "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux"
 
+  WriteRegStr HKLM ${REGUNINSTAL} "DisplayName" "coLinux ${VERSION}"
+  WriteRegStr HKLM ${REGUNINSTAL} "UninstallString" '"$INSTDIR\Uninstall.exe"'
+  WriteRegStr HKLM ${REGUNINSTAL} "DisplayIcon" "$INSTDIR\colinux-daemon.exe,0"
+  WriteRegDWORD HKLM ${REGUNINSTAL} "NoModify" "1"
+  WriteRegDWORD HKLM ${REGUNINSTAL} "NoRepair" "1"
 
   ;---------------------------------------------------------------FILES--
   ;----------------------------------------------------------------------
@@ -554,11 +555,7 @@ SectionEnd
 ;Uninstaller Section
 ;--------------------------------
 
-
 Section "Uninstall"
-  DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayName"
-  DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "UninstallString"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux"
 
   DetailPrint "TAP-Win32 REMOVE"
   nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" remove TAP0801co'
@@ -602,6 +599,8 @@ Section "Uninstall"
   RMDir "$INSTDIR\netdriver"
   RMDir "$INSTDIR"
 
+  ; Cleanup registry
+  DeleteRegKey HKLM ${REGUNINSTAL}
   DeleteRegKey /ifempty HKCU "Software\coLinux"
 
 SectionEnd
