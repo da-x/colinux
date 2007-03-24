@@ -17,7 +17,7 @@ STRIP="$TARGET-strip --strip-all"
 unix_dos()
 {
 	sed "s/\$CO_VERSION/$CO_VERSION/" < $1 > $2
-	unix2dos -q $2
+	unix2dos -q $2 || exit $?
 }
 
 mkdir -p premaid
