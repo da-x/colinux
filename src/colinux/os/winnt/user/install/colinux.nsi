@@ -2,7 +2,7 @@
 ;Written by NEBOR Regis
 ;Modified by Dan Aloni (c) 2004
 ;Modified 8/20/2004,2/4/2004 by George P Boutwell
-;Modified 12/10/2006 by Henry Nestler
+;Modified 3/24/2007 by Henry Nestler
 
 ;-------------------------------------
 ;Good look
@@ -167,12 +167,17 @@ no_old_linux_sys:
   ;----------------------------------------------------------------------
 
   !define REGUNINSTAL "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux"
+  !define REGEVENTS "SYSTEM\CurrentControlSet\Services\Eventlog\Application\coLinux"
 
   WriteRegStr HKLM ${REGUNINSTAL} "DisplayName" "coLinux ${VERSION}"
   WriteRegStr HKLM ${REGUNINSTAL} "UninstallString" '"$INSTDIR\Uninstall.exe"'
   WriteRegStr HKLM ${REGUNINSTAL} "DisplayIcon" "$INSTDIR\colinux-daemon.exe,0"
   WriteRegDWORD HKLM ${REGUNINSTAL} "NoModify" "1"
   WriteRegDWORD HKLM ${REGUNINSTAL} "NoRepair" "1"
+
+  ; plain text in event log view
+  WriteRegStr HKLM ${REGEVENTS} "EventMessageFile" "$INSTDIR\colinux-daemon.exe"
+  WriteRegDWORD HKLM ${REGEVENTS} "TypesSupported" "4" ;EVENTLOG_INFORMATION_TYPE
 
   ;---------------------------------------------------------------FILES--
   ;----------------------------------------------------------------------
@@ -601,6 +606,7 @@ Section "Uninstall"
 
   ; Cleanup registry
   DeleteRegKey HKLM ${REGUNINSTAL}
+  DeleteRegKey HKLM ${REGEVENTS}
   DeleteRegKey /ifempty HKCU "Software\coLinux"
 
 SectionEnd

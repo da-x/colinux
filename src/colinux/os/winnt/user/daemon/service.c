@@ -26,6 +26,7 @@
 #include "misc.h"
 #include "driver.h"
 #include "service.h"
+#include "res/service-message.h"
 
 /* 
  * The coLinux driver that the colinux service depends on - needs 
@@ -344,7 +345,7 @@ void co_ntevent_print(const char *format, ...)
 	if (ReportEvent(hEventLog,		// Event Log Handle
 		EVENTLOG_INFORMATION_TYPE,	// Event type
 		0,				// Event category
-		1,				// Event ID
+		MSG_SERVICE_INFO,		// Event ID
 		NULL,				// User Security Identifier
 		1,				// # of Strings
 		0,				// Size of Data in Bytes

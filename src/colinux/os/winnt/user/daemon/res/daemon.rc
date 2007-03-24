@@ -1,6 +1,9 @@
 #include <windows.h>
 #include "resources_def.inc"
 
+LANGUAGE LANG_ENGLISH,SUBLANG_DEFAULT
+1 11 service-message.bin
+
 2 ICON "colinux.ico"
 
 1 VERSIONINFO
