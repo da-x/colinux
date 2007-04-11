@@ -153,6 +153,7 @@ typedef struct co_monitor {
 
 	struct co_manager_open_desc *connected_modules[CO_MONITOR_MODULES_COUNT];
 	co_os_mutex_t connected_modules_write_lock;
+	bool_t sending_monitor_end_messages;
 
 	co_console_t *console;
 

@@ -1119,14 +1119,16 @@ static void send_monitor_end_messages(co_monitor_t *cmon)
 	int i;
 	
 	co_os_mutex_acquire(cmon->connected_modules_write_lock);
-	for (i = 0; i <  CO_MONITOR_MODULES_COUNT; i++) {
+	for (i = 0; i < CO_MONITOR_MODULES_COUNT; i++) {
 		opened = cmon->connected_modules[i];
 		if (!opened)
 			continue;
 
+		cmon->sending_monitor_end_messages = PTRUE;
 		co_manager_send_eof(cmon->manager, opened);
 		cmon->connected_modules[i] = NULL;
 		co_manager_close(cmon->manager, opened);
+		cmon->sending_monitor_end_messages = PFALSE;
 	}
 	co_os_mutex_release(cmon->connected_modules_write_lock);
 }
@@ -1134,15 +1136,12 @@ static void send_monitor_end_messages(co_monitor_t *cmon)
 co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monitor_owner)
 {
 	co_manager_t *manager;
-	int new_count;
-	bool_t destroy = PFALSE;
 	bool_t end_messages = PFALSE;
 
 	manager = cmon->manager;
 
 	co_os_mutex_acquire(manager->lock);
-	new_count = cmon->refcount;
-	if (new_count > 0) {
+	if (cmon->refcount > 0) {
 		cmon->refcount--;
 
 		if (monitor_owner  &&  cmon->listed_in_manager) {
@@ -1153,19 +1152,18 @@ co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monit
 
 		if (monitor_owner)
 			end_messages = PTRUE;
-
-		if (cmon->refcount == 0) {
-			destroy = PTRUE;
-		}
 	}
 	co_os_mutex_release(manager->lock);
+
+	/* Don't destroy monitor, if we are in sending end messages! */
+	if (cmon->sending_monitor_end_messages)
+		return CO_RC(OK);
 
 	if (end_messages)
 		send_monitor_end_messages(cmon);
 
-	if (destroy) {
+	if (cmon->refcount == 0)
 		return co_monitor_destroy(cmon, monitor_owner);
-	}
 
 	return CO_RC(OK);
 }
@@ -1268,8 +1266,8 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 
 	switch (io_buffer->op) {
 	case CO_MONITOR_IOCTL_CLOSE: {
-		co_monitor_refdown(cmon, PTRUE, opened_manager->monitor_owner);
 		opened_manager->monitor = NULL;
+		co_monitor_refdown(cmon, PTRUE, opened_manager->monitor_owner);
 		return CO_RC_OK;
 	}
 	case CO_MONITOR_IOCTL_GET_CONSOLE: {
