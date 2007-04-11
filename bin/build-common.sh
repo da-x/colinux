@@ -283,7 +283,7 @@ build_package()
 {
 	local name bname oname
 	local STRIP="$TARGET-strip --strip-all"
-	local DATE=`date +%G%m%d`
+	local DATE=`LANG=C TZ="UTC" date +%G%m%d`
 	local SYMBOLS_ZIP=$COLINUX_INSTALL_DIR/daemons-$CO_VERSION-$DATE.dbg.zip
 	local DAEMONS_ZIP=$COLINUX_INSTALL_DIR/daemons-$CO_VERSION-$DATE.zip
 	local VMLINUX_ZIP=$COLINUX_INSTALL_DIR/vmlinux-$COMPLETE_KERNEL_NAME-$DATE.zip
