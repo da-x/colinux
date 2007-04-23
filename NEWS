@@ -95,6 +95,7 @@
     - UDP receive Buffer incrase to 32K (win32 default was 8K),
       maximal size of a packet is 32767 bytes now.
       (Thanks to Bernd Brandstetter)
+    - Incrase TCP MSS from 512 to 1460 bytes.
     - Remove honypot ports 517, 518 and 7648 from udp listen.
       talk and Cu-Seeme are not implement, still remove the table mow.
     - Runtime debug code disabled.

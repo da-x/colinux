@@ -98,6 +98,12 @@ Linux for running from command line.
 	Don't launch and attach a coLinux console on startup.  This is
 	the default for running as service.
 
+    -p pidfile
+
+	Write PID to file.
+	It is mostly for running more as one coLinux instances on one machine.
+	Console can read the pid from this file.
+
     -v level
 
 	Verbose messages, level 1 prints booting details, 2 or
