@@ -1124,11 +1124,9 @@ static void send_monitor_end_messages(co_monitor_t *cmon)
 		if (!opened)
 			continue;
 
-		cmon->sending_monitor_end_messages = PTRUE;
 		co_manager_send_eof(cmon->manager, opened);
 		cmon->connected_modules[i] = NULL;
 		co_manager_close(cmon->manager, opened);
-		cmon->sending_monitor_end_messages = PFALSE;
 	}
 	co_os_mutex_release(cmon->connected_modules_write_lock);
 }
@@ -1138,31 +1136,23 @@ co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monit
 	co_manager_t *manager;
 	bool_t end_messages = PFALSE;
 
+	if (!(cmon->refcount > 0))
+		return CO_RC(OK);
+
 	manager = cmon->manager;
 
 	co_os_mutex_acquire(manager->lock);
-	if (cmon->refcount > 0) {
-		cmon->refcount--;
-
-		if (monitor_owner  &&  cmon->listed_in_manager) {
-			cmon->listed_in_manager = PFALSE;
-			manager->monitors_count--;
-			co_list_del(&cmon->node);
-		}
-
-		if (monitor_owner)
-			end_messages = PTRUE;
+	if (monitor_owner  &&  cmon->listed_in_manager) {
+		cmon->listed_in_manager = PFALSE;
+		manager->monitors_count--;
+		co_list_del(&cmon->node);
 	}
 	co_os_mutex_release(manager->lock);
 
-	/* Don't destroy monitor, if we are in sending end messages! */
-	if (cmon->sending_monitor_end_messages)
-		return CO_RC(OK);
-
-	if (end_messages)
+	if (monitor_owner)
 		send_monitor_end_messages(cmon);
 
-	if (cmon->refcount == 0)
+	if (--cmon->refcount == 0)
 		return co_monitor_destroy(cmon, monitor_owner);
 
 	return CO_RC(OK);
@@ -1266,8 +1256,9 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 
 	switch (io_buffer->op) {
 	case CO_MONITOR_IOCTL_CLOSE: {
-		opened_manager->monitor = NULL;
 		co_monitor_refdown(cmon, PTRUE, opened_manager->monitor_owner);
+		opened_manager->monitor = NULL;
+		opened_manager->monitor_owner = PFALSE;
 		return CO_RC_OK;
 	}
 	case CO_MONITOR_IOCTL_GET_CONSOLE: {
