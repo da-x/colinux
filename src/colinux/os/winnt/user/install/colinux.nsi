@@ -161,7 +161,7 @@ check_running_monitors:
 
 remove_linux_sys:
   DetailPrint "Uninstall old linux driver"
-  nsExec::ExecToStack '"$R2\colinux-daemon.exe" --remove-driver'
+  nsExec::ExecToLog '"$R2\colinux-daemon.exe" --remove-driver'
   Pop $R0 # return value/error/timeout
 
 no_old_linux_sys:
@@ -481,6 +481,7 @@ Section -post
     IntOp $5 0 & 0
     nsExec::ExecToStack '"$INSTDIR\netdriver\tapcontrol.exe" hwids TAP0801co'
     Pop $R0 # return value/error/timeout
+            # leave Log in stack
     IntOp $5 $5 | $R0
     DetailPrint "tapcontrol hwids returned: $R0"
 
@@ -525,7 +526,8 @@ SectionEnd
 Section -post
     nsExec::ExecToStack '"$INSTDIR\colinux-daemon.exe" --remove-driver'
     Pop $R0 # return value/error/timeout
-    nsExec::ExecToStack '"$INSTDIR\colinux-daemon.exe" --install-driver'
+    Pop $R1 # Log
+    nsExec::ExecToLog '"$INSTDIR\colinux-daemon.exe" --install-driver'
     Pop $R0 # return value/error/timeout
 SectionEnd
 
@@ -566,7 +568,7 @@ Section "Uninstall"
   Pop $R0 # return value/error/timeout
   DetailPrint "tapcontrol remove returned: $R0"
 
-  nsExec::ExecToStack '"$INSTDIR\colinux-daemon.exe" --remove-driver'
+  nsExec::ExecToLog '"$INSTDIR\colinux-daemon.exe" --remove-driver'
   Pop $R0 # return value/error/timeout
 
   ;---------------------------------------------------------------FILES--
