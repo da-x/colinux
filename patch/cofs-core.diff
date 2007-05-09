@@ -1820,7 +1820,7 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.17-source/fs/cofusefs/inode.c
-@@ -0,0 +1,438 @@
+@@ -0,0 +1,437 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001	Miklos Szeredi (miklos@szeredi.hu)
@@ -2166,12 +2166,11 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 +static int parse_options(struct cofuse_mount_data *mnt, char *options)
 +{
 +        int c;
-+        unsigned long flags;
-+        unsigned long value;
++        unsigned long flags = 0;
++        unsigned long value = 0;
 +        char *optarg;
 +        char *optopt;
 +
-+        flags = 0;
 +        while ((c = cofuse_getopt("cofuse", &options, opts,
 +				  &optopt, &optarg, &flags, &value)) > 0)
 +	{
