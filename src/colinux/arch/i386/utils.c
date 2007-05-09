@@ -73,12 +73,12 @@ unsigned long co_get_dr7(void)
 	return reg;
 }
 
-void co_fxsave(char *buffer)
+void co_fxsave(unsigned char *buffer)
 {
 	asm("fxsave (%0) ; fnclex" : : "r"(buffer));
 }
 
-void co_fnsave(char *buffer)
+void co_fnsave(unsigned char *buffer)
 {
 	asm("fnsave (%0) ; fwait" : : "r"(buffer));
 }
