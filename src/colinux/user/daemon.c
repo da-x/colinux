@@ -524,7 +524,7 @@ void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon)
 co_rc_t co_daemon_handle_printk(co_daemon_t *daemon, co_message_t *message)
 {
 	if (message->type == CO_MESSAGE_TYPE_STRING) {
-		char *string_start = message->data;
+		char *string_start = (char *)message->data;
                
 		if (string_start[0] == '<'  &&  
 		    string_start[1] >= '0'  &&  string_start[1] <= '9'  &&

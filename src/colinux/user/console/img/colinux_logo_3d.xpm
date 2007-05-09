@@ -1,5 +1,5 @@
 /* XPM */
-static char * colinux_logo_3d_xpm[] = {
+static const char * colinux_logo_3d_xpm[] = {
 "134 134 1614 2",
 "  	c None",
 ". 	c #9C9D9C",

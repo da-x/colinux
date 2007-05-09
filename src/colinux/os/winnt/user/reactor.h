@@ -30,7 +30,7 @@ struct co_winnt_reactor_packet_user {
 	HANDLE rhandle;
 	OVERLAPPED read_overlapped;
 	OVERLAPPED write_overlapped;
-	char buffer[0x10000];
+	unsigned char buffer[0x10000];
 	unsigned long size;
 };
 

@@ -278,7 +278,7 @@ co_monitor_create_ptes(
 
 
 typedef struct {
-	char *data;
+	void *data;
 	co_monitor_t *monitor;
 } co_monitor_copy_region_callback_data_t;
 
@@ -322,7 +322,7 @@ co_rc_t co_monitor_copy_region(
 	struct co_monitor *monitor, 
 	vm_ptr_t address,
 	unsigned long size,
-	char *data_to_copy
+	void *data_to_copy
 	)
 {
 	co_monitor_copy_region_callback_data_t cbdata;

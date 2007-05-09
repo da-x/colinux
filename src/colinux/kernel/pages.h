@@ -39,7 +39,7 @@ extern co_rc_t co_monitor_copy_region(
 	struct co_monitor *monitor, 
 	vm_ptr_t address,
 	unsigned long size,
-	char *data_to_copy
+	void *data_to_copy
 	);
 
 extern co_rc_t co_monitor_alloc_and_map_page(

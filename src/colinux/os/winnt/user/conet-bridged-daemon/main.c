@@ -76,7 +76,7 @@ co_rc_t monitor_receive(co_reactor_user_t user, unsigned char *buffer, unsigned 
 		size_left -= message_size;
 		if (size_left >= 0) {
 			pcap_rc = pcap_sendpacket(pcap_packet.adhandle,
-						  message->data, message->size);
+						  (const u_char *)message->data, message->size);
 			/* TODO */
 		}
 		position += message_size;
@@ -190,7 +190,7 @@ co_rc_t get_device_name(char *name,
 			name_string,
 			NULL,
 			&name_type,
-			name_data,
+			(PBYTE)name_data,
 			&len);
 		if (status != ERROR_SUCCESS || name_type != REG_SZ) {
 			co_terminal_print("conet-bridged-daemon: error opening registry key: %s\\%s\\%s",
