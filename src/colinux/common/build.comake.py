@@ -5,7 +5,6 @@ targets['common.a'] = Target(
     Input('debug.o'),
     Input('errors.o'),
     Input('messages.o'),
-    Input('version.o'),
     Input('libc.o'),
     Input('libc_strtol.o'),
     Input('snprintf.o'),
@@ -57,14 +56,6 @@ def version_inputs(scripter, tool_run_inf):
         tool_run_inf.target.inputs[1].pathname,
         tool_run_inf.target.pathname)
     return command_line
-
-targets['version.o'] = Target(
-    tool = Compiler(),
-    inputs = [
-       Input('version.c'),
-       Input('version.h'),
-    ]
-)
 
 targets['version.h'] = Target(
     tool = Script(version_inputs),

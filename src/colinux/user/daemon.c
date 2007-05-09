@@ -52,8 +52,8 @@ void co_daemon_print_header(void)
 	if (printed_already)
 		return;
 
-	co_terminal_print("Cooperative Linux Daemon, %s\n", colinux_version);
-	co_terminal_print("Compiled on %s\n", colinux_compile_time);
+	co_terminal_print("Cooperative Linux Daemon, " COLINUX_VERSION "\n");
+	co_terminal_print("Compiled on " __DATE__ " " __TIME__ "\n");
 	co_terminal_print("\n");
 	printed_already = 1;
 }

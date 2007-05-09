@@ -22,7 +22,7 @@ static int __init colinux_module_init(void)
 {
 	co_rc_t rc;
 
-	printk("colinux: loaded version %s (compiled on %s)\n", COLINUX_VERSION, COLINUX_COMPILE_TIME);
+	printk("colinux: loaded version " COLINUX_VERSION " (compiled on " __DATE__ " " __TIME__ ")\n");
 
 	co_global_manager = co_os_malloc(sizeof(co_manager_t));
 	if (co_global_manager == NULL) {
