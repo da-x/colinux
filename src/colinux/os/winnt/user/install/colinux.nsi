@@ -356,7 +356,7 @@ Section "Root Filesystem image Download" SeccoLinuxImage
     StrCmp $R1 "1" tryDownload
 
     !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_DEBIAN}" "State"
-    StrCpy $R0 "Debian-3.0r2.ext3-mit-backports.1gb.bz2"
+    StrCpy $R0 "Debian-4.0r0-etch.ext3.1gb.bz2"
     StrCmp $R1 "1" tryDownload
 
     !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_FEDORA}" "State"
