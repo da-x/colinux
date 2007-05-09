@@ -225,7 +225,6 @@ Section "Native Windows Linux Console" SecNTConsole
   ; Our Files . If you adds something here, Remember to delete it in 
   ; the uninstall section
 
-  SetOutPath "$INSTDIR"
   File "premaid\coLinux-console-nt.exe"
 
   ;--------------------------------------------------------------/FILES--
@@ -240,7 +239,6 @@ Section "Cross-platform Linux Console" SecFLTKConsole
   ; Our Files . If you adds something here, Remember to delete it in 
   ; the uninstall section
 
-  SetOutPath "$INSTDIR"
   File "premaid\coLinux-console-fltk.exe"
 
   ;--------------------------------------------------------------/FILES--
@@ -277,7 +275,6 @@ Section "coLinux Virtual Network Daemon (SLiRP)" SeccoLinuxNetSLiRP
   ; Our Files . If you adds something here, Remember to delete it in 
   ; the uninstall section
 
-  SetOutPath "$INSTDIR"
   File "premaid\coLinux-slirp-net-daemon.exe"
 
   ;--------------------------------------------------------------/FILES--
@@ -293,7 +290,6 @@ Section "coLinux Bridged Ethernet (WinPcap)" SeccoLinuxBridgedNet
   ; Our Files . If you adds something here, Remember to delete it in 
   ; the uninstall section
 
-  SetOutPath "$INSTDIR"
   File "premaid\coLinux-bridged-net-daemon.exe"
 
   ;--------------------------------------------------------------/FILES--
@@ -308,7 +304,6 @@ Section "coLinux Virtual Serial Device" SeccoLinuxSerial
   ; Our Files . If you adds something here, Remember to delete it in 
   ; the uninstall section
 
-  SetOutPath "$INSTDIR"
   File "premaid\coLinux-serial-daemon.exe"
   
   ;--------------------------------------------------------------/FILES--
@@ -324,7 +319,6 @@ Section "coLinux Debugging" SeccoLinuxDebug
   ; Our Files . If you adds something here, Remember to delete it in 
   ; the uninstall section
 
-  SetOutPath "$INSTDIR"
   File "premaid\coLinux-debug-daemon.exe"
   ;File /oname=debugging.txt  "..\..\..\..\..\..\doc\debugging"
   
