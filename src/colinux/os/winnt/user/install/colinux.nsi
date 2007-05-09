@@ -45,6 +45,7 @@
 ;Interface Settings
 
   !define MUI_ABORTWARNING
+  !define MUI_FINISHPAGE_NOAUTOCLOSE
 
 ;--------------------------------
 ;Pages
