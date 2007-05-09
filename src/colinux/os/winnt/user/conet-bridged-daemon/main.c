@@ -198,9 +198,7 @@ co_rc_t get_device_name(char *name,
 			return CO_RC(ERROR);
 		}
 		else {
-			if (name_data) {
-				snprintf(actual_name, actual_name_size, "%s", name_data);
-			}
+			snprintf(actual_name, actual_name_size, "%s", name_data);
 		}
 		
 		RegCloseKey(connection_key);
