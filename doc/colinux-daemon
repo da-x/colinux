@@ -4,7 +4,7 @@ colinux-daemon - help/manpage
 The Cooperative Linux Daemon hosts the Linux virtual machine as one process
 under the host operating system.
 
-The daemon spits out the kernel's printk() messages along with its own prints.
+The daemon splits out the kernel's printk() messages along with its own prints.
 It also optionally launches the virtual VGA console, that can be used to
 interface with the virtual machine.  For every network device it launches a
 network daemon.
@@ -420,4 +420,3 @@ Special keys in consoles
 	Ctrl+Alt+Shift+Del	sends Ctrl+Alt+Del to Linux
 
 	Win+LeftAlt		detach from colinux
-

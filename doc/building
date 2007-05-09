@@ -29,6 +29,7 @@ Table of Contents
   5.2.4 Source tree sample for a mingw build process
   5.3 For Linux as host
   5.3.1 For Linux as host with different libraries (patched FLTK)
+  6. Create, resize and optimize images
 
 =================================================================
 
@@ -342,7 +343,7 @@ scripts executable and ran the download script in "bin" directory.
     tar xzf colinux-20061210.tar.gz
     cd colinux-20061210/bin
     chmod +x *.sh
-    ./build-all.sh --download-all
+    ./build-all.sh --download-only
     
 Files will be downloaded into directory $HOME/colinux-devel/download.
 
@@ -353,7 +354,7 @@ Edit bin/user-build.cfg and set some directories.
 It's unsafe to use a relative path in this build script. The BINDIR is mostly
 the bin directory, but not in all cases!
 
-build-all.sh --download-all	Download all missing files, step is optional
+build-all.sh --download-only	Download all missing files, step is optional
 build-all.sh			Extract (OVERWRITE!) and compile all files
     build-cross.sh		Extract and compile the cross compiler
     build-colinux-libs.sh	Extract and compile all libs
@@ -409,11 +410,10 @@ files and installing or update the colinux driver with these commands:
 
 5.2.4 Source tree sample for a mingw build process
 
-Source tree before building, after download-all.sh:
+Source tree before building, after download:
 /colinux-devel
     +-- colinux-20061210/
     |	+-- bin/
-    |	|   +-- download-all.sh			(Download all files only)
     |	|   +-- build-all.sh			(Compile for Win32,
     |	|   ...					 download missing files)
     |	+-- src/
@@ -577,3 +577,70 @@ PATH=.:$PATH is needed, if the executables aren't installed in your e.g
   export COLINUX_CFLAGS="-I$HOME/i686-pc-linux-local/include"
   export COLINUX_LFLAGS="-L$HOME/i686-pc-linux-local/lib"
   make HOSTOS=linux colinux
+
+
+6. Create, resize and optimize images
+-------------------------------------
+
+Mostly images are created from minimal distribution installation under Qemu.
+From Qemu-image should use the option "offset" for loop mount.
+
+Tips for cleanup the image:
+- Run "apt-get clean" on Debian to remove all downloaded files.
+- Remove files
+	/lib/modules/*-co-*
+	/boot
+	/var/log/*.gz
+	/var/run/*.pid
+- Clean files in /var/log (don't remove files! Set the size to zero.)
+
+Final clean and resize the image:
+- You should have an image file, named "image.old" here
+- Create an new empty file, use your favorite size as count.
+  This is the best to compress it very small.
+
+	dd if=/dev/zero of=/tmp/image.new bs=1k count=1024k
+
+  For coLinux version >= 0.7.1 the image files image.new can live on a "cofs"
+  mounted file system.  That means, you can create the new image directly in
+  your Windows (... of=/mmt/cofs-Windows/image.new ...).
+
+- Create a filesystem on the new file
+
+	mkfs.ext3 /tmp/image.new
+
+- Mount new and old images
+
+	mkdir /tmp/new
+	mount -o loop /tmp/image.new /tmp/new
+	mkdir /tmp/old
+	mount -o loop,ro /tmp/image.old /tmp/old
+
+- Copy all files from old current image into the new image.
+
+	cd /tmp/old
+	cp -ax * /tmp/new/
+	cd /tmp
+
+- Unmount images
+
+	umount /tmp/new
+	umount /tmp/old
+
+- Check and cleanup file system
+
+	fsck.ext3 -f /tmp/image.new
+
+- Disable time based "Check interval", set more mount counts
+
+	tune2fs -i 0 -c 60 /tmp/image.new
+
+  CoLinux version 0.6.4 counts +2 per boot with initrd, the default 30/2
+  would be very often check the file system on boot.
+
+- Compress this image
+
+	bzip2 </tmp/image.new >/tmp/image.bz2
+
+- Test the /tmp/image.new on coLinux now.
+  If it fails, repair it and repeat the steps from beginning
