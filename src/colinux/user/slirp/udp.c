@@ -157,6 +157,7 @@ udp_input(m, iphlen)
             goto bad;
         }
 
+#ifdef EMULATE_TFTP_SERVER
         /*
          *  handle TFTP
          */
@@ -164,6 +165,7 @@ udp_input(m, iphlen)
             tftp_input(m);
             goto bad;
         }
+#endif
 
 	/*
 	 * Locate pcb for datagram.
