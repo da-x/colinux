@@ -2352,7 +2352,7 @@ Index: linux-2.6.14-source/include/linux/cooperative.h
 +
 +typedef struct {
 +	unsigned long messages_waiting;
-+	char buffer[];
++	unsigned char buffer[];
 +} co_io_buffer_t;
 +
 +typedef struct {
