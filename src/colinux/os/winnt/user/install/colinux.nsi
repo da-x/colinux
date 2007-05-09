@@ -20,7 +20,7 @@
 
   ;Folder selection page
   InstallDir "$PROGRAMFILES\coLinux"
-  
+
   ;Get install folder from registry if available
   InstallDirRegKey HKCU "Software\coLinux" ""
 
@@ -40,7 +40,7 @@
   ReserveFile "iDl.ini"
   ReserveFile "WinpcapRedir.ini"
   !insertmacro MUI_RESERVEFILE_INSTALLOPTIONS
- 
+
 ;--------------------------------
 ;Interface Settings
 
@@ -70,11 +70,11 @@
   !define MUI_FINISHPAGE_LINK "Visit the Cooperative Linux website"
   !define MUI_FINISHPAGE_LINK_LOCATION "http://www.colinux.org/"
   !define MUI_FINISHPAGE_SHOWREADME "README.TXT"
-  
+
   !insertmacro MUI_PAGE_FINISH
   !insertmacro MUI_UNPAGE_CONFIRM
   !insertmacro MUI_UNPAGE_INSTFILES
-  
+
 ;--------------------------------
 ;Languages
  
@@ -152,7 +152,9 @@ check_running_monitors:
   Pop $R1
   IntCmp $R0 -1 remove_linux_sys
 
-  MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "Any coLinux is running.$\nPlease stop it, before continue" IDRETRY check_running_monitors
+  MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION \
+             "Any coLinux is running.$\nPlease stop it, before continue" \
+             IDRETRY check_running_monitors
   DetailPrint "Abort"
   Abort
 
@@ -210,7 +212,7 @@ no_old_linux_sys:
 
   ;Store install folder
   WriteRegStr HKCU "Software\coLinux" "" "$INSTDIR"
-  
+
   ;Create uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
@@ -499,7 +501,8 @@ Section -post
 
  ;tapupdate:
     DetailPrint "TAP-Win32 UPDATE (please confirm Windows-Logo-Test)"
-    nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" update "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
+    nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" update \
+                       "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
     DetailPrint "tapcontrol update returned: $R0"
@@ -507,7 +510,8 @@ Section -post
 
  tapinstall:
     DetailPrint "TAP-Win32 INSTALL (please confirm Windows-Logo-Test)"
-    nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" install "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
+    nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" install \
+		       "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
     DetailPrint "tapcontrol install returned: $R0"
