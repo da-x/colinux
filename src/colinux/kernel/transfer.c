@@ -59,7 +59,7 @@ co_rc_t co_monitor_host_linuxvm_transfer(
 		if (one_copy > size)
 			one_copy = size;
 
-		page = (char *)co_os_map(cmon->manager, pfn);
+		page = co_os_map(cmon->manager, pfn);
 		rc = host_func(cmon, host_data, page + (vaddr & ~CO_ARCH_PAGE_MASK), one_copy, dir);
 		co_os_unmap(cmon->manager, page, pfn);
 

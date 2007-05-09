@@ -66,7 +66,7 @@ co_rc_t co_arch_anti_nx_init(co_monitor_t *mon)
 	co_debug_lvl(misc, 11, "cr3 = %08x\n", cr3);
 	pfn = cr3 >> CO_ARCH_PAGE_SHIFT;
 	co_debug("pfn = %08x\n", pfn);
-	page = (unsigned char *)co_os_map(mon->manager, pfn);
+	page = co_os_map(mon->manager, pfn);
 	if (!page) {
 		rc = CO_RC(ERROR);
 		goto out;
@@ -80,7 +80,7 @@ co_rc_t co_arch_anti_nx_init(co_monitor_t *mon)
 	co_os_unmap(mon->manager, page, pfn);
 	pfn = pfn_next;
 
-	page = (unsigned char *)co_os_map(mon->manager, pfn);
+	page = co_os_map(mon->manager, pfn);
 	if (!page) {
 		rc = CO_RC(ERROR);
 		goto out;
@@ -97,7 +97,7 @@ co_rc_t co_arch_anti_nx_init(co_monitor_t *mon)
 		co_os_unmap(mon->manager, page, pfn);
 		pfn = pfn_next;
 		
-		page = (unsigned char *)co_os_map(mon->manager, pfn);
+		page = co_os_map(mon->manager, pfn);
 		if (!page) {
 			rc = CO_RC(ERROR);
 			goto out;

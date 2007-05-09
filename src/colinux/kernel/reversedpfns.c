@@ -74,7 +74,7 @@ co_rc_t co_manager_alloc_reversed_pfns(co_manager_t *manager)
 		if (!CO_OK(rc))
 			return rc;
 
-		pte = (typeof(pte))(co_os_map(manager, pfn));
+		pte = co_os_map(manager, pfn);
 		for (j=0; j < PTRS_PER_PTE; j++) {
 			co_pfn_t rpfn;
 			if (reversed_page_count >= manager->reversed_page_count) {
@@ -131,7 +131,7 @@ co_rc_t co_manager_set_reversed_pfn(co_manager_t *manager, co_pfn_t real_pfn, co
 	entry = real_pfn % PTRS_PER_PTE;
 
 	mapped_pfn = manager->reversed_map_pfns[top_level];
-	reversed_pfns = (typeof(reversed_pfns))(co_os_map(manager, mapped_pfn));
+	reversed_pfns = co_os_map(manager, mapped_pfn);
 	reversed_pfns[entry] = pseudo_pfn;
 	co_os_unmap(manager, reversed_pfns, mapped_pfn);
 
