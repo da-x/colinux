@@ -670,16 +670,16 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	if (caps & (1 << CO_ARCH_X86_FEATURE_FXSR)) {
 		co_debug("CPU supports fxsave/fxrstor\n");
 		if (!co_is_pae_enabled()) {
-			memcpy_co_monitor_passage_func_short_fxsave(&pp->code[0]);
+			memcpy_co_monitor_passage_func_short_fxsave(pp->code);
 		} else {
-			memcpy_co_monitor_passage_func_fxsave(&pp->code[0]);
+			memcpy_co_monitor_passage_func_fxsave(pp->code);
 		}
 	} else {
 		co_debug("CPU supports fnsave/frstor\n");
 		if (!co_is_pae_enabled()) {
-			memcpy_co_monitor_passage_func_short_fnsave(&pp->code[0]);
+			memcpy_co_monitor_passage_func_short_fnsave(pp->code);
 		} else {
-			memcpy_co_monitor_passage_func_fnsave(&pp->code[0]);
+			memcpy_co_monitor_passage_func_fnsave(pp->code);
 		}
 	}
 

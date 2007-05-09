@@ -2052,14 +2052,14 @@ Index: linux-2.6.17-source/include/linux/cooperative.h
 +} co_termination_reason_t;
 +
 +typedef void (*co_switcher_t)(co_arch_passage_page_t *page,
-+			      unsigned char *from,
-+			      unsigned char *to);
++			      void *from,
++			      void *to);
 +
 +#define co_passage_page_func_low(_from_,_to_)	\
 +	(((co_switcher_t)(co_passage_page->code))	\
 +	 (co_passage_page,				\
-+	  (char *)&_from_.border2,			\
-+	  (char *)&_to_.border2))
++	  &_from_.border2,			\
++	  &_to_.border2))
 +
 +#define co_passage_page_func(_from_,_to_)				\
 +	co_passage_page_func_low(co_passage_page->_from_, co_passage_page->_to_)
