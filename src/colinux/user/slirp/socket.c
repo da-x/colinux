@@ -96,7 +96,7 @@ soread(so)
 	int n, nn, lss, total;
 	struct sbuf *sb = &so->so_snd;
 	int len = sb->sb_datalen - sb->sb_cc;
-	struct iovec iov[2];
+	struct iovec iov[2] = { {0}, };
 	int mss = so->so_tcpcb->t_maxseg;
 	
 	DEBUG_CALL("soread");
@@ -296,7 +296,7 @@ sowrite(so)
 	int  n,nn;
 	struct sbuf *sb = &so->so_rcv;
 	int len = sb->sb_cc;
-	struct iovec iov[2];
+	struct iovec iov[2] = { {0}, };
 	
 	DEBUG_CALL("sowrite");
 	DEBUG_ARG("so = %lx", (long)so);
