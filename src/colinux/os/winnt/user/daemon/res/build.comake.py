@@ -37,5 +37,6 @@ targets['resources_def.inc'] = Target(
     inputs = [
        Input('resources_def.sh'),
        Input('src/colinux/VERSION', root_relative=True),
+       Input('bin/build-common.sh', root_relative=True),
     ]
 )

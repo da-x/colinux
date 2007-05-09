@@ -3,7 +3,7 @@
 # Remember: This file runs from / as current directory.
 # Standard arguments for this script:
 # $1: src/colinux/VERSION
-# $2: src/colinux/os/winnt/user/daemon/res/recources_def.inc
+# $2: src/colinux/os/winnt/user/daemon/res/resources_def.inc
 
 VERSION_FILE=$1
 TARGET_FILE=$2
