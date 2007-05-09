@@ -1134,10 +1134,9 @@ static void send_monitor_end_messages(co_monitor_t *cmon)
 co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monitor_owner)
 {
 	co_manager_t *manager;
-	bool_t end_messages = PFALSE;
 
 	if (!(cmon->refcount > 0))
-		return CO_RC(OK);
+		return CO_RC(ERROR);
 
 	manager = cmon->manager;
 
