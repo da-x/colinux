@@ -14,7 +14,7 @@ Table of Contents
   3.6 make clean
   3.7 make disclean
   3.8 Comments about configure system
-  4. Build a coLinux kernel
+  4. Building a coLinux kernel
   4.1 Kernel build Dependencies
   4.2 Compiling the Cooperative Linux kernel (the vmlinux file)
   4.3 Testing new kernel builds
@@ -23,10 +23,10 @@ Table of Contents
   5. Compiling the OS support code
   5.1 OS build Dependencies
   5.2 For Microsoft Windows as host
-  5.2.1 Complete download and building for Win32 under Linux (mingw32)
-  5.2.2 Running script compiling
-  5.2.3 Create a pre-distributabel package as ZIP
-  5.2.4 Source tree sample for a mingw build process
+  5.2.1 Complete downloading and build for Win32 under Linux (MinGW32)
+  5.2.2 Running the compiling script
+  5.2.3 Create a pre-distributable package as ZIP
+  5.2.4 Source tree example for a MinGW build process
   5.3 For Linux as host
   5.3.1 For Linux as host with different libraries (patched FLTK)
   6. Create, resize and optimize images
@@ -37,59 +37,70 @@ Table of Contents
 ----------------
 
 When compiling coLinux to run on Linux of the same architecture, 
-only one compiler can to be used.
+only one compiler needs to be used.
 
-For cross compiling, the components that comprise coLinux need 
-to be compiled using 2 differently targeted versions of GCC 
-(http://gcc.gnu.org). One gcc is required for the native Linux 
-architecture that coLinux designed to run on (e.g, i686-pc-linux), 
-and the other version is used to compiled binary executables and 
-drivers for the host OS (e.g, i686-pc-mingw32).
+For cross compiling, the components that comprise coLinux need to be
+compiled using 2 differently targeted versions of GCC (http://gcc.gnu.org/).
+One gcc is required for the native Linux architecture that coLinux is
+designed to run on (i686-pc-linux), and the other version is used to
+compile binary executables and drivers for the host OS (i686-pc-mingw32).
 
-The versions of the two compilers need to match as closely as 
-possible. Versions 2.95.x, 3.1.x, 3.2.x and 3.3.x of gcc are 
-not guaranteed to be ABI-compatible.
+Please note that the newest version of gcc uses --target=i686-pc-linux-gnu
+and not --target=i686-pc-linux . You could run ./config.guess to find the
+correct name for --host but it is not correct to specify --host since it
+should be guessed correctly (by ./config.guess script). You should not
+specify --target if it is the same as --host when using the newest gcc.
+So never use --host or --target unless you must (EG: when cross-compiling
+or making a canadian-cross (when --host, --build and --target are !=)).
 
-If your compiler for kernel building and daemons don't match the 
-right version, you can't run colinux.  The daemon blocks this.
+The versions of the two compilers need to match as closely as possible.
+Versions 2.95.x, 3.1.x, 3.2.x and 3.3.x of gcc are not guaranteed to
+be ABI-compatible.
 
-To resolve these problems, you should build the Linux compiler 
-(i686-co-linux) and the Win32 compiler (i686-pc-mingw32) from same
-source of gnu/gcc and put it in first search PATH.
-You can set variables 'COLINUX_GCC_GUEST*' in bin/*.cfg.  The scripts
-builds automatic and use the specific compiler.  This option can
-enable with option  --gcc-guest-build on "./configure".
+If the compiler used for building the kernel and the daemons doesn't have
+the same version, you can't run coLinux. The daemon blocks this.
+
+To resolve these problems, you should always build the Linux cross-compiler
+(i686-pc-linux-gnu) and the Win32 compiler (i686-pc-mingw32) from the same
+set of Gnu gcc sources and put it first in the search PATH. You can set the
+variable 'COLINUX_GCC_GUEST*' in bin/*.cfg. The scripts build automaticaly
+and use the specified compiler. This feature can be enabled using the option
+--gcc-guest-build in "./configure".
 
 
 2. Build systems
 ----------------
 
-Colinux source tree contains different types.  The simplest is a configure
-&& make.  This should use, if you are a new colinux devoloper and wand to
-build colinux binaries from source at the first time.
+The coLinux source tree contains different types of build systems. The
+simplest is a "./configure && make". This should be used if you are a new
+coLinux devoloper and want to build coLinux binaries from source for the
+first time.
 
-Configure script is not the same as in other software projects. This script
-do not detect all needed tools and host environments. It creates a simple
-config to have fun for "standard" linux projects ala "./configure && make".
-It should help some newbies to compile colinux.
+The ./configure script is not the same as in other software projects. This
+script does not detect all the needed tools and host environments. It creates
+a simple configuration to make it easy to have "standard" Linux projects using
+"./configure && make". This should help newcommers to compile coLinux.
 
-Later you can run some of the scripts in bin directory by hand.  For sample,
-you wand only rebuild the kernel, than run "cd bin; ./build-kernel.sh".
-All scripts in bin dir use the settings from the "configure".
+Later you can run some of the scripts in bin directory by hand. For example,
+you want only to rebuild the kernel, then run "cd bin; ./build-kernel.sh".
+All scripts in the bin dir use settings from the main "./configure" script.
 
-The mostly wanted is to rebuild the kernel without building the complete
-colinux (daemons).  You not need a cross platform for this step, so we
-describe it in the step guide "Build non standard linux kernel" here.
-The text is some times not up to date.  You should know some about kernel
-building, patching and general using gcc.
+The usual situation is to rebuild the kernel without building the complete
+coLinux (daemons). You do not need a cross platform for this step, so we
+describe it, in this guide, in the step "Build non standard Linux kernel",
+"4.2 Compiling the Cooperative Linux kernel (the vmlinux file)".
 
-The source tree use a Python build system to manage out-of-date sources and
-allows to build differen targest (winnt and linux) without a "make clean".
-Python build system starts with "make colinux" in the src directory and
-needs various envoronment settings before.
+The texts are sometimes not up to date. You should know something about
+building the kernel, patching and in general, using the gcc toolchain.
 
-We suggest you: Start with "configure && make" and later use the shell
-scripts from bin directory.
+The source tree uses a Python build system to manage out-of-date sources
+and allow for building different targets (WinNT and Linux) without using
+"make clean". The Python build system starts with "make colinux" in the src
+directory and needs various environment settings to be setup beforehand.
+
+We suggest you start with "configure && make". When you are more familiar
+with how coLinux is built you can try to use the shell scripts from the bin
+directory.
 
 
 3. configure && make && make installer
@@ -97,21 +108,22 @@ scripts from bin directory.
 
 3.1 configure
 
-Call './configure' in toplevel directory will create the file 
-bin/user-build.cfg with absolute paths of your installation.
+Call './configure' in the toplevel directory to create the file
+bin/user-build.cfg using the absolute paths of your installation.
 
-Default target is winnt. Mostly directories can overwrite by options.
-Please run './configure --help' for list of options.
+Default target is WinNT. There are some options that can be used to override
+the default directories. Run './configure --help' for a list of options.
 
-Sample for WinNT as host (default):
+Example for WinNT as host (default):
   ./configure --target=i686-pc-mingw32 \
         --downloaddir=$HOME/colinux-devel/download \
         --prefix=$HOME/colinux-devel/mingw32
 
-For Linux as Host must use the option '--target=i686-pc-linux'. Host kernel
-directories will automatic detect. You can overwrite with --hostkerneldir.
+For Linux as host you must use the option '--target=i686-pc-linux'. Host
+kernel directories will be detected automaticaly. You can alter them by
+using --hostkerneldir.
 
-Sample for Linux as host:
+Example for Linux as host:
   ./configure --target=i686-pc-linux \
         --downloaddir=$HOME/colinux-devel/download \
         --targetkerneldir=$HOME/colinux-devel/download/linux-2.x.y
@@ -127,16 +139,17 @@ Sample for Linux as host:
 
 Call 'make' in toplevel directory (not in src/) to build all cross tools, cross
 compiler, libraries and target. Makefile is only a wrapper for bin/build-*.sh
-sripts. Settings in bin/user-build.cfg are used by Makefilen a lot of other
+scripts. Settings in bin/user-build.cfg are used by Makefile and a lot of other
 shell- and Python- scripts.
 
-Missing source files will be download with wget.
+Missing source files will be downloaded with wget.
 
-To control the 'out of date' this Makefile use not timestamps. Monotone checkout
-or download can not handle timestamps. So we use md5sum to check new sources,
-patches or configuration. Every compile step update the md5sum file at the end.
+To detect 'out of date' files this Makefile does not timestamps. Monotone
+checkout (or download) can not handle timestamps. So we use md5sum to check
+out new sources, patches or configuration. After every compile it updates the
+md5sum file at the end.
 
-Run "make help" to see what "all" will build, if you not give a target.
+Run "make help" to see what "make all" will build, if you do not give a target.
 
 
 3.4 make package
@@ -146,58 +159,62 @@ Run "make help" to see what "all" will build, if you not give a target.
 
 3.5 make installer
 
-'make installer' builds complete colinux installer.
-This need wine, "makensis" and more win32 installer tools.
+'make installer' builds the complete coLinux installer.
+This needs wine, "makensis" and more win32 installer tools.
 
 
 3.6 make clean
 
-This cleans only the source tree of colinux daemons.
+This will only cleans the source tree of coLinux daemons.
 The cross tools and libraries are untouched.
 
 
-3.7 make disclean
+3.7 make distclean
 
-This remove also control files for md5sum, user-build.cfg and libraries.  But
-it will never remove your cross compiler (in hope, you have not installed it
-under the colinux source tree).  After this step you must './configure' again.
+This will also remove control files for md5sum, user-build.cfg and libraries.
+But it will never remove your cross compiler (we hope, you have not installed
+it under the coLinux source tree). After this step you must run './configure'
+again.
 
 
 3.8 Comments about configure system
 
-Actual version of configure provided only targets i686-pc-mingw32 or
-i686-pc-linux. No other strings supported. (Sorry, configure is very simple.)
+This version of configure is provided only with the targets i686-pc-mingw32
+or i686-pc-linux. No other strings supported. (Sorry, configure is very
+simple.)
 
-Some build steps are supported by separate call.  For sample compile colinux
-daemons without build kernel: 'make colinux'.  Optional targets can list with
-'make help'
+Some build steps are supported by a separate call. For example to compile
+coLinux daemons without building the  kernel: 'make colinux'.  Optional
+targets can be listed with 'make help'
 
 
-4. Build a coLinux kernel
--------------------------
+4. Building a coLinux kernel
+----------------------------
 
-4.1 Kernel build Dependencies
+4.1 Kernel build dependencies
 
-Check the used gcc version of your running coLinux.  Run "dmesg | head -n1"
-would print such text: "gcc version 3.4.5".  In this case you need a gcc
-version 3.4.x, check it by run "gcc --version".  If not, install it.  If
-you not have such packet to install, properly you need to build gcc self
-from source.  The bin/build-cross.sh does it, if you have configured.
+You can check the gcc version that was used to build your coLinux by typing
+"dmesg | head -n1", this would print text like: "gcc version 3.4.5".  In
+that case you need a gcc version 3.4.x, check it by running "gcc --version".
+If you do not have it try "apt-get install gcc" to install it. If you do not
+have such packet to install, probably you need to build gcc yourself from
+source. The script bin/build-cross.sh does it, if you have ran "./configure".
 
-The default gcc version is defined in file bin/build-common.sh, but you can
-only change it, if exists a mingw version of this gcc.  After changing it,
-you need to rebuild also the cross gcc and all daemons.  We suggest you,
-not to change the gcc version.  Read the coLinux changelog (inside
-Monotone) about problems with other (older) gcc versions and the fixies.
+The default gcc version is defined in the file bin/build-common.sh. You can
+only change it, if there exists a MinGW version of this gcc. After changing
+it, you also need to rebuild the cross gcc and all daemons. We suggest you
+not change the gcc version to an older version. Read the coLinux changelog
+(inside Monotone) about the problems with other (older) gcc versions and the
+fixes. If you are up to it then compile gcc-4.2.0 for MinGW and Linux.
 
 
 4.2 Compiling the Cooperative Linux kernel (the vmlinux file)
 
-Unpack the source tarball of coLinux.  Locate the file series-2.6.12
+Unpack the source tarball of coLinux. Locate the file series-2.6.17
 in the directory patch/. This file give you the supported kernel versions.
-(version 2.6.12 for instance, can be obtained from www.kernel.org) 
+(version 2.6.17 for instance, can be obtained from www.kernel.org)
 Unpack the kernel tar in home directory. Make sure that the directory 
-of the Linux kernel is named 'linux-2.6.12'.
+of the Linux kernel is named 'linux-2.6.17'.
 
 Apply the patches found in the series file to the Linux kernel
 as exactly in this order.  If conflicts arrise, then it is
@@ -213,54 +230,94 @@ more examples for patching kernel and the quilt handling.
 
 For example:
     ~/# cd PathToColinux/patch
-    ~/PathToColinux/patch# cat `cat series-2.6.12` > /tmp/sumary.patch
+    ~/PathToColinux/patch# cat `cat series-2.6.17` > /tmp/sumary.patch
     ~/PathToColinux/patch# cd
-    ~/# wget http://www.kernel.org/pub/linux/kernel/2.6/linux-2.6.12.tar.bz2
-    ~/# bunzip2 -dc linux-2.6.12.tar.bz2 | tar x
-    ~/# cd linux-2.6.12
-    ~/linux-2.6.12# patch -p1 < /tmp/sumary.patch
-    ~/linux-2.6.12# rm /tmp/sumary.patch
+    ~/# wget http://www.kernel.org/pub/linux/kernel/2.6/linux-2.6.17.tar.bz2
+    ~/# bunzip2 -dc linux-2.6.17.tar.bz2 | tar x
+    ~/# cd linux-2.6.17
+    ~/linux-2.6.17# patch -p1 < /tmp/sumary.patch
+    ~/linux-2.6.17# rm /tmp/sumary.patch
 
 The coLinux package is supplied with a premaid Linux kernel
 configuration file. Copy it to your kernel tree:
 
-    ~/linux-2.6.12# cp PathToColinux/conf/linux-2.6.12-config .config
+    ~/linux-2.6.17# cp PathToColinux/conf/linux-2.6.17-config .config
 
-Append colinux version information to kernel version name:
-    ~/linux-2.6.12# echo "-co-0.8.0" > localversion-cooperative
+Append coLinux version information to kernel version name:
+    ~/linux-2.6.17# echo "-co-0.8.0" > localversion-cooperative
 
 Update config and build vmlinux:
-    ~/linux-2.6.12# make oldconfig
-    ~/linux-2.6.12# make vmlinux
+    ~/linux-2.6.17# make oldconfig
+    ~/linux-2.6.17# make vmlinux
 
 Module build and install:
-    ~/linux-2.6.12# make modules
-    ~/linux-2.6.12# su -c "make modules_install"
+    ~/linux-2.6.17# make modules
+    ~/linux-2.6.17# su -c "make modules_install"
 
 
 4.3 Testing new kernel builds
 
 Then test to run this unchanged kernel with your daemons.
 
-Be shure to save all your work and the disk cache, before you run your
-new kernel.  On windows, only a reboot save the disk cache.  I suggest
-you to reboot windows _before_ you starts the new kernel!
+Be sure to save all your work and the disk cache, before you run your
+new kernel. On windows, only a reboot save the disk cache. I suggest
+you reboot windows _before_ you start the new kernel!
 
-After these steps you can modify kernel config or adding some special patches
+After these steps you can modify kernel config or add some special patches
 and rebuild your special kernel.
 
 
 4.4 Private kernel config
 
-After the default kernel was working, you can call "make menuconfig"
-to change your options.  But please: Don't enable device drivers with
-direct hardware access (ISA-, PCI- or VL-Bus) and don't change cpu specific
-configs.  This would mostly crash your system.
+After the default kernel is working, you can call "make menuconfig" to change
+your options.
 
-Than run "make vmlinux modules" in the kernel source again and test it.
+If you have Cygwin x11 try "make xconfig" or "make gconfig". You need to have
+installed (on coLinux) the packages gtk+-2.0 glib-2.0 libglade-2.0 for xconfig
+and install qt-mt for gconfig. It is a bit of work but it looks good!
 
-Save the file ".config" as your new default config in colinux source tree
-as conf/linux-2.6.12-config.
+Typing "make menuconfig" runs: "scripts/kconfig/mconf arch/i386/Kconfig"
+Typing "make gconfig"    runs: "scripts/kconfig/gconf arch/i386/Kconfig"
+Typing "make xconfig"    runs: "scripts/kconfig/qconf arch/i386/Kconfig"
+
+The program "mconf" is a curses graphics interface both gconf and qconf use
+X11. The qconf program saves it's setting (both X11 settings, EG: window size
+and position and qcon settings, EG: wide of the individual panes and "show
+options") but (as least for me, and I think I set it up correct) the gconf
+program does NOT save these settings.
+
+The gconf program seems to have a few more buttons to push than the qconf
+program does and both (sometimes) show features differently than mconf. This
+might be due to a bug in reading .config or simply my lack of familiarity
+but I like to use mconf first (for it's simple run through of everthing)
+and then go back and re-check with gconf to get a graphical presentation
+of the choices I made and fix any of (my) mistakes.
+
+It is very easy with either gconf or qconf to click from one section of
+settings to another to check (or change) options that interfere (or need)
+another option to work properly (or change what extra choices you have).
+It is more difficult with mconf to cursor-key back and forth between the
+options and get things set properly - so make (and use) both types :( .
+
+When I built gconf it seemed unable to alter _some_ features (that were
+NOT disabled) but did work to alter other features. Maybe something is
+not working with the linux-2.6.17 kernel's version of gconf. With gconf
+when I changed the setting for "show all options" the screen did not
+update immediately, I needed to click a "screen-layout-button" and then
+go back to the prior layout to refresh the screen. This does NOT happen
+with qconf, it updates the screen immediately. I suspect qconf is working
+better than gconf (but it _might_ be the way it was installed - I used
+the standard method to install, so it is not my fault).
+
+
+WARNING: Don't enable device drivers with direct hardware access (ISA-, PCI-
+or VL-Bus) and don't change cpu specific configs. This will likely crash your
+system.
+
+Now run "make vmlinux modules" in the kernel source again and test it.
+
+Save the file ".config" as your new default config in coLinux source tree
+as conf/linux-2.6.17-config.
 
 
 4.5 Add private kernel patches
@@ -281,7 +338,7 @@ end.  Better way is, to use "quilt import" for your patch files.
 
 Run the "make oldconfig", answer for the new devices with the right option.
 If you are unshure, use 'N'.  Save the file ".config" as your new default
-config in colinux source conf/linux-2.6.12-config.
+config in coLinux source conf/linux-2.6.17-config.
 
 Run "make vmlinux modules" and check the new nernel.
 
@@ -312,7 +369,7 @@ Python build system
 
 5.2 For Microsoft Windows as host
 
-5.2.1 Complete download and building for Win32 under Linux (mingw32)
+5.2.1 Complete downloading and build for Win32 under Linux (MinGW32)
 
 To compile source for a Windows target, the compiler must be self compiled
 for this target. You can not download a binary of this compiler!
@@ -326,7 +383,7 @@ This needs a Compiler, devel-libraries and a lot of tools:
     make-3.80
     module-init-tools-0.9.14
     patch-2.5.9
-    python2.3		for colinux build system, need version 2.3+
+    python2.3		for coLinux build system, need version 2.3+
     texinfo-4.5		need by binutils
     unzip-5.50.0	extracting winapi source
     wget-1.8.2		download source files
@@ -335,7 +392,7 @@ This needs a Compiler, devel-libraries and a lot of tools:
     ncurses-devel
     ... and many more devel packets ...
 
-Create a new directory, extract colinux source in this directory, set 
+Create a new directory, extract coLinux source in this directory, set
 scripts executable and ran the download script in "bin" directory.
 
     mkdir $HOME/colinux-devel
@@ -348,7 +405,7 @@ scripts executable and ran the download script in "bin" directory.
 Files will be downloaded into directory $HOME/colinux-devel/download.
 
 
-5.2.2 Running script compiling
+5.2.2 Running the compiling script
 
 Edit bin/user-build.cfg and set some directories.
 It's unsafe to use a relative path in this build script. The BINDIR is mostly
@@ -359,7 +416,7 @@ build-all.sh			Extract (OVERWRITE!) and compile all files
     build-cross.sh		Extract and compile the cross compiler
     build-colinux-libs.sh	Extract and compile all libs
     build-kernel.sh		Extract, patch, compile the kernel and modules
-    build-colinux.sh		Recompile only the colinux daemons and console
+    build-colinux.sh		Recompile only the coLinux daemons and console
 
 ! Any starts of build-kernel.sh will delete all source and extract it again !
 ! If you have changed some kernel sources, set COLINUX_KERNEL_UNTAR="no" in !
@@ -375,7 +432,7 @@ directory (not system wide). We never need root rights for installing
 headers, libs or programs.
 
 
-After Downloading a new version of colinux source, should only extract source
+After Downloading a new version of coLinux source, should only extract source
 at same top level directory and run the last scripts build-kernel.sh and
 build-colinux.sh. In some cases you might also need to compile the libs.
 The cross compiler mostly never need compile again.
@@ -392,7 +449,7 @@ Single script can also use to recompile one step. For instance you can rebuild
 the win32k-api and fltk library by calling 'cd bin ; ./build-colinux-libs.sh'
 
 
-5.2.3 Create a pre-distributabel package as ZIP
+5.2.3 Create a pre-distributable package as ZIP
 
 Run the common script to create a zip archives in directory 'dist' with all
 executables for Windows host:
@@ -400,7 +457,7 @@ executables for Windows host:
     . ./build-common.sh --package
 
 The target files should copy into a Windows host system, unpack the zip
-files and installing or update the colinux driver with these commands:
+files and installing or update the coLinux driver with these commands:
 
   cd OldColinuxPath
   colinux-daemon.exe --remove-driver
@@ -408,7 +465,7 @@ files and installing or update the colinux driver with these commands:
   colinux-daemon.exe --install-driver
 
 
-5.2.4 Source tree sample for a mingw build process
+5.2.4 Source tree example for a MinGW build process
 
 Source tree before building, after download:
 /colinux-devel
@@ -424,14 +481,14 @@ Source tree before building, after download:
         +-- fltk-1.1.6-source.tar.bz2
         +-- gcc-core-3.4.5-20060117-1-src.tar.gz
         +-- gcc-g++-3.4.5-20060117-1-src.tar.gz
-        +-- linux-2.x.y.tar.bz2			(version of colinux kernel)
+        +-- linux-2.x.y.tar.bz2			(version of coLinux kernel)
         +-- mingw-runtime-3.9.tar.gz
         +-- w32api-3.5-src.tar.gz
         +-- w32api-3.5.tar.gz
         +-- wpdpack_3_1.zip
 
 
-Source tree after building cross compiler and colinux binaries:
+Source tree after building cross compiler and coLinux binaries:
 /colinux-devel					$USER_TOPDIR
     +-- colinux-20061210/
     |   ... Colinux sources
@@ -458,8 +515,8 @@ Source tree after building cross compiler and colinux binaries:
     |   |   +-- colinux-console-nt.exe
     |   |   +-- colinux-daemon.exe
     |   |   +-- colinux-net-daemon.exe
-    |   |   +-- colinux-*.exe			(Some more colinux daemons)
-    |   |   +-- linux.sys			(Windows colinux driver)
+    |   |   +-- colinux-*.exe			(Some more coLinux daemons)
+    |   |   +-- linux.sys			(Windows coLinux driver)
     |   +-- vmlinux-0.8.0.zip
     |   |   +-- vmlinux				(kernel)
     |   +-- modules-2.x.y-co-0.8.0.tgz		(Modules for target kernel)
@@ -507,7 +564,7 @@ For building and runnning coLinux on Linux you need:
 1. Tree or headers of the designated host kernel available, in order to build 
    the kernel module (colinux.ko).
    Currently works only with host kernel 2.6.x,
-   testet up to 2.6.8.1, 2.6.10 - 2.6.18.
+   tested up to 2.6.8.1, 2.6.10 - 2.6.18.
    2.6.19 as host kernel is not usable.
    Host kernel should not set CONFIG_REGPARM, coLinux can't run there.
 2. patched fltk-1.1.6 (see patch directory) installed in the 
@@ -541,7 +598,7 @@ The steps are basically:
 This much like the Windows port except where the logic around the installation 
 of the driver is more simple.
 
-You should run colinux in a graphic environment, KDE, Gnome or after 'startx'.
+You should run coLinux in a graphic environment, KDE, Gnome or after 'startx'.
 'xhost +' allows root (su) to use your user desktop (access control disabled).
 
 PATH=.:$PATH is needed, if the executables aren't installed in your e.g 
@@ -563,13 +620,13 @@ PATH=.:$PATH is needed, if the executables aren't installed in your e.g
   cd /tmp
   rm -r fltk-1.1.6
 
-- Run colinux configure with path to this fltk
+- Run coLinux configure with path to this fltk
 
   cd colinux-source
   export PATH=$HOME/i686-linux-local/bin:$PATH
   ./configure --target=i686-pc-linux ...
 
-- Run colinux build with path to FLTK libraries
+- Run coLinux build with path to FLTK libraries
 
   export COLINUX_TARGET_KERNEL_PATH=/path/to/your/patched/colinux/kernel/tree
   export COLINUX_HOST_KERNEL_DIR=/path/to/your/host/kernel
