@@ -321,7 +321,7 @@ Section "coLinux Debugging" SeccoLinuxDebug
   ; the uninstall section
 
   File "premaid\coLinux-debug-daemon.exe"
-  ;File /oname=debugging.txt  "..\..\..\..\..\..\doc\debugging"
+  File "premaid\debugging.txt"
   
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
@@ -590,6 +590,7 @@ Section "Uninstall"
   Delete "$INSTDIR\news.txt"
   Delete "$INSTDIR\cofs.txt"
   Delete "$INSTDIR\colinux-daemon.txt"
+  Delete "$INSTDIR\debugging.txt"
   Delete "$INSTDIR\example.conf"
 
   Delete "$INSTDIR\netdriver\OemWin2k.inf"

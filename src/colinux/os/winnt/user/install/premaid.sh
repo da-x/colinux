@@ -43,4 +43,5 @@ unix_dos ${TOPDIR}/NEWS 		premaid/NEWS.txt
 unix_dos ${TOPDIR}/RUNNING 		premaid/README.txt
 unix_dos ${TOPDIR}/doc/cofs		premaid/cofs.txt
 unix_dos ${TOPDIR}/doc/colinux-daemon	premaid/colinux-daemon.txt
+unix_dos ${TOPDIR}/doc/debugging	premaid/debugging.txt
 unix_dos ${TOPDIR}/conf/example.conf	premaid/example.conf

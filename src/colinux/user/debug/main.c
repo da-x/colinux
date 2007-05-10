@@ -433,18 +433,19 @@ static void syntax(void)
 	printf("colinux-debug-daemon\n");
 	printf("syntax: \n");
 	printf("\n");
-	printf("    colinux-debug-daemon [-h] [-p] [-d] [-s levels] [-f filename] [-e exitcode]\n");
+	printf("    colinux-debug-daemon [-d] [-f filename] [-n ipaddress] [-p] [-s levels] | -e exitcode | -h\n");
 	printf("\n");
 	printf("      -d              Download debug information on the fly from driver.\n");
 	printf("                      Without -d, uses standard input.\n");
 	printf("      -p              Parse the debug information and output an XML\n");
-	printf("      -f [filename]   File to append the output instead of writing to\n");
+	printf("      -f filename     File to append the output instead of writing to\n");
 	printf("                      standard output. Write with flush every line.\n");
 	printf("      -s level=num,level2=num2,...\n");
 	printf("                      Change the levels of the given debug facilities\n");
-	printf("      -n [ip-address] Send logs as UDP packets to [ip-address]:63000\n");
+	printf("      -n ipaddress    Send logs as UDP packets to ipaddress:63000\n");
 	printf("                      (requires -d)\n");
 	printf("      -e exitcode     Translate exitcode into human readable format.\n");
+	printf("      -h              This help text\n");
 	printf("\n");
 }
 

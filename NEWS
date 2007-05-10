@@ -1,4 +1,7 @@
 * Version 0.8.0
+  * New file: Debugging.txt with tips for debugging colinux start problems.
+  * Warnings with gcc 4.x fixed. Gcc 4.1.2 and 4.2.0-snapshot was tested.
+    (Currently have not switched to gcc 4. Is available as patch.)
   * Optimized workaround for DEP/noexecute problems (flush tlb).
   * Network daemons TAP, Bridged and Slirp runs with process priority high.
   * New: colinux-daemon -p pidFile stores ID of coLinux in file pidFile.

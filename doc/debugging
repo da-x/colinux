@@ -1,0 +1,99 @@
+coLinux debugging
+=================
+
+colinux-debug-daemon.exe
+------------------------
+
+This is a configurator and debug logger.  You need to start it before you
+wish to see more internals from coLinux system. Start it after colinux
+driver is installed (normal case after the Installer was done, or after
+you was ran colinux-dasemon --install-driver) and before launch your Linux
+via colinux-daemon.
+
+
+Command Line Parameters
+-----------------------
+
+    -d
+	Download debug information on the fly from driver.
+	Without -d, uses standard input.
+
+    -p
+
+	Parse the debug information and output an XML
+
+    -f filename
+
+	File to append the output, instead of writing to standard output.
+	Write to file with flush on every line.
+
+    -s level=num,level2=num2,...
+
+	Change the levels of the given debug facilities.
+	A highter value give more outputs, 0 disable the facility.
+
+    -n ipaddress
+
+	Send logs as UDP packets to ipaddress:63000
+	(requires -d)
+
+    -e exitcode
+
+	Translate exitcode into human readable format.
+
+    -h
+
+	Shows a short help text
+
+
+Example
+-------
+
+    Open a windows command prompt, change into coLinux install directory and
+    run the debug-logger:
+
+	C:
+	cd \coLinux
+        colinux-debug-daemon.exe -d -p -s prints=31,misc=31 -f debug.xml    
+
+    Than start colinux (as console application or as service).
+    Whenever you means that the trce point was done, stop debug logger
+    with key CTRL-C on the colinux-debug-daemon.
+
+    Open the file debug.xml with Internet Explorer or notepad and view
+    near the end of file.  Search the text, you see also on the colinux-daemon
+    and view near this linies in the debug.xml.  Mostly the debug says more about
+    your problem as the colinux-daemon console.
+
+
+Debuging over network
+---------------------
+
+You can run coLinx on on PC and send all debugging messages over network
+to an other PC.  This is very helpfull, if your colinux crashes your PC and
+you can not log into local filesystem.
+
+In coLinux sources exist a small Python script.  Run this to download all
+raw debugging datas into file:
+
+    DEVEL-PC: src/colinux/user/debug/server.py debug.bin
+
+Or run Netcat (Linux) as debug server:
+
+    DEVEL-PC: netcat -l -u -p 63000 debug.bin
+
+On the other PC open command prompt, run debug logger with network
+option '-n' and the ipaddres to your 'server' PC:
+
+    TARGET-PC: colinux-debug-daemon.exe -d -s prints=31,misc=31 -n ip.of.server.pc
+
+Open a second command prompt and run colinux:
+
+    TARGET-PC: colinux-daemon.exe @colinux.conf
+    
+
+After finish your debug session stop colinux-debug-daemon with CTRL-C on
+the other PC and stop the server.py (or netcat) with CTRL-C.
+Than convert the binary data into more readable XML format:
+
+    DEVEL-PC: colinux-debug-daemon -p < debug.bin > debug.xml
