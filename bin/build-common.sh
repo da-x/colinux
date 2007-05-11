@@ -282,13 +282,13 @@ strip_kernel()
 build_package()
 {
 	local name bname oname
-	local STRIP="$TARGET-strip --strip-all"
 	local DATE=`LANG=C TZ="UTC" date +%G%m%d`
 	local SYMBOLS_ZIP=$COLINUX_INSTALL_DIR/daemons-$CO_VERSION-$DATE.dbg.zip
 	local DAEMONS_ZIP=$COLINUX_INSTALL_DIR/daemons-$CO_VERSION-$DATE.zip
 	local VMLINUX_ZIP=$COLINUX_INSTALL_DIR/vmlinux-$COMPLETE_KERNEL_NAME-$DATE.zip
 	local MODULES_TGZ=$COLINUX_INSTALL_DIR/modules-$COMPLETE_KERNEL_NAME-$DATE.tgz
 	local EXE_DIR="$TOPDIR/src/colinux/os/winnt/build"
+	local PREMAID="$TOPDIR/src/colinux/os/winnt/user/install/premaid"
 	
 	echo "Create ZIP packages into $COLINUX_INSTALL_DIR"
 	mkdir -p $COLINUX_INSTALL_DIR
@@ -296,22 +296,11 @@ build_package()
 	# remove old zip files
 	rm -f $SYMBOLS_ZIP $DAEMONS_ZIP
 
-	# Strip executables and put into ZIP file
-	for i in $EXE_DIR/*.exe $EXE_DIR/*.sys
-	do
-		name=`basename $i`
-		bname=`basename $i .exe`
-		bname=`basename $bname .sys`
-		oname=$COLINUX_INSTALL_DIR/$name
+	# Add files with debugging symbols into zip
+	zip -j "$SYMBOLS_ZIP" $EXE_DIR/*.exe $EXE_DIR/*.sys || exit $?
 
-		# Add file with debugging symbols into zip
-		zip -j "$SYMBOLS_ZIP" $i || exit $?
-		
-		# strip symbols and add file to zip
-		$STRIP -o $oname $i || exit $?
-		zip -j $DAEMONS_ZIP $oname || exit $?
-		rm $oname
-	done
+	# Use stripped files from installer and add to zip
+	zip -j $DAEMONS_ZIP $PREMAID/*.exe $PREMAID/*.sys || exit $?
 
 	# Exist Kernel and is newer?
 	if [ $COLINUX_TARGET_KERNEL_BUILD/vmlinux -nt $VMLINUX_ZIP ]
@@ -342,16 +331,9 @@ build_package()
 		fi
 	fi
 
-	# Exist target modules.dep and is newer?
-	if [ $COLINUX_TARGET_MODULE_PATH/lib/modules/$COMPLETE_KERNEL_NAME/modules.dep -nt $MODULES_TGZ ]
-	then
-		# Create compressed tar archive with path for extracting direct on the
-		# root of fs, lib/modules with full version of kernel and colinux.
-		echo "Installing Modules $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
-		cd "$COLINUX_TARGET_MODULE_PATH"
-		tar czf $MODULES_TGZ lib/modules/$COMPLETE_KERNEL_NAME || exit $?
-		cd -
-	fi
+	# Link to modules file
+	echo "Installing Modules $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
+        ln -f $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz $MODULES_TGZ
 }
 
 build_all()

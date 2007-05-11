@@ -33,9 +33,10 @@ check_md5sums()
 	echo -n "Check kernel and modules: "
 	cd "$TOPDIR"
 
-	if [ ! -f "$COLINUX_TARGET_KERNEL_BUILD/vmlinux" ]
+	if [ ! -f "$COLINUX_TARGET_KERNEL_BUILD/vmlinux" -o \
+	     ! -f "$COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz" ]
 	then
-		echo "vmlinux don't exist, build it now"
+		echo "vmlinux or modules don't exist, build it now"
 		return
 	fi
 
@@ -59,7 +60,7 @@ create_md5sums()
 	    patch/series-$KERNEL_VERSION \
 	    "$COLINUX_TARGET_KERNEL_BUILD/.config" \
 	    "$COLINUX_TARGET_KERNEL_BUILD/vmlinux" \
-	    "$COLINUX_TARGET_MODULE_PATH/lib/modules/$COMPLETE_KERNEL_NAME/modules.dep" \
+	    "$COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz" \
 	    > $KERNEL_CHECKSUM \
 	|| error_exit 10 "can not create md5sum"
 
@@ -197,12 +198,21 @@ compile_modules()
 	    DEPMOD=$COLINUX_DEPMOD \
 	    modules modules_install >>$COLINUX_BUILD_LOG 2>&1 \
 	|| error_exit 1 "Kernel $KERNEL_VERSION make modules failed"
+}
 
+archive_modules()
+{
+	echo "Create Modules archive"
 	# fix directories for installing
 	local DEST=$COLINUX_TARGET_MODULE_PATH/lib/modules/$COMPLETE_KERNEL_NAME
 	rm -f $DEST/build $DEST/source
 	ln -s /usr/src/linux-${COMPLETE_KERNEL_NAME}-obj $DEST/build
 	ln -s /usr/src/linux-$COMPLETE_KERNEL_NAME $DEST/source
+
+	# Create compressed tar archive for unpacking directly on root of fs
+	cd $COLINUX_TARGET_MODULE_PATH
+	tar czf $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz \
+	    lib/modules/$COMPLETE_KERNEL_NAME || exit $?
 }
 
 build_kernel()
@@ -226,6 +236,7 @@ build_kernel()
 		patch_kernel_source
 	fi
 
+	# Check basicly include
 	if [ ! -s "$COLINUX_TARGET_KERNEL_SOURCE/include/linux/cooperative.h" ]; then
 		error_exit 10 "$COLINUX_TARGET_KERNEL_SOURCE/include/linux/cooperative.h: Missing. Source not usable, please check \$COLINUX_TARGET_KERNEL_SOURCE"
 	fi
@@ -239,6 +250,7 @@ build_kernel()
 
 	# Build and install Modules
 	compile_modules
+        archive_modules
 
 	create_md5sums
 }
