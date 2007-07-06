@@ -2,7 +2,6 @@
   * Bug #1643371: BSOD from dmidecode, fixed by disallow mmap on /dev/mem.
   * New file: Debugging.txt with tips for debugging colinux start problems.
   * Warnings with gcc 4.x fixed. Gcc 4.1.2 and 4.2.0-snapshot was tested.
-    (Currently have not switched to gcc 4. Is available as patch.)
   * Optimized workaround for DEP/noexecute problems (flush tlb).
   * Network daemons TAP, Bridged and Slirp runs with process priority high.
   * New: colinux-daemon -p pidFile stores ID of coLinux in file pidFile.
@@ -24,6 +23,11 @@
   * Option "-v level" enable verbose messages and debug prints on console.
   * Leveled debug output to Dbgview.exe (www.sysinternals.com).
     Needs to enable facility/level with colinux-debug-daemon before.
+  * Updated libraries and tools:
+    - gcc 4.1.2 (unpatched now, not from mingw)
+    - binutils 2.17.50
+    - mingw 3.11
+    - w32api 3.9
   
 * Version 0.7.1
   * colinux-daemon:

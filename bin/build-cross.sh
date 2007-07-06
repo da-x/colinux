@@ -7,13 +7,13 @@
 # Flags for building gcc (not for target)
 BUILD_FLAGS="CFLAGS=-O2 LDFLAGS=-s"
 
-# TEMPORARY until release, you can disable it for faster builds:
+# until release, disable checking for faster builds:
 DISABLE_CHECKING=--disable-checking
 
 download_files()
 {
-	download_file "$GCC_ARCHIVE1" "$MINGW_URL"
-	download_file "$GCC_ARCHIVE2" "$MINGW_URL"
+	download_file "$GCC_ARCHIVE1" "$GCC_URL"
+	download_file "$GCC_ARCHIVE2" "$GCC_URL"
 	download_file "$BINUTILS_ARCHIVE" "$MINGW_URL"
 	download_file "$MINGW_ARCHIVE" "$MINGW_URL"
 	download_file "$W32API_ARCHIVE" "$MINGW_URL"
@@ -70,6 +70,8 @@ extract_binutils()
 
 patch_binutils()
 {
+	# Fixup wrong path in tar
+	test -d $BUILD_DIR/${BINUTILS}-src && mv $BUILD_DIR/${BINUTILS}-src $BUILD_DIR/${BINUTILS}
 	if [ "$BINUTILS_PATCH" != "" ]; then
 		echo "Patching binutils"
 		cd "$BUILD_DIR/$BINUTILS"
@@ -120,8 +122,8 @@ extract_gcc()
 	echo "Extracting gcc"
 	cd "$BUILD_DIR"
 	rm -rf "$GCC"
-	gzip -dc "$SOURCE_DIR/$GCC_ARCHIVE1" | tar x
-	gzip -dc "$SOURCE_DIR/$GCC_ARCHIVE2" | tar x
+	bunzip2 -dc "$SOURCE_DIR/$GCC_ARCHIVE1" | tar x
+	bunzip2 -dc "$SOURCE_DIR/$GCC_ARCHIVE2" | tar x
 }
 
 patch_gcc()
