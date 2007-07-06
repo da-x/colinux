@@ -1,4 +1,4 @@
-Building Cooperative Linux            Dan Aloni, da-x@colinux.org
+Building Cooperative Linux         Dan Aloni, da-x at colinux.org
 =================================================================
 
 Table of Contents
@@ -144,7 +144,7 @@ shell- and Python- scripts.
 
 Missing source files will be downloaded with wget.
 
-To detect 'out of date' files this Makefile does not timestamps. Monotone
+To detect 'out of date' files this Makefile does not timestamps. Subversion
 checkout (or download) can not handle timestamps. So we use md5sum to check
 out new sources, patches or configuration. After every compile it updates the
 md5sum file at the end.
@@ -204,7 +204,7 @@ The default gcc version is defined in the file bin/build-common.sh. You can
 only change it, if there exists a MinGW version of this gcc. After changing
 it, you also need to rebuild the cross gcc and all daemons. We suggest you
 not change the gcc version to an older version. Read the coLinux changelog
-(inside Monotone) about the problems with other (older) gcc versions and the
+(inside Subversion) about the problems with older gcc versions and the
 fixes. If you are up to it then compile gcc-4.2.0 for MinGW and Linux.
 
 
