@@ -2633,7 +2633,28 @@ diff -urN a/drivers/char/mem.c b/drivers/char/mem.c
  	if (!valid_phys_addr_range(p, &count))
  		return -EFAULT;
  
-@@ -286,6 +297,11 @@
+@@ -231,6 +242,9 @@
+ 
+ static int mmap_mem(struct file * file, struct vm_area_struct * vma)
+ {
++	if (cooperative_mode_enabled())
++		return -EFAULT;
++
+ #if defined(__HAVE_PHYS_MEM_ACCESS_PROT)
+ 	unsigned long offset = vma->vm_pgoff << PAGE_SHIFT;
+ 
+@@ -259,6 +273,10 @@
+ static int mmap_kmem(struct file * file, struct vm_area_struct * vma)
+ {
+         unsigned long long val;
++
++	if (cooperative_mode_enabled())
++		return -EFAULT;
++
+ 	/*
+ 	 * RED-PEN: on some architectures there is more mapped memory
+ 	 * than available in mem_map which pfn_valid checks
+@@ -286,6 +304,11 @@
  	ssize_t low_count, read, sz;
  	char * kbuf; /* k-addr because vread() takes vmlist_lock rwlock */
  
@@ -2645,7 +2666,7 @@ diff -urN a/drivers/char/mem.c b/drivers/char/mem.c
  	read = 0;
  	if (p < (unsigned long) high_memory) {
  		low_count = count;
-@@ -437,6 +453,11 @@
+@@ -437,6 +460,11 @@
  	ssize_t written;
  	char * kbuf; /* k-addr because vwrite() takes vmlist_lock rwlock */
  

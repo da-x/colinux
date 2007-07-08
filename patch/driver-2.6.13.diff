@@ -614,7 +614,27 @@ Index: linux-2.6.13-source/drivers/char/mem.c
  	if (!valid_phys_addr_range(p, &count))
  		return -EFAULT;
  
-@@ -327,6 +338,11 @@
+@@ -234,6 +245,9 @@
+ 
+ static int mmap_mem(struct file * file, struct vm_area_struct * vma)
+ {
++	if (cooperative_mode_enabled())
++		return -EFAULT;
++
+ #if defined(__HAVE_PHYS_MEM_ACCESS_PROT)
+ 	unsigned long offset = vma->vm_pgoff << PAGE_SHIFT;
+ 
+@@ -263,6 +277,9 @@
+ {
+ 	unsigned long pfn;
+ 
++	if (cooperative_mode_enabled())
++		return -EFAULT;
++
+ 	/* Turn a kernel-virtual address into a physical page frame */
+ 	pfn = __pa((u64)vma->vm_pgoff << PAGE_SHIFT) >> PAGE_SHIFT;
+ 
+@@ -327,6 +344,11 @@
  	ssize_t low_count, read, sz;
  	char * kbuf; /* k-addr because vread() takes vmlist_lock rwlock */
  
@@ -626,7 +646,7 @@ Index: linux-2.6.13-source/drivers/char/mem.c
  	read = 0;
  	if (p < (unsigned long) high_memory) {
  		low_count = count;
-@@ -478,6 +494,11 @@
+@@ -478,6 +500,11 @@
  	ssize_t written;
  	char * kbuf; /* k-addr because vwrite() takes vmlist_lock rwlock */
  
