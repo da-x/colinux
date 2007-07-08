@@ -5906,7 +5906,7 @@ diff -urN a/fs/cofusefs/dir.c b/fs/cofusefs/dir.c
 diff -urN a/fs/cofusefs/file.c b/fs/cofusefs/file.c
 --- a/fs/cofusefs/file.c
 +++ b/fs/cofusefs/file.c
-@@ -0,0 +1,542 @@
+@@ -0,0 +1,541 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
@@ -6084,11 +6084,12 @@ diff -urN a/fs/cofusefs/file.c b/fs/cofusefs/file.c
 +	out.args[0].size = PAGE_CACHE_SIZE;
 +	out.args[0].value = buffer;
 +
++	/* Hack: Can't detect readed bytes. But the overhead should fill with zero. */
++	if (inarg.offset + PAGE_CACHE_SIZE > i_size_read(inode))
++		memset(buffer, 0, PAGE_CACHE_SIZE);
++
 +	request_send(fc, &in, &out);
 +	if(!out.h.error) {
-+		size_t outsize = out.args[0].size;
-+		if(outsize < PAGE_CACHE_SIZE) 
-+			memset(buffer + outsize, 0, PAGE_CACHE_SIZE - outsize);
 +		flush_dcache_page(page);
 +		SetPageUptodate(page);
 +	}
@@ -6187,13 +6188,11 @@ diff -urN a/fs/cofusefs/file.c b/fs/cofusefs/file.c
 +	out.args[0].size = FUSE_BLOCK_SIZE;
 +	out.args[0].value = bl_buf;
 +
-+	request_send(fc, &in, &out);
++	/* Hack: Can't detect readed bytes. But the overhead should fill with zero. */
++	if (inarg.offset + FUSE_BLOCK_SIZE > i_size_read(inode))
++		memset(bl_buf, 0, FUSE_BLOCK_SIZE);
 +
-+	if (!out.h.error) {
-+		size_t outsize = out.args[0].size;
-+		if (outsize < FUSE_BLOCK_SIZE)
-+			memset(bl_buf + outsize, 0, FUSE_BLOCK_SIZE - outsize);
-+	}
++	request_send(fc, &in, &out);
 +
 +	return out.h.error;
 +}   
