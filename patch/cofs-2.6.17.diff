@@ -54,7 +54,7 @@ Index: linux-2.6.17-source/fs/cofusefs/file.c
 ===================================================================
 --- linux-2.6.17-source.orig/fs/cofusefs/file.c
 +++ linux-2.6.17-source/fs/cofusefs/file.c
-@@ -306,9 +306,9 @@
+@@ -305,9 +305,9 @@
  
  	if(fc->flags & FUSE_LARGE_READ) {
  		/* Don't allow this to get mixed up with writes */

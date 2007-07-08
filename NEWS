@@ -1,4 +1,5 @@
 * Version 0.8.0
+  * Fix mmap read error behind end of file (was not zero filled).
   * Bug #1190080: Fix cofs file time/mode/flags after touch or write.
   * Bug #1643371: BSOD from dmidecode, fixed by disallow mmap on /dev/mem.
   * New file: Debugging.txt with tips for debugging colinux start problems.
