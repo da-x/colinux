@@ -217,8 +217,8 @@ static co_rc_t inode_mknod(co_filesystem_t *filesystem, co_inode_t *dir, unsigne
 	attr->rdev = 0;
 	attr->_dummy = 0;
 	attr->blocks = 0;
-	attr->atime = co_os_get_time();
-	attr->mtime = co_os_get_time();
+	attr->atime = \
+	attr->mtime = \
 	attr->ctime = co_os_get_time();
 	
 	rc = filesystem->ops->inode_mknod(filesystem, dir, mode, rdev, name, ino, attr);
