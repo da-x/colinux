@@ -239,7 +239,7 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.17-source/fs/cofusefs/dir.c
-@@ -0,0 +1,819 @@
+@@ -0,0 +1,817 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
@@ -267,9 +267,8 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 +
 +static void change_attributes(struct inode *inode, struct fuse_attr *attr)
 +{
-+	if(S_ISREG(inode->i_mode) && i_size_read(inode) != attr->size) {
++	if(S_ISREG(inode->i_mode) && i_size_read(inode) != attr->size)
 +		invalidate_inode_pages(inode->i_mapping);
-+	}
 +
 +	inode->i_mode    = (inode->i_mode & S_IFMT) + (attr->mode & 07777);
 +	inode->i_nlink   = attr->nlink;
@@ -681,7 +680,7 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 +		int over;
 +
 +		if(dirent->namelen > NAME_MAX) {
-+			printk("fuse_readdir: name too long\n");
++			printk("parse_dirfile: name too long\n");
 +			return -EPROTO;
 +		}
 +		if(reclen > nbytes)
@@ -795,7 +794,7 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 +	return ret;
 +}
 +
-+static int fuse_follow_link(struct dentry *dentry, struct nameidata *nd)
++static void * fuse_follow_link(struct dentry *dentry, struct nameidata *nd)
 +{
 +	int ret;
 +	char *link;
@@ -803,7 +802,7 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 +	link = read_link(dentry);
 +	ret = vfs_follow_link(nd, link);
 +	free_link(link);
-+	return ret;
++	return ERR_PTR(ret);
 +}
 +
 +static int fuse_dir_open(struct inode *inode, struct file *file)
@@ -837,7 +836,7 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 +	co_passage_page_release(flags);
 +
 +	if (ret) {
-+		printk("fuse_readdir: host returned error: %x\n", ret);
++		printk("fuse_dir_open: host returned error: %x\n", ret);
 +		kfree(rd);
 +	} else {
 +		file->private_data = (void *)rd;
@@ -868,9 +867,8 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 +
 +	co_passage_page_release(flags);
 +
-+	if (ret) {
-+		printk("fuse_readdir: host returned error: %x\n", ret);
-+	}
++	if (ret)
++		printk("fuse_dir_release: host returned error: %x\n", ret);
 +
 +	kfree(rd);
 +
@@ -1572,7 +1570,7 @@ Index: linux-2.6.17-source/fs/cofusefs/fuse_i.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.17-source/fs/cofusefs/fuse_i.h
-@@ -0,0 +1,250 @@
+@@ -0,0 +1,252 @@
 +/*
 +    COFUSE: Filesystem in an host of Cooperative Linux
 +    Copyright (C) 2004 Dan Aloni <da-x@colinux.org>
@@ -1617,7 +1615,9 @@ Index: linux-2.6.17-source/fs/cofusefs/fuse_i.h
 +	/** The superblock of the mounted filesystem */
 +	struct super_block *sb;
 +
++	/** index on the host side **/
 +	int cofs_unit;
++
 +	/** The user id for this mount */
 +	uid_t uid;
 +
@@ -1827,7 +1827,7 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.17-source/fs/cofusefs/inode.c
-@@ -0,0 +1,442 @@
+@@ -0,0 +1,441 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001	Miklos Szeredi (miklos@szeredi.hu)
@@ -1946,7 +1946,7 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 +	const char *name, *next;
 +
 +	if (d == NULL) {
-+		printk("cofuse_read_super: Bad mount data\n");
++		printk("co_get_conn: Bad mount data\n");
 +		return NULL;
 +	}
 +
@@ -1957,7 +1957,7 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 +
 +	index = _atoi(name, &next);
 +	if (index < 0  || index >= CO_MODULE_MAX_COFS) {
-+		printk("cofuse_read_super: Invalid index %d\n", index);
++		printk("co_get_conn: Invalid index %d\n", index);
 +		return NULL;
 +	}
 +
@@ -1970,9 +1970,8 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 +
 +	memset(conn, 0, sizeof(*conn));
 +
-+	if (*next == ':') {
++	if (*next == ':')
 +		snprintf(conn->opt_pathname, sizeof(conn->opt_pathname), "%s", next+1);
-+	}
 +
 +	conn->cofs_unit = index;
 +	conn->flags = d->flags;

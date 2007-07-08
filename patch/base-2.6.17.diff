@@ -3267,23 +3267,23 @@ Index: linux-2.6.17-source/drivers/char/mem.c
 @@ -244,6 +255,9 @@
  {
  	size_t size = vma->vm_end - vma->vm_start;
-
+ 
 +	if (cooperative_mode_enabled())
 +		return -EFAULT;
 +
  	if (!valid_mmap_phys_addr_range(vma->vm_pgoff << PAGE_SHIFT, size))
  		return -EINVAL;
-
+ 
 @@ -265,6 +279,9 @@
  {
  	unsigned long pfn;
-
+ 
 +	if (cooperative_mode_enabled())
 +		return -EFAULT;
 +
  	/* Turn a kernel-virtual address into a physical page frame */
  	pfn = __pa((u64)vma->vm_pgoff << PAGE_SHIFT) >> PAGE_SHIFT;
-
+ 
 @@ -329,6 +346,11 @@
  	ssize_t low_count, read, sz;
  	char * kbuf; /* k-addr because vread() takes vmlist_lock rwlock */
