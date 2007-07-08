@@ -442,7 +442,7 @@ target files. Md5sum is updated after build step was complete and stored as
 .build-*.md5 in 'BUILD' directory.  An "error on MD5" is not a file error
 here, it's only a detection for outdated sources, where need to rebuild.
 
-Call as 'build-all.sh --rebuild-all' will ignore md5sum and builds all
+Call as 'build-all.sh --rebuild' will ignore md5sum and builds all
 cross tools, cross compiler, libraries and target files again.
 
 Single script can also use to recompile one step. For instance you can rebuild
@@ -454,7 +454,7 @@ the win32k-api and fltk library by calling 'cd bin ; ./build-colinux-libs.sh'
 Run the common script to create a zip archives in directory 'dist' with all
 executables for Windows host:
 
-    . ./build-common.sh --package
+    . ./build-common.sh ; build_package
 
 The target files should copy into a Windows host system, unpack the zip
 files and installing or update the coLinux driver with these commands:

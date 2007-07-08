@@ -27,7 +27,7 @@ kernel:
 
 # Download only all missing sources (for cross compile)
 download:
-	@cd bin && . ./build-common.sh --download-all
+	@cd bin && ./build-all.sh --download-only
 
 # Run only ones the premaid.sh for installer or package
 src/colinux/os/winnt/user/install/premaid/linux.sys: \
@@ -36,7 +36,7 @@ src/colinux/os/winnt/user/install/premaid/linux.sys: \
 
 # Create a pre-distributabel package as ZIP
 package: src/colinux/os/winnt/user/install/premaid/linux.sys
-	@cd bin && . ./build-common.sh --package
+	@. bin/build-common.sh ; build_package
 
 # Create installer (need wine and running X11)
 installer: src/colinux/os/winnt/user/install/premaid/linux.sys

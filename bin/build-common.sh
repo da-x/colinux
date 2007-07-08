@@ -1,34 +1,11 @@
 #!/bin/sh
 
 #
-# This script builds the mingw32 cross compiler on Linux,
-# and patches the w32api package.
-#
-# It also downloads, compiles, and installs FLTK.
+# This file will source from toplevel Makefile and scripts.
+# It's no designed to execute directly.
 # 
 # - Dan Aloni <da-x@colinux.org>
 #
-# This file will source from toplevel Makefile and scripts.
-#
-# Options MUST ones of (and only ones):
-#  --build-all		Build all, without checking old targed files.
-#			(Old file was build-all.sh)
-#  --rebuild-all	Rebuild all, without checking old targed files.
-#			Disable md5sum, untar and patch source.
-#			Overwrite all old source!
-#  --download-all	Download all source files, no compile
-#			(Old file was download-all.sh)
-
-
-#####################################################################
-# This is my script for building a complete cross-compiler toolchain.
-# It is based partly on Ray Kelm's script, which in turn was built on
-# Mo Dejong's script for doing the same, but with some added fixes.
-# The intent with this script is to build a cross-compiled version
-# of the current MinGW environment.
-#
-# Updated by Sam Lantinga <slouken@libsdl.org>
-#####################################################################
 
 # We need to find our self here, or in subdir bin
 # BINDIR is bin directory with scripts
@@ -336,36 +313,3 @@ build_package()
 	echo "Installing Modules $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
         ln -f $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz $MODULES_TGZ
 }
-
-build_all()
-{
-	./build-cross.sh $1 && \
-	./build-colinux-libs.sh $1 && \
-	./build-kernel.sh $1 && \
-	./build-colinux.sh $1 && \
-	echo "Build-all $1 DONE"
-}
-
-case "$1" in
-    --build-all)
-	build_all
-	;;
-    --download-all)
-	build_all --download-only
-	;;
-    --rebuild-all)
-	build_all --rebuild
-	;;
-    --package)
-	build_package
-	;;
-    --help)
-	echo "
-	file: bin/build-common.sh
-
-	Options: --build-all | --download-all | --rebuild-all | --help
-
-	Whithout arguments is used for common set of variables and functions.
-	For more information, read top of file."
-	;;
-esac
