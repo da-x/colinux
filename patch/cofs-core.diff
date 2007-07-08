@@ -239,7 +239,7 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.17-source/fs/cofusefs/dir.c
-@@ -0,0 +1,811 @@
+@@ -0,0 +1,813 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
@@ -934,7 +934,9 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 +			vmtruncate(inode, outarg.attr.size);
 +
 +		change_attributes(inode, &outarg.attr);
++		d_invalidate(entry);
 +	}
++
 +	return out.h.error;
 +}
 +
