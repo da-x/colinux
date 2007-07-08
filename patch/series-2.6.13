@@ -5,6 +5,7 @@ serial-2.6.13.diff
 coconsole-2.6.13.diff 
 conet-2.6.13.diff 
 driver-2.6.13.diff 
+cofs-core.diff
 cofs-2.6.13.diff 
 cloop-core.diff
 cloop-2.6.12.diff
