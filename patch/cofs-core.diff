@@ -239,7 +239,7 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.17-source/fs/cofusefs/dir.c
-@@ -0,0 +1,813 @@
+@@ -0,0 +1,819 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
@@ -631,7 +631,8 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 +		if(!(fc->flags & FUSE_ALLOW_OTHER) &&
 +		   current->fsuid != fc->uid)
 +			return -EACCES;
-+	} else if(time_before_eq(jiffies, entry->d_time + FUSE_REVALIDATE_TIME))
++	} else if(!(fc->flags & COFS_MOUNT_NOCACHE) &&
++		  time_before_eq(jiffies, entry->d_time + FUSE_REVALIDATE_TIME))
 +		return 0;
 +
 +	return fuse_do_getattr(inode);
@@ -942,10 +943,15 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 +
 +static int _fuse_dentry_revalidate(struct dentry *entry)
 +{
-+	if(!entry->d_inode)
++	struct fuse_conn *fc;
++	struct inode *inode = entry->d_inode;
++
++	if(!inode)
 +		return 0;
-+	else if(time_after(jiffies, entry->d_time + FUSE_REVALIDATE_TIME)) {
-+		struct inode *inode = entry->d_inode;
++
++	fc = INO_FC(inode);
++	if((fc->flags & COFS_MOUNT_NOCACHE) ||
++	   time_after(jiffies, entry->d_time + FUSE_REVALIDATE_TIME)) {
 +		struct fuse_lookup_out outarg;
 +		int version;
 +		int ret;
@@ -1821,7 +1827,7 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.17-source/fs/cofusefs/inode.c
-@@ -0,0 +1,437 @@
+@@ -0,0 +1,442 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001	Miklos Szeredi (miklos@szeredi.hu)
@@ -1969,6 +1975,10 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 +	}
 +
 +	conn->cofs_unit = index;
++	conn->flags = d->flags;
++
++	if (d->flags & COFS_MOUNT_NOCACHE)
++		printk("cofs%d: cache disabed\n", index);
 +
 +	co_passage_page_assert_valid();
 +	co_passage_page_acquire(&flags);
@@ -2158,6 +2168,7 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 +	{ "gid",	0, 'g' },
 +	{ "fmask",	0, 'f' },
 +	{ "dmask",	0, 'd' },
++	{ "nocache",	COFS_MOUNT_NOCACHE, 1 },
 +	{ NULL,		0, 0}
 +};
 +
@@ -2221,7 +2232,7 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 +		return ERR_PTR(-EINVAL);
 +
 +	md.rootmode = S_IFDIR | S_IRWXU | S_IRUGO | S_IXUGO;
-+	md.flags = FUSE_ALLOW_OTHER | FUSE_DEFAULT_PERMISSIONS;
++	md.flags = FUSE_ALLOW_OTHER | FUSE_DEFAULT_PERMISSIONS | co_md.flags;
 +
 +	co_md.fuse = &md;
 +	snprintf(co_md.name, sizeof(co_md.name), "%s", dev_name);

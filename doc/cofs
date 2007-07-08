@@ -55,6 +55,7 @@ host OS directories inside Linux.
     uid=        Set the default user.
     dmask=      Set the default directory permission.
     fmask=      Set the default regular file permission.
+    nocache     Disable directory caching.
 
 * Examples:
     
