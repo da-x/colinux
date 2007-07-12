@@ -293,7 +293,7 @@ complex. The current build system assumes a cross compiler toolchain is
 installed for that purpose. 
 
 This is the second way to compile coLinux, it's more flexible.  But you
-need to setup all the phats and tools by hand.  These steps are for
+need to setup all the paths and tools by hand.  These steps are for
 devolopers with more background.
 
 

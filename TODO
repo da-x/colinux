@@ -48,7 +48,6 @@
      enabled.   
 
  * Miscellaneous enhancements and fixes:
-   * BSOD on 64bit Intel Xeon and Pentium 4 with XP SP2 (NoExecuteDEP).
    * Lack of entropy - empty /dev/random
    * Make coLinux work on Windows NT 4 SP*.
    * Address all reported SMP issues.
@@ -57,11 +56,6 @@
      that contains the XML file.
    * Revise the argument parsing of the executables other than daemon, i.e,
      use the framework that the daemon uses.
-   * When coLinux terminates with the reason of a restart (rather than 
-     shutdown or kernel panic), let the daemon to restart itself (or maybe
-     add support for it in the driver itself - but that requires more 
-     changes. The behaviour of the daemon with regard the VM's termination
-     could also be specified in the XML.
    * Support to shutdown/suspend/resume (just!) coLinux so it becomes
      transportable between hosts.
    * Import features from UML

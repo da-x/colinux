@@ -1,9 +1,10 @@
 #!/bin/sh
 
+# This File exports the current version informations and
+# creates an NIS installer include file.
+
 # Remember: This file will be sourced from / as current directory.
 # Standard arguments for this script:
-# pwd: $HOME/CoLinux/work/co-devel
-# $0: /bin/sh
 # $1: src/colinux/VERSION
 # $2: src/colinux/os/winnt/user/install/colinux_def.inc
 

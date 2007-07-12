@@ -4,7 +4,7 @@ colinux-daemon - help/manpage
 The Cooperative Linux Daemon hosts the Linux virtual machine as one process
 under the host operating system.
 
-The daemon spits out the kernel's printk() messages along with its own prints.
+The daemon splits out the kernel's printk() messages along with its own prints.
 It also optionally launches the virtual VGA console, that can be used to
 interface with the virtual machine.  For every network device it launches a
 network daemon.
@@ -143,7 +143,7 @@ don't depend on each other.  The parameters are case sensitive.
 	Use any number <X> of these to specify the block device image file.
 
 	<path to image file> is typicali a filname of your image file,
-	for sample the base root fs, you have extracted.
+	for example the base root fs, you have extracted.
 
 	It automatically adds \DosDevices\ where needed.  Make sure
 	you use double-slashes in the situations where command shell
@@ -157,7 +157,7 @@ don't depend on each other.  The parameters are case sensitive.
 	Partitions should only use non beginners to make a "dualboot"
 	runable.
 
-	Samples:
+	Example:
 	cobd0=rootfs.img
 	cobd1=C:\temp\swapfs.img
 	cobd2=\Device\Cdrom0
@@ -173,7 +173,7 @@ don't depend on each other.  The parameters are case sensitive.
 	<alias> is any of the linux typicaly harddisks (hda1, sda1, etc).
 	<path to image file> is the same as above.
 
-	Sample:
+	Example:
 	hda1=rootfs.img		# (cobdX maps automaticly from first free)
 	hdc=\Device\Cdrom0	# CDROM as raw device. Mount as iso9660.
 
@@ -183,7 +183,7 @@ don't depend on each other.  The parameters are case sensitive.
 	have defined a "cobdX=..." priror, you can set an alias for this
 	codbX - read the next examples for understanding more.
 
-	Sample:
+	Example:
 	cobd0=rootfs.img	# /dev/cobd0 is now the image file.
 	hda1=:cobd0		# /dev/hda1 and cobd0 are the same now.
 
@@ -199,7 +199,7 @@ don't depend on each other.  The parameters are case sensitive.
 	coLinux has admin rights on this mount point.  Read-only-mount is
 	a good idea.
 
-	Samples:
+	Example:
 	cofs0=C:\coLinux	# (Directory)
 	cofs1=R:\		# (CDROM drive, USB drive etc.).
 
@@ -213,7 +213,7 @@ don't depend on each other.  The parameters are case sensitive.
 	follow by any more options.
 
 	Consult README.TXT about installation and use of network types,
-	and the page 'Network' in Wiki with lots of sample combinations.
+	and the page 'Network' in Wiki with lots of example combinations.
 
     ethX=slirp,<MAC>,<redirections>
 
@@ -222,7 +222,7 @@ don't depend on each other.  The parameters are case sensitive.
 	to the current active adapater over the Windows API (WinSock).  You can
 	not send and not receice IMCP messages, this means ping and traceroute
 	dont't work.  To check your network you must use some other commands,
-	for sample wget, ftp, etc.
+	for example wget, ftp, etc.
 
 	Slirp works as "outgoing only" firewall from coLinux virtual machine
 	to the world.  In typicaly mode can not connect from outside to the
@@ -242,7 +242,7 @@ don't depend on each other.  The parameters are case sensitive.
 	counts for port array.  More redirections have the same form and
 	are seperated by "/".
 
-	Samples:
+	Example:
 	eth0=slirp			# Simplest slirp mode (outgoing only)
 	eth0=slirp,,tcp:22:22		# Forwards SSH from host to guest
 	eth0=slirp,,tcp:2222:22		# Forwards 2222 on host to guest 22
@@ -281,7 +281,7 @@ don't depend on each other.  The parameters are case sensitive.
 	Set a <MAC>, if you wish a constant hardware identification number.
 	Othercase colinux builds a random number.
 
-	Samples:
+	Example:
 	eth0=tuntap				# Use the first TAP device.
 	eth0=tuntap,"Local Area Network"	# You name it.
 	eth0=tuntap,,11:22:33:44:55:66		# Set a MAC address.
@@ -347,7 +347,7 @@ don't depend on each other.  The parameters are case sensitive.
 	program and terminamte at stopping linux.  Use Quotation
 	marks, if more as one parameter.
 
-	Sample:
+	Example:
 	exec0=C:\Programs\Xming\Xming.exe,":0 -clipboard -multiwindow -ac"
 			# Program Xming.exe runs at start of colnux and
 			# terminate it, if colinux is shutting down.
@@ -359,15 +359,15 @@ don't depend on each other.  The parameters are case sensitive.
 
 	Of course we need to pass root= to the kernel.
 
-	Sample:
+	Example:
 	root=/dev/cobd0
 
     ANY additional parameters are passed to the coLinux kernel as is
     (unmodified) kernel boot parameters.
-    For sample "init 5" runs linux on specific runlevel.
+    For example "init 5" runs linux on specific runlevel.
 
     See the file "example.conf" in your colinux installation directory for
-    full sample.
+    full example.
 
 
 Environment settings
@@ -391,7 +391,7 @@ Environment settings
 	Set the font type and size for FLTK console.  Only fixed fonts
 	are allowed.
 
-	Full sample:
+	Example:
 	set COLINUX_CONSOLE_FONT=Lucida Console:12
 
 	Change font size only.  Default font "Terminal" is still active:
