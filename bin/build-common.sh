@@ -100,11 +100,10 @@ FLTK_URL=http://heanet.dl.sourceforge.net/sourceforge/fltk
 FLTK=fltk-$FLTK_VERSION
 FLTK_ARCHIVE=$FLTK-source.tar.bz2
 
-WINPCAP_VERSION="3_1"
-WINPCAP_URL=http://winpcap.polito.it/install/bin
-WINPCAP_URL2=http://www.winpcap.org/install/bin
+WINPCAP_VERSION="3.1"
+WINPCAP_URL=http://www.winpcap.org/archive
 WINPCAP_SRC=WpdPack
-WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_$WINPCAP_VERSION.zip
+WINPCAP_SRC_ARCHIVE=${WINPCAP_VERSION}-${WINPCAP_SRC}.zip
 
 
 # KERNEL_VERSION: full kernel version (e.g. 2.6.11)
