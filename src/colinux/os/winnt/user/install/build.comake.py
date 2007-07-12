@@ -28,7 +28,7 @@ targets['coLinux.exe'] = Target(
 )
 
 def script_cmdline(scripter, tool_run_inf):
-    command_line = '%s %s %s' % (
+    command_line = 'sh -c ". %s %s %s"' % (
         tool_run_inf.target.inputs[0].pathname,
         tool_run_inf.target.inputs[1].pathname,
         tool_run_inf.target.pathname)

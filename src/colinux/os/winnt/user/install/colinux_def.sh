@@ -5,12 +5,15 @@
 
 # Remember: This file will be sourced from / as current directory.
 # Standard arguments for this script:
-# pwd: $HOME/colinux-devel
 # $1: src/colinux/VERSION
 # $2: src/colinux/os/winnt/user/install/colinux_def.inc
 
 VERSION_FILE=$1
 TARGET_FILE=$2
+
+# Fallback for dash with defaults
+test -z "$VERSION_FILE" && VERSION_FILE="src/colinux/VERSION"
+test -z "$TARGET_FILE" && TARGET_FILE="src/colinux/os/winnt/user/install/colinux_def.inc"
 
 # Get kernel version
 . bin/build-common.sh --get-vars
