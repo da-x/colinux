@@ -30,6 +30,7 @@
     - binutils 2.17.50
     - mingw 3.11
     - w32api 3.9
+    - WinPcap 4.0.1
   
 * Version 0.7.1
   * colinux-daemon:
