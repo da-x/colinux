@@ -397,3 +397,16 @@ Environment settings
 	Change font size only.  Default font "Terminal" is still active:
 	set COLINUX_CONSOLE_FONT=:12
 
+
+Special keys in consoles
+------------------------
+
+    FLTK console:
+
+	Win+V			inserts text from copy & past buffer
+
+    NT console:
+
+	Ctrl+Alt+Shift+Del	sends Ctrl+Alt+Del to Linux
+
+	Win+LeftAlt		detach from colinux
