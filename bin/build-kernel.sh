@@ -197,6 +197,12 @@ compile_modules()
 	    DEPMOD=$COLINUX_DEPMOD \
 	    modules modules_install >>$COLINUX_BUILD_LOG 2>&1 \
 	|| error_exit 1 "Kernel $KERNEL_VERSION make modules failed"
+
+	# fixup directories for installing to typicaly path
+	local DEST=$COLINUX_TARGET_MODULE_PATH/lib/modules/$COMPLETE_KERNEL_NAME
+	rm -f $DEST/build $DEST/source
+	ln -s -f /usr/src/linux-${COMPLETE_KERNEL_NAME}-obj $DEST/build
+	ln -s -f /usr/src/linux-$COMPLETE_KERNEL_NAME $DEST/source
 }
 
 build_kernel()
