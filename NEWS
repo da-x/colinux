@@ -57,6 +57,7 @@
     - Break out the limit of filename length.  Basename length up to
       255 chars.  Fullpath is limited by path depth of 256 directories.
     - Bug #1151757: COFS disallow mutiple mounts.
+    - Bug #1190080: Fix cofs file time/mode/flags after touch or write.
   * TAP-Win32 device driver
     - version 8.4 update from openvpn-2.1_beta15a
     - usable without admin rights
