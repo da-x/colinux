@@ -1129,38 +1129,25 @@ static void send_monitor_end_messages(co_monitor_t *cmon)
 co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monitor_owner)
 {
 	co_manager_t *manager;
-	int new_count;
-	bool_t destroy = PFALSE;
-	bool_t end_messages = PFALSE;
+
+	if (!(cmon->refcount > 0))
+		return CO_RC(ERROR);
 
 	manager = cmon->manager;
 
 	co_os_mutex_acquire(manager->lock);
-	new_count = cmon->refcount;
-	if (new_count > 0) {
-		cmon->refcount--;
-
-		if (monitor_owner  &&  cmon->listed_in_manager) {
-			cmon->listed_in_manager = PFALSE;
-			manager->monitors_count--;
-			co_list_del(&cmon->node);
-		}
-
-		if (monitor_owner)
-			end_messages = PTRUE;
-
-		if (cmon->refcount == 0) {
-			destroy = PTRUE;
-		}
+	if (monitor_owner  &&  cmon->listed_in_manager) {
+		cmon->listed_in_manager = PFALSE;
+		manager->monitors_count--;
+		co_list_del(&cmon->node);
 	}
 	co_os_mutex_release(manager->lock);
 
-	if (end_messages)
+	if (monitor_owner)
 		send_monitor_end_messages(cmon);
 
-	if (destroy) {
+	if (--cmon->refcount == 0)
 		return co_monitor_destroy(cmon, monitor_owner);
-	}
 
 	return CO_RC(OK);
 }
@@ -1265,6 +1252,7 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 	case CO_MONITOR_IOCTL_CLOSE: {
 		co_monitor_refdown(cmon, PTRUE, opened_manager->monitor_owner);
 		opened_manager->monitor = NULL;
+		opened_manager->monitor_owner = PFALSE;
 		return CO_RC_OK;
 	}
 	case CO_MONITOR_IOCTL_GET_CONSOLE: {
