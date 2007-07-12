@@ -29,7 +29,7 @@ ln -f $COLINUX_TARGET_KERNEL_BUILD/vmlinux premaid/vmlinux
 # root of fs, lib/modules with full version of kernel and colinux.
 echo "Installing Modules $KERNEL_VERSION"
 cd $COLINUX_TARGET_MODULE_PATH
-tar cfz $THISDIR/premaid/vmlinux-modules.tar.gz lib/modules/$COMPLETE_KERNEL_NAME || exit $?
+tar czf $THISDIR/premaid/vmlinux-modules.tar.gz lib/modules/$COMPLETE_KERNEL_NAME || exit $?
 cd $THISDIR
 
 echo "Copy and strip executable"
