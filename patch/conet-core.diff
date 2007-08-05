@@ -2,7 +2,7 @@ Index: linux-2.6.17-source/drivers/net/conet.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.17-source/drivers/net/conet.c
-@@ -0,0 +1,311 @@
+@@ -0,0 +1,309 @@
 +/*
 + *  Copyright (C) 2003-2004 Dan Aloni <da-x@gmx.net>
 + *  Copyright (C) 2004 Pat Erley
@@ -33,9 +33,7 @@ Index: linux-2.6.17-source/drivers/net/conet.c
 +	int handling;
 +};
 +
-+struct net_device *conet_dev[CO_MODULE_MAX_CONET];
-+
-+irqreturn_t conet_interrupt(int irq, void *dev_id, struct pt_regs *reg_ptr);
++static struct net_device *conet_dev[CO_MODULE_MAX_CONET];
 +
 +static int conet_get_mac(int unit, char *address)
 +{
@@ -59,7 +57,7 @@ Index: linux-2.6.17-source/drivers/net/conet.c
 +	return result;
 +}
 +
-+int conet_open(struct net_device *dev)
++static int conet_open(struct net_device *dev)
 +{
 +	struct conet_priv *priv = (struct conet_priv *)dev->priv;
 +
@@ -75,7 +73,7 @@ Index: linux-2.6.17-source/drivers/net/conet.c
 +	return 0;
 +}
 +
-+int conet_stop(struct net_device *dev)
++static int conet_stop(struct net_device *dev)
 +{
 +	struct conet_priv *priv = (struct conet_priv *)dev->priv;
 +
@@ -86,7 +84,7 @@ Index: linux-2.6.17-source/drivers/net/conet.c
 +	return 0;
 +}
 +
-+int conet_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
++static int conet_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
 +{
 +	int len;
 +	char *data;
@@ -154,7 +152,7 @@ Index: linux-2.6.17-source/drivers/net/conet.c
 +	return;
 +}
 +
-+irqreturn_t conet_interrupt(int irq, void *dev_id, struct pt_regs *reg_ptr)
++static irqreturn_t conet_interrupt(int irq, void *dev_id, struct pt_regs *reg_ptr)
 +{
 +	co_message_node_t *node_message;
 +	while (co_get_message(&node_message, CO_DEVICE_NETWORK)) {
@@ -194,12 +192,12 @@ Index: linux-2.6.17-source/drivers/net/conet.c
 +	return IRQ_HANDLED;
 +}
 +
-+struct net_device_stats* conet_get_stats(struct net_device *dev)
++static struct net_device_stats* conet_get_stats(struct net_device *dev)
 +{
 +	return (struct net_device_stats *)dev->priv;
 +}
 +
-+int conet_init(struct net_device *dev)
++static int conet_init(struct net_device *dev)
 +{
 +	struct conet_priv *priv = (struct conet_priv *)dev->priv;
 +
@@ -218,7 +216,7 @@ Index: linux-2.6.17-source/drivers/net/conet.c
 +	return 0;
 +}
 +
-+void conet_uninit(struct net_device *dev)
++static void conet_uninit(struct net_device *dev)
 +{
 +}
 +
@@ -279,7 +277,7 @@ Index: linux-2.6.17-source/drivers/net/conet.c
 +	struct net_device *dev;
 +	char mac_address[6];
 +
-+	result = request_irq(NETWORK_IRQ, &conet_interrupt, 0, "conet", NULL);
++	result = request_irq(NETWORK_IRQ, &conet_interrupt, SA_SAMPLE_RANDOM, "conet", NULL);
 +
 +	printk("conet: loaded (max %d devices)\n", CO_MODULE_MAX_CONET);
 +
