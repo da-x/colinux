@@ -2,8 +2,12 @@ base-2.6.13.diff
 bootparms-2.6.12.diff
 serial-core.diff
 serial-2.6.13.diff
+coconsole-core.diff
 coconsole-2.6.13.diff 
+conet-core.diff 
 conet-2.6.13.diff 
+cobd-core.diff
+kbd-core.diff
 driver-2.6.13.diff 
 cofs-core.diff
 cofs-2.6.13.diff 

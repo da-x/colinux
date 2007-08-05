@@ -1,7 +1,6 @@
 Serial support
 
 flip.count is not longer known, changed for clean compile.
-This new API is not tested.
 (Anders and Henry)
 
 Index: linux-2.6.17-source/drivers/char/Makefile

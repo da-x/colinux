@@ -1252,16 +1252,14 @@ Index: linux-2.6.17-source/arch/i386/mm/init.c
  		if (page_table != pte_offset_kernel(pmd, 0))
  			BUG();	
  
-@@ -142,7 +145,8 @@
+@@ -142,6 +145,7 @@
   * of max_low_pfn pages, by creating page tables starting from address 
   * PAGE_OFFSET.
   */
--static void __init kernel_physical_mapping_init(pgd_t *pgd_base)
 +#ifndef CONFIG_COOPERATIVE
-+static void __init TODO_HN__kernel_physical_mapping_init(pgd_t *pgd_base)
+ static void __init kernel_physical_mapping_init(pgd_t *pgd_base)
  {
  	unsigned long pfn;
- 	pgd_t *pgd;
 @@ -183,6 +187,7 @@
  		}
  	}

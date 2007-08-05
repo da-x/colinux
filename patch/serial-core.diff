@@ -2,8 +2,8 @@ Serial support
 
 Index: linux-2.6.13-source/drivers/char/cocd.c
 ===================================================================
---- a/drivers/char/cocd.c
-+++ b/drivers/char/cocd.c
+--- /dev/null
++++ linux-2.6.17-source/drivers/char/cocd.c
 @@ -0,0 +1,389 @@
 +/*
 + *  Copyright (C) 2004 Dan Aloni <da-x@colinux.org>
