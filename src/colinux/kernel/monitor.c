@@ -383,7 +383,7 @@ static bool_t co_terminate(co_monitor_t *cmon)
 		else
 			/* show the end of filename */
 			co_snprintf(cmon->bug_info.file, sizeof(cmon->bug_info.file),
-				    "...%s", str + len - sizeof(cmon->bug_info.file)-1 - 3);
+				    "...%s", str + len - sizeof(cmon->bug_info.file) + 4);
 
 		co_debug_system("BUG%d at %s:%d\n", cmon->bug_info.code,
 				cmon->bug_info.file, cmon->bug_info.line);
