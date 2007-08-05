@@ -335,7 +335,7 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 	return CO_RC(OK);
 }
 
-static co_rc_t callback_return_jiffies(co_monitor_t *cmon)
+static void callback_return_jiffies(co_monitor_t *cmon)
 {	
 	co_timestamp_t timestamp;
 	long long timestamp_diff;
@@ -344,25 +344,21 @@ static co_rc_t callback_return_jiffies(co_monitor_t *cmon)
 	co_os_get_timestamp(&timestamp);
 
 	timestamp_diff = cmon->timestamp_reminder;
-	timestamp_diff += 100 * (((long long)timestamp.quad) - ((long long)cmon->timestamp.quad));
+	timestamp_diff += 100 * (((long long)timestamp.quad) - ((long long)cmon->timestamp.quad));  /* HZ value */
 
 	jiffies = co_div64(timestamp_diff, cmon->timestamp_freq.quad);
 	cmon->timestamp_reminder = timestamp_diff - (jiffies * cmon->timestamp_freq.quad);
 	cmon->timestamp = timestamp;
 
 	co_passage_page->params[1] = jiffies;
-
-	return CO_RC(OK);
 }
 
-static co_rc_t callback_return(co_monitor_t *cmon)
+static void callback_return(co_monitor_t *cmon)
 {
 	co_passage_page->operation = CO_OPERATION_MESSAGE_FROM_MONITOR;
 
 	callback_return_messages(cmon);
 	callback_return_jiffies(cmon);
-
-	return CO_RC(OK);
 }
 
 static bool_t co_terminate(co_monitor_t *cmon)
@@ -1008,7 +1004,7 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 		goto out_revert_used_mem;
 	}
 
-        rc = co_os_timer_create(&timer_callback, cmon, 10, &cmon->timer);
+        rc = co_os_timer_create(&timer_callback, cmon, 10, &cmon->timer); /* HZ value */
         if (!CO_OK(rc)) {
                 co_debug_error("creating host OS timer (%x)\n", rc);
                 goto out_free_pp;
