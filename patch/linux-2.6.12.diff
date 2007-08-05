@@ -1212,7 +1212,7 @@ diff -urN a/arch/i386/kernel/timers/timer.c b/arch/i386/kernel/timers/timer.c
 diff -urN a/arch/i386/kernel/timers/timer_cooperative.c b/arch/i386/kernel/timers/timer_cooperative.c
 --- a/arch/i386/kernel/timers/timer_cooperative.c
 +++ b/arch/i386/kernel/timers/timer_cooperative.c
-@@ -0,0 +1,142 @@
+@@ -0,0 +1,145 @@
 +/*
 + *  Cooperative mode timer.
 + *
@@ -1229,6 +1229,8 @@ diff -urN a/arch/i386/kernel/timers/timer_cooperative.c b/arch/i386/kernel/timer
 +
 +#include <linux/cooperative.h>
 +#include <linux/cooperative_internal.h>
++
++extern unsigned int cpu_khz;	/* Detected from host */
 +
 +static unsigned long long first_time;
 +static unsigned long frequencey;
@@ -1335,6 +1337,7 @@ diff -urN a/arch/i386/kernel/timers/timer_cooperative.c b/arch/i386/kernel/timer
 +static int __init init_cooperative_timer(char* override)
 +{
 +	first_time = query_host_highprec_time();
++	cpu_khz = frequencey / 1000;
 +
 +	/* Always pick this timer */
 +	return 0;

@@ -1,5 +1,3 @@
-Index: linux-2.6.17-source/drivers/video/console/cocon.c
-===================================================================
 --- /dev/null
 +++ linux-2.6.17-source/drivers/video/console/cocon.c
 @@ -0,0 +1,487 @@
