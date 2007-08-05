@@ -1,0 +1,137 @@
+Mouse driver
+
+
+Index: linux-2.6.22-source/drivers/input/mouse/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/drivers/input/mouse/Kconfig
++++ linux-2.6.22-source/drivers/input/mouse/Kconfig
+@@ -12,9 +12,22 @@
+ 
+ if INPUT_MOUSE
+ 
++config MOUSE_COOPERATIVE
++	tristate "Cooperative Mouse driver"
++       	default y
++        depends on COOPERATIVE
++        ---help---
++          Virtual mouse driver for cooperative kernels.
++
++          If unsure, say Y.
++
++          To compile this driver as a module, choose M here: the
++          module will be called comouse.
++
+ config MOUSE_PS2
+ 	tristate "PS/2 mouse"
+ 	default y
++	depends on !COOPERATIVE
+ 	select SERIO
+ 	select SERIO_LIBPS2
+ 	select SERIO_I8042 if X86_PC
+@@ -98,6 +111,7 @@
+ 
+ config MOUSE_SERIAL
+ 	tristate "Serial mouse"
++	depends on !COOPERATIVE
+ 	select SERIO
+ 	help
+ 	  Say Y here if you have a serial (RS-232, COM port) mouse connected
+@@ -199,6 +213,7 @@
+ 
+ config MOUSE_VSXXXAA
+ 	tristate "DEC VSXXX-AA/GA mouse and VSXXX-AB tablet"
++	depends on !COOPERATIVE
+ 	select SERIO
+ 	help
+ 	  Say Y (or M) if you want to use a DEC VSXXX-AA (hockey
+Index: linux-2.6.22-source/drivers/input/mouse/Makefile
+===================================================================
+--- linux-2.6.22-source.orig/drivers/input/mouse/Makefile
++++ linux-2.6.22-source/drivers/input/mouse/Makefile
+@@ -12,6 +12,7 @@
+ obj-$(CONFIG_MOUSE_LOGIBM)	+= logibm.o
+ obj-$(CONFIG_MOUSE_PC110PAD)	+= pc110pad.o
+ obj-$(CONFIG_MOUSE_PS2)		+= psmouse.o
++obj-$(CONFIG_MOUSE_COOPERATIVE)	+= comouse.o
+ obj-$(CONFIG_MOUSE_SERIAL)	+= sermouse.o
+ obj-$(CONFIG_MOUSE_HIL)		+= hil_ptr.o
+ obj-$(CONFIG_MOUSE_VSXXXAA)	+= vsxxxaa.o
+Index: linux-2.6.22-source/drivers/input/mouse/comouse.c
+===================================================================
+--- /dev/null
++++ linux-2.6.22-source/drivers/input/mouse/comouse.c
+@@ -0,0 +1,74 @@
++/*
++ * Virtual mouse driver for Linux
++ *
++ * Skeleton based on:
++ *  $Id: comouse.c,v 1.1.6.1 2005/07/15 08:19:48 tamura Exp $
++ *
++ *  Copyright (c) 1999-2001 Vojtech Pavlik
++ *
++ * Copyright (c) 2004 Dan Aloni
++ */
++
++#include <linux/module.h>
++#include <linux/slab.h>
++#include <linux/interrupt.h>
++#include <linux/input.h>
++#include <linux/serio.h>
++#include <linux/init.h>
++
++MODULE_AUTHOR("Dan Aloni <da-x@colinux.org>");
++MODULE_DESCRIPTION("Virtual mouse driver");
++MODULE_LICENSE("GPL");
++
++/*
++ * comouse_interrupt() handles incoming characters, either gathering them into
++ * packets or passing them to the command routine as command output.
++ */
++
++static irqreturn_t comouse_interrupt(struct serio *serio,
++				     unsigned char data, unsigned int flags)
++{
++	return IRQ_HANDLED;
++}
++
++/*
++ * comouse_disconnect() cleans up after we don't want talk
++ * to the mouse anymore.
++ */
++
++static void comouse_disconnect(struct serio *serio)
++{
++}
++
++/*
++ * comouse_connect() is a callback form the serio module when
++ * an unhandled serio port is found.
++ */
++
++static int comouse_connect(struct serio *serio, struct serio_driver *dev)
++{
++	return -ENODEV;
++}
++
++static struct serio_driver comouse_dev = {
++	.interrupt =	comouse_interrupt,
++	.connect =	comouse_connect,
++	.disconnect =	comouse_disconnect,
++	.driver		= {
++		.name	= "comouse",
++	},
++};
++
++int __init comouse_init(void)
++{
++	serio_register_driver(&comouse_dev);
++	return 0;
++}
++
++void __exit comouse_exit(void)
++{
++	serio_unregister_driver(&comouse_dev);
++}
++
++module_init(comouse_init);
++module_exit(comouse_exit);

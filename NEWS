@@ -1,5 +1,6 @@
 * Version 0.8.0
-  * Fix mmap read error behind end of file (was not zero filled).
+  * cloop updated to 2.06 (compressed loop blockdevice from Knoppix)
+  * Fix cofs mmap read error behind end of file (was not zero filled).
   * Bug #1190080: Fix cofs file time/mode/flags after touch or write.
   * Bug #1643371: BSOD from dmidecode, fixed by disallow mmap on /dev/mem.
   * New file: Debugging.txt with tips for debugging colinux start problems.
@@ -11,10 +12,10 @@
     ID.  With this mechanism can open a /named/ console without knowing
     the current ID (Process ID).  pidFile will removed on normal shutdown.
   * Added a nice colinux 3D logo image to the "About" box (Nlucas)
-  * Kernel has been updated to 2.6.17
+  * Kernel has been updated to 2.6.22
     (Thanks to Anders Eriksson for 2.6.13, 2.6.14, 2.6.15)
   * Holds multiple kernel versions in patch series files
-    (2.6.12, 2.6.13, 2.6.14, 2.6.15, 2.6.17)
+    (2.6.12, 2.6.13, 2.6.14, 2.6.15, 2.6.17, 2.6.22)
   * Un-/Installer checks a running coLinux before overwrite or remove old
     files.  [Bugs item #1396459, #1549148]
   * Uninstall old colinux with old exefile, path from registry uninstaller

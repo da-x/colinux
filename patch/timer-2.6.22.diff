@@ -1,0 +1,284 @@
+Index: linux-2.6.22-source/arch/i386/kernel/timer_cooperative.c
+===================================================================
+--- /dev/null
++++ linux-2.6.22-source/arch/i386/kernel/timer_cooperative.c
+@@ -0,0 +1,141 @@
++/*
++ *  Cooperative mode timer.
++ *
++ *  Dan Aloni <da-x@colinux.org>, 2003-2004 (C).
++ */
++
++#include <linux/init.h>
++#include <linux/interrupt.h>
++
++#include <asm/timer.h>
++#include <asm/delay.h>
++
++#include <linux/clockchips.h>
++#include <linux/clocksource.h>
++#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
++
++#define CO_CLOCK_SHIFT 23
++static unsigned long frequencey;
++
++unsigned int cpu_khz;
++EXPORT_SYMBOL(cpu_khz);
++
++/* unused here, but needed by linker */
++volatile unsigned long cmos_lock = 0;
++EXPORT_SYMBOL(cmos_lock);
++
++/*
++ * Functions copied from time.c
++ */
++unsigned long profile_pc(struct pt_regs *regs)
++{
++	unsigned long pc = instruction_pointer(regs);
++
++	return pc;
++}
++EXPORT_SYMBOL(profile_pc);
++
++/* Read system date and clock at startup */
++unsigned long read_persistent_clock(void)
++{
++	return co_get_host_time();
++}
++
++/*
++ * Clock source related code, based on arch/arm/mach-omap1/time.c
++ */
++
++static cycle_t query_host_highprec_time(void)
++{
++	unsigned long flags;
++	unsigned long long this_time;
++
++	co_passage_page_assert_valid();
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_GET_HIGH_PREC_TIME;
++	co_switch_wrapper();
++	this_time = *(unsigned long long *)(&co_passage_page->params[0]);
++	frequencey = *(unsigned long *)(&co_passage_page->params[2]);
++	co_passage_page_release(flags);
++
++	return this_time;
++}
++
++static struct clocksource co_clocksource = {
++	.name		= "cooperative",
++	.rating		= 450,
++	.read		= query_host_highprec_time,
++	.mask		= CLOCKSOURCE_MASK(64),
++	.shift		= CO_CLOCK_SHIFT,
++	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
++};
++
++
++static void co_timer_setup(enum clock_event_mode mode,
++			   struct clock_event_device *evt)
++{
++}
++
++struct clock_event_device co_clockevent = {
++	.name		= "clock",
++	.features	= CLOCK_EVT_FEAT_PERIODIC,
++	.set_mode	= co_timer_setup,
++	.shift		= CO_CLOCK_SHIFT,
++};
++
++static irqreturn_t co_timer_interrupt(int irq, void *dev_id)
++{
++	struct clock_event_device *evt = &co_clockevent;
++
++	evt->event_handler(evt);
++
++	return IRQ_HANDLED;
++}
++
++static struct irqaction co_timer_irq = {
++	.name		= "timer",
++	.flags		= IRQF_DISABLED | IRQF_TIMER | IRQF_IRQPOLL,
++	.handler	= co_timer_interrupt,
++};
++
++static void co_delay_loop(unsigned long loops)
++{
++	/*
++	 * A bogos delay loop for creating BogoMIPS...
++	 */
++
++	loops = loops / 0x10000;
++	while (loops) {
++		query_host_highprec_time();
++		loops -= 1;
++	}
++}
++
++extern void (*late_time_init)(void);
++static void co_register_timer(void)
++{
++	setup_irq(TIMER_IRQ, &co_timer_irq);
++}
++
++void __init time_init(void)
++{
++	/* fill value 'frequencey' */
++	query_host_highprec_time();
++
++	/* 100Hz is fix from damons 10ms setup */
++	co_clocksource.mult = clocksource_hz2mult(100, CO_CLOCK_SHIFT);
++	co_clockevent.cpumask = cpumask_of_cpu(0);
++
++	clockevents_register_device(&co_clockevent);
++	late_time_init = co_register_timer;
++
++	setup_delay_function(co_delay_loop);
++
++	cpu_khz = frequencey / 1000;
++	printk("Detected %lu.%03lu MHz processor.\n",
++				(unsigned long)cpu_khz / 1000,
++				(unsigned long)cpu_khz % 1000);
++}
++
+Index: linux-2.6.22-source/arch/i386/kernel/cpu/common.c
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/kernel/cpu/common.c
++++ linux-2.6.22-source/arch/i386/kernel/cpu/common.c
+@@ -452,9 +452,11 @@
+ 	 * we do "generic changes."
+ 	 */
+ 
++#ifdef CONFIG_X86_TSC
+ 	/* TSC disabled? */
+ 	if ( tsc_disable )
+ 		clear_bit(X86_FEATURE_TSC, c->x86_capability);
++#endif
+ 
+ 	/* FXSR disabled? */
+ 	if (disable_x86_fxsr) {
+@@ -673,12 +675,14 @@
+ 
+ 	if (cpu_has_vme || cpu_has_tsc || cpu_has_de)
+ 		clear_in_cr4(X86_CR4_VME|X86_CR4_PVI|X86_CR4_TSD|X86_CR4_DE);
++#ifdef CONFIG_X86_TSC
+ 	if (tsc_disable && cpu_has_tsc) {
+ 		printk(KERN_NOTICE "Disabling TSC...\n");
+ 		/**** FIX-HPA: DOES THIS REALLY BELONG HERE? ****/
+ 		clear_bit(X86_FEATURE_TSC, boot_cpu_data.x86_capability);
+ 		set_in_cr4(X86_CR4_TSD);
+ 	}
++#endif
+ 
+ 	load_idt(&idt_descr);
+ 	switch_to_new_gdt();
+Index: linux-2.6.22-source/arch/i386/lib/delay.c
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/lib/delay.c
++++ linux-2.6.22-source/arch/i386/lib/delay.c
+@@ -37,6 +37,7 @@
+ 		:"0" (loops));
+ }
+ 
++#ifndef CONFIG_COOPERATIVE
+ /* TSC based delay: */
+ static void delay_tsc(unsigned long loops)
+ {
+@@ -48,6 +49,7 @@
+ 		rdtscl(now);
+ 	} while ((now-bclock) < loops);
+ }
++#endif
+ 
+ /*
+  * Since we calibrate only once at boot, this
+@@ -55,6 +57,12 @@
+  */
+ static void (*delay_fn)(unsigned long) = delay_loop;
+ 
++#ifdef CONFIG_COOPERATIVE
++void setup_delay_function(void (*fn)(unsigned long))
++{
++	delay_fn = fn;
++}
++#else
+ void use_tsc_delay(void)
+ {
+ 	delay_fn = delay_tsc;
+@@ -68,6 +76,7 @@
+ 	}
+ 	return -1;
+ }
++#endif
+ 
+ void __delay(unsigned long loops)
+ {
+Index: linux-2.6.22-source/arch/i386/mach-default/setup.c
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/mach-default/setup.c
++++ linux-2.6.22-source/arch/i386/mach-default/setup.c
+@@ -79,6 +79,7 @@
+ {
+ }
+ 
++#ifndef CONFIG_COOPERATIVE
+ static struct irqaction irq0  = {
+ 	.handler = timer_interrupt,
+ 	.flags = IRQF_DISABLED | IRQF_NOBALANCING | IRQF_IRQPOLL,
+@@ -98,6 +99,7 @@
+ 	irq0.mask = cpumask_of_cpu(0);
+ 	setup_irq(0, &irq0);
+ }
++#endif /* !CONFIG_COOPERATIVE */
+ 
+ #ifdef CONFIG_MCA
+ /**
+Index: linux-2.6.22-source/include/asm-i386/delay.h
+===================================================================
+--- linux-2.6.22-source.orig/include/asm-i386/delay.h
++++ linux-2.6.22-source/include/asm-i386/delay.h
+@@ -26,6 +26,10 @@
+ 	((n) > 20000 ? __bad_ndelay() : __const_udelay((n) * 5ul)) : \
+ 	__ndelay(n))
+ 
++#ifdef CONFIG_COOPERATIVE
++void setup_delay_function(void (*fn)(unsigned long));
++#else
+ void use_tsc_delay(void);
++#endif
+ 
+ #endif /* defined(_I386_DELAY_H) */
+Index: linux-2.6.22-source/include/asm-i386/mach-default/do_timer.h
+===================================================================
+--- linux-2.6.22-source.orig/include/asm-i386/mach-default/do_timer.h
++++ linux-2.6.22-source/include/asm-i386/mach-default/do_timer.h
+@@ -4,6 +4,7 @@
+ #include <asm/i8259.h>
+ #include <asm/i8253.h>
+ 
++#ifndef CONFIG_COOPERATIVE
+ /**
+  * do_timer_interrupt_hook - hook into timer tick
+  *
+@@ -14,3 +15,4 @@
+ {
+ 	pit_interrupt_hook();
+ }
++#endif
+Index: linux-2.6.22-source/include/asm-i386/timex.h
+===================================================================
+--- linux-2.6.22-source.orig/include/asm-i386/timex.h
++++ linux-2.6.22-source/include/asm-i386/timex.h
+@@ -16,7 +16,9 @@
+ #endif
+ 
+ 
++#ifndef CONFIG_COOPERATIVE
+ extern int read_current_timer(unsigned long *timer_value);
+ #define ARCH_HAS_READ_CURRENT_TIMER	1
++#endif /* !CONFIG_COOPERATIVE */
+ 
+ #endif

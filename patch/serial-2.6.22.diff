@@ -1,0 +1,109 @@
+Serial support
+
+--- linux-2.6.22-source.orig/drivers/char/Makefile
++++ linux-2.6.22-source/drivers/char/Makefile
+@@ -25,6 +25,7 @@
+ obj-$(CONFIG_CYCLADES)		+= cyclades.o
+ obj-$(CONFIG_STALLION)		+= stallion.o
+ obj-$(CONFIG_ISTALLION)		+= istallion.o
++obj-$(CONFIG_COSERIAL)     	+= cocd.o
+ obj-$(CONFIG_DIGIEPCA)		+= epca.o
+ obj-$(CONFIG_SPECIALIX)		+= specialix.o
+ obj-$(CONFIG_MOXA_INTELLIO)	+= moxa.o
+--- linux-2.6.22-source.orig/drivers/char/cocd.c
++++ linux-2.6.22-source/drivers/char/cocd.c
+@@ -25,7 +25,6 @@
+ 
+ 
+ #include <linux/major.h>
+-#include <linux/config.h>
+ #include <linux/module.h>
+ #include <linux/init.h>
+ #include <linux/fs.h>
+@@ -39,7 +38,6 @@
+ #include <linux/wait.h>
+ 
+ #include <linux/workqueue.h>
+-#include <linux/devfs_fs_kernel.h>
+ #include <linux/tty.h>
+ #include <linux/tty_flip.h>
+ 
+@@ -60,16 +58,15 @@
+ static struct tty_driver *cocd_driver;
+ DECLARE_MUTEX(cocd_sem);
+ 
+-static void cocd_unit_task(void *data)
++static void cocd_unit_task(struct work_struct *data)
+ {
+ 	co_message_node_t *input;
+-	struct cocd_tty *cocd;
++	struct cocd_tty *cocd = container_of(data, struct cocd_tty, work);
+ 	co_linux_message_t *message;
+ 	char *p, *e, *m;
+ 	struct tty_struct *tty;
+ 	int index;
+ 
+-	cocd = data;
+ 	if (!cocd)
+ 		return;
+ 
+@@ -93,13 +90,9 @@
+ 				return;
+ 			}
+ 			up(&cocd->sem);
+-			if(e < (m += (TTY_FLIPBUF_SIZE - tty->flip.count)))
+-				m = e;
+-			while(p < m)
+-				tty_insert_flip_char(tty, *(p++), 0);
+-			if(tty->flip.count >= TTY_FLIPBUF_SIZE) {
+-				tty_flip_buffer_push(tty);
+-			}
++			m += tty_buffer_request_room(tty, e - m);
++			p += tty_insert_flip_string(tty, p, m - p);
++			tty_flip_buffer_push(tty);
+ 			down(&cocd->sem);
+ 		}
+ 		list_del(&input->node);
+@@ -122,8 +115,7 @@
+ 	}
+ 	up(&cocd->sem);
+ 
+-	if(tty->flip.count)
+-		tty_flip_buffer_push(tty);
++	tty_flip_buffer_push(tty);
+ }
+ 
+ static int cocd_open(struct tty_struct *tty, struct file * filp)
+@@ -145,7 +137,7 @@
+ 		cocd->tty = tty;
+ 		cocd->throttled = 0;
+ 		cocd->throttle_index = 0;
+-		INIT_WORK(&cocd->work, cocd_unit_task, cocd);
++		INIT_WORK(&cocd->work, cocd_unit_task);
+ 		INIT_LIST_HEAD(&cocd->inq);
+ 		tty->driver_data = cocd;
+ 		tty->low_latency = 1;
+@@ -324,7 +316,6 @@
+ 	cocd_driver->owner = THIS_MODULE;
+ 	cocd_driver->driver_name = "coserial";
+ 	cocd_driver->name = "ttyS";
+-	cocd_driver->devfs_name = "tts/";
+ 	cocd_driver->major = TTY_MAJOR;
+ 	cocd_driver->minor_start = 64;
+ 	cocd_driver->type = TTY_DRIVER_TYPE_SERIAL;
+--- linux-2.6.22-source.orig/drivers/char/Kconfig
++++ linux-2.6.22-source/drivers/char/Kconfig
+@@ -459,6 +459,13 @@
+          If you have an SGI Altix with an attached SABrick
+          say Y or M here, otherwise say N.
+ 
++config COSERIAL
++       bool "coLinux serial device support"
++       depends on COOPERATIVE
++       default y
++       help
++         say Y, if you have colinux
++
+ source "drivers/serial/Kconfig"
+ 
+ config UNIX98_PTYS
