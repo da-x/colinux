@@ -130,14 +130,12 @@ error_out1:
 static void print_xml_text(const char *str)
 {
 	while (*str) {
-		const char *str_start = str;
-		while (*str  &&  *str != '&')
-			str++;
-		fwrite(str_start, str - str_start, 1, output_file);
-		if (!*str)
-			break;
-		if (*str == '&')
-			fprintf(output_file, " ");
+		switch (*str) {
+			case '&': fwrite("&amp;", 5, 1, output_file); break;
+			case '<': fwrite("&lt;", 4, 1, output_file); break;
+			case '>': fwrite("&gt;", 4, 1, output_file); break;
+			default: putc(*str, output_file);
+		}
 		str++;
 	}
 }
@@ -433,7 +431,7 @@ static void syntax(void)
 	printf("colinux-debug-daemon\n");
 	printf("syntax: \n");
 	printf("\n");
-	printf("    colinux-debug-daemon [-d] [-f filename] [-n ipaddress] [-p] [-s levels] | -e exitcode | -h\n");
+	printf("    colinux-debug-daemon [-d] [-f filename | -n ipaddress] [-p] [-s levels] | -e exitcode | -h\n");
 	printf("\n");
 	printf("      -d              Download debug information on the fly from driver.\n");
 	printf("                      Without -d, uses standard input.\n");
