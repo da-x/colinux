@@ -7,7 +7,7 @@ colinux-debug-daemon.exe
 This is a configurator and debug logger.  You need to start it before you
 wish to see more internals from coLinux system. Start it after colinux
 driver is installed (normal case after the Installer was done, or after
-you was ran colinux-dasemon --install-driver) and before launch your Linux
+you runs colinux-dasemon --install-driver) and before launch your Linux
 via colinux-daemon.
 
 
@@ -46,8 +46,8 @@ Command Line Parameters
 	Shows a short help text
 
 
-Example
--------
+Short start to see more error messages
+--------------------------------------
 
     Open a windows command prompt, change into coLinux install directory and
     run the debug-logger:
@@ -66,34 +66,125 @@ Example
     your problem as the colinux-daemon console.
 
 
+
+Stepguide for colinux-daebug-daemon
+-----------------------------------
+
+1) Open a Command Prompt or shell window and cd to the coLinux directory,
+   e.g. "cd c:\colinux"
+
+2) To see a list of options:
+
+        colinux-debug-daemon -h
+
+3) To see a list of "facility" names:
+
+	colinux-debug-daemon -d
+	(Type ^C to exit back to the cmd prompt.)
+
+   * "facilities" are different types of messages that the daemon can
+     capture. The current list of facility names is:
+     misc, network, messages, prints, blockdev, allocations, context_switch, pipe
+   * Each facility has an associated level number - higher numbers
+     capture more messages.
+   * See below for how to set the facility level
+
+
+4) To capture and display some messages:
+
+	colinux-debug-daemon  -d  -p  -f mylogfile.xml  -s network=11,blockdev=9
+
+   * "-d" makes it get the raw debug messages in real time from a
+     running colinux session.  Without "-d", it gets the raw debug
+     messages from standard input, presumably from a previously-captured file.
+   * "-p" makes it decode (parse) the raw debug messages and display
+     them in human-readable form (encapsulated in XML markup).  Without
+     "-p", I presume that it just sends the raw debug messages to the
+     output, perhaps so you can capture them to a file in a compact
+     form for later inspection.
+   * "-f mylogfile.xml" makes it append the output to the file
+     "mylogfile.xml".  Without "-f", it sends the output to standard
+     output.  As far as I can tell, "-f filename" is equivalent to
+     ">>filename", but it flushes more file caches.
+   * "-s network=11,blockdev=9" sets the "network" facility level to
+     11, thus capturing network messages sent at levels 0-11, and the
+     "blockdev" facility level to 9.
+   * To determine the desired facility level, either increase the
+     number (trial and error) until you see the level of detail you
+     need, or inspect the source code for the component you wish to
+     debug to see the level at which the desired messages are sent.
+
+5) There is also a "-n  ip-address" switch that will send the raw logs
+   to UDP port 63000 at the indicated IP address, instead of to standard
+   output or a file.
+
+6) There is a python program to listen on port 63000 and write the logs
+   to a file.  The python program is in the source tarball, in
+   src/colinux/user/debug/server.py
+
+7) There is a python program to decode and display the XML-formatted (preparsed)
+   messages.  It is in the source tarball, in src/colinux/user/debug/dump.py .
+   It is not strictly necessary to use this program; the XML-formatted messages
+   are in ASCII and are easy enough to read directly.
+
+8) The source code for colinux-debug-daemon is in the source tarball, in
+   src/colinux/user/debug/main.c
+
+9) The source code for various other colinux helper daemons (i.e. the things that
+   ultimately send the debug messages) is in the source tarball in various places.
+   For example, the bridged network daemon source for Windows is in
+   src/colinux/os/winnt/user/conet-bridged-daemon/
+
+10) Debug messages are sent by calls like the following:
+
+	co_debug_lvl(network, 13, "packet sent (0x%x written)\n", write_size);
+
+(Mitch Bradley via Mail)
+
+
 Debuging over network
 ---------------------
 
-You can run coLinx on on PC and send all debugging messages over network
-to an other PC.  This is very helpfull, if your colinux crashes your PC and
-you can not log into local filesystem.
+You can run coLinx on one PC (TARGET) and send all debugging messages over
+network to an other PC (DEVEL).  This is very helpfull, if your colinux
+crashes your PC and you can not log into local filesystem.
 
 In coLinux sources exist a small Python script.  Run this to download all
 raw debugging datas into file:
 
-    DEVEL-PC: src/colinux/user/debug/server.py debug.bin
+    DEVEL: python src/colinux/user/debug/server.py debug.bin
 
 Or run Netcat (Linux) as debug server:
 
-    DEVEL-PC: netcat -l -u -p 63000 debug.bin
+    DEVEL: netcat -l -u -p 63000 > debug.bin
 
 On the other PC open command prompt, run debug logger with network
 option '-n' and the ipaddres to your 'server' PC:
 
-    TARGET-PC: colinux-debug-daemon.exe -d -s prints=31,misc=31 -n ip.of.server.pc
+    TARGET: colinux-debug-daemon.exe -d -s prints=31,misc=31 -n ip.of.devel.pc
 
 Open a second command prompt and run colinux:
 
-    TARGET-PC: colinux-daemon.exe @colinux.conf
+    TARGET: colinux-daemon.exe @colinux.conf
     
-
 After finish your debug session stop colinux-debug-daemon with CTRL-C on
 the other PC and stop the server.py (or netcat) with CTRL-C.
-Than convert the binary data into more readable XML format:
+Convert the binary data into more readable XML format:
 
-    DEVEL-PC: colinux-debug-daemon -p < debug.bin > debug.xml
+    DEVEL: colinux-debug-daemon -p < debug.bin > debug.xml
+
+Now can convert the XML file into a text file with one line per log entry:
+
+    DEVEL: python src/colinux/user/debug/dump.py debug.xml > debug.txt
+
+Typicaly output for debug.txt are such lines:
+
+    DEVEL: cat debug.txt
+
+    1|00000000.496810439|colinux-daemon|src/colinux/os/winnt/user/misc.c:co_terminal_printv:37|prints "Cooperative Linux Daemon, 0.8.0"
+    2|00000000.496824313|colinux-daemon|src/colinux/os/winnt/user/misc.c:co_terminal_printv:37|prints "Compiled on Jul 22 2007 21:59:05"
+    3|00000000.496826571|colinux-daemon|src/colinux/os/winnt/user/misc.c:co_terminal_printv:37|prints ""
+    4|00000000.496827397|colinux-daemon|src/colinux/user/config.c:co_parse_config_args:713|using 'vmlinux' as kernel image
+    5|00000000.496828810|colinux-daemon|src/colinux/user/config.c:parse_config_args:635|configuring 32 MB of virtual RAM
+    ...
+

@@ -272,7 +272,7 @@ and rebuild your special kernel.
 After the default kernel is working, you can call "make menuconfig" to change
 your options.
 
-If you have Cygwin x11 try "make xconfig" or "make gconfig". You need to have
+If you have X11 try "make xconfig" or "make gconfig". You need to have
 installed (on coLinux) the packages gtk+-2.0 glib-2.0 libglade-2.0 for xconfig
 and install qt-mt for gconfig. It is a bit of work but it looks good!
 
