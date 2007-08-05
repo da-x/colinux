@@ -65,7 +65,8 @@ create_md5sums()
 	|| error_exit 10 "can not create md5sum"
 
 	# Md5sums for patches
-	for name in `cat patch/series-$KERNEL_VERSION`
+	local SERIES=`cat patch/series-$KERNEL_VERSION`
+	for name in $SERIES
 	do
 		if [ -e "patch/$name" ]
 		then
@@ -136,7 +137,6 @@ patch_kernel_source()
 
 	# Copy coLinux Version into kernel localversion
 	echo "-co-$CO_VERSION" > localversion-cooperative
-	cd -
 }
 
 configure_kernel()
@@ -250,7 +250,7 @@ build_kernel()
 
 	# Build and install Modules
 	compile_modules
-        archive_modules
+	archive_modules
 
 	create_md5sums
 }
