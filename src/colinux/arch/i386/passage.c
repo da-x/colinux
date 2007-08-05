@@ -664,6 +664,15 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 
 	caps = cmon->manager->archdep->caps[0];
 
+	if (co_monitor_passage_func_short_fxsave_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
+	if (co_monitor_passage_func_fxsave_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
+	if (co_monitor_passage_func_short_fnsave_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
+	if (co_monitor_passage_func_fnsave_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
+
 	/*
 	 * TODO: Add sysenter / sysexit restoration support 
 	 */
