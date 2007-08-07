@@ -25,6 +25,11 @@ unsigned long co_os_get_time()
 
 void co_os_get_timestamp(co_timestamp_t *dts)
 {
+	co_os_get_timestamp_freq(dts, NULL);
+}
+
+void co_os_get_timestamp_freq(co_timestamp_t *dts, co_timestamp_t *freq)
+{
 	LARGE_INTEGER PerformanceFrequency;
 	LARGE_INTEGER PerformanceCounter;
 
@@ -32,15 +37,10 @@ void co_os_get_timestamp(co_timestamp_t *dts)
 
 	dts->high = PerformanceCounter.HighPart;
 	dts->low = PerformanceCounter.LowPart;
-}
 
-void co_os_get_timestamp_freq(co_timestamp_t *dts)
-{
-	LARGE_INTEGER PerformanceFrequency;
-
-	KeQueryPerformanceCounter(&PerformanceFrequency);
-
-	dts->high = PerformanceFrequency.HighPart;
-	dts->low = PerformanceFrequency.LowPart;
+	if (freq) {
+		freq->high = PerformanceFrequency.HighPart;
+		freq->low = PerformanceFrequency.LowPart;
+	}
 }
 

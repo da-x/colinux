@@ -597,8 +597,8 @@ static bool_t iteration(co_monitor_t *cmon)
 		return PTRUE;
 	}
 	case CO_OPERATION_GET_HIGH_PREC_TIME: {
-		co_os_get_timestamp((co_timestamp_t *)&co_passage_page->params[0]);
-		co_os_get_timestamp_freq((co_timestamp_t *)&co_passage_page->params[2]);
+		co_os_get_timestamp_freq((co_timestamp_t *)&co_passage_page->params[0],
+					 (co_timestamp_t *)&co_passage_page->params[2]);
 		return PTRUE;
 	}
 
@@ -840,8 +840,7 @@ static co_rc_t start(co_monitor_t *cmon)
 		return rc;
 	}
 
-	co_os_get_timestamp(&cmon->timestamp);
-	co_os_get_timestamp_freq(&cmon->timestamp_freq);
+	co_os_get_timestamp_freq(&cmon->timestamp, &cmon->timestamp_freq);
 
 	co_os_timer_activate(cmon->timer);
 
