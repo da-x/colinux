@@ -2,7 +2,7 @@ Index: linux-2.6.22-source/fs/squashfs/inode.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/fs/squashfs/inode.c
-@@ -0,0 +1,2241 @@
+@@ -0,0 +1,2239 @@
 +/*
 + * Squashfs - a compressed read only filesystem for Linux
 + *
@@ -1679,7 +1679,7 @@ Index: linux-2.6.22-source/fs/squashfs/inode.c
 +	struct inode *inode = page->mapping->host;
 +	struct squashfs_sb_info *msblk = inode->i_sb->s_fs_info;
 +	struct squashfs_super_block *sblk = &msblk->sblk;
-+	unsigned char *block_list;
++	unsigned char *block_list = NULL;
 +	long long block;
 +	unsigned int bsize, i;
 +	int bytes;
@@ -1699,7 +1699,6 @@ Index: linux-2.6.22-source/fs/squashfs/inode.c
 +
 +	if (page->index >= ((i_size_read(inode) + PAGE_CACHE_SIZE - 1) >>
 +					PAGE_CACHE_SHIFT)) {
-+		block_list = NULL;
 +		goto out;
 +	}
 +
@@ -1740,7 +1739,6 @@ Index: linux-2.6.22-source/fs/squashfs/inode.c
 +			ERROR("Unable to read page, block %llx, size %x\n",
 +					SQUASHFS_I(inode)->u.s1.fragment_start_block,
 +					(int) SQUASHFS_I(inode)->u.s1.fragment_size);
-+			block_list = NULL;
 +			goto error_out;
 +		}
 +		bytes = i_size_read(inode) & (sblk->block_size - 1);
