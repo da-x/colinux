@@ -1,6 +1,8 @@
 Colinux base
 
 
+Index: linux-2.6.22-source/CREDITS
+===================================================================
 --- linux-2.6.22-source.orig/CREDITS
 +++ linux-2.6.22-source/CREDITS
 @@ -16,6 +16,13 @@
@@ -17,6 +19,8 @@ Colinux base
  N: Dragos Acostachioaie
  E: dragos@iname.com
  W: http://www.arbornet.org/~dragos
+Index: linux-2.6.22-source/Makefile
+===================================================================
 --- linux-2.6.22-source.orig/Makefile
 +++ linux-2.6.22-source/Makefile
 @@ -281,7 +281,11 @@
@@ -31,6 +35,8 @@ Colinux base
  CPP		= $(CC) -E
  AR		= $(CROSS_COMPILE)ar
  NM		= $(CROSS_COMPILE)nm
+Index: linux-2.6.22-source/arch/i386/Kconfig
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/Kconfig
 +++ linux-2.6.22-source/arch/i386/Kconfig
 @@ -95,6 +95,7 @@
@@ -173,6 +179,8 @@ Colinux base
  	default y
  
  config X86_TRAMPOLINE
+Index: linux-2.6.22-source/arch/i386/Kconfig.cpu
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/Kconfig.cpu
 +++ linux-2.6.22-source/arch/i386/Kconfig.cpu
 @@ -334,7 +334,7 @@
@@ -184,6 +192,8 @@ Colinux base
  	default y
  
  # this should be set for all -march=.. options where the compiler
+Index: linux-2.6.22-source/arch/i386/kernel/Makefile
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/Makefile
 +++ linux-2.6.22-source/arch/i386/kernel/Makefile
 @@ -5,14 +5,16 @@
@@ -222,6 +232,8 @@ Colinux base
  
  obj-$(CONFIG_SCx200)		+= scx200.o
  
+Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
+===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
 @@ -0,0 +1,331 @@
@@ -556,6 +568,8 @@ Colinux base
 +};
 +
 +CO_TRACE_CONTINUE;
+Index: linux-2.6.22-source/arch/i386/kernel/cpu/common.c
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/cpu/common.c
 +++ linux-2.6.22-source/arch/i386/kernel/cpu/common.c
 @@ -5,6 +5,7 @@
@@ -575,6 +589,8 @@ Colinux base
  		clear_bit(X86_FEATURE_SEP, c->x86_capability);
  
  	if (disable_pse)
+Index: linux-2.6.22-source/arch/i386/kernel/entry.S
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/entry.S
 +++ linux-2.6.22-source/arch/i386/kernel/entry.S
 @@ -616,7 +616,11 @@
@@ -589,6 +605,8 @@ Colinux base
  	jmp ret_from_intr
  ENDPROC(common_interrupt)
  	CFI_ENDPROC
+Index: linux-2.6.22-source/arch/i386/kernel/head.S
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/head.S
 +++ linux-2.6.22-source/arch/i386/kernel/head.S
 @@ -263,6 +263,7 @@
@@ -619,6 +637,8 @@ Colinux base
  	.long __BOOT_DS
  
  ready:	.byte 0
+Index: linux-2.6.22-source/arch/i386/kernel/i387.c
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/i387.c
 +++ linux-2.6.22-source/arch/i386/kernel/i387.c
 @@ -10,6 +10,7 @@
@@ -640,6 +660,8 @@ Colinux base
  	stts();
  }
  
+Index: linux-2.6.22-source/arch/i386/kernel/i8259.c
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/i8259.c
 +++ linux-2.6.22-source/arch/i386/kernel/i8259.c
 @@ -9,6 +9,7 @@
@@ -773,6 +795,8 @@ Colinux base
  	/* setup after call gates are initialised (usually add in
  	 * the architecture specific gates)
  	 */
+Index: linux-2.6.22-source/arch/i386/kernel/ioport.c
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/ioport.c
 +++ linux-2.6.22-source/arch/i386/kernel/ioport.c
 @@ -16,6 +16,7 @@
@@ -803,6 +827,8 @@ Colinux base
  	if (level > 3)
  		return -EINVAL;
  	/* Trying to gain more privileges? */
+Index: linux-2.6.22-source/arch/i386/kernel/process.c
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/process.c
 +++ linux-2.6.22-source/arch/i386/kernel/process.c
 @@ -54,6 +54,7 @@
@@ -833,6 +859,8 @@ Colinux base
  	for_each_online_cpu(cpu) {
  		per_cpu(cpu_idle_state, cpu) = 1;
  		cpu_set(cpu, map);
+Index: linux-2.6.22-source/arch/i386/kernel/setup.c
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/setup.c
 +++ linux-2.6.22-source/arch/i386/kernel/setup.c
 @@ -41,6 +41,7 @@
@@ -1040,6 +1068,8 @@ Colinux base
  	if (!efi_enabled || (efi_mem_type(0xa0000) != EFI_CONVENTIONAL_MEMORY))
  		conswitchp = &vga_con;
  #elif defined(CONFIG_DUMMY_CONSOLE)
+Index: linux-2.6.22-source/arch/i386/kernel/traps.c
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/traps.c
 +++ linux-2.6.22-source/arch/i386/kernel/traps.c
 @@ -56,6 +56,8 @@
@@ -1077,6 +1107,8 @@ Colinux base
  	if (notify_die(DIE_DEBUG, "debug", regs, condition, error_code,
  					SIGTRAP) == NOTIFY_STOP)
  		return;
+Index: linux-2.6.22-source/arch/i386/kernel/vmlinux.lds.S
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/vmlinux.lds.S
 +++ linux-2.6.22-source/arch/i386/kernel/vmlinux.lds.S
 @@ -43,6 +43,7 @@
@@ -1087,6 +1119,8 @@ Colinux base
    .text : AT(ADDR(.text) - LOAD_OFFSET) {
  	TEXT_TEXT
  	SCHED_TEXT
+Index: linux-2.6.22-source/arch/i386/mm/fault.c
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/mm/fault.c
 +++ linux-2.6.22-source/arch/i386/mm/fault.c
 @@ -274,7 +274,7 @@
@@ -1116,6 +1150,8 @@ Colinux base
  			printk(KERN_ALERT "*pte = %0*Lx\n", sizeof(page)*2, (u64)page);
  		}
  	}
+Index: linux-2.6.22-source/arch/i386/mm/init.c
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/mm/init.c
 +++ linux-2.6.22-source/arch/i386/mm/init.c
 @@ -28,6 +28,7 @@
@@ -1294,6 +1330,8 @@ Colinux base
  
  #ifdef CONFIG_DEBUG_RODATA
  
+Index: linux-2.6.22-source/arch/i386/mm/ioremap.c
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/mm/ioremap.c
 +++ linux-2.6.22-source/arch/i386/mm/ioremap.c
 @@ -11,6 +11,7 @@
@@ -1320,6 +1358,8 @@ Colinux base
  	if (!p) 
  		return p; 
  
+Index: linux-2.6.22-source/include/asm-i386/bug.h
+===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/bug.h
 +++ linux-2.6.22-source/include/asm-i386/bug.h
 @@ -10,6 +10,10 @@
@@ -1341,6 +1381,8 @@ Colinux base
  #endif
  
  #include <asm-generic/bug.h>
+Index: linux-2.6.22-source/include/asm-i386/cooperative.h
+===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/asm-i386/cooperative.h
 @@ -0,0 +1,194 @@
@@ -1538,6 +1580,8 @@ Colinux base
 +} __attribute__((packed)) co_arch_info_t;
 +
 +#endif
+Index: linux-2.6.22-source/include/asm-i386/cooperative_internal.h
+===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/asm-i386/cooperative_internal.h
 @@ -0,0 +1,32 @@
@@ -1573,6 +1617,8 @@ Colinux base
 +#endif
 +
 +#endif
+Index: linux-2.6.22-source/include/asm-i386/dma.h
+===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/dma.h
 +++ linux-2.6.22-source/include/asm-i386/dma.h
 @@ -267,6 +267,7 @@
@@ -1591,6 +1637,8 @@ Colinux base
  
  
  /* These are in kernel/dma.c: */
+Index: linux-2.6.22-source/include/asm-i386/fixmap.h
+===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/fixmap.h
 +++ linux-2.6.22-source/include/asm-i386/fixmap.h
 @@ -32,6 +32,7 @@
@@ -1601,6 +1649,8 @@ Colinux base
  
  /*
   * Here we define all the compile-time 'special' virtual
+Index: linux-2.6.22-source/include/asm-i386/io.h
+===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/io.h
 +++ linux-2.6.22-source/include/asm-i386/io.h
 @@ -116,6 +116,9 @@
@@ -1625,6 +1675,8 @@ Colinux base
  }
  
  #if defined(CONFIG_PARAVIRT)
+Index: linux-2.6.22-source/include/asm-i386/mach-default/irq_vectors.h
+===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/mach-default/irq_vectors.h
 +++ linux-2.6.22-source/include/asm-i386/mach-default/irq_vectors.h
 @@ -67,6 +67,11 @@
@@ -1639,6 +1691,8 @@ Colinux base
  /*
   * 16 8259A IRQ's, 208 potential APIC interrupt sources.
   * Right now the APIC is mostly only used for SMP.
+Index: linux-2.6.22-source/include/asm-i386/mach-default/irq_vectors_limits.h
+===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/mach-default/irq_vectors_limits.h
 +++ linux-2.6.22-source/include/asm-i386/mach-default/irq_vectors_limits.h
 @@ -1,7 +1,7 @@
@@ -1650,6 +1704,8 @@ Colinux base
  #define NR_IRQS 224
  # if (224 >= 32 * NR_CPUS)
  # define NR_IRQ_VECTORS NR_IRQS
+Index: linux-2.6.22-source/include/asm-i386/mc146818rtc.h
+===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/mc146818rtc.h
 +++ linux-2.6.22-source/include/asm-i386/mc146818rtc.h
 @@ -80,6 +80,8 @@
@@ -1673,6 +1729,8 @@ Colinux base
  #define RTC_IRQ 8
  
  #endif /* _ASM_MC146818RTC_H */
+Index: linux-2.6.22-source/include/asm-i386/mmzone.h
+===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/mmzone.h
 +++ linux-2.6.22-source/include/asm-i386/mmzone.h
 @@ -7,6 +7,7 @@
@@ -1683,6 +1741,8 @@ Colinux base
  
  #ifdef CONFIG_NUMA
  extern struct pglist_data *node_data[];
+Index: linux-2.6.22-source/include/asm-i386/page.h
+===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/page.h
 +++ linux-2.6.22-source/include/asm-i386/page.h
 @@ -11,6 +11,7 @@
@@ -1713,6 +1773,8 @@ Colinux base
  
  #define PAGE_OFFSET		((unsigned long)__PAGE_OFFSET)
  #define VMALLOC_RESERVE		((unsigned long)__VMALLOC_RESERVE)
+Index: linux-2.6.22-source/include/asm-i386/pgalloc.h
+===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/pgalloc.h
 +++ linux-2.6.22-source/include/asm-i386/pgalloc.h
 @@ -3,6 +3,7 @@
@@ -1740,6 +1802,8 @@ Colinux base
  			(unsigned long long) PAGE_SHIFT)));	\
  } while (0)
  
+Index: linux-2.6.22-source/include/asm-i386/pgtable-2level.h
+===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/pgtable-2level.h
 +++ linux-2.6.22-source/include/asm-i386/pgtable-2level.h
 @@ -1,6 +1,8 @@
@@ -1764,6 +1828,8 @@ Colinux base
  
  /*
   * All present user pages are user-executable:
+Index: linux-2.6.22-source/include/asm-i386/pgtable.h
+===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/pgtable.h
 +++ linux-2.6.22-source/include/asm-i386/pgtable.h
 @@ -25,6 +25,8 @@
@@ -1788,6 +1854,8 @@ Colinux base
  
  /*
   * Helper function that returns the kernel pagetable entry controlling
+Index: linux-2.6.22-source/include/asm-i386/processor.h
+===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/processor.h
 +++ linux-2.6.22-source/include/asm-i386/processor.h
 @@ -140,7 +140,7 @@
@@ -1815,6 +1883,8 @@ Colinux base
  
  static inline void __mwait(unsigned long eax, unsigned long ecx)
  {
+Index: linux-2.6.22-source/include/linux/cooperative.h
+===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative.h
 @@ -0,0 +1,344 @@
@@ -2162,6 +2232,8 @@ Colinux base
 +#include "cooperative_fs.h"
 +
 +#endif
+Index: linux-2.6.22-source/include/linux/cooperative_internal.h
+===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative_internal.h
 @@ -0,0 +1,78 @@
@@ -2243,6 +2315,8 @@ Colinux base
 +#endif
 +
 +#endif
+Index: linux-2.6.22-source/kernel/Makefile
+===================================================================
 --- linux-2.6.22-source.orig/kernel/Makefile
 +++ linux-2.6.22-source/kernel/Makefile
 @@ -47,6 +47,7 @@
@@ -2253,6 +2327,8 @@ Colinux base
  obj-$(CONFIG_SYSCTL) += utsname_sysctl.o
  obj-$(CONFIG_UTS_NS) += utsname.o
  obj-$(CONFIG_TASK_DELAY_ACCT) += delayacct.o
+Index: linux-2.6.22-source/kernel/cooperative.c
+===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
 @@ -0,0 +1,448 @@
@@ -2704,6 +2780,8 @@ Colinux base
 +EXPORT_SYMBOL(co_terminate_bug);
 +
 +CO_TRACE_CONTINUE;
+Index: linux-2.6.22-source/kernel/panic.c
+===================================================================
 --- linux-2.6.22-source.orig/kernel/panic.c
 +++ linux-2.6.22-source/kernel/panic.c
 @@ -17,6 +17,7 @@
@@ -2725,6 +2803,8 @@ Colinux base
  	/*
  	 * If we have crashed and we have a crash kernel loaded let it handle
  	 * everything else.
+Index: linux-2.6.22-source/kernel/printk.c
+===================================================================
 --- linux-2.6.22-source.orig/kernel/printk.c
 +++ linux-2.6.22-source/kernel/printk.c
 @@ -34,6 +34,8 @@
@@ -2745,6 +2825,8 @@ Colinux base
  	/*
  	 * Copy the output into log_buf.  If the caller didn't provide
  	 * appropriate log level tags, we insert them here
+Index: linux-2.6.22-source/mm/bootmem.c
+===================================================================
 --- linux-2.6.22-source.orig/mm/bootmem.c
 +++ linux-2.6.22-source/mm/bootmem.c
 @@ -12,6 +12,7 @@
@@ -2779,6 +2861,8 @@ Colinux base
  	memset(ret, 0, size);
  	return ret;
  }
+Index: linux-2.6.22-source/mm/page_alloc.c
+===================================================================
 --- linux-2.6.22-source.orig/mm/page_alloc.c
 +++ linux-2.6.22-source/mm/page_alloc.c
 @@ -41,6 +41,7 @@
@@ -2859,6 +2943,8 @@ Colinux base
  	return page;
  }
  
+Index: linux-2.6.22-source/mm/vmscan.c
+===================================================================
 --- linux-2.6.22-source.orig/mm/vmscan.c
 +++ linux-2.6.22-source/mm/vmscan.c
 @@ -1368,7 +1368,7 @@
@@ -2870,6 +2956,8 @@ Colinux base
  /*
   * Helper function for shrink_all_memory().  Tries to reclaim 'nr_pages' pages
   * from LRU lists system-wide, for given pass and priority, and returns the
+Index: linux-2.6.22-source/drivers/char/mem.c
+===================================================================
 --- linux-2.6.22-source.orig/drivers/char/mem.c
 +++ linux-2.6.22-source/drivers/char/mem.c
 @@ -22,6 +22,7 @@
@@ -2940,6 +3028,8 @@ Colinux base
  	if (p < (unsigned long) high_memory) {
  
  		wrote = count;
+Index: linux-2.6.22-source/include/linux/elf.h
+===================================================================
 --- linux-2.6.22-source.orig/include/linux/elf.h
 +++ linux-2.6.22-source/include/linux/elf.h
 @@ -4,7 +4,9 @@
@@ -2952,6 +3042,8 @@ Colinux base
  
  struct file;
  
+Index: linux-2.6.22-source/arch/i386/kernel/cpu/bugs.c
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/cpu/bugs.c
 +++ linux-2.6.22-source/arch/i386/kernel/cpu/bugs.c
 @@ -33,6 +33,8 @@
@@ -2971,6 +3063,8 @@ Colinux base
  
  static double __initdata x = 4195835.0;
  static double __initdata y = 3145727.0;
+Index: linux-2.6.22-source/arch/i386/kernel/reboot_co.c
+===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/reboot_co.c
 @@ -0,0 +1,59 @@
@@ -3033,6 +3127,8 @@ Colinux base
 +{
 +	co_terminate(CO_TERMINATE_HALT);
 +}
+Index: linux-2.6.22-source/arch/i386/mach-default/setup.c
+===================================================================
 --- linux-2.6.22-source.orig/arch/i386/mach-default/setup.c
 +++ linux-2.6.22-source/arch/i386/mach-default/setup.c
 @@ -138,6 +138,7 @@

@@ -1,6 +1,8 @@
 Implements console support
 
 
+Index: linux-2.6.22-source/drivers/video/console/Kconfig
+===================================================================
 --- linux-2.6.22-source.orig/drivers/video/console/Kconfig
 +++ linux-2.6.22-source/drivers/video/console/Kconfig
 @@ -6,7 +6,7 @@
@@ -36,6 +38,8 @@ Implements console support
  	default y
  
  config DUMMY_CONSOLE_COLUMNS
+Index: linux-2.6.22-source/include/linux/console.h
+===================================================================
 --- linux-2.6.22-source.orig/include/linux/console.h
 +++ linux-2.6.22-source/include/linux/console.h
 @@ -61,6 +61,7 @@
@@ -46,6 +50,8 @@ Implements console support
  extern const struct consw newport_con;	/* SGI Newport console  */
  extern const struct consw prom_con;	/* SPARC PROM console */
  
+Index: linux-2.6.22-source/drivers/video/console/Makefile
+===================================================================
 --- linux-2.6.22-source.orig/drivers/video/console/Makefile
 +++ linux-2.6.22-source/drivers/video/console/Makefile
 @@ -25,6 +25,7 @@
@@ -56,6 +62,8 @@ Implements console support
  obj-$(CONFIG_MDA_CONSOLE)         += mdacon.o
  obj-$(CONFIG_FRAMEBUFFER_CONSOLE) += fbcon.o bitblit.o font.o softcursor.o
  ifeq ($(CONFIG_FB_TILEBLITTING),y)
+Index: linux-2.6.22-source/drivers/video/console/cocon.c
+===================================================================
 --- linux-2.6.22-source.orig/drivers/video/console/cocon.c
 +++ linux-2.6.22-source/drivers/video/console/cocon.c
 @@ -10,7 +10,6 @@
