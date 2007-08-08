@@ -87,6 +87,15 @@ Index: linux-2.6.22-source/drivers/char/cocd.c
  		INIT_LIST_HEAD(&cocd->inq);
  		tty->driver_data = cocd;
  		tty->low_latency = 1;
+@@ -288,7 +280,7 @@
+ {
+ }
+ 
+-static void cocd_set_termios(struct tty_struct *tty, struct termios *old_termios)
++static void cocd_set_termios(struct tty_struct *tty, struct ktermios *old_termios)
+ {
+ }
+ 
 @@ -324,7 +316,6 @@
  	cocd_driver->owner = THIS_MODULE;
  	cocd_driver->driver_name = "coserial";
