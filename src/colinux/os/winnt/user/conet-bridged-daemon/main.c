@@ -76,7 +76,7 @@ co_rc_t monitor_receive(co_reactor_user_t user, unsigned char *buffer, unsigned 
 		size_left -= message_size;
 		if (size_left >= 0) {
 			pcap_rc = pcap_sendpacket(pcap_packet.adhandle,
-						  (const u_char *)message->data, message->size);
+						  message->data, message->size);
 			/* TODO */
 		}
 		position += message_size;

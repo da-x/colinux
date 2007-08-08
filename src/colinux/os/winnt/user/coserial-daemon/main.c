@@ -59,7 +59,7 @@ static co_rc_t monitor_receive(co_reactor_user_t user, unsigned char *buffer, un
 		message_size = message->size + sizeof(*message);
 		size_left -= message_size;
 		if (size_left >= 0) {
-			g_reactor_handle->user.send(&g_reactor_handle->user, (void *)message->data, message->size);
+			g_reactor_handle->user.send(&g_reactor_handle->user, message->data, message->size);
 		}
 		position += message_size;
 	}

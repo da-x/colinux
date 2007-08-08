@@ -24,7 +24,7 @@ struct co_linux_reactor_packet_user {
 	struct co_reactor_user user;
 	struct co_reactor_os_user os_user;
 
-	char buffer[0x10000];
+	unsigned char buffer[0x10000];
 	unsigned long size;
 };
 
