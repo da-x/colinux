@@ -162,7 +162,7 @@ co_rc_t co_winnt_reactor_packet_user_create(
 	co_winnt_reactor_packet_user_t user;
 	co_rc_t rc;
 
-	user = (typeof(user))(co_os_malloc(sizeof(*user)));
+	user = co_os_malloc(sizeof(*user));
 	if (!user)
 		return CO_RC(OUT_OF_MEMORY);
 

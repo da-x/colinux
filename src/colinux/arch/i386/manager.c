@@ -22,7 +22,7 @@ co_rc_t co_manager_arch_init(co_manager_t *manager, co_archdep_manager_t *out_ar
 
 	co_debug("arch init\n");
  
-	archdep = (co_archdep_manager_t)co_os_malloc(sizeof(*archdep));
+	archdep = co_os_malloc(sizeof(*archdep));
 	if (archdep == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 

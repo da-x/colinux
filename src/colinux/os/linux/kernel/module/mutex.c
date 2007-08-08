@@ -23,7 +23,7 @@ co_rc_t co_os_mutex_create(co_os_mutex_t *mutex_out)
 
 	*mutex_out = NULL;
 
-	mutex = (typeof(mutex))co_os_malloc(sizeof(*mutex));
+	mutex = co_os_malloc(sizeof(*mutex));
 
 	if (mutex == NULL)
 		return CO_RC(OUT_OF_MEMORY);

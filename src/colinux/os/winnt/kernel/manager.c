@@ -19,7 +19,7 @@ co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
 	int i;
 	co_osdep_manager_t dep;
 
-	*osdep = dep = (typeof(dep))(co_os_malloc(sizeof(*dep)));
+	*osdep = dep = co_os_malloc(sizeof(*dep));
 	if (dep == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 

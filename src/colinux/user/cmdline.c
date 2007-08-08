@@ -223,7 +223,7 @@ co_rc_t co_cmdline_params_alloc(char **argv, int argc, co_command_line_params_t 
 		return CO_RC(OUT_OF_MEMORY);
 
 	argv_size = (sizeof(char *))*(argc+1);
-	cmdline->argv = (char **)co_os_malloc(argv_size);
+	cmdline->argv = co_os_malloc(argv_size);
 	if (!cmdline->argv) {
 		co_os_free(cmdline);
 		return CO_RC(OUT_OF_MEMORY);
@@ -314,7 +314,7 @@ static co_rc_t co_cmdline_get_next_equality_wrapper(co_command_line_params_t cmd
 			if (value)
 				co_os_free(value);
 			/* dynamic alloc value buffer */
-			value = (char *)co_os_malloc(length+1);
+			value = co_os_malloc(length+1);
 			if (!value) {
 				co_os_free(arg);
 				return CO_RC(OUT_OF_MEMORY);

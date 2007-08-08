@@ -556,7 +556,7 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 
 	char_count = co_utf8_mbstrlen(dest_filename);
 	block_size = (char_count + 1)*sizeof(WCHAR) + sizeof(FILE_RENAME_INFORMATION);
-	rename_info = (FILE_RENAME_INFORMATION *)co_os_malloc(block_size);
+	rename_info = co_os_malloc(block_size);
 	if (!rename_info)
 		return CO_RC(OUT_OF_MEMORY);
 

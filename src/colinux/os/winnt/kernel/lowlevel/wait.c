@@ -23,7 +23,7 @@ co_rc_t co_os_wait_create(co_os_wait_t *wait_out)
 
 	*wait_out = NULL;
 
-	wait = (typeof(wait))co_os_malloc(sizeof(*wait));
+	wait = co_os_malloc(sizeof(*wait));
 
 	if (wait == NULL)
 		return CO_RC(OUT_OF_MEMORY);

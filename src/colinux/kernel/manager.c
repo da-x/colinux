@@ -160,7 +160,7 @@ co_rc_t co_manager_open(co_manager_t *manager, co_manager_open_desc_t *opened_ou
 	co_manager_open_desc_t opened;
 	co_rc_t rc;
 
-	opened = (typeof(opened))co_os_malloc(sizeof(*opened));
+	opened = co_os_malloc(sizeof(*opened));
 	if (!opened)
 		return CO_RC(OUT_OF_MEMORY);
 

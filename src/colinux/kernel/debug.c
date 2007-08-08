@@ -26,7 +26,7 @@ static co_rc_t create_section(co_debug_section_t **section_out)
 	co_debug_section_t *section;
 	co_rc_t rc;
 
-	section = (co_debug_section_t *)co_os_malloc(sizeof(co_debug_section_t));
+	section = co_os_malloc(sizeof(co_debug_section_t));
 	if (!section)
 		return CO_RC(OUT_OF_MEMORY);
 	

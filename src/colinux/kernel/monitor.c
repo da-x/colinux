@@ -924,7 +924,7 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 
 	params->id = cmon->id;
 
-	cmon->io_buffer = (co_io_buffer_t *)(co_os_malloc(CO_VPTR_IO_AREA_SIZE));
+	cmon->io_buffer = co_os_malloc(CO_VPTR_IO_AREA_SIZE);
 	if (cmon->io_buffer == NULL) {
 		rc = CO_RC(OUT_OF_MEMORY);
 		goto out_free_wait;

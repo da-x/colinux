@@ -20,7 +20,7 @@ co_rc_t co_monitor_os_init(co_monitor_t *cmon)
 {
 	co_rc_t rc = CO_RC_OK;
 
-	cmon->osdep = (co_monitor_osdep_t *)co_os_malloc(sizeof(*cmon->osdep));
+	cmon->osdep = co_os_malloc(sizeof(*cmon->osdep));
 	if (cmon->osdep == NULL) {
 		return CO_RC(OUT_OF_MEMORY);
 	}

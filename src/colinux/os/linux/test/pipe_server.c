@@ -66,7 +66,7 @@ co_rc_t connected(co_os_pipe_connection_t *conn,
 
 	printf("%p: %s\n", conn, __FUNCTION__);
 
-	*data_client = client_data = (client_data_t *)co_os_malloc(sizeof(client_data_t));
+	*data_client = client_data = co_os_malloc(sizeof(client_data_t));
 	if (!client_data)
 		return CO_RC(OUT_OF_MEMORY);
 	

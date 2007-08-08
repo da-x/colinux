@@ -24,12 +24,11 @@ static co_rc_t co_winnt_new_mdl_bucket(struct co_manager *manager)
 	int i;
 	co_rc_t rc;
 
-	mdl_ptr = (co_os_mdl_ptr_t *)co_os_malloc(sizeof(*mdl_ptr));
+	mdl_ptr = co_os_malloc(sizeof(*mdl_ptr));
 	if (!mdl_ptr)
 		return CO_RC(OUT_OF_MEMORY);
 
-	pfn_ptrs = (co_os_pfn_ptr_t *)co_os_malloc(sizeof(co_os_pfn_ptr_t)*
-						   PFN_ALLOCATION_COUNT);
+	pfn_ptrs = co_os_malloc(sizeof(co_os_pfn_ptr_t) * PFN_ALLOCATION_COUNT);
 	if (!pfn_ptrs) {
 		rc = CO_RC(OUT_OF_MEMORY);
 		goto error_free_mdl_ptr;

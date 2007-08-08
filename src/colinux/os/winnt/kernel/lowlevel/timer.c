@@ -42,7 +42,7 @@ co_rc_t co_os_timer_create(co_os_func_t func, void *data,
 
 	*timer_out = NULL;
 
-	timer = (typeof(timer))co_os_malloc(sizeof(*timer));
+	timer = co_os_malloc(sizeof(*timer));
 
 	if (timer == NULL)
 		return CO_RC(OUT_OF_MEMORY);

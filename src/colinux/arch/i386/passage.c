@@ -479,7 +479,7 @@ co_rc_t co_monitor_arch_passage_page_alloc(co_monitor_t *cmon)
 	co_rc_t rc;
 	co_archdep_monitor_t archdep;
 
-	archdep = (co_archdep_monitor_t)co_os_malloc(sizeof(*archdep));
+	archdep = co_os_malloc(sizeof(*archdep));
 	if (archdep == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 

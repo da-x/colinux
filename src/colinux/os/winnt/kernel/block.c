@@ -72,7 +72,7 @@ static co_rc_t co_os_file_block_detect_size_binary_search(HANDLE handle, unsigne
 	unsigned long test_buffer_size = 0x100;
 	char *test_buffer;
 
-	test_buffer = (char *)co_os_malloc(test_buffer_size_max);
+	test_buffer = co_os_malloc(test_buffer_size_max);
 	if (!test_buffer)
 		return CO_RC(OUT_OF_MEMORY);
 

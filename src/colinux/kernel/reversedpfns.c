@@ -31,7 +31,7 @@ co_rc_t co_manager_alloc_reversed_pfns(co_manager_t *manager)
 	map_size = sizeof(co_pfn_t) * manager->reversed_page_count;
 
 	co_debug("allocating top level pages map (%d bytes)\n", map_size);
-	manager->reversed_map_pfns = (co_pfn_t *)co_os_malloc(map_size);
+	manager->reversed_map_pfns = co_os_malloc(map_size);
 	if (manager->reversed_map_pfns == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 
@@ -53,7 +53,7 @@ co_rc_t co_manager_alloc_reversed_pfns(co_manager_t *manager)
 		  / PTRS_PER_PTE)  / PTRS_PER_PGD) / sizeof(linux_pgd_t);
 
 	co_debug("using %d table entries for reversed physical mapping\n", manager->reversed_map_pgds_count);
-	manager->reversed_map_pgds = (unsigned long *)(co_os_malloc(manager->reversed_map_pgds_count*sizeof(linux_pgd_t)));
+	manager->reversed_map_pgds = co_os_malloc(manager->reversed_map_pgds_count*sizeof(linux_pgd_t));
 	if (!manager->reversed_map_pgds) {
 		if (!CO_OK(rc)) /* TODO: handle error */
 			return rc;

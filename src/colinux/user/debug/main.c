@@ -50,7 +50,7 @@ static void co_debug_download(void)
 
 	handle = co_os_manager_open();
 	if (handle) {
-		char *buffer = (char *)co_os_malloc(BUFFER_SIZE);
+		char *buffer = co_os_malloc(BUFFER_SIZE);
 		if (buffer) {
 			co_manager_ioctl_debug_reader_t debug_reader;
 			debug_reader.user_buffer = buffer;
@@ -89,7 +89,7 @@ static void co_debug_download_to_network(void)
 	if (!handle)
 		goto error_out1;
 
-	char *buffer = (char *)co_os_malloc(BUFFER_SIZE);
+	char *buffer = co_os_malloc(BUFFER_SIZE);
 	if (!buffer)
 		goto error_out2;
 
@@ -293,7 +293,7 @@ void co_debug_download_and_parse(void)
 
 	handle = co_os_manager_open();
 	if (handle) {
-		char *buffer = (char *)co_os_malloc(BUFFER_SIZE);
+		char *buffer = co_os_malloc(BUFFER_SIZE);
 		if (buffer) {
 			co_manager_ioctl_debug_reader_t debug_reader;
 			debug_reader.user_buffer = buffer;

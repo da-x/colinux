@@ -175,7 +175,7 @@ co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **
 
 	init_srand();
 
-	daemon = (co_daemon_t *)co_os_malloc(sizeof(co_daemon_t));
+	daemon = co_os_malloc(sizeof(co_daemon_t));
 	if (daemon == NULL) {
 		rc = CO_RC(OUT_OF_MEMORY);
 		goto out;

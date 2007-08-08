@@ -6,7 +6,7 @@ co_rc_t co_reactor_create(co_reactor_t *out_handle)
 {
 	co_reactor_t reactor;
 
-	reactor = (co_reactor_t)(co_os_malloc(sizeof(*reactor)));
+	reactor = co_os_malloc(sizeof(*reactor));
 	if (!reactor)
 		return CO_RC(OUT_OF_MEMORY);
 
