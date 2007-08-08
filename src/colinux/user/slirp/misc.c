@@ -313,13 +313,10 @@ fork_exec(so, ex, do_pty)
 {
 	int s;
 	struct sockaddr_in addr;
-	int addrlen = sizeof(addr);
+	socklen_t addrlen = sizeof(addr);
 	int opt;
         int master;
 	char *argv[256];
-#if 0
-	char buff[256];
-#endif
 	/* don't want to clobber the original */
 	char *bptr;
 	char *curarg;
@@ -382,6 +379,7 @@ fork_exec(so, ex, do_pty)
 		
 #if 0
 		if (x_port >= 0) {
+			char buff[256];
 #ifdef HAVE_SETENV
 			sprintf(buff, "%s:%d.%d", inet_ntoa(our_addr), x_port, x_screen);
 			setenv("DISPLAY", buff, 1);

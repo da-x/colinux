@@ -653,7 +653,7 @@ udp_listen(port, laddr, lport, flags)
 {
 	struct sockaddr_in addr;
 	struct socket *so;
-	int addrlen = sizeof(struct sockaddr_in), opt = 1;
+	socklen_t addrlen = sizeof(struct sockaddr_in), opt = 1;
 	
 	if ((so = socreate()) == NULL) {
 		free(so);

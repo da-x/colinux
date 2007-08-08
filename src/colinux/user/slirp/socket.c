@@ -387,7 +387,7 @@ sorecvfrom(so)
 	struct socket *so;
 {
 	struct sockaddr_in addr;
-	int addrlen = sizeof(struct sockaddr_in);
+	socklen_t addrlen = sizeof(struct sockaddr_in);
 	
 	DEBUG_CALL("sorecvfrom");
 	DEBUG_ARG("so = %lx", (long)so);
@@ -553,7 +553,8 @@ solisten(port, laddr, lport, flags)
 {
 	struct sockaddr_in addr;
 	struct socket *so;
-	int s, addrlen = sizeof(addr), opt = 1;
+	socklen_t addrlen = sizeof(addr);
+	int s, opt = 1;
 
 	DEBUG_CALL("solisten");
 	DEBUG_ARG("port = %d", port);
