@@ -129,25 +129,13 @@ static int get_dns_addr(struct in_addr *pdns_addr)
 struct in_addr cached_dns_addr (void)
 {
     static long dns_expire;
-    struct in_addr new_dns_addr;
     
     if (!dns_addr.s_addr || curtime > dns_expire) {
-        if (get_dns_addr(&new_dns_addr) < 0) {
+        if (get_dns_addr(&dns_addr) < 0) {
             fprintf(stderr, "Could not get DNS address\n");
             return (dns_addr);
         }
 
-#if 0
-        /* If DNS server changed, re-read host ipaddr */
-        if (dns_addr.s_addr != new_dns_addr.s_addr) {
-            getouraddr();
-            printf( "conet-slirp-daemon: host internet connection update detected.\n" );
-            printf( "Our addr: %s\n", inet_ntoa(our_addr));
-            printf( "DNS Server: %s\n", inet_ntoa(new_dns_addr));
-        }
-#endif
-
-        dns_addr = new_dns_addr;
         dns_expire = curtime + SO_EXPIREFAST;
     }
     return (dns_addr);
