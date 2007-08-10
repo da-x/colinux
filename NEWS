@@ -1,4 +1,5 @@
 * Version 0.8.0
+  * Bug #1324092: cofs rename replace existing file.
   * cloop updated to 2.06 (compressed loop blockdevice from Knoppix)
   * Fix cofs mmap read error behind end of file (was not zero filled).
   * Bug #1190080: Fix cofs file time/mode/flags after touch or write.

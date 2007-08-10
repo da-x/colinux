@@ -564,7 +564,7 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	if (!CO_OK(rc))
 		goto error;
 
-	rename_info->ReplaceIfExists = FALSE;
+	rename_info->ReplaceIfExists = TRUE;
 	rename_info->RootDirectory = NULL;
 	rename_info->FileNameLength = char_count * sizeof(WCHAR);
 
@@ -577,6 +577,9 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	status = ZwSetInformationFile(handle, &io_status, rename_info, block_size,
 				      FileRenameInformation);
 	rc = status_convert(status);
+
+	if (!CO_OK(rc))
+		co_debug_lvl(filesystem, 5, "error %x ZwSetInformationFile rename %s,%s\n", status, filename, dest_filename);
 
 error2:
 	co_os_file_close(handle);
