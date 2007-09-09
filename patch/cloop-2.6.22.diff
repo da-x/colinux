@@ -23,7 +23,7 @@ Index: linux-2.6.22-source/drivers/block/Makefile
  obj-$(CONFIG_AMIGA_Z2RAM)	+= z2ram.o
  obj-$(CONFIG_BLK_DEV_RAM)	+= rd.o
  obj-$(CONFIG_BLK_DEV_COBD)	+= cobd.o
-+obj-$(CONFIG_BLK_DEV_CLOOP)	+= compressed_loop.o
++obj-$(CONFIG_BLK_DEV_CLOOP)	+= cloop.o
  obj-$(CONFIG_BLK_DEV_LOOP)	+= loop.o
  obj-$(CONFIG_BLK_DEV_PS2)	+= ps2esdi.o
  obj-$(CONFIG_BLK_DEV_XD)	+= xd.o

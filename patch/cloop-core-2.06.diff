@@ -1,7 +1,7 @@
-Index: linux-2.6.22-source/drivers/block/compressed_loop.c
+Index: linux-2.6.22-source/drivers/block/cloop.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/drivers/block/compressed_loop.c
++++ linux-2.6.22-source/drivers/block/cloop.c
 @@ -0,0 +1,1099 @@
 +/*
 + *  compressed_loop.c: Read-only compressed loop blockdevice
