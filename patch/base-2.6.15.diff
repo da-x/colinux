@@ -2226,7 +2226,7 @@ Index: linux-2.6.15-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.15-source/kernel/cooperative.c
-@@ -0,0 +1,411 @@
+@@ -0,0 +1,412 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2575,6 +2575,7 @@ Index: linux-2.6.15-source/kernel/cooperative.c
 +	.api_version = CO_LINUX_API_VERSION,
 +	.compiler_major = __GNUC__,
 +	.compiler_minor = __GNUC_MINOR__,
++	.compiler_abi = __GXX_ABI_VERSION,
 +};
 +
 +static int __init initcall_message_queues(void)

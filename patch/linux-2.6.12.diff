@@ -7972,7 +7972,7 @@ diff -urN a/include/linux/console.h b/include/linux/console.h
 diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 --- a/include/linux/cooperative.h
 +++ b/include/linux/cooperative.h
-@@ -0,0 +1,330 @@
+@@ -0,0 +1,331 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -8291,6 +8291,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +	unsigned long api_version;
 +	unsigned long compiler_major;
 +	unsigned long compiler_minor;
++	unsigned long compiler_abi;
 +} __attribute__((packed)) co_info_t;
 +
 +#ifndef COLINUX_TRACE
@@ -8699,7 +8700,7 @@ diff -urN a/kernel/Makefile b/kernel/Makefile
 diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 --- a/kernel/cooperative.c
 +++ b/kernel/cooperative.c
-@@ -0,0 +1,426 @@
+@@ -0,0 +1,427 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -9063,6 +9064,7 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +	.api_version = CO_LINUX_API_VERSION,
 +	.compiler_major = __GNUC__,
 +	.compiler_minor = __GNUC_MINOR__,
++	.compiler_abi = __GXX_ABI_VERSION,
 +};
 +
 +static int __init initcall_message_queues(void)

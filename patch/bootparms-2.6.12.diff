@@ -5,8 +5,8 @@ Index: linux-2.6.12-source/include/linux/cooperative.h
 ===================================================================
 --- linux-2.6.12-source.orig/include/linux/cooperative.h
 +++ linux-2.6.12-source/include/linux/cooperative.h
-@@ -318,6 +318,16 @@
- 	unsigned long compiler_minor;
+@@ -319,6 +319,16 @@
+ 	unsigned long compiler_abi;
  } __attribute__((packed)) co_info_t;
  
 +typedef struct {

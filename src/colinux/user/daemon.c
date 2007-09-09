@@ -409,10 +409,12 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 		goto out;
 	}
 
-	if ((create_params.info.compiler_major != __GNUC__) || 
-	    (create_params.info.compiler_minor != __GNUC_MINOR__)) {
-		co_terminal_print("colinux: error, expected gcc version %d.%d.x, got %d.%d.x\n", __GNUC__,
-		 __GNUC_MINOR__,
+	if (create_params.info.compiler_abi != __GXX_ABI_VERSION) {
+		co_terminal_print("colinux: error, expected gcc abi version %d, got %d\n",
+		  __GXX_ABI_VERSION, create_params.info.compiler_abi);
+		co_terminal_print("colinux: Daemons gcc version %d.%d.x, "
+				  "incompatible to kernel gcc version %d.%d.x\n",
+		 __GNUC__, __GNUC_MINOR__,
 		 create_params.info.compiler_major,
 		 create_params.info.compiler_minor);
 

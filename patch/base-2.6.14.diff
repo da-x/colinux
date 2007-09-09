@@ -2099,7 +2099,7 @@ Index: linux-2.6.14-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.14-source/include/linux/cooperative.h
-@@ -0,0 +1,330 @@
+@@ -0,0 +1,331 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -2418,6 +2418,7 @@ Index: linux-2.6.14-source/include/linux/cooperative.h
 +	unsigned long api_version;
 +	unsigned long compiler_major;
 +	unsigned long compiler_minor;
++	unsigned long compiler_abi;
 +} __attribute__((packed)) co_info_t;
 +
 +#ifndef COLINUX_TRACE
@@ -2558,7 +2559,7 @@ Index: linux-2.6.14-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.14-source/kernel/cooperative.c
-@@ -0,0 +1,421 @@
+@@ -0,0 +1,422 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2917,6 +2918,7 @@ Index: linux-2.6.14-source/kernel/cooperative.c
 +	.api_version = CO_LINUX_API_VERSION,
 +	.compiler_major = __GNUC__,
 +	.compiler_minor = __GNUC_MINOR__,
++	.compiler_abi = __GXX_ABI_VERSION,
 +};
 +
 +static int __init initcall_message_queues(void)
