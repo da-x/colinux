@@ -21,7 +21,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/timer_cooperative.c
 +#include <linux/cooperative_internal.h>
 +
 +#define CO_CLOCK_SHIFT 23
-+static unsigned long frequencey;
++/* static unsigned long frequencey; */
 +
 +unsigned int cpu_khz;
 +EXPORT_SYMBOL(cpu_khz);
@@ -62,7 +62,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/timer_cooperative.c
 +	co_passage_page->operation = CO_OPERATION_GET_HIGH_PREC_TIME;
 +	co_switch_wrapper();
 +	this_time = *(unsigned long long *)(&co_passage_page->params[0]);
-+	frequencey = *(unsigned long *)(&co_passage_page->params[2]);
++	/* frequencey = *(unsigned long *)(&co_passage_page->params[2]); */
 +	co_passage_page_release(flags);
 +
 +	return this_time;
