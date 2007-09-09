@@ -501,6 +501,32 @@ gcc_helper()
 		return
 	fi
 
+	# ABI from local GCC
+	touch /tmp/colinux-$$.c
+	LOCAL_ABI=`gcc -E -dM /tmp/colinux-$$.c 2>/dev/null | sed -n -r -e \
+          's/^#define __GXX_ABI_VERSION ([0-9]+)$/\1/p'`
+	rm /tmp/colinux-$$.c
+
+	# ABI from known mingw compilers
+	case $GCC_VERSION in
+	    4.3.*|4.2.*|4.1.*|4.0.*|3.4.*)
+		MINGW_ABI="1002"
+		;;
+	    3.3.*)
+		MINGW_ABI="102"
+		;;
+	    3.2.*)
+		MINGW_ABI="101"
+		;;
+	    *)	MINGW_ABI="unknown"
+		;;
+	esac
+
+	if [ x$LOCAL_ABI = x$MINGW_ABI ]; then
+		echo "  ABI seems be compatible. Use local gcc `gcc -dumpversion` for kernel, $GCC_VERSION for daemons."
+		return
+	fi
+
 	cat << EOF
 
 	Cross gcc and local gcc should be the same major and minor version.
