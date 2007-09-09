@@ -140,7 +140,7 @@ Index: linux-2.6.15-source/arch/i386/kernel/Makefile
  obj-$(CONFIG_X86_MSR)		+= msr.o
  obj-$(CONFIG_X86_CPUID)		+= cpuid.o
  obj-$(CONFIG_MICROCODE)		+= microcode.o
-+obj-$(CONFIG_COOPERATIVE)       += cooperative.o reboot_co.o
++obj-$(CONFIG_COOPERATIVE)       += cooperative.o reboot_cooperative.o
  obj-$(CONFIG_APM)		+= apm.o
  obj-$(CONFIG_X86_SMP)		+= smp.o smpboot.o
  obj-$(CONFIG_X86_TRAMPOLINE)	+= trampoline.o
@@ -2926,10 +2926,10 @@ Index: linux-2.6.15-source/include/linux/elf.h
  
  #ifndef elf_read_implies_exec
    /* Executables for which elf_read_implies_exec() returns TRUE will
-Index: linux-2.6.15-source/arch/i386/kernel/reboot_co.c
+Index: linux-2.6.15-source/arch/i386/kernel/reboot_cooperative.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.15-source/arch/i386/kernel/reboot_co.c
++++ linux-2.6.15-source/arch/i386/kernel/reboot_cooperative.c
 @@ -0,0 +1,38 @@
 +#include <linux/module.h>
 +#include <linux/reboot.h>

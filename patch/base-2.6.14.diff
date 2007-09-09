@@ -93,7 +93,7 @@ Index: linux-2.6.14-source/arch/i386/kernel/Makefile
  obj-$(CONFIG_X86_MSR)		+= msr.o
  obj-$(CONFIG_X86_CPUID)		+= cpuid.o
  obj-$(CONFIG_MICROCODE)		+= microcode.o
-+obj-$(CONFIG_COOPERATIVE)       += cooperative.o reboot_co.o
++obj-$(CONFIG_COOPERATIVE)       += cooperative.o reboot_cooperative.o
  obj-$(CONFIG_APM)		+= apm.o
  obj-$(CONFIG_X86_SMP)		+= smp.o smpboot.o
  obj-$(CONFIG_X86_TRAMPOLINE)	+= trampoline.o
@@ -3191,10 +3191,10 @@ Index: linux-2.6.14-source/include/asm-i386/processor.h
  
  /*
   * Set IOPL bits in EFLAGS from given mask
-Index: linux-2.6.14-source/arch/i386/kernel/reboot_co.c
+Index: linux-2.6.14-source/arch/i386/kernel/reboot_cooperative.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.14-source/arch/i386/kernel/reboot_co.c
++++ linux-2.6.14-source/arch/i386/kernel/reboot_cooperative.c
 @@ -0,0 +1,35 @@
 +#include <linux/module.h>
 +#include <linux/reboot.h>

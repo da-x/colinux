@@ -87,7 +87,7 @@ diff -urN a/arch/i386/kernel/Makefile b/arch/i386/kernel/Makefile
  obj-$(CONFIG_X86_MSR)		+= msr.o
  obj-$(CONFIG_X86_CPUID)		+= cpuid.o
  obj-$(CONFIG_MICROCODE)		+= microcode.o
-+obj-$(CONFIG_COOPERATIVE)       += cooperative.o reboot_co.o
++obj-$(CONFIG_COOPERATIVE)       += cooperative.o reboot_cooperative.o
  obj-$(CONFIG_APM)		+= apm.o
  obj-$(CONFIG_X86_SMP)		+= smp.o smpboot.o
  obj-$(CONFIG_X86_TRAMPOLINE)	+= trampoline.o
@@ -9267,9 +9267,9 @@ diff -urN a/mm/vmscan.c b/mm/vmscan.c
  /*
   * Try to free `nr_pages' of memory, system-wide.  Returns the number of freed
   * pages.
-diff -urN a/arch/i386/kernel/reboot_co.c b/arch/i386/kernel/reboot_co.c
---- a/arch/i386/kernel/reboot_co.c
-+++ b/arch/i386/kernel/reboot_co.c
+diff -urN a/arch/i386/kernel/reboot_co.c b/arch/i386/kernel/reboot_cooperative.c
+--- a/arch/i386/kernel/reboot_cooperative.c
++++ b/arch/i386/kernel/reboot_cooperative.c
 @@ -0,0 +1,30 @@
 +#include <linux/module.h>
 +#include <linux/reboot.h>

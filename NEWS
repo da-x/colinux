@@ -1,6 +1,7 @@
 * Version 0.8.0
   * Linux Kernel and daemons can build with differ gcc versions now.
     ABI is runtime checked.
+    Usable gcc for kernel build: 3.4.x, 4.0.x, 4.1.x, 4.2.x up to 4.3.0
   * New menu entries in FLTK console
     Power off: Fast power down coLinux kernel, no file sync!
     Reboot:    Sends ctrl-alt-del, init process goes into runlevel 6
@@ -37,7 +38,6 @@
     Needs to enable facility/level with colinux-debug-daemon before.
   * Updated libraries and tools:
     - gcc 4.1.2 (unpatched now, not from mingw)
-      Usable gcc for kernel build: 3.4.x, 4.0.x, 4.1.x, 4.2.x up to 4.3.0
     - binutils 2.17.50
     - mingw 3.11
     - w32api 3.9

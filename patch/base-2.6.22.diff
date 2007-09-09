@@ -196,7 +196,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/Makefile
 +++ linux-2.6.22-source/arch/i386/kernel/Makefile
-@@ -5,14 +5,16 @@
+@@ -5,13 +5,14 @@
  extra-y := head.o init_task.o vmlinux.lds
  
  obj-y	:= process.o signal.o entry.o traps.o irq.o \
@@ -212,11 +212,9 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
  obj-y				+= acpi/
 +obj-$(CONFIG_PCI)		+= e820.o
  obj-$(CONFIG_X86_BIOS_REBOOT)	+= reboot.o
-+obj-$(CONFIG_COOPERATIVE)       += reboot_co.o cooperative.o timer_cooperative.o
  obj-$(CONFIG_MCA)		+= mca.o
  obj-$(CONFIG_X86_MSR)		+= msr.o
- obj-$(CONFIG_X86_CPUID)		+= cpuid.o
-@@ -39,11 +41,15 @@
+@@ -39,11 +40,19 @@
  obj-$(CONFIG_VM86)		+= vm86.o
  obj-$(CONFIG_EARLY_PRINTK)	+= early_printk.o
  obj-$(CONFIG_HPET_TIMER) 	+= hpet.o
@@ -225,7 +223,11 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
  
  obj-$(CONFIG_VMI)		+= vmi.o vmiclock.o
  obj-$(CONFIG_PARAVIRT)		+= paravirt.o
-+ifndef CONFIG_COOPERATIVE
++ifdef CONFIG_COOPERATIVE
++obj-y				+= cooperative.o
++obj-y				+= reboot_cooperative.o
++obj-y				+= timer_cooperative.o
++else
 +obj-y				+= time.o i8253.o
  obj-y				+= pcspeaker.o
 +endif
@@ -3070,13 +3072,13 @@ Index: linux-2.6.22-source/arch/i386/kernel/cpu/bugs.c
  
  static double __initdata x = 4195835.0;
  static double __initdata y = 3145727.0;
-Index: linux-2.6.22-source/arch/i386/kernel/reboot_co.c
+Index: linux-2.6.22-source/arch/i386/kernel/reboot_cooperative.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/arch/i386/kernel/reboot_co.c
++++ linux-2.6.22-source/arch/i386/kernel/reboot_cooperative.c
 @@ -0,0 +1,88 @@
 +/*
-+ *  linux/arch/i386/kernel/reboot_co.c
++ *  linux/arch/i386/kernel/reboot_cooperative.c
 + */
 +
 +#include <linux/module.h>
