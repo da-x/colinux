@@ -73,8 +73,14 @@ static void console_terminate_cb(Fl_Widget *widget, void* v)
 
 static void console_send_ctrl_alt_del_cb(Fl_Widget *widget, void* v) 
 {
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del();
+	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del(0);
 }
+
+static void console_send_power_off_cb(Fl_Widget *widget, void* v)
+{
+	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del(1);
+}
+
 static void console_about_cb(Fl_Widget *widget, void* v) 
 {
 	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->about();
@@ -192,14 +198,19 @@ co_rc_t console_window_t::start()
 		{ "Select", 0, (Fl_Callback *)console_select_cb, this, FL_MENU_DIVIDER },
 		{ "Attach", 0, (Fl_Callback *)console_attach_cb, this, },
 		{ "Detach", 0, (Fl_Callback *)console_detach_cb, this, FL_MENU_DIVIDER },
+#if 0
 		{ "Pause", 0, (Fl_Callback *)console_pause_cb, this,  },
 		{ "Resume", 0, (Fl_Callback *)console_resume_cb, this, },
+#endif
 		{ "Terminate", 0, (Fl_Callback *)console_terminate_cb, this, },
-		{ "Send Ctrl-Alt-Del", 0, (Fl_Callback *)console_send_ctrl_alt_del_cb, this, },
+		{ "Reboot - send Ctrl-Alt-Del", 0, (Fl_Callback *)console_send_ctrl_alt_del_cb, this, },
+		{ "Shutdown", 0, (Fl_Callback *)console_send_power_off_cb, this, },
 		{ 0 },
 
+#if 0
 		{ "Inspect", 0, 0, 0, FL_SUBMENU },
 		{ 0 },
+#endif
 
 		{ "Help", 0, 0, 0, FL_SUBMENU },
 		{ "About", 0, (Fl_Callback *)console_about_cb, this, },
@@ -430,7 +441,7 @@ co_rc_t console_window_t::terminate()
 	return detach();
 }
 
-co_rc_t console_window_t::send_ctrl_alt_del()
+co_rc_t console_window_t::send_ctrl_alt_del(int poweroff)
 {
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return CO_RC(ERROR);
@@ -449,8 +460,12 @@ co_rc_t console_window_t::send_ctrl_alt_del()
 	message.linux_msg.device = CO_DEVICE_POWER;
 	message.linux_msg.unit = 0;
 	message.linux_msg.size = sizeof(message.data);
-	message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
 	
+	if (poweroff == 0)
+		message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
+	else
+		message.data.type = CO_LINUX_MESSAGE_POWER_SHUTDOWN;
+
 	co_user_monitor_message_send(message_monitor, &message.message);
 
 	return CO_RC(OK);
