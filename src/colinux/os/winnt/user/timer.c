@@ -88,17 +88,3 @@ void co_os_get_timestamp(co_timestamp_t *dts)
 	dts->high = PerformanceCounter.HighPart;
 	dts->low = PerformanceCounter.LowPart;
 }
-
-double co_os_timer_highres()
-{
-	LARGE_INTEGER lpFrequency;
-	LARGE_INTEGER lpPerformanceCount;
-
-	if (QueryPerformanceFrequency(&lpFrequency)) {
-		if (QueryPerformanceCounter(&lpPerformanceCount)) {
-			return ((double)lpPerformanceCount.QuadPart)/((double)lpFrequency.QuadPart);
-		}
-	}
-
-	return 0;
-}
