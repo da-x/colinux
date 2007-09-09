@@ -18,15 +18,24 @@
 #error "colinux don't run, if CONFIG_REGPARM enabled in host kernel"
 #endif
 
+/* Prototype must be local, checks the linker here */
+extern int regparm_check(int p1, int p2, int p3);
+
 static int __init colinux_module_init(void)
 {
 	co_rc_t rc;
 
-	printk("colinux: loaded version " COLINUX_VERSION " (compiled on " __DATE__ " " __TIME__ ")\n");
+	printk(KERN_INFO "colinux: loaded version " COLINUX_VERSION " (compiled on " __DATE__ " " __TIME__ ")\n");
+
+	/* Function params must check, before any other coLinux function from prelinked_driver will call */
+	if (regparm_check(1, 2, 3)) {
+		printk(KERN_ERR "colinux: Don't run on regparm enabled host kernels kernels\n");
+		return -EILSEQ;
+	}
 
 	co_global_manager = co_os_malloc(sizeof(co_manager_t));
 	if (co_global_manager == NULL) {
-		printk("colinux: allocation error\n");
+		printk(KERN_ERR "colinux: allocation error\n");
 		return -ENOMEM;
 	}
 
@@ -36,7 +45,7 @@ static int __init colinux_module_init(void)
 			printk("colinux: PAE is enabled, cannot continue\n");
 			return -ENOSYS;
 		}
-		printk("colinux: manager load failure: %x\n", (int)rc);
+		printk(KERN_ERR "colinux: manager load failure: %x\n", (int)rc);
 		return -ENXIO;
 	}
 
@@ -52,7 +61,7 @@ static void __exit colinux_module_exit(void)
 		co_os_free(manager);
 	}
 
-	printk("colinux: module unloaded\n");
+	printk(KERN_INFO "colinux: module unloaded\n");
 }
 
 MODULE_LICENSE("GPL");

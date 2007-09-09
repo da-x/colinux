@@ -1,7 +1,9 @@
-#include <linux/module.h>
 #include <linux/version.h>
-#include <linux/compiler.h>
+#include <linux/module.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,19)
 #include <linux/config.h>
+#endif
+#include <linux/compiler.h>
 #include <linux/kmod.h>
 #include <linux/init.h>
 #include <linux/slab.h>

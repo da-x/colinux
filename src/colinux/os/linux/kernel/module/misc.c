@@ -29,3 +29,11 @@ co_rc_t co_os_physical_memory_pages(unsigned long *pages)
 
 	return CO_RC(OK);
 }
+
+__attribute__((regparm(0))) int regparm_check(int p1, int p2, int p3)
+{
+	if (p1 == 1 && p2 == 2 && p3 == 3)
+		return 0;
+	else
+		return -EILSEQ;
+}

@@ -567,6 +567,7 @@ For building and runnning coLinux on Linux you need:
    tested up to 2.6.8.1, 2.6.10 - 2.6.18.
    2.6.19 as host kernel is not usable.
    Host kernel should not set CONFIG_REGPARM, coLinux can't run there.
+   >=2.6.20: "-mregparm=3" in arch/i386/Makefile is badly idea for coLinux.
 2. patched fltk-1.1.6 (see patch directory) installed in the 
    system (./configure ; make ; su -c "make install")
    You can also install this version under your HOME (see below).
