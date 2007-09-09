@@ -42,7 +42,11 @@ const char *co_strstr(const char *haystack, const char *needle)
 
 int co_strlen(const char *s)
 {
-	return strlen(s);
+        const char *sc;
+
+        for (sc = s; *sc != '\0'; ++sc)
+                /* nothing */;
+        return sc - s;
 }
 
 /* copied from Linux's string lib */

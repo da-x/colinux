@@ -24,7 +24,6 @@ $(MODULE_NAME)-objs := \
 	time.o \
 	manager.o \
 	file.o \
-	lib.o \
 	mutex.o \
 	user.o \
 	wait.o \
