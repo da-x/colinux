@@ -56,29 +56,22 @@ static void console_detach_cb(Fl_Widget *widget, void* v)
 	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->detach();
 }
 
-static void console_pause_cb(Fl_Widget *widget, void* v) 
-{
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->pause();
-}
-
-static void console_resume_cb(Fl_Widget *widget, void* v) 
-{
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->resume();
-}
-
-static void console_terminate_cb(Fl_Widget *widget, void* v) 
-{
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->terminate();
-}
-
 static void console_send_ctrl_alt_del_cb(Fl_Widget *widget, void* v) 
 {
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del(0);
+	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del(
+					CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL);
 }
 
-static void console_send_power_off_cb(Fl_Widget *widget, void* v)
+static void console_send_shutdown_cb(Fl_Widget *widget, void* v)
 {
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del(1);
+	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del(
+					CO_LINUX_MESSAGE_POWER_SHUTDOWN);
+}
+
+static void console_send_poweroff_cb(Fl_Widget *widget, void* v)
+{
+	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del(
+					CO_LINUX_MESSAGE_POWER_OFF);
 }
 
 static void console_about_cb(Fl_Widget *widget, void* v) 
@@ -198,19 +191,10 @@ co_rc_t console_window_t::start()
 		{ "Select", 0, (Fl_Callback *)console_select_cb, this, FL_MENU_DIVIDER },
 		{ "Attach", 0, (Fl_Callback *)console_attach_cb, this, },
 		{ "Detach", 0, (Fl_Callback *)console_detach_cb, this, FL_MENU_DIVIDER },
-#if 0
-		{ "Pause", 0, (Fl_Callback *)console_pause_cb, this,  },
-		{ "Resume", 0, (Fl_Callback *)console_resume_cb, this, },
-#endif
-		{ "Terminate", 0, (Fl_Callback *)console_terminate_cb, this, },
-		{ "Reboot - send Ctrl-Alt-Del", 0, (Fl_Callback *)console_send_ctrl_alt_del_cb, this, },
-		{ "Shutdown", 0, (Fl_Callback *)console_send_power_off_cb, this, },
+		{ "Power off", 0, (Fl_Callback *)console_send_poweroff_cb, this, },
+		{ "Reboot - Ctrl-Alt-Del", 0, (Fl_Callback *)console_send_ctrl_alt_del_cb, this, },
+		{ "Shutdown", 0, (Fl_Callback *)console_send_shutdown_cb, this, },
 		{ 0 },
-
-#if 0
-		{ "Inspect", 0, 0, 0, FL_SUBMENU },
-		{ 0 },
-#endif
 
 		{ "Help", 0, 0, 0, FL_SUBMENU },
 		{ "About", 0, (Fl_Callback *)console_about_cb, this, },
@@ -253,9 +237,9 @@ co_rc_t console_window_t::start()
 	window->show();
 
 	menu_item_activate(console_select_cb);
-	menu_item_deactivate(console_pause_cb);
-	menu_item_deactivate(console_resume_cb);
-	menu_item_deactivate(console_terminate_cb);
+	menu_item_deactivate(console_send_poweroff_cb);
+	menu_item_deactivate(console_send_ctrl_alt_del_cb);
+	menu_item_deactivate(console_send_shutdown_cb);
 	menu_item_deactivate(console_detach_cb);
 	menu_item_deactivate(console_attach_cb);
 
@@ -368,9 +352,9 @@ co_rc_t console_window_t::attach()
 	state = CO_CONSOLE_STATE_ATTACHED;
 
 	menu_item_deactivate(console_select_cb);
-	menu_item_activate(console_pause_cb);
-	menu_item_deactivate(console_resume_cb);
-	menu_item_activate(console_terminate_cb);
+	menu_item_activate(console_send_poweroff_cb);
+	menu_item_activate(console_send_ctrl_alt_del_cb);
+	menu_item_activate(console_send_shutdown_cb);
 	menu_item_activate(console_detach_cb);
 	menu_item_deactivate(console_attach_cb);
 
@@ -380,18 +364,6 @@ co_rc_t console_window_t::attach()
 
 out:	
 	return rc;
-}
-
-co_rc_t console_window_t::pause()
-{
-	log("Pause not implemented yet");
-	return CO_RC(OK);
-}
-
-co_rc_t console_window_t::resume()
-{
-	log("Pause not implemented yet");
-	return CO_RC(OK);
 }
 
 co_rc_t console_window_t::attach_anyhow(co_id_t id)
@@ -413,12 +385,12 @@ co_rc_t console_window_t::detach()
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return CO_RC(ERROR);
 
-        menu_item_activate(console_select_cb);
-        menu_item_deactivate(console_pause_cb);
-        menu_item_deactivate(console_resume_cb);
-        menu_item_deactivate(console_terminate_cb);
-        menu_item_deactivate(console_detach_cb);
-        menu_item_activate(console_attach_cb);	
+	menu_item_activate(console_select_cb);
+	menu_item_deactivate(console_send_poweroff_cb);
+	menu_item_deactivate(console_send_ctrl_alt_del_cb);
+	menu_item_deactivate(console_send_shutdown_cb);
+	menu_item_deactivate(console_detach_cb);
+	menu_item_activate(console_attach_cb);	
 
 	co_user_monitor_close(message_monitor);	
 
@@ -433,15 +405,7 @@ co_rc_t console_window_t::detach()
 	return CO_RC(OK);
 }
 
-co_rc_t console_window_t::terminate()
-{
-	if (state != CO_CONSOLE_STATE_ATTACHED)
-		return CO_RC(ERROR);
-
-	return detach();
-}
-
-co_rc_t console_window_t::send_ctrl_alt_del(int poweroff)
+co_rc_t console_window_t::send_ctrl_alt_del(co_linux_message_power_type_t poweroff)
 {
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return CO_RC(ERROR);
@@ -460,11 +424,7 @@ co_rc_t console_window_t::send_ctrl_alt_del(int poweroff)
 	message.linux_msg.device = CO_DEVICE_POWER;
 	message.linux_msg.unit = 0;
 	message.linux_msg.size = sizeof(message.data);
-	
-	if (poweroff == 0)
-		message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
-	else
-		message.data.type = CO_LINUX_MESSAGE_POWER_SHUTDOWN;
+	message.data.type = poweroff;
 
 	co_user_monitor_message_send(message_monitor, &message.message);
 

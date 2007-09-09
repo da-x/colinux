@@ -48,8 +48,7 @@ static bool_t stoped = PFALSE;
 void co_winnt_daemon_stop(void)
 {
 	if (g_daemon != NULL) {
-		g_daemon->next_reboot_will_shutdown = PTRUE;
-		co_daemon_send_ctrl_alt_del(g_daemon);
+		co_daemon_send_shutdown(g_daemon);
 		stoped = PTRUE;
 	}
 }

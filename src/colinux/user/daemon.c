@@ -502,7 +502,7 @@ out:
 	return rc;
 }
 
-void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon)
+void co_daemon_send_shutdown(co_daemon_t *daemon)
 {
 	struct {
 		co_message_t message;
@@ -510,10 +510,8 @@ void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon)
 		co_linux_message_power_t data;
 	} message;
 
-	if (daemon->next_reboot_will_shutdown)
-		co_terminal_print_color(CO_TERM_COLOR_YELLOW, "colinux: Linux VM goes shutdown, please wait!\n");
-	else
-		co_terminal_print("colinux: Linux VM reboot\n");
+	daemon->next_reboot_will_shutdown = PTRUE;
+	co_terminal_print_color(CO_TERM_COLOR_YELLOW, "colinux: Linux VM goes shutdown, please wait!\n");
 
 	message.message.from = CO_MODULE_DAEMON;
 	message.message.to = CO_MODULE_LINUX;
@@ -523,7 +521,7 @@ void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon)
 	message.linux_msg.device = CO_DEVICE_POWER;
 	message.linux_msg.unit = 0;
 	message.linux_msg.size = sizeof(message.data);
-	message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
+	message.data.type = CO_LINUX_MESSAGE_POWER_SHUTDOWN;
 
 	co_user_monitor_message_send(daemon->message_monitor, &message.message);
 }

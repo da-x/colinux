@@ -236,7 +236,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,328 @@
+@@ -0,0 +1,331 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -359,6 +359,9 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +			break;
 +		case CO_LINUX_MESSAGE_POWER_SHUTDOWN:
 +			co_shedule_shutdown();
++			break;
++		case CO_LINUX_MESSAGE_POWER_OFF:
++			machine_power_off();
 +			break;
 +		}
 +		co_free_message(node_message);
@@ -1884,7 +1887,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -0,0 +1,346 @@
+@@ -0,0 +1,347 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -2001,6 +2004,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +typedef enum {
 +	CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL=0,
 +	CO_LINUX_MESSAGE_POWER_SHUTDOWN,
++	CO_LINUX_MESSAGE_POWER_OFF,
 +} co_linux_message_power_type_t;
 +
 +typedef struct {
@@ -3120,7 +3124,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/reboot_co.c
 +		return 0;
 +	printk(KERN_INFO "%s spawn failed\n", argv_halt[0]);
 +
-+	printk(KERN_INFO "Fallback into reboot with power off later\n");
++	printk(KERN_INFO "Fallback into reboot and power off\n");
 +	co_powering_off++;
 +	ctrl_alt_del();
 +
