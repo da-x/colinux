@@ -57,6 +57,9 @@ BINUTILS=binutils-$BINUTILS_RELEASE
 BINUTILS_ARCHIVE=$BINUTILS-src.tar.gz
 #BINUTILS_PATCH="patch/$BINUTILS.diff"
 
+# Minimal binutils version for target. Requirements from Linux kernel
+BINUTILS_REQUIREMENTS="2.12.0"
+
 GCC_VERSION="4.1.2"
 GCC_RELEASE="$GCC_VERSION"
 GCC=gcc-$GCC_RELEASE
