@@ -86,7 +86,7 @@ static co_rc_t co_os_file_block_detect_size_binary_search(HANDLE handle, unsigne
 	}
 
 	if (test_buffer_size >= test_buffer_size_max) {
-		co_debug_error("%s: size is zero\n", __FUNCTION__);
+		co_debug_error("size is zero\n");
 		*out_size = 0;
 		co_os_free(test_buffer);
 		return CO_RC(ERROR);
@@ -172,7 +172,7 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 	co_rc_t rc;
 	bool_t opened = PFALSE;
 
-	co_debug("%s: device %s\n", __FUNCTION__, fdev->pathname);
+	co_debug("device %s\n", fdev->pathname);
 
 	if (fdev->sysdep == NULL) {
 		rc = co_os_file_open(fdev->pathname, &FileHandle, FILE_READ_DATA);
@@ -193,13 +193,13 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 
 	if (status == STATUS_SUCCESS) {
 		*size = fsi.EndOfFile.QuadPart;
-		co_debug("%s: reported size: %llu KBs\n", __FUNCTION__, (*size >> 10));
+		co_debug("reported size: %llu KBs\n", (*size >> 10));
 		rc = CO_RC(OK);
 	}
 	else {
 		rc = co_os_file_block_detect_size(FileHandle, size);
 		if (CO_OK(rc)) {
-			co_debug("%s: detected size: %llu KBs\n", __FUNCTION__, (*size >> 10));
+			co_debug("detected size: %llu KBs\n", (*size >> 10));
 		}
 	}
 	
