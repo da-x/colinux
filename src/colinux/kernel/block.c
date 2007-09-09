@@ -81,7 +81,7 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned int index,
 		break;
 	}
 	case CO_BLOCK_GET_ALIAS: {
-		co_debug("cobd%d: %x, %x\n", index, dev, dev->conf);
+		co_debug("cobd%d: %p, %p\n", index, dev, dev->conf);
 		if (!dev->conf || !dev->conf->enabled || !dev->conf->alias_used)
 			return CO_RC(ERROR);
 		dev->conf->alias[sizeof(dev->conf->alias)-1] = '\0';
@@ -100,7 +100,7 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned int index,
 			co_debug("cobd%d: open success (count=%d)\n", index, dev->use_count);
 			dev->use_count++;
 		} else {
-			co_debug_error("cobd%d: open failed (count=%d, rc=%x)\n", index, dev->use_count, rc);
+			co_debug_error("cobd%d: open failed (count=%d, rc=%08x)\n", index, dev->use_count, (int)rc);
 		}
 
 		break;
@@ -110,7 +110,7 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned int index,
 			dev->use_count--;
 			co_debug("cobd%d: close success (count=%d)\n", index, dev->use_count);
 		} else {
-			co_debug_error("cobd%d: close failed (count=%d, rc=%x)\n", index, dev->use_count, rc);
+			co_debug_error("cobd%d: close failed (count=%d, rc=%08x)\n", index, dev->use_count, (int)rc);
 		}
 		break;
 	default:

@@ -145,7 +145,7 @@ console_widget_NT_t::set_window(console_window_t * W)
         region.Bottom = 24;
 
         if( ! SetConsoleWindowInfo( output , TRUE , &region ) )
-         co_debug("SetConsoleWindowInfo() error code %d\n", GetLastError());
+         co_debug("SetConsoleWindowInfo() error 0x%lx\n", GetLastError());
 
 	screen =
 	    (CHAR_INFO *) co_os_malloc(sizeof (CHAR_INFO) * size.X * size.Y);
@@ -155,7 +155,7 @@ console_widget_NT_t::set_window(console_window_t * W)
 				      CONSOLE_TEXTMODE_BUFFER, 0);
 
 	if( ! SetConsoleScreenBufferSize( buffer , size ) )
-          co_debug("SetConsoleScreenBufferSize() error %d\n", GetLastError());
+          co_debug("SetConsoleScreenBufferSize() error 0x%lx\n", GetLastError());
 
 	SetConsoleMode(buffer, 0);
 
@@ -187,11 +187,11 @@ console_widget_NT_t::draw()
 		DWORD z;
 		if (!FillConsoleOutputCharacter
 		    (buffer, blank.Char.AsciiChar, size.X * size.Y, c, &z))
-			co_debug("FillConsoleOutputCharacter() error code %d\n",
+			co_debug("FillConsoleOutputCharacter() error 0x%lx\n",
 				 GetLastError());
 		if (!FillConsoleOutputAttribute
 		    (buffer, blank.Attributes, size.X * size.Y, c, &z))
-			co_debug("FillConsoleOutputAttribute() error code %d\n",
+			co_debug("FillConsoleOutputAttribute() error 0x%lx\n",
 				 GetLastError());
 		return;
 	}
@@ -209,7 +209,7 @@ console_widget_NT_t::draw()
 	COORD c = {0, 0};
 
 	if (!WriteConsoleOutput(buffer, screen, size, c, &r))
-		co_debug("WriteConsoleOutput() error %d \n", GetLastError());
+		co_debug("WriteConsoleOutput() error 0x%lx\n", GetLastError());
 }
 
 void
@@ -219,7 +219,7 @@ console_widget_NT_t::update()
 	COORD c = { 0, 0 };
 
 	if (!ReadConsoleOutput(buffer, screen, size, c, &r))
-		co_debug("ReadConsoleOutput() error %d \n", GetLastError());
+		co_debug("ReadConsoleOutput() error 0x%lx\n", GetLastError());
 
 	co_console_cell_t *cell = console->screen;
 	CHAR_INFO *ci = screen;
@@ -248,7 +248,7 @@ console_widget_NT_t::op_scroll_up(
 	c.Y = r.Top - L;
 
 	if (!ScrollConsoleScreenBuffer(buffer, &r, &r, c, &blank))
-		co_debug("ScrollConsoleScreenBuffer() error code: %d \n",
+		co_debug("ScrollConsoleScreenBuffer() error 0x%lx\n",
 			 GetLastError());
 
 	return CO_RC(OK);
@@ -271,7 +271,7 @@ console_widget_NT_t::op_scroll_down(
 	c.Y = r.Top + L;
 
 	if (!ScrollConsoleScreenBuffer(buffer, &r, &r, c, &blank))
-		co_debug("ScrollConsoleScreenBuffer() error code: %d \n",
+		co_debug("ScrollConsoleScreenBuffer() error 0x%lx\n",
 			 GetLastError());
 
 	return CO_RC(OK);
@@ -313,7 +313,7 @@ console_widget_NT_t::op_putcs(
 	} while (count--);
 
 	if (!WriteConsoleOutput(buffer, screen, size, c, &r))
-		co_debug("WriteConsoleOutput() error %d \n", GetLastError());
+		co_debug("WriteConsoleOutput() error 0x%lx\n", GetLastError());
 
 	return CO_RC(OK);
 }
@@ -340,7 +340,7 @@ console_widget_NT_t::op_putc(
 	ci->Char.AsciiChar = (C & 0x00FF);
 
 	if (!WriteConsoleOutput(buffer, screen, size, c, &r))
-		co_debug("WriteConsoleOutput() error %d \n", GetLastError());
+		co_debug("WriteConsoleOutput() error 0x%lx\n", GetLastError());
 	return CO_RC(OK);
 }
 
@@ -393,7 +393,7 @@ console_widget_NT_t::op_clear(
 	r.Right = R;
 	
 	if (!WriteConsoleOutput(buffer, screen, size, c, &r))
-		co_debug("WriteConsoleOutput() error %d \n", GetLastError());
+		co_debug("WriteConsoleOutput() error 0x%lx\n", GetLastError());
 
 	return CO_RC(OK);
 }
@@ -419,7 +419,7 @@ console_widget_NT_t::op_bmove(
 	r.Right = R;
 
 	if(!ScrollConsoleScreenBuffer(buffer, &r, &region, c, &blank))
-		co_debug("ScrollConsoleScreenBuffer() error %d\n", GetLastError());
+		co_debug("ScrollConsoleScreenBuffer() error 0x%lx\n", GetLastError());
 
 	return CO_RC(OK);
 }

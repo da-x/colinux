@@ -20,8 +20,10 @@ typedef enum {
 	CO_TERM_COLOR_WHITE = 2,
 } co_terminal_color_t;
 
-extern void co_terminal_print(const char *format, ...);
-extern void co_terminal_print_color(co_terminal_color_t color, const char *format, ...);
+extern void co_terminal_print(const char *format, ...)
+	__attribute__ ((format (printf, 1, 2)));
+extern void co_terminal_print_color(co_terminal_color_t color, const char *format, ...)
+	__attribute__ ((format (printf, 2, 3)));
 extern void co_set_terminal_print_hook(co_terminal_print_hook_func_t func);
 extern void co_process_high_priority_set(void);
 extern int co_udp_socket_connect(const char *addr, unsigned short int port);

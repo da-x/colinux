@@ -106,8 +106,7 @@ co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned long open
 			      0);
 
 	if (status != STATUS_SUCCESS)
-		co_debug_lvl(filesystem, 5, "error %x ZwOpenFile('%s')", status, pathname);
-
+		co_debug_lvl(filesystem, 5, "error %x ZwOpenFile('%s')", (int)status, pathname);
 
 	co_winnt_free_unicode(&unipath);
 
@@ -172,8 +171,8 @@ static co_rc_t transfer_file_block(co_monitor_t *cmon,
 	}
 
 	if (status != STATUS_SUCCESS) {
-		co_debug_error("block io failed: %x %x (reason: %x)",
-				linuxvm, size, status);
+		co_debug_error("block io failed: %p %lx (reason: %x)",
+				linuxvm, size, (int)status);
 		rc = status_convert(status);
 	}
 
@@ -392,7 +391,7 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 			      NULL, 0);
 
 	if (!NT_SUCCESS(status)) {
-		co_debug_lvl(filesystem, 5, "error %x ZwCreateFile('%s')", status, dirname);
+		co_debug_lvl(filesystem, 5, "error %x ZwCreateFile('%s')", (int)status, dirname);
                 rc = status_convert(status);
                 goto error_2;
         }
@@ -409,7 +408,7 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 						      PTRUE);
 			
 			if (!NT_SUCCESS(status)) {
-				co_debug_lvl(filesystem, 5, "error %x ZwQueryDirectoryFile('%s')", status, filename);
+				co_debug_lvl(filesystem, 5, "error %x ZwQueryDirectoryFile('%s')", (int)status, filename);
 				rc = status_convert(status);
 				goto error_3;
 			} else {
@@ -420,7 +419,7 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 				FileAttributes = entry_buffer.entry2.FileAttributes;
 			}
 		} else {
-			co_debug_lvl(filesystem, 5, "error %x ZwQueryDirectoryFile('%s')", status, filename);
+			co_debug_lvl(filesystem, 5, "error %x ZwQueryDirectoryFile('%s')", (int)status, filename);
 			rc = status_convert(status);
 			goto error_3;
 		}
@@ -510,7 +509,7 @@ retry:
 				goto retry;
 		}
 
-		co_debug_lvl(filesystem, 5, "error %x ZwDeleteFile('%s')", status, filename);
+		co_debug_lvl(filesystem, 5, "error %x ZwDeleteFile('%s')", (int)status, filename);
 	}
 
 	co_winnt_free_unicode(&unipath);
@@ -572,7 +571,7 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	rc = status_convert(status);
 
 	if (!CO_OK(rc))
-		co_debug_lvl(filesystem, 5, "error %x ZwSetInformationFile rename %s,%s\n", status, filename, dest_filename);
+		co_debug_lvl(filesystem, 5, "error %x ZwSetInformationFile rename %s,%s\n", (int)status, filename, dest_filename);
 
 error2:
 	co_os_file_close(handle);
@@ -627,7 +626,7 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 			      NULL, 0);
 	
 	if (!NT_SUCCESS(status)) {
-		co_debug_lvl(filesystem, 5, "error %x ZwCreateFile('%s')", status, dirname);
+		co_debug_lvl(filesystem, 5, "error %x ZwCreateFile('%s')", (int)status, dirname);
 		rc = status_convert(status);
 		goto error;
 	}

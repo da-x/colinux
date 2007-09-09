@@ -44,7 +44,7 @@ co_rc_t co_os_transfer_file_block(struct co_monitor *cmon,
 		set_fs(fs);
 
 		if (size_read != size) {
-			co_debug("co_os_transfer_file_block: read error: %d != %d\n",
+			co_debug("co_os_transfer_file_block: read error: %d != %ld\n",
 				 size_read, size);
 			rc = CO_RC(ERROR);
 		}
@@ -62,7 +62,7 @@ co_rc_t co_os_transfer_file_block(struct co_monitor *cmon,
 		set_fs(fs);
 
 		if (size_written != size) {
-			co_debug("co_os_transfer_file_block: write error: %d != %d\n",
+			co_debug("co_os_transfer_file_block: write error: %d != %ld\n",
 				 size_written, size);
 			rc = CO_RC(ERROR);
 		}
@@ -124,8 +124,8 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 
 	filp = filp_open(fdev->pathname, O_RDONLY | O_LARGEFILE, 0);
         if (IS_ERR(filp)) {
-		co_debug("error opening file '%s' (errno=%d)\n",
-		         (fdev->pathname) ? fdev->pathname : "(NULL)", -(long)filp);
+		co_debug("error opening file '%s' (errno %ld)\n",
+		         (fdev->pathname) ? fdev->pathname : "(NULL)", PTR_ERR(filp));
 		return CO_RC(ERROR);
 	}
 

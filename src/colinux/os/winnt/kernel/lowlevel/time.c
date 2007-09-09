@@ -62,7 +62,7 @@ unsigned long co_os_get_cpu_khz(void)
 		    		query, NULL, NULL);
 
 		if (status != STATUS_SUCCESS)
-			co_debug("getting MHz failed %x", status);
+			co_debug("getting MHz failed %x", (int)status);
 	}
 
 	return(1000*mhz);

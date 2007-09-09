@@ -66,7 +66,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 
 	rc = co_monitor_get_pfn(cmon, cmon->import.kernel_swapper_pg_dir, &swapper_pg_dir_pfn);
 	if (!CO_OK(rc)) {
-		co_debug_error("error getting swapper_pg_dir pfn (%x)\n", rc);
+		co_debug_error("error %08x getting swapper_pg_dir pfn\n", (int)rc);
 		goto out_error;
 	}	
 	
@@ -74,13 +74,13 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 
 	rc = co_monitor_arch_passage_page_alloc(cmon);
 	if (!CO_OK(rc)) {
-		co_debug_error("error allocating passage page (%d)\n", rc);
+		co_debug_error("error %08x allocating passage page\n", (int)rc);
 		goto out_error;
 	}
 
 	rc = co_monitor_arch_passage_page_init(cmon);
 	if (!CO_OK(rc)) {
-		co_debug_error("error initializing the passage page (%d)\n", rc);
+		co_debug_error("error %08x initializing the passage page\n", (int)rc);
 		goto out_error;
 	}
 
@@ -93,7 +93,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 
 	rc = co_monitor_create_ptes(cmon, cmon->import.kernel_swapper_pg_dir, CO_ARCH_PAGE_SIZE, pfns);
 	if (!CO_OK(rc)) {
-		co_debug_error("error initializing swapper_pg_dir (%x)\n", rc);
+		co_debug_error("error %08x initializing swapper_pg_dir\n", (int)rc);
 		goto out_error;
 	}
 
@@ -104,19 +104,19 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 					     sizeof(linux_pgd_t)*cmon->manager->reversed_map_pgds_count, 
 					     (void *)cmon->manager->reversed_map_pgds);
 	if (!CO_OK(rc)) {
-		co_debug_error("error adding reversed physical mapping (%x)\n", rc);
+		co_debug_error("error %08x adding reversed physical mapping\n", (int)rc);
 		goto out_error;
 	}	
 
 	rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP, CO_ARCH_PAGE_SIZE, pfns);
 	if (!CO_OK(rc)) {
-		co_debug_error("error initializing self_map (%x)\n", rc);
+		co_debug_error("error %08x initializing self_map\n", (int)rc);
 		goto out_error;
 	}
 
 	rc = co_monitor_get_pfn(cmon, CO_VPTR_SELF_MAP, &self_map_pfn);
 	if (!CO_OK(rc)) {
-		co_debug_error("error getting self_map pfn (%x)\n", rc);
+		co_debug_error("error %08x getting self_map pfn\n", (int)rc);
 		goto out_error;
 	}
 
@@ -130,7 +130,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		&self_map_pfn);
 
 	if (!CO_OK(rc)) {
-		co_debug_error("error getting self_map pfn (%x)\n", rc);
+		co_debug_error("error %08x getting self_map pfn\n", (int)rc);
 		goto out_error;
 	}	
 
@@ -144,7 +144,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		&passage_page_pfn);
 
 	if (!CO_OK(rc)) {
-		co_debug_error("error mapping passage page into the self map (%x)\n", rc);
+		co_debug_error("error %08x mapping passage page into the self map\n", (int)rc);
 		goto out_error;
 	}	
 
@@ -155,11 +155,11 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		&self_map_pfn);
 	
 	if (!CO_OK(rc)) {
-		co_debug_error("error initializing self_map (%x)\n", rc);
+		co_debug_error("error %08x initializing self_map\n", (int)rc);
 		goto out_error;
 	}	
 
-	long io_buffer_page = 0;
+	long io_buffer_page;
 	long io_buffer_num_pages = CO_VPTR_IO_AREA_SIZE >> CO_ARCH_PAGE_SHIFT;
 	long io_buffer_offset = ((CO_VPTR_IO_AREA_START & ((1 << PGDIR_SHIFT) - 1)) >> CO_ARCH_PAGE_SHIFT) 
 		* sizeof(linux_pte_t);
@@ -171,7 +171,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP + io_buffer_offset,
 					    sizeof(linux_pte_t), &io_buffer_pfn);
 		if (!CO_OK(rc)) {
-			co_debug_error("error initializing io buffer (%x, %d)\n", rc, io_buffer_page);
+			co_debug_error("error %08x initializing io buffer (%ld)\n", (int)rc, io_buffer_page);
 			goto out_error;
 		}
 		
@@ -285,7 +285,7 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 		unsigned long size = message->size + sizeof(*message);
 
 		if (message->from == CO_MODULE_CONET0)
-			co_debug_lvl(network, 14, "message sent to linux: %x", message);
+			co_debug_lvl(network, 14, "message sent to linux: %p", message);
 		
 		if (io_buffer + size > io_buffer_end) {
 			break;
@@ -329,7 +329,7 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 
 	co_passage_page->params[0] = io_buffer - (unsigned char *)&cmon->io_buffer->buffer;
 
-	co_debug_lvl(messages, 12, "sending messages to linux (%d bytes)\n", co_passage_page->params[0]);
+	co_debug_lvl(messages, 12, "sending messages to linux (%ld bytes)\n", co_passage_page->params[0]);
 
 	return CO_RC(OK);
 }
@@ -380,7 +380,7 @@ static bool_t co_terminate(co_monitor_t *cmon)
 			co_snprintf(cmon->bug_info.file, sizeof(cmon->bug_info.file),
 				    "...%s", str + len - sizeof(cmon->bug_info.file) + 4);
 
-		co_debug_system("BUG%d at %s:%d\n", cmon->bug_info.code,
+		co_debug_system("BUG%ld at %s:%ld\n", cmon->bug_info.code,
 				cmon->bug_info.file, cmon->bug_info.line);
 	}
 
@@ -448,7 +448,7 @@ static void incoming_message(co_monitor_t *cmon, co_message_t *message)
 	co_rc_t rc;
 
 	if (message->to == CO_MODULE_CONET0)
-		co_debug_lvl(network, 14, "message received: %x %x", cmon, message);
+		co_debug_lvl(network, 14, "message received: %p %p", cmon, message);
 	
 	co_os_mutex_acquire(cmon->connected_modules_write_lock);
 	opened = cmon->connected_modules[message->to];
@@ -464,7 +464,7 @@ static void incoming_message(co_monitor_t *cmon, co_message_t *message)
 	}
 
 	if (message->to == CO_MODULE_CONET0)
-		co_debug_lvl(network, 14, "message received end: %x %x", cmon, message);
+		co_debug_lvl(network, 14, "message received end: %p %p", cmon, message);
 
 	switch (message->to) {
 	case CO_MODULE_CONSOLE:
@@ -509,7 +509,7 @@ static bool_t iteration(co_monitor_t *cmon)
 		break;
 	}
 
-	co_debug_lvl(context_switch, 14, "switching to linux (%d)\n", co_passage_page->operation);
+	co_debug_lvl(context_switch, 14, "switching to linux (%ld)\n", co_passage_page->operation);
 	co_host_switch_wrapper(cmon);
 
 	if (co_passage_page->operation == CO_OPERATION_FORWARD_INTERRUPT)
@@ -606,7 +606,7 @@ static bool_t iteration(co_monitor_t *cmon)
                 return PTRUE;
 
 	default:
-		co_debug_lvl(context_switch, 5, "unknown operation %d not handled\n", co_passage_page->operation);
+		co_debug_lvl(context_switch, 5, "unknown operation %ld not handled\n", co_passage_page->operation);
 		return PFALSE;
 	}
 	
@@ -639,12 +639,12 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 		rc = co_monitor_file_block_init(dev, &conf_dev->pathname);
 		if (CO_OK(rc)) {
 			dev->dev.conf = conf_dev;
-			co_debug("cobd%d: enabled (%x)\n", i, dev);
+			co_debug("cobd%d: enabled (%p)\n", i, dev);
 			co_monitor_block_register_device(cmon, i, (co_block_dev_t *)dev);
 			dev->dev.free = free_file_blockdevice;
 		} else {
 			co_monitor_free(cmon, dev);
-			co_debug_error("cobd%d: cannot enable (%x)\n", i, rc);
+			co_debug_error("cobd%d: cannot enable (%08x)\n", i, (int)rc);
 			goto error_1;
 		}
 	}
@@ -777,7 +777,7 @@ static co_rc_t load_section(co_monitor_t *cmon, co_monitor_ioctl_load_section_t 
 		return CO_RC(ERROR);
 
 	if (params->user_ptr) {
-		co_debug("loading section at 0x%x (0x%x bytes)\n", params->address, params->size);
+		co_debug("loading section at 0x%lx (0x%lx bytes)\n", params->address, params->size);
 		rc = co_monitor_copy_region(cmon, params->address, params->size, params->buf);
 	} else {
 		rc = co_monitor_copy_region(cmon, params->address, params->size, NULL);
@@ -801,7 +801,7 @@ static co_rc_t load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_t *p
 	 */
 	address = CO_ARCH_KERNEL_OFFSET + cmon->memory_size - (pages << CO_ARCH_PAGE_SHIFT);
 	
-	co_debug("initrd address: %x (0x%x pages)\n", address, pages);
+	co_debug("initrd address: %lx (0x%lx pages)\n", address, pages);
 
 	if (address <= cmon->core_end + 0x100000) {
 		co_debug_error("initrd is too close to the kernel code, not enough memory)\n");
@@ -812,7 +812,7 @@ static co_rc_t load_initrd(co_monitor_t *cmon, co_monitor_ioctl_load_initrd_t *p
 
 	rc = co_monitor_copy_region(cmon, address, params->size, params->buf);
 	if (!CO_OK(rc)) {
-		co_debug_error("initrd copy failed (%x)\n", rc);
+		co_debug_error("initrd copy failed (%x)\n", (int)rc);
 		return rc;
 	}
 
@@ -835,7 +835,7 @@ static co_rc_t start(co_monitor_t *cmon)
 		
 	rc = guest_address_space_init(cmon);
 	if (!CO_OK(rc)) {
-		co_debug_error("error initializing coLinux context (%d)\n", rc);
+		co_debug_error("error %08x initializing coLinux context\n", (int)rc);
 		return rc;
 	}
 
@@ -975,14 +975,14 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 		cmon->memory_size = cmon->config.ram_size;
 	}
 
-	co_debug("configured to %d MB\n", cmon->memory_size);
+	co_debug("configured to %ld MB\n", cmon->memory_size);
 
 	if (cmon->memory_size < 8)
 		cmon->memory_size = 8;
 	else if (cmon->memory_size > 1000)	/* 1000 = 1024 - 8*4 */
 		cmon->memory_size = 1000;	/* 24MB = 8 Pages a 4K reserved */
 
-	co_debug("after adjustments: %d MB\n", cmon->memory_size);
+	co_debug("after adjustments: %ld MB\n", cmon->memory_size);
 
 	cmon->memory_size <<= 20; /* Megify */
 	
@@ -1005,13 +1005,13 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 
         rc = co_os_timer_create(&timer_callback, cmon, 10, &cmon->timer); /* HZ value */
         if (!CO_OK(rc)) {
-                co_debug_error("creating host OS timer (%x)\n", rc);
+                co_debug_error("error %08x creating host OS timer\n", (int)rc);
                 goto out_free_pp;
         }
 
 	rc = load_configuration(cmon);
 	if (!CO_OK(rc)) {
-		co_debug_error("loading monitor configuration (%x)\n", rc);
+		co_debug_error("error %08x loading monitor configuration\n", (int)rc);
 		goto out_destroy_timer;
 	}
 
@@ -1077,7 +1077,7 @@ static co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
 	manager = cmon->manager;
 
 	co_debug("cleaning up\n");
-	co_debug("before free: %d blocks\n", cmon->blocks_allocated);
+	co_debug("before free: %ld blocks\n", cmon->blocks_allocated);
 
 	if (cmon->state == CO_MONITOR_STATE_RUNNING ||
 	    cmon->state == CO_MONITOR_STATE_STARTED)
@@ -1102,7 +1102,7 @@ static co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
 	co_console_destroy(cmon->console);
 	cmon->console = NULL;
 
-	co_debug("after free: %d blocks\n", cmon->blocks_allocated);
+	co_debug("after free: %ld blocks\n", cmon->blocks_allocated);
 	co_os_free(cmon);
 
 	return CO_RC_OK;

@@ -518,20 +518,21 @@ void co_monitor_arch_passage_page_free(co_monitor_t *cmon)
 
 static inline void co_passage_page_dump_state(co_arch_state_stack_t *state)
 {
-	co_debug("cs: %04x   ds: %04x   es: %04x   fs: %04x   gs: %04x   ss: %04x\n",
+	co_debug("cs: %04lx   ds: %04lx   es: %04lx   fs: %04lx   gs: %04lx   ss: %04lx\n",
 		 state->cs, state->ds, state->es, state->fs, state->gs, state->ss);
 
-	co_debug("cr0: %08x   cr2: %08x   cr3: %08x   cr4: %08x\n",
+	co_debug("cr0: %08lx   cr2: %08lx   cr3: %08lx   cr4: %08lx\n",
 		 state->cr0, state->cr2, state->cr3, state->cr4);
 
-	co_debug("dr0: %08x   dr1: %08x  dr2: %08x  dr3: %08x  dr6: %08x  dr7: %08x\n",
+	co_debug("dr0: %08lx   dr1: %08lx  dr2: %08lx  dr3: %08lx  dr6: %08lx  dr7: %08lx\n",
 		 state->dr0, state->dr1, state->dr2, state->dr3, state->dr6, state->dr7);
 
-	co_debug("gdt: %08x:%04x   idt:%08x:%04x   ldt:%04x  tr:%04x\n",
-		 state->gdt.base, state->gdt.limit,  state->idt.table, state->idt.size,
+	co_debug("gdt: %08lx:%04x   idt:%08lx:%04x   ldt:%04x  tr:%04x\n",
+		 (long)state->gdt.base, state->gdt.limit,
+		 (long)state->idt.table, state->idt.size,
 		 state->ldt, state->tr);
 
-	co_debug("return_eip: %08x   flags: %08x   esp: %8x\n",
+	co_debug("return_eip: %08lx   flags: %08lx   esp: %08lx\n",
 		 state->return_eip, state->flags, state->esp);
 }
 
@@ -764,7 +765,7 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	else
 		co_fnsave(pp->linuxvm_state.fxstate);
 
-	co_debug("Passage page dump: %x\n", co_monitor_arch_passage_page_init);
+	co_debug("Passage page dump: %lx\n", (long)co_monitor_arch_passage_page_init);
 
 	co_passage_page_dump(pp);
 

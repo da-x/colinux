@@ -62,7 +62,7 @@ static int PasteClipboardIntoColinux( )
 	// Lock clipboard for inspection -- TODO: try again on failure
 	if ( ! ::OpenClipboard(NULL) )
 	{
-		co_debug( "OpenClipboard() error %d !", ::GetLastError() );
+		co_debug( "OpenClipboard() error 0x%lx !", ::GetLastError() );
 		return -1;
 	}
 	HANDLE h = ::GetClipboardData( CF_TEXT );

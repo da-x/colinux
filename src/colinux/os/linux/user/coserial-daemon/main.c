@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
 	rc = coserial_main(argc, argv);
 
 	if (!CO_OK(rc))
-		co_terminal_print("colinux-serial-daemon: exitcode %08x\n", rc);
+		co_terminal_print("colinux-serial-daemon: exitcode %x\n", (int)rc);
 
 	co_debug_end();
 

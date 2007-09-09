@@ -66,7 +66,7 @@ static int daemon_main(int argc, char *argv[])
 
 	rc = co_os_manager_is_installed(&installed);
 	if (!CO_OK(rc)) {
-		co_terminal_print("daemon: error, unable to determine if driver is installed (rc %d)\n", rc);
+		co_terminal_print("daemon: error, unable to determine if driver is installed (rc %x)\n", (int)rc);
 		return -1;
 	}
 	
@@ -122,7 +122,7 @@ out:
 			char buf[0x100];
 			co_rc_format_error(rc, buf, sizeof(buf));
 
-			co_terminal_print("daemon: exit code %x\n", rc);
+			co_terminal_print("daemon: exit code %08x\n", (int)rc);
 			co_terminal_print("daemon: %s\n", buf);
 		}
 		ret = -1;

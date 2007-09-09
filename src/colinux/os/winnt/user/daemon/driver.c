@@ -40,7 +40,7 @@ static co_rc_t co_win32_manager_is_installed(bool_t *installed)
 		if (CO_RC_GET_CODE(rc) == CO_RC_ACCESS_DENIED)
 			co_terminal_print("access defined, not enough privileges\n");
 		else
-			co_terminal_print("error, unable to determine if driver is installed (rc %x)\n", rc);
+			co_terminal_print("error, unable to determine if driver is installed (rc %x)\n", (int)rc);
 	}
 
 	return rc;
@@ -67,7 +67,7 @@ co_rc_t co_winnt_install_driver(void)
 	
 	rc = co_winnt_driver_install_lowlevel();
 	if (!CO_OK(rc)) {
-		co_terminal_print("cannot install (%x)\n", rc);
+		co_terminal_print("cannot install (rc %x)\n", (int)rc);
 		return CO_RC(ERROR);
 	}
 	
@@ -155,17 +155,15 @@ co_rc_t co_winnt_status_driver(int verbose)
 	rc = co_manager_status(handle, &status);
 	if (!CO_OK(rc)) {
 		if (verbose)
-			co_terminal_print("couldn't get driver status (rc %x)\n", rc);
+			co_terminal_print("couldn't get driver status (rc %x)\n", (int)rc);
 		co_os_manager_close(handle);
 		return rc;
 	}		
 
 	if (verbose) {
-		if (status.state >= CO_MANAGER_STATE_INITIALIZED)
-			co_terminal_print("current state: %d (fully initialized)\n", status.state);
-		else
-			co_terminal_print("current state: %d\n", status.state);
-
+		co_terminal_print("current state: %ld%s\n", status.state,
+				  (status.state >= CO_MANAGER_STATE_INITIALIZED) ?
+				  " (fully initialized)" : "");
 		co_terminal_print("current number of monitors: %d\n", status.monitors_count);
 		co_terminal_print("current linux api version: %d\n", status.linux_api_version);
 		co_terminal_print("current periphery api version: %d\n", status.periphery_api_version);
@@ -249,7 +247,7 @@ static co_rc_t co_winnt_start_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LPCT
 		if (err == ERROR_SERVICE_ALREADY_RUNNING) 
 			co_terminal_print("failure: StartService, ERROR_SERVICE_ALREADY_RUNNING\n"); 
 		else 
-			co_terminal_print("failure: StartService (0x%02x)\n", err);
+			co_terminal_print("failure: StartService (0x%lx)\n", err);
 #endif
 	} 
  

@@ -34,7 +34,7 @@ static void set_hostmem_usage_limit(co_manager_t *manager)
 		manager->hostmem_usage_limit = ((manager->hostmem_amount/0x100000)*3/4) * 0x100000;
 	}
 
-	co_debug("machine RAM use limit: %d MB\n" , manager->hostmem_amount/0x100000);
+	co_debug("machine RAM use limit: %ld MB\n" , manager->hostmem_amount/0x100000);
 }
 
 co_rc_t co_manager_load(co_manager_t *manager)
@@ -62,7 +62,7 @@ co_rc_t co_manager_load(co_manager_t *manager)
 		goto out_err_mutex;
 	}
 
-	co_debug("machine has %d MB of RAM\n", (manager->hostmem_pages >> 8));
+	co_debug("machine has %ld MB of RAM\n", (manager->hostmem_pages >> 8));
 
 	manager->hostmem_amount = manager->hostmem_pages << CO_ARCH_PAGE_SHIFT;
 
@@ -446,7 +446,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 		*return_size = sizeof(*params);
 
 		if (in_size < sizeof(*params)) {
-			co_debug_error("monitor ioctl too small! (%d < %d)\n", in_size, sizeof(*params));
+			co_debug_error("monitor ioctl too small! (%ld < %d)\n", in_size, sizeof(*params));
 			params->rc = CO_RC(MONITOR_NOT_LOADED);
 			break;
 		}

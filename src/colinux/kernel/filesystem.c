@@ -69,7 +69,7 @@ static co_inode_t *alloc_inode(co_filesystem_t *filesystem, co_inode_t *parent, 
 	co_list_add_tail(&inode->hash_node, &filesystem->inode_hashes[inode->number % CO_FS_HASH_TABLE_SIZE]);
 
 	filesystem->inodes_count++;
-	co_debug_lvl(filesystem, 10, "inode [%d] allocated %x child '%s' of %x\n", 
+	co_debug_lvl(filesystem, 10, "inode [%d] allocated %p child '%s' of %p\n",
 		     filesystem->inodes_count, inode, name ? name : "<root>", parent);
 	
 	return inode;
@@ -105,7 +105,7 @@ static void free_inode(co_filesystem_t *filesystem, co_inode_t *inode)
 	if (inode->name)
 		co_os_free(inode->name);
 	co_os_free(inode);
-	co_debug_lvl(filesystem, 10, "inode [%d] freed %x\n", filesystem->inodes_count, inode);
+	co_debug_lvl(filesystem, 10, "inode [%d] freed %p\n", filesystem->inodes_count, inode);
 	filesystem->inodes_count--;
 }
 

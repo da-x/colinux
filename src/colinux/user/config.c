@@ -632,7 +632,7 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 	if (!exists)
 		conf->ram_size = 32;
 		
-	co_debug_info("configuring %d MB of virtual RAM", conf->ram_size);
+	co_debug_info("configuring %ld MB of virtual RAM", conf->ram_size);
 
 	rc = parse_args_config_cobd(cmdline, conf);
 	if (!CO_OK(rc))

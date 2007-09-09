@@ -306,7 +306,7 @@ co_rc_t co_load_initrd(co_daemon_t *daemon)
 		return rc;
 	}
 
-	co_debug("initrd size: %d bytes\n", initrd_size);
+	co_debug("initrd size: %ld bytes\n", initrd_size);
 
 	rc = co_user_monitor_load_initrd(daemon->monitor, initrd, initrd_size);
 
@@ -322,7 +322,7 @@ memory_usage_limit_resached(co_manager_ioctl_create_t *create_params)
 	co_manager_handle_t handle;
 	co_rc_t rc;
 
-	co_terminal_print("colinux: memory size configuration for this VM: %d MB\n", 
+	co_terminal_print("colinux: memory size configuration for this VM: %ld MB\n",
 			  create_params->actual_memsize_used / 0x100000);
 	co_terminal_print("colinux: memory usage limit reached\n");
 	co_terminal_print("colinux: try to decrease memory size configuration\n");
@@ -341,9 +341,9 @@ memory_usage_limit_resached(co_manager_ioctl_create_t *create_params)
 	}
 	co_os_manager_close(handle);
 
-	co_terminal_print("colinux: memory usage limit: %d MB\n", 
+	co_terminal_print("colinux: memory usage limit: %ld MB\n",
 			  info.hostmem_usage_limit / 0x100000);
-	co_terminal_print("colinux: current memory used by running VMs: %d MB\n", 
+	co_terminal_print("colinux: current memory used by running VMs: %ld MB\n",
 			  info.hostmem_used / 0x100000);
 }
 
@@ -402,21 +402,21 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 	}
 
 	if (create_params.info.api_version != CO_LINUX_API_VERSION) {
-		co_terminal_print("colinux: error, expected kernel API version %d, got %d\n", CO_LINUX_API_VERSION,
-				  create_params.info.api_version);
+		co_terminal_print("colinux: error, expected kernel API version %d, got %ld\n",
+				  CO_LINUX_API_VERSION, create_params.info.api_version);
 
 		rc = CO_RC(VERSION_MISMATCHED);
 		goto out;
 	}
 
 	if (create_params.info.compiler_abi != __GXX_ABI_VERSION) {
-		co_terminal_print("colinux: error, expected gcc abi version %d, got %d\n",
-		  __GXX_ABI_VERSION, create_params.info.compiler_abi);
+		co_terminal_print("colinux: error, expected gcc abi version %d, got %ld\n",
+				  __GXX_ABI_VERSION, create_params.info.compiler_abi);
 		co_terminal_print("colinux: Daemons gcc version %d.%d.x, "
-				  "incompatible to kernel gcc version %d.%d.x\n",
-		 __GNUC__, __GNUC_MINOR__,
-		 create_params.info.compiler_major,
-		 create_params.info.compiler_minor);
+				  "incompatible to kernel gcc version %ld.%ld.x\n",
+				  __GNUC__, __GNUC_MINOR__,
+				  create_params.info.compiler_major,
+				  create_params.info.compiler_minor);
 
 		rc = CO_RC(COMPILER_MISMATCHED);
 		goto out;
@@ -467,7 +467,7 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 
 	rc = co_elf_image_read(&daemon->elf_data, daemon->buf, size);
 	if (!CO_OK(rc)) {
-		co_terminal_print("error reading image (%d bytes)\n", size);
+		co_terminal_print("error reading image (%ld bytes)\n", size);
 		goto out_free_vmlinux; 
 	}
 
@@ -752,7 +752,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	if (!CO_OK(rc))
 		return rc;
 
-	co_terminal_print("PID: %d\n", daemon->id);
+	co_terminal_print("PID: %d\n", (int)daemon->id);
 
 	rc = co_user_monitor_open(reactor, message_receive,
 				  daemon->id, modules, sizeof(modules)/sizeof(co_module_t),
@@ -767,7 +767,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 		char buf[32];
 		int size;
 
-		size = co_snprintf(buf, sizeof(buf), "%d\n", daemon->id);
+		size = co_snprintf(buf, sizeof(buf), "%d\n", (int)daemon->id);
 		rc = co_os_file_write(start_parameters->pidfile, buf, size);
 		if (!CO_OK(rc)) {
 			co_terminal_print("colinux: error creating PID file '%s'\n", start_parameters->pidfile);
@@ -854,7 +854,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 				break;
 
 			case CO_TERMINATE_BUG:
-				co_terminal_print("colinux: BUG at %s:%d\n", params.bug_info.file, params.bug_info.line);
+				co_terminal_print("colinux: BUG at %s:%ld\n", params.bug_info.file, params.bug_info.line);
 				break;
 
 			default:

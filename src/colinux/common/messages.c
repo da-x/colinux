@@ -84,7 +84,7 @@ co_rc_t co_message_switch_cb_add_to_queue(void *data, co_message_t *message)
 		return rc;
 	}
 
-	co_debug_lvl_message(message, 11, "adding to queue %x\n", queue);
+	co_debug_lvl_message(message, 11, "adding to queue %p\n", queue);
 
 	queue_item->message = message;
 
@@ -140,7 +140,7 @@ co_rc_t co_message_switch_message(co_message_switch_t *ms, co_message_t *message
 
 		/* A message for me */
 		if (message->size != sizeof(co_switch_message_t)) {
-			co_debug_lvl_message(message, 4, "bad messasge size (%d != %d)", message->size,  sizeof(co_switch_message_t));
+			co_debug_lvl_message(message, 4, "bad message size (%ld != %d)", message->size,  sizeof(co_switch_message_t));
 			goto out_free_error;
 		}
 		

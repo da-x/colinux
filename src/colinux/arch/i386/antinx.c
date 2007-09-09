@@ -49,7 +49,7 @@ co_rc_t co_arch_anti_nx_init(co_monitor_t *mon)
 	marchdep = mon->manager->archdep;
 	vaddr = (unsigned long)mon->passage_page;
 
-	co_debug_lvl(misc, 11, "vaddr = %08x\n", vaddr);
+	co_debug_lvl(misc, 11, "vaddr = %08lx\n", vaddr);
 
 	if (!(marchdep->caps[1] & (1 << CO_ARCH_AMD_FEATURE_NX))) {
 		co_debug("AMD's NX is not enabled\n");
@@ -63,20 +63,20 @@ co_rc_t co_arch_anti_nx_init(co_monitor_t *mon)
 	}
 
 	cr3 = co_get_cr3();
-	co_debug_lvl(misc, 11, "cr3 = %08x\n", cr3);
+	co_debug_lvl(misc, 11, "cr3 = %08lx\n", cr3);
 	pfn = cr3 >> CO_ARCH_PAGE_SHIFT;
-	co_debug("pfn = %08x\n", pfn);
+	co_debug("pfn = %08lx\n", (long)pfn);
 	page = co_os_map(mon->manager, pfn);
 	if (!page) {
 		rc = CO_RC(ERROR);
 		goto out;
 	}
 
-	co_debug_lvl(misc, 11, "page = %08x\n", page);
+	co_debug_lvl(misc, 11, "page = %p\n", page);
 	ptes = ((unsigned long long *)&(page[((cr3 & (~CO_ARCH_PAGE_MASK)) & ~0x1f)]));
-	co_debug_lvl(misc, 11, "ptes = %08x\n", ptes);
+	co_debug_lvl(misc, 11, "ptes = %p\n", ptes);
 	pfn_next = ptes[vaddr >> CO_ARCH_PAE_PGD_SHIFT] >> CO_ARCH_PAGE_SHIFT;
-	co_debug_lvl(misc, 11, "pfn_next = %08x\n", pfn_next);
+	co_debug_lvl(misc, 11, "pfn_next = %08lx\n", pfn_next);
 	co_os_unmap(mon->manager, page, pfn);
 	pfn = pfn_next;
 
@@ -86,14 +86,14 @@ co_rc_t co_arch_anti_nx_init(co_monitor_t *mon)
 		goto out;
 	}
 
-	co_debug_lvl(misc, 11, "page = %08x\n", page);
+	co_debug_lvl(misc, 11, "page = %p\n", page);
 	ptes = (unsigned long long *)page;
 	ptes = &ptes[(vaddr & ~CO_ARCH_PAE_PGD_MASK) >> CO_ARCH_PAE_PMD_SHIFT];
-	co_debug_lvl(misc, 11, "ptes = %08x\n", ptes);
+	co_debug_lvl(misc, 11, "ptes = %p\n", ptes);
 
 	if (!(*ptes & _PAGE_PSE)) {
 		pfn_next = (*ptes) >> CO_ARCH_PAGE_SHIFT;
-		co_debug_lvl(misc, 11, "pfn_next = %08x\n", pfn_next);
+		co_debug_lvl(misc, 11, "pfn_next = %08lx\n", pfn_next);
 		co_os_unmap(mon->manager, page, pfn);
 		pfn = pfn_next;
 		
@@ -103,10 +103,10 @@ co_rc_t co_arch_anti_nx_init(co_monitor_t *mon)
 			goto out;
 		}
 		
-		co_debug_lvl(misc, 11, "page = %08x\n", page);
+		co_debug_lvl(misc, 11, "page = %p\n", page);
 		ptes = (unsigned long long *)page;
 		ptes = &ptes[(vaddr & ~CO_ARCH_PAE_PMD_MASK) >> CO_ARCH_PAGE_SHIFT];
-		co_debug_lvl(misc, 11, "ptes = %08x\n", ptes);
+		co_debug_lvl(misc, 11, "ptes = %p\n", ptes);
 	}
 
 	co_debug_lvl(misc, 11, "unmask page NX and flush tlb\n");

@@ -138,7 +138,7 @@ out:
 			co_rc_format_error(rc, buf, sizeof(buf));
 		}
 
-		co_terminal_print("daemon: exit code %x\n", rc);
+		co_terminal_print("daemon: exit code %08x\n", (int)rc);
 		co_terminal_print("daemon: %s\n", buf);
 
 		ret = CO_RC(ERROR);
@@ -289,7 +289,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		ret = 1;
 	}
 
-	co_debug ("rc=%x exit=%d\n", rc, -ret);
+	co_debug("rc=%08x exit=%d\n", (int)rc, -ret);
 	co_debug_end();
 
 	return -ret;

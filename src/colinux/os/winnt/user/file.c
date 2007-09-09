@@ -53,7 +53,7 @@ co_rc_t co_os_file_load(co_pathname_t pathname, char **out_buf, unsigned long *o
 
 	if (size != size_read) {
 		co_terminal_print_last_error(pathname);
-		co_debug_error("Error reading file %s, %d != %d\n",
+		co_debug_error("Error reading file %s, %lu != %lu\n",
 				pathname, size, size_read);
 		free(buf);
 		rc = CO_RC(ERROR);

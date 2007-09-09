@@ -96,7 +96,7 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 	if (pidfile_specified) {
 		rc = read_pid_from_file(pidfile, &start_parameters.attach_id);
 		if (!CO_OK(rc)) {
-			co_terminal_print("error on reading PID from file '%s'\n", &pidfile);
+			co_terminal_print("error on reading PID from file '%s'\n", pidfile);
 			return CO_RC(ERROR);
 		}
 	}

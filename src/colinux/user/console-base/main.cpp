@@ -56,7 +56,7 @@ int co_user_console_main(int argc, char **argv)
 	}
 
 co_user_console_main_error:
-	co_debug("The console program encountered an error: %08x\n", rc);
+	co_debug("The console program encountered an error: %08x\n", (int)rc);
 
 	co_debug_end();
 

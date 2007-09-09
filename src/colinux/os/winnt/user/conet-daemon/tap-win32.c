@@ -299,7 +299,7 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 		return CO_RC(ERROR);
 	}
 
-	co_terminal_print("colinux-net-daemon: TAP driver version %d.%d\n", version.major, version.minor);
+	co_terminal_print("colinux-net-daemon: TAP driver version %ld.%ld\n", version.major, version.minor);
 	
 	*phandle = handle;
 

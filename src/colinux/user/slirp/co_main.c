@@ -321,7 +321,7 @@ out_params:
 	
 out:
 	if (!CO_OK(rc))
-		co_terminal_print("conet-slirp-daemon: exitcode %08x\n", rc);
+		co_terminal_print("conet-slirp-daemon: exitcode %x\n", (int)rc);
 
 	co_debug_end();
 	return rc;

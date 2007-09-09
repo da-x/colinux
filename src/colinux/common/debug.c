@@ -25,7 +25,7 @@ void co_trace_ent_name(void *ptr, const char *name)
 
 	reenter++;
 	
-	co_debug("TRACE: [%08x] %s\n", ptr, name);
+	co_debug("TRACE: [%p] %s\n", ptr, name);
 
 	reenter--;
 }
