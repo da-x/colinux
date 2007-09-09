@@ -126,7 +126,7 @@ patch_kernel_source()
 	if quilt --version >/dev/null 2>&1
 	then
 		# use quilt for patching, don't trust users settings
-		unset QUILT_COMMAND_ARGS
+		unset QUILT_PUSH_ARGS
 		unset QUILT_PATCHES
 		quilt --quiltrc /dev/null push -a \
 		|| error_exit 10 "quilt failed"
