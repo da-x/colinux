@@ -189,42 +189,37 @@ check_binutils_guest()
 
 	# Get version number
 	local PATH="$PATH:$COLINUX_GCC_GUEST_PATH"
-	ver=`${COLINUX_GCC_GUEST_TARGET}-as --version 2>/dev/null | \
+	ver=`${COLINUX_GCC_GUEST_TARGET}-as --version 2>/dev/null || \
+		as --version 2>/dev/null | \
 		sed -n -r -e 's/^.+ ([0-9]+\.[0-9]+\.[0-9]+).+$/\1/p'`
 
 	if [ -z "$ver" ]
 	then
-		ver=`as --version 2>/dev/null | sed -n -r -e \
-			's/^.+ ([0-9]+\.[0-9]+\.[0-9]+).+$/\1/p'`
+		echo "No executables, build now"
+		return 1
 	fi
 
-	if [ -n "$ver" ]
+	# Verify version of installed AS
+	if [ $ver != $BINUTILS_VERSION ]
 	then
-		# Verify version of installed AS
-		if [ $ver = $BINUTILS_VERSION ]
-		then
-			echo "found"
-
-			# Must exist with prefix for kernel build
-			for name in ar as ld nm objdump objcopy strip
-			do
-				if ! which ${COLINUX_GCC_GUEST_TARGET}-$name >/dev/null 2>/dev/null
-				then
-					mkdir -p $COLINUX_GCC_GUEST_PATH
-					ln -s `which $name` $COLINUX_GCC_GUEST_PATH/${COLINUX_GCC_GUEST_TARGET}-$name
-					echo " softlink for ${COLINUX_GCC_GUEST_TARGET}-$name"
-				fi
-			done
-
-			return 0
-		fi
-
 		echo "Wrong version ($ver), build now"
 		return 1
 	fi
 
-	echo "No executables, build now"
-	return 1
+	echo "found"
+
+	# Must have prefix for kernel build
+	for name in ar as ld nm objdump objcopy strip
+	do
+		if ! which ${COLINUX_GCC_GUEST_TARGET}-$name >/dev/null 2>/dev/null
+		then
+			mkdir -p $COLINUX_GCC_GUEST_PATH
+			ln -s `which $name` $COLINUX_GCC_GUEST_PATH/${COLINUX_GCC_GUEST_TARGET}-$name
+			echo " softlink for ${COLINUX_GCC_GUEST_TARGET}-$name"
+		fi
+	done
+
+	return 0
 }
 
 build_binutils_guest()
@@ -257,28 +252,24 @@ check_gcc_guest()
 
 	# Get version number
 	local PATH="$PATH:$COLINUX_GCC_GUEST_PATH"
-	ver=`${COLINUX_GCC_GUEST_TARGET}-gcc -dumpversion 2>/dev/null`
+	ver=`${COLINUX_GCC_GUEST_TARGET}-gcc -dumpversion 2>/dev/null || \
+	     gcc -dumpversion 2>/dev/null`
 
 	if [ -z "$ver" ]
 	then
-		ver=`gcc -dumpversion 2>/dev/null`
+		echo "No executables, build now"
+		return 1
 	fi
 
-	if [ -n "$ver" ]
+	# Verify version of installed GCC
+	if [ $ver != $GCC_VERSION ]
 	then
-		# Verify version of installed GCC
-		if [ $ver = $GCC_VERSION ]
-		then
-			echo "found"
-			return 0
-		fi
-
 		echo "Wrong version ($ver), build now"
 		return 1
 	fi
 
-	echo "No executables, build now"
-	return 1
+	echo "found"
+	return 0
 }
 
 build_gcc_guest()
