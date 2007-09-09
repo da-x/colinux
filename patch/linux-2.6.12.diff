@@ -8065,7 +8065,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +	co_priority_t priority;
 +	co_message_type_t type;
 +	unsigned long size;
-+	char data[0];
++	unsigned char data[0];
 +} __attribute__((packed)) co_message_t;
 +
 +typedef enum {
