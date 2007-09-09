@@ -145,7 +145,8 @@ typedef char co_pathname_t[0x100];
 
 extern int co_snprintf(char *str, long n, const char *format, ...)
 	__attribute__ ((format (printf, 3, 4)));
-extern int co_vsnprintf(char *str, long nmax, const char *format, va_list ap);
+extern int co_vsnprintf(char *str, long nmax, const char *format, va_list ap)
+	__attribute__ ((format (printf, 3, 0)));
 extern void co_rc_format_error(co_rc_t rc, char *buf, int size);
 
 #endif

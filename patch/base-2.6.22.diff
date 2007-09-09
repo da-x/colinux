@@ -236,7 +236,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,331 @@
+@@ -0,0 +1,332 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -503,9 +503,10 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +	if (!code)
 +		return;
 +
++	code--;
 +	for (i=0; i < active_tracepoints; i++) {
-+		if (tracepoints[i].code == code - 1) {
-+			co_debug("TRACEPOINT: %x", code - 1);
++		if (tracepoints[i].code == code) {
++			co_debug("TRACEPOINT: %p", code);
 +			break;
 +		}
 +	}
@@ -518,7 +519,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +
 +	*tracepoints[i].code = tracepoints[i].original_byte;
 +	regs->eflags |= (1 << 8); /* Enable TF */
-+	regs->eip = (unsigned long)(code - 1);
++	regs->eip = (unsigned long)code;
 +	tracepoints[i].off = 1;
 +}
 +
@@ -2239,9 +2240,9 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative_internal.h
-@@ -0,0 +1,79 @@
+@@ -0,0 +1,80 @@
 +/*
-+ *  linux/include/linux/cooperative.h
++ *  linux/include/linux/cooperative_internal.h
 + *
 + *  Copyright (C) 2004 Dan Aloni
 + *
@@ -2262,7 +2263,8 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +	co_message_t msg;
 +} co_message_node_t;
 +
-+extern void co_debug(const char *fmt, ...);
++extern void co_debug(const char *fmt, ...)
++	__attribute__ ((format (printf, 1, 2)));
 +extern void co_printk(const char *line);
 +
 +extern void co_switch_wrapper(void);
