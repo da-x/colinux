@@ -236,7 +236,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,331 @@
+@@ -0,0 +1,327 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -403,9 +403,10 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +
 +static void co_switch_wrapper_protected(void)
 +{
-+	kernel_fpu_begin();
++	unsigned long fs;
++	unsigned long gs;
 +
-+	{
++	kernel_fpu_begin();
 +
 +	/*
 +	 * We don't trust the passage page code to safely restore %gs and %fs.
@@ -414,17 +415,14 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +	 * exits with a segmentation fault rather than bringing down the
 +	 * machine.
 +	 **/
-+	unsigned long fs = 0;
-+	unsigned long gs = 0;
-+
-+        asm volatile("mov %%fs,%0": "=m" (fs));
-+        asm volatile("mov %%gs,%0": "=m" (gs));
++	savesegment(fs, fs);
++	savesegment(gs, gs);
 +
 +	/*
 +	 * Nullify the registers so the passage page code restores to
 +	 * null segment values on return.
 +	 */
-+        asm volatile("movl %0, %%fs;  movl %0, %%gs" : : "r" (0));
++	asm volatile("movl %0, %%fs;  movl %0, %%gs" : : "r" (0));
 +
 +	/* And switch... */
 +	co_switch();
@@ -434,8 +432,6 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +	 */
 +	loadsegment(fs, fs);
 +	loadsegment(gs, gs);
-+
-+	}
 +
 +	kernel_fpu_end();
 +}

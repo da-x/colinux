@@ -235,7 +235,7 @@ pcap_init()
 	if (daemon_parameters->name_specified == PTRUE)
 		co_terminal_print("conet-bridged-daemon: Looking for interface \"%s\"\n", daemon_parameters->interface_name);
 	else
-		co_terminal_print("conet-bridged-daemon: Auto selecting name for bridged interfac\n");
+		co_terminal_print("conet-bridged-daemon: Auto selecting name for bridged interface\n");
 	
 	device = alldevs;
 	char name_data[256];
