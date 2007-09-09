@@ -203,7 +203,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
 -		ptrace.o time.o ioport.o ldt.o setup.o i8259.o sys_i386.o \
 -		pci-dma.o i386_ksyms.o i387.o bootflag.o e820.o\
 -		quirks.o i8237.o topology.o alternative.o i8253.o tsc.o
-+		ptrace.o ioport.o ldt.o setup.o sys_i386.o \
++		ptrace.o ldt.o setup.o sys_i386.o \
 +		pci-dma.o i386_ksyms.o i387.o bootflag.o \
 +		quirks.o i8237.o topology.o alternative.o
  
@@ -214,7 +214,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
  obj-$(CONFIG_X86_BIOS_REBOOT)	+= reboot.o
  obj-$(CONFIG_MCA)		+= mca.o
  obj-$(CONFIG_X86_MSR)		+= msr.o
-@@ -39,11 +40,20 @@
+@@ -39,11 +40,21 @@
  obj-$(CONFIG_VM86)		+= vm86.o
  obj-$(CONFIG_EARLY_PRINTK)	+= early_printk.o
  obj-$(CONFIG_HPET_TIMER) 	+= hpet.o
@@ -228,8 +228,9 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
 +obj-y				+= reboot_cooperative.o
 +obj-y				+= timer_cooperative.o
 +obj-y				+= i8259_cooperative.o
++obj-y				+= ioport_cooperative.o
 +else
-+obj-y				+= time.o i8253.o i8259.o
++obj-y				+= time.o i8253.o i8259.o ioport.o
  obj-y				+= pcspeaker.o
 +endif
  
@@ -664,38 +665,6 @@ Index: linux-2.6.22-source/arch/i386/kernel/i387.c
  	stts();
  }
  
-Index: linux-2.6.22-source/arch/i386/kernel/ioport.c
-===================================================================
---- linux-2.6.22-source.orig/arch/i386/kernel/ioport.c
-+++ linux-2.6.22-source/arch/i386/kernel/ioport.c
-@@ -16,6 +16,7 @@
- #include <linux/slab.h>
- #include <linux/thread_info.h>
- #include <linux/syscalls.h>
-+#include <linux/cooperative_internal.h>
- 
- /* Set EXTENT bits starting at BASE in BITMAP to value TURN_ON. */
- static void set_bitmap(unsigned long *bitmap, unsigned int base, unsigned int extent, int new_value)
-@@ -62,6 +63,9 @@
- 	struct tss_struct * tss;
- 	unsigned long *bitmap;
- 
-+	if (cooperative_mode_enabled())
-+		return -EPERM;
-+
- 	if ((from + num <= from) || (from + num > IO_BITMAP_BITS))
- 		return -EINVAL;
- 	if (turn_on && !capable(CAP_SYS_RAWIO))
-@@ -139,6 +143,9 @@
- 	unsigned int old = (regs->eflags >> 12) & 3;
- 	struct thread_struct *t = &current->thread;
- 
-+	if (cooperative_mode_enabled())
-+		return -EPERM;
-+
- 	if (level > 3)
- 		return -EINVAL;
- 	/* Trying to gain more privileges? */
 Index: linux-2.6.22-source/arch/i386/kernel/process.c
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/process.c
@@ -3153,4 +3122,24 @@ Index: linux-2.6.22-source/arch/i386/kernel/i8259_cooperative.c
 +		if (vector != SYSCALL_VECTOR)
 +			set_intr_gate(vector, interrupt[i]);
 +	}
++}
+Index: linux-2.6.22-source/arch/i386/kernel/ioport_cooperative.c
+===================================================================
+--- /dev/null
++++ linux-2.6.22-source/arch/i386/kernel/ioport_cooperative.c
+@@ -0,0 +1,15 @@
++/*
++ *	linux/arch/i386/kernel/ioport_cooperative.c
++ */
++
++#include <linux/syscalls.h>
++
++asmlinkage long sys_ioperm(unsigned long from, unsigned long num, int turn_on)
++{
++	return -EPERM;
++}
++
++asmlinkage long sys_iopl(unsigned long unused)
++{
++	return -EPERM;
 +}
