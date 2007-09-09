@@ -333,7 +333,7 @@ co_rc_t co_os_file_set_attr(char *filename, unsigned long valid, struct fuse_att
 	return rc;
 } 
 
-static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
+co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 {
 	char * dirname;
 	char * filename;
@@ -383,7 +383,6 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 	if (!CO_OK(rc))
 		goto error_1;
 
- 
         InitializeObjectAttributes(&attributes, &dirname_unicode,
                                    OBJ_CASE_INSENSITIVE, NULL, NULL);
  
@@ -456,7 +455,7 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
         attr->blocks = (EndOfFile.QuadPart + ((1<<10)-1)) >> 10;
 	
         rc = CO_RC(OK);
-	
+
 error_3:
         ZwClose(handle);
 error_2:
@@ -466,12 +465,6 @@ error_1:
 error_0:
 	co_os_free(dirname);
         return rc;
-}
- 
-
-co_rc_t co_os_file_get_attr(char *filename, struct fuse_attr *attr)
-{
-	return file_get_attr_alt(filename, attr);
 }
 
 static void remove_read_only_func(void *data, VOID *buffer, ULONG len)
