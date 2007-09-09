@@ -378,7 +378,7 @@ void co_filesystem_getdir_free(co_filesystem_dir_names_t *names)
 	}
 }
 
-co_rc_t co_monitor_file_system_init(co_monitor_t *cmon, unsigned long unit, 
+co_rc_t co_monitor_file_system_init(co_monitor_t *cmon, unsigned int unit,
 				    co_cofsdev_desc_t *desc)
 {
 	co_filesystem_t *filesystem;
@@ -502,7 +502,7 @@ static co_rc_t fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *stat
 	return filesystem->ops->fs_stat(filesystem, statfs);	
 }
 
-void co_monitor_file_system(co_monitor_t *cmon, unsigned long unit, 
+void co_monitor_file_system(co_monitor_t *cmon, unsigned int unit,
 			    enum fuse_opcode opcode, unsigned long *params)
 {
 	int ino = -1;

@@ -3296,7 +3296,7 @@ diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 +
 +		message = (co_linux_message_t *)&node_message->msg.data;
 +		if (message->unit < 0  ||  message->unit >= CO_MODULE_MAX_CONET) {
-+			printk("conet interrupt: buggy network reception: %lx\n", message->unit);
++			printk("conet interrupt: buggy network reception unit %d\n", message->unit);
 +			return IRQ_HANDLED;
 +		}
 +
@@ -8097,7 +8097,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +
 +typedef struct {
 +	co_device_t device;
-+	unsigned long unit;
++	unsigned int unit;
 +	unsigned long size;
 +	char data[];
 +} __attribute__((packed)) co_linux_message_t;
@@ -8276,7 +8276,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +
 +typedef struct {
 +	co_network_request_type_t type;
-+	unsigned long unit;
++	unsigned int unit;
 +	char mac_address[6];
 +	char _pad[2];
 +	int result;

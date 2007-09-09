@@ -12,12 +12,12 @@
 #include "block.h"
 #include "monitor.h"
 
-void co_monitor_block_register_device(co_monitor_t *cmon, unsigned long index, co_block_dev_t *dev)
+void co_monitor_block_register_device(co_monitor_t *cmon, unsigned int index, co_block_dev_t *dev)
 {
 	cmon->block_devs[index] = dev;
 }
 
-void co_monitor_block_unregister_device(co_monitor_t *cmon, unsigned long index)
+void co_monitor_block_unregister_device(co_monitor_t *cmon, unsigned int index)
 {
 	cmon->block_devs[index] = NULL;
 }
@@ -36,7 +36,7 @@ void co_monitor_unregister_and_free_block_devices(co_monitor_t *cmon)
 	}
 }
 
-co_block_dev_t *co_monitor_block_dev_from_index(co_monitor_t *cmon, unsigned long index)
+co_block_dev_t *co_monitor_block_dev_from_index(co_monitor_t *cmon, unsigned int index)
 {
 	if (index >= CO_MODULE_MAX_COBD)
 		return NULL;
@@ -44,7 +44,7 @@ co_block_dev_t *co_monitor_block_dev_from_index(co_monitor_t *cmon, unsigned lon
 	return cmon->block_devs[index];
 }
 
-co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned long index, 
+co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned int index,
 				 co_block_request_t *request)
 {
 	co_block_dev_t *dev;

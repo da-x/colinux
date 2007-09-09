@@ -2015,7 +2015,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +
 +typedef struct {
 +	co_device_t device;
-+	unsigned long unit;
++	unsigned int unit;
 +	unsigned long size;
 +	char data[];
 +} __attribute__((packed)) co_linux_message_t;
@@ -2198,7 +2198,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +
 +typedef struct {
 +	co_network_request_type_t type;
-+	unsigned long unit;
++	unsigned int unit;
 +	char mac_address[6];
 +	char _pad[2];
 +	int result;

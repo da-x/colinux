@@ -190,14 +190,14 @@ static bool_t device_request(co_monitor_t *cmon, co_device_t device, unsigned lo
 	switch (device) {
 	case CO_DEVICE_BLOCK: {
 		co_block_request_t *request;
-		unsigned long dev_index = params[0];
+		unsigned int unit = params[0];
 		co_rc_t rc;
 
-		co_debug_lvl(blockdev, 13, "blockdev requested (unit %d)\n", dev_index);
+		co_debug_lvl(blockdev, 13, "blockdev requested (unit %d)\n", unit);
 
 		request = (co_block_request_t *)(&params[1]);
 
-		rc = co_monitor_block_request(cmon, dev_index, request);
+		rc = co_monitor_block_request(cmon, unit, request);
 
 		if (CO_OK(rc))
 			request->rc = 0;
@@ -624,7 +624,7 @@ static void free_file_blockdevice(co_monitor_t *cmon, co_block_dev_t *dev)
 static co_rc_t load_configuration(co_monitor_t *cmon)
 {
 	co_rc_t rc = CO_RC_OK; 
-	long i;
+	unsigned int i;
 
 	for (i=0; i < CO_MODULE_MAX_COBD; i++) {
 		co_monitor_file_block_dev_t *dev;
@@ -649,7 +649,7 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 		}
 	}
 
-	for (i=0; i < CO_MODULE_MAX_COFS; i++) {
+	for (i = 0; i < CO_MODULE_MAX_COFS; i++) {
 		co_cofsdev_desc_t *desc = &cmon->config.cofs_devs[i];
 		if (!desc->enabled)
 			continue;
