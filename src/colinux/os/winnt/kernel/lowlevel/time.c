@@ -46,23 +46,24 @@ void co_os_get_timestamp_freq(co_timestamp_t *dts, co_timestamp_t *freq)
 
 unsigned long co_os_get_cpu_khz(void)
 {
-	ULONG mhz = 0;
-	RTL_QUERY_REGISTRY_TABLE query[2] = {{0, }};
 	NTSTATUS status;
+	static ULONG mhz = 0;
+	static RTL_QUERY_REGISTRY_TABLE query[2] = {{
+		.Flags = RTL_QUERY_REGISTRY_REQUIRED | RTL_QUERY_REGISTRY_DIRECT,
+		.Name = L"~MHz",
+		.EntryContext = &mhz,
+		.DefaultType = REG_DWORD,
+		}};
 
-	query[0].Flags = RTL_QUERY_REGISTRY_REQUIRED |
-			 RTL_QUERY_REGISTRY_DIRECT;
-	query[0].Name = L"~MHz";
-	query[0].EntryContext = &mhz;
-	query[0].DefaultType = REG_DWORD;
+	if (!mhz) {
+		status = RtlQueryRegistryValues(
+				RTL_REGISTRY_ABSOLUTE,
+				L"\\Registry\\MACHINE\\HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+		    		query, NULL, NULL);
 
-	status = RtlQueryRegistryValues(
-			RTL_REGISTRY_ABSOLUTE,
-			L"\\Registry\\MACHINE\\HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
-		        query, NULL, NULL);
-
-	if (status != STATUS_SUCCESS)
-		co_debug("getting MHz failed %x", status);
+		if (status != STATUS_SUCCESS)
+			co_debug("getting MHz failed %x", status);
+	}
 
 	return(1000*mhz);
 }
