@@ -134,6 +134,15 @@ Index: linux-2.6.17-source/arch/i386/Kconfig
  
  config PCI
  	bool "PCI support" if !X86_VISWS
+@@ -1119,7 +1130,7 @@
+ 
+ config X86_BIOS_REBOOT
+ 	bool
+-	depends on !(X86_VISWS || X86_VOYAGER)
++	depends on !(X86_VISWS || X86_VOYAGER || COOPERATIVE)
+ 	default y
+ 
+ config X86_TRAMPOLINE
 Index: linux-2.6.17-source/arch/i386/Kconfig.cpu
 ===================================================================
 --- linux-2.6.17-source.orig/arch/i386/Kconfig.cpu
@@ -153,7 +162,7 @@ Index: linux-2.6.17-source/arch/i386/kernel/Makefile
  obj-$(CONFIG_X86_MSR)		+= msr.o
  obj-$(CONFIG_X86_CPUID)		+= cpuid.o
  obj-$(CONFIG_MICROCODE)		+= microcode.o
-+obj-$(CONFIG_COOPERATIVE)       += cooperative.o
++obj-$(CONFIG_COOPERATIVE)       += cooperative.o reboot_co.o
  obj-$(CONFIG_APM)		+= apm.o
  obj-$(CONFIG_X86_SMP)		+= smp.o smpboot.o
  obj-$(CONFIG_X86_TRAMPOLINE)	+= trampoline.o
@@ -161,11 +170,12 @@ Index: linux-2.6.17-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.17-source/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,357 @@
+@@ -0,0 +1,361 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
 +#include <linux/mm.h>
++#include <linux/reboot.h>
 +
 +#include <linux/cooperative_internal.h>
 +#include <asm/cooperative_internal.h>
@@ -268,8 +278,6 @@ Index: linux-2.6.17-source/arch/i386/kernel/cooperative.c
 +	co_start_kernel();
 +}
 +
-+extern void ctrl_alt_del(void);
-+
 +void co_handle_jiffies(long count)
 +{
 +	unsigned long flags;
@@ -308,10 +316,15 @@ Index: linux-2.6.17-source/arch/i386/kernel/cooperative.c
 +	case CO_DEVICE_POWER: {
 +		co_linux_message_power_t *type = (co_linux_message_power_t *)message->data;
 +		switch (type->type) {
-+		case CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL: {
++		case CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL:
 +			ctrl_alt_del();
 +			break;
-+		}
++		case CO_LINUX_MESSAGE_POWER_SHUTDOWN:
++			co_shedule_shutdown();
++			break;
++		case CO_LINUX_MESSAGE_POWER_OFF:
++			machine_power_off();
++			break;
 +		}
 +		co_free_message(node_message);
 +		break;
@@ -876,55 +889,6 @@ Index: linux-2.6.17-source/arch/i386/kernel/process.c
  	for_each_online_cpu(cpu) {
  		per_cpu(cpu_idle_state, cpu) = 1;
  		cpu_set(cpu, map);
-Index: linux-2.6.17-source/arch/i386/kernel/reboot.c
-===================================================================
---- linux-2.6.17-source.orig/arch/i386/kernel/reboot.c
-+++ linux-2.6.17-source/arch/i386/kernel/reboot.c
-@@ -18,6 +18,7 @@
- #include <asm/desc.h>
- #include "mach_reboot.h"
- #include <linux/reboot_fixups.h>
-+#include <linux/cooperative_internal.h>
- 
- /*
-  * Power off function, if any
-@@ -203,6 +204,11 @@
- {
- 	unsigned long flags;
- 
-+	if (cooperative_mode_enabled()) {
-+		co_terminate(CO_TERMINATE_REBOOT);
-+		return;
-+	}
-+
- 	local_irq_disable();
- 
- 	/* Write zero to CMOS register number 0x0f, which the BIOS POST
-@@ -347,15 +353,24 @@
- void machine_restart(char * __unused)
- {
- 	machine_shutdown();
-+	if (cooperative_mode_enabled()) {
-+		co_terminate(CO_TERMINATE_REBOOT);
-+		return;
-+	}
- 	machine_emergency_restart();
- }
- 
- void machine_halt(void)
- {
-+	co_terminate(CO_TERMINATE_HALT);
- }
- 
- void machine_power_off(void)
- {
-+	if (cooperative_mode_enabled()) {
-+		co_terminate(CO_TERMINATE_POWEROFF);
-+		return;
-+	}
- 	if (pm_power_off) {
- 		machine_shutdown();
- 		pm_power_off();
 Index: linux-2.6.17-source/arch/i386/kernel/setup.c
 ===================================================================
 --- linux-2.6.17-source.orig/arch/i386/kernel/setup.c
@@ -1903,7 +1867,7 @@ Index: linux-2.6.17-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.17-source/include/linux/cooperative.h
-@@ -0,0 +1,341 @@
+@@ -0,0 +1,343 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -2019,6 +1983,8 @@ Index: linux-2.6.17-source/include/linux/cooperative.h
 +
 +typedef enum {
 +	CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL=0,
++	CO_LINUX_MESSAGE_POWER_SHUTDOWN,
++	CO_LINUX_MESSAGE_POWER_OFF,
 +} co_linux_message_power_type_t;
 +
 +typedef struct {
@@ -2249,7 +2215,7 @@ Index: linux-2.6.17-source/include/linux/cooperative_internal.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.17-source/include/linux/cooperative_internal.h
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,83 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -2299,6 +2265,8 @@ Index: linux-2.6.17-source/include/linux/cooperative_internal.h
 +extern void co_send_message_restore(unsigned long flags);
 +
 +extern void cocd_interrupt(void);
++extern void co_shedule_shutdown(void);
++extern void ctrl_alt_del(void);
 +
 +extern void co_handle_incoming_messages(struct pt_regs *regs);
 +extern void co_handle_incoming_message(co_message_node_t *message, struct pt_regs *orig_regs);
@@ -3048,3 +3016,43 @@ Index: linux-2.6.17-source/include/linux/elf.h
  
  #ifndef elf_read_implies_exec
    /* Executables for which elf_read_implies_exec() returns TRUE will
+Index: linux-2.6.17-source/arch/i386/kernel/reboot_co.c
+===================================================================
+--- /dev/null
++++ linux-2.6.17-source/arch/i386/kernel/reboot_co.c
+@@ -0,0 +1,35 @@
++#include <linux/module.h>
++#include <linux/reboot.h>
++#include <linux/cooperative_internal.h>
++
++/* sys_reboot needs this dummy. */
++void (*pm_power_off)(void);
++
++static int co_powering_off;
++
++void machine_restart(char * __unused)
++{
++	co_terminate(co_powering_off ? CO_TERMINATE_POWEROFF
++				     : CO_TERMINATE_REBOOT);
++}
++
++void machine_emergency_restart(void)
++{
++	co_terminate(CO_TERMINATE_REBOOT);
++}
++
++void machine_halt(void)
++{
++	co_terminate(CO_TERMINATE_HALT);
++}
++
++void machine_power_off(void)
++{
++	co_terminate(CO_TERMINATE_POWEROFF);
++}
++
++void co_shedule_shutdown(void)
++{
++	co_powering_off++;
++	ctrl_alt_del();
++}

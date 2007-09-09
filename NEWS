@@ -1,11 +1,19 @@
 * Version 0.8.0
+  * Linux Kernel and daemons can build with differ gcc versions now.
+    ABI is runtime checked.
+  * New menu entries in FLTK console
+    Power off: Fast power down coLinux kernel, no file sync!
+    Reboot:    Sends ctrl-alt-del, init process goes into runlevel 6
+    Shutdown:  Calls "/sbin/shutdown -h now" with fallback to "/sbin/halt"
+               Shutdown will automatic call from stopping as service,
+               of if the user click close close on the colinux-daemon.
   * Bug #1324092: cofs rename replace existing file.
   * cloop updated to 2.06 (compressed loop blockdevice from Knoppix)
   * Fix cofs mmap read error behind end of file (was not zero filled).
   * Bug #1190080: Fix cofs file time/mode/flags after touch or write.
   * Bug #1643371: BSOD from dmidecode, fixed by disallow mmap on /dev/mem.
   * New file: Debugging.txt with tips for debugging colinux start problems.
-  * Warnings with gcc 4.x fixed. Gcc 4.1.2 and 4.2.0-snapshot was tested.
+  * Warnings with gcc 4.x fixed. Gcc 4.2.0 and 4.3.0-snapshot was tested.
   * Optimized workaround for DEP/noexecute problems (flush tlb).
   * Network daemons TAP, Bridged and Slirp runs with process priority high.
   * New: colinux-daemon -p pidFile stores ID of coLinux in file pidFile.
@@ -29,6 +37,7 @@
     Needs to enable facility/level with colinux-debug-daemon before.
   * Updated libraries and tools:
     - gcc 4.1.2 (unpatched now, not from mingw)
+      Usable gcc for kernel build: 3.4.x, 4.0.x, 4.1.x, 4.2.x up to 4.3.0
     - binutils 2.17.50
     - mingw 3.11
     - w32api 3.9

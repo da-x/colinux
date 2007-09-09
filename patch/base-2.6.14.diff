@@ -76,6 +76,15 @@ Index: linux-2.6.14-source/arch/i386/Kconfig
  source "drivers/acpi/Kconfig"
  
  menu "APM (Advanced Power Management) BIOS Support"
+@@ -1333,7 +1342,7 @@
+ 
+ config X86_BIOS_REBOOT
+ 	bool
+-	depends on !(X86_VISWS || X86_VOYAGER)
++	depends on !(X86_VISWS || X86_VOYAGER || COOPERATIVE)
+ 	default y
+ 
+ config X86_TRAMPOLINE
 Index: linux-2.6.14-source/arch/i386/kernel/Makefile
 ===================================================================
 --- linux-2.6.14-source.orig/arch/i386/kernel/Makefile
@@ -84,7 +93,7 @@ Index: linux-2.6.14-source/arch/i386/kernel/Makefile
  obj-$(CONFIG_X86_MSR)		+= msr.o
  obj-$(CONFIG_X86_CPUID)		+= cpuid.o
  obj-$(CONFIG_MICROCODE)		+= microcode.o
-+obj-$(CONFIG_COOPERATIVE)       += cooperative.o
++obj-$(CONFIG_COOPERATIVE)       += cooperative.o reboot_co.o
  obj-$(CONFIG_APM)		+= apm.o
  obj-$(CONFIG_X86_SMP)		+= smp.o smpboot.o
  obj-$(CONFIG_X86_TRAMPOLINE)	+= trampoline.o
@@ -92,11 +101,12 @@ Index: linux-2.6.14-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.14-source/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,347 @@
+@@ -0,0 +1,364 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
 +#include <linux/mm.h>
++#include <linux/reboot.h>
 +
 +#include <linux/cooperative_internal.h>
 +#include <asm/cooperative_internal.h>
@@ -202,8 +212,6 @@ Index: linux-2.6.14-source/arch/i386/kernel/cooperative.c
 +	co_start_kernel();
 +}
 +
-+extern void ctrl_alt_del(void);
-+
 +void co_handle_jiffies(long count)
 +{
 +	unsigned long flags;
@@ -242,10 +250,15 @@ Index: linux-2.6.14-source/arch/i386/kernel/cooperative.c
 +	case CO_DEVICE_POWER: {
 +		co_linux_message_power_t *type = (co_linux_message_power_t *)message->data;
 +		switch (type->type) {
-+		case CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL: {
++		case CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL:
 +			ctrl_alt_del();
 +			break;
-+		}
++		case CO_LINUX_MESSAGE_POWER_SHUTDOWN:
++			co_shedule_shutdown();
++			break;
++		case CO_LINUX_MESSAGE_POWER_OFF:
++			machine_power_off();
++			break;
 +		}
 +		co_free_message(node_message);
 +		break;
@@ -271,6 +284,15 @@ Index: linux-2.6.14-source/arch/i386/kernel/cooperative.c
 +		break;
 +	}
 +
++	case CO_DEVICE_SERIAL: {
++		co_queue_incoming_message(node_message);
++
++		local_irq_save(flags);
++		cocd_interrupt();
++		local_irq_restore(flags);
++		break;
++	}
++
 +	default:
 +		co_free_message(node_message);
 +		break;
@@ -280,6 +302,8 @@ Index: linux-2.6.14-source/arch/i386/kernel/cooperative.c
 +void co_switch_wrapper_protected(void)
 +{
 +	kernel_fpu_begin();
++
++	{
 +
 +	/*
 +	 * We don't trust the passage page code to safely restore %gs and %fs.
@@ -308,6 +332,8 @@ Index: linux-2.6.14-source/arch/i386/kernel/cooperative.c
 +	 */
 +	loadsegment(fs, fs);
 +	loadsegment(gs, gs);
++
++	}
 +
 +	kernel_fpu_end();
 +}
@@ -804,53 +830,6 @@ Index: linux-2.6.14-source/arch/i386/kernel/process.c
  /*
   * This uses new MONITOR/MWAIT instructions on P4 processors with PNI,
   * which can obviate IPI to trigger checking of need_resched.
-Index: linux-2.6.14-source/arch/i386/kernel/reboot.c
-===================================================================
---- linux-2.6.14-source.orig/arch/i386/kernel/reboot.c
-+++ linux-2.6.14-source/arch/i386/kernel/reboot.c
-@@ -17,6 +17,7 @@
- #include <asm/desc.h>
- #include "mach_reboot.h"
- #include <linux/reboot_fixups.h>
-+#include <linux/cooperative_internal.h>
- 
- /*
-  * Power off function, if any
-@@ -194,6 +195,11 @@
- {
- 	unsigned long flags;
- 
-+	if (cooperative_mode_enabled()) {
-+		co_terminate(CO_TERMINATE_REBOOT);
-+		return;
-+	}
-+
- 	local_irq_disable();
- 
- 	/* Write zero to CMOS register number 0x0f, which the BIOS POST
-@@ -337,16 +343,22 @@
- 
- void machine_restart(char * __unused)
- {
-+	co_terminate(CO_TERMINATE_REBOOT);
- 	machine_shutdown();
- 	machine_emergency_restart();
- }
- 
- void machine_halt(void)
- {
-+	co_terminate(CO_TERMINATE_HALT);
- }
- 
- void machine_power_off(void)
- {
-+	if (cooperative_mode_enabled()) {
-+                co_terminate(CO_TERMINATE_POWEROFF);
-+                return;
-+        }
- 	machine_shutdown();
- 
- 	if (pm_power_off)
 Index: linux-2.6.14-source/arch/i386/kernel/setup.c
 ===================================================================
 --- linux-2.6.14-source.orig/arch/i386/kernel/setup.c
@@ -1142,7 +1121,7 @@ Index: linux-2.6.14-source/arch/i386/kernel/timers/timer_cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.14-source/arch/i386/kernel/timers/timer_cooperative.c
-@@ -0,0 +1,140 @@
+@@ -0,0 +1,142 @@
 +/*
 + *  Cooperative mode timer.
 + *
@@ -1207,13 +1186,15 @@ Index: linux-2.6.14-source/arch/i386/kernel/timers/timer_cooperative.c
 +static long get_offset_cooperative(void)
 +{
 +	unsigned long flags;
++	unsigned long long this_time;
++	unsigned long reminder, result;
++	long long diff, lldiff;
++	long signed_result;
 +
 +	local_irq_save(flags);
 +
-+	unsigned long long this_time = query_host_highprec_time() - first_time;
-+	unsigned long reminder = 0, result;
-+	long long diff, lldiff;
-+	long signed_result;
++	this_time = query_host_highprec_time() - first_time;
++	reminder = 0;
 +
 +	diff = ((long long)this_time - (long long)(last_mark));
 +	if (diff < 0)
@@ -2096,7 +2077,7 @@ Index: linux-2.6.14-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.14-source/include/linux/cooperative.h
-@@ -0,0 +1,331 @@
+@@ -0,0 +1,333 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -2212,6 +2193,8 @@ Index: linux-2.6.14-source/include/linux/cooperative.h
 +
 +typedef enum {
 +	CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL=0,
++	CO_LINUX_MESSAGE_POWER_SHUTDOWN,
++	CO_LINUX_MESSAGE_POWER_OFF,
 +} co_linux_message_power_type_t;
 +
 +typedef struct {
@@ -2432,7 +2415,7 @@ Index: linux-2.6.14-source/include/linux/cooperative_internal.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.14-source/include/linux/cooperative_internal.h
-@@ -0,0 +1,83 @@
+@@ -0,0 +1,87 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -2480,6 +2463,10 @@ Index: linux-2.6.14-source/include/linux/cooperative_internal.h
 +extern co_message_t *co_send_message_save(unsigned long *flags);
 +extern co_message_t *co_get_message_save(unsigned long *flags);
 +extern void co_send_message_restore(unsigned long flags);
++
++extern void cocd_interrupt(void);
++extern void co_shedule_shutdown(void);
++extern void ctrl_alt_del(void);
 +
 +extern void co_handle_incoming_messages(struct pt_regs *regs);
 +extern void co_handle_incoming_message(co_message_node_t *message, struct pt_regs *orig_regs);
@@ -2556,7 +2543,7 @@ Index: linux-2.6.14-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.14-source/kernel/cooperative.c
-@@ -0,0 +1,423 @@
+@@ -0,0 +1,427 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2636,14 +2623,16 @@ Index: linux-2.6.14-source/kernel/cooperative.c
 +
 +void co_send_message_s(co_message_t *message, const char *data)
 +{
++	unsigned long flags;
++	co_message_t *buffer;
++
 +	if ((sizeof(co_message_t) + message->size) > CO_VPTR_IO_AREA_SIZE - sizeof(co_io_buffer_t))
 +		return;
 +
 +	if (co_passage_page_held())
 +		return;
 +
-+	unsigned long flags;
-+	co_message_t *buffer = (co_message_t *)co_io_buffer->buffer;
++	buffer = (co_message_t *)co_io_buffer->buffer;
 +
 +	co_passage_page_acquire(&flags);
 +	if (co_io_buffer->messages_waiting) {
@@ -2864,18 +2853,20 @@ Index: linux-2.6.14-source/kernel/cooperative.c
 +
 +void co_queue_incoming_message(co_message_node_t *node_message)
 +{
++	co_linux_message_t *message;
++	co_message_queue_t *queue;
++	unsigned long flags;
++
 +	if (!co_messages_active)
 +		return;
 +
-+	co_linux_message_t *message = (co_linux_message_t *)&node_message->msg.data;
++	message = (co_linux_message_t *)&node_message->msg.data;
 +	if (message->device < 0 || (message->device >= CO_DEVICES_TOTAL))
 +		return;
 +
-+	co_message_queue_t *queue;
 +	queue = &co_incoming_queued_messages[message->device];
 +
 +	/* Add to the queue */
-+	unsigned long flags;
 +	local_irq_save(flags);
 +	list_add(&node_message->node, &queue->list);
 +	queue->num_messages++;
@@ -3200,3 +3191,43 @@ Index: linux-2.6.14-source/include/asm-i386/processor.h
  
  /*
   * Set IOPL bits in EFLAGS from given mask
+Index: linux-2.6.14-source/arch/i386/kernel/reboot_co.c
+===================================================================
+--- /dev/null
++++ linux-2.6.14-source/arch/i386/kernel/reboot_co.c
+@@ -0,0 +1,35 @@
++#include <linux/module.h>
++#include <linux/reboot.h>
++#include <linux/cooperative_internal.h>
++
++/* sys_reboot needs this dummy. */
++void (*pm_power_off)(void);
++
++static int co_powering_off;
++
++void machine_restart(char * __unused)
++{
++	co_terminate(co_powering_off ? CO_TERMINATE_POWEROFF
++				     : CO_TERMINATE_REBOOT);
++}
++
++void machine_emergency_restart(void)
++{
++	co_terminate(CO_TERMINATE_REBOOT);
++}
++
++void machine_halt(void)
++{
++	co_terminate(CO_TERMINATE_HALT);
++}
++
++void machine_power_off(void)
++{
++	co_terminate(CO_TERMINATE_POWEROFF);
++}
++
++void co_shedule_shutdown(void)
++{
++	co_powering_off++;
++	ctrl_alt_del();
++}
