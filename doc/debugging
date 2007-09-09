@@ -86,7 +86,7 @@ Stepguide for colinux-daebug-daemon
      capture. The current list of facility names is:
      misc, network, messages, prints, blockdev, allocations, context_switch, pipe
    * Each facility has an associated level number - higher numbers
-     capture more messages.
+     capture more messages.  Facility can be turn off with value 0.
    * See below for how to set the facility level
 
 
@@ -142,15 +142,15 @@ Stepguide for colinux-daebug-daemon
 (Mitch Bradley via Mail)
 
 
-Debuging over network
----------------------
+Example debuging over network
+-----------------------------
 
 You can run coLinx on one PC (TARGET) and send all debugging messages over
 network to an other PC (DEVEL).  This is very helpfull, if your colinux
 crashes your PC and you can not log into local filesystem.
 
-In coLinux sources exist a small Python script.  Run this to download all
-raw debugging datas into file:
+Run small Python script inside coLinux sources, to download all raw
+debugging datas into file:
 
     DEVEL: python src/colinux/user/debug/server.py debug.bin
 
@@ -159,7 +159,7 @@ Or run Netcat (Linux) as debug server:
     DEVEL: netcat -l -u -p 63000 > debug.bin
 
 On the other PC open command prompt, run debug logger with network
-option '-n' and the ipaddres to your 'server' PC:
+option '-n' and the ipaddress to your 'server' PC:
 
     TARGET: colinux-debug-daemon.exe -d -s prints=31,misc=31 -n ip.of.devel.pc
 
@@ -167,9 +167,11 @@ Open a second command prompt and run colinux:
 
     TARGET: colinux-daemon.exe @colinux.conf
     
-After finish your debug session stop colinux-debug-daemon with CTRL-C on
-the other PC and stop the server.py (or netcat) with CTRL-C.
-Convert the binary data into more readable XML format:
+Can also run the debug-daemon after coLinux was started. The debug session
+should start, before you think is interesting.
+After finish your debug session stop colinux-debug-daemon with CTRL-C and
+stop the server.py (or netcat) with CTRL-C.
+Convert the binary data into readable XML format:
 
     DEVEL: colinux-debug-daemon -p < debug.bin > debug.xml
 
@@ -188,3 +190,191 @@ Typicaly output for debug.txt are such lines:
     5|00000000.496828810|colinux-daemon|src/colinux/user/config.c:parse_config_args:635|configuring 32 MB of virtual RAM
     ...
 
+
+Howto use Windows crash dump
+----------------------------
+
+Enable minidump (the small option, 64KB). Not need a full core dump.
+Don't set the ckeckbox for "automatic reboot after crash dump". The menu
+will find via keys Windows+Pause (or Control Panel * System Properties) *
+Register: Extentions * Frame: Start and Recover * Button: Configure *
+Frame: System errors.
+
+If you think, coLinux would crash on start or with your next doing, then
+should restart Windows after your last changes on configuration and before
+you starts coLinux. This saves your last doing and write back all file
+buffers to disk.
+
+Typicaly BSOD have such lines:
+
+   *** STOP: 0x1111777A (0x00000000, 0x00000000, 0x00000000, 0x00000000)
+   ***    linux.sys - Adress F799992F0 base at F7989000, DateStamp 46c6e118
+
+0x1111777A in this case is an call of BugCheck, because coLinux detects an
+internal error. There exists some more with similar error code 0x11117777
+to 0x1111777F. Grep into coLinux source and locate the "0x11117777 + n",
+where 'n' is the number '3' in the example.
+
+F7989000 and F799992F0 in this case needs to know to find any address from
+windows crash in the dumped linux.sys later.
+
+Note all the hex numbers exacly down to paper and restart Windows. In
+Event Manager finds mostly the hex numbers later. But not in all cases.
+
+Download from "Install Debugging Tools for Windows 32-bit Version"
+http://www.microsoft.com/whdc/devtools/debugging/installx86.mspx
+the Current Release of "Download the Debugging Tools for Windows"
+http://msdl.microsoft.com/download/symbols/debuggers/dbg_x86_6.7.05.1.exe
+approx. 15MB.
+
+Windows will say, that no symbols was found. That is no problem. Windows
+will never seen the GCC symbols. XP Symbol names we not need. You can
+download and install they from "Download Windows Symbol Packages"
+http://www.microsoft.com/whdc/devtools/debugging/symbolpkg.mspx
+approx. 200MB. But worth downloading and installing IMHO. Install they,
+if you wish to see more Windows names (see example follow).
+
+Please don't change or replace the file "linux.sys" from there you got the
+crash before the next step!
+
+Run WinDbg.exe, and "Open Crash-Dump ...". The file typicaly exists as
+C:\WINDOWS\Minidump\Mini081807-01.dmp (file name is coded by current date).
+
+In the prompt "kd>" run
+
+  !analyze -v
+
+and than "Write windows text to file ..." (in the menu "edit").
+
+CoLinux developers interest for the follow lines:
+
+    BugCheck 1111777A, {f79b02f0, 8b606015, 0, 0}
+    ...
+    Probably caused by : linux.sys ( linux+9a48 )
+    ...
+    STACK_TEXT:
+    (... please all lines ...)
+
+This lets see the Stack, for example:
+  STACK_TEXT:  
+  WARNING: Stack unwind information not available. Following frames may be wrong.
+  f7a54b04 f79a9a48 1111777a f79b02f0 8b606015 nt+0x21925
+  f7a54b34 f79a8a07 00000000 f79b02f0 8b606015 linux+0x9a48
+  f7a54b54 f79a609d 8147e000 00000001 814844cc linux+0x8a07
+  f7a54b84 f79a206a 8155bf60 814e2000 f7a54bb4 linux+0x609d
+  f7a54bc4 f79a7189 8155bf60 00000011 814e2000 linux+0x206a
+  f7a54c34 804eddf9 8155bea8 81497ed0 806d02d0 linux+0x7189
+  f7a54c58 805749d1 8155bea8 81497ed0 814fbe78 nt+0x16df9
+  f7a54d00 8056d33c 000007c4 00000000 00000000 nt+0x9d9d1
+
+If you have installed the Windows symbols and set the path, then all the
+labels with "nt+..." would see with the windows names, for example:
+
+  f7a54b04 f79a9a48 1111777a f79b02f0 8b606015 nt!KeBugCheck+0x14
+  f7a54b34 f79a8a07 00000000 f79b02f0 8b606015 linux+0x9a48
+  f7a54b54 f79a609d 8147e000 00000001 814844cc linux+0x8a07
+  f7a54b84 f79a206a 8155bf60 814e2000 f7a54bb4 linux+0x609d
+  f7a54bc4 f79a7189 8155bf60 00000011 814e2000 linux+0x206a
+  f7a54c34 804eddf9 8155bea8 81497ed0 806d02d0 linux+0x7189
+  f7a54c58 805749d1 8155bea8 81497ed0 814fbe78 nt!IofCallDriver+0x32
+  f7a54d00 8056d33c 000007c4 00000000 00000000 nt!SeQueryAuthenticationIdToken+0x6c6
+
+Is a liddle bit better to read. But names from linux.sys can't see. They
+must convert by hands. You need the coLinux build environment under Linux.
+Or objdump.exe from mingw32 to run directly under windows.
+There start:
+
+  i686-pc-mingw32-objdump -D linux.sys > linux.sys.dump
+
+Open linux.sys.dump and view the first lines:
+
+  linux.sys:     file format pei-i386
+  Disassembly of section .text:
+  00011000 <_co_monitor_get_pfn>:
+   11000:       55                      push   %ebp
+   11001:       89 e5                   mov    %esp,%ebp
+
+You will see, that linux.sys starts with code 0x00011000. An other offset
+is the 0x1000 in the linker params. So, the real offset from windows runtime
+WinDbg to the dump is 0x10000.
+
+For example "linux+0x9a48" is 0x19a48 in the dump.  Locate "19a48:" in
+linux.sys.dump and view some lines before to get the function name.
+
+The top of function give the start address. Sub the address 00019a20 from
+stack address 18a48 to have the relative offset 0x28. The stack have now
+decoded as "linux!co_os_malloc+0x28".
+
+00019a20 <_co_os_malloc>:
+   ...
+   19a3d:       68 7a 77 11 11          push   $0x1111777a              <-- this pushed the parameter for KeBugCheck
+   19a42:       ff 15 74 31 02 00       call   *0x23174                 <-- this is the call to KeBugCheck
+   19a48:       83 c4 0c                add    $0xc,%esp                <-- this address is shown in stack as 'linux+0x9a48'
+
+The next stack label is "linux+0x8a07". Add the 10000 to have 18a07 and
+locate this in the linux.sys.dump file, pick the function name from some
+lines before 18a07. Now have the next caller. Do the same steps for all.
+
+000189f0 <_co_monitor_os_init>:
+   ...
+   18a02:       e8 19 10 00 00          call   19a20 <_co_os_malloc>
+   18a07:       83 c4 10                add    $0x10,%esp
+
+00015f10 <_co_monitor_create>:
+   ...
+   16098:       e8 53 29 00 00          call   189f0 <_co_monitor_os_init>
+   1609d:       83 c4 10                add    $0x10,%esp
+
+00011d80 <_co_manager_ioctl>:
+   ...
+   12065:       e8 a6 3e 00 00          call   15f10 <_co_monitor_create>
+   1206a:       83 c4 10                add    $0x10,%esp
+
+00016d70 <_dispatch_wrapper@8>:
+   ...
+   17184:       e8 f7 ab ff ff          call   11d80 <_co_manager_ioctl>
+   17189:       83 c4 20                add    $0x20,%esp
+
+
+Write down the coLinux names. The stack can better read now:
+
+  f7a54b04 f79a9a48 1111777a f79b02f0 8b606015 nt!KeBugCheck+0x14
+  f7a54b34 f79a8a07 00000000 f79b02f0 8b606015 linux+0x9a48		linux!co_os_malloc+0x28
+  f7a54b54 f79a609d 8147e000 00000001 814844cc linux+0x8a07		linux!co_monitor_os_init+0x17
+  f7a54b84 f79a206a 8155bf60 814e2000 f7a54bb4 linux+0x609d		linux!co_monitor_create+0x18d
+  f7a54bc4 f79a7189 8155bf60 00000011 814e2000 linux+0x206a		linux!co_manager_ioctl+0x2e8
+  f7a54c34 804eddf9 8155bea8 81497ed0 806d02d0 linux+0x7189		linux!dispatch_wrapper+0x419
+  f7a54c58 805749d1 8155bea8 81497ed0 814fbe78 nt!IofCallDriver+0x32
+  f7a54d00 8056d33c 000007c4 00000000 00000000 nt!SeQueryAuthenticationIdToken+0x6c6
+
+The NT kernel calls are in the list of imports.
+For example the "call *0x23174" can find in the dump as:
+
+00023174 <__imp__KeBugCheckEx@20>:
+   23174:       4c                      dec    %esp
+   23175:       33 01                   xor    (%ecx),%eax
+
+This example was written down by forcing BugCheck with a special hacked
+source via a "co_os_alloc(0)". In the real run you would have other
+addresses in the stack list.
+
+If you can't analyse the stack self, you can send it to coLinux developers.
+Very interesting is the exactly build date of the file linux.sys. Please give
+the name or date of snapshort you used. Good idea is to note the file size.
+The stack can only properly view, if we use exactly the same linux.sys for
+objdump, that created the BSOD.
+
+If you are testing various coLinux versions, then should be shure, that you
+have clean load the driver linux.sys with the colinux-daemon.exe from same
+build. Check, that linux.sys and colinux-daemon.exe in your directory have
+the same build date. A file "overwrite" of the file linux.sys is not enouth
+to use this driver. To be shure, run:
+
+    cd CurentColinuxPath
+    colinux-daemon.exe --remove-driver
+    colinux-daemon.exe --status-driver    <--- should say: Driver not installed
+    cd NewColinuxPath
+    colinux-daemon.exe --install-driver
+    colinux-daemon.exe --status-driver
+
+In some heavy cases needs to reboot Windows between remove and install.
