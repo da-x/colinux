@@ -87,7 +87,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 	pp_pagetables_pgd = CO_VPTR_PSEUDO_RAM_PAGE_TABLES >> PGDIR_SHIFT;
 	pfns = cmon->pp_pfns[pp_pagetables_pgd];
 	if (pfns == NULL) {
-		co_debug_error("CO_VPTR_PSEUDO_RAM_PAGE_TABLES is not mapped, huh? (%x)\n");
+		co_debug_error("CO_VPTR_PSEUDO_RAM_PAGE_TABLES is not mapped, huh?\n");
 		goto out_error;
 	}
 
@@ -644,7 +644,7 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 			dev->dev.free = free_file_blockdevice;
 		} else {
 			co_monitor_free(cmon, dev);
-			co_debug_error("cobd%d: cannot enable %d (%x)\n", i, rc);
+			co_debug_error("cobd%d: cannot enable (%x)\n", i, rc);
 			goto error_1;
 		}
 	}

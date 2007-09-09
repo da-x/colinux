@@ -232,7 +232,7 @@ co_rc_t co_daemon_load_symbol_and_data(co_daemon_t *daemon,
 	
 	data = co_elf_get_symbol_data(daemon->elf_data, sym);
 	if (data == NULL) {
-		co_debug_error("data of symbol %s not found\n");
+		co_debug_error("data of symbol %s not found\n", symbol_name);
 		return CO_RC(ERROR);
 	}
 	

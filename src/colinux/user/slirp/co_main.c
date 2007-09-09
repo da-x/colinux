@@ -183,7 +183,7 @@ parse_redir_param (char *p)
 			return CO_RC(ERROR);
 
 		for (i = 0; i < iPortCount; i++) {
-			co_debug("slirp redir %d %d:%d (%d)\n", iProto, iHostPort+i, iClientPort+i);
+			co_debug("slirp redir %d %d:%d\n", iProto, iHostPort+i, iClientPort+i);
 			if (slirp_redir(iProto, iHostPort+i, client_addr, iClientPort+i) < 0) {
 				co_terminal_print("conet-slirp-daemon: slirp redir %d:%d failed.\n", iHostPort+i, iClientPort+i);
 			}
