@@ -31,7 +31,7 @@ co_rc_t co_launch_process(int *pid, char *command_line, ...)
 	vsnprintf(buf, sizeof(buf), command_line, ap);
 	va_end(ap);
 
-	co_debug("executing: %s\n", buf);
+	co_debug("executing: %s", buf);
 
 	ret = CreateProcess(NULL,
 			    buf,              // Command line. 
@@ -71,12 +71,12 @@ co_rc_t co_kill_process(int pid)
 		if (err == ERROR_INVALID_PARAMETER)
 			return CO_RC(OK); /* Process is not running */
 
-		co_debug_error("error 0x%lx open process %d\n", err, pid);
+		co_debug_error("error 0x%lx open process %d", err, pid);
 		return CO_RC(ERROR);
 	}
 
 	if (!TerminateProcess(hProcess, 0)) {
-		co_debug_error("error 0x%lx in temination of pid %d\n", GetLastError(), pid);
+		co_debug_error("error 0x%lx in temination of pid %d", GetLastError(), pid);
 		rc = CO_RC(ERROR);
 	}
 	

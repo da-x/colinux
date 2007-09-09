@@ -114,12 +114,12 @@ typedef long co_rc_t;
 #else
 #define CO_RC(name)      ({ \
                         co_rc_t __rc__ = CO_RC_##name; \
-                        co_debug("%s():%d: CO_RC(%d)\n", __FUNCTION__, __LINE__, __rc__); \
+                        co_debug("%s():%d: CO_RC(%d)", __FUNCTION__, __LINE__, __rc__); \
                         __rc__; \
 })
 #define CO_OK(rc)        ({ \
 			co_rc_t __rc__ = rc; \
-                        co_debug("%s():%d: CO_OK(%d)\n", __FUNCTION__, __LINE__, __rc__); \
+                        co_debug("%s():%d: CO_OK(%d)", __FUNCTION__, __LINE__, __rc__); \
                         __rc__ >= 0; \
 })
 #endif

@@ -42,13 +42,13 @@ co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
 
 void co_os_manager_free(co_osdep_manager_t osdep)
 {
-	co_debug("before free: %ld mdsl, %ld pages\n", osdep->mdls_allocated, osdep->pages_allocated);
+	co_debug("before free: %ld mdls, %ld pages", osdep->mdls_allocated, osdep->pages_allocated);
 	
 	co_winnt_free_all_pages(osdep);
 
 	co_os_mutex_destroy(osdep->mutex);
 	
-	co_debug("after free: %ld mdsl, %ld pages\n", osdep->mdls_allocated, osdep->pages_allocated);
+	co_debug("after free: %ld mdls, %ld pages", osdep->mdls_allocated, osdep->pages_allocated);
 	
 	co_os_free(osdep);
 }

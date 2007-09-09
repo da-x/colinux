@@ -518,30 +518,30 @@ void co_monitor_arch_passage_page_free(co_monitor_t *cmon)
 
 static inline void co_passage_page_dump_state(co_arch_state_stack_t *state)
 {
-	co_debug("cs: %04lx   ds: %04lx   es: %04lx   fs: %04lx   gs: %04lx   ss: %04lx\n",
+	co_debug("cs: %04lx   ds: %04lx   es: %04lx   fs: %04lx   gs: %04lx   ss: %04lx",
 		 state->cs, state->ds, state->es, state->fs, state->gs, state->ss);
 
-	co_debug("cr0: %08lx   cr2: %08lx   cr3: %08lx   cr4: %08lx\n",
+	co_debug("cr0: %08lx   cr2: %08lx   cr3: %08lx   cr4: %08lx",
 		 state->cr0, state->cr2, state->cr3, state->cr4);
 
-	co_debug("dr0: %08lx   dr1: %08lx  dr2: %08lx  dr3: %08lx  dr6: %08lx  dr7: %08lx\n",
+	co_debug("dr0: %08lx   dr1: %08lx  dr2: %08lx  dr3: %08lx  dr6: %08lx  dr7: %08lx",
 		 state->dr0, state->dr1, state->dr2, state->dr3, state->dr6, state->dr7);
 
-	co_debug("gdt: %08lx:%04x   idt:%08lx:%04x   ldt:%04x  tr:%04x\n",
+	co_debug("gdt: %08lx:%04x   idt:%08lx:%04x   ldt:%04x  tr:%04x",
 		 (long)state->gdt.base, state->gdt.limit,
 		 (long)state->idt.table, state->idt.size,
 		 state->ldt, state->tr);
 
-	co_debug("return_eip: %08lx   flags: %08lx   esp: %08lx\n",
+	co_debug("return_eip: %08lx   flags: %08lx   esp: %08lx",
 		 state->return_eip, state->flags, state->esp);
 }
 
 static inline void co_passage_page_dump(co_arch_passage_page_t *page)
 {
-	co_debug("Host state\n");
+	co_debug("Host state");
 	co_passage_page_dump_state(&page->host_state);
 
-	co_debug("Linux state\n");
+	co_debug("Linux state");
 	co_passage_page_dump_state(&page->linuxvm_state);
 }
 
@@ -678,14 +678,14 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	 * TODO: Add sysenter / sysexit restoration support 
 	 */
 	if (caps & (1 << CO_ARCH_X86_FEATURE_FXSR)) {
-		co_debug("CPU supports fxsave/fxrstor\n");
+		co_debug("CPU supports fxsave/fxrstor");
 		if (!co_is_pae_enabled()) {
 			memcpy_co_monitor_passage_func_short_fxsave(pp->code);
 		} else {
 			memcpy_co_monitor_passage_func_fxsave(pp->code);
 		}
 	} else {
-		co_debug("CPU supports fnsave/frstor\n");
+		co_debug("CPU supports fnsave/frstor");
 		if (!co_is_pae_enabled()) {
 			memcpy_co_monitor_passage_func_short_fnsave(pp->code);
 		} else {
@@ -765,7 +765,7 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	else
 		co_fnsave(pp->linuxvm_state.fxstate);
 
-	co_debug("Passage page dump: %lx\n", (long)co_monitor_arch_passage_page_init);
+	co_debug("Passage page dump: %lx", (long)co_monitor_arch_passage_page_init);
 
 	co_passage_page_dump(pp);
 

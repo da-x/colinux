@@ -170,7 +170,7 @@ static co_rc_t coserial_main(int argc, char *argv[])
 	if (!CO_OK(rc))
 		return rc;
 	
-	co_debug("connecting to monitor\n");
+	co_debug("connecting to monitor");
 
 	module = CO_MODULE_SERIAL0 + g_daemon_parameters.index;
 	rc = co_user_monitor_open(g_reactor, monitor_receive,
@@ -180,7 +180,7 @@ static co_rc_t coserial_main(int argc, char *argv[])
 	if (!CO_OK(rc))
 		return rc;
 
-	co_debug("connected\n");
+	co_debug("connected");
 
 	rc = co_linux_reactor_packet_user_create(g_reactor, 
 						 STDIN_FILENO,

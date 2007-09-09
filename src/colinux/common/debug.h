@@ -107,7 +107,7 @@ typedef struct {
 extern int co_debug_local_index;
 extern void co_debug_buf(const char *buf, long size);
 
-#define co_debug_ulong(name)     co_debug("%s: 0x%lx\n", #name, name)
+#define co_debug_ulong(name)     co_debug("%s: 0x%lx", #name, name)
 #define co_debug(fmt, ...)       co_debug_lvl(misc, 10, fmt, ## __VA_ARGS__)
 #define co_debug_error(fmt, ...) co_debug_lvl(misc, 3, fmt, ## __VA_ARGS__)
 #define co_debug_info(fmt, ...)  co_debug_lvl(misc, 1, fmt, ## __VA_ARGS__)

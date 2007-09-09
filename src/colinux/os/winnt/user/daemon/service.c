@@ -79,12 +79,12 @@ static char * co_winnt_get_path_from_exe(void)
 	static char exe_name[512];
 
 	if (!GetModuleFileName(0, exe_name, sizeof(exe_name))) {
-		co_debug_error("daemon: cannot determine exe name.\n");
+		co_debug_error("daemon: cannot determine exe name.");
 		return NULL;
 	}
 
 	if (!PathRemoveFileSpec(exe_name)) {
-		co_debug_error("daemon: cannot get path from exe name.\n");
+		co_debug_error("daemon: cannot get path from exe name.");
 		return NULL;
 	}
 
@@ -109,7 +109,7 @@ void co_winnt_change_directory_for_service(int argc, char **argv)
 				p = co_winnt_get_path_from_exe();
 			}
 
-			co_debug("cd '%s'\n", p);
+			co_debug("cd '%s'", p);
 			if (SetCurrentDirectory(p) == 0)
 				co_terminal_print_last_error("daemon: Set working directory for service failed.\n");
 

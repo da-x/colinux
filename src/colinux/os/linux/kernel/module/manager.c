@@ -90,7 +90,7 @@ int co_os_manager_ioctl(struct inode *inode, struct file *file,
 	if (buffer_size > 80) {
 		void *buffer = vmalloc(buffer_size);
 		if (buffer == NULL) {
-			    co_debug("ioctl buffer too big: %lx\n", buffer_size);
+			    co_debug("ioctl buffer too big: %lx", buffer_size);
 			    return -ENOMEM;
 		}
 

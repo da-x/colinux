@@ -142,7 +142,7 @@ pcap2Daemon(LPVOID lpParam)
 
 		default:
 			/* Error or EOF(offline capture only) */
-			co_debug_lvl(network, 5, "unexpected error %d reading from winPCap.\n", pcap_status);
+			co_debug_lvl(network, 5, "unexpected error %d reading from winPCap.", pcap_status);
 			ExitProcess(0);
 			return 0;
 		}

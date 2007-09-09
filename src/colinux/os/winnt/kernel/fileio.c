@@ -564,14 +564,14 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	if (!CO_OK(rc))
 		goto error2;
 	
-	co_debug_lvl(filesystem, 10, "rename of '%s' to '%s'\n", filename, dest_filename);
+	co_debug_lvl(filesystem, 10, "rename of '%s' to '%s'", filename, dest_filename);
 
 	status = ZwSetInformationFile(handle, &io_status, rename_info, block_size,
 				      FileRenameInformation);
 	rc = status_convert(status);
 
 	if (!CO_OK(rc))
-		co_debug_lvl(filesystem, 5, "error %x ZwSetInformationFile rename %s,%s\n", (int)status, filename, dest_filename);
+		co_debug_lvl(filesystem, 5, "error %x ZwSetInformationFile rename %s,%s", (int)status, filename, dest_filename);
 
 error2:
 	co_os_file_close(handle);
@@ -611,7 +611,7 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 
 	co_list_init(&names->list);
 
-	co_debug_lvl(filesystem, 10, "listing of '%s'\n", dirname);
+	co_debug_lvl(filesystem, 10, "listing of '%s'", dirname);
 
 	rc = co_winnt_utf8_to_unicode(dirname, &dirname_unicode);
 	if (!CO_OK(rc))

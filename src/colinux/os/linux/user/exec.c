@@ -29,7 +29,7 @@ co_rc_t co_launch_process(int *pid, char *command_line, ...)
 
 	snprintf(buf2, sizeof(buf2), "%s &", buf);
 
-	co_debug("executing: %s\n", buf2);
+	co_debug("executing: %s", buf2);
 	ret = system(buf2);
 
 	if (ret == -1) {

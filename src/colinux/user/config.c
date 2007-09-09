@@ -283,7 +283,7 @@ static co_rc_t config_parse_mac_address(const char *text, co_netdev_desc_t *net_
 		}
 		net_dev->manual_mac_address = PTRUE;
 
-		co_debug_info("MAC address: %s\n", text);
+		co_debug_info("MAC address: %s", text);
 	} else {
 		co_debug("MAC address: auto generated");
 	}
@@ -720,8 +720,7 @@ co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_paramete
 		return rc_;
 	
 	if (CO_OK(rc)) {
-		co_debug_info("kernel boot parameters: '%s'\n", conf->boot_parameters_line);
-		co_debug_info("\n");
+		co_debug_info("kernel boot parameters: '%s'", conf->boot_parameters_line);
 		start_parameters->config_specified = PTRUE;
 	}
 

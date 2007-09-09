@@ -46,7 +46,7 @@ co_rc_t co_message_switch_set_rule(co_message_switch_t *ms, co_module_t destinat
 	rule->data = data;
 	rule->func = func;
 
-	co_debug_lvl(messages, 5, "setting callback rule for %s\n", co_module_repr(destination, &destination_str));
+	co_debug_lvl(messages, 5, "setting callback rule for %s", co_module_repr(destination, &destination_str));
 
 	co_list_add_head(&rule->node, &ms->list);
 
@@ -84,7 +84,7 @@ co_rc_t co_message_switch_cb_add_to_queue(void *data, co_message_t *message)
 		return rc;
 	}
 
-	co_debug_lvl_message(message, 11, "adding to queue %p\n", queue);
+	co_debug_lvl_message(message, 11, "adding to queue %p", queue);
 
 	queue_item->message = message;
 
@@ -154,7 +154,7 @@ co_rc_t co_message_switch_message(co_message_switch_t *ms, co_message_t *message
 			rc = co_message_switch_free_rule(ms, switch_message->destination);
 			break;
 		default:
-			co_debug_lvl_message(message, 4, "bad switch message type (%d)\n", switch_message->type);
+			co_debug_lvl_message(message, 4, "bad switch message type (%d)", switch_message->type);
 			goto out_free_error;
 		}
 
@@ -174,7 +174,7 @@ co_rc_t co_message_switch_message(co_message_switch_t *ms, co_message_t *message
 	}
 
 out_free_error:
-	co_debug_lvl_message(message, 11, "freed message\n");
+	co_debug_lvl_message(message, 11, "freed message");
 
 out_free:
 	co_os_free(message);
@@ -192,7 +192,7 @@ co_rc_t co_message_switch_free_rule(co_message_switch_t *ms, co_module_t destina
 	if (!CO_OK(rc))
 		return rc;
 
-	co_debug_lvl(messages, 5, "freeng rule for %s\n", co_module_repr(destination, &destination_str));
+	co_debug_lvl(messages, 5, "freeing rule for %s", co_module_repr(destination, &destination_str));
 
 	co_list_del(&rule->node);
 	co_os_free(rule);

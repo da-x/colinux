@@ -189,7 +189,7 @@ co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **
 
 	rc = co_load_config_file(daemon);
 	if (!CO_OK(rc)) {
-		co_debug_error("error loading configuration\n");
+		co_debug_error("error loading configuration");
 		goto out_free;
 	}
 
@@ -205,7 +205,7 @@ out:
 
 void co_daemon_destroy(co_daemon_t *daemon)
 {
-	co_debug("daemon cleanup\n");
+	co_debug("daemon cleanup");
 	co_os_free(daemon);
 }
 
@@ -225,14 +225,14 @@ co_rc_t co_daemon_load_symbol_and_data(co_daemon_t *daemon,
 	if (sym) 
 		*address_out = co_elf_get_symbol_value(sym);
 	else {
-		co_debug_error("symbol %s not found\n", symbol_name);
+		co_debug_error("symbol %s not found", symbol_name);
 		return CO_RC(ERROR);
 		
 	}
 	
 	data = co_elf_get_symbol_data(daemon->elf_data, sym);
 	if (data == NULL) {
-		co_debug_error("data of symbol %s not found\n", symbol_name);
+		co_debug_error("data of symbol %s not found", symbol_name);
 		return CO_RC(ERROR);
 	}
 	
@@ -254,7 +254,7 @@ co_rc_t co_daemon_load_symbol(co_daemon_t *daemon,
 	if (sym) 
 		*address_out = co_elf_get_symbol_value(sym);
 	else {
-		co_debug_error("symbol %s not found\n", symbol_name);
+		co_debug_error("symbol %s not found", symbol_name);
 		rc = CO_RC(ERROR);
 	}
 
@@ -298,7 +298,7 @@ co_rc_t co_load_initrd(co_daemon_t *daemon)
 	if (!daemon->config.initrd_enabled)
 		return CO_RC(OK);
 
-	co_debug("reading initrd from (%s)\n", daemon->config.initrd_path);
+	co_debug("reading initrd from (%s)", daemon->config.initrd_path);
 
 	rc = co_os_file_load(daemon->config.initrd_path, &initrd, &initrd_size, 0);
 	if (!CO_OK(rc)) {
@@ -306,7 +306,7 @@ co_rc_t co_load_initrd(co_daemon_t *daemon)
 		return rc;
 	}
 
-	co_debug("initrd size: %ld bytes\n", initrd_size);
+	co_debug("initrd size: %ld bytes", initrd_size);
 
 	rc = co_user_monitor_load_initrd(daemon->monitor, initrd, initrd_size);
 
@@ -471,11 +471,11 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 		goto out_free_vmlinux; 
 	}
 
-	co_debug("creating monitor\n");
+	co_debug("creating monitor");
 
 	rc = co_daemon_monitor_create(daemon);
 	if (!CO_OK(rc)) {
-		co_debug_error("error initializing\n");
+		co_debug_error("error initializing");
 		goto out_free_vmlinux;
 	}
 
@@ -599,7 +599,7 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 		if (net_dev->enabled == PFALSE)
 			continue;
 
-		co_debug("launching daemon for conet%d\n", i);
+		co_debug("launching daemon for conet%d", i);
 
 		if (*net_dev->desc != 0)
 			co_snprintf(interface_name, sizeof(interface_name), "-n \"%s\"", net_dev->desc);
@@ -651,7 +651,7 @@ static co_rc_t co_daemon_launch_serial_daemons(co_daemon_t *daemon)
 		if (serial->enabled == PFALSE)
 			continue;
 
-		co_debug("launching daemon for ttys%d\n", i);
+		co_debug("launching daemon for ttys%d", i);
 
 		if (serial->mode)
 			co_snprintf(mode_param, sizeof(mode_param), " -m \"%s\"", serial->mode);
@@ -874,7 +874,7 @@ out:
 
 		rc1 = co_os_file_unlink(start_parameters->pidfile);
 		if (!CO_OK(rc1))
-			co_debug("error removing PID file '%s'\n", start_parameters->pidfile);
+			co_debug("error removing PID file '%s'", start_parameters->pidfile);
 	}
 
 	co_reactor_destroy(reactor);
@@ -884,7 +884,7 @@ out:
 
 void co_daemon_end_monitor(co_daemon_t *daemon)
 {
-	co_debug("shutting down\n");
+	co_debug("shutting down");
 
 	co_daemon_monitor_destroy(daemon);
 	co_os_file_free(daemon->buf);

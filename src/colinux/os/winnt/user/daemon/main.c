@@ -289,7 +289,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		ret = 1;
 	}
 
-	co_debug("rc=%08x exit=%d\n", (int)rc, -ret);
+	co_debug("rc=%08x exit=%d", (int)rc, -ret);
 	co_debug_end();
 
 	return -ret;

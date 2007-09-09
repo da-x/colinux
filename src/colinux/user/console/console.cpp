@@ -476,7 +476,7 @@ void console_window_t::global_resize_constraint()
 			
 			if (h_diff != 0   ||  w_diff != 0) {
 				if (resized_on_attach == PFALSE) {
-					/* co_debug("%d, %d\n", window->w() - w_diff, window->h() - h_diff); */
+					/* co_debug("%d, %d", window->w() - w_diff, window->h() - h_diff); */
 					window->size(window->w() - w_diff, window->h() - h_diff);
 					resized_on_attach = PTRUE;
 				}

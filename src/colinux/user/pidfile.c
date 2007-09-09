@@ -36,7 +36,7 @@ co_rc_t read_pid_from_file(co_pathname_t pathname, co_id_t *id)
 		*id = atoi(buf);
 		co_debug("pid %d from file", (int)*id);
 	} else {
-		co_debug("file '%s' to small or unreadable\n", pathname);
+		co_debug("file '%s' to small or unreadable", pathname);
 		rc = CO_RC(INVALID_PARAMETER);
 	}
 

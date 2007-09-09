@@ -33,13 +33,13 @@ int co_user_console_main(int argc, char **argv)
 	
 	rc = global_window->parse_args(argc, argv);
 	if (!CO_OK(rc)) {
-		co_debug("The console program was unable to parse the parameters.\n");
+		co_debug("The console program was unable to parse the parameters.");
 		goto co_user_console_main_error;
 	}
 
 	rc = global_window->start();
 	if (!CO_OK(rc)) {
-		co_debug("The console program could not start.\n");
+		co_debug("The console program could not start.");
 		goto co_user_console_main_error;
 	}
 
@@ -56,7 +56,7 @@ int co_user_console_main(int argc, char **argv)
 	}
 
 co_user_console_main_error:
-	co_debug("The console program encountered an error: %08x\n", (int)rc);
+	co_debug("The console program encountered an error: %08x", (int)rc);
 
 	co_debug_end();
 

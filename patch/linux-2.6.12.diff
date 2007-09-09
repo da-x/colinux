@@ -383,7 +383,7 @@ diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 +
 +	for (i=0; i < active_tracepoints; i++) {
 +		if (tracepoints[i].code == code - 1) {
-+			co_debug("TRACEPOINT: %x\n", code - 1);
++			co_debug("TRACEPOINT: %x", code - 1);
 +			break;
 +		}
 +	}
