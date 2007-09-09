@@ -22,7 +22,6 @@
 #include <colinux/os/kernel/time.h>
 #include <colinux/os/kernel/wait.h>
 #include <colinux/os/timer.h>
-#include <colinux/os/current/kernel/main.h>
 #include <colinux/arch/passage.h>
 #include <colinux/arch/interrupt.h>
 #include <colinux/arch/mmu.h>
