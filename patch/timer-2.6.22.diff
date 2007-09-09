@@ -2,7 +2,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/timer_cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/timer_cooperative.c
-@@ -0,0 +1,141 @@
+@@ -0,0 +1,135 @@
 +/*
 + *  Cooperative mode timer.
 + *
@@ -126,9 +126,6 @@ Index: linux-2.6.22-source/arch/i386/kernel/timer_cooperative.c
 +
 +void __init time_init(void)
 +{
-+	/* fill value 'frequencey' */
-+	query_host_highprec_time();
-+
 +	/* 100Hz is fix from damons 10ms setup */
 +	co_clocksource.mult = clocksource_hz2mult(100, CO_CLOCK_SHIFT);
 +	co_clockevent.cpumask = cpumask_of_cpu(0);
@@ -138,10 +135,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/timer_cooperative.c
 +
 +	setup_delay_function(co_delay_loop);
 +
-+	cpu_khz = frequencey / 1000;
-+	printk("Detected %lu.%03lu MHz processor.\n",
-+				(unsigned long)cpu_khz / 1000,
-+				(unsigned long)cpu_khz % 1000);
++	cpu_khz = co_boot_params.co_cpu_khz;
 +}
 +
 Index: linux-2.6.22-source/arch/i386/kernel/cpu/common.c

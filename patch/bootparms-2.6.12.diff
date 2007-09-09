@@ -14,7 +14,7 @@ Index: linux-2.6.12-source/include/linux/cooperative.h
 +	unsigned long co_memory_size;		// co_passage_page->params[1]
 +	void *co_initrd;			// co_passage_page->params[2]
 +	unsigned long co_initrd_size;		// co_passage_page->params[3]
-+	long result;				// co_passage_page->params[4]
++	unsigned long co_cpu_khz;		// co_passage_page->params[4]
 +	unsigned long filler[5];		// compatible api: empty 5,6,7,8,9
 +	char co_boot_parameters[CO_BOOTPARAM_STRING_LENGTH]; // co_passage_page->params[10]
 +} __attribute__((packed)) co_boot_params_t;

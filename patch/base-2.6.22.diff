@@ -2218,7 +2218,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	unsigned long co_memory_size;
 +	void *co_initrd;
 +	unsigned long co_initrd_size;
-+	long result;
++	unsigned long co_cpu_khz;
 +	unsigned long filler[5];		// compatible old api: empty 5,6,7,8,9
 +	char co_boot_parameters[CO_BOOTPARAM_STRING_LENGTH]; // params[10]
 +} __attribute__((packed)) co_boot_params_t;

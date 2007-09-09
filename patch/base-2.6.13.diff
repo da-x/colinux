@@ -1145,7 +1145,7 @@ Index: linux-2.6.13-source/arch/i386/kernel/timers/timer_cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.13-source/arch/i386/kernel/timers/timer_cooperative.c
-@@ -0,0 +1,143 @@
+@@ -0,0 +1,140 @@
 +/*
 + *  Cooperative mode timer.
 + *
@@ -1162,8 +1162,6 @@ Index: linux-2.6.13-source/arch/i386/kernel/timers/timer_cooperative.c
 +
 +#include <linux/cooperative.h>
 +#include <linux/cooperative_internal.h>
-+
-+extern unsigned int cpu_khz;	/* Detected from host */
 +
 +static unsigned long long first_time;
 +static unsigned long frequencey;
@@ -1268,7 +1266,6 @@ Index: linux-2.6.13-source/arch/i386/kernel/timers/timer_cooperative.c
 +static int __init init_cooperative_timer(char* override)
 +{
 +	first_time = query_host_highprec_time();
-+	cpu_khz = frequencey / 1000;
 +
 +	/* Always pick this timer */
 +	return 0;
@@ -2595,7 +2592,7 @@ Index: linux-2.6.13-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.13-source/kernel/cooperative.c
-@@ -0,0 +1,422 @@
+@@ -0,0 +1,423 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2641,6 +2638,7 @@ Index: linux-2.6.13-source/kernel/cooperative.c
 +        co_memory_size = co_passage_page->params[1];
 +        co_initrd = (void *)co_passage_page->params[2];
 +        co_initrd_size = co_passage_page->params[3];
++        cpu_khz = co_passage_page->params[4];
 +
 +        memcpy(co_boot_parameters, &co_passage_page->params[10],
 +               sizeof(co_boot_parameters));

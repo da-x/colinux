@@ -851,6 +851,7 @@ static co_rc_t start(co_monitor_t *cmon)
 	params->co_memory_size	= cmon->memory_size;
 	params->co_initrd 	= (void *)cmon->initrd_address;
 	params->co_initrd_size	= cmon->initrd_size;
+	params->co_cpu_khz	= co_os_get_cpu_khz();
 
 	co_memcpy(&params->co_boot_parameters,
 		cmon->config.boot_parameters_line,
