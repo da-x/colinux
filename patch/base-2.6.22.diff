@@ -203,7 +203,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
 -		ptrace.o time.o ioport.o ldt.o setup.o i8259.o sys_i386.o \
 -		pci-dma.o i386_ksyms.o i387.o bootflag.o e820.o\
 -		quirks.o i8237.o topology.o alternative.o i8253.o tsc.o
-+		ptrace.o ioport.o ldt.o setup.o i8259.o sys_i386.o \
++		ptrace.o ioport.o ldt.o setup.o sys_i386.o \
 +		pci-dma.o i386_ksyms.o i387.o bootflag.o \
 +		quirks.o i8237.o topology.o alternative.o
  
@@ -214,7 +214,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
  obj-$(CONFIG_X86_BIOS_REBOOT)	+= reboot.o
  obj-$(CONFIG_MCA)		+= mca.o
  obj-$(CONFIG_X86_MSR)		+= msr.o
-@@ -39,11 +40,19 @@
+@@ -39,11 +40,20 @@
  obj-$(CONFIG_VM86)		+= vm86.o
  obj-$(CONFIG_EARLY_PRINTK)	+= early_printk.o
  obj-$(CONFIG_HPET_TIMER) 	+= hpet.o
@@ -227,8 +227,9 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
 +obj-y				+= cooperative.o
 +obj-y				+= reboot_cooperative.o
 +obj-y				+= timer_cooperative.o
++obj-y				+= i8259_cooperative.o
 +else
-+obj-y				+= time.o i8253.o
++obj-y				+= time.o i8253.o i8259.o
  obj-y				+= pcspeaker.o
 +endif
  
@@ -663,141 +664,6 @@ Index: linux-2.6.22-source/arch/i386/kernel/i387.c
  	stts();
  }
  
-Index: linux-2.6.22-source/arch/i386/kernel/i8259.c
-===================================================================
---- linux-2.6.22-source.orig/arch/i386/kernel/i8259.c
-+++ linux-2.6.22-source/arch/i386/kernel/i8259.c
-@@ -9,6 +9,7 @@
- #include <linux/kernel_stat.h>
- #include <linux/sysdev.h>
- #include <linux/bitops.h>
-+#include <linux/cooperative_internal.h>
- 
- #include <asm/8253pit.h>
- #include <asm/atomic.h>
-@@ -24,6 +25,27 @@
- 
- #include <io_ports.h>
- 
-+#ifdef CONFIG_COOPERATIVE
-+
-+CO_TRACE_STOP;
-+
-+/* Function must have the same prototype as do_IRQ() */
-+fastcall void proxy_interrupt_handler(struct pt_regs *regs)
-+{
-+	unsigned long flags;
-+
-+	co_passage_page_acquire(&flags);
-+	co_passage_page->operation = CO_OPERATION_FORWARD_INTERRUPT;
-+	co_passage_page->params[0] = (~regs->orig_eax) + 0x20; /* IRQ number */
-+	co_passage_page->host_state.flags &= ~(1 << 9); /* Turn IF off */
-+	co_switch_wrapper();
-+	co_callback(flags, regs);
-+}
-+
-+CO_TRACE_CONTINUE;
-+
-+#endif
-+
- /*
-  * This is the 'legacy' 8259A Programmable Interrupt Controller,
-  * present in the majority of PC/AT boxes.
-@@ -249,6 +271,9 @@
- 
- static int i8259A_shutdown(struct sys_device *dev)
- {
-+	if (cooperative_mode_enabled())
-+		return 0;
-+
- 	/* Put the i8259A into a quiescent state that
- 	 * the kernel initialization code can get it
- 	 * out of.
-@@ -352,6 +377,65 @@
-  */
- static struct irqaction fpu_irq = { math_error_irq, 0, CPU_MASK_NONE, "fpu", NULL, NULL };
- 
-+#ifdef CONFIG_COOPERATIVE
-+
-+/*
-+ * Not like you have any other choice other than using
-+ * COPIC in Cooperative mode.
-+ */
-+
-+static void end_COPIC_irq(unsigned int irq)
-+{
-+}
-+
-+#define shutdown_COPIC_irq	disable_COPIC_irq
-+
-+static void mask_and_ack_COPIC(unsigned int irq)
-+{
-+}
-+
-+static unsigned int startup_COPIC_irq(unsigned int irq)
-+{
-+	return 0;
-+}
-+
-+void disable_COPIC_irq(unsigned int irq)
-+{
-+}
-+
-+void enable_COPIC_irq(unsigned int irq)
-+{
-+}
-+
-+static struct irq_chip co_pic_irq_chip = {
-+	.name = "COPIC",
-+	.startup = startup_COPIC_irq,
-+	.shutdown = shutdown_COPIC_irq,
-+	.enable = enable_COPIC_irq,
-+	.disable = disable_COPIC_irq,
-+	.mask_ack = mask_and_ack_COPIC,
-+	.end = end_COPIC_irq,
-+	.set_affinity = NULL
-+};
-+
-+/* Called from pre_intr_init_hook */
-+void __init init_ISA_irqs (void)
-+{
-+	int i;
-+
-+	printk("Setting proxy interrupt vectors\n");
-+	for (i = 0; i < NR_IRQS; i++) {
-+		irq_desc[i].status = IRQ_DISABLED;
-+		irq_desc[i].action = 0;
-+		irq_desc[i].depth = 1;
-+
-+		set_irq_chip_and_handler_name(i, &co_pic_irq_chip, handle_simple_irq, "CO");
-+	}
-+
-+}
-+
-+#else /* CONFIG_COOPERATIVE */
-+
- void __init init_ISA_irqs (void)
- {
- 	int i;
-@@ -381,6 +465,8 @@
- 	}
- }
- 
-+#endif /* CONFIG_COOPERATIVE */
-+
- /* Overridden in paravirt.c */
- void init_IRQ(void) __attribute__((weak, alias("native_init_IRQ")));
- 
-@@ -404,6 +490,9 @@
- 			set_intr_gate(vector, interrupt[i]);
- 	}
- 
-+	if (cooperative_mode_enabled())
-+		return;
-+
- 	/* setup after call gates are initialised (usually add in
- 	 * the architecture specific gates)
- 	 */
 Index: linux-2.6.22-source/arch/i386/kernel/ioport.c
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/ioport.c
@@ -3182,3 +3048,109 @@ Index: linux-2.6.22-source/arch/i386/mach-default/setup.c
  	return who;
  }
 +#endif /* !CONFIG_COOPERATIVE */
+Index: linux-2.6.22-source/arch/i386/kernel/i8259_cooperative.c
+===================================================================
+--- /dev/null
++++ linux-2.6.22-source/arch/i386/kernel/i8259_cooperative.c
+@@ -0,0 +1,101 @@
++/*
++ *  linux/arch/i386/kernel/i8259_cooperative.c
++ */
++
++#include <linux/interrupt.h>
++#include <linux/init.h>
++#include <linux/cooperative_internal.h>
++
++#include <asm/irq.h>
++#include <asm/arch_hooks.h>
++
++CO_TRACE_STOP;
++
++/* Function must have the same prototype as do_IRQ() */
++fastcall void proxy_interrupt_handler(struct pt_regs *regs)
++{
++	unsigned long flags;
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_FORWARD_INTERRUPT;
++	co_passage_page->params[0] = (~regs->orig_eax) + 0x20; /* IRQ number */
++	co_passage_page->host_state.flags &= ~(1 << 9); /* Turn IF off */
++	co_switch_wrapper();
++	co_callback(flags, regs);
++}
++
++CO_TRACE_CONTINUE;
++
++/*
++ * Not like you have any other choice other than using
++ * COPIC in Cooperative mode.
++ */
++
++static void end_COPIC_irq(unsigned int irq)
++{
++}
++
++static void mask_and_ack_COPIC(unsigned int irq)
++{
++}
++
++static unsigned int startup_COPIC_irq(unsigned int irq)
++{
++	return 0;
++}
++
++#define shutdown_COPIC_irq	disable_COPIC_irq
++
++static void disable_COPIC_irq(unsigned int irq)
++{
++}
++
++static void enable_COPIC_irq(unsigned int irq)
++{
++}
++
++static struct irq_chip co_pic_irq_chip = {
++	.name = "COPIC",
++	.startup = startup_COPIC_irq,
++	.shutdown = shutdown_COPIC_irq,
++	.enable = enable_COPIC_irq,
++	.disable = disable_COPIC_irq,
++	.mask_ack = mask_and_ack_COPIC,
++	.end = end_COPIC_irq,
++	.set_affinity = NULL
++};
++
++/* Called from pre_intr_init_hook */
++void __init init_ISA_irqs (void)
++{
++	int i;
++
++	printk("Setting proxy interrupt vectors\n");
++	for (i = 0; i < NR_IRQS; i++) {
++		irq_desc[i].status = IRQ_DISABLED;
++		irq_desc[i].action = 0;
++		irq_desc[i].depth = 1;
++
++		set_irq_chip_and_handler_name(i, &co_pic_irq_chip, handle_simple_irq, "CO");
++	}
++
++}
++
++void __init init_IRQ(void)
++{
++	int i;
++
++	/* all the set up before the call gates are initialised */
++	pre_intr_init_hook();
++
++	/*
++	 * Cover the whole vector space, no vector can escape us.
++	 */
++	for (i = 0; i < (NR_VECTORS - FIRST_EXTERNAL_VECTOR); i++) {
++		int vector = FIRST_EXTERNAL_VECTOR + i;
++		if (i >= NR_IRQS)
++			break;
++		if (vector != SYSCALL_VECTOR)
++			set_intr_gate(vector, interrupt[i]);
++	}
++}
