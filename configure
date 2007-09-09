@@ -515,9 +515,9 @@ gcc_helper()
 	    3.3.*)
 		MINGW_ABI="102"
 		;;
-	    3.2.*)
-		MINGW_ABI="101"
-		;;
+#	    3.2.*)
+#		MINGW_ABI="101"
+#		;;
 	    *)	MINGW_ABI="unknown"
 		;;
 	esac
