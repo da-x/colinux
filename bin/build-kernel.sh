@@ -210,7 +210,11 @@ archive_modules()
 	ln -s /usr/src/linux-$COMPLETE_KERNEL_NAME $DEST/source
 
 	# Create compressed tar archive for unpacking directly on root of fs
+	# Fallback, if option --owner/--group isn't supported
 	cd $COLINUX_TARGET_MODULE_PATH
+	tar --owner=root --group=root \
+	    -czf $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz \
+	    lib/modules/$COMPLETE_KERNEL_NAME || \
 	tar czf $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz \
 	    lib/modules/$COMPLETE_KERNEL_NAME || exit $?
 }
