@@ -159,24 +159,26 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		goto out_error;
 	}	
 
-	long io_buffer_page;
-	long io_buffer_num_pages = CO_VPTR_IO_AREA_SIZE >> CO_ARCH_PAGE_SHIFT;
-	long io_buffer_offset = ((CO_VPTR_IO_AREA_START & ((1 << PGDIR_SHIFT) - 1)) >> CO_ARCH_PAGE_SHIFT) 
-		* sizeof(linux_pte_t);
-	unsigned long io_buffer_host_address = (unsigned long)(cmon->io_buffer);
+	{
+		long io_buffer_page;
+		long io_buffer_num_pages = CO_VPTR_IO_AREA_SIZE >> CO_ARCH_PAGE_SHIFT;
+		long io_buffer_offset = ((CO_VPTR_IO_AREA_START & ((1 << PGDIR_SHIFT) - 1)) >> CO_ARCH_PAGE_SHIFT)
+			* sizeof(linux_pte_t);
+		unsigned long io_buffer_host_address = (unsigned long)(cmon->io_buffer);
 
-	for (io_buffer_page=0; io_buffer_page < io_buffer_num_pages; io_buffer_page++) {
-		unsigned long io_buffer_pfn = co_os_virt_to_phys((void *)io_buffer_host_address) >> CO_ARCH_PAGE_SHIFT;
-		
-		rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP + io_buffer_offset,
-					    sizeof(linux_pte_t), &io_buffer_pfn);
-		if (!CO_OK(rc)) {
-			co_debug_error("error %08x initializing io buffer (%ld)", (int)rc, io_buffer_page);
-			goto out_error;
+		for (io_buffer_page=0; io_buffer_page < io_buffer_num_pages; io_buffer_page++) {
+			unsigned long io_buffer_pfn = co_os_virt_to_phys((void *)io_buffer_host_address) >> CO_ARCH_PAGE_SHIFT;
+
+			rc = co_monitor_create_ptes(cmon, CO_VPTR_SELF_MAP + io_buffer_offset,
+						    sizeof(linux_pte_t), &io_buffer_pfn);
+			if (!CO_OK(rc)) {
+				co_debug_error("error %08x initializing io buffer (%ld)", (int)rc, io_buffer_page);
+				goto out_error;
+			}
+
+			io_buffer_offset += sizeof(linux_pte_t);
+			io_buffer_host_address += CO_ARCH_PAGE_SIZE;
 		}
-		
-		io_buffer_offset += sizeof(linux_pte_t);
-		io_buffer_host_address += CO_ARCH_PAGE_SIZE;
 	}
 
 	co_debug("initialization finished");
@@ -277,12 +279,16 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 	while (co_queue_size(queue) != 0)
 	{
 		co_message_queue_item_t *message_item;
+		co_message_t *message;
+		unsigned long size;
+		co_linux_message_t *linux_message;
+
 		rc = co_queue_peek_tail(queue, (void **)&message_item);
 		if (!CO_OK(rc))
 			return rc;
 		
-		co_message_t *message = message_item->message;
-		unsigned long size = message->size + sizeof(*message);
+		message = message_item->message;
+		size = message->size + sizeof(*message);
 
 		if (message->from == CO_MODULE_CONET0)
 			co_debug_lvl(network, 14, "message sent to linux: %p", message);
@@ -309,7 +315,7 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 			break;
 		}
 
-		co_linux_message_t *linux_message = (co_linux_message_t *)message->data;
+		linux_message = (co_linux_message_t *)message->data;
 		if ((unsigned long)linux_message->device >= (unsigned long)CO_DEVICES_TOTAL){
 			co_debug_system("BUG! %s:%d %d %d", __FILE__, __LINE__,
 					message->to, message->from);

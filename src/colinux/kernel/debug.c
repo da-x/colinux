@@ -233,6 +233,8 @@ co_rc_t co_debug_write_log(co_manager_debug_t *debug,
 			   co_debug_write_vector_t *vec, int vec_size)
 {
 	unsigned long size;
+	co_debug_tlv_t tlv;
+	co_debug_write_vector_t local_vec[3];
 
 	size = co_debug_write_vector_size(vec, vec_size);
 	if (size > 0xf8)
@@ -240,11 +242,9 @@ co_rc_t co_debug_write_log(co_manager_debug_t *debug,
 
 	debug_driver_index++;
 
-	co_debug_tlv_t tlv;
 	tlv.type = CO_DEBUG_TYPE_TLV;
 	tlv.length = size + sizeof(debug_tlv_index) + sizeof(debug_driver_index);
 	
-	co_debug_write_vector_t local_vec[3];
 	local_vec[0].vec_size = 0;
 	local_vec[0].size = sizeof(tlv);
 	local_vec[0].ptr = (void *)&tlv;
@@ -385,15 +385,14 @@ co_rc_t co_debug_free(co_manager_debug_t *debug)
 
 void co_debug_buf(const char *buf, long size)
 {
-	if (!co_global_manager) {
-		return;
-	}
-
-	if (!co_global_manager->debug.ready) {
-		return;
-	}
-
 	co_debug_write_vector_t vec;
+
+	if (!co_global_manager)
+		return;
+
+	if (!co_global_manager->debug.ready)
+		return;
+
 	vec.vec_size = 0;
 	vec.size = size;
 	vec.ptr = buf;
