@@ -33,6 +33,14 @@
 #define SYMBOL_PREFIX ""
 #endif
 
+#ifdef CO_COLINUX_KERNEL
+#error "CO_COLINUX_KERNEL should never defined here"
+#endif
+
+#ifdef CONFIG_COOPERATIVE
+#error "CONFIG_COOPERATIVE should never defined here"
+#endif
+
 /*
  * These two pseudo variables mark the start and the end of the passage code.
  * The passage code is position indepedent, so we just copy it from the 

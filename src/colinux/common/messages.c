@@ -7,10 +7,10 @@
  * the root directory.
  */
 
-#include "messages.h"
-
-#include <memory.h>
+#include <colinux/os/current/memory.h>
 #include <colinux/os/alloc.h>
+
+#include "messages.h"
 
 #define co_debug_lvl_route(msg, from, to, level, fmt, ...) do {	\
     co_module_name_t from_str;						\

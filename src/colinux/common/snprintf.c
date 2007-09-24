@@ -9,7 +9,8 @@
  */ 
 
 #include <stdarg.h>
-#include <memory.h>
+
+#include <colinux/os/current/memory.h>
 #include <colinux/common/common.h>
 #include <colinux/common/libc.h>
 

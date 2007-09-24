@@ -79,3 +79,11 @@ target.mono_options = Options(
     compiler_defines = dict(CO_LIBC__STRTOL=None),
     )
 )
+
+targets['Makefile.libm'] = Target(
+    inputs = input_list(".c", ".c"),
+    tool = MakefileKbuild(),
+    mono_options = Options(
+	appenders = dict(compiler_defines = dict(CO_LIBC__MISC=None),)
+    )
+)

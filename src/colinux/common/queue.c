@@ -7,10 +7,10 @@
  * the root directory.
  */
 
-#include "queue.h"
-
-#include <memory.h>
+#include <colinux/os/current/memory.h>
 #include <colinux/os/alloc.h>
+
+#include "queue.h"
 
 co_rc_t co_queue_init(co_queue_t *queue)
 {

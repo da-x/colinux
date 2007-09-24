@@ -7,11 +7,10 @@
  * the root directory.
  */
 
-#include "console.h"
-
-#include <memory.h>
-
+#include <colinux/os/current/memory.h>
 #include <colinux/os/alloc.h>
+
+#include "console.h"
 
 /*
  * Console initialization.

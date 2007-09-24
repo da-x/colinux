@@ -26,6 +26,40 @@ class Empty(Tool):
     def make(self, target, reporter):
         return 0
 
+class MakefileKbuild(Tool):
+    def _content(self, target):
+        from StringIO import StringIO
+        from comake.defaults import file_id_allocator
+	import os
+
+	parameters = [os.path.dirname(target.pathname)]
+        compiler_defines = target.options.get('compiler_defines', {})
+        defines = compiler_defines.items()
+        defines.sort()
+        for key, value in defines:
+            if value is not None:
+                parameters.append('-D%s=%s' % (key, value))
+                continue
+            parameters.append('-D%s' % (key, ))
+
+        output_file = StringIO()
+        print >>output_file, "include $(KBUILD_EXTMOD)/Makefile.include"
+        print >>output_file, "EXTRA_CFLAGS += -I$(COLINUX_BASE)/%s" % ' '.join(parameters)
+        print >>output_file, "lib-m := \\"
+        for names in target.inputs:
+	    name = os.path.basename(names.pathname)
+	    if name != 'file_ids.c' and name != 'colinux.mod.c':
+        	print >>output_file, " %s \\" % (os.path.splitext(name)[0]+'.o')
+        return output_file.getvalue()
+
+    def make(self, target, reporter):
+        output_file = open(target.pathname, 'wb')
+        output_file.write(self._content(target))
+
+    def rebuild_needed(self, target):
+        return open(target.pathname, 'rb').read() != self._content(target)
+
+
 class Copy(Tool):
     def make(self, target, reporter):
         input_pathnames = []
@@ -243,4 +277,5 @@ exported_tools = [
     Tool,
     Executer,
     Copy,
+    MakefileKbuild,
 ]

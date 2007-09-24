@@ -7,10 +7,10 @@
  * the root directory.
  */
 
+#include <colinux/os/current/memory.h>
+
 #include "fileblock.h"
 #include "monitor.h"
-
-#include <memory.h>
 
 co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 				      co_block_dev_t *dev, 

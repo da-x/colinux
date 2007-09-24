@@ -7,9 +7,7 @@
  * the root directory.
  */
 
-#include <stdlib.h>
-#include <strings.h>
-#include <memory.h>
+#include <colinux/os/current/memory.h>
 
 #include "libc.h"
 
@@ -90,6 +88,8 @@ int co_strncmp(const char *s1, const char *s2, int n)
 #endif
 
 #ifdef CO_LIBC__STRTOL
+
+#include <stdlib.h>
 
 int co_strtol(const char *s1, char **s2, int n)
 {

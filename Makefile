@@ -48,6 +48,7 @@ endif
 clean:
 	make -C src clean
 	find src \( -name '.tmp_versions' \
+		-o -name '.module.*_build' \
 		\) -type d -print | xargs rm -rf
 	find src bin \( -name '*.o' -o -name '*.pyc' \
 		-o -name '.*.cmd' -o -name 'colinux.mod.c' \

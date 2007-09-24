@@ -14,10 +14,6 @@
 
 #include "manager.h"
 
-#ifdef CONFIG_REGPARM
-#error "colinux don't run, if CONFIG_REGPARM enabled in host kernel"
-#endif
-
 /* Prototype must be local, checks the linker here */
 extern int regparm_check(int p1, int p2, int p3);
 
