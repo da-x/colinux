@@ -29,6 +29,4 @@ struct co_archdep_monitor {
 	unsigned long long *fixed_pte;
 };
 
-extern void (*co_host_switch_wrapper_func)(struct co_monitor *);
-
 #endif

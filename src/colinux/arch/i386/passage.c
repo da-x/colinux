@@ -651,13 +651,6 @@ static void pae_temp_address_space_init(co_arch_passage_page_pae_address_space_t
 }
 
 
-void co_host_normal_switch_wrapper(co_monitor_t *cmon)
-{
-	co_switch();
-}
-
-void (*co_host_switch_wrapper_func)(co_monitor_t *) = co_host_normal_switch_wrapper;
-
 co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 {
 	co_arch_passage_page_t *pp = cmon->passage_page;
@@ -774,5 +767,5 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 
 void co_host_switch_wrapper(co_monitor_t *cmon)
 {
-	co_host_switch_wrapper_func(cmon);
+	co_switch();
 }
