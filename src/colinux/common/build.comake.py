@@ -13,11 +13,6 @@ targets['common.a'] = Target(
     ],
 )
 
-def file_id_inputs(scripter, tool_run_inf):
-    command_line = 'echo "a.c" | python %s > %s' % (tool_run_inf.target.inputs[0].pathname,
-                                tool_run_inf.target.pathname)
-    return command_line
-
 targets['file_ids.o'] = Target(
     tool = Compiler(),
     inputs = [Input('file_ids.c')],
