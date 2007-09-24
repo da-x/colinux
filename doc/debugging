@@ -7,7 +7,7 @@ colinux-debug-daemon.exe
 This is a configurator and debug logger.  You need to start it before you
 wish to see more internals from coLinux system. Start it after colinux
 driver is installed (normal case after the Installer was done, or after
-you runs colinux-dasemon --install-driver) and before launch your Linux
+you runs colinux-daemon --install-driver) and before launch your Linux
 via colinux-daemon.
 
 
@@ -49,21 +49,21 @@ Command Line Parameters
 Short start to see more error messages
 --------------------------------------
 
-    Open a windows command prompt, change into coLinux install directory and
-    run the debug-logger:
+Open a windows command prompt, change into coLinux install directory and
+run the debug-logger:
 
 	C:
 	cd \coLinux
-        colinux-debug-daemon.exe -d -p -s prints=31,misc=31 -f debug.xml    
+	colinux-debug-daemon.exe -d -p -s prints=31,misc=31 -f debug.xml
 
-    Than start colinux (as console application or as service).
-    Whenever you means that the trce point was done, stop debug logger
-    with key CTRL-C on the colinux-debug-daemon.
+Than start colinux (as console application or as service).
+Whenever you means that the trace point was done, stop debug logger
+with key CTRL-C on the colinux-debug-daemon.
 
-    Open the file debug.xml with Internet Explorer or notepad and view
-    near the end of file.  Search the text, you see also on the colinux-daemon
-    and view near this linies in the debug.xml.  Mostly the debug says more about
-    your problem as the colinux-daemon console.
+Open the file debug.xml with Internet Explorer or notepad and view
+near the end of file.  Search the text, you was seen from colinux-daemon
+and view near this linies in the debug.xml.  Mostly the debug says more
+about your problem as the colinux-daemon console.
 
 
 
@@ -171,6 +171,7 @@ Can also run the debug-daemon after coLinux was started. The debug session
 should start, before you think is interesting.
 After finish your debug session stop colinux-debug-daemon with CTRL-C and
 stop the server.py (or netcat) with CTRL-C.
+
 Convert the binary data into readable XML format:
 
     DEVEL: colinux-debug-daemon -p < debug.bin > debug.xml
@@ -218,8 +219,8 @@ where 'n' is the number '3' in the example.
 F7989000 and F799992F0 in this case needs to know to find any address from
 windows crash in the dumped linux.sys later.
 
-Note all the hex numbers exacly down to paper and restart Windows. In
-Event Manager finds mostly the hex numbers later. But not in all cases.
+Note all the hex numbers exactly down to paper and restart Windows. In
+Event Manager finds mostly the hex numbers later, but not in all cases.
 
 Download from "Install Debugging Tools for Windows 32-bit Version"
 http://www.microsoft.com/whdc/devtools/debugging/installx86.mspx
