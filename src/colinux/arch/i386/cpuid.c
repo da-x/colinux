@@ -10,8 +10,6 @@
 
 #include "cpuid.h"
 
-#include <memory.h>
-
 bool_t co_i386_has_cpuid()
 {
 	bool_t has_cpuid = 0;
@@ -60,50 +58,6 @@ void co_i386_get_cpuid(unsigned long op, cpuid_t *cpuid)
 	      "=d" (cpuid->edx)
 	    : "0" (op));
 }
-
-#if (0)
-unsigned long co_i386_get_cpu_vendor()
-{
-	cpuid_t cpuid;
-	char id_string[sizeof(cpuid.id_string)+1] = {0, };
-
-	co_i386_get_cpuid(0, &cpuid);
-	memcpy(id_string, cpuid.id_string, sizeof(cpuid.id_string));
-
-	if (!strcmp(id_string, "GenuineIntel"))
-		return X86_VENDOR_INTEL;
-
-	if (!strcmp(id_string, "AuthenticAMD"))
-		return X86_VENDOR_AMD;
-
-	if (!strcmp(id_string, "CyrixInstead"))
-		return X86_VENDOR_CYRIX;
-
-	if (!strcmp(id_string, "Geode by NSC"))
-		return X86_VENDOR_NSC;
-
-	if (!strcmp(id_string, "UMC UMC UMC "))
-		return X86_VENDOR_UMC;
-
-	if (!strcmp(id_string, "CentaurHauls"))
-		return X86_VENDOR_CENTAUR;
-
-	if (!strcmp(id_string, "NexGenDriven"))
-		return X86_VENDOR_NEXGEN;
-
-	if (!strcmp(id_string, "RiseRiseRise"))
-		return X86_VENDOR_RISE;
-
-	if (!strcmp(id_string, "GenuineTMx86") ||
-	    !strcmp(id_string, "TransmetaCPU"))
-		return X86_VENDOR_TRANSMETA;
-
-	if (!strcmp(id_string, "SiS SiS SiS "))
-		return X86_VENDOR_SIS;
-
-	return X86_VENDOR_UNKNOWN;
-}
-#endif
 
 co_rc_t co_i386_get_cpuid_capabilities(unsigned long *caps)
 {
