@@ -4,36 +4,44 @@ targets['core.c'] = Target(
     tool = Copy(),
 )
 
+targets['Makefile.colinux-objs'] = Target(
+    inputs = input_list(".c", ".c") +
+        [Input("core.c")],   # 'core.o' can be double, kbuild sorted it out
+    tool = MakefileKbuild(),
+)
+
 # Create links to Makefile and all C-files in build directory
 def script_cmdline(scripter, tool_run_inf):
     inputs = tool_run_inf.target.get_actual_inputs()
+    from comake import build_root
     command_line = (
-     ('cp %s %s;'+
-      'INFILE=%s;'+
-      'INPATH=`dirname $INFILE`;'+
-      'OUTPATH=%s_build;'+
-      'mkdir -p $OUTPATH;'+
-      'ln -sf `pwd`/$INFILE $OUTPATH/Makefile;'+
+     ('INFILE=%s; '+
+      'OUTFILE=%s; '+
+      'BASE=%s; '+
+      'INPATH=`dirname $INFILE`; '+
+      'OUTPATH=${OUTFILE}_build; '+
+      'mkdir -p $OUTPATH; '+
+      'ln -sf $BASE/$INFILE $OUTPATH/Makefile; '+
       'for name in $INPATH/*.c; do '+
-        'OUTFILE=`basename $name`;'+
-        'ln -sf `pwd`/$name $OUTPATH/$OUTFILE;'+
-      'done') %
+        'ln -sf $BASE/$name $OUTPATH/`basename $name`; '+
+      'done; '+
+      'cp $INFILE $OUTFILE') %
      (inputs[0].pathname, tool_run_inf.target.pathname,
-      inputs[0].pathname, tool_run_inf.target.pathname))
+      build_root))
     return command_line
 
 targets['.module.arch'] = Target(
-    inputs = [Input("../../../../arch/i386/Makefile.libm")],
+    inputs = [Input("../../../../arch/i386/Makefile.lib-m")],
     tool = Script(script_cmdline),
 )
 
 targets['.module.common'] = Target(
-    inputs = [Input("../../../../common/Makefile.libm")],
+    inputs = [Input("../../../../common/Makefile.lib-m")],
     tool = Script(script_cmdline),
 )
 
 targets['.module.kernel'] = Target(
-    inputs = [Input("../../../../kernel/Makefile.libm")],
+    inputs = [Input("../../../../kernel/Makefile.lib-m")],
     tool = Script(script_cmdline),
 )
 
@@ -45,7 +53,7 @@ class ModuleBuilder(Executer):
 
     def get_command_line(self, tool_run_inf):
         return ('make V=0 -C $COLINUX_HOST_KERNEL_DIR '+
-		'M=$COLINUX_BASE/src/colinux/os/linux/kernel/module ')
+                'M=$COLINUX_BASE/%s' % current_dirname)
 
     def cleanup(self, tool_run_inf):
         import os
@@ -53,10 +61,11 @@ class ModuleBuilder(Executer):
 
 targets['colinux.ko'] = Target(
     inputs = [
-        Input('core.c'),
+        Input('Makefile.colinux-objs'),
         Input('.module.arch'),
         Input('.module.kernel'),
         Input('.module.common'),
+        Input('../../../../common/version.h', only_build_dep=True),
     ],
     tool = ModuleBuilder(),
 )

@@ -29,27 +29,39 @@ class Empty(Tool):
 class MakefileKbuild(Tool):
     def _content(self, target):
         from StringIO import StringIO
+        import os
         from comake.defaults import file_id_allocator
-	import os
+        global colinux_file_id
 
-	parameters = [os.path.dirname(target.pathname)]
+        parameters = [os.path.dirname(target.pathname)]
         compiler_defines = target.options.get('compiler_defines', {})
         defines = compiler_defines.items()
         defines.sort()
         for key, value in defines:
+            if key == 'COLINUX_FILE_ID':
+                continue
             if value is not None:
                 parameters.append('-D%s=%s' % (key, value))
                 continue
             parameters.append('-D%s' % (key, ))
 
+        # Output-type coded in extension (lib-m or colinux-objs)
+        libm = target.get_ext()[1:]
+
         output_file = StringIO()
         print >>output_file, "include $(KBUILD_EXTMOD)/Makefile.include"
         print >>output_file, "EXTRA_CFLAGS += -I$(COLINUX_BASE)/%s" % ' '.join(parameters)
-        print >>output_file, "lib-m := \\"
+
         for names in target.inputs:
-	    name = os.path.basename(names.pathname)
-	    if name != 'file_ids.c' and name != 'colinux.mod.c':
-        	print >>output_file, " %s \\" % (os.path.splitext(name)[0]+'.o')
+            name = os.path.basename(names.pathname)
+            if not name in [ 'file_ids.c', 'colinux.mod.c', 'colinux.c' ]:
+                full_name = os.path.join(parameters[0], name)
+                colinux_file_id = file_id_allocator.allocate(full_name)
+
+                oname = os.path.splitext(name)[0]+'.o'
+                print >>output_file, "%s += %s" % (libm, oname)
+                print >>output_file, "CFLAGS_%s = -DCOLINUX_FILE_ID=%d" % (oname, colinux_file_id)
+
         return output_file.getvalue()
 
     def make(self, target, reporter):
