@@ -1,4 +1,7 @@
 * Version 0.8.0
+  * Bug #1791993: Ship modules with root as owner and group.
+  * Linux as host: Restructed build of colinux.ko, use kbuild system
+    from host. Host with regparm=3 is usable (tested host 2.6.22-smp).
   * Linux Kernel and daemons can build with differ gcc versions now.
     ABI is runtime checked.
     Usable gcc for kernel build: 3.4.x, 4.0.x, 4.1.x, 4.2.x up to 4.3.0
