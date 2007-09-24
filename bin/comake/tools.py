@@ -126,7 +126,7 @@ class Executer(Tool):
 class Compiler(Executer):
     def get_command_line(self, tool_run_inf):
         actual_compile = False
-	count_archives = 0
+        count_archives = 0
         compiler_def_type = tool_run_inf.options.get('compiler_def_type', [])
         if not compiler_def_type:
             compiler_def_type = 'gcc'
@@ -137,7 +137,9 @@ class Compiler(Executer):
             if tinput.get_ext() in ['.c', '.cpp']:
                 actual_compile = True
             elif tinput.get_ext() in ['.a']:
-	        count_archives += 1
+                count_archives += 1
+            elif tinput.get_ext() in ['.h']:
+                continue
             input_pathnames.append(tinput.pathname)
 
         parameters = []
