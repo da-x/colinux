@@ -22,7 +22,7 @@ typedef union {
 	};
 } cpuid_t;
 
-bool_t co_i386_has_cpuid();
+bool_t co_i386_has_cpuid(void);
 void co_i386_get_cpuid(unsigned long op, cpuid_t *cpuid);
 co_rc_t co_i386_get_cpuid_capabilities(unsigned long *caps);
 

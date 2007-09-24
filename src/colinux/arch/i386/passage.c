@@ -43,7 +43,7 @@
 extern char _name_;                                     \
 extern char _name_##_end;                               \
 							\
-static inline unsigned long _name_##_size()		\
+static inline unsigned long _name_##_size(void)		\
 {							\
 	return &_name_##_end - &_name_;			\
 }							\
