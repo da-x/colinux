@@ -18,5 +18,5 @@ $(MODULE_NAME)-objs += \
 	.module.common_build/lib.a \
 	.module.kernel_build/lib.a \
 
-# Deal with recursive depens of libraries
-LDFLAGS_MODULE += --start-group
+# Solve circular references between archives
+EXTRA_LDFLAGS += --start-group
