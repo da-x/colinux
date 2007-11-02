@@ -1,27 +1,22 @@
 Cooperative Linux $CO_VERSION README
 ----------------------------------------------------------------------------
 
-  Instructions for running Cooperative Linux for Windows (see source for 
+  Instructions for running Cooperative Linux for Windows (see source for
 how to build and run coLinux for Linux)
 
 WARNING: 
 
   Although Cooperative Linux may be actually useful on some setups
-(e.g, stable setups), it is still meant for testing purposes only. 
+(e.g, stable setups), it is still meant for testing purposes only.
 This means that running it may crash the host (Windows or Linux system).
 
-KNOWN ISSUES:
-
-  Any known issues for an release can be found on the Wiki 
-http://colinux.wikia.com
-
-  PLEASE REPORT and read about problems on the colinux-devel@sourceforge.net 
+  PLEASE REPORT and read about problems on the colinux-devel@sourceforge.net
 mailing list or file an Bug report at 
 http://www.sourceforge.net/projects/colinux
 
 NOTES ON UPGRADING:
 
- 1. XML config files have been removed.  Use the command-line 
+ 1. XML config files have been removed.  Use the command-line
     syntax in a name=value per line plain text file instead:
 
 	kernel=vlinux
@@ -51,11 +46,11 @@ RUNNING:
 To run Cooperative Linux, please follow these instructions before trying to
 run anything.
 
-1. Run the downloaded installer file to begin the installation. 
+1. Run the downloaded installer file to begin the installation.
    
 2. Choose an installation directory. It is better to choose c:\coLinux because
    this way you don't need to edit the configuration file since the pathnames
-   of block devices files are currently aboslute. However, note that any 
+   of block devices files are currently aboslute. However, note that any
    directory should be acceptable.
 
 3. Choose networking method(s) to install. Currently there are three choices:
@@ -73,33 +68,33 @@ run anything.
 	file and set "slirp" as first parameter.  Inside linux use DHCP-Client
 	to get your network configuration.
 
-	b. TAP driver - This method installs a virtual network adapter that can 
-	then be either shared or bridged with a physical network connection. 
-	Note that this requires Internet Connection Sharing or Bridging 
-	(Windows XP or higher) or a 3rd party Internet connection 
+	b. TAP driver - This method installs a virtual network adapter that can
+	then be either shared or bridged with a physical network connection.
+	Note that this requires Internet Connection Sharing or Bridging
+	(Windows XP or higher) or a 3rd party Internet connection
 	sharing application.  The TAP method autmatically chooses the TAP
-	first TAP adapter it finds, if you have multiple TAP WIN32 devices, you 
+	first TAP adapter it finds, if you have multiple TAP WIN32 devices, you
 	can specify the specific adapter by name (for sample "TAP-Colinux").
 
-  	c. Bridging - This method allows the Cooperative Linux network 
-	interface to directly interoperate with one of your built in networking 
+	c. Bridging - This method allows the Cooperative Linux network
+	interface to directly interoperate with one of your built in networking
 	interfaces.  You'll need to edit the configuration file to reflect
-	that type "pcap-bridge" and the 'name' parameter needs to be set to a 
-	substring of the network connection name that you will be bridging 
+	that type "pcap-bridge" and the 'name' parameter needs to be set to a
+	substring of the network connection name that you will be bridging
 	with (e.g. "Local Area Connection").
 
 	You can select all types on installation and use one of these later.
 	See the Wiki at the page 'Network' for more information/help.
 
-4. Choose whether to download a root file system from the Cooperative Linux 
+4. Choose whether to download a root file system from the Cooperative Linux
    sourceforge page. The installer will try to download directly in 
    the next step but if you experience any issues you can visit the
    Sourceforge page directly at:
 
    http://sourceforge.net/project/showfiles.php?group_id=98788&package_id=108058
 
-   NOTE ABOUT DISK SPACE: Each image extracts to over 1GB (or more), so make 
-   sure you have enough space there before you start downloading/extracting 
+   NOTE ABOUT DISK SPACE: Each image extracts to over 1GB (or more), so make
+   sure you have enough space there before you start downloading/extracting
    it. If you are manually downloading, put the extracted file in the 
    installation directory.  To unzip .bz2 files, you can use Winzip or 7-Zip
    (or the bzip utilities in Cygwin, etc).  The image MUST be extracted from
@@ -108,19 +103,19 @@ run anything.
    See "Quick running" (below), if you would not download an image file in
    this step.  You can download an image file from SourgeForge later.
 
-5. Edit the config file to point to whatever root file system you 
+5. Edit the config file to point to whatever root file system you
    downloaded and replace the file name 'root_fs' with yours.
 
-6. The installation directory should include vmlinux, example.conf, the 
-   supplied linux.sys driver and executables, and probably the root 
-   filesystem image. Be sure to review the config file for any additional 
+6. The installation directory should include vmlinux, example.conf, the
+   supplied linux.sys driver and executables, and probably the root
+   filesystem image. Be sure to review the config file for any additional
    configuration that may be needed.
 
    Refer the file colinux-daemon.txt in coLinux installation for the
    full list of device parameters.
 
 7. Run coLinux. The current directory should be the installation directory,
-   if not, then you need to change paths (especially for vmlinux) in the 
+   if not, then you need to change paths (especially for vmlinux) in the
    config file..
 
 	a. Run as an regular application.
@@ -178,7 +173,7 @@ Common Problems
 ---------------
 
     "Unable to mount root fs"
-	Generally this means that the root filesystem image is 
+	Generally this means that the root filesystem image is
 	missing, was specified incorrectly, or not uncompressed.
 
 	Check the device name and index (cobd0, hda1).
@@ -187,18 +182,18 @@ Common Problems
 	simple "DIR ..." on command prompt.
 
 
-  Additional problems not know at time of release are typically 
+  Additional problems not know at time of release are typically
 documented on the Wiki (http://colinux.wikia.com/), look
-there for known problems.  If your problem isn't listed, report on the 
-colinux-devel@sourceforge.net mailing list or file an Bug report at 
+there for known problems.  If your problem isn't listed, report on the
+colinux-devel@sourceforge.net mailing list or file an Bug report at
 http://www.sourceforge.net/projects/colinux
 
 
 Developing, Helping out the Project
 -----------------------------------
 
-   Check out the source code, and or the Home page 
-(http://www.colinux.org) for more on developing coLinux and/or helping 
+   Check out the source code, and or the Home page
+(http://www.colinux.org) for more on developing coLinux and/or helping
 the project out.  Also, subscribing to the Mailing List is helpful.
 
 
@@ -209,11 +204,11 @@ The following resources are available if you need help getting going, or find
 bugs, etc.
 
 	IRC
-		The official IRC location is at server irc.oftc.net, 
- 		channel #colinux.
+		The official IRC location is at server irc.oftc.net,
+		channel #colinux.
 
 	WEB
-		The official website, containing downloads, documentation, 
+		The official website, containing downloads, documentation,
 		FAQ, WIKI, etc., is at http://www.colinux.org
 
 	Project Web-site
@@ -221,13 +216,13 @@ bugs, etc.
 		http://www.sourceforge.net/projects/colinux
 
 	WIKI
-		The community has contributed wonderful and helpful 
-                information on numerous topics, which is available at
-                http://colinux.wikia.com/
+		The community has contributed wonderful and helpful
+		information on numerous topics, which is available at
+		http://colinux.wikia.com/
 		(You can contribute here too!)
 
 	Mailing Lists
-		Visit the colinux.org website and choose from the available 
+		Visit the colinux.org website and choose from the available
 		mailing lists (user and devel) to join, view archives, etc.
 
 
