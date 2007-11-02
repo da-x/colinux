@@ -238,8 +238,8 @@ don't depend on each other.  The parameters are case sensitive.
 	to the world.  In typicaly mode can not connect from outside to the
 	colinux guest.  Incommings can enable with the <redirections>.
 
-	BIG HINT: In firewalls on your Windows host should allow the
-	outgoing connections for the programm colinux-serial-daemon.exe.
+	BIG HINT: In firewalls on your Windows host should allow the outgoing
+	connections for the programm colinux-slirp-net-daemon.exe.
 
 	Use any number <X> of these to specify network interfaces,
 	<MAC> is currently ignored, <redirections> are optional.
