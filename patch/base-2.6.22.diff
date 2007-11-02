@@ -2303,7 +2303,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	if (count > HZ) {
 +		long secs = count / HZ;
 +
-+		co_debug(co_handle_jiffies: "clock warp (%ld,%ld)\n", count, secs);
++		co_debug("co_handle_jiffies: clock warp (%ld,%ld)\n", count, secs);
 +		/* 'warp_clock' for long distances */
 +		write_seqlock_irq(&xtime_lock);
 +		xtime.tv_sec += secs;
