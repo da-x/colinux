@@ -2,10 +2,10 @@
 ;Written by NEBOR Regis
 ;Modified by Dan Aloni (c) 2004
 ;Modified 8/20/2004,2/4/2004 by George P Boutwell
-;Modified 3/24/2007 by Henry Nestler
+;Modified 11/2/2007 by Henry Nestler
 
 ;-------------------------------------
-;Good look
+
   !include "MUI.nsh"
   !include Sections.nsh
   !include "coLinux_def.inc"
@@ -93,11 +93,9 @@
 ; StartDlImageFunc down for reference resolution
 
 Function EndDlImageFunc
-
 FunctionEnd
 
 Function WinpcapRedirLeave
-	
 FunctionEnd
 
 Function .onInit
@@ -196,7 +194,7 @@ no_old_linux_sys:
   File "premaid\colinux-daemon.txt"
   File "premaid\vmlinux"
   File "premaid\vmlinux-modules.tar.gz"
-  ; initrd replaces vmlinux-modules.tar.gz as preferred way to ship modules.
+  ; initrd installs modules vmlinux-modules.tar.gz over cofs31 on first start
   File "premaid\initrd.gz"
 
   ;Backup config file if present
@@ -204,7 +202,7 @@ no_old_linux_sys:
     CopyFiles /SILENT "$INSTDIR\example.conf" "$INSTDIR\example.conf.old"
   File "premaid\example.conf"
 
-  ; Remove kludge from older installations	
+  ; Remove kludge from older installations
   Delete "$INSTDIR\packet.dll"
   Delete "$INSTDIR\wpcap.dll"
 
@@ -219,41 +217,15 @@ no_old_linux_sys:
 
 SectionEnd
 
-Section "Native Windows Linux Console" SecNTConsole
-
-  ;---------------------------------------------------------------FILES--
-  ;----------------------------------------------------------------------
-  ; Our Files . If you adds something here, Remember to delete it in 
-  ; the uninstall section
-
+Section "Native Windows Linux Console (NT)" SecNTConsole
   File "premaid\coLinux-console-nt.exe"
-
-  ;--------------------------------------------------------------/FILES--
-  ;----------------------------------------------------------------------
-
 SectionEnd
 
-Section "Cross-platform Linux Console" SecFLTKConsole
-
-  ;---------------------------------------------------------------FILES--
-  ;----------------------------------------------------------------------
-  ; Our Files . If you adds something here, Remember to delete it in 
-  ; the uninstall section
-
+Section "Cross-platform Linux Console (FLTK)" SecFLTKConsole
   File "premaid\coLinux-console-fltk.exe"
-
-  ;--------------------------------------------------------------/FILES--
-  ;----------------------------------------------------------------------
-
 SectionEnd
 
-Section "coLinux Virtual Ethernet Driver (TAP-Win32)" SeccoLinuxNet
-
-  ;---------------------------------------------------------------FILES--
-  ;----------------------------------------------------------------------
-  ; Our Files . If you adds something here, Remember to delete it in 
-  ; the uninstall section
-
+Section "Virtual Ethernet Driver (coLinux TAP-Win32)" SeccoLinuxNet
   SetOutPath "$INSTDIR\netdriver"
   File "premaid\netdriver\OemWin2k.inf"
   File "premaid\netdriver\tap0801co.sys"
@@ -262,71 +234,23 @@ Section "coLinux Virtual Ethernet Driver (TAP-Win32)" SeccoLinuxNet
 
   SetOutPath "$INSTDIR"
   File "premaid\coLinux-net-daemon.exe"
-
-  ;--------------------------------------------------------------/FILES--
-  ;----------------------------------------------------------------------
-
-
 SectionEnd
 
-Section "coLinux Virtual Network Daemon (SLiRP)" SeccoLinuxNetSLiRP
-
-  ;---------------------------------------------------------------FILES--
-  ;----------------------------------------------------------------------
-  ; Our Files . If you adds something here, Remember to delete it in 
-  ; the uninstall section
-
+Section "Virtual Network Daemon (SLiRP)" SeccoLinuxNetSLiRP
   File "premaid\coLinux-slirp-net-daemon.exe"
-
-  ;--------------------------------------------------------------/FILES--
-  ;----------------------------------------------------------------------
-
-
 SectionEnd
 
-Section "coLinux Bridged Ethernet (WinPcap)" SeccoLinuxBridgedNet
-
-  ;---------------------------------------------------------------FILES--
-  ;----------------------------------------------------------------------
-  ; Our Files . If you adds something here, Remember to delete it in 
-  ; the uninstall section
-
+Section "Bridged Ethernet (WinPcap)" SeccoLinuxBridgedNet
   File "premaid\coLinux-bridged-net-daemon.exe"
-
-  ;--------------------------------------------------------------/FILES--
-  ;----------------------------------------------------------------------
-
 SectionEnd
 
-Section "coLinux Virtual Serial Device" SeccoLinuxSerial
-
-  ;---------------------------------------------------------------FILES--
-  ;----------------------------------------------------------------------
-  ; Our Files . If you adds something here, Remember to delete it in 
-  ; the uninstall section
-
+Section "Virtual Serial Device (ttyS)" SeccoLinuxSerial
   File "premaid\coLinux-serial-daemon.exe"
-  
-  ;--------------------------------------------------------------/FILES--
-  ;----------------------------------------------------------------------
-
-
 SectionEnd
 
-Section "coLinux Debugging" SeccoLinuxDebug
-
-  ;---------------------------------------------------------------FILES--
-  ;----------------------------------------------------------------------
-  ; Our Files . If you adds something here, Remember to delete it in 
-  ; the uninstall section
-
+Section "Debugging" SeccoLinuxDebug
   File "premaid\coLinux-debug-daemon.exe"
   File "premaid\debugging.txt"
-  
-  ;--------------------------------------------------------------/FILES--
-  ;----------------------------------------------------------------------
-
-
 SectionEnd
 
 SectionGroupEnd
@@ -535,14 +459,14 @@ SectionEnd
 ;--------------------------------
 ;Descriptions
 
-  LangString DESC_SecGrpcoLinux ${LANG_ENGLISH} "Install coLinux"
-  LangString DESC_SecNTConsole ${LANG_ENGLISH} "Install native Windows (NT) coLinux console, which allows to view Linux console in an NT DOS Command-line console"
-  LangString DESC_SecFLTKConsole ${LANG_ENGLISH} "Install cross-platform coLinux console, which allows to view Linux console and manage coLinux from a cross-platform GUI program"
-  LangString DESC_SeccoLinuxNet ${LANG_ENGLISH} "Install Virtual Ethernet Driver (TAP) as private network link between Linux and Windows"
-  LangString DESC_SeccoLinuxNetSLiRP ${LANG_ENGLISH} "Install SLiRP Ethernet Driver as virtual Gateway for outgoings TCP and UDP connections"
-  LangString DESC_SeccoLinuxBridgedNet ${LANG_ENGLISH} "Install Bridge Ethernet support, which allows to join the coLinux machine to an existing network"
-  LangString DESC_SeccoLinuxSerial ${LANG_ENGLISH} "Install Virtual Serial Driver, which allows to use serial Devices between Linux and Windows"
-  LangString DESC_SeccoLinuxDebug ${LANG_ENGLISH} "Install Debugging, which allows to create extensive debug log for troubleshooting problems"
+  LangString DESC_SecGrpcoLinux ${LANG_ENGLISH} "Install or upgrade coLinux. Install coLinux basics, driver, Linux kernel, Linux modules and docs"
+  LangString DESC_SecNTConsole ${LANG_ENGLISH} "Native Windows (NT) coLinux console views Linux console in an NT DOS Command-line console"
+  LangString DESC_SecFLTKConsole ${LANG_ENGLISH} "FLTK Cross-platform coLinux console to view Linux console and manage coLinux from a GUI program"
+  LangString DESC_SeccoLinuxNet ${LANG_ENGLISH} "TAP Virtual Ethernet Driver as private network link between Linux and Windows"
+  LangString DESC_SeccoLinuxNetSLiRP ${LANG_ENGLISH} "SLiRP Ethernet Driver as virtual Gateway for outgoings TCP and UDP connections - Simplest to use"
+  LangString DESC_SeccoLinuxBridgedNet ${LANG_ENGLISH} "Bridge Ethernet support allows to join the coLinux machine to an existing network"
+  LangString DESC_SeccoLinuxSerial ${LANG_ENGLISH} "Virtual Serial Driver allows to use serial Devices between Linux and Windows"
+  LangString DESC_SeccoLinuxDebug ${LANG_ENGLISH} "Debugging allows to create extensive debug log for troubleshooting problems"
   LangString DESC_SecImage ${LANG_ENGLISH} "Download an image from sourceforge. Also provide useful links on how to use it"
 
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
@@ -601,7 +525,6 @@ Section "Uninstall"
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
 
-
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR\netdriver"
   RMDir "$INSTDIR"
@@ -613,17 +536,14 @@ Section "Uninstall"
 
 SectionEnd
 
-
-; TODO coLinux runtime detection, to kill before install or upgrade
-
-; LEGACY
+# Functions #######################################
 
 ;====================================================
 ; StrStr - Finds a given string in another given string.
-;               Returns -1 if not found and the pos if found.
-;          Input: head of the stack - string to find
-;                      second in the stack - string to find in
-;          Output: head of the stack
+;          Returns -1 if not found and the pos if found.
+;   Input: head of the stack - string to find
+;          second in the stack - string to find in
+;   Output: head of the stack
 ;====================================================
 Function StrStr
   Push $0
@@ -661,10 +581,6 @@ Function StrStr
     Pop $0
     Pop $1
 FunctionEnd
-
-; Taken from the archives : Dowload from random Mirror
-
-# Functions #######################################
 
 ###################################################
 #
@@ -859,8 +775,6 @@ FunctionEnd
 
 ###############################################################
 #
-# NOTE: If you don't want a random mirror, remove this Function
-#
 # Returns a random number
 #
 # Usage:
@@ -878,8 +792,6 @@ Function RandomNumber
 FunctionEnd
 
 ####################################################
-#
-# NOTE: If you don't want a random mirror, remove this Function
 #
 # Returns a random number between 0 and Max-1
 #
