@@ -1725,7 +1725,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -0,0 +1,347 @@
+@@ -0,0 +1,346 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1873,6 +1873,8 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_TERMINATE_BUG,
 +} co_termination_reason_t;
 +
++#ifdef CO_KERNEL
++
 +#ifndef asmlinkage
 +#define asmlinkage __attribute__((regparm(0)))
 +#endif
@@ -1887,10 +1889,6 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	  &_from_.border2,			\
 +	  &_to_.border2))
 +
-+#define co_passage_page_func(_from_,_to_)				\
-+	co_passage_page_func_low(co_passage_page->_from_, co_passage_page->_to_)
-+
-+#ifdef CO_KERNEL
 +# ifdef CO_COLINUX_KERNEL
 +#  define co_passage_page  ((co_arch_passage_page_t *)(CO_VPTR_PASSAGE_PAGE))
 +#  define co_current (co_passage_page->linuxvm_state)
@@ -1902,7 +1900,8 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +# endif
 +
 +# define co_switch() co_passage_page_func_low(co_current, co_other)
-+#endif
++
++#endif /* CO_KERNEL */
 +
 +/*
 + * Defines operations on various virtual devices.
@@ -2044,7 +2043,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	int result;
 +} __attribute__((packed)) co_network_request_t;
 +
-+#endif
++#endif /* CO_KERNEL */
 +
 +typedef struct {
 +	unsigned long api_version;
