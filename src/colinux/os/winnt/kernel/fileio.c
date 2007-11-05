@@ -360,8 +360,13 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 	len = co_strlen(fullname);
 	len1 = len;
 	
-	while (len > 0 && (fullname[len-1] != '\\'))
+	while (len > 0 && fullname[len-1] != '\\') {
+		if (fullname[len-1] == '?' || fullname[len-1] == '*') {
+			co_debug_lvl(filesystem, 5, "error: Wildcard in filename ('%s')", fullname);
+			return CO_RC(NOT_FOUND);
+		}
 		len--;
+	}
 
 	dirname = co_os_malloc(len+1);
 	if (!dirname) {
@@ -430,7 +435,7 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 		EndOfFile = entry_buffer.entry.EndOfFile;
 		FileAttributes = entry_buffer.entry.FileAttributes;
 	}
- 
+
         attr->uid = 0;
         attr->gid = 0;
         attr->rdev = 0;

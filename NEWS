@@ -5,6 +5,7 @@
   * #1643371: BSOD from dmidecode, fixed by disallow mmap on /dev/mem.
   * #1791993: Ship modules with root as owner and group.
   * Fix cofs mmap read error behind end of file (was not zero filled).
+  * Fix cofs chdir with wildcards on existing upper/lower directory.
 
   Console and daemons:
   * New menu entries in FLTK console

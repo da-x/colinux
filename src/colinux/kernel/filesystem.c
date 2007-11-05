@@ -224,7 +224,7 @@ static co_rc_t inode_mknod(co_filesystem_t *filesystem, co_inode_t *dir, unsigne
 	rc = filesystem->ops->inode_mknod(filesystem, dir, mode, rdev, name, ino, attr);
 	
 	if (CO_OK(rc)) {
-		co_inode_t *inode = NULL;
+		co_inode_t *inode;
 
 		inode = find_inode(filesystem, dir, name);
 		if (!inode)
