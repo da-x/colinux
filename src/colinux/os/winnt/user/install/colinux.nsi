@@ -261,7 +261,8 @@ SectionGroupEnd
 !define IDL_DEBIAN 3
 !define IDL_FEDORA 4
 !define IDL_GENTOO 5
-!define IDL_LOCATION 6
+!define IDL_UBUNTU 6
+!define IDL_LOCATION 7
 
 Section "Root Filesystem image Download" SeccoLinuxImage
 
@@ -286,6 +287,10 @@ Section "Root Filesystem image Download" SeccoLinuxImage
 
     !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_GENTOO}" "State"
     StrCpy $R0 "Gentoo-colinux-i686-2007-03-03.7z"
+    StrCmp $R1 "1" tryDownload
+
+    !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_UBUNTU}" "State"
+    StrCpy $R0 "Ubuntu-6.06.1.ext3.1gb.bz2"
     StrCmp $R1 "1" tryDownload
     GoTo End
 
