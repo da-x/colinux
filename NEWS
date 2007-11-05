@@ -33,6 +33,8 @@
   * Un-/Installer checks a running coLinux before overwrite or remove old
     files.  [Bugs item #1396459, #1549148]
   * Text was to big for description box in installer. [Bugs item #1819219]
+  * Add Ubuntu 6.06.1 to images page. Update image Fedore 7. Add web link
+    to Notes for each image. Link to 'other images on SF' clickable now.
   * Uninstall old colinux with old exefile, path from registry uninstaller
     [Support Requests-1553923]
   * Update tapinstall.exe (alias devcon) from DDK 3790.1830 (Mar 24 2005)
