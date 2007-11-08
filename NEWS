@@ -1,10 +1,7 @@
 * Version 0.8.0
   Bugfixes:
-  * #1190080: Fix cofs file time/mode/flags after touch or write.
   * #1324092: cofs rename replace existing file.
-  * #1643371: BSOD from dmidecode, fixed by disallow mmap on /dev/mem.
   * #1791993: Ship modules with root as owner and group.
-  * Fix cofs mmap read error behind end of file (was not zero filled).
   * Fix cofs chdir with wildcards on existing upper/lower directory.
 
   Console and daemons:
@@ -31,11 +28,11 @@
   * cloop updated to 2.06 (compressed loop blockdevice from Knoppix)
 
   Installer:
-  * Un-/Installer checks a running coLinux before overwrite or remove old
-    files.  [Bugs item #1396459, #1549148]
   * Text was to big for description box in installer. [Bugs item #1819219]
   * Add Ubuntu 6.06.1 to images page. Update image Fedore 7. Add web link
     to Notes for each image. Link to 'other images on SF' clickable now.
+  * Un-/Installer checks a running coLinux before overwrite or remove old
+    files.  [Bugs item #1396459, #1549148]
   * Uninstall old colinux with old exefile, path from registry uninstaller
     [Support Requests-1553923]
   * Update tapinstall.exe (alias devcon) from DDK 3790.1830 (Mar 24 2005)
@@ -101,6 +98,7 @@
     - Bug #1479042: Ignore bootparm "no387", while no emulation is enabled
     - Bug #1665812: Disable /proc/kcore from kernel config.
       Reading from this file would crash host system.
+    - Bug #1643371: BSOD from dmidecode, fixed by disallow mmap on /dev/mem.
   * Updated libraries:
     - MinGW from 3.7 to 3.9
     - w32api from 3.2 to 3.4
@@ -120,6 +118,8 @@
     - Break out the limit of filename length.  Basename length up to
       255 chars.  Fullpath is limited by path depth of 256 directories.
     - Bug #1151757: COFS disallow mutiple mounts.
+    - Bug #1190080: Fix cofs file time/mode/flags after touch or write.
+    - Fix mmap read error behind end of file (was not zero filled).
   * TAP-Win32 device driver
     - version 8.4 update from openvpn-2.1_beta15a
     - usable without admin rights
