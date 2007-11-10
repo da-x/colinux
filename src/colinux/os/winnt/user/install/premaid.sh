@@ -16,8 +16,8 @@ STRIP="$TARGET-strip --strip-all --preserve-dates"
 # Set current CoLinux-Version number
 unix_dos()
 {
-	sed "s/\$CO_VERSION/$CO_VERSION/" < $1 > $2
-	unix2dos -q $2 || exit $?
+	sed -e "s/\$CO_VERSION/$CO_VERSION/" \
+	    -e 's/$/\r/' < $1 > $2 || exit $?
 }
 
 mkdir -p premaid

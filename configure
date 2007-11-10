@@ -645,8 +645,6 @@ case $colinux_os in
     check_exec_tool "texinfo" "texindex --version"
     check_exec_tool "flex" "flex --version"
     check_exec_tool "gettext" "gettext --version"
-    # need by "make installer" only ...
-    check_exec_tool --warn "unix2dos" "unix2dos --version"
   ;;
 esac
 
