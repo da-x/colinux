@@ -169,7 +169,8 @@ EOF
 	then
 		OPT="O=\"$COLINUX_TARGET_KERNEL_BUILD\""
 	fi
-	make $OPT silentoldconfig >>$COLINUX_BUILD_LOG 2>&1 \
+
+	make ARCH=$TARGET_ARCH $OPT silentoldconfig >>$COLINUX_BUILD_LOG 2>&1 \
 	|| error_exit 1 "Kernel $KERNEL_VERSION config failed (check 'make oldconfig' on kerneltree)"
 }
 
@@ -177,7 +178,7 @@ compile_kernel()
 {
 	echo "Making Kernel $KERNEL_VERSION"
 	cd "$COLINUX_TARGET_KERNEL_BUILD" || exit 1
-	make vmlinux >>$COLINUX_BUILD_LOG 2>&1 \
+	make ARCH=$TARGET_ARCH vmlinux >>$COLINUX_BUILD_LOG 2>&1 \
 	|| error_exit 1 "Kernel $KERNEL_VERSION make failed"
 }
 
@@ -194,6 +195,7 @@ compile_modules()
 	test -z "$COLINUX_DEPMOD" && COLINUX_DEPMOD=/sbin/depmod
 
 	make \
+	    ARCH=$TARGET_ARCH \
 	    INSTALL_MOD_PATH="$COLINUX_TARGET_MODULE_PATH" \
 	    DEPMOD=$COLINUX_DEPMOD \
 	    modules modules_install >>$COLINUX_BUILD_LOG 2>&1 \

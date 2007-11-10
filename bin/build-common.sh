@@ -40,6 +40,9 @@ fi
 # what flavor are we building?
 TARGET=i686-pc-mingw32
 
+# ARCH must overwrite for builds on 64 bit (target kernel)
+TARGET_ARCH=i386
+
 # Current developing build system
 BUILD=i686-pc-linux
 
