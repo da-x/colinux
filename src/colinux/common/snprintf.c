@@ -9,7 +9,10 @@
  */ 
 
 #include <stdarg.h>
-#include <memory.h>
+
+#include <colinux/os/current/memory.h>
+#include <colinux/common/common.h>
+#include <colinux/common/libc.h>
 
 /* Use these directly if you want to avoid overhead of psnprintf
  * Return value is number of characters printed (or number printed
@@ -54,8 +57,6 @@ static long pstrnlen(const char *s, long count);
 # define FCVT fcvt
 #endif
 #endif
-
-int co_vsnprintf(char *str, long nmax, const char *format, va_list ap);
 
 int co_snprintf(char *str, long n, const char *format, ...)
 {
@@ -325,7 +326,7 @@ int co_vsnprintf(char *str, long nmax, const char *format, va_list ap)
     return ncount;
 }
 
-int pvsnfmt_char(char **pinsertion, long *nmax, const char fmt, int flags,
+static int pvsnfmt_char(char **pinsertion, long *nmax, const char fmt, int flags,
                  int width, int precision, char prefix, va_list *ap)
 {
     if (*nmax > 1)
@@ -357,7 +358,7 @@ static long pstrnlen(const char *s, long count)
  *   ap             Argument list
  */
 
-int pvsnfmt_str(char **pinsertion, long *nmax, const char fmt, int flags,
+static int pvsnfmt_str(char **pinsertion, long *nmax, const char fmt, int flags,
                 int width, int precision, char prefix, va_list *ap)
 {
     const char *str = va_arg(*ap, const char *);
@@ -374,7 +375,7 @@ int pvsnfmt_str(char **pinsertion, long *nmax, const char fmt, int flags,
 
     /* Truncate due to precision */
     if (precision < 0)
-        len = strlen(str);
+        len = co_strlen(str);
     else
         len = pstrnlen(str, precision);
 
@@ -447,7 +448,7 @@ int pvsnfmt_str(char **pinsertion, long *nmax, const char fmt, int flags,
  *   ap             Argument list
  */
 
-int pvsnfmt_int(char **pinsertion, long *nmax, char fmt, int flags,
+static int pvsnfmt_int(char **pinsertion, long *nmax, char fmt, int flags,
                 int width, int precision, char prefix, va_list *ap)
 {
     long int number = 0;
@@ -795,7 +796,7 @@ typedef union {
  *   ap             Argument list
  */
 
-int pvsnfmt_double(char **pinsertion, long *nmax, const char fmt, int flags,
+static int pvsnfmt_double(char **pinsertion, long *nmax, const char fmt, int flags,
                 int width, int precision, char prefix, va_list *ap)
 {
     char *digits;
@@ -827,7 +828,7 @@ int pvsnfmt_double(char **pinsertion, long *nmax, const char fmt, int flags,
 
     if (special)
     {
-        totallen = len = strlen(special);
+        totallen = len = co_strlen(special);
 
         /* Sign (this is silly for NaN but conforming to printf */
         if (flags & (FLAG_SIGNED | FLAG_SIGN_PAD) || sign)
@@ -917,7 +918,7 @@ int pvsnfmt_double(char **pinsertion, long *nmax, const char fmt, int flags,
             precision = 6;
 
         digits = FCVT(value, precision, &dec, &sign);
-        len = strlen(digits);
+        len = co_strlen(digits);
 
         if (dec > 0)
             totallen = dec;

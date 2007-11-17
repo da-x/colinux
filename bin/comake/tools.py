@@ -26,6 +26,52 @@ class Empty(Tool):
     def make(self, target, reporter):
         return 0
 
+class MakefileKbuild(Tool):
+    def _content(self, target):
+        from StringIO import StringIO
+        import os
+        from comake.defaults import file_id_allocator
+        global colinux_file_id
+
+        parameters = [os.path.dirname(target.pathname)]
+        compiler_defines = target.options.get('compiler_defines', {})
+        defines = compiler_defines.items()
+        defines.sort()
+        for key, value in defines:
+            if key == 'COLINUX_FILE_ID':
+                continue
+            if value is not None:
+                parameters.append('-D%s=%s' % (key, value))
+                continue
+            parameters.append('-D%s' % (key, ))
+
+        # Output-type coded in extension (lib-m or colinux-objs)
+        libm = target.get_ext()[1:]
+
+        output_file = StringIO()
+        print >>output_file, "include $(KBUILD_EXTMOD)/Makefile.include"
+        print >>output_file, "EXTRA_CFLAGS += -I$(COLINUX_BASE)/%s" % ' '.join(parameters)
+
+        for names in target.inputs:
+            name = os.path.basename(names.pathname)
+            if not name in [ 'file_ids.c', 'colinux.mod.c', 'colinux.c' ]:
+                full_name = os.path.join(parameters[0], name)
+                colinux_file_id = file_id_allocator.allocate(full_name)
+
+                oname = os.path.splitext(name)[0]+'.o'
+                print >>output_file, "%s += %s" % (libm, oname)
+                print >>output_file, "CFLAGS_%s = -DCOLINUX_FILE_ID=%d" % (oname, colinux_file_id)
+
+        return output_file.getvalue()
+
+    def make(self, target, reporter):
+        output_file = open(target.pathname, 'wb')
+        output_file.write(self._content(target))
+
+    def rebuild_needed(self, target):
+        return open(target.pathname, 'rb').read() != self._content(target)
+
+
 class Copy(Tool):
     def make(self, target, reporter):
         input_pathnames = []
@@ -80,7 +126,7 @@ class Executer(Tool):
 class Compiler(Executer):
     def get_command_line(self, tool_run_inf):
         actual_compile = False
-	count_archives = 0
+        count_archives = 0
         compiler_def_type = tool_run_inf.options.get('compiler_def_type', [])
         if not compiler_def_type:
             compiler_def_type = 'gcc'
@@ -91,7 +137,9 @@ class Compiler(Executer):
             if tinput.get_ext() in ['.c', '.cpp']:
                 actual_compile = True
             elif tinput.get_ext() in ['.a']:
-	        count_archives += 1
+                count_archives += 1
+            elif tinput.get_ext() in ['.h']:
+                continue
             input_pathnames.append(tinput.pathname)
 
         parameters = []
@@ -115,6 +163,9 @@ class Compiler(Executer):
         else:
             linker_flags = tool_run_inf.options.get('linker_flags', [])
             parameters += linker_flags
+            compiler_strip = tool_run_inf.options.get('compiler_strip', False)
+            if compiler_strip:
+                parameters.append('-Wl,--strip-debug')
 
         if count_archives > 1:
             parameters.append('-Wl,--start-group')
@@ -128,12 +179,6 @@ class Compiler(Executer):
         
         parameters.append('-o')
         parameters.append(tool_run_inf.target.pathname)
-
-        compiler_strip = tool_run_inf.options.get('compiler_strip', False)
-        if compiler_strip:
-            parameters.append('&&')
-            parameters.append(self.get_cross_build_tool("strip --strip-debug", tool_run_inf))
-            parameters.append(tool_run_inf.target.pathname)
 
         command_line = ' '.join(parameters)
         return command_line
@@ -246,4 +291,5 @@ exported_tools = [
     Tool,
     Executer,
     Copy,
+    MakefileKbuild,
 ]

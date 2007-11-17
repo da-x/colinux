@@ -176,7 +176,7 @@ typedef struct co_config {
 	 * Linux and the index of the block device to boot from.
 	 */
 	co_block_dev_desc_t block_devs[CO_MODULE_MAX_COBD];
-	long block_root_device_index;
+	long _UNUSED__block_root_device_index;
 
 	/*
 	 * Network devices

@@ -52,8 +52,8 @@ if_init()
 	if_maxlinkhdr = 40;
 #endif
 #else
-        /* 14 for ethernet + 40 */
-        if_maxlinkhdr = 14 + 40;
+        /* 2 for alignment, 14 for ethernet, 40 for TCP/IP */
+        if_maxlinkhdr = 2 + 14 + 40;
 #endif
 	if_mtu = 1500;
 	if_mru = 1500;
@@ -313,7 +313,7 @@ if_start(void)
 	}
 	
 	/* Encapsulate the packet for sending */
-        if_encap(ifm->m_data, ifm->m_len);
+        if_encap((const uint8_t *)ifm->m_data, ifm->m_len);
 
         m_free(ifm);
 

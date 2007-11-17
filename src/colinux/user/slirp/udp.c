@@ -157,6 +157,7 @@ udp_input(m, iphlen)
             goto bad;
         }
 
+#ifdef EMULATE_TFTP_SERVER
         /*
          *  handle TFTP
          */
@@ -164,6 +165,7 @@ udp_input(m, iphlen)
             tftp_input(m);
             goto bad;
         }
+#endif
 
 	/*
 	 * Locate pcb for datagram.
@@ -317,8 +319,11 @@ int udp_output(struct socket *so, struct mbuf *m,
     struct sockaddr_in saddr, daddr;
 
     saddr = *addr;
-    if ((so->so_faddr.s_addr & htonl(0xffffff00)) == special_addr.s_addr)
+    if ((so->so_faddr.s_addr & htonl(0xffffff00)) == special_addr.s_addr) {
         saddr.sin_addr.s_addr = so->so_faddr.s_addr;
+        if ((so->so_faddr.s_addr & htonl(0x000000ff)) == htonl(0xff))
+            saddr.sin_addr.s_addr = alias_addr.s_addr;
+    }
     daddr.sin_addr = so->so_laddr;
     daddr.sin_port = so->so_lport;
     
@@ -648,7 +653,7 @@ udp_listen(port, laddr, lport, flags)
 {
 	struct sockaddr_in addr;
 	struct socket *so;
-	int addrlen = sizeof(struct sockaddr_in), opt = 1;
+	socklen_t addrlen = sizeof(struct sockaddr_in), opt = 1;
 	
 	if ((so = socreate()) == NULL) {
 		free(so);
@@ -675,7 +680,7 @@ udp_listen(port, laddr, lport, flags)
 
 	/* Translate connections from localhost to the alias hostname */
 	if (is_localhost(addr.sin_addr))
-	   so->so_faddr = alias_addr; /* our addr */
+	   so->so_faddr = alias_addr;
 	else
 	   so->so_faddr = addr.sin_addr;
 	

@@ -1,0 +1,29 @@
+Implements network support
+
+Index: linux-2.6.14-source/drivers/net/Kconfig
+===================================================================
+--- linux-2.6.14-source.orig/drivers/net/Kconfig
++++ linux-2.6.14-source/drivers/net/Kconfig
+@@ -105,6 +105,10 @@
+ 
+ 	  If you don't know what to use this for, you don't need it.
+ 
++config COOPERATIVE_CONET
++	tristate 'Cooperative Virtual Ethernet driver support'
++	depends on COOPERATIVE
++
+ config NET_SB1000
+ 	tristate "General Instruments Surfboard 1000"
+ 	depends on PNP
+Index: linux-2.6.14-source/drivers/net/Makefile
+===================================================================
+--- linux-2.6.14-source.orig/drivers/net/Makefile
++++ linux-2.6.14-source/drivers/net/Makefile
+@@ -157,6 +157,7 @@
+ 
+ # This is also a 82596 and should probably be merged
+ obj-$(CONFIG_LP486E) += lp486e.o
++obj-$(CONFIG_COOPERATIVE_CONET) += conet.o
+ 
+ obj-$(CONFIG_ETH16I) += eth16i.o
+ obj-$(CONFIG_ZORRO8390) += zorro8390.o 8390.o

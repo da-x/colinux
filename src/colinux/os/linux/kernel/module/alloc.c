@@ -5,18 +5,18 @@
 #include <colinux/os/kernel/misc.h>
 #include <asm/mman.h>
 
+#ifdef DEBUG_CO_KMALLOC
 static int blocks = 0;
+#endif
 
 void *co_os_malloc(unsigned long bytes)
 {
 	void *ret;
 
-	blocks++;
-
 	ret = kmalloc(bytes, GFP_KERNEL);
 
-#if (0)
-	co_debug_lvl(allocations, 11, "BLOCK ALLOC %d: %x %d\n", blocks-1, ret, bytes);
+#ifdef DEBUG_CO_KMALLOC
+	co_debug_lvl(allocations, 11, "BLOCK ALLOC %d: %x %d", blocks++, ret, bytes);
 #endif
 
 	return ret;
@@ -24,11 +24,10 @@ void *co_os_malloc(unsigned long bytes)
 
 void co_os_free(void *ptr)
 {
-	blocks--;
 	kfree(ptr);
 
-#if (0)
-	co_debug_lvl(allocations, 11, "BLOCK FREE %d: %x\n", blocks, ptr);
+#ifdef DEBUG_CO_KMALLOC
+	co_debug_lvl(allocations, 11, "BLOCK FREE %d: %x", --blocks, ptr);
 #endif
 }
 
@@ -39,11 +38,14 @@ co_rc_t co_os_userspace_map(void *address, unsigned long pages, void **user_addr
 	void *result;
 
 	filp = filp_open("/dev/kmem", O_RDWR | O_LARGEFILE, 0);
-	if (!filp)
+	if (!filp) {
+		co_debug("error: co_os_userspace_map: open /dev/kmem failed");
 		return CO_RC(ERROR);
+	}
 	
 	pa = co_os_virt_to_phys(address);
 	if (!pa) {
+		co_debug("error: co_os_userspace_map: co_os_virt_to_phys failed");
 		filp_close(filp, NULL);
 		return CO_RC(ERROR);
 	}
@@ -62,6 +64,7 @@ co_rc_t co_os_userspace_map(void *address, unsigned long pages, void **user_addr
 #endif
 	);
 	if (IS_ERR(result)) {
+		co_debug("error: co_os_userspace_map: do_mmap_pgoff failed (errno %ld)", PTR_ERR(result));
 		filp_close(filp, NULL);
 		return CO_RC(ERROR);
 	}

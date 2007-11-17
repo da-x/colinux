@@ -106,8 +106,7 @@ co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned long open
 			      0);
 
 	if (status != STATUS_SUCCESS)
-		co_debug_lvl(filesystem, 5, "error %x ZwOpenFile('%s')", status, pathname);
-
+		co_debug_lvl(filesystem, 5, "error %x ZwOpenFile('%s')", (int)status, pathname);
 
 	co_winnt_free_unicode(&unipath);
 
@@ -172,8 +171,8 @@ static co_rc_t transfer_file_block(co_monitor_t *cmon,
 	}
 
 	if (status != STATUS_SUCCESS) {
-		co_debug("block io failed: %x %x (reason: %x)", linuxvm, size,
-			   status);
+		co_debug_error("block io failed: %p %lx (reason: %x)",
+				linuxvm, size, (int)status);
 		rc = status_convert(status);
 	}
 
@@ -333,7 +332,7 @@ co_rc_t co_os_file_set_attr(char *filename, unsigned long valid, struct fuse_att
 	return rc;
 } 
 
-static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
+co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 {
 	char * dirname;
 	char * filename;
@@ -361,8 +360,13 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 	len = co_strlen(fullname);
 	len1 = len;
 	
-	while (len > 0 && (fullname[len-1] != '\\'))
+	while (len > 0 && fullname[len-1] != '\\') {
+		if (fullname[len-1] == '?' || fullname[len-1] == '*') {
+			co_debug_lvl(filesystem, 5, "error: Wildcard in filename ('%s')", fullname);
+			return CO_RC(NOT_FOUND);
+		}
 		len--;
+	}
 
 	dirname = co_os_malloc(len+1);
 	if (!dirname) {
@@ -383,7 +387,6 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 	if (!CO_OK(rc))
 		goto error_1;
 
- 
         InitializeObjectAttributes(&attributes, &dirname_unicode,
                                    OBJ_CASE_INSENSITIVE, NULL, NULL);
  
@@ -393,7 +396,7 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 			      NULL, 0);
 
 	if (!NT_SUCCESS(status)) {
-		co_debug_lvl(filesystem, 5, "error %x ZwCreateFile('%s')", status, dirname);
+		co_debug_lvl(filesystem, 5, "error %x ZwCreateFile('%s')", (int)status, dirname);
                 rc = status_convert(status);
                 goto error_2;
         }
@@ -410,7 +413,7 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 						      PTRUE);
 			
 			if (!NT_SUCCESS(status)) {
-				co_debug_lvl(filesystem, 5, "error %x ZwQueryDirectoryFile('%s')", status, filename);
+				co_debug_lvl(filesystem, 5, "error %x ZwQueryDirectoryFile('%s')", (int)status, filename);
 				rc = status_convert(status);
 				goto error_3;
 			} else {
@@ -421,7 +424,7 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 				FileAttributes = entry_buffer.entry2.FileAttributes;
 			}
 		} else {
-			co_debug_lvl(filesystem, 5, "error %x ZwQueryDirectoryFile('%s')", status, filename);
+			co_debug_lvl(filesystem, 5, "error %x ZwQueryDirectoryFile('%s')", (int)status, filename);
 			rc = status_convert(status);
 			goto error_3;
 		}
@@ -432,7 +435,7 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
 		EndOfFile = entry_buffer.entry.EndOfFile;
 		FileAttributes = entry_buffer.entry.FileAttributes;
 	}
- 
+
         attr->uid = 0;
         attr->gid = 0;
         attr->rdev = 0;
@@ -456,7 +459,7 @@ static co_rc_t file_get_attr_alt(char *fullname, struct fuse_attr *attr)
         attr->blocks = (EndOfFile.QuadPart + ((1<<10)-1)) >> 10;
 	
         rc = CO_RC(OK);
-	
+
 error_3:
         ZwClose(handle);
 error_2:
@@ -466,12 +469,6 @@ error_1:
 error_0:
 	co_os_free(dirname);
         return rc;
-}
- 
-
-co_rc_t co_os_file_get_attr(char *filename, struct fuse_attr *attr)
-{
-	return file_get_attr_alt(filename, attr);
 }
 
 static void remove_read_only_func(void *data, VOID *buffer, ULONG len)
@@ -517,7 +514,7 @@ retry:
 				goto retry;
 		}
 
-		co_debug_lvl(filesystem, 5, "error %x ZwDeleteFile('%s')", status, filename);
+		co_debug_lvl(filesystem, 5, "error %x ZwDeleteFile('%s')", (int)status, filename);
 	}
 
 	co_winnt_free_unicode(&unipath);
@@ -556,7 +553,7 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 
 	char_count = co_utf8_mbstrlen(dest_filename);
 	block_size = (char_count + 1)*sizeof(WCHAR) + sizeof(FILE_RENAME_INFORMATION);
-	rename_info = (FILE_RENAME_INFORMATION *)co_os_malloc(block_size);
+	rename_info = co_os_malloc(block_size);
 	if (!rename_info)
 		return CO_RC(OUT_OF_MEMORY);
 
@@ -564,7 +561,7 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	if (!CO_OK(rc))
 		goto error;
 
-	rename_info->ReplaceIfExists = FALSE;
+	rename_info->ReplaceIfExists = TRUE;
 	rename_info->RootDirectory = NULL;
 	rename_info->FileNameLength = char_count * sizeof(WCHAR);
 
@@ -572,11 +569,14 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	if (!CO_OK(rc))
 		goto error2;
 	
-	co_debug_lvl(filesystem, 10, "rename of '%s' to '%s'\n", filename, dest_filename);
+	co_debug_lvl(filesystem, 10, "rename of '%s' to '%s'", filename, dest_filename);
 
 	status = ZwSetInformationFile(handle, &io_status, rename_info, block_size,
 				      FileRenameInformation);
 	rc = status_convert(status);
+
+	if (!CO_OK(rc))
+		co_debug_lvl(filesystem, 5, "error %x ZwSetInformationFile rename %s,%s", (int)status, filename, dest_filename);
 
 error2:
 	co_os_file_close(handle);
@@ -616,7 +616,7 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 
 	co_list_init(&names->list);
 
-	co_debug_lvl(filesystem, 10, "listing of '%s'\n", dirname);
+	co_debug_lvl(filesystem, 10, "listing of '%s'", dirname);
 
 	rc = co_winnt_utf8_to_unicode(dirname, &dirname_unicode);
 	if (!CO_OK(rc))
@@ -631,7 +631,7 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 			      NULL, 0);
 	
 	if (!NT_SUCCESS(status)) {
-		co_debug_lvl(filesystem, 5, "error %x ZwCreateFile('%s')", status, dirname);
+		co_debug_lvl(filesystem, 5, "error %x ZwCreateFile('%s')", (int)status, dirname);
 		rc = status_convert(status);
 		goto error;
 	}

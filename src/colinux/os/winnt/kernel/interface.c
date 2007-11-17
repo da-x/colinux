@@ -165,7 +165,7 @@ static NTSTATUS manager_write(co_manager_t *manager, co_manager_open_desc_t open
 			size_left -= message_size;
 			if (size_left >= 0) {
 				if (message->from == CO_MODULE_CONET0)
-					co_debug_lvl(network, 14, "message written (sent): %x", message);
+					co_debug_lvl(network, 14, "message written (sent): %p", message);
 
 				co_monitor_message_from_user(opened->monitor, opened, message);
 			}

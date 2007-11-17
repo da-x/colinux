@@ -16,8 +16,6 @@
 
 #include <stdarg.h>
 
-extern void co_debug_system(const char *fmt, ...);
-
 extern char _colinux_module[0x30];
 extern const char *colinux_obj_filenames[];
 
@@ -47,9 +45,15 @@ typedef enum {
 #undef X
 } co_debug_facility_t;
 
+extern void co_debug_system(const char *fmt, ...)
+	__attribute__ ((format (printf, 1, 2)));
+extern void co_debug_level_system(const char *module, co_debug_facility_t facility, int level,
+			const char *filename, int line, const char *func, const char *text);
+
 extern void co_debug_(const char *module, co_debug_facility_t facility, int level, 
 		      const char *filename, int line, const char *func,
-		      const char *fmt, ...);
+		      const char *fmt, ...)
+	__attribute__ ((format (printf, 7, 8)));
 
 extern co_debug_levels_t co_global_debug_levels;
 
@@ -103,8 +107,10 @@ typedef struct {
 extern int co_debug_local_index;
 extern void co_debug_buf(const char *buf, long size);
 
-#define co_debug_ulong(name)     co_debug("%s: 0x%x\n", #name, name)
+#define co_debug_ulong(name)     co_debug("%s: 0x%lx", #name, name)
 #define co_debug(fmt, ...)       co_debug_lvl(misc, 10, fmt, ## __VA_ARGS__)
+#define co_debug_error(fmt, ...) co_debug_lvl(misc, 3, fmt, ## __VA_ARGS__)
+#define co_debug_info(fmt, ...)  co_debug_lvl(misc, 1, fmt, ## __VA_ARGS__)
 
 #ifndef COLINUX_TRACE
 #undef CO_TRACE_STOP

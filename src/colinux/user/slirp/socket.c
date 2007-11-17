@@ -96,7 +96,7 @@ soread(so)
 	int n, nn, lss, total;
 	struct sbuf *sb = &so->so_snd;
 	int len = sb->sb_datalen - sb->sb_cc;
-	struct iovec iov[2];
+	struct iovec iov[2] = { {0}, };
 	int mss = so->so_tcpcb->t_maxseg;
 	
 	DEBUG_CALL("soread");
@@ -296,7 +296,7 @@ sowrite(so)
 	int  n,nn;
 	struct sbuf *sb = &so->so_rcv;
 	int len = sb->sb_cc;
-	struct iovec iov[2];
+	struct iovec iov[2] = { {0}, };
 	
 	DEBUG_CALL("sowrite");
 	DEBUG_ARG("so = %lx", (long)so);
@@ -387,7 +387,7 @@ sorecvfrom(so)
 	struct socket *so;
 {
 	struct sockaddr_in addr;
-	int addrlen = sizeof(struct sockaddr_in);
+	socklen_t addrlen = sizeof(struct sockaddr_in);
 	
 	DEBUG_CALL("sorecvfrom");
 	DEBUG_ARG("so = %lx", (long)so);
@@ -553,7 +553,8 @@ solisten(port, laddr, lport, flags)
 {
 	struct sockaddr_in addr;
 	struct socket *so;
-	int s, addrlen = sizeof(addr), opt = 1;
+	socklen_t addrlen = sizeof(addr);
+	int s, opt = 1;
 
 	DEBUG_CALL("solisten");
 	DEBUG_ARG("port = %d", port);
@@ -588,6 +589,7 @@ solisten(port, laddr, lport, flags)
 	addr.sin_port = port;
 	
 	if (((s = socket(AF_INET,SOCK_STREAM,0)) < 0) ||
+	    (setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(char *)&opt,sizeof(int)) < 0) ||
 	    (bind(s,(struct sockaddr *)&addr, sizeof(addr)) < 0) ||
 	    (listen(s,1) < 0)) {
 		int tmperrno = errno; /* Don't clobber the real reason we failed */
@@ -602,7 +604,6 @@ solisten(port, laddr, lport, flags)
 #endif
 		return NULL;
 	}
-	setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(char *)&opt,sizeof(int));
 	setsockopt(s,SOL_SOCKET,SO_OOBINLINE,(char *)&opt,sizeof(int));
 	
 	getsockname(s,(struct sockaddr *)&addr,&addrlen);
@@ -610,7 +611,7 @@ solisten(port, laddr, lport, flags)
 
 	/* Translate connections from localhost to the alias hostname */
 	if (is_localhost(addr.sin_addr))
-	   so->so_faddr = alias_addr; /*  our addr */
+	   so->so_faddr = alias_addr;
 	else
 	   so->so_faddr = addr.sin_addr;
 

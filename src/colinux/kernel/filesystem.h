@@ -77,12 +77,12 @@ typedef struct co_filesystem_ops {
 } co_filesystem_ops_t;
 
 struct co_monitor;
-extern void co_monitor_file_system(struct co_monitor *cmon, unsigned long unit, 
+extern void co_monitor_file_system(struct co_monitor *cmon, unsigned int unit,
 				   enum fuse_opcode opcode, unsigned long *params);
 
 extern void co_filesystem_getdir_free(co_filesystem_dir_names_t *names);
 
-extern co_rc_t co_monitor_file_system_init(struct co_monitor *cmon, unsigned long unit, 
+extern co_rc_t co_monitor_file_system_init(struct co_monitor *cmon, unsigned int unit,
 					   co_cofsdev_desc_t *desc);
 
 extern void co_monitor_unregister_filesystems(struct co_monitor *cmon);

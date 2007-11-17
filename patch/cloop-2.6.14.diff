@@ -1,0 +1,29 @@
+Index: linux-2.6.14-source/drivers/block/Kconfig
+===================================================================
+--- linux-2.6.14-source.orig/drivers/block/Kconfig
++++ linux-2.6.14-source/drivers/block/Kconfig
+@@ -417,6 +417,12 @@
+ 
+         If unsure, say Y.
+ 
++config BLK_DEV_CLOOP
++	tristate "Compressed Loopback device support (from Knoppix)"
++	default m
++	help
++	  Adds an compressed loopback device.
++
+ 
+ #XXX - it makes sense to enable this only for 32-bit subarch's, not for x86_64
+ #for instance.
+Index: linux-2.6.14-source/drivers/block/Makefile
+===================================================================
+--- linux-2.6.14-source.orig/drivers/block/Makefile
++++ linux-2.6.14-source/drivers/block/Makefile
+@@ -30,6 +30,7 @@
+ obj-$(CONFIG_AMIGA_Z2RAM)	+= z2ram.o
+ obj-$(CONFIG_BLK_DEV_RAM)	+= rd.o
+ obj-$(CONFIG_BLK_DEV_COBD)	+= cobd.o
++obj-$(CONFIG_BLK_DEV_CLOOP)	+= cloop.o
+ obj-$(CONFIG_BLK_DEV_LOOP)	+= loop.o
+ obj-$(CONFIG_BLK_DEV_PS2)	+= ps2esdi.o
+ obj-$(CONFIG_BLK_DEV_XD)	+= xd.o

@@ -82,6 +82,7 @@ inet_aton(cp, ia)
 }
 #endif
 
+#if 0
 /*
  * Get our IP address and put it in our_addr
  */
@@ -99,15 +100,7 @@ getouraddr()
 	
 	our_addr = *(struct in_addr *)he->h_addr;
 }
-
-/* Check given address for localhost */		/* 127.0.0.1  localhost */
-#define LOCALHOST_NETMASK 0xff000000		/* 255.0.0.0  netmask Class A */
-#define LOCALHOST_NETWORK 0x7f000000		/* 127.0.0.0  network */
-int is_localhost(struct in_addr addr)
-{
-	return (addr.s_addr == 0 || 
-		((ntohl(addr.s_addr) & LOCALHOST_NETMASK) == LOCALHOST_NETWORK));
-}
+#endif
 
 #if SIZEOF_CHAR_P == 8
 
@@ -320,13 +313,10 @@ fork_exec(so, ex, do_pty)
 {
 	int s;
 	struct sockaddr_in addr;
-	int addrlen = sizeof(addr);
+	socklen_t addrlen = sizeof(addr);
 	int opt;
         int master;
 	char *argv[256];
-#if 0
-	char buff[256];
-#endif
 	/* don't want to clobber the original */
 	char *bptr;
 	char *curarg;
@@ -389,6 +379,7 @@ fork_exec(so, ex, do_pty)
 		
 #if 0
 		if (x_port >= 0) {
+			char buff[256];
 #ifdef HAVE_SETENV
 			sprintf(buff, "%s:%d.%d", inet_ntoa(our_addr), x_port, x_screen);
 			setenv("DISPLAY", buff, 1);

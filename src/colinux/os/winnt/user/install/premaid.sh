@@ -10,27 +10,22 @@ THISDIR=`pwd`
 cd ${TOPDIR}/bin; . ./build-common.sh; cd $THISDIR
 
 PATH="$PATH:$PREFIX/bin"
-STRIP="$TARGET-strip --strip-all"
+STRIP="$TARGET-strip --strip-all --preserve-dates"
 
 # Convert files into win-lite CR+LF and store in distdir
 # Set current CoLinux-Version number
 unix_dos()
 {
-	sed "s/\$CO_VERSION/$CO_VERSION/" < $1 > $2
-	unix2dos -q $2
+	sed -e "s/\$CO_VERSION/$CO_VERSION/" \
+	    -e 's/$/\r/' < $1 > $2 || exit $?
 }
 
 mkdir -p premaid
 
-# link kernel
-ln -f $COLINUX_TARGET_KERNEL_BUILD/vmlinux premaid/vmlinux
-
-# Create compressed tar archive with path for extracting direct on the
-# root of fs, lib/modules with full version of kernel and colinux.
-echo "Installing Modules $KERNEL_VERSION"
-cd $COLINUX_TARGET_MODULE_PATH
-tar czf $THISDIR/premaid/vmlinux-modules.tar.gz lib/modules/$COMPLETE_KERNEL_NAME || exit $?
-cd $THISDIR
+# link kernel and modules
+echo "Links to kernel and modules"
+ln -f $COLINUX_TARGET_KERNEL_BUILD/vmlinux premaid/vmlinux || exit $?
+ln -f $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz premaid/vmlinux-modules.tar.gz || exit $?
 
 echo "Copy and strip executable"
 for name in $EXEDIR/*.exe $EXEDIR/*.sys
@@ -43,4 +38,5 @@ unix_dos ${TOPDIR}/NEWS 		premaid/NEWS.txt
 unix_dos ${TOPDIR}/RUNNING 		premaid/README.txt
 unix_dos ${TOPDIR}/doc/cofs		premaid/cofs.txt
 unix_dos ${TOPDIR}/doc/colinux-daemon	premaid/colinux-daemon.txt
-unix_dos ${TOPDIR}/doc/example.conf	premaid/example.conf
+unix_dos ${TOPDIR}/doc/debugging	premaid/debugging.txt
+unix_dos ${TOPDIR}/conf/example.conf	premaid/example.conf

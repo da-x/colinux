@@ -101,7 +101,7 @@ static void syntax(void)
 }
 
 static co_rc_t 
-handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
+handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 {
 	bool_t instance_specified, unit_specified;
 	co_command_line_params_t cmdline;
@@ -162,7 +162,7 @@ static co_rc_t coserial_main(int argc, char *argv[])
 	struct termios term_in;
 	struct termios term_out;
 
-	rc = handle_paramters(&g_daemon_parameters, argc, argv);
+	rc = handle_parameters(&g_daemon_parameters, argc, argv);
 	if (!CO_OK(rc))
 		return rc;
 
@@ -170,7 +170,7 @@ static co_rc_t coserial_main(int argc, char *argv[])
 	if (!CO_OK(rc))
 		return rc;
 	
-	co_debug("connecting to monitor\n");
+	co_debug("connecting to monitor");
 
 	module = CO_MODULE_SERIAL0 + g_daemon_parameters.index;
 	rc = co_user_monitor_open(g_reactor, monitor_receive,
@@ -180,7 +180,7 @@ static co_rc_t coserial_main(int argc, char *argv[])
 	if (!CO_OK(rc))
 		return rc;
 
-	co_debug("connected\n");
+	co_debug("connected");
 
 	rc = co_linux_reactor_packet_user_create(g_reactor, 
 						 STDIN_FILENO,
@@ -223,7 +223,7 @@ int main(int argc, char *argv[])
 	rc = coserial_main(argc, argv);
 
 	if (!CO_OK(rc))
-		co_terminal_print("colinux-serial-daemon: exitcode %08x\n", rc);
+		co_terminal_print("colinux-serial-daemon: exitcode %x\n", (int)rc);
 
 	co_debug_end();
 

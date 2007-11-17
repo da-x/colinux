@@ -34,7 +34,7 @@ static void set_hostmem_usage_limit(co_manager_t *manager)
 		manager->hostmem_usage_limit = ((manager->hostmem_amount/0x100000)*3/4) * 0x100000;
 	}
 
-	co_debug("machine RAM use limit: %d MB\n" , manager->hostmem_amount/0x100000);
+	co_debug("machine RAM use limit: %ld MB" , manager->hostmem_amount/0x100000);
 }
 
 co_rc_t co_manager_load(co_manager_t *manager)
@@ -43,7 +43,7 @@ co_rc_t co_manager_load(co_manager_t *manager)
 
 	co_memset(manager, 0, sizeof(*manager));
 	
-	co_debug("loaded to host kernel\n");
+	co_debug("loaded to host kernel");
 
 	co_list_init(&manager->opens);
 	co_list_init(&manager->monitors);
@@ -57,12 +57,12 @@ co_rc_t co_manager_load(co_manager_t *manager)
 		goto out_err_mutex;
 
 	if (manager->hostmem_pages > 0x100000) {
-		co_debug("error, machines with more than 4GB are not currently supported\n");
+		co_debug_error("error, machines with more than 4GB are not currently supported");
 		rc = CO_RC(ERROR);
 		goto out_err_mutex;
 	}
 
-	co_debug("machine has %d MB of RAM\n", (manager->hostmem_pages >> 8));
+	co_debug("machine has %ld MB of RAM", manager->hostmem_pages >> 8);
 
 	manager->hostmem_amount = manager->hostmem_pages << CO_ARCH_PAGE_SHIFT;
 
@@ -113,7 +113,7 @@ out_err_mutex:
 
 void co_manager_unload(co_manager_t *manager)
 {
-	co_debug("unloaded from host kernel\n");
+	co_debug("unloaded from host kernel");
 
 	if (manager->state >= CO_MANAGER_STATE_INITIALIZED) {
 		co_manager_free_reversed_pfns(manager);
@@ -160,7 +160,7 @@ co_rc_t co_manager_open(co_manager_t *manager, co_manager_open_desc_t *opened_ou
 	co_manager_open_desc_t opened;
 	co_rc_t rc;
 
-	opened = (typeof(opened))co_os_malloc(sizeof(*opened));
+	opened = co_os_malloc(sizeof(*opened));
 	if (!opened)
 		return CO_RC(OUT_OF_MEMORY);
 
@@ -446,7 +446,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 		*return_size = sizeof(*params);
 
 		if (in_size < sizeof(*params)) {
-			co_debug("monitor ioctl too small! (%d < %d)\n", in_size, sizeof(*params));
+			co_debug_error("monitor ioctl too small! (%ld < %d)", in_size, sizeof(*params));
 			params->rc = CO_RC(MONITOR_NOT_LOADED);
 			break;
 		}

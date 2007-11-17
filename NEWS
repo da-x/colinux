@@ -1,3 +1,64 @@
+* Version 0.8.0
+  Bugfixes:
+  * #1324092: cofs rename replace existing file.
+  * #1791993: Ship modules with root as owner and group.
+  * Fix cofs chdir with wildcards on existing upper/lower directory.
+
+  Console and daemons:
+  * New menu entries in FLTK console
+    Power off: Fast power down coLinux kernel. Without file sync!
+    Reboot:    Sends ctrl-alt-del, init process goes into runlevel 6
+    Shutdown:  Calls "/sbin/shutdown -h now" with fallback to "/sbin/halt"
+               Shutdown will automatic call from stopping as service,
+               of if the user click close close on the colinux-daemon.
+  * New: "colinux-daemon -p pidFile" stores ID of coLinux in file pidFile.
+    "colinux-console-fltk|nt -p pidFile" attach the monitor from stored
+    ID.  With this mechanism can open a /named/ console without knowing
+    the current ID (Process ID).  pidFile will removed on normal shutdown.
+  * Network daemons TAP, Bridged and Slirp runs with process priority high.
+  * Added a nice colinux 3D logo image to the "About" box (Nlucas)
+  * Stop with error, if double defined device (cobd,cofs,eth,exec)
+  * Optimized workaround for DEP/noexecute problems (flush tlb).
+
+  Kernel:
+  * Kernel has been updated to 2.6.22
+    (Thanks to Anders Eriksson for 2.6.13, 2.6.14, 2.6.15)
+  * Holds multiple kernel versions in patch series files
+    (2.6.12, 2.6.13, 2.6.14, 2.6.15, 2.6.17, 2.6.22)
+  * cloop updated to 2.06 (compressed loop blockdevice from Knoppix)
+
+  Installer:
+  * Text was to big for description box in installer. [Bugs item #1819219]
+  * Add Ubuntu 6.06.1 to images page. Update image Fedore 7. Add web link
+    to Notes for each image. Link to 'other images on SF' clickable now.
+  * Un-/Installer checks a running coLinux before overwrite or remove old
+    files.  [Bugs item #1396459, #1549148]
+  * Uninstall old colinux with old exefile, path from registry uninstaller
+    [Support Requests-1553923]
+  * Update tapinstall.exe (alias devcon) from DDK 3790.1830 (Mar 24 2005)
+
+  Buildsystem:
+  * Linux as host: Restructed build of colinux.ko, use kbuild system
+    from host. Host with regparm=3 is usable (tested host 2.6.22).
+  * Linux Kernel and daemons can build with differ gcc versions now.
+    ABI is runtime checked.
+    Usable gcc for kernel: 3.4.x, 4.0.x, 4.1.x, 4.2.x up to 4.3.0
+  * Warnings from gcc 4.x fixed.
+
+  Debugging:
+  * New: Debugging.txt with hints for debugging colinux start problems.
+  * Option "-v level" enable verbose messages and debug prints on console.
+  * colinux-debug-daemon: Only connect to driver, if args -s settings.
+  * Leveled debug output to Dbgview.exe (www.sysinternals.com).
+    Needs to enable facility/level with colinux-debug-daemon before.
+
+  Updated libraries and tools:
+  * gcc 4.1.2 (unpatched now, not from mingw)
+  * binutils 2.17.50
+  * mingw 3.11
+  * w32api 3.9
+  * WinPcap 4.0.1
+
 * Version 0.7.1
   * colinux-daemon:
     - Obsoleted the use of XML files for configuration.

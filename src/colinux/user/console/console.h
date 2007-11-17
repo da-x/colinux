@@ -69,12 +69,9 @@ public:
 	
 	co_rc_t attach();
 	co_rc_t attach_anyhow(co_id_t id);
-	co_rc_t pause();
 	co_rc_t about();
-	co_rc_t resume();
 	co_rc_t detach();
-	co_rc_t terminate();
-	co_rc_t send_ctrl_alt_del();
+	co_rc_t send_ctrl_alt_del(co_linux_message_power_type_t poweroff);
 	void idle();
 	void select_monitor();
 

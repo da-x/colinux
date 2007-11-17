@@ -2,10 +2,10 @@
 ;Written by NEBOR Regis
 ;Modified by Dan Aloni (c) 2004
 ;Modified 8/20/2004,2/4/2004 by George P Boutwell
-;Modified 12/10/2006 by Henry Nestler
+;Modified 11/2/2007 by Henry Nestler
 
 ;-------------------------------------
-;Good look
+
   !include "MUI.nsh"
   !include Sections.nsh
   !include "coLinux_def.inc"
@@ -20,7 +20,7 @@
 
   ;Folder selection page
   InstallDir "$PROGRAMFILES\coLinux"
-  
+
   ;Get install folder from registry if available
   InstallDirRegKey HKCU "Software\coLinux" ""
 
@@ -40,11 +40,12 @@
   ReserveFile "iDl.ini"
   ReserveFile "WinpcapRedir.ini"
   !insertmacro MUI_RESERVEFILE_INSTALLOPTIONS
- 
+
 ;--------------------------------
 ;Interface Settings
 
   !define MUI_ABORTWARNING
+  !define MUI_FINISHPAGE_NOAUTOCLOSE
 
 ;--------------------------------
 ;Pages
@@ -70,11 +71,11 @@
   !define MUI_FINISHPAGE_LINK "Visit the Cooperative Linux website"
   !define MUI_FINISHPAGE_LINK_LOCATION "http://www.colinux.org/"
   !define MUI_FINISHPAGE_SHOWREADME "README.TXT"
-  
+
   !insertmacro MUI_PAGE_FINISH
   !insertmacro MUI_UNPAGE_CONFIRM
   !insertmacro MUI_UNPAGE_INSTFILES
-  
+
 ;--------------------------------
 ;Languages
  
@@ -92,11 +93,9 @@
 ; StartDlImageFunc down for reference resolution
 
 Function EndDlImageFunc
-
 FunctionEnd
 
 Function WinpcapRedirLeave
-	
 FunctionEnd
 
 Function .onInit
@@ -114,12 +113,72 @@ SectionGroup "coLinux" SecGrpcoLinux
 
 Section
 
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayName" "coLinux ${VERSION}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "UninstallString" '"$INSTDIR\Uninstall.exe"'
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayIcon" "$INSTDIR\colinux-daemon.exe,0"
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "NoModify" "1"
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "NoRepair" "1"
+  ;-------------------------------------------Uninstall with old driver--
+  ;----------------------------------------------------------------------
 
+  ;get the old install folder
+  ReadRegStr $R2 HKCU "Software\coLinux" ""
+  StrCmp $R2 "" no_old_linux_sys
+
+  ;path without ""
+  StrCpy $R1 $R2 1
+  StrCmp $R1 '"' 0 +2
+    StrCpy $R2 $R2 -1 1
+
+  ;Check old daemon for removing driver
+  IfFileExists "$R2\colinux-daemon.exe" 0 no_old_linux_sys
+
+  ;Runs any monitor?
+check_running_monitors:
+  DetailPrint "Check running monitors"
+  nsExec::ExecToStack '"$R2\colinux-daemon.exe" --status-driver'
+  Pop $R0 # return value/error/timeout
+  Pop $R1 # Log
+
+  ;Remove, if no monitor is running
+  Push $R1
+  Push "current number of monitors: 0"
+  Call StrStr
+  Pop $R0
+  Pop $R1
+  IntCmp $R0 -1 0 remove_linux_sys remove_linux_sys
+
+  ;remove anyway, if no can detect running status
+  Push $R1
+  Push "current number of monitors:"
+  Call StrStr
+  Pop $R0
+  Pop $R1
+  IntCmp $R0 -1 remove_linux_sys
+
+  MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION \
+             "Any coLinux is running.$\nPlease stop it, before continue" \
+             IDRETRY check_running_monitors
+  DetailPrint "Abort"
+  Abort
+
+remove_linux_sys:
+  DetailPrint "Uninstall old linux driver"
+  nsExec::ExecToLog '"$R2\colinux-daemon.exe" --remove-driver'
+  Pop $R0 # return value/error/timeout
+
+no_old_linux_sys:
+
+  ;------------------------------------------------------------REGISTRY--
+  ;----------------------------------------------------------------------
+
+  !define REGUNINSTAL "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux"
+  !define REGEVENTS "SYSTEM\CurrentControlSet\Services\Eventlog\Application\coLinux"
+
+  WriteRegStr HKLM ${REGUNINSTAL} "DisplayName" "coLinux ${VERSION}"
+  WriteRegStr HKLM ${REGUNINSTAL} "UninstallString" '"$INSTDIR\Uninstall.exe"'
+  WriteRegStr HKLM ${REGUNINSTAL} "DisplayIcon" "$INSTDIR\colinux-daemon.exe,0"
+  WriteRegDWORD HKLM ${REGUNINSTAL} "NoModify" "1"
+  WriteRegDWORD HKLM ${REGUNINSTAL} "NoRepair" "1"
+
+  ; plain text in event log view
+  WriteRegStr HKLM ${REGEVENTS} "EventMessageFile" "$INSTDIR\colinux-daemon.exe"
+  WriteRegDWORD HKLM ${REGEVENTS} "TypesSupported" "4" ;EVENTLOG_INFORMATION_TYPE
 
   ;---------------------------------------------------------------FILES--
   ;----------------------------------------------------------------------
@@ -135,15 +194,15 @@ Section
   File "premaid\colinux-daemon.txt"
   File "premaid\vmlinux"
   File "premaid\vmlinux-modules.tar.gz"
-  ; initrd replaces vmlinux-modules.tar.gz as preferred way to ship modules.
+  ; initrd installs modules vmlinux-modules.tar.gz over cofs31 on first start
   File "premaid\initrd.gz"
 
   ;Backup config file if present
-  IfFileExists "$INSTDIR\example.conf" 0 +1
+  IfFileExists "$INSTDIR\example.conf" 0 +2
     CopyFiles /SILENT "$INSTDIR\example.conf" "$INSTDIR\example.conf.old"
   File "premaid\example.conf"
 
-  ; Remove kludge from older installations	
+  ; Remove kludge from older installations
   Delete "$INSTDIR\packet.dll"
   Delete "$INSTDIR\wpcap.dll"
 
@@ -152,49 +211,21 @@ Section
 
   ;Store install folder
   WriteRegStr HKCU "Software\coLinux" "" "$INSTDIR"
-  
+
   ;Create uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
 SectionEnd
 
-Section "Native Windows Linux Console" SecNTConsole
-
-  ;---------------------------------------------------------------FILES--
-  ;----------------------------------------------------------------------
-  ; Our Files . If you adds something here, Remember to delete it in 
-  ; the uninstall section
-
-  SetOutPath "$INSTDIR"
+Section "Native Windows Linux Console (NT)" SecNTConsole
   File "premaid\coLinux-console-nt.exe"
-
-  ;--------------------------------------------------------------/FILES--
-  ;----------------------------------------------------------------------
-
 SectionEnd
 
-Section "Cross-platform Linux Console" SecFLTKConsole
-
-  ;---------------------------------------------------------------FILES--
-  ;----------------------------------------------------------------------
-  ; Our Files . If you adds something here, Remember to delete it in 
-  ; the uninstall section
-
-  SetOutPath "$INSTDIR"
+Section "Cross-platform Linux Console (FLTK)" SecFLTKConsole
   File "premaid\coLinux-console-fltk.exe"
-
-  ;--------------------------------------------------------------/FILES--
-  ;----------------------------------------------------------------------
-
 SectionEnd
 
-Section "coLinux Virtual Ethernet Driver (TAP-Win32)" SeccoLinuxNet
-
-  ;---------------------------------------------------------------FILES--
-  ;----------------------------------------------------------------------
-  ; Our Files . If you adds something here, Remember to delete it in 
-  ; the uninstall section
-
+Section "Virtual Ethernet Driver (coLinux TAP-Win32)" SeccoLinuxNet
   SetOutPath "$INSTDIR\netdriver"
   File "premaid\netdriver\OemWin2k.inf"
   File "premaid\netdriver\tap0801co.sys"
@@ -203,75 +234,23 @@ Section "coLinux Virtual Ethernet Driver (TAP-Win32)" SeccoLinuxNet
 
   SetOutPath "$INSTDIR"
   File "premaid\coLinux-net-daemon.exe"
-
-  ;--------------------------------------------------------------/FILES--
-  ;----------------------------------------------------------------------
-
-
 SectionEnd
 
-Section "coLinux Virtual Network Daemon (SLiRP)" SeccoLinuxNetSLiRP
-
-  ;---------------------------------------------------------------FILES--
-  ;----------------------------------------------------------------------
-  ; Our Files . If you adds something here, Remember to delete it in 
-  ; the uninstall section
-
-  SetOutPath "$INSTDIR"
+Section "Virtual Network Daemon (SLiRP)" SeccoLinuxNetSLiRP
   File "premaid\coLinux-slirp-net-daemon.exe"
-
-  ;--------------------------------------------------------------/FILES--
-  ;----------------------------------------------------------------------
-
-
 SectionEnd
 
-Section "coLinux Bridged Ethernet (WinPcap)" SeccoLinuxBridgedNet
-
-  ;---------------------------------------------------------------FILES--
-  ;----------------------------------------------------------------------
-  ; Our Files . If you adds something here, Remember to delete it in 
-  ; the uninstall section
-
-  SetOutPath "$INSTDIR"
+Section "Bridged Ethernet (WinPcap)" SeccoLinuxBridgedNet
   File "premaid\coLinux-bridged-net-daemon.exe"
-
-  ;--------------------------------------------------------------/FILES--
-  ;----------------------------------------------------------------------
-
 SectionEnd
 
-Section "coLinux Virtual Serial Device" SeccoLinuxSerial
-
-  ;---------------------------------------------------------------FILES--
-  ;----------------------------------------------------------------------
-  ; Our Files . If you adds something here, Remember to delete it in 
-  ; the uninstall section
-
-  SetOutPath "$INSTDIR"
+Section "Virtual Serial Device (ttyS)" SeccoLinuxSerial
   File "premaid\coLinux-serial-daemon.exe"
-  
-  ;--------------------------------------------------------------/FILES--
-  ;----------------------------------------------------------------------
-
-
 SectionEnd
 
-Section "coLinux Debugging" SeccoLinuxDebug
-
-  ;---------------------------------------------------------------FILES--
-  ;----------------------------------------------------------------------
-  ; Our Files . If you adds something here, Remember to delete it in 
-  ; the uninstall section
-
-  SetOutPath "$INSTDIR"
+Section "Debugging" SeccoLinuxDebug
   File "premaid\coLinux-debug-daemon.exe"
-  ;File /oname=debugging.txt  "..\..\..\..\..\..\doc\debugging"
-  
-  ;--------------------------------------------------------------/FILES--
-  ;----------------------------------------------------------------------
-
-
+  File "premaid\debugging.txt"
 SectionEnd
 
 SectionGroupEnd
@@ -282,7 +261,8 @@ SectionGroupEnd
 !define IDL_DEBIAN 3
 !define IDL_FEDORA 4
 !define IDL_GENTOO 5
-!define IDL_LOCATION 6
+!define IDL_UBUNTU 6
+!define IDL_LOCATION 7
 
 Section "Root Filesystem image Download" SeccoLinuxImage
 
@@ -298,15 +278,19 @@ Section "Root Filesystem image Download" SeccoLinuxImage
     StrCmp $R1 "1" tryDownload
 
     !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_DEBIAN}" "State"
-    StrCpy $R0 "Debian-3.0r2.ext3-mit-backports.1gb.bz2"
+    StrCpy $R0 "Debian-4.0r0-etch.ext3.1gb.bz2"
     StrCmp $R1 "1" tryDownload
 
     !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_FEDORA}" "State"
-    StrCpy $R0 "FedoraCore5-2006.8-ext3-2gb.7z"
+    StrCpy $R0 "Fedora-7-20070906.exe"
     StrCmp $R1 "1" tryDownload
 
     !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_GENTOO}" "State"
     StrCpy $R0 "Gentoo-colinux-i686-2007-03-03.7z"
+    StrCmp $R1 "1" tryDownload
+
+    !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_UBUNTU}" "State"
+    StrCpy $R0 "Ubuntu-6.06.1.ext3.1gb.bz2"
     StrCmp $R1 "1" tryDownload
     GoTo End
 
@@ -426,6 +410,7 @@ Section -post
     IntOp $5 0 & 0
     nsExec::ExecToStack '"$INSTDIR\netdriver\tapcontrol.exe" hwids TAP0801co'
     Pop $R0 # return value/error/timeout
+            # leave Log in stack
     IntOp $5 $5 | $R0
     DetailPrint "tapcontrol hwids returned: $R0"
 
@@ -441,7 +426,8 @@ Section -post
 
  ;tapupdate:
     DetailPrint "TAP-Win32 UPDATE (please confirm Windows-Logo-Test)"
-    nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" update "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
+    nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" update \
+                       "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
     DetailPrint "tapcontrol update returned: $R0"
@@ -449,7 +435,8 @@ Section -post
 
  tapinstall:
     DetailPrint "TAP-Win32 INSTALL (please confirm Windows-Logo-Test)"
-    nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" install "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
+    nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" install \
+		       "$INSTDIR\netdriver\OemWin2k.inf" TAP0801co'
     Pop $R0 # return value/error/timeout
     IntOp $5 $5 | $R0
     DetailPrint "tapcontrol install returned: $R0"
@@ -468,7 +455,8 @@ SectionEnd
 Section -post
     nsExec::ExecToStack '"$INSTDIR\colinux-daemon.exe" --remove-driver'
     Pop $R0 # return value/error/timeout
-    nsExec::ExecToStack '"$INSTDIR\colinux-daemon.exe" --install-driver'
+    Pop $R1 # Log
+    nsExec::ExecToLog '"$INSTDIR\colinux-daemon.exe" --install-driver'
     Pop $R0 # return value/error/timeout
 SectionEnd
 
@@ -476,14 +464,14 @@ SectionEnd
 ;--------------------------------
 ;Descriptions
 
-  LangString DESC_SecGrpcoLinux ${LANG_ENGLISH} "Install coLinux"
-  LangString DESC_SecNTConsole ${LANG_ENGLISH} "Install native Windows (NT) coLinux console, which allows to view Linux console in an NT DOS Command-line console"
-  LangString DESC_SecFLTKConsole ${LANG_ENGLISH} "Install cross-platform coLinux console, which allows to view Linux console and manage coLinux from a cross-platform GUI program"
-  LangString DESC_SeccoLinuxNet ${LANG_ENGLISH} "Install coLinux Virtual Ethernet Driver, which allows to create a network link between Linux and Windows"
-  LangString DESC_SeccoLinuxNetSLiRP ${LANG_ENGLISH} "Install coLinux Virtual Ethernet Driver, which allows to create a network link between Linux and Windows"
-  LangString DESC_SeccoLinuxBridgedNet ${LANG_ENGLISH} "Install coLinux Bridge Ethernet support, which allows to join the coLinux machine to an existing network"
-  LangString DESC_SeccoLinuxSerial ${LANG_ENGLISH} "Install coLinux Virtual Serial Driver, which allows to use serial Devices between Linux and Windows"
-  LangString DESC_SeccoLinuxDebug ${LANG_ENGLISH} "Install coLinux Debugging, which allows to create extensive debug log for troubleshooting problems"
+  LangString DESC_SecGrpcoLinux ${LANG_ENGLISH} "Install or upgrade coLinux. Install coLinux basics, driver, Linux kernel, Linux modules and docs"
+  LangString DESC_SecNTConsole ${LANG_ENGLISH} "Native Windows (NT) coLinux console views Linux console in an NT DOS Command-line console"
+  LangString DESC_SecFLTKConsole ${LANG_ENGLISH} "FLTK Cross-platform coLinux console to view Linux console and manage coLinux from a GUI program"
+  LangString DESC_SeccoLinuxNet ${LANG_ENGLISH} "TAP Virtual Ethernet Driver as private network link between Linux and Windows"
+  LangString DESC_SeccoLinuxNetSLiRP ${LANG_ENGLISH} "SLiRP Ethernet Driver as virtual Gateway for outgoings TCP and UDP connections - Simplest to use"
+  LangString DESC_SeccoLinuxBridgedNet ${LANG_ENGLISH} "Bridge Ethernet support allows to join the coLinux machine to an existing network"
+  LangString DESC_SeccoLinuxSerial ${LANG_ENGLISH} "Virtual Serial Driver allows to use serial Devices between Linux and Windows"
+  LangString DESC_SeccoLinuxDebug ${LANG_ENGLISH} "Debugging allows to create extensive debug log for troubleshooting problems"
   LangString DESC_SecImage ${LANG_ENGLISH} "Download an image from sourceforge. Also provide useful links on how to use it"
 
   !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
@@ -502,18 +490,14 @@ SectionEnd
 ;Uninstaller Section
 ;--------------------------------
 
-
 Section "Uninstall"
-  DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "DisplayName"
-  DeleteRegValue HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux" "UninstallString"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\coLinux"
 
   DetailPrint "TAP-Win32 REMOVE"
   nsExec::ExecToLog '"$INSTDIR\netdriver\tapcontrol.exe" remove TAP0801co'
   Pop $R0 # return value/error/timeout
   DetailPrint "tapcontrol remove returned: $R0"
 
-  nsExec::ExecToStack '"$INSTDIR\colinux-daemon.exe" --remove-driver'
+  nsExec::ExecToLog '"$INSTDIR\colinux-daemon.exe" --remove-driver'
   Pop $R0 # return value/error/timeout
 
   ;---------------------------------------------------------------FILES--
@@ -535,6 +519,7 @@ Section "Uninstall"
   Delete "$INSTDIR\news.txt"
   Delete "$INSTDIR\cofs.txt"
   Delete "$INSTDIR\colinux-daemon.txt"
+  Delete "$INSTDIR\debugging.txt"
   Delete "$INSTDIR\example.conf"
 
   Delete "$INSTDIR\netdriver\OemWin2k.inf"
@@ -545,26 +530,25 @@ Section "Uninstall"
   ;--------------------------------------------------------------/FILES--
   ;----------------------------------------------------------------------
 
-
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR\netdriver"
   RMDir "$INSTDIR"
 
+  ; Cleanup registry
+  DeleteRegKey HKLM ${REGUNINSTAL}
+  DeleteRegKey HKLM ${REGEVENTS}
   DeleteRegKey /ifempty HKCU "Software\coLinux"
 
 SectionEnd
 
-
-; TODO coLinux runtime detection, to kill before install or upgrade
-
-; LEGACY
+# Functions #######################################
 
 ;====================================================
 ; StrStr - Finds a given string in another given string.
-;               Returns -1 if not found and the pos if found.
-;          Input: head of the stack - string to find
-;                      second in the stack - string to find in
-;          Output: head of the stack
+;          Returns -1 if not found and the pos if found.
+;   Input: head of the stack - string to find
+;          second in the stack - string to find in
+;   Output: head of the stack
 ;====================================================
 Function StrStr
   Push $0
@@ -602,10 +586,6 @@ Function StrStr
     Pop $0
     Pop $1
 FunctionEnd
-
-; Taken from the archives : Dowload from random Mirror
-
-# Functions #######################################
 
 ###################################################
 #
@@ -800,8 +780,6 @@ FunctionEnd
 
 ###############################################################
 #
-# NOTE: If you don't want a random mirror, remove this Function
-#
 # Returns a random number
 #
 # Usage:
@@ -819,8 +797,6 @@ Function RandomNumber
 FunctionEnd
 
 ####################################################
-#
-# NOTE: If you don't want a random mirror, remove this Function
 #
 # Returns a random number between 0 and Max-1
 #

@@ -8,6 +8,9 @@
 /* Undefine if you don't want Cu-SeeMe emulation */
 #undef EMULATE_CUSEEME
 
+/* Undefine if you don't want tftp emulation */
+#undef EMULATE_TFTP_SERVER
+
 /* Define if you want the connection to be probed */
 /* XXX Not working yet, so ignore this for now */
 #undef PROBE_CONN

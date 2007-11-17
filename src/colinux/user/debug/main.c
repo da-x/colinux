@@ -50,7 +50,7 @@ static void co_debug_download(void)
 
 	handle = co_os_manager_open();
 	if (handle) {
-		char *buffer = (char *)co_os_malloc(BUFFER_SIZE);
+		char *buffer = co_os_malloc(BUFFER_SIZE);
 		if (buffer) {
 			co_manager_ioctl_debug_reader_t debug_reader;
 			debug_reader.user_buffer = buffer;
@@ -89,7 +89,7 @@ static void co_debug_download_to_network(void)
 	if (!handle)
 		goto error_out1;
 
-	char *buffer = (char *)co_os_malloc(BUFFER_SIZE);
+	char *buffer = co_os_malloc(BUFFER_SIZE);
 	if (!buffer)
 		goto error_out2;
 
@@ -130,14 +130,12 @@ error_out1:
 static void print_xml_text(const char *str)
 {
 	while (*str) {
-		const char *str_start = str;
-		while (*str  &&  *str != '&')
-			str++;
-		fwrite(str_start, str - str_start, 1, output_file);
-		if (!*str)
-			break;
-		if (*str == '&')
-			fprintf(output_file, " ");
+		switch (*str) {
+			case '&': fwrite("&amp;", 5, 1, output_file); break;
+			case '<': fwrite("&lt;", 4, 1, output_file); break;
+			case '>': fwrite("&gt;", 4, 1, output_file); break;
+			default: putc(*str, output_file);
+		}
 		str++;
 	}
 }
@@ -295,7 +293,7 @@ void co_debug_download_and_parse(void)
 
 	handle = co_os_manager_open();
 	if (handle) {
-		char *buffer = (char *)co_os_malloc(BUFFER_SIZE);
+		char *buffer = co_os_malloc(BUFFER_SIZE);
 		if (buffer) {
 			co_manager_ioctl_debug_reader_t debug_reader;
 			debug_reader.user_buffer = buffer;
@@ -433,18 +431,19 @@ static void syntax(void)
 	printf("colinux-debug-daemon\n");
 	printf("syntax: \n");
 	printf("\n");
-	printf("    colinux-debug-daemon [-h] [-p] [-d] [-s levels] [-f filename] [-e exitcode]\n");
+	printf("    colinux-debug-daemon [-d] [-f filename | -n ipaddress] [-p] [-s levels] | -e exitcode | -h\n");
 	printf("\n");
 	printf("      -d              Download debug information on the fly from driver.\n");
 	printf("                      Without -d, uses standard input.\n");
 	printf("      -p              Parse the debug information and output an XML\n");
-	printf("      -f [filename]   File to append the output instead of writing to\n");
+	printf("      -f filename     File to append the output instead of writing to\n");
 	printf("                      standard output. Write with flush every line.\n");
 	printf("      -s level=num,level2=num2,...\n");
 	printf("                      Change the levels of the given debug facilities\n");
-	printf("      -n [ip-address] Send logs as UDP packets to [ip-address]:63000\n");
+	printf("      -n ipaddress    Send logs as UDP packets to ipaddress:63000\n");
 	printf("                      (requires -d)\n");
 	printf("      -e exitcode     Translate exitcode into human readable format.\n");
+	printf("      -h              This help text\n");
 	printf("\n");
 }
 

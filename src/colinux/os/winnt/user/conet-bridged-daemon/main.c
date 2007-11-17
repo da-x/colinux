@@ -41,7 +41,7 @@ typedef struct co_win32_pcap {
 	u_char *buffer;
 } co_win32_pcap_t;
 
-/* Runtime paramters */
+/* Runtime parameters */
 
 typedef struct start_parameters {
 	bool_t show_help;
@@ -142,16 +142,13 @@ pcap2Daemon(LPVOID lpParam)
 
 		default:
 			/* Error or EOF(offline capture only) */
-			co_debug_lvl(network, 5, "unexpected error reading from winPCap.\n");
+			co_debug_lvl(network, 5, "unexpected error %d reading from winPCap.", pcap_status);
 			ExitProcess(0);
 			return 0;
-			break;
 		}
 	}
 
 	/* We should never get to here. */
-	co_debug_lvl(network, 5, "unexpected exit of winPCap read loop.\n");
-	ExitProcess(0);
 	return 0;
 }
 
@@ -190,7 +187,7 @@ co_rc_t get_device_name(char *name,
 			name_string,
 			NULL,
 			&name_type,
-			name_data,
+			(PBYTE)name_data,
 			&len);
 		if (status != ERROR_SUCCESS || name_type != REG_SZ) {
 			co_terminal_print("conet-bridged-daemon: error opening registry key: %s\\%s\\%s",
@@ -198,9 +195,7 @@ co_rc_t get_device_name(char *name,
 			return CO_RC(ERROR);
 		}
 		else {
-			if (name_data) {
-				snprintf(actual_name, actual_name_size, "%s", name_data);
-			}
+			snprintf(actual_name, actual_name_size, "%s", name_data);
 		}
 		
 		RegCloseKey(connection_key);
@@ -240,7 +235,7 @@ pcap_init()
 	if (daemon_parameters->name_specified == PTRUE)
 		co_terminal_print("conet-bridged-daemon: Looking for interface \"%s\"\n", daemon_parameters->interface_name);
 	else
-		co_terminal_print("conet-bridged-daemon: Auto selecting name for bridged interfac\n");
+		co_terminal_print("conet-bridged-daemon: Auto selecting name for bridged interface\n");
 	
 	device = alldevs;
 	char name_data[256];
@@ -392,7 +387,7 @@ void co_net_syntax()
 }
 
 static co_rc_t 
-handle_paramters(start_parameters_t *start_parameters, int argc, char *argv[])
+handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 {
 	char **param_scan = argv;
 	const char *option;
@@ -523,7 +518,7 @@ conet_bridged_main(int argc, char *argv[])
 	co_module_t modules[] = {CO_MODULE_CONET0, };
 	int exit_code = 0;
 
-	rc = handle_paramters(&start_parameters, argc, argv);
+	rc = handle_parameters(&start_parameters, argc, argv);
 	if (!CO_OK(rc)) 
 		return -1;
 
@@ -583,6 +578,7 @@ main(int argc, char *argv[])
 	int ret;
 
 	co_debug_start();
+	co_process_high_priority_set();
         
 	ret = conet_bridged_main(argc, argv);
 

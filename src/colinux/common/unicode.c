@@ -42,7 +42,7 @@ static struct utf8_table utf8_table[] =
 	{0,						   /* end of table    */},
 };
 
-static int utf8_mbtowc(co_wchar_t *p, const char *s, int n)
+static int utf8_mbtowc(co_wchar_t *p, const unsigned char *s, int n)
 {
 	long l;
 	int c0, c, nc;

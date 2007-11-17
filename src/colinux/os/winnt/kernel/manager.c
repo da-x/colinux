@@ -19,7 +19,7 @@ co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
 	int i;
 	co_osdep_manager_t dep;
 
-	*osdep = dep = (typeof(dep))(co_os_malloc(sizeof(*dep)));
+	*osdep = dep = co_os_malloc(sizeof(*dep));
 	if (dep == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 
@@ -42,13 +42,13 @@ co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
 
 void co_os_manager_free(co_osdep_manager_t osdep)
 {
-	co_debug("before free: %d mdsl, %d pages\n", osdep->mdls_allocated, osdep->pages_allocated);
+	co_debug("before free: %ld mdls, %ld pages", osdep->mdls_allocated, osdep->pages_allocated);
 	
 	co_winnt_free_all_pages(osdep);
 
 	co_os_mutex_destroy(osdep->mutex);
 	
-	co_debug("after free: %d mdsl, %d pages\n", osdep->mdls_allocated, osdep->pages_allocated);
+	co_debug("after free: %ld mdls, %ld pages", osdep->mdls_allocated, osdep->pages_allocated);
 	
 	co_os_free(osdep);
 }

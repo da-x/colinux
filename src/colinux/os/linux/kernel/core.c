@@ -8,6 +8,7 @@
  *
  */ 
 
+#include <colinux/common/debug.h>
 #include <colinux/kernel/monitor.h>
 #include <colinux/os/kernel/alloc.h>
 

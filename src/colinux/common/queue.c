@@ -7,10 +7,10 @@
  * the root directory.
  */
 
-#include "queue.h"
-
-#include <memory.h>
+#include <colinux/os/current/memory.h>
 #include <colinux/os/alloc.h>
+
+#include "queue.h"
 
 co_rc_t co_queue_init(co_queue_t *queue)
 {
@@ -37,7 +37,7 @@ co_rc_t co_queue_malloc(co_queue_t *queue, long bytes, void **ptr)
 {
 	co_queue_item_t *item;
 
-	item = (co_queue_item_t *)co_os_malloc(bytes + sizeof(co_queue_item_t));
+	item = co_os_malloc(bytes + sizeof(co_queue_item_t));
 	if (item == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 
@@ -100,11 +100,14 @@ void co_queue_add_tail(co_queue_t *queue, void *ptr)
 
 co_rc_t co_queue_get_tail(co_queue_t *queue, void **ptr)
 {
+	co_list_t *item;
+	co_queue_item_t *queue_item;
+
 	if (queue->items_count == 0)
 		return CO_RC(ERROR);
 
-	co_list_t *item = queue->head.prev;
-	co_queue_item_t *queue_item = co_list_entry(item, co_queue_item_t, node);
+	item = queue->head.prev;
+	queue_item = co_list_entry(item, co_queue_item_t, node);
 	*ptr = (void *)(&queue_item->data);
 
 	return CO_RC(OK);
@@ -114,11 +117,12 @@ co_rc_t co_queue_get_prev(co_queue_t *queue, void **ptr)
 {
 	co_list_t *node = ((co_list_t *)((char *)(*ptr) - sizeof(co_list_t)));
 	co_list_t *prev = node->prev;
+	co_queue_item_t *queue_item;
 
 	if (prev == &queue->head)
 		return CO_RC(ERROR);
 		
-	co_queue_item_t *queue_item = co_list_entry(prev, co_queue_item_t, node);
+	queue_item = co_list_entry(prev, co_queue_item_t, node);
 	*ptr = (void *)(&queue_item->data);
 
 	return CO_RC(OK);

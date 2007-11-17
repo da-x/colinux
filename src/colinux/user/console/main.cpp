@@ -32,14 +32,14 @@ int co_user_console_main(int argc, char **argv)
 
 	rc = window.parse_args(argc, argv);
 	if (!CO_OK(rc)) {
-		co_debug("Error parsing parameters (%d)\n", rc);
+		co_debug("Error %08x parsing parameters", (int)rc);
 		ret = -1;
 		goto out;
 	}
 
 	rc = window.start(); 
 	if (!CO_OK(rc)) {
-		co_debug("Error starting console (%d)\n", rc);
+		co_debug("Error %08x starting console", (int)rc);
 		ret = -1;
 		goto out;
 	}

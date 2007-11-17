@@ -18,7 +18,8 @@ extern co_rc_t co_winnt_daemon_install_as_service(const char *service_name, cons
 extern int co_winnt_daemon_remove_service(const char *service_name);
 extern bool_t co_winnt_daemon_initialize_service(co_start_parameters_t *start_parameters);
 
-extern void co_ntevent_print(const char *format, ...);
+extern void co_ntevent_print(const char *format, ...)
+	__attribute__ ((format (printf, 1, 2)));
 
 extern co_rc_t co_winnt_install_driver(void);
 extern co_rc_t co_winnt_remove_driver(void);

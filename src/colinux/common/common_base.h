@@ -64,7 +64,7 @@ typedef long co_rc_t;
 #include "debug.h"
 
 #ifndef COLINUX_FILE_ID           
-#define COLINUX_FILE_ID           0
+#define COLINUX_FILE_ID           -1
 #endif
 
 /* 
@@ -114,12 +114,12 @@ typedef long co_rc_t;
 #else
 #define CO_RC(name)      ({ \
                         co_rc_t __rc__ = CO_RC_##name; \
-                        co_debug("%s():%d: CO_RC(%d)\n", __FUNCTION__, __LINE__, __rc__); \
+                        co_debug("%s():%d: CO_RC(%d)", __FUNCTION__, __LINE__, __rc__); \
                         __rc__; \
 })
 #define CO_OK(rc)        ({ \
 			co_rc_t __rc__ = rc; \
-                        co_debug("%s():%d: CO_OK(%d)\n", __FUNCTION__, __LINE__, __rc__); \
+                        co_debug("%s():%d: CO_OK(%d)", __FUNCTION__, __LINE__, __rc__); \
                         __rc__ >= 0; \
 })
 #endif
@@ -143,8 +143,10 @@ typedef char co_pathname_t[0x100];
 
 #include <stdarg.h>
 
-extern int co_snprintf(char *str, long n, const char *format, ...);
-extern int co_vsnprintf(char *str, long nmax, const char *format, va_list ap);
+extern int co_snprintf(char *str, long n, const char *format, ...)
+	__attribute__ ((format (printf, 3, 4)));
+extern int co_vsnprintf(char *str, long nmax, const char *format, va_list ap)
+	__attribute__ ((format (printf, 3, 0)));
 extern void co_rc_format_error(co_rc_t rc, char *buf, int size);
 
 #endif

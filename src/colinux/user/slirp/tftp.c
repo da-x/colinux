@@ -22,6 +22,7 @@
  * THE SOFTWARE.
  */
 
+#ifdef EMULATE_TFTP_SERVER
 #include "slirp.h"
 
 struct tftp_session {
@@ -331,3 +332,4 @@ void tftp_input(struct mbuf *m)
     break;
   }
 }
+#endif /* EMULATE_TFTP_SERVER */

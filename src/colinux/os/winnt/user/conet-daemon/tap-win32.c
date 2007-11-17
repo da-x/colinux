@@ -49,9 +49,9 @@ is_tap_win32_dev(const char *guid)
 		char enum_name[256];
 		char unit_string[256];
 		HKEY unit_key;
-		char component_id_string[] = "ComponentId";
+		const char component_id_string[] = "ComponentId";
 		char component_id[256];
-		char net_cfg_instance_id_string[] = "NetCfgInstanceId";
+		const char net_cfg_instance_id_string[] = "NetCfgInstanceId";
 		char net_cfg_instance_id[256];
 		DWORD data_type;
 
@@ -96,7 +96,7 @@ is_tap_win32_dev(const char *guid)
 				component_id_string,
 				NULL,
 				&data_type,
-				component_id,
+				(PBYTE)component_id,
 				&len);
 
 			if (!(status != ERROR_SUCCESS || data_type != REG_SZ)) {
@@ -106,7 +106,7 @@ is_tap_win32_dev(const char *guid)
 					net_cfg_instance_id_string,
 					NULL,
 					&data_type,
-					net_cfg_instance_id,
+					(PBYTE)net_cfg_instance_id,
 					&len);
 
 				if (status == ERROR_SUCCESS && data_type == REG_SZ)
@@ -200,7 +200,7 @@ co_rc_t get_device_guid(
 				name_string,
 				NULL,
 				&name_type,
-				name_data,
+				(LPBYTE)name_data,
 				&len);
 
 			if (status != ERROR_SUCCESS || name_type != REG_SZ) {
@@ -255,7 +255,7 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 		unsigned long minor;
 		unsigned long debug;		
 	} version;
-	LONG version_len;
+	DWORD version_len;
 
 	if (prefered_name != NULL)
 		co_snprintf(name_buffer, sizeof(name_buffer), "%s", prefered_name);
@@ -299,7 +299,7 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 		return CO_RC(ERROR);
 	}
 
-	co_terminal_print("colinux-net-daemon: TAP driver version %d.%d\n", version.major, version.minor);
+	co_terminal_print("colinux-net-daemon: TAP driver version %ld.%ld\n", version.major, version.minor);
 	
 	*phandle = handle;
 

@@ -1,74 +1,22 @@
 #
 # Makefile for the coLinux Linux kernel module.
 #
-# Based on a makefile by Christoph Hellwig <hch@infradead.org>.
-# 
-
-ifneq ($(COLINUX_HOST_KERNEL_DIR),)
-KERNEL_DIR=$(COLINUX_HOST_KERNEL_DIR)
-KERNEL_BUILD=$(COLINUX_HOST_KERNEL_DIR)
-else
-KERNEL_DIR=/lib/modules/$(shell uname -r)
-KERNEL_BUILD=$(KERNEL_DIR)/build
-endif
 
 MODULE_NAME = colinux
 
-$(MODULE_NAME)-objs := \
-	alloc.o \
-	main.o \
-	debug.o \
-	timer.o \
-	misc.o \
-        pages.o \
-	time.o \
-	manager.o \
-	file.o \
-	lib.o \
-	mutex.o \
-	user.o \
-	wait.o \
-	fs.o \
-	prelinked_driver.o \
+# Softlinks avoids problems with userland builds
+obj-y += .module.arch_build/
+obj-y += .module.common_build/
+obj-y += .module.kernel_build/
 
-MODULE_OBJECT := $(MODULE_NAME).ko
-MODULE_ROOT := $(KERNEL_DIR)/kernel/drivers
-TOP_DIR ?= $(KERNEL_BUILD)
+obj-m := $(MODULE_NAME).o
 
-ifeq ($(COLINUX_TARGET_KERNEL_BUILD),)
-COLINUX_TARGET_KERNEL_BUILD := $(COLINUX_TARGET_KERNEL_PATH)
-endif
+include $(KBUILD_EXTMOD)/Makefile.$(MODULE_NAME)-objs
 
-EXTRA_CFLAGS += -DCO_KERNEL -DCO_HOST_API -D__KERNEL__ -DMODULE \
- -I$(COLINUX_PWD) \
- -I$(COLINUX_TARGET_KERNEL_BUILD)/include \
- $(if $(COLINUX_TARGET_KERNEL_SOURCE), \
- -I$(COLINUX_TARGET_KERNEL_BUILD)/include2 \
- -I$(COLINUX_TARGET_KERNEL_SOURCE)/include) \
- $(CFLAGS)
+$(MODULE_NAME)-objs += \
+	.module.arch_build/lib.a \
+	.module.common_build/lib.a \
+	.module.kernel_build/lib.a \
 
-ifneq ($(COLINUX_NDEBUG),Y)
-EXTRA_CFLAGS += -DCOLINUX_DEBUG 
-endif
-
-obj ?= .
-src ?= .
-
-obj-m = colinux.o
-
-all: module
-
-module:
-	@make -C $(KERNEL_BUILD) SUBDIRS=$(PWD)
-
-clean:
-	rm -f *.o *.ko *.mod.c .test.* .tmp.*
-
-load: 
-	insmod test.ko
-
-unload:
-	rmmod test
-
-$(obj)/prelinked_driver.o: 
-	cp $< $@
+# Solve circular references between archives
+EXTRA_LDFLAGS += --start-group

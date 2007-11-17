@@ -1,0 +1,112 @@
+Implements network support
+
+
+Index: linux-2.6.22-source/drivers/net/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/drivers/net/Kconfig
++++ linux-2.6.22-source/drivers/net/Kconfig
+@@ -119,6 +119,10 @@
+ 
+ 	  If you don't know what to use this for, you don't need it.
+ 
++config COOPERATIVE_CONET
++	tristate 'Cooperative Virtual Ethernet driver support'
++	depends on COOPERATIVE
++
+ config NET_SB1000
+ 	tristate "General Instruments Surfboard 1000"
+ 	depends on PNP
+@@ -152,7 +156,7 @@
+ #
+ 
+ menu "Ethernet (10 or 100Mbit)"
+-	depends on !UML
++	depends on !UML && !COOPERATIVE
+ 
+ config NET_ETHERNET
+ 	bool "Ethernet (10 or 100Mbit)"
+@@ -1900,7 +1904,7 @@
+ 
+ menuconfig NETDEV_1000
+ 	bool "Ethernet (1000 Mbit)"
+-	depends on !UML
++	depends on !UML && !COOPERATIVE
+ 	default y
+ 
+ if NETDEV_1000
+@@ -2338,7 +2342,7 @@
+ 
+ menuconfig NETDEV_10000
+ 	bool "Ethernet (10000 Mbit)"
+-	depends on !UML
++	depends on !UML && !COOPERATIVE
+ 	default y
+ 
+ if NETDEV_10000
+Index: linux-2.6.22-source/drivers/net/Makefile
+===================================================================
+--- linux-2.6.22-source.orig/drivers/net/Makefile
++++ linux-2.6.22-source/drivers/net/Makefile
+@@ -163,6 +163,7 @@
+ 
+ # This is also a 82596 and should probably be merged
+ obj-$(CONFIG_LP486E) += lp486e.o
++obj-$(CONFIG_COOPERATIVE_CONET) += conet.o
+ 
+ obj-$(CONFIG_ETH16I) += eth16i.o
+ obj-$(CONFIG_ZORRO8390) += zorro8390.o
+Index: linux-2.6.22-source/drivers/net/conet.c
+===================================================================
+--- linux-2.6.22-source.orig/drivers/net/conet.c
++++ linux-2.6.22-source/drivers/net/conet.c
+@@ -6,7 +6,6 @@
+  *  Cooperative Linux Network Device implementation
+  */
+ 
+-#include <linux/config.h>
+ #include <linux/version.h>
+ #include <linux/module.h>
+ 
+@@ -147,7 +146,7 @@
+ 	return;
+ }
+ 
+-static irqreturn_t conet_interrupt(int irq, void *dev_id, struct pt_regs *reg_ptr)
++static irqreturn_t conet_interrupt(int irq, void *dev_id)
+ {
+ 	co_message_node_t *node_message;
+ 	while (co_get_message(&node_message, CO_DEVICE_NETWORK)) {
+@@ -221,20 +220,17 @@
+ 	struct conet_priv *priv;
+ 	int result = 0;
+ 
+-	dev = kmalloc(sizeof(struct net_device), GFP_KERNEL);
++	dev = kzalloc(sizeof(struct net_device), GFP_KERNEL);
+ 	if (!dev) {
+ 		return ERR_PTR(-ENOMEM);
+ 	}
+ 
+-	memset(dev, 0, sizeof(struct net_device));
+-
+-	priv = kmalloc(sizeof(struct conet_priv), GFP_KERNEL);
++	priv = kzalloc(sizeof(struct conet_priv), GFP_KERNEL);
+ 	if (priv == NULL) {
+ 		kfree(dev);
+ 		return ERR_PTR(-ENOMEM);
+ 	}
+ 
+-	memset(priv, 0, sizeof(struct conet_priv));
+ 	priv->unit = unit;
+ 
+ 	dev->priv = priv;
+@@ -272,7 +268,9 @@
+ 	struct net_device *dev;
+ 	char mac_address[6];
+ 
+-	result = request_irq(NETWORK_IRQ, &conet_interrupt, SA_SAMPLE_RANDOM, "conet", NULL);
++	result = request_irq(NETWORK_IRQ, &conet_interrupt, IRQF_SAMPLE_RANDOM, "conet", NULL);
++	if (result)
++		return result;
+ 
+ 	printk("conet: loaded (max %d devices)\n", CO_MODULE_MAX_CONET);
+ 

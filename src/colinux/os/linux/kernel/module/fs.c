@@ -1,4 +1,3 @@
-#include <colinux/common/libc.h>
 #include <colinux/os/kernel/filesystem.h>
 
 co_rc_t co_os_fs_inode_to_path(co_filesystem_t *fs, co_inode_t *dir, 
@@ -10,7 +9,8 @@ co_rc_t co_os_fs_inode_to_path(co_filesystem_t *fs, co_inode_t *dir,
 
 int co_os_fs_add_last_component(co_pathname_t *dirname)
 {
-	return co_strlen(*dirname);
+	/* TODO */
+	return 0;
 }
 
 co_rc_t co_os_fs_dir_inode_to_path(co_filesystem_t *fs, co_inode_t *dir, 

@@ -112,8 +112,8 @@ Options:
   --no-create             Test only this configure, no files create.
   --verbose               More messages in configure.
   --gcc-guest-build       Build C compiler from source of gnu cross compiler,
-                          and use for kernel compiling, if gcc version (major +
-                          minor) is different from your distribution compiler.
+                          and use for kernel compiling. Should use, if gcc version
+                          (major + minor) is different from your distribution.
 -------------------------------------------------------------------------------
 Sample for WinNT as host (default):
   ./configure --target=i686-pc-mingw32 \\
@@ -423,7 +423,7 @@ check_exec_tool()
     shift
   fi
   
-  echo -n "Checking for $1 ... "
+  echo -n "Checking $1 ... "
   if ($2) </dev/null >/dev/null 2>&1; then
     if [ -n "$3" ]; then
       # get needed version, transform the 'x' into 0
@@ -484,11 +484,46 @@ check_exec_tool()
 }
 
 
+as_helper()
+{
+	if [ "$gcc_guest_build" = "yes" ]; then
+		echo "  Build guest '${gcc_guest_target_prefix}as' and binutils for kernel later"
+		return
+	fi
+	exit 1
+}
+
+
 gcc_helper()
 {
 	if [ "$gcc_guest_build" = "yes" ]; then
-		echo "  Can't use local gcc/binutils for kernel."
-		echo "  Build guest '${gcc_guest_target_prefix}gcc' later"
+		echo "  Build guest '${gcc_guest_target_prefix}gcc' for kernel later"
+		return
+	fi
+
+	# ABI from local GCC
+	touch /tmp/colinux-$$.c
+	LOCAL_ABI=`gcc -E -dM /tmp/colinux-$$.c 2>/dev/null | sed -n -r -e \
+          's/^#define __GXX_ABI_VERSION ([0-9]+)$/\1/p'`
+	rm /tmp/colinux-$$.c
+
+	# ABI from known mingw compilers
+	case $GCC_VERSION in
+	    4.3.*|4.2.*|4.1.*|4.0.*|3.4.*)
+		MINGW_ABI="1002"
+		;;
+	    3.3.*)
+		MINGW_ABI="102"
+		;;
+#	    3.2.*)
+#		MINGW_ABI="101"
+#		;;
+	    *)	MINGW_ABI="unknown"
+		;;
+	esac
+
+	if [ x$LOCAL_ABI = x$MINGW_ABI ]; then
+		echo "  ABI seems be compatible. Use local gcc `gcc -dumpversion` for kernel, $GCC_VERSION for daemons."
 		return
 	fi
 
@@ -523,7 +558,7 @@ EOF
 
 check_depmod()
 {
-  echo -n "Checking for depmod ... "
+  echo -n "Checking depmod ... "
 
   # Locate depmod in user dirs and check for module-init-tools version
   if depmod_cfg=`PATH="$prefix/$target/bin:/sbin:/usr/sbin:/usr/local/sbin:$PATH" \
@@ -560,7 +595,6 @@ warning=""
 failed=""
 
 # Get version from script, replace the last digit
-#BINUTILS_NEEDED=`echo "$BINUTILS_VERSION" | sed -e 's/\([0-9]\+\)\.\([0-9]\+\).*$/\1.\2/'`.x
 GCC_NEEDED=`echo "$GCC_VERSION" | sed -e 's/\([0-9]\+\)\.\([0-9]\+\).*$/\1.\2/'`.x
 
 # Build specific path
@@ -598,8 +632,8 @@ case $colinux_os in
     # Check GCC for kernel
     check_exec_tool --warn "${gcc_guest_target_prefix}gcc for kernel" "${gcc_guest_target_prefix}gcc -dumpversion" \
        "$GCC_NEEDED" "$GCC_NEEDED" || gcc_helper
-    check_exec_tool --warn "${gcc_guest_target_prefix}binutils for kernel" "${gcc_guest_target_prefix}as --version" \
-       "$BINUTILS_NEEDED" "$BINUTILS_NEEDED" || gcc_helper
+    check_exec_tool --warn "${gcc_guest_target_prefix}as binutils for kernel" "${gcc_guest_target_prefix}as --version" \
+       "$BINUTILS_REQUIREMENTS" || as_helper
 
     # Locate users depmod and check for module-init-tools
     check_depmod "depmod"
@@ -611,8 +645,6 @@ case $colinux_os in
     check_exec_tool "texinfo" "texindex --version"
     check_exec_tool "flex" "flex --version"
     check_exec_tool "gettext" "gettext --version"
-    # need by "make installer" only ...
-    check_exec_tool --warn "unix2dos" "unix2dos --version"
   ;;
 esac
 

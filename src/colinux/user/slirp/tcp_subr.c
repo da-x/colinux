@@ -460,7 +460,7 @@ tcp_connect(inso)
 {
 	struct socket *so;
 	struct sockaddr_in addr;
-	int addrlen = sizeof(struct sockaddr_in);
+	socklen_t addrlen = sizeof(struct sockaddr_in);
 	struct tcpcb *tp;
 	int s, opt;
 
@@ -499,13 +499,15 @@ tcp_connect(inso)
 	setsockopt(s,SOL_SOCKET,SO_REUSEADDR,(char *)&opt,sizeof(int));
 	opt = 1;
 	setsockopt(s,SOL_SOCKET,SO_OOBINLINE,(char *)&opt,sizeof(int));
+	opt = 1;
+	setsockopt(s,IPPROTO_TCP,TCP_NODELAY,(char *)&opt,sizeof(int));
 	
 	so->so_fport = addr.sin_port;
 	so->so_faddr = addr.sin_addr;
 
 	/* Translate connections from localhost to the alias hostname */
 	if (is_localhost(so->so_faddr))
-	   so->so_faddr = alias_addr; /* our addr */
+	   so->so_faddr = alias_addr;
 
 	/* Close the accept() socket, set right state */
 	if (inso->so_state & SS_FACCEPTONCE) {
@@ -656,7 +658,7 @@ tcp_emu(so, m)
 		{
 			struct socket *tmpso;
 			struct sockaddr_in addr;
-			int addrlen = sizeof(struct sockaddr_in);
+			socklen_t addrlen = sizeof(struct sockaddr_in);
 			struct sbuf *so_rcv = &so->so_rcv;
 			
 			memcpy(so_rcv->sb_wptr, m->m_data, m->m_len);
@@ -841,7 +843,7 @@ tcp_emu(so, m)
 
 				/* Translate connections from localhost to the alias hostname */
 				if (is_localhost(ns->so_faddr.s_addr))
-					ns->so_faddr = alias_addr; /* our addr */
+					ns->so_faddr = alias_addr;
 
 				ns->so_iptos = tcp_tos(ns);
 				tp = sototcpcb(ns);

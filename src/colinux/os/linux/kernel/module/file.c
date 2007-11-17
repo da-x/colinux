@@ -19,6 +19,7 @@ typedef struct {
 	co_monitor_file_block_dev_t *fdev;
 } co_os_transfer_file_block_data_t;
 
+static
 co_rc_t co_os_transfer_file_block(struct co_monitor *cmon, 
 				  void *host_data, void *linuxvm, unsigned long size, 
 				  co_monitor_transfer_dir_t dir)
@@ -43,7 +44,7 @@ co_rc_t co_os_transfer_file_block(struct co_monitor *cmon,
 		set_fs(fs);
 
 		if (size_read != size) {
-			co_debug("co_os_transfer_file_block: read error: %d != %d\n",
+			co_debug("co_os_transfer_file_block: read error: %d != %ld",
 				 size_read, size);
 			rc = CO_RC(ERROR);
 		}
@@ -61,7 +62,7 @@ co_rc_t co_os_transfer_file_block(struct co_monitor *cmon,
 		set_fs(fs);
 
 		if (size_written != size) {
-			co_debug("co_os_transfer_file_block: write error: %d != %d\n",
+			co_debug("co_os_transfer_file_block: write error: %d != %ld",
 				 size_written, size);
 			rc = CO_RC(ERROR);
 		}
@@ -70,6 +71,7 @@ co_rc_t co_os_transfer_file_block(struct co_monitor *cmon,
 	return rc;
 }
 
+static
 co_rc_t co_os_file_block_read(struct co_monitor *linuxvm,
 			      co_block_dev_t *dev, 
 			      co_monitor_file_block_dev_t *fdev,
@@ -92,6 +94,7 @@ co_rc_t co_os_file_block_read(struct co_monitor *linuxvm,
 }
 
 
+static
 co_rc_t co_os_file_block_write(struct co_monitor *linuxvm,
 			       co_block_dev_t *dev, 
 			       co_monitor_file_block_dev_t *fdev,
@@ -112,6 +115,7 @@ co_rc_t co_os_file_block_write(struct co_monitor *linuxvm,
 	return rc;
 }
 
+static
 co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned long long *size)
 {
 	struct file *filp;
@@ -120,8 +124,8 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 
 	filp = filp_open(fdev->pathname, O_RDONLY | O_LARGEFILE, 0);
         if (IS_ERR(filp)) {
-		co_debug("error opening file '%s' (errno=%d)\n",
-		         (fdev->pathname) ? fdev->pathname : "(NULL)", -(long)filp);
+		co_debug("error opening file '%s' (errno %ld)",
+		         (fdev->pathname) ? fdev->pathname : "(NULL)", PTR_ERR(filp));
 		return CO_RC(ERROR);
 	}
 
@@ -141,13 +145,14 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 	return rc;
 }
 
+static
 co_rc_t co_os_file_block_open(struct co_monitor *linuxvm, co_monitor_file_block_dev_t *fdev)
 {
 	struct file *filp;
 	struct inode *inode = NULL;
 	co_rc_t rc = CO_RC(OK);
 
-	co_debug("opening %s\n", fdev->pathname);
+	co_debug("opening %s", fdev->pathname);
 
 	filp = filp_open(fdev->pathname, O_RDWR | O_LARGEFILE, 0);
         if (IS_ERR(filp))
@@ -161,7 +166,7 @@ co_rc_t co_os_file_block_open(struct co_monitor *linuxvm, co_monitor_file_block_
 			/* TODO... */
 		}
         } else if (!inode || !S_ISREG(inode->i_mode)) {
-                co_debug("colinux: invalid file type: %s\n", fdev->pathname);
+                co_debug("colinux: invalid file type: %s", fdev->pathname);
 		rc = CO_RC(ERROR);
 		goto out;
         }
@@ -174,11 +179,12 @@ out:
 	return rc;
 }
 
+static
 co_rc_t co_os_file_block_close(co_monitor_file_block_dev_t *fdev)
 {
 	struct file *filp;
 
-	co_debug("closing %s\n", fdev->pathname);
+	co_debug("closing %s", fdev->pathname);
 
 	filp = (struct file *)(fdev->sysdep);
 	filp_close(filp, NULL);

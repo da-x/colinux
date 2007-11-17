@@ -13,7 +13,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+
 #include "console.h"
+#include "about.h"
 #include "select_monitor.h"
 
 #include <FL/Fl_Select_Browser.H>
@@ -54,25 +56,24 @@ static void console_detach_cb(Fl_Widget *widget, void* v)
 	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->detach();
 }
 
-static void console_pause_cb(Fl_Widget *widget, void* v) 
-{
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->pause();
-}
-
-static void console_resume_cb(Fl_Widget *widget, void* v) 
-{
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->resume();
-}
-
-static void console_terminate_cb(Fl_Widget *widget, void* v) 
-{
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->terminate();
-}
-
 static void console_send_ctrl_alt_del_cb(Fl_Widget *widget, void* v) 
 {
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del();
+	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del(
+					CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL);
 }
+
+static void console_send_shutdown_cb(Fl_Widget *widget, void* v)
+{
+	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del(
+					CO_LINUX_MESSAGE_POWER_SHUTDOWN);
+}
+
+static void console_send_poweroff_cb(Fl_Widget *widget, void* v)
+{
+	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del(
+					CO_LINUX_MESSAGE_POWER_OFF);
+}
+
 static void console_about_cb(Fl_Widget *widget, void* v) 
 {
 	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->about();
@@ -135,9 +136,7 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 	while (argc > 0) {
 		const char *option;
 
-		option = "-a";
-
-		if (strcmp(*param_scan, option) == 0) {
+		if (strcmp(*param_scan, (option = "-a")) == 0) {
 			param_scan++;
 			argc--;
 
@@ -149,6 +148,26 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 			}
 
 			start_parameters.attach_id = atoi(*param_scan);
+		} else
+		if (strcmp(*param_scan, (option = "-p")) == 0) {
+			co_rc_t rc;
+
+			param_scan++;
+			argc--;
+
+			if (argc <= 0) {
+				co_terminal_print(
+					"Parameter of command line option %s not specified\n",
+					option);
+				return CO_RC(ERROR);
+			}
+
+			rc = read_pid_from_file(*param_scan, &start_parameters.attach_id);
+			if (!CO_OK(rc)) {
+				co_terminal_print(
+					"error on reading PID from file '%s'\n", *param_scan);
+				return CO_RC(ERROR);
+			}
 		}
 
 		param_scan++;
@@ -156,32 +175,6 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 	}
 
 	return CO_RC(OK);
-}
-
-/**
- * Returns PID of first monitor.
- *
- * If none found, returns CO_INVALID_ID.
- *
- * TODO: Find first monitor not already attached.
- *       Duplicate source in src/colinux/user/console-base/console.cpp
- */
-static co_id_t find_first_monitor(void)
-{
-	co_manager_handle_t handle;
-	co_manager_ioctl_monitor_list_t	list;
-	co_rc_t	rc;
-
-	handle = co_os_manager_open();
-	if (handle == NULL)
-		return CO_INVALID_ID;
-
-	rc = co_manager_monitor_list(handle, &list);
-	co_os_manager_close(handle);
-	if (!CO_OK(rc) || list.count == 0)
-		return CO_INVALID_ID;
-
-	return list.ids[0];
 }
 
 co_rc_t console_window_t::start()
@@ -198,13 +191,9 @@ co_rc_t console_window_t::start()
 		{ "Select", 0, (Fl_Callback *)console_select_cb, this, FL_MENU_DIVIDER },
 		{ "Attach", 0, (Fl_Callback *)console_attach_cb, this, },
 		{ "Detach", 0, (Fl_Callback *)console_detach_cb, this, FL_MENU_DIVIDER },
-		{ "Pause", 0, (Fl_Callback *)console_pause_cb, this,  },
-		{ "Resume", 0, (Fl_Callback *)console_resume_cb, this, },
-		{ "Terminate", 0, (Fl_Callback *)console_terminate_cb, this, },
-		{ "Send Ctrl-Alt-Del", 0, (Fl_Callback *)console_send_ctrl_alt_del_cb, this, },
-		{ 0 },
-
-		{ "Inspect", 0, 0, 0, FL_SUBMENU },
+		{ "Power off", 0, (Fl_Callback *)console_send_poweroff_cb, this, },
+		{ "Reboot - Ctrl-Alt-Del", 0, (Fl_Callback *)console_send_ctrl_alt_del_cb, this, },
+		{ "Shutdown", 0, (Fl_Callback *)console_send_shutdown_cb, this, },
 		{ 0 },
 
 		{ "Help", 0, 0, 0, FL_SUBMENU },
@@ -248,9 +237,9 @@ co_rc_t console_window_t::start()
 	window->show();
 
 	menu_item_activate(console_select_cb);
-	menu_item_deactivate(console_pause_cb);
-	menu_item_deactivate(console_resume_cb);
-	menu_item_deactivate(console_terminate_cb);
+	menu_item_deactivate(console_send_poweroff_cb);
+	menu_item_deactivate(console_send_ctrl_alt_del_cb);
+	menu_item_deactivate(console_send_shutdown_cb);
 	menu_item_deactivate(console_detach_cb);
 	menu_item_deactivate(console_attach_cb);
 
@@ -363,9 +352,9 @@ co_rc_t console_window_t::attach()
 	state = CO_CONSOLE_STATE_ATTACHED;
 
 	menu_item_deactivate(console_select_cb);
-	menu_item_activate(console_pause_cb);
-	menu_item_deactivate(console_resume_cb);
-	menu_item_activate(console_terminate_cb);
+	menu_item_activate(console_send_poweroff_cb);
+	menu_item_activate(console_send_ctrl_alt_del_cb);
+	menu_item_activate(console_send_shutdown_cb);
 	menu_item_activate(console_detach_cb);
 	menu_item_deactivate(console_attach_cb);
 
@@ -375,18 +364,6 @@ co_rc_t console_window_t::attach()
 
 out:	
 	return rc;
-}
-
-co_rc_t console_window_t::pause()
-{
-	log("Pause not implemented yet");
-	return CO_RC(OK);
-}
-
-co_rc_t console_window_t::resume()
-{
-	log("Pause not implemented yet");
-	return CO_RC(OK);
 }
 
 co_rc_t console_window_t::attach_anyhow(co_id_t id)
@@ -408,12 +385,12 @@ co_rc_t console_window_t::detach()
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return CO_RC(ERROR);
 
-        menu_item_activate(console_select_cb);
-        menu_item_deactivate(console_pause_cb);
-        menu_item_deactivate(console_resume_cb);
-        menu_item_deactivate(console_terminate_cb);
-        menu_item_deactivate(console_detach_cb);
-        menu_item_activate(console_attach_cb);	
+	menu_item_activate(console_select_cb);
+	menu_item_deactivate(console_send_poweroff_cb);
+	menu_item_deactivate(console_send_ctrl_alt_del_cb);
+	menu_item_deactivate(console_send_shutdown_cb);
+	menu_item_deactivate(console_detach_cb);
+	menu_item_activate(console_attach_cb);	
 
 	co_user_monitor_close(message_monitor);	
 
@@ -428,15 +405,7 @@ co_rc_t console_window_t::detach()
 	return CO_RC(OK);
 }
 
-co_rc_t console_window_t::terminate()
-{
-	if (state != CO_CONSOLE_STATE_ATTACHED)
-		return CO_RC(ERROR);
-
-	return detach();
-}
-
-co_rc_t console_window_t::send_ctrl_alt_del()
+co_rc_t console_window_t::send_ctrl_alt_del(co_linux_message_power_type_t poweroff)
 {
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return CO_RC(ERROR);
@@ -455,8 +424,8 @@ co_rc_t console_window_t::send_ctrl_alt_del()
 	message.linux_msg.device = CO_DEVICE_POWER;
 	message.linux_msg.unit = 0;
 	message.linux_msg.size = sizeof(message.data);
-	message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
-	
+	message.data.type = poweroff;
+
 	co_user_monitor_message_send(message_monitor, &message.message);
 
 	return CO_RC(OK);
@@ -482,7 +451,7 @@ void console_window_t::global_resize_constraint()
 			
 			if (h_diff != 0   ||  w_diff != 0) {
 				if (resized_on_attach == PFALSE) {
-					/* co_debug("%d, %d\n", window->w() - w_diff, window->h() - h_diff); */
+					/* co_debug("%d, %d", window->w() - w_diff, window->h() - h_diff); */
 					window->size(window->w() - w_diff, window->h() - h_diff);
 					resized_on_attach = PTRUE;
 				}
@@ -521,11 +490,10 @@ void console_window_t::select_monitor()
 
 co_rc_t console_window_t::about()
 {
-	Fl_Double_Window *win = new Fl_Double_Window(400, 300);
-
-	/* TODO: Add some text here :) */
-
-	win->end();
+	// Show the "About Box" dialog
+	about_box * win = new about_box( );
+	win->set_modal( );
+	win->show( );
 
 	return CO_RC(OK);
 }

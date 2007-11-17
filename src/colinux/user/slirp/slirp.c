@@ -1,7 +1,9 @@
 #include "slirp.h"
 
+#if 0
 /* host address */
 struct in_addr our_addr;
+#endif
 /* host dns address */
 static struct in_addr dns_addr;
 /* host loopback address */
@@ -9,6 +11,7 @@ struct in_addr loopback_addr;	/* 127.0.0.1 */
 
 /* address for slirp virtual addresses */
 struct in_addr special_addr;	/* 10.0.2.0 */
+/* virtual address alias for host */
 struct in_addr alias_addr;	/* 10.0.2.2  windows */
 struct in_addr client_addr;	/* 10.0.2.15 Linux */
 
@@ -32,6 +35,8 @@ struct ex_list *exec_list;
 
 /* XXX: suppress those select globals */
 fd_set *global_readfds, *global_writefds, *global_xfds;
+
+char slirp_hostname[33];
 
 #ifdef _WIN32
 
@@ -98,8 +103,8 @@ static int get_dns_addr(struct in_addr *pdns_addr)
         if (sscanf(buff, "nameserver%*[ \t]%256s", buff2) == 1) {
             if (!inet_aton(buff2, &tmp_addr))
                 continue;
-            if (tmp_addr.s_addr == loopback_addr.s_addr)
-                tmp_addr = our_addr;
+            if (is_localhost(tmp_addr))
+                tmp_addr = alias_addr;
             /* If it's the first one, set it to dns_addr */
             if (!found)
                 *pdns_addr = tmp_addr;
@@ -124,25 +129,13 @@ static int get_dns_addr(struct in_addr *pdns_addr)
 struct in_addr cached_dns_addr (void)
 {
     static long dns_expire;
-    struct in_addr new_dns_addr;
     
     if (!dns_addr.s_addr || curtime > dns_expire) {
-        if (get_dns_addr(&new_dns_addr) < 0) {
+        if (get_dns_addr(&dns_addr) < 0) {
             fprintf(stderr, "Could not get DNS address\n");
             return (dns_addr);
         }
 
-        /* If DNS server changed, re-read host ipaddr */
-        if (dns_addr.s_addr != new_dns_addr.s_addr) {
-            getouraddr();
-#if 0
-            printf( "conet-slirp-daemon: host internet connection update detected.\n" );
-            printf( "Our addr: %s\n", inet_ntoa(our_addr));
-            printf( "DNS Server: %s\n", inet_ntoa(new_dns_addr));
-#endif
-        }
-
-        dns_addr = new_dns_addr;
         dns_expire = curtime + SO_EXPIREFAST;
     }
     return (dns_addr);
@@ -178,12 +171,14 @@ void slirp_init(void)
     m_init();
 
     /* set default addresses */
-    getouraddr();
     inet_aton("127.0.0.1", &loopback_addr);
 
     inet_aton(CTL_SPECIAL, &special_addr);
-    alias_addr.s_addr  = special_addr.s_addr | htonl(CTL_ALIAS);
+    alias_addr.s_addr = special_addr.s_addr | htonl(CTL_ALIAS);
     client_addr.s_addr = special_addr.s_addr | htonl(CTL_CLIENT);
+#if 0
+    getouraddr();
+#endif
 }
 
 #define CONN_CANFSEND(so) (((so)->so_state & (SS_FCANTSENDMORE|SS_ISFCONNECTED)) == SS_ISFCONNECTED)
@@ -638,11 +633,12 @@ void slirp_input(const uint8_t *pkt, int pkt_len)
         m = m_get();
         if (!m)
             return;
-        m->m_len = pkt_len;
-        memcpy(m->m_data, pkt, pkt_len);
+        /* Note: we add to align the IP header */
+        m->m_len = pkt_len + 2;
+        memcpy(m->m_data + 2, pkt, pkt_len);
 
-        m->m_data += ETH_HLEN;
-        m->m_len -= ETH_HLEN;
+        m->m_data += 2 + ETH_HLEN;
+        m->m_len -= 2 + ETH_HLEN;
 
         ip_input(m);
         break;

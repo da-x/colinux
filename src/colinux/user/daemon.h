@@ -30,6 +30,8 @@ typedef struct co_daemon_start_parameters {
 	bool_t suppress_printk;
 	bool_t cmdline_config;
 	co_config_t config;
+	bool_t pidfile_specified;
+	co_pathname_t pidfile;
 } co_start_parameters_t;
 
 typedef struct co_daemon {
@@ -61,7 +63,7 @@ extern co_rc_t co_daemon_start_monitor(co_daemon_t *daemon);
 extern co_rc_t co_daemon_run(co_daemon_t *daemon);
 extern void co_daemon_end_monitor(co_daemon_t *daemon);
 extern void co_daemon_destroy(co_daemon_t *daemon);
-extern void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon);
+extern void co_daemon_send_shutdown(co_daemon_t *daemon);
 extern co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_parameters_t *start_parameters);
 
 #endif

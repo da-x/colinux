@@ -1,22 +1,27 @@
 #include <windows.h>
+#include "resources_def.inc"
+
+LANGUAGE LANG_ENGLISH,SUBLANG_DEFAULT
+1 11 service-message.bin
 
 2 ICON "colinux.ico"
 
 1 VERSIONINFO
-FILEVERSION 1,1,0,0
-PRODUCTVERSION 1,0,0,0
+FILEVERSION CO_VERSION_DWORD
+PRODUCTVERSION CO_VERSION_DWORD
 FILEOS VOS__WINDOWS32
 {
   BLOCK "StringFileInfo"{
     BLOCK "040904B0" {    
-      VALUE "Comment", ""
       VALUE "CompanyName","Open Source software"
       VALUE "FileDescription", "coLinux daemon program"
-      VALUE "FileVersion", "coLinux version"
+      VALUE "FileVersion", CO_VERSION_STRING
       VALUE "LegalCopyright","Copyright (c) coLinux project"
       VALUE "OriginalFilename","colinux-daemon.exe"
       VALUE "ProductName", "coLinux"
-      VALUE "ProductVersion", "P2D2"
+      VALUE "ProductVersion", CO_VERSION_STRING
+      VALUE "LinuxKernelVersion", CO_KERNEL_STRING
+      VALUE "GccVersion", CO_GCC_STRING
     }
   }
 }

@@ -98,6 +98,16 @@ Linux for running from command line.
 	Don't launch and attach a coLinux console on startup.  This is
 	the default for running as service.
 
+    -p pidfile
+
+	Write PID to file.
+	It is mostly for running more as one coLinux instances on one machine.
+	Console can read the pid from this file.
+
+    -v level
+
+	Verbose messages, level 1 prints booting details, 2 or
+	more checks configs, 3 prints errors, default is 0 (off)
 
     -h
 
@@ -228,11 +238,11 @@ don't depend on each other.  The parameters are case sensitive.
 	to the world.  In typicaly mode can not connect from outside to the
 	colinux guest.  Incommings can enable with the <redirections>.
 
-	BIG HINT: In firewalls on your Windows host should allow the
-	outgoing connections for the programm colinux-serial-daemon.exe.
+	BIG HINT: In firewalls on your Windows host should allow the outgoing
+	connections for the programm colinux-slirp-net-daemon.exe.
 
 	Use any number <X> of these to specify network interfaces,
-	<MAC> and <redirections> are optional.
+	<MAC> is currently ignored, <redirections> are optional.
 
 	<redirections> take the form tcp|upd:hostport:linuxport[:count],
 	multiple redirections are seperated by /, ie tcp:2222:22/tcp:8080:80

@@ -183,9 +183,10 @@ parse_redir_param (char *p)
 			return CO_RC(ERROR);
 
 		for (i = 0; i < iPortCount; i++) {
-			co_debug("slirp redir %d %d:%d (%d)\n", iProto, iHostPort+i, iClientPort+i);
+			co_debug("slirp redir %d %d:%d", iProto, iHostPort+i, iClientPort+i);
 			if (slirp_redir(iProto, iHostPort+i, client_addr, iClientPort+i) < 0) {
-				co_terminal_print("conet-slirp-daemon: slirp redir %d:%d failed.\n", iHostPort+i, iClientPort+i);
+				co_terminal_print("conet-slirp-daemon: slirp redir %d:%d failed.\n",
+						  iHostPort+i, iClientPort+i);
 			}
 		}
 
@@ -268,6 +269,7 @@ co_rc_t co_slirp_main(int argc, char *argv[])
 	co_module_t module;
 
 	co_debug_start();
+	co_process_high_priority_set();
 	slirp_init();
 
 	rc = co_cmdline_params_alloc(argv+1, argc-1, &cmdline);
@@ -283,17 +285,17 @@ co_rc_t co_slirp_main(int argc, char *argv[])
 		goto out;
 	}
 
-	co_debug("conet-slirp-daemon: create mutex\n");
+	co_debug("conet-slirp-daemon: create mutex");
 	rc = co_slirp_mutex_init();
 	if (!CO_OK(rc))
 		goto out_params;
 
-	co_debug("conet-slirp-daemon: create reactor\n");
+	co_debug("conet-slirp-daemon: create reactor");
 	rc = co_reactor_create(&g_reactor);
 	if (!CO_OK(rc))
 		goto out_mutex;
 
-	co_debug("conet-slirp-daemon: connecting to monitor\n");
+	co_debug("conet-slirp-daemon: connecting to monitor");
 
 	module = CO_MODULE_CONET0 + g_daemon_parameters.index;
 	rc = co_user_monitor_open(g_reactor, monitor_receive,
@@ -320,7 +322,7 @@ out_params:
 	
 out:
 	if (!CO_OK(rc))
-		co_terminal_print("conet-slirp-daemon: exitcode %08x\n", rc);
+		co_terminal_print("conet-slirp-daemon: exitcode %x\n", (int)rc);
 
 	co_debug_end();
 	return rc;

@@ -7,11 +7,10 @@
  * the root directory.
  */
 
-#include "console.h"
-
-#include <memory.h>
-
+#include <colinux/os/current/memory.h>
 #include <colinux/os/alloc.h>
+
+#include "console.h"
 
 /*
  * Console initialization.
@@ -34,7 +33,7 @@ co_rc_t co_console_create(long x, long y, long max_blacklog, co_console_t **cons
 	struct_size += sizeof(co_console_t);
 	struct_size += sizeof(co_console_cell_t)*(y + max_blacklog)*x;
 
-	console = (typeof(console))(co_os_malloc(struct_size));
+	console = co_os_malloc(struct_size);
 	if (console == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 

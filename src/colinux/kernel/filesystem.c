@@ -69,7 +69,7 @@ static co_inode_t *alloc_inode(co_filesystem_t *filesystem, co_inode_t *parent, 
 	co_list_add_tail(&inode->hash_node, &filesystem->inode_hashes[inode->number % CO_FS_HASH_TABLE_SIZE]);
 
 	filesystem->inodes_count++;
-	co_debug_lvl(filesystem, 10, "inode [%d] allocated %x child '%s' of %x\n", 
+	co_debug_lvl(filesystem, 10, "inode [%d] allocated %p child '%s' of %p",
 		     filesystem->inodes_count, inode, name ? name : "<root>", parent);
 	
 	return inode;
@@ -105,7 +105,7 @@ static void free_inode(co_filesystem_t *filesystem, co_inode_t *inode)
 	if (inode->name)
 		co_os_free(inode->name);
 	co_os_free(inode);
-	co_debug_lvl(filesystem, 10, "inode [%d] freed %x\n", filesystem->inodes_count, inode);
+	co_debug_lvl(filesystem, 10, "inode [%d] freed %p", filesystem->inodes_count, inode);
 	filesystem->inodes_count--;
 }
 
@@ -217,14 +217,14 @@ static co_rc_t inode_mknod(co_filesystem_t *filesystem, co_inode_t *dir, unsigne
 	attr->rdev = 0;
 	attr->_dummy = 0;
 	attr->blocks = 0;
-	attr->atime = co_os_get_time();
-	attr->mtime = co_os_get_time();
+	attr->atime = \
+	attr->mtime = \
 	attr->ctime = co_os_get_time();
 	
 	rc = filesystem->ops->inode_mknod(filesystem, dir, mode, rdev, name, ino, attr);
 	
 	if (CO_OK(rc)) {
-		co_inode_t *inode = NULL;
+		co_inode_t *inode;
 
 		inode = find_inode(filesystem, dir, name);
 		if (!inode)
@@ -378,7 +378,7 @@ void co_filesystem_getdir_free(co_filesystem_dir_names_t *names)
 	}
 }
 
-co_rc_t co_monitor_file_system_init(co_monitor_t *cmon, unsigned long unit, 
+co_rc_t co_monitor_file_system_init(co_monitor_t *cmon, unsigned int unit,
 				    co_cofsdev_desc_t *desc)
 {
 	co_filesystem_t *filesystem;
@@ -502,7 +502,7 @@ static co_rc_t fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *stat
 	return filesystem->ops->fs_stat(filesystem, statfs);	
 }
 
-void co_monitor_file_system(co_monitor_t *cmon, unsigned long unit, 
+void co_monitor_file_system(co_monitor_t *cmon, unsigned int unit,
 			    enum fuse_opcode opcode, unsigned long *params)
 {
 	int ino = -1;

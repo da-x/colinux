@@ -23,14 +23,14 @@ struct co_block_dev {
 	co_rc_t (*service)(struct co_monitor *cmon, co_block_dev_t *dev, 
 			   co_block_request_t *request);
 	void (*free)(struct co_monitor *cmon, co_block_dev_t *dev);
-	long use_count;
+	unsigned int use_count;
 } PACKED_STRUCT;
 
-extern void co_monitor_block_register_device(struct co_monitor *cmon, unsigned long index, 
+extern void co_monitor_block_register_device(struct co_monitor *cmon, unsigned int unit,
 					     co_block_dev_t *dev);
-extern co_rc_t co_monitor_block_request(struct co_monitor *cmon, unsigned long index, 
+extern co_rc_t co_monitor_block_request(struct co_monitor *cmon, unsigned int unit,
 					co_block_request_t *request);
-extern void co_monitor_block_unregister_device(struct co_monitor *cmon, unsigned long index);
+extern void co_monitor_block_unregister_device(struct co_monitor *cmon, unsigned int unit);
 extern void co_monitor_unregister_and_free_block_devices(struct co_monitor *cmon);
 
 #endif

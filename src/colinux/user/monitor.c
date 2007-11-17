@@ -142,7 +142,7 @@ co_rc_t co_user_monitor_load_section(co_user_monitor_t *umon,
 	if (params->user_ptr) 
 		alloc_size += params->size;
     
-	params_copy = (co_monitor_ioctl_load_section_t *)co_os_malloc(alloc_size);
+	params_copy = co_os_malloc(alloc_size);
 	if (!params_copy)
 		return CO_RC(OUT_OF_MEMORY);
 
@@ -170,7 +170,7 @@ co_rc_t co_user_monitor_load_initrd(co_user_monitor_t *umon,
 
 	alloc_size = sizeof(*params_copy) + initrd_size;
     
-	params_copy = (co_monitor_ioctl_load_initrd_t *)co_os_malloc(alloc_size);
+	params_copy = co_os_malloc(alloc_size);
 	if (!params_copy)
 		return CO_RC(OUT_OF_MEMORY);
 

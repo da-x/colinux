@@ -25,6 +25,11 @@ unsigned long co_os_get_time()
 
 void co_os_get_timestamp(co_timestamp_t *dts)
 {
+	co_os_get_timestamp_freq(dts, NULL);
+}
+
+void co_os_get_timestamp_freq(co_timestamp_t *dts, co_timestamp_t *freq)
+{
 	LARGE_INTEGER PerformanceFrequency;
 	LARGE_INTEGER PerformanceCounter;
 
@@ -32,15 +37,33 @@ void co_os_get_timestamp(co_timestamp_t *dts)
 
 	dts->high = PerformanceCounter.HighPart;
 	dts->low = PerformanceCounter.LowPart;
+
+	if (freq) {
+		freq->high = PerformanceFrequency.HighPart;
+		freq->low = PerformanceFrequency.LowPart;
+	}
 }
 
-void co_os_get_timestamp_freq(co_timestamp_t *dts)
+unsigned long co_os_get_cpu_khz(void)
 {
-	LARGE_INTEGER PerformanceFrequency;
+	NTSTATUS status;
+	static ULONG mhz = 0;
+	static RTL_QUERY_REGISTRY_TABLE query[2] = {{
+		.Flags = RTL_QUERY_REGISTRY_REQUIRED | RTL_QUERY_REGISTRY_DIRECT,
+		.Name = L"~MHz",
+		.EntryContext = &mhz,
+		.DefaultType = REG_DWORD,
+		}};
 
-	KeQueryPerformanceCounter(&PerformanceFrequency);
+	if (!mhz) {
+		status = RtlQueryRegistryValues(
+				RTL_REGISTRY_ABSOLUTE,
+				L"\\Registry\\MACHINE\\HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+		    		query, NULL, NULL);
 
-	dts->high = PerformanceFrequency.HighPart;
-	dts->low = PerformanceFrequency.LowPart;
+		if (status != STATUS_SUCCESS)
+			co_debug("getting MHz failed %x", (int)status);
+	}
+
+	return(1000*mhz);
 }
-

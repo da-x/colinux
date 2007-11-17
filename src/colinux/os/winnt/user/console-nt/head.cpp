@@ -34,7 +34,7 @@ int main(int argc, char **argv)
 	try {
 		status = co_user_console_main(argc, argv);
 	} catch(...) {
-		co_debug("The console program encountered an exception.\n");
+		co_debug("The console program encountered an exception.");
 		status = -1;
 	}
 

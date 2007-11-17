@@ -1,5 +1,6 @@
 /* tftp defines */
 
+#ifdef EMULATE_TFTP_SERVER
 #define TFTP_SESSIONS_MAX 3
 
 #define TFTP_SERVER	69
@@ -30,3 +31,4 @@ struct tftp_t {
 };
 
 void tftp_input(struct mbuf *m);
+#endif /* EMULATE_TFTP_SERVER */

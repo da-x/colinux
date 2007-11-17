@@ -12,12 +12,12 @@
 #include "block.h"
 #include "monitor.h"
 
-void co_monitor_block_register_device(co_monitor_t *cmon, unsigned long index, co_block_dev_t *dev)
+void co_monitor_block_register_device(co_monitor_t *cmon, unsigned int index, co_block_dev_t *dev)
 {
 	cmon->block_devs[index] = dev;
 }
 
-void co_monitor_block_unregister_device(co_monitor_t *cmon, unsigned long index)
+void co_monitor_block_unregister_device(co_monitor_t *cmon, unsigned int index)
 {
 	cmon->block_devs[index] = NULL;
 }
@@ -36,7 +36,7 @@ void co_monitor_unregister_and_free_block_devices(co_monitor_t *cmon)
 	}
 }
 
-co_block_dev_t *co_monitor_block_dev_from_index(co_monitor_t *cmon, unsigned long index)
+co_block_dev_t *co_monitor_block_dev_from_index(co_monitor_t *cmon, unsigned int index)
 {
 	if (index >= CO_MODULE_MAX_COBD)
 		return NULL;
@@ -44,7 +44,7 @@ co_block_dev_t *co_monitor_block_dev_from_index(co_monitor_t *cmon, unsigned lon
 	return cmon->block_devs[index];
 }
 
-co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned long index, 
+co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned int index,
 				 co_block_request_t *request)
 {
 	co_block_dev_t *dev;
@@ -60,7 +60,7 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned long index,
 
 	switch (request->type) { 
 	case CO_BLOCK_OPEN: {
-		co_debug("cobd%d: open (count=%d)\n", index, dev->use_count);
+		co_debug("cobd%d: open (count=%d)", index, dev->use_count);
 		if (dev->use_count >= 1) { 
 			dev->use_count++;
 			return rc;
@@ -69,19 +69,19 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned long index,
 	}
 	case CO_BLOCK_CLOSE: {
 		if (dev->use_count == 0) {
-			co_debug("cobd%d: close with no open\n", index);
+			co_debug_error("cobd%d: close with no open", index);
 			rc = CO_RC_ERROR;
 			return rc;
 		} else if (dev->use_count > 1) {
 			dev->use_count--;
-			co_debug("cobd%d: close (count=%d)\n", index, dev->use_count);
+			co_debug("cobd%d: close (count=%d)", index, dev->use_count);
 			return rc;
 		}
-		co_debug("cobd%d: close (count=%d)\n", index, dev->use_count);
+		co_debug("cobd%d: close (count=%d)", index, dev->use_count);
 		break;
 	}
 	case CO_BLOCK_GET_ALIAS: {
-		co_debug("cobd%d: %x, %x\n", index, dev, dev->conf);
+		co_debug("cobd%d: %p, %p", index, dev, dev->conf);
 		if (!dev->conf || !dev->conf->enabled || !dev->conf->alias_used)
 			return CO_RC(ERROR);
 		dev->conf->alias[sizeof(dev->conf->alias)-1] = '\0';
@@ -97,10 +97,10 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned long index,
 	switch (request->type) { 
 	case CO_BLOCK_OPEN: {
 		if (CO_OK(rc)) {
-			co_debug("cobd%d: open success (count=%d)\n", index, dev->use_count);
+			co_debug("cobd%d: open success (count=%d)", index, dev->use_count);
 			dev->use_count++;
 		} else {
-			co_debug("cobd%d: open failed (count=%d, rc=%x)\n", index, dev->use_count, rc);
+			co_debug_error("cobd%d: open failed (count=%d, rc=%08x)", index, dev->use_count, (int)rc);
 		}
 
 		break;
@@ -108,9 +108,9 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned long index,
 	case CO_BLOCK_CLOSE: {
 		if (CO_OK(rc)) {
 			dev->use_count--;
-			co_debug("cobd%d: close success (count=%d)\n", index, dev->use_count);
+			co_debug("cobd%d: close success (count=%d)", index, dev->use_count);
 		} else {
-			co_debug("cobd%d: close failed (count=%d, rc=%x)\n", index, dev->use_count, rc);
+			co_debug_error("cobd%d: close failed (count=%d, rc=%08x)", index, dev->use_count, (int)rc);
 		}
 		break;
 	default:

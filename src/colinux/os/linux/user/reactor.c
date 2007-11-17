@@ -102,7 +102,7 @@ extern co_rc_t co_linux_reactor_packet_user_create(
 {
 	co_linux_reactor_packet_user_t user;
 
-	user = (typeof(user))(co_os_malloc(sizeof(*user)));
+	user = co_os_malloc(sizeof(*user));
 	if (!user)
 		return CO_RC(OUT_OF_MEMORY);
 

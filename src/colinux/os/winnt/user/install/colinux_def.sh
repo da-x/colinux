@@ -16,7 +16,7 @@ test -z "$VERSION_FILE" && VERSION_FILE="src/colinux/VERSION"
 test -z "$TARGET_FILE" && TARGET_FILE="src/colinux/os/winnt/user/install/colinux_def.inc"
 
 # Get kernel version
-KERNEL_VERSION=`. bin/build-common.sh --get-vars; echo \$KERNEL_VERSION`
+. bin/build-common.sh --get-vars
 
 # coLinux full version with "-preXX", if exist
 PRE_VERSION=`cat $VERSION_FILE`

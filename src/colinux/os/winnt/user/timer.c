@@ -41,7 +41,7 @@ co_rc_t co_os_timer_create(co_os_func_t func, void *data,
 
 	*timer_out = NULL;
 
-	timer = (typeof(timer))co_os_malloc(sizeof(*timer));
+	timer = co_os_malloc(sizeof(*timer));
 
 	if (timer == NULL)
 		return CO_RC(OUT_OF_MEMORY);
@@ -87,18 +87,4 @@ void co_os_get_timestamp(co_timestamp_t *dts)
 
 	dts->high = PerformanceCounter.HighPart;
 	dts->low = PerformanceCounter.LowPart;
-}
-
-double co_os_timer_highres()
-{
-	LARGE_INTEGER lpFrequency;
-	LARGE_INTEGER lpPerformanceCount;
-
-	if (QueryPerformanceFrequency(&lpFrequency)) {
-		if (QueryPerformanceCounter(&lpPerformanceCount)) {
-			return ((double)lpPerformanceCount.QuadPart)/((double)lpFrequency.QuadPart);
-		}
-	}
-
-	return 0;
 }

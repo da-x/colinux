@@ -30,8 +30,14 @@ void co_os_get_timestamp(co_timestamp_t *dts)
         dts->quad += tv.tv_usec;
 }
 
-void co_os_get_timestamp_freq(co_timestamp_t *dts)
+void co_os_get_timestamp_freq(co_timestamp_t *dts, co_timestamp_t *freq)
 {
-	dts->quad = 1000000;
+	co_os_get_timestamp(dts);
+	if (freq)
+		freq->quad = 1000000;
 }
 
+unsigned long co_os_get_cpu_khz(void)
+{
+	return cpu_khz;
+}

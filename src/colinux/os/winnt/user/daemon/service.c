@@ -26,6 +26,7 @@
 #include "misc.h"
 #include "driver.h"
 #include "service.h"
+#include "res/service-message.h"
 
 /* 
  * The coLinux driver that the colinux service depends on - needs 
@@ -78,12 +79,12 @@ static char * co_winnt_get_path_from_exe(void)
 	static char exe_name[512];
 
 	if (!GetModuleFileName(0, exe_name, sizeof(exe_name))) {
-		co_debug("daemon: cannot determine exe name.\n");
+		co_debug_error("daemon: cannot determine exe name.");
 		return NULL;
 	}
 
 	if (!PathRemoveFileSpec(exe_name)) {
-		co_debug("daemon: cannot get path from exe name.\n");
+		co_debug_error("daemon: cannot get path from exe name.");
 		return NULL;
 	}
 
@@ -108,7 +109,7 @@ void co_winnt_change_directory_for_service(int argc, char **argv)
 				p = co_winnt_get_path_from_exe();
 			}
 
-			co_debug("cd '%s'\n", p);
+			co_debug("cd '%s'", p);
 			if (SetCurrentDirectory(p) == 0)
 				co_terminal_print_last_error("daemon: Set working directory for service failed.\n");
 
@@ -344,7 +345,7 @@ void co_ntevent_print(const char *format, ...)
 	if (ReportEvent(hEventLog,		// Event Log Handle
 		EVENTLOG_INFORMATION_TYPE,	// Event type
 		0,				// Event category
-		1,				// Event ID
+		MSG_SERVICE_INFO,		// Event ID
 		NULL,				// User Security Identifier
 		1,				// # of Strings
 		0,				// Size of Data in Bytes

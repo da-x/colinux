@@ -71,6 +71,15 @@ diff -urN a/arch/i386/Kconfig b/arch/i386/Kconfig
  source "drivers/acpi/Kconfig"
  
  menu "APM (Advanced Power Management) BIOS Support"
+@@ -1275,7 +1284,7 @@
+ 
+ config X86_BIOS_REBOOT
+ 	bool
+-	depends on !(X86_VISWS || X86_VOYAGER)
++	depends on !(X86_VISWS || X86_VOYAGER || COOPERATIVE)
+ 	default y
+ 
+ config X86_TRAMPOLINE
 diff -urN a/arch/i386/kernel/Makefile b/arch/i386/kernel/Makefile
 --- a/arch/i386/kernel/Makefile
 +++ b/arch/i386/kernel/Makefile
@@ -78,18 +87,19 @@ diff -urN a/arch/i386/kernel/Makefile b/arch/i386/kernel/Makefile
  obj-$(CONFIG_X86_MSR)		+= msr.o
  obj-$(CONFIG_X86_CPUID)		+= cpuid.o
  obj-$(CONFIG_MICROCODE)		+= microcode.o
-+obj-$(CONFIG_COOPERATIVE)       += cooperative.o
++obj-$(CONFIG_COOPERATIVE)       += cooperative.o reboot_cooperative.o
  obj-$(CONFIG_APM)		+= apm.o
  obj-$(CONFIG_X86_SMP)		+= smp.o smpboot.o
  obj-$(CONFIG_X86_TRAMPOLINE)	+= trampoline.o
 diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 --- a/arch/i386/kernel/cooperative.c
 +++ b/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,360 @@
+@@ -0,0 +1,364 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
 +#include <linux/mm.h>
++#include <linux/reboot.h>
 +
 +#include <linux/cooperative_internal.h>
 +#include <asm/cooperative_internal.h>
@@ -195,8 +205,6 @@ diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 +	co_start_kernel();
 +}
 +
-+extern void ctrl_alt_del(void);
-+
 +void co_handle_jiffies(long count)
 +{
 +	unsigned long flags;
@@ -235,10 +243,15 @@ diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 +	case CO_DEVICE_POWER: {
 +		co_linux_message_power_t *type = (co_linux_message_power_t *)message->data;
 +		switch (type->type) {
-+		case CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL: {
++		case CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL:
 +			ctrl_alt_del();
 +			break;
-+		}
++		case CO_LINUX_MESSAGE_POWER_SHUTDOWN:
++			co_shedule_shutdown();
++			break;
++		case CO_LINUX_MESSAGE_POWER_OFF:
++			machine_power_off();
++			break;
 +		}
 +		co_free_message(node_message);
 +		break;
@@ -383,7 +396,7 @@ diff -urN a/arch/i386/kernel/cooperative.c b/arch/i386/kernel/cooperative.c
 +
 +	for (i=0; i < active_tracepoints; i++) {
 +		if (tracepoints[i].code == code - 1) {
-+			co_debug("TRACEPOINT: %x\n", code - 1);
++			co_debug("TRACEPOINT: %x", code - 1);
 +			break;
 +		}
 +	}
@@ -797,63 +810,6 @@ diff -urN a/arch/i386/kernel/process.c b/arch/i386/kernel/process.c
  /*
   * This uses new MONITOR/MWAIT instructions on P4 processors with PNI,
   * which can obviate IPI to trigger checking of need_resched.
-diff -urN a/arch/i386/kernel/reboot.c b/arch/i386/kernel/reboot.c
---- a/arch/i386/kernel/reboot.c
-+++ b/arch/i386/kernel/reboot.c
-@@ -14,6 +14,7 @@
- #include <asm/apic.h>
- #include "mach_reboot.h"
- #include <linux/reboot_fixups.h>
-+#include <linux/cooperative_internal.h>
- 
- /*
-  * Power off function, if any
-@@ -218,6 +219,11 @@
- {
- 	unsigned long flags;
- 
-+	if (cooperative_mode_enabled()) {
-+		co_terminate(CO_TERMINATE_REBOOT);
-+		return;
-+	}
-+
- 	local_irq_disable();
- 
- 	/* Write zero to CMOS register number 0x0f, which the BIOS POST
-@@ -333,8 +339,13 @@
- 	 */
- 	smp_send_stop();
- #endif /* CONFIG_SMP */
--
-+ 
- 	lapic_shutdown();
-+ 
-+	if (cooperative_mode_enabled()) {
-+		co_terminate(CO_TERMINATE_REBOOT);
-+		return;
-+	}
- 
- #ifdef CONFIG_X86_IO_APIC
- 	disable_IO_APIC();
-@@ -366,12 +377,18 @@
- 
- void machine_halt(void)
- {
-+	co_terminate(CO_TERMINATE_HALT);
- }
- 
- EXPORT_SYMBOL(machine_halt);
- 
- void machine_power_off(void)
- {
-+	if (cooperative_mode_enabled()) {
-+		co_terminate(CO_TERMINATE_POWEROFF);
-+		return;
-+	}
-+
- 	lapic_shutdown();
- 
- 	if (efi_enabled)
 diff -urN a/arch/i386/kernel/setup.c b/arch/i386/kernel/setup.c
 --- a/arch/i386/kernel/setup.c
 +++ b/arch/i386/kernel/setup.c
@@ -3296,7 +3252,7 @@ diff -urN a/drivers/net/conet.c b/drivers/net/conet.c
 +
 +		message = (co_linux_message_t *)&node_message->msg.data;
 +		if (message->unit < 0  ||  message->unit >= CO_MODULE_MAX_CONET) {
-+			printk("conet interrupt: buggy network reception: %lx\n", message->unit);
++			printk("conet interrupt: buggy network reception unit %d\n", message->unit);
 +			return IRQ_HANDLED;
 +		}
 +
@@ -7381,18 +7337,6 @@ diff -urN a/fs/cofusefs/util.c b/fs/cofusefs/util.c
 + * c-basic-offset: 8
 + * End:
 + */
-diff -urN a/fs/namespace.c b/fs/namespace.c
---- a/fs/namespace.c
-+++ b/fs/namespace.c
-@@ -1015,7 +1015,7 @@
- 	/* Discard magic */
- 	if ((flags & MS_MGC_MSK) == MS_MGC_VAL)
- 		flags &= ~MS_MGC_MSK;
--
-+	
- 	/* Basic sanity checks */
- 
- 	if (!dir_name || !*dir_name || !memchr(dir_name, 0, PAGE_SIZE))
 diff -urN a/include/asm-i386/bug.h b/include/asm-i386/bug.h
 --- a/include/asm-i386/bug.h
 +++ b/include/asm-i386/bug.h
@@ -7969,7 +7913,7 @@ diff -urN a/include/linux/console.h b/include/linux/console.h
 diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 --- a/include/linux/cooperative.h
 +++ b/include/linux/cooperative.h
-@@ -0,0 +1,330 @@
+@@ -0,0 +1,333 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -8062,7 +8006,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +	co_priority_t priority;
 +	co_message_type_t type;
 +	unsigned long size;
-+	char data[0];
++	unsigned char data[0];
 +} __attribute__((packed)) co_message_t;
 +
 +typedef enum {
@@ -8085,6 +8029,8 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +
 +typedef enum {
 +	CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL=0,
++	CO_LINUX_MESSAGE_POWER_SHUTDOWN,
++	CO_LINUX_MESSAGE_POWER_OFF,
 +} co_linux_message_power_type_t;
 +
 +typedef struct {
@@ -8097,7 +8043,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +
 +typedef struct {
 +	co_device_t device;
-+	unsigned long unit;
++	unsigned int unit;
 +	unsigned long size;
 +	char data[];
 +} __attribute__((packed)) co_linux_message_t;
@@ -8225,7 +8171,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +
 +typedef struct {
 +	unsigned long messages_waiting;
-+	char buffer[];
++	unsigned char buffer[];
 +} co_io_buffer_t;
 +
 +typedef struct {	
@@ -8276,7 +8222,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +
 +typedef struct {
 +	co_network_request_type_t type;
-+	unsigned long unit;
++	unsigned int unit;
 +	char mac_address[6];
 +	char _pad[2];
 +	int result;
@@ -8288,6 +8234,7 @@ diff -urN a/include/linux/cooperative.h b/include/linux/cooperative.h
 +	unsigned long api_version;
 +	unsigned long compiler_major;
 +	unsigned long compiler_minor;
++	unsigned long compiler_abi;
 +} __attribute__((packed)) co_info_t;
 +
 +#ifndef COLINUX_TRACE
@@ -8574,7 +8521,7 @@ diff -urN a/include/linux/cooperative_fs.h b/include/linux/cooperative_fs.h
 diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_internal.h
 --- a/include/linux/cooperative_internal.h
 +++ b/include/linux/cooperative_internal.h
-@@ -0,0 +1,85 @@
+@@ -0,0 +1,87 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -8624,6 +8571,8 @@ diff -urN a/include/linux/cooperative_internal.h b/include/linux/cooperative_int
 +extern void co_send_message_restore(unsigned long flags);
 +
 +extern void cocd_interrupt(void);
++extern void co_shedule_shutdown(void);
++extern void ctrl_alt_del(void);
 +
 +extern void co_handle_incoming_messages(struct pt_regs *regs);
 +extern void co_handle_incoming_message(co_message_node_t *message, struct pt_regs *orig_regs);
@@ -8743,6 +8692,7 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +        co_memory_size = co_passage_page->params[1];
 +        co_initrd = (void *)co_passage_page->params[2];
 +        co_initrd_size = co_passage_page->params[3];
++        cpu_khz = co_passage_page->params[4];
 +
 +        memcpy(co_boot_parameters, &co_passage_page->params[10], 
 +               sizeof(co_boot_parameters));
@@ -9060,6 +9010,7 @@ diff -urN a/kernel/cooperative.c b/kernel/cooperative.c
 +	.api_version = CO_LINUX_API_VERSION,
 +	.compiler_major = __GNUC__,
 +	.compiler_minor = __GNUC_MINOR__,
++	.compiler_abi = __GXX_ABI_VERSION,
 +};
 +
 +static int __init initcall_message_queues(void)
@@ -9316,3 +9267,37 @@ diff -urN a/mm/vmscan.c b/mm/vmscan.c
  /*
   * Try to free `nr_pages' of memory, system-wide.  Returns the number of freed
   * pages.
+diff -urN a/arch/i386/kernel/reboot_co.c b/arch/i386/kernel/reboot_cooperative.c
+--- a/arch/i386/kernel/reboot_cooperative.c
++++ b/arch/i386/kernel/reboot_cooperative.c
+@@ -0,0 +1,30 @@
++#include <linux/module.h>
++#include <linux/reboot.h>
++#include <linux/cooperative_internal.h>
++
++/* sys_reboot needs this dummy. */
++void (*pm_power_off)(void);
++
++static int co_powering_off;
++
++void machine_restart(char * __unused)
++{
++	co_terminate(co_powering_off ? CO_TERMINATE_POWEROFF
++				     : CO_TERMINATE_REBOOT);
++}
++
++void machine_halt(void)
++{
++	co_terminate(CO_TERMINATE_HALT);
++}
++
++void machine_power_off(void)
++{
++	co_terminate(CO_TERMINATE_POWEROFF);
++}
++
++void co_shedule_shutdown(void)
++{
++	co_powering_off++;
++	ctrl_alt_del();
++}

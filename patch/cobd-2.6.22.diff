@@ -1,0 +1,132 @@
+Index: linux-2.6.22-source/include/linux/major.h
+===================================================================
+--- linux-2.6.22-source.orig/include/linux/major.h
++++ linux-2.6.22-source/include/linux/major.h
+@@ -131,6 +131,7 @@
+ #define VIOCD_MAJOR		113
+ 
+ #define ATARAID_MAJOR		114
++#define COLINUX_MAJOR		117
+ 
+ #define SCSI_DISK8_MAJOR	128
+ #define SCSI_DISK9_MAJOR	129
+Index: linux-2.6.22-source/drivers/block/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/drivers/block/Kconfig
++++ linux-2.6.22-source/drivers/block/Kconfig
+@@ -406,6 +406,15 @@
+ 	  setups function - apparently needed by the rd_load_image routine
+ 	  that supposes the filesystem in the image uses a 1024 blocksize.
+ 
++config BLK_DEV_COBD
++	tristate 'Cooperative block device support'
++	default y
++	depends on COOPERATIVE
++	help
++	  Virtual block device support for cooperative kernels.
++
++	  If unsure, say Y.
++
+ config CDROM_PKTCDVD
+ 	tristate "Packet writing on CD/DVD media"
+ 	depends on !UML
+Index: linux-2.6.22-source/drivers/block/Makefile
+===================================================================
+--- linux-2.6.22-source.orig/drivers/block/Makefile
++++ linux-2.6.22-source/drivers/block/Makefile
+@@ -13,6 +13,7 @@
+ obj-$(CONFIG_ATARI_SLM)		+= acsi_slm.o
+ obj-$(CONFIG_AMIGA_Z2RAM)	+= z2ram.o
+ obj-$(CONFIG_BLK_DEV_RAM)	+= rd.o
++obj-$(CONFIG_BLK_DEV_COBD)	+= cobd.o
+ obj-$(CONFIG_BLK_DEV_LOOP)	+= loop.o
+ obj-$(CONFIG_BLK_DEV_PS2)	+= ps2esdi.o
+ obj-$(CONFIG_BLK_DEV_XD)	+= xd.o
+Index: linux-2.6.22-source/drivers/block/cobd.c
+===================================================================
+--- linux-2.6.22-source.orig/drivers/block/cobd.c
++++ linux-2.6.22-source/drivers/block/cobd.c
+@@ -5,7 +5,6 @@
+  */
+ 
+ #include <linux/major.h>
+-#include <linux/config.h>
+ #include <linux/module.h>
+ #include <linux/init.h>
+ #include <linux/fs.h>
+@@ -23,8 +22,6 @@
+ #include <asm/uaccess.h>
+ #include <asm/types.h>
+ 
+-#include <linux/devfs_fs_kernel.h>
+-
+ #define PBD_BLOCK_SIZE  512
+ 
+ static int hardsect_size = 512;
+@@ -249,12 +246,9 @@
+ 		disk->first_minor = i;
+ 		disk->fops = &cobd_fops;
+ 		sprintf(disk->disk_name, "cobd%d", i);
+-		sprintf(disk->devfs_name, "cobd/%d", i);
+ 		disk->private_data = cobd;
+ 	}
+ 
+-	devfs_mk_dir("cobd");
+-
+ 	for (i=0; i < cobd_max; i++)
+ 		add_disk(cobd_disks[i]);
+ 
+@@ -265,7 +259,6 @@
+ fail_malloc4:
+ 	while (i--)
+ 		blk_cleanup_queue(cobd_disks[i]->queue);
+-	devfs_remove("cobd");
+ 	i = cobd_max;
+ 
+ fail_malloc3:
+@@ -381,12 +374,11 @@
+ 	if (alias->gendisk == NULL) {
+ 		static struct gendisk **gendisks;
+ 
+-		gendisks = kmalloc(alias->minor_count * sizeof(struct gendisk *), GFP_KERNEL);
++		gendisks = kzalloc(alias->minor_count * sizeof(struct gendisk *), GFP_KERNEL);
+ 		if (!gendisks) {
+ 			printk(KERN_WARNING "cannot allocate gendisk array for %s\n", alias->name);
+ 			return -ENOMEM;
+ 		}
+-		memset(gendisks, 0, alias->minor_count * sizeof(struct gendisk *));
+ 
+ 		if (!alias->major->registered) {
+ 			if (register_blkdev(alias->major->number, alias->major->name)) {
+@@ -400,7 +392,6 @@
+ 		}
+ 
+ 		alias->gendisk = gendisks;
+-		devfs_mk_dir(alias->name);
+ 	}
+ 
+ 	if (alias->gendisk[index] != NULL) {
+@@ -430,7 +421,6 @@
+ 		sprintf(disk->disk_name, "%s%d", alias->name, index);
+ 	else
+ 		sprintf(disk->disk_name, "%s", alias->name);
+-	sprintf(disk->devfs_name, "%s/%d", alias->name, index);
+ 	disk->private_data = cobd;
+ 	add_disk(disk);
+ 	alias->gendisk[index] = disk;
+@@ -477,7 +467,6 @@
+ 		put_disk(cobd_disks[i]);
+ 	}
+ 
+-	devfs_remove("cobd");
+ 	if (unregister_blkdev(COLINUX_MAJOR, "cobd"))
+ 		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
+ 
+@@ -504,7 +493,6 @@
+ 			put_disk(disk);
+ 		}
+ 
+-		devfs_remove(alias->name);
+ 		if (!alias->major->registered) {
+ 			unregister_blkdev(alias->major->number, alias->major->name);
+ 			alias->major->registered = 0;

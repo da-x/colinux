@@ -52,8 +52,8 @@ void co_daemon_print_header(void)
 	if (printed_already)
 		return;
 
-	co_terminal_print("Cooperative Linux Daemon, %s\n", colinux_version);
-	co_terminal_print("Compiled on %s\n", colinux_compile_time);
+	co_terminal_print("Cooperative Linux Daemon, " COLINUX_VERSION "\n");
+	co_terminal_print("Compiled on " __DATE__ " " __TIME__ "\n");
 	co_terminal_print("\n");
 	printed_already = 1;
 }
@@ -63,35 +63,36 @@ void co_daemon_syntax()
 	co_daemon_print_header();
 	co_terminal_print("syntax: \n");
 	co_terminal_print("\n");
-	co_terminal_print("    colinux-daemon [-h] [-d] [-t name] [configuration and boot parameter] @params.txt\n");
+	co_terminal_print("    colinux-daemon [-d] [-h] [k] [-t name] [-v level] [configuration and boot parameter] @params.txt\n");
 	co_terminal_print("\n");
-	co_terminal_print("      -h             Show this help text\n");
-	co_terminal_print("      -d             Don't launch and attach a coLinux console on\n");
-	co_terminal_print("                     startup\n");
-	co_terminal_print("      -k             Suppress kernel messages\n");
-	co_terminal_print("      -t name        When spawning a console, this is the type of \n");
-	co_terminal_print("                     console (e.g, nt, fltk, etc...)\n");
-	co_terminal_print("      @params.txt    Take more command line params from the given text file (can be multi-line)\n");
+	co_terminal_print("  -d             Don't launch and attach a coLinux console on startup\n");
+	co_terminal_print("  -h             Show this help text\n");
+	co_terminal_print("  -k             Suppress kernel messages\n");
+	co_terminal_print("  -p pidfile     Write pid to file.\n");
+	co_terminal_print("  -t name        When spawning a console, this is the type of console\n");
+	co_terminal_print("                 (e.g, nt, fltk, etc...)\n");
+	co_terminal_print("  -v level       Verbose messages, level 1 prints booting details, 2 or\n");
+	co_terminal_print("                 more checks configs, 3 prints errors, default is 0 (off)\n");
+	co_terminal_print("  @params.txt    Take more command line params from the given text file\n");
+	co_terminal_print("                 (can be multi-line)\n");
 	co_terminal_print("\n");
-	co_terminal_print("      Configuration and boot parameters:\n");
+	co_terminal_print("Configuration and boot parameters:\n");
 	co_terminal_print("\n");
-	co_terminal_print("        When specifying kernel=vmlinux (where vmlinux is the kernel image file\n");
-	co_terminal_print("        the -c option is not needed. Instead, you pass all configuration via\n");
-	co_terminal_print("        the command line, for example:\n");
+	co_terminal_print("Params should start with kernel=vmlinux (is the kernel image file\n");
+	co_terminal_print("the '@' option is not needed. Instead, you pass all configuration\n");
+	co_terminal_print("via the command line, for example:\n");
 	co_terminal_print("\n");
-	co_terminal_print("          colinux-daemon kernel=vmlinux cobd0=root_fs root=/dev/cobd0 hda1=:cobd0 \\ \n");
-	co_terminal_print("          eth0=tuntap,\"Local Area Connection\"\n");
+	co_terminal_print("  colinux-daemon kernel=vmlinux cobd0=root_fs hda1=:cobd0 root=/dev/cobd0 eth0=slirp\n");
+	co_terminal_print(" \n");
 	co_terminal_print("\n");
-	co_terminal_print("      Use of new aliases automatically allocates cobd(s), for example:\n");
+	co_terminal_print("Use of new aliases automatically allocates cobd(s), for example:\n");
 	co_terminal_print("\n");
-	co_terminal_print("          colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1 \\\n");
-	co_terminal_print("          eth0=pcap-bridge,\"Local Area Connection\"\n");
+	co_terminal_print("  colinux-daemon mem=32 kernel=vmlinux hda1=root_fs root=/dev/hda1 \\\n");
+	co_terminal_print("  eth0=pcap-bridge,\"Local Area Connection\"\n");
 	co_terminal_print("\n");
-	co_terminal_print("      See README.txt for more details about command-line usage.\n");
-	co_terminal_print("\n");
-	co_terminal_print("      Unhandled paramters are forwarded to the kernel's boot parameters string.\n");
-	co_terminal_print("\n");
-	co_terminal_print("     See colinux-daemon's documentation for more options.\n");
+	co_terminal_print("Unhandled parameters are forwarded to the kernel's boot parameters string.\n");
+	co_terminal_print("See README.txt for more details about command-line usage.\n");
+	co_terminal_print("See colinux-daemon's documentation for more options.\n");
 	co_terminal_print("\n");
 }
 
@@ -99,10 +100,8 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 {
 	co_rc_t rc;
 	bool_t dont_launch_console = PFALSE;
-
-	start_parameters->show_help = PFALSE;
-	start_parameters->config_specified = PFALSE;
-	start_parameters->suppress_printk = PFALSE;
+	bool_t verbose_specified = PFALSE;
+	int verbose_level = 0;
 
 	co_snprintf(start_parameters->console, sizeof(start_parameters->console), "fltk");
 
@@ -111,6 +110,13 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 						      start_parameters->config_path,
 						      sizeof(start_parameters->config_path));
 	if (!CO_OK(rc)) 
+		return rc;
+
+	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-p",
+						      &start_parameters->pidfile_specified,
+						      start_parameters->pidfile,
+						      sizeof(start_parameters->pidfile));
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-t", 
@@ -129,6 +135,12 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 
 	if (!CO_OK(rc)) 
 		return rc;
+
+	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-v",
+							  &verbose_specified, &verbose_level);
+
+	if (co_global_debug_levels.misc_level < verbose_level)
+		co_global_debug_levels.misc_level = verbose_level;
 
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-h", &start_parameters->show_help);
 
@@ -163,7 +175,7 @@ co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **
 
 	init_srand();
 
-	daemon = (co_daemon_t *)co_os_malloc(sizeof(co_daemon_t));
+	daemon = co_os_malloc(sizeof(co_daemon_t));
 	if (daemon == NULL) {
 		rc = CO_RC(OUT_OF_MEMORY);
 		goto out;
@@ -177,7 +189,7 @@ co_rc_t co_daemon_create(co_start_parameters_t *start_parameters, co_daemon_t **
 
 	rc = co_load_config_file(daemon);
 	if (!CO_OK(rc)) {
-		co_debug("error loading configuration\n");
+		co_debug_error("error loading configuration");
 		goto out_free;
 	}
 
@@ -193,7 +205,7 @@ out:
 
 void co_daemon_destroy(co_daemon_t *daemon)
 {
-	co_debug("daemon cleanup\n");
+	co_debug("daemon cleanup");
 	co_os_free(daemon);
 }
 
@@ -213,14 +225,14 @@ co_rc_t co_daemon_load_symbol_and_data(co_daemon_t *daemon,
 	if (sym) 
 		*address_out = co_elf_get_symbol_value(sym);
 	else {
-		co_debug("symbol %s not found\n", symbol_name);
+		co_debug_error("symbol %s not found", symbol_name);
 		return CO_RC(ERROR);
 		
 	}
 	
 	data = co_elf_get_symbol_data(daemon->elf_data, sym);
 	if (data == NULL) {
-		co_debug("data of symbol %s not found\n");
+		co_debug_error("data of symbol %s not found", symbol_name);
 		return CO_RC(ERROR);
 	}
 	
@@ -242,7 +254,7 @@ co_rc_t co_daemon_load_symbol(co_daemon_t *daemon,
 	if (sym) 
 		*address_out = co_elf_get_symbol_value(sym);
 	else {
-		co_debug("symbol %s not found\n", symbol_name);
+		co_debug_error("symbol %s not found", symbol_name);
 		rc = CO_RC(ERROR);
 	}
 
@@ -286,16 +298,15 @@ co_rc_t co_load_initrd(co_daemon_t *daemon)
 	if (!daemon->config.initrd_enabled)
 		return CO_RC(OK);
 
-	co_debug("reading initrd from (%s)\n", daemon->config.initrd_path);
+	co_debug("reading initrd from (%s)", daemon->config.initrd_path);
 
-	rc = co_os_file_load(&daemon->config.initrd_path, &initrd, &initrd_size);
+	rc = co_os_file_load(daemon->config.initrd_path, &initrd, &initrd_size, 0);
 	if (!CO_OK(rc)) {
-		co_terminal_print("error loading initrd file '%s'\n",
-				  daemon->config.initrd_path);
+		co_terminal_print("error loading initrd file\n");
 		return rc;
 	}
 
-	co_debug("initrd size: %d bytes\n", initrd_size);
+	co_debug("initrd size: %ld bytes", initrd_size);
 
 	rc = co_user_monitor_load_initrd(daemon->monitor, initrd, initrd_size);
 
@@ -311,7 +322,7 @@ memory_usage_limit_resached(co_manager_ioctl_create_t *create_params)
 	co_manager_handle_t handle;
 	co_rc_t rc;
 
-	co_terminal_print("colinux: memory size configuration for this VM: %d MB\n", 
+	co_terminal_print("colinux: memory size configuration for this VM: %ld MB\n",
 			  create_params->actual_memsize_used / 0x100000);
 	co_terminal_print("colinux: memory usage limit reached\n");
 	co_terminal_print("colinux: try to decrease memory size configuration\n");
@@ -330,9 +341,9 @@ memory_usage_limit_resached(co_manager_ioctl_create_t *create_params)
 	}
 	co_os_manager_close(handle);
 
-	co_terminal_print("colinux: memory usage limit: %d MB\n", 
+	co_terminal_print("colinux: memory usage limit: %ld MB\n",
 			  info.hostmem_usage_limit / 0x100000);
-	co_terminal_print("colinux: current memory used by running VMs: %d MB\n", 
+	co_terminal_print("colinux: current memory used by running VMs: %ld MB\n",
 			  info.hostmem_used / 0x100000);
 }
 
@@ -369,7 +380,12 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 	if (!CO_OK(rc)) 
 		goto out;
 
-	rc = co_daemon_load_symbol(daemon, "cpu_gdt_table", &import->kernel_gdt_table);
+	if (co_get_symbol_by_name(daemon->elf_data, "per_cpu__gdt_page"))
+		// >= 2.6.22
+		rc = co_daemon_load_symbol(daemon, "per_cpu__gdt_page", &import->kernel_gdt_table);
+	else
+		// <= 2.6.17
+		rc = co_daemon_load_symbol(daemon, "cpu_gdt_table", &import->kernel_gdt_table);
 	if (!CO_OK(rc))
 		goto out;
 
@@ -386,19 +402,21 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 	}
 
 	if (create_params.info.api_version != CO_LINUX_API_VERSION) {
-		co_terminal_print("colinux: error, expected kernel API version %d, got %d\n", CO_LINUX_API_VERSION,
-				  create_params.info.api_version);
+		co_terminal_print("colinux: error, expected kernel API version %d, got %ld\n",
+				  CO_LINUX_API_VERSION, create_params.info.api_version);
 
 		rc = CO_RC(VERSION_MISMATCHED);
 		goto out;
 	}
 
-	if ((create_params.info.compiler_major != __GNUC__) || 
-	    (create_params.info.compiler_minor != __GNUC_MINOR__)) {
-		co_terminal_print("colinux: error, expected gcc version %d.%d.x, got %d.%d.x\n", __GNUC__,
-		 __GNUC_MINOR__,
-		 create_params.info.compiler_major,
-		 create_params.info.compiler_minor);
+	if (create_params.info.compiler_abi != __GXX_ABI_VERSION) {
+		co_terminal_print("colinux: error, expected gcc abi version %d, got %ld\n",
+				  __GXX_ABI_VERSION, create_params.info.compiler_abi);
+		co_terminal_print("colinux: Daemons gcc version %d.%d.x, "
+				  "incompatible to kernel gcc version %ld.%ld.x\n",
+				  __GNUC__, __GNUC_MINOR__,
+				  create_params.info.compiler_major,
+				  create_params.info.compiler_minor);
 
 		rc = CO_RC(COMPILER_MISMATCHED);
 		goto out;
@@ -441,24 +459,23 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 	unsigned long size;
 	co_manager_ioctl_status_t status;
 
-	rc = co_os_file_load(&daemon->config.vmlinux_path, &daemon->buf, &size);
+	rc = co_os_file_load(daemon->config.vmlinux_path, &daemon->buf, &size, 0);
 	if (!CO_OK(rc)) {
-		co_terminal_print("error loading vmlinux file '%s'\n", 
-		      &daemon->config.vmlinux_path);
+		co_terminal_print("error loading vmlinux file\n");
 		goto out;
 	}
 
 	rc = co_elf_image_read(&daemon->elf_data, daemon->buf, size);
 	if (!CO_OK(rc)) {
-		co_terminal_print("error reading image (%d bytes)\n", size);
+		co_terminal_print("error reading image (%ld bytes)\n", size);
 		goto out_free_vmlinux; 
 	}
 
-	co_debug("creating monitor\n");
+	co_debug("creating monitor");
 
 	rc = co_daemon_monitor_create(daemon);
 	if (!CO_OK(rc)) {
-		co_debug("error initializing\n");
+		co_debug_error("error initializing");
 		goto out_free_vmlinux;
 	}
 
@@ -485,7 +502,7 @@ out:
 	return rc;
 }
 
-void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon)
+void co_daemon_send_shutdown(co_daemon_t *daemon)
 {
 	struct {
 		co_message_t message;
@@ -493,10 +510,8 @@ void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon)
 		co_linux_message_power_t data;
 	} message;
 
-	if (daemon->next_reboot_will_shutdown)
-		co_terminal_print_color(CO_TERM_COLOR_YELLOW, "colinux: Linux VM goes shutdown, please wait!\n");
-	else
-		co_terminal_print("colinux: Linux VM reboot\n");
+	daemon->next_reboot_will_shutdown = PTRUE;
+	co_terminal_print_color(CO_TERM_COLOR_YELLOW, "colinux: Linux VM goes shutdown, please wait!\n");
 
 	message.message.from = CO_MODULE_DAEMON;
 	message.message.to = CO_MODULE_LINUX;
@@ -506,7 +521,7 @@ void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon)
 	message.linux_msg.device = CO_DEVICE_POWER;
 	message.linux_msg.unit = 0;
 	message.linux_msg.size = sizeof(message.data);
-	message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
+	message.data.type = CO_LINUX_MESSAGE_POWER_SHUTDOWN;
 
 	co_user_monitor_message_send(daemon->message_monitor, &message.message);
 }
@@ -514,7 +529,7 @@ void co_daemon_send_ctrl_alt_del(co_daemon_t *daemon)
 co_rc_t co_daemon_handle_printk(co_daemon_t *daemon, co_message_t *message)
 {
 	if (message->type == CO_MESSAGE_TYPE_STRING) {
-		char *string_start = message->data;
+		char *string_start = (char *)message->data;
                
 		if (string_start[0] == '<'  &&  
 		    string_start[1] >= '0'  &&  string_start[1] <= '9'  &&
@@ -534,9 +549,9 @@ co_rc_t co_daemon_handle_printk(co_daemon_t *daemon, co_message_t *message)
 			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
 						"root= kernel boot paramter or the file / device mapped to the root\n");
 			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
-						"file system is not found or inaccessible. Please Check your.\n");
+						"file system is not found or inaccessible.\n");
 			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
-						"coLinux configuration.\n");
+						"Please Check your coLinux configuration and use option \"-v 3\".\n");
 		}
 	}
 
@@ -582,7 +597,7 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 		if (net_dev->enabled == PFALSE)
 			continue;
 
-		co_debug("launching daemon for conet%d\n", i);
+		co_debug("launching daemon for conet%d", i);
 
 		if (*net_dev->desc != 0)
 			co_snprintf(interface_name, sizeof(interface_name), "-n \"%s\"", net_dev->desc);
@@ -634,7 +649,7 @@ static co_rc_t co_daemon_launch_serial_daemons(co_daemon_t *daemon)
 		if (serial->enabled == PFALSE)
 			continue;
 
-		co_debug("launching daemon for ttys%d\n", i);
+		co_debug("launching daemon for ttys%d", i);
 
 		if (serial->mode)
 			co_snprintf(mode_param, sizeof(mode_param), " -m \"%s\"", serial->mode);
@@ -729,12 +744,13 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	co_reactor_t reactor;
 	co_module_t modules[] = {CO_MODULE_PRINTK, };
 	bool_t restarting = PFALSE;
+	co_start_parameters_t *start_parameters = daemon->start_parameters;
 
 	rc = co_reactor_create(&reactor);
 	if (!CO_OK(rc))
 		return rc;
 
-	co_terminal_print("PID: %d\n", daemon->id);
+	co_terminal_print("PID: %d\n", (int)daemon->id);
 
 	rc = co_user_monitor_open(reactor, message_receive,
 				  daemon->id, modules, sizeof(modules)/sizeof(co_module_t),
@@ -745,9 +761,21 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 
 	daemon->message_monitor->reactor_user->private_data = (void *)daemon;
 
-	if (daemon->start_parameters->launch_console) {
-		co_terminal_print("colinux: launching console\n");
-		rc = co_launch_process(NULL, "colinux-console-%s -a %d", daemon->start_parameters->console, daemon->id);
+	if (start_parameters->pidfile_specified) {
+		char buf[32];
+		int size;
+
+		size = co_snprintf(buf, sizeof(buf), "%d\n", (int)daemon->id);
+		rc = co_os_file_write(start_parameters->pidfile, buf, size);
+		if (!CO_OK(rc)) {
+			co_terminal_print("colinux: error creating PID file '%s'\n", start_parameters->pidfile);
+			return rc;
+		}
+	}
+
+	if (start_parameters->launch_console) {
+		co_debug_info("colinux: launching console");
+		rc = co_launch_process(NULL, "colinux-console-%s -a %d", start_parameters->console, daemon->id);
 		if (!CO_OK(rc)) {
 			co_terminal_print("error launching console\n");
 			goto out;
@@ -824,7 +852,7 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 				break;
 
 			case CO_TERMINATE_BUG:
-				co_terminal_print("colinux: BUG at %s:%d\n", params.bug_info.file, params.bug_info.line);
+				co_terminal_print("colinux: BUG at %s:%ld\n", params.bug_info.file, params.bug_info.line);
 				break;
 
 			default:
@@ -839,6 +867,14 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 	co_user_monitor_close(daemon->message_monitor);
 
 out:
+	if (start_parameters->pidfile_specified) {
+		co_rc_t rc1;
+
+		rc1 = co_os_file_unlink(start_parameters->pidfile);
+		if (!CO_OK(rc1))
+			co_debug("error removing PID file '%s'", start_parameters->pidfile);
+	}
+
 	co_reactor_destroy(reactor);
 
 	return rc;
@@ -846,7 +882,7 @@ out:
 
 void co_daemon_end_monitor(co_daemon_t *daemon)
 {
-	co_debug("shutting down\n");
+	co_debug("shutting down");
 
 	co_daemon_monitor_destroy(daemon);
 	co_os_file_free(daemon->buf);

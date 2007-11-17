@@ -155,6 +155,7 @@ int main(int argc, char *argv[])
 	user_daemon_t *daemon = 0;
 
 	co_debug_start();
+	co_process_high_priority_set();
 
 	try {
 		daemon = new user_network_tap_daemon_t;

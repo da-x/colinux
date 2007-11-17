@@ -26,18 +26,18 @@ co_rc_t co_manager_alloc_reversed_pfns(co_manager_t *manager)
 	co_rc_t rc = CO_RC(OK);
 	int i, j;
 
-	co_debug("allocating reversed physical mapping\n");
+	co_debug("allocating reversed physical mapping");
 	manager->reversed_page_count = manager->hostmem_pages / PTRS_PER_PTE;
 	map_size = sizeof(co_pfn_t) * manager->reversed_page_count;
 
-	co_debug("allocating top level pages map (%d bytes)\n", map_size);
-	manager->reversed_map_pfns = (co_pfn_t *)co_os_malloc(map_size);
+	co_debug("allocating top level pages map (%ld bytes)", map_size);
+	manager->reversed_map_pfns = co_os_malloc(map_size);
 	if (manager->reversed_map_pfns == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 
 	co_memset(manager->reversed_map_pfns, 0, map_size);
 	
-	co_debug("allocating %d top level pages\n", manager->reversed_page_count);
+	co_debug("allocating %ld top level pages", manager->reversed_page_count);
 	for (i=0; i < manager->reversed_page_count; i++) {
 		co_pfn_t pfn;
 
@@ -52,8 +52,8 @@ co_rc_t co_manager_alloc_reversed_pfns(co_manager_t *manager)
 		(((unsigned long)(CO_VPTR_BASE - CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP) 
 		  / PTRS_PER_PTE)  / PTRS_PER_PGD) / sizeof(linux_pgd_t);
 
-	co_debug("using %d table entries for reversed physical mapping\n", manager->reversed_map_pgds_count);
-	manager->reversed_map_pgds = (unsigned long *)(co_os_malloc(manager->reversed_map_pgds_count*sizeof(linux_pgd_t)));
+	co_debug("using %ld table entries for reversed physical mapping", manager->reversed_map_pgds_count);
+	manager->reversed_map_pgds = co_os_malloc(manager->reversed_map_pgds_count*sizeof(linux_pgd_t));
 	if (!manager->reversed_map_pgds) {
 		if (!CO_OK(rc)) /* TODO: handle error */
 			return rc;
@@ -74,7 +74,7 @@ co_rc_t co_manager_alloc_reversed_pfns(co_manager_t *manager)
 		if (!CO_OK(rc))
 			return rc;
 
-		pte = (typeof(pte))(co_os_map(manager, pfn));
+		pte = co_os_map(manager, pfn);
 		for (j=0; j < PTRS_PER_PTE; j++) {
 			co_pfn_t rpfn;
 			if (reversed_page_count >= manager->reversed_page_count) {
@@ -131,7 +131,7 @@ co_rc_t co_manager_set_reversed_pfn(co_manager_t *manager, co_pfn_t real_pfn, co
 	entry = real_pfn % PTRS_PER_PTE;
 
 	mapped_pfn = manager->reversed_map_pfns[top_level];
-	reversed_pfns = (typeof(reversed_pfns))(co_os_map(manager, mapped_pfn));
+	reversed_pfns = co_os_map(manager, mapped_pfn);
 	reversed_pfns[entry] = pseudo_pfn;
 	co_os_unmap(manager, reversed_pfns, mapped_pfn);
 

@@ -1,34 +1,11 @@
 #!/bin/sh
 
 #
-# This script builds the mingw32 cross compiler on Linux,
-# and patches the w32api package.
-#
-# It also downloads, compiles, and installs FLTK.
+# This file will source from toplevel Makefile and scripts.
+# It's no designed to execute directly.
 # 
 # - Dan Aloni <da-x@colinux.org>
 #
-# This file will source from toplevel Makefile and scripts.
-#
-# Options MUST ones of (and only ones):
-#  --build-all		Build all, without checking old targed files.
-#			(Old file was build-all.sh)
-#  --rebuild-all	Rebuild all, without checking old targed files.
-#			Disable md5sum, untar and patch source.
-#			Overwrite all old source!
-#  --download-all	Download all source files, no compile
-#			(Old file was download-all.sh)
-
-
-#####################################################################
-# This is my script for building a complete cross-compiler toolchain.
-# It is based partly on Ray Kelm's script, which in turn was built on
-# Mo Dejong's script for doing the same, but with some added fixes.
-# The intent with this script is to build a cross-compiled version
-# of the current MinGW environment.
-#
-# Updated by Sam Lantinga <slouken@libsdl.org>
-#####################################################################
 
 # We need to find our self here, or in subdir bin
 # BINDIR is bin directory with scripts
@@ -63,31 +40,38 @@ fi
 # what flavor are we building?
 TARGET=i686-pc-mingw32
 
+# ARCH must overwrite for builds on 64 bit (target kernel)
+TARGET_ARCH=i386
+
 # Current developing build system
 BUILD=i686-pc-linux
 
 # Updated by Sam Lantinga <slouken@libsdl.org>
 # These are the files from the current MingW release
 
-MINGW_VERSION="3.9"
+MINGW_VERSION="3.11"
 MINGW_URL=http://heanet.dl.sourceforge.net/sourceforge/mingw
 MINGW=mingw-runtime-$MINGW_VERSION
 MINGW_ARCHIVE=$MINGW.tar.gz
 
-BINUTILS_VERSION="2.16.91"
-BINUTILS_RELEASE="$BINUTILS_VERSION-20060119-1"
+BINUTILS_VERSION="2.17.50"
+BINUTILS_RELEASE="$BINUTILS_VERSION-20070129-1"
 BINUTILS=binutils-$BINUTILS_RELEASE
 BINUTILS_ARCHIVE=$BINUTILS-src.tar.gz
 #BINUTILS_PATCH="patch/$BINUTILS.diff"
 
-GCC_VERSION="3.4.5"
-GCC_RELEASE="$GCC_VERSION-20060117-1"
+# Minimal binutils version for target. Requirements from Linux kernel
+BINUTILS_REQUIREMENTS="2.12.0"
+
+GCC_VERSION="4.1.2"
+GCC_RELEASE="$GCC_VERSION"
 GCC=gcc-$GCC_RELEASE
-GCC_ARCHIVE1=gcc-core-$GCC_RELEASE-src.tar.gz
-GCC_ARCHIVE2=gcc-g++-$GCC_RELEASE-src.tar.gz
+GCC_ARCHIVE1=gcc-core-$GCC_RELEASE.tar.bz2
+GCC_ARCHIVE2=gcc-g++-$GCC_RELEASE.tar.bz2
+GCC_URL=ftp://ftp.gnu.org/pub/gnu/gcc/gcc-$GCC_VERSION/
 #GCC_PATCH="patch/$GCC.diff"
 
-W32API_VERSION=3.5
+W32API_VERSION=3.9
 W32API=w32api-$W32API_VERSION
 W32API_SRC=$W32API
 W32API_SRC_ARCHIVE=$W32API-src.tar.gz
@@ -100,10 +84,13 @@ FLTK_URL=http://heanet.dl.sourceforge.net/sourceforge/fltk
 FLTK=fltk-$FLTK_VERSION
 FLTK_ARCHIVE=$FLTK-source.tar.bz2
 
-WINPCAP_VERSION="3.1"
-WINPCAP_URL=http://www.winpcap.org/archive
+WINPCAP_VERSION="4_0_1"
+WINPCAP_URL=http://www.winpcap.org/install/bin
 WINPCAP_SRC=WpdPack
-WINPCAP_SRC_ARCHIVE=${WINPCAP_VERSION}-${WINPCAP_SRC}.zip
+WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_${WINPCAP_VERSION}.zip
+# in archive later
+#WINPCAP_URL=http://www.winpcap.org/archive
+#WINPCAP_SRC_ARCHIVE=${WINPCAP_VERSION}-${WINPCAP_SRC}.zip
 
 
 # KERNEL_VERSION: full kernel version (e.g. 2.6.11)
@@ -281,13 +268,13 @@ strip_kernel()
 build_package()
 {
 	local name bname oname
-	local STRIP="$TARGET-strip --strip-all"
 	local DATE=`LANG=C TZ="UTC" date +%G%m%d`
 	local SYMBOLS_ZIP=$COLINUX_INSTALL_DIR/daemons-$CO_VERSION-$DATE.dbg.zip
 	local DAEMONS_ZIP=$COLINUX_INSTALL_DIR/daemons-$CO_VERSION-$DATE.zip
 	local VMLINUX_ZIP=$COLINUX_INSTALL_DIR/vmlinux-$COMPLETE_KERNEL_NAME-$DATE.zip
 	local MODULES_TGZ=$COLINUX_INSTALL_DIR/modules-$COMPLETE_KERNEL_NAME-$DATE.tgz
 	local EXE_DIR="$TOPDIR/src/colinux/os/winnt/build"
+	local PREMAID="$TOPDIR/src/colinux/os/winnt/user/install/premaid"
 	
 	echo "Create ZIP packages into $COLINUX_INSTALL_DIR"
 	mkdir -p $COLINUX_INSTALL_DIR
@@ -295,22 +282,11 @@ build_package()
 	# remove old zip files
 	rm -f $SYMBOLS_ZIP $DAEMONS_ZIP
 
-	# Strip executables and put into ZIP file
-	for i in $EXE_DIR/*.exe $EXE_DIR/*.sys
-	do
-		name=`basename $i`
-		bname=`basename $i .exe`
-		bname=`basename $bname .sys`
-		oname=$COLINUX_INSTALL_DIR/$name
+	# Add files with debugging symbols into zip
+	zip -j "$SYMBOLS_ZIP" $EXE_DIR/*.exe $EXE_DIR/*.sys || exit $?
 
-		# Add file with debugging symbols into zip
-		zip -j "$SYMBOLS_ZIP" $i || exit $?
-		
-		# strip symbols and add file to zip
-		$STRIP -o $oname $i || exit $?
-		zip -j $DAEMONS_ZIP $oname || exit $?
-		rm $oname
-	done
+	# Use stripped files from installer and add to zip
+	zip -j $DAEMONS_ZIP $PREMAID/*.exe $PREMAID/*.sys || exit $?
 
 	# Exist Kernel and is newer?
 	if [ $COLINUX_TARGET_KERNEL_BUILD/vmlinux -nt $VMLINUX_ZIP ]
@@ -341,47 +317,7 @@ build_package()
 		fi
 	fi
 
-	# Exist target modules.dep and is newer?
-	if [ $COLINUX_TARGET_MODULE_PATH/lib/modules/$COMPLETE_KERNEL_NAME/modules.dep -nt $MODULES_TGZ ]
-	then
-		# Create compressed tar archive with path for extracting direct on the
-		# root of fs, lib/modules with full version of kernel and colinux.
-		echo "Installing Modules $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
-		cd "$COLINUX_TARGET_MODULE_PATH"
-		tar czf $MODULES_TGZ lib/modules/$COMPLETE_KERNEL_NAME || exit $?
-		cd -
-	fi
+	# Link to modules file
+	echo "Installing Modules $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
+        ln -f $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz $MODULES_TGZ
 }
-
-build_all()
-{
-	./build-cross.sh $1 && \
-	./build-colinux-libs.sh $1 && \
-	./build-kernel.sh $1 && \
-	./build-colinux.sh $1 && \
-	echo "Build-all $1 DONE"
-}
-
-case "$1" in
-    --build-all)
-	build_all
-	;;
-    --download-all)
-	build_all --download-only
-	;;
-    --rebuild-all)
-	build_all --rebuild
-	;;
-    --package)
-	build_package
-	;;
-    --help)
-	echo "
-	file: bin/build-common.sh
-
-	Options: --build-all | --download-all | --rebuild-all | --help
-
-	Whithout arguments is used for common set of variables and functions.
-	For more information, read top of file."
-	;;
-esac

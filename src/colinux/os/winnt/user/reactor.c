@@ -77,10 +77,10 @@ static co_rc_t packet_read_async(co_winnt_reactor_packet_user_t handle)
 				return CO_RC(OK);
 			case ERROR_NOT_ENOUGH_MEMORY:
 				/* Hack for serial daemon */
-				co_debug("Warn: NOT_ENOUGH_MEMORY (handle=%d)\n", handle->rhandle);
+				co_debug_error("Warn: NOT_ENOUGH_MEMORY (handle=%d)", (int)handle->rhandle);
 				return CO_RC(OUT_OF_MEMORY);
 			default:
-				co_debug("Error: %x\n", error);
+				co_debug_error("Error: 0x%lx", error);
 				return CO_RC(ERROR);
 			}
 		} else {
@@ -104,11 +104,11 @@ static co_rc_t packet_read_completed(co_winnt_reactor_packet_user_t handle)
 		return packet_read_async(handle);
 	} else {
 		if (GetLastError() == ERROR_BROKEN_PIPE) {
-			co_debug("Pipe broken, exiting\n");
+			co_debug_error("Pipe broken, exiting");
 			return CO_RC(BROKEN_PIPE);
 		}
 
-		co_debug("GetOverlappedResult error %d\n", GetLastError());
+		co_debug_error("GetOverlappedResult error 0x%lx", GetLastError());
 	}
 
 	return CO_RC(OK);
@@ -162,7 +162,7 @@ co_rc_t co_winnt_reactor_packet_user_create(
 	co_winnt_reactor_packet_user_t user;
 	co_rc_t rc;
 
-	user = (typeof(user))(co_os_malloc(sizeof(*user)));
+	user = co_os_malloc(sizeof(*user));
 	if (!user)
 		return CO_RC(OUT_OF_MEMORY);
 

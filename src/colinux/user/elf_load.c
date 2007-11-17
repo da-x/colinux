@@ -80,7 +80,7 @@ unsigned long co_get_section_count(co_elf_data_t *pl)
 	return pl->header->e_shnum;
 }
 
-char *co_get_at_offset(co_elf_data_t *pl, Elf32_Shdr *section, unsigned long index)
+static void *co_get_at_offset(co_elf_data_t *pl, Elf32_Shdr *section, unsigned long index)
 {
 	return &pl->buffer[section->sh_offset + index];
 }

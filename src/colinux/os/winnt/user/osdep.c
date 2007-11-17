@@ -44,7 +44,7 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 		param_count++;
 	}
 
-	param_array = (char **)co_os_malloc(sizeof(char *)*param_count + 1);
+	param_array = co_os_malloc(sizeof(char *)*param_count + 1);
 	if (param_array == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 

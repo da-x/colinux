@@ -5,7 +5,6 @@ targets['common.a'] = Target(
     Input('debug.o'),
     Input('errors.o'),
     Input('messages.o'),
-    Input('version.o'),
     Input('libc.o'),
     Input('libc_strtol.o'),
     Input('snprintf.o'),
@@ -13,11 +12,6 @@ targets['common.a'] = Target(
     Input('unicode.o'),
     ],
 )
-
-def file_id_inputs(scripter, tool_run_inf):
-    command_line = 'echo "a.c" | python %s > %s' % (tool_run_inf.target.inputs[0].pathname,
-                                tool_run_inf.target.pathname)
-    return command_line
 
 targets['file_ids.o'] = Target(
     tool = Compiler(),
@@ -58,14 +52,6 @@ def version_inputs(scripter, tool_run_inf):
         tool_run_inf.target.pathname)
     return command_line
 
-targets['version.o'] = Target(
-    tool = Compiler(),
-    inputs = [
-       Input('version.c'),
-       Input('version.h'),
-    ]
-)
-
 targets['version.h'] = Target(
     tool = Script(version_inputs),
     inputs = [
@@ -86,5 +72,13 @@ targets['libc_strtol.o'] = target = deftarget('libc.o')
 target.mono_options = Options(
     appenders = dict(
     compiler_defines = dict(CO_LIBC__STRTOL=None),
+    )
+)
+
+targets['Makefile.lib-m'] = Target(
+    inputs = input_list(".c", ".c"),
+    tool = MakefileKbuild(),
+    mono_options = Options(
+	appenders = dict(compiler_defines = dict(CO_LIBC__MISC=None),)
     )
 )

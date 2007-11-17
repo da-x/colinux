@@ -10,6 +10,8 @@ targets['coLinux.exe'] = Target(
     inputs = [
        Input('colinux.nsi'),
        Input('colinux_def.inc'),
+       Input('WinpcapRedir.ini'),
+       Input('iDl.ini'),
        Input('premaid/colinux-bridged-net-daemon.exe'),
        Input('premaid/colinux-console-fltk.exe'),
        Input('premaid/colinux-console-nt.exe'),

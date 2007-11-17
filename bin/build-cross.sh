@@ -7,13 +7,13 @@
 # Flags for building gcc (not for target)
 BUILD_FLAGS="CFLAGS=-O2 LDFLAGS=-s"
 
-# TEMPORARY until release, you can disable it for faster builds:
+# until release, disable checking for faster builds:
 DISABLE_CHECKING=--disable-checking
 
 download_files()
 {
-	download_file "$GCC_ARCHIVE1" "$MINGW_URL"
-	download_file "$GCC_ARCHIVE2" "$MINGW_URL"
+	download_file "$GCC_ARCHIVE1" "$GCC_URL"
+	download_file "$GCC_ARCHIVE2" "$GCC_URL"
 	download_file "$BINUTILS_ARCHIVE" "$MINGW_URL"
 	download_file "$MINGW_ARCHIVE" "$MINGW_URL"
 	download_file "$W32API_ARCHIVE" "$MINGW_URL"
@@ -70,6 +70,8 @@ extract_binutils()
 
 patch_binutils()
 {
+	# Fixup wrong path in tar
+	test -d $BUILD_DIR/${BINUTILS}-src && mv $BUILD_DIR/${BINUTILS}-src $BUILD_DIR/${BINUTILS}
 	if [ "$BINUTILS_PATCH" != "" ]; then
 		echo "Patching binutils"
 		cd "$BUILD_DIR/$BINUTILS"
@@ -120,8 +122,8 @@ extract_gcc()
 	echo "Extracting gcc"
 	cd "$BUILD_DIR"
 	rm -rf "$GCC"
-	gzip -dc "$SOURCE_DIR/$GCC_ARCHIVE1" | tar x
-	gzip -dc "$SOURCE_DIR/$GCC_ARCHIVE2" | tar x
+	bunzip2 -dc "$SOURCE_DIR/$GCC_ARCHIVE1" | tar x
+	bunzip2 -dc "$SOURCE_DIR/$GCC_ARCHIVE2" | tar x
 }
 
 patch_gcc()
@@ -187,42 +189,37 @@ check_binutils_guest()
 
 	# Get version number
 	local PATH="$PATH:$COLINUX_GCC_GUEST_PATH"
-	ver=`${COLINUX_GCC_GUEST_TARGET}-as --version 2>/dev/null | \
+	ver=`${COLINUX_GCC_GUEST_TARGET}-as --version 2>/dev/null || \
+		as --version 2>/dev/null | \
 		sed -n -r -e 's/^.+ ([0-9]+\.[0-9]+\.[0-9]+).+$/\1/p'`
 
 	if [ -z "$ver" ]
 	then
-		ver=`as --version 2>/dev/null | sed -n -r -e \
-			's/^.+ ([0-9]+\.[0-9]+\.[0-9]+).+$/\1/p'`
+		echo "No executables, build now"
+		return 1
 	fi
 
-	if [ -n "$ver" ]
+	# Verify version of installed AS
+	if [ $ver != $BINUTILS_VERSION ]
 	then
-		# Verify version of installed AS
-		if [ $ver = $BINUTILS_VERSION ]
-		then
-			echo "found"
-
-			# Must exist with prefix for kernel build
-			for name in ar as ld nm objdump objcopy strip
-			do
-				if ! which ${COLINUX_GCC_GUEST_TARGET}-$name >/dev/null 2>/dev/null
-				then
-					mkdir -p $COLINUX_GCC_GUEST_PATH
-					ln -s `which $name` $COLINUX_GCC_GUEST_PATH/${COLINUX_GCC_GUEST_TARGET}-$name
-					echo " softlink for ${COLINUX_GCC_GUEST_TARGET}-$name"
-				fi
-			done
-
-			return 0
-		fi
-
 		echo "Wrong version ($ver), build now"
 		return 1
 	fi
 
-	echo "No executables, build now"
-	return 1
+	echo "found"
+
+	# Must have prefix for kernel build
+	for name in ar as ld nm objdump objcopy strip
+	do
+		if ! which ${COLINUX_GCC_GUEST_TARGET}-$name >/dev/null 2>/dev/null
+		then
+			mkdir -p $COLINUX_GCC_GUEST_PATH
+			ln -s `which $name` $COLINUX_GCC_GUEST_PATH/${COLINUX_GCC_GUEST_TARGET}-$name
+			echo " softlink for ${COLINUX_GCC_GUEST_TARGET}-$name"
+		fi
+	done
+
+	return 0
 }
 
 build_binutils_guest()
@@ -255,28 +252,24 @@ check_gcc_guest()
 
 	# Get version number
 	local PATH="$PATH:$COLINUX_GCC_GUEST_PATH"
-	ver=`${COLINUX_GCC_GUEST_TARGET}-gcc -dumpversion 2>/dev/null`
+	ver=`${COLINUX_GCC_GUEST_TARGET}-gcc -dumpversion 2>/dev/null || \
+	     gcc -dumpversion 2>/dev/null`
 
 	if [ -z "$ver" ]
 	then
-		ver=`gcc -dumpversion 2>/dev/null`
+		echo "No executables, build now"
+		return 1
 	fi
 
-	if [ -n "$ver" ]
+	# Verify version of installed GCC
+	if [ $ver != $GCC_VERSION ]
 	then
-		# Verify version of installed GCC
-		if [ $ver = $GCC_VERSION ]
-		then
-			echo "found"
-			return 0
-		fi
-
 		echo "Wrong version ($ver), build now"
 		return 1
 	fi
 
-	echo "No executables, build now"
-	return 1
+	echo "found"
+	return 0
 }
 
 build_gcc_guest()

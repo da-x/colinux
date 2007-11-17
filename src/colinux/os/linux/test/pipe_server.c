@@ -20,7 +20,7 @@ int client()
 	rc = co_os_daemon_pipe_open(0, 41234, &handle);
 
 	if (!CO_OK(rc)) {
-		co_debug("co_os_daemon_pipe_open: %x\n", rc);
+		co_debug("co_os_daemon_pipe_open: %x", rc);
 		return rc;
 	}
 
@@ -66,7 +66,7 @@ co_rc_t connected(co_os_pipe_connection_t *conn,
 
 	printf("%p: %s\n", conn, __FUNCTION__);
 
-	*data_client = client_data = (client_data_t *)co_os_malloc(sizeof(client_data_t));
+	*data_client = client_data = co_os_malloc(sizeof(client_data_t));
 	if (!client_data)
 		return CO_RC(OUT_OF_MEMORY);
 	
@@ -87,10 +87,10 @@ co_rc_t packet(co_os_pipe_connection_t *conn,
 
 	if (client_data->state == 0) {
 		if (size != sizeof(unsigned long)) {
-			co_debug("Size of first packet is not unsigned long\n");
+			co_debug("Size of first packet is not unsigned long");
 			return CO_RC(ERROR);
 		}
-		co_debug("id: %d\n", (*(unsigned long *)packet_data));
+		co_debug("id: %d", (*(unsigned long *)packet_data));
 		client_data->state += 1;
 	} else {
 		int i;
@@ -103,12 +103,12 @@ co_rc_t packet(co_os_pipe_connection_t *conn,
 #if (0)
 		printf("packet: %d\n", client_data->state);
 		for (i=0; i < size; i++) {
-			co_debug("%02x ", packet_data[i]);
+			printf("%02x ", packet_data[i]);
 			if ((i % 16 == 0)  &&  (i != 0))
-				co_debug("\n");
+				printf("\n");
 		}
 		if (size % 16 != 0)
-			co_debug("\n");
+			printf("\n");
 #endif
 	}
 
@@ -129,7 +129,7 @@ int server()
 	
 	rc = co_os_pipe_server_create(connected, packet, disconnected, NULL, &ps);
 	if (!CO_OK(rc)) {
-		co_debug("pipe_server_create: %x\n", rc);
+		co_debug("pipe_server_create: %x", rc);
 		return rc;
 	}
 

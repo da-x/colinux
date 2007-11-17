@@ -24,11 +24,9 @@ struct co_archdep_manager {
 
 struct co_archdep_monitor {
 	bool_t antinx_enabled;
-	char *fixed_page_table_mapping;
+	unsigned char *fixed_page_table_mapping;
 	co_pfn_t fixed_page_table_pfn;
 	unsigned long long *fixed_pte;
 };
-
-extern void (*co_host_switch_wrapper_func)(struct co_monitor *);
 
 #endif

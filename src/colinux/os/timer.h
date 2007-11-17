@@ -33,7 +33,8 @@ typedef struct {
 } co_timestamp_t;
 
 extern void co_os_get_timestamp(co_timestamp_t *dts);
-extern void co_os_get_timestamp_freq(co_timestamp_t *dts);
+extern void co_os_get_timestamp_freq(co_timestamp_t *dts, co_timestamp_t *freq);
+extern unsigned long co_os_get_cpu_khz(void);
 
 #endif
 

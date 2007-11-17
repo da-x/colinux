@@ -33,6 +33,14 @@
 #define SYMBOL_PREFIX ""
 #endif
 
+#ifdef CO_COLINUX_KERNEL
+#error "CO_COLINUX_KERNEL should never defined here"
+#endif
+
+#ifdef CONFIG_COOPERATIVE
+#error "CONFIG_COOPERATIVE should never defined here"
+#endif
+
 /*
  * These two pseudo variables mark the start and the end of the passage code.
  * The passage code is position indepedent, so we just copy it from the 
@@ -43,7 +51,7 @@
 extern char _name_;                                     \
 extern char _name_##_end;                               \
 							\
-static inline unsigned long _name_##_size()		\
+static inline unsigned long _name_##_size(void)		\
 {							\
 	return &_name_##_end - &_name_;			\
 }							\
@@ -479,7 +487,7 @@ co_rc_t co_monitor_arch_passage_page_alloc(co_monitor_t *cmon)
 	co_rc_t rc;
 	co_archdep_monitor_t archdep;
 
-	archdep = (co_archdep_monitor_t)co_os_malloc(sizeof(*archdep));
+	archdep = co_os_malloc(sizeof(*archdep));
 	if (archdep == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 
@@ -518,29 +526,30 @@ void co_monitor_arch_passage_page_free(co_monitor_t *cmon)
 
 static inline void co_passage_page_dump_state(co_arch_state_stack_t *state)
 {
-	co_debug("cs: %04x   ds: %04x   es: %04x   fs: %04x   gs: %04x   ss: %04x\n",
+	co_debug("cs: %04lx   ds: %04lx   es: %04lx   fs: %04lx   gs: %04lx   ss: %04lx",
 		 state->cs, state->ds, state->es, state->fs, state->gs, state->ss);
 
-	co_debug("cr0: %08x   cr2: %08x   cr3: %08x   cr4: %08x\n",
+	co_debug("cr0: %08lx   cr2: %08lx   cr3: %08lx   cr4: %08lx",
 		 state->cr0, state->cr2, state->cr3, state->cr4);
 
-	co_debug("dr0: %08x   dr1: %08x  dr2: %08x  dr3: %08x  dr6: %08x  dr7: %08x\n",
+	co_debug("dr0: %08lx   dr1: %08lx  dr2: %08lx  dr3: %08lx  dr6: %08lx  dr7: %08lx",
 		 state->dr0, state->dr1, state->dr2, state->dr3, state->dr6, state->dr7);
 
-	co_debug("gdt: %08x:%04x   idt:%08x:%04x   ldt:%04x  tr:%04x\n",
-		 state->gdt.base, state->gdt.limit,  state->idt.table, state->idt.size,
+	co_debug("gdt: %08lx:%04x   idt:%08lx:%04x   ldt:%04x  tr:%04x",
+		 (long)state->gdt.base, state->gdt.limit,
+		 (long)state->idt.table, state->idt.size,
 		 state->ldt, state->tr);
 
-	co_debug("return_eip: %08x   flags: %08x   esp: %8x\n",
+	co_debug("return_eip: %08lx   flags: %08lx   esp: %08lx",
 		 state->return_eip, state->flags, state->esp);
 }
 
 static inline void co_passage_page_dump(co_arch_passage_page_t *page)
 {
-	co_debug("Host state\n");
+	co_debug("Host state");
 	co_passage_page_dump_state(&page->host_state);
 
-	co_debug("Linux state\n");
+	co_debug("Linux state");
 	co_passage_page_dump_state(&page->linuxvm_state);
 }
 
@@ -650,13 +659,6 @@ static void pae_temp_address_space_init(co_arch_passage_page_pae_address_space_t
 }
 
 
-void co_host_normal_switch_wrapper(co_monitor_t *cmon)
-{
-	co_switch();
-}
-
-void (*co_host_switch_wrapper_func)(co_monitor_t *) = co_host_normal_switch_wrapper;
-
 co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 {
 	co_arch_passage_page_t *pp = cmon->passage_page;
@@ -664,22 +666,31 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 
 	caps = cmon->manager->archdep->caps[0];
 
+	if (co_monitor_passage_func_short_fxsave_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
+	if (co_monitor_passage_func_fxsave_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
+	if (co_monitor_passage_func_short_fnsave_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
+	if (co_monitor_passage_func_fnsave_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
+
 	/*
 	 * TODO: Add sysenter / sysexit restoration support 
 	 */
 	if (caps & (1 << CO_ARCH_X86_FEATURE_FXSR)) {
-		co_debug("CPU supports fxsave/fxrstor\n");
+		co_debug("CPU supports fxsave/fxrstor");
 		if (!co_is_pae_enabled()) {
-			memcpy_co_monitor_passage_func_short_fxsave(&pp->code[0]);
+			memcpy_co_monitor_passage_func_short_fxsave(pp->code);
 		} else {
-			memcpy_co_monitor_passage_func_fxsave(&pp->code[0]);
+			memcpy_co_monitor_passage_func_fxsave(pp->code);
 		}
 	} else {
-		co_debug("CPU supports fnsave/frstor\n");
+		co_debug("CPU supports fnsave/frstor");
 		if (!co_is_pae_enabled()) {
-			memcpy_co_monitor_passage_func_short_fnsave(&pp->code[0]);
+			memcpy_co_monitor_passage_func_short_fnsave(pp->code);
 		} else {
-			memcpy_co_monitor_passage_func_fnsave(&pp->code[0]);
+			memcpy_co_monitor_passage_func_fnsave(pp->code);
 		}
 	}
 
@@ -755,7 +766,7 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	else
 		co_fnsave(pp->linuxvm_state.fxstate);
 
-	co_debug("Passage page dump: %x\n", co_monitor_arch_passage_page_init);
+	co_debug("Passage page dump: %lx", (long)co_monitor_arch_passage_page_init);
 
 	co_passage_page_dump(pp);
 
@@ -764,5 +775,5 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 
 void co_host_switch_wrapper(co_monitor_t *cmon)
 {
-	co_host_switch_wrapper_func(cmon);
+	co_switch();
 }

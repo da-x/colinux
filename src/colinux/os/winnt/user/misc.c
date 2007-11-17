@@ -106,7 +106,7 @@ bool_t co_winnt_get_last_error(char *error_message, int buf_size)
 		    buf_size,
 		    NULL))
 	{
-		co_snprintf(error_message, buf_size, "GetLastError() = %d\n", dwLastError);
+		co_snprintf(error_message, buf_size, "GetLastError() = 0x%lx\n", dwLastError);
 	}
 
 	return dwLastError != 0;
@@ -135,9 +135,4 @@ bool_t co_winnt_is_winxp_or_better(void)
 	}
 
 	return bRetVal;
-}
-
-co_id_t co_os_current_id(void)
-{
-	return (co_id_t)(GetCurrentProcessId());
 }

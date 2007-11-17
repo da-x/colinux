@@ -25,7 +25,7 @@ void co_trace_ent_name(void *ptr, const char *name)
 
 	reenter++;
 	
-	co_debug("TRACE: [%08x] %s\n", ptr, name);
+	co_debug("TRACE: [%p] %s", ptr, name);
 
 	reenter--;
 }
@@ -42,8 +42,10 @@ static inline co_debug_tlv_t *tlv_add_timestamp(co_debug_tlv_t *sub_tlv)
 {
 	sub_tlv->type = CO_DEBUG_TYPE_TIMESTAMP;
 	sub_tlv->length = sizeof(co_timestamp_t);
-	co_timestamp_t *ts = (co_timestamp_t *)&sub_tlv->value;
-	co_os_get_timestamp(ts);	
+	{
+		co_timestamp_t *ts = (co_timestamp_t *)&sub_tlv->value;
+		co_os_get_timestamp(ts);
+	}
 	return (co_debug_tlv_t *)&sub_tlv->value[sub_tlv->length];
 }
 
@@ -84,11 +86,13 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 	packet_size += sizeof(co_debug_type_t) + sizeof(unsigned long);
 	packet_size += sizeof(co_debug_type_t) + sizeof(unsigned char);
 	packet_size += sizeof(co_debug_type_t) + sizeof(unsigned char);
-	packet_size += sizeof(co_debug_type_t) + 80;
+	packet_size += sizeof(co_debug_type_t) + 120;
 
+	{
 	char buffer[packet_size];
-
 	co_debug_tlv_t *sub_tlv = (co_debug_tlv_t *)buffer;
+	va_list ap;
+
 	sub_tlv = tlv_add_const_string(CO_DEBUG_TYPE_MODULE, module, sub_tlv);
 	sub_tlv = tlv_add_const_string(CO_DEBUG_TYPE_FILE, filename, sub_tlv);
 	sub_tlv = tlv_add_timestamp(sub_tlv);
@@ -99,13 +103,15 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 	sub_tlv = tlv_add_char(CO_DEBUG_TYPE_LEVEL, level, sub_tlv);
 
 	sub_tlv->type = CO_DEBUG_TYPE_STRING;
-	va_list ap;
+
 	va_start(ap, fmt);
 	co_vsnprintf(sub_tlv->value, sizeof(buffer) - (sub_tlv->value - (char *)buffer) - 1, fmt, ap);
 	va_end(ap);
 	sub_tlv->length = co_strlen(sub_tlv->value) + 1;
 
+	co_debug_level_system(module, facility, level, filename, line, func, sub_tlv->value);
 	co_debug_buf(buffer, (&sub_tlv->value[sub_tlv->length]) - buffer);
+	}
 }
 
 CO_TRACE_CONTINUE;

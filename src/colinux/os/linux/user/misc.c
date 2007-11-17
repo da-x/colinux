@@ -93,15 +93,6 @@ void co_terminal_print_color(co_terminal_color_t color, const char *format, ...)
 	va_end(ap);
 }
 
-double co_os_timer_highres()
-{
-        struct timeval tv;
-
-        gettimeofday(&tv, NULL);
-
-        return ((double)tv.tv_sec) + ((double)tv.tv_usec)/1000000;
-}
-
 void co_os_get_timestamp(co_timestamp_t *dts)
 {
 	struct timeval tv;

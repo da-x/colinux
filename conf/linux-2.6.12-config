@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
-# Linux kernel version: 2.6.12-co-0.7.1
-# Mon Feb 13 22:43:16 2006
+# Linux kernel version: 2.6.12-co-0.8.0
+# Sun Sep 17 12:11:52 2006
 #
 CONFIG_X86=y
 CONFIG_MMU=y
@@ -869,5 +869,4 @@ CONFIG_ZLIB_INFLATE=y
 CONFIG_ZLIB_DEFLATE=m
 CONFIG_GENERIC_HARDIRQS=y
 CONFIG_GENERIC_IRQ_PROBE=y
-CONFIG_X86_BIOS_REBOOT=y
 CONFIG_PC=y

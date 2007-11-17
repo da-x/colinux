@@ -33,9 +33,10 @@ check_md5sums()
 	echo -n "Check kernel and modules: "
 	cd "$TOPDIR"
 
-	if [ ! -f "$COLINUX_TARGET_KERNEL_BUILD/vmlinux" ]
+	if [ ! -f "$COLINUX_TARGET_KERNEL_BUILD/vmlinux" -o \
+	     ! -f "$COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz" ]
 	then
-		echo "vmlinux don't exist, build it now"
+		echo "vmlinux or modules don't exist, build it now"
 		return
 	fi
 
@@ -59,12 +60,13 @@ create_md5sums()
 	    patch/series-$KERNEL_VERSION \
 	    "$COLINUX_TARGET_KERNEL_BUILD/.config" \
 	    "$COLINUX_TARGET_KERNEL_BUILD/vmlinux" \
-	    "$COLINUX_TARGET_MODULE_PATH/lib/modules/$COMPLETE_KERNEL_NAME/modules.dep" \
+	    "$COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz" \
 	    > $KERNEL_CHECKSUM \
 	|| error_exit 10 "can not create md5sum"
 
 	# Md5sums for patches
-	for name in `cat patch/series-$KERNEL_VERSION`
+	local SERIES=`cat patch/series-$KERNEL_VERSION`
+	for name in $SERIES
 	do
 		if [ -e "patch/$name" ]
 		then
@@ -124,7 +126,7 @@ patch_kernel_source()
 	if quilt --version >/dev/null 2>&1
 	then
 		# use quilt for patching, don't trust users settings
-		unset QUILT_COMMAND_ARGS
+		unset QUILT_PUSH_ARGS
 		unset QUILT_PATCHES
 		quilt --quiltrc /dev/null push -a \
 		|| error_exit 10 "quilt failed"
@@ -135,7 +137,6 @@ patch_kernel_source()
 
 	# Copy coLinux Version into kernel localversion
 	echo "-co-$CO_VERSION" > localversion-cooperative
-	cd -
 }
 
 configure_kernel()
@@ -168,7 +169,8 @@ EOF
 	then
 		OPT="O=\"$COLINUX_TARGET_KERNEL_BUILD\""
 	fi
-	make $OPT silentoldconfig >>$COLINUX_BUILD_LOG 2>&1 \
+
+	make ARCH=$TARGET_ARCH $OPT silentoldconfig >>$COLINUX_BUILD_LOG 2>&1 \
 	|| error_exit 1 "Kernel $KERNEL_VERSION config failed (check 'make oldconfig' on kerneltree)"
 }
 
@@ -176,7 +178,7 @@ compile_kernel()
 {
 	echo "Making Kernel $KERNEL_VERSION"
 	cd "$COLINUX_TARGET_KERNEL_BUILD" || exit 1
-	make vmlinux >>$COLINUX_BUILD_LOG 2>&1 \
+	make ARCH=$TARGET_ARCH vmlinux >>$COLINUX_BUILD_LOG 2>&1 \
 	|| error_exit 1 "Kernel $KERNEL_VERSION make failed"
 }
 
@@ -193,16 +195,30 @@ compile_modules()
 	test -z "$COLINUX_DEPMOD" && COLINUX_DEPMOD=/sbin/depmod
 
 	make \
+	    ARCH=$TARGET_ARCH \
 	    INSTALL_MOD_PATH="$COLINUX_TARGET_MODULE_PATH" \
 	    DEPMOD=$COLINUX_DEPMOD \
 	    modules modules_install >>$COLINUX_BUILD_LOG 2>&1 \
 	|| error_exit 1 "Kernel $KERNEL_VERSION make modules failed"
+}
 
-	# fixup directories for installing to typicaly path
+archive_modules()
+{
+	echo "Create Modules archive"
+	# fix directories for installing
 	local DEST=$COLINUX_TARGET_MODULE_PATH/lib/modules/$COMPLETE_KERNEL_NAME
 	rm -f $DEST/build $DEST/source
-	ln -s -f /usr/src/linux-${COMPLETE_KERNEL_NAME}-obj $DEST/build
-	ln -s -f /usr/src/linux-$COMPLETE_KERNEL_NAME $DEST/source
+	ln -s /usr/src/linux-${COMPLETE_KERNEL_NAME}-obj $DEST/build
+	ln -s /usr/src/linux-$COMPLETE_KERNEL_NAME $DEST/source
+
+	# Create compressed tar archive for unpacking directly on root of fs
+	# Fallback, if option --owner/--group isn't supported
+	cd $COLINUX_TARGET_MODULE_PATH
+	tar --owner=root --group=root \
+	    -czf $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz \
+	    lib/modules/$COMPLETE_KERNEL_NAME || \
+	tar czf $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz \
+	    lib/modules/$COMPLETE_KERNEL_NAME || exit $?
 }
 
 build_kernel()
@@ -226,6 +242,7 @@ build_kernel()
 		patch_kernel_source
 	fi
 
+	# Check basicly include
 	if [ ! -s "$COLINUX_TARGET_KERNEL_SOURCE/include/linux/cooperative.h" ]; then
 		error_exit 10 "$COLINUX_TARGET_KERNEL_SOURCE/include/linux/cooperative.h: Missing. Source not usable, please check \$COLINUX_TARGET_KERNEL_SOURCE"
 	fi
@@ -239,6 +256,7 @@ build_kernel()
 
 	# Build and install Modules
 	compile_modules
+	archive_modules
 
 	create_md5sums
 }

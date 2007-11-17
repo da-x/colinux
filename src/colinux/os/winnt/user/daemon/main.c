@@ -48,8 +48,7 @@ static bool_t stoped = PFALSE;
 void co_winnt_daemon_stop(void)
 {
 	if (g_daemon != NULL) {
-		g_daemon->next_reboot_will_shutdown = PTRUE;
-		co_daemon_send_ctrl_alt_del(g_daemon);
+		co_daemon_send_shutdown(g_daemon);
 		stoped = PTRUE;
 	}
 }
@@ -138,7 +137,7 @@ out:
 			co_rc_format_error(rc, buf, sizeof(buf));
 		}
 
-		co_terminal_print("daemon: exit code %x\n", rc);
+		co_terminal_print("daemon: exit code %08x\n", (int)rc);
 		co_terminal_print("daemon: %s\n", buf);
 
 		ret = CO_RC(ERROR);
@@ -289,7 +288,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		ret = 1;
 	}
 
-	co_debug ("rc=%x exit=%d\n", rc, -ret);
+	co_debug("rc=%08x exit=%d", (int)rc, -ret);
 	co_debug_end();
 
 	return -ret;

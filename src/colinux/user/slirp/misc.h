@@ -23,6 +23,10 @@ extern int (*lprint_print) _P((void *, const char *, va_list));
 extern char *lprint_ptr, *lprint_ptr2, **lprint_arg;
 extern struct sbuf *lprint_sb;
 
+/* Check given address for localhost */
+#define is_localhost(addr) \
+	((addr).s_addr == 0 || (addr).s_addr == loopback_addr.s_addr)
+
 #ifndef HAVE_STRDUP
 char *strdup _P((const char *));
 #endif
@@ -70,7 +74,6 @@ extern int x_port, x_server, x_display;
 int show_x _P((char *, struct socket *));
 void redir_x _P((u_int32_t, int, int, int));
 void getouraddr _P((void));
-int is_localhost _P((struct in_addr paddr));
 inline  void slirp_insque  _P((void *, void *));
 inline  void slirp_remque  _P((void *));
 int add_exec _P((struct ex_list **, int, char *, int, int));
