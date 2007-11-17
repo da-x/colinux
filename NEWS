@@ -1,4 +1,4 @@
-* Version 0.8.0
+* Version 0.7.2
   Bugfixes:
   * #1324092: cofs rename replace existing file.
   * #1791993: Ship modules with root as owner and group.
