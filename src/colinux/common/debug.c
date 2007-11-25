@@ -65,6 +65,7 @@ static inline co_debug_tlv_t *tlv_add_char(co_debug_type_t type, unsigned long d
 	return (co_debug_tlv_t *)&sub_tlv->value[sub_tlv->length];
 }
 
+#ifdef COLINUX_DEBUG
 int co_debug_local_index = 0;
 #define X(facility, static_level, default_dynamic_level) .facility##_level=default_dynamic_level,
 co_debug_levels_t co_global_debug_levels = {
@@ -113,6 +114,7 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 	co_debug_buf(buffer, (&sub_tlv->value[sub_tlv->length]) - buffer);
 	}
 }
+#endif
 
 CO_TRACE_CONTINUE;
 

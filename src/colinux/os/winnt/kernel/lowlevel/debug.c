@@ -13,6 +13,7 @@
 
 #include <colinux/common/debug.h>
 
+#ifdef COLINUX_DEBUG
 void co_debug_system(const char *fmt, ...)
 {
 	char buf[0x100];
@@ -30,3 +31,4 @@ void co_debug_level_system(const char *module, co_debug_facility_t facility, int
 	/* Debug output to Dbgview.exe (www.sysinternals.com) */
         DbgPrint("[m:%s f:%d l:%d %s:%d:%s] %s", module, facility, level, filename, line, func, text);
 }
+#endif

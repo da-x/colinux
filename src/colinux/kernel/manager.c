@@ -334,6 +334,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 
 		return CO_RC(OK);
 	}
+#ifdef COLINUX_DEBUG
 	case CO_MANAGER_IOCTL_DEBUG_LEVELS: {
 		co_manager_ioctl_debug_levels_t *params;
 
@@ -348,6 +349,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 
 		return CO_RC(OK);
 	}
+#endif
 	default:
 		break;
 	}

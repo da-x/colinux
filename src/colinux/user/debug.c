@@ -16,6 +16,7 @@
 
 #include "debug.h"
 
+#ifdef COLINUX_DEBUG
 static co_manager_handle_t handle = NULL;
 
 void co_debug_start(void)
@@ -63,3 +64,7 @@ void co_debug_level_system(const char *module, co_debug_facility_t facility, int
 		fprintf(stderr, format, text);
 	}
 }
+#else
+void co_debug_start(void) { return; }
+void co_debug_end(void) { return; }
+#endif

@@ -12,6 +12,7 @@
 
 #include "messages.h"
 
+#ifdef COLINUX_DEBUG
 #define co_debug_lvl_route(msg, from, to, level, fmt, ...) do {	\
     co_module_name_t from_str;						\
     co_module_name_t to_str;						\
@@ -21,6 +22,9 @@
 		 co_module_repr(to, &to_str),				\
 		 ## __VA_ARGS__);					\
 } while (0);
+#else
+#define co_debug_lvl_route(msg, from, to, level, fmt, ...)  /* msg */
+#endif
 
 #define co_debug_lvl_message(message, level, fmt, ...)			\
 	co_debug_lvl_route("route", message->from, message->to, level, fmt, ## __VA_ARGS__)
@@ -35,7 +39,9 @@ co_rc_t co_message_switch_set_rule(co_message_switch_t *ms, co_module_t destinat
 				   co_switch_rule_func_t func, void *data)
 {
 	co_switch_rule_t *rule;
+#ifdef COLINUX_DEBUG
 	co_module_name_t destination_str;
+#endif
 
 	rule = co_os_malloc(sizeof(*rule));
 	if (rule == NULL)
@@ -185,7 +191,9 @@ out_free:
 co_rc_t co_message_switch_free_rule(co_message_switch_t *ms, co_module_t destination)
 {
 	co_switch_rule_t *rule = NULL;
+#ifdef COLINUX_DEBUG
 	co_module_name_t destination_str;
+#endif
 	co_rc_t rc;
 
 	rc = co_message_switch_get_rule(ms, destination, &rule);

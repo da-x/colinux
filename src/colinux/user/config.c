@@ -39,8 +39,10 @@ static co_rc_t check_cobd_file (co_pathname_t pathname, int index)
 	static const char magic_bz2 [3] = "BZh";		/* bzip2 compressed data */
 	static const char magic_7z  [6] = "7z\274\257\047\034";	/* 7z archive data */
 
+#ifdef COLINUX_DEBUG
 	if (co_global_debug_levels.misc_level < 2)
 		return CO_RC(OK);  /* verbose is not enabled */
+#endif
 
 	co_remove_quotation_marks(pathname);
 
