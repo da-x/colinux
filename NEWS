@@ -10,7 +10,7 @@
     Reboot:    Sends ctrl-alt-del, init process goes into runlevel 6
     Shutdown:  Calls "/sbin/shutdown -h now" with fallback to "/sbin/halt"
                Shutdown will automatic call from stopping as service,
-               or if user clicks close close on the colinux-daemon.
+               or if user clicks close on the colinux-daemon.
   * New: "colinux-daemon -p pidFile" stores ID of coLinux in file pidFile.
     "colinux-console-fltk|nt -p pidFile" attach the monitor from stored
     ID.  With this mechanism can open a /named/ console without knowing
