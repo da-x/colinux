@@ -1,0 +1,964 @@
+Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/kernel/cooperative.c
++++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
+@@ -160,6 +160,24 @@
+ 	}
+ #endif
+ 
++	case CO_DEVICE_SCSI: {
++		co_queue_incoming_message(node_message);
++
++		irq_enter();
++		__do_IRQ(SCSI_IRQ);
++		irq_exit();
++		break;
++	}
++
++	case CO_DEVICE_MOUSE: {
++		co_queue_incoming_message(node_message);
++
++		irq_enter();
++		__do_IRQ(MOUSE_IRQ);
++		irq_exit();
++		break;
++	}
++
+ 	default:
+ 		co_free_message(node_message);
+ 		break;
+Index: linux-2.6.22-source/arch/i386/kernel/e820.c
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/kernel/e820.c
++++ linux-2.6.22-source/arch/i386/kernel/e820.c
+@@ -35,6 +35,7 @@
+ #ifdef CONFIG_PCI
+ EXPORT_SYMBOL(pci_mem_start);
+ #endif
++#ifndef CONFIG_COOPERATIVE
+ extern int user_defined_memmap;
+ struct resource data_resource = {
+ 	.name	= "Kernel data",
+@@ -910,3 +911,4 @@
+ 	return 0;
+ }
+ early_param("memmap", parse_memmap);
++#endif
+Index: linux-2.6.22-source/arch/i386/pci/copci.c
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/pci/copci.c
++++ linux-2.6.22-source/arch/i386/pci/copci.c
+@@ -6,7 +6,8 @@
+ #include <linux/cooperative_internal.h>
+ #include "pci.h"
+ 
+-//#define COPCI_DEBUG
++#define COPCI_DEBUG 0
++#define COPCI_DEBUG_IO 0
+ 
+ struct device_list {
+ 	int bus;
+@@ -22,15 +23,19 @@
+ #define get_short(r,l) *((unsigned short *)(&r[l]))
+ #define get_long(r,l) *((unsigned long *)(&r[l]))
+ 
+-static int pci_co_read(unsigned int seg, unsigned int bus, unsigned int devfn, int reg, int len, u32 *value)
++static int copci_read(unsigned int seg, unsigned int bus, unsigned int devfn, int reg, int len, u32 *value)
+ {
+ 	int device, func;
+ 	unsigned long flags;
+ 	struct device_list *dp;
+ 
+-#ifdef COPCI_DEBUG
+-	printk(KERN_INFO "pci_co_read: bus: %02x, fn: %02x, reg: %02x, len: %d\n",
+-		bus, devfn, reg, len);
++	/* Linux has encoded the device & func; split them */
++	device = devfn >> 3;
++	func = devfn & 7;
++
++#if COPCI_DEBUG_IO
++	printk(KERN_INFO "copci_read: bus: %02x, devfn: %02x (device: %02x, func: %02x), reg: %02x, len: %d\n",
++		bus, devfn, device, func, reg, len);
+ #endif
+ 
+ 	if (reg + len > 255) {
+@@ -38,10 +43,6 @@
+ 		return -EINVAL;
+ 	}
+ 
+-	/* Linux has already encoded the device & func; split them */
+-	device = devfn >> 3;
+-	func = devfn & 7;
+-
+ 	spin_lock_irqsave(&pci_config_lock, flags);
+ 
+ 	*value = 0;
+@@ -65,23 +66,23 @@
+ 
+ 	spin_unlock_irqrestore(&pci_config_lock, flags);
+ 
+-#ifdef COPCI_DEBUG
+-	printk(KERN_INFO "pci_co_read: value: 0x%08x\n", *value);
++#if COPCI_DEBUG_IO
++	printk(KERN_INFO "copci_read: value: 0x%08x\n", *value);
+ #endif
+ 	return 0;
+ }
+ 
+-static int pci_co_write(unsigned int seg, unsigned int bus, unsigned int devfn, int reg, int len, u32 value) {
+-#ifdef COPCI_DEBUG
+-	printk(KERN_INFO "pci_co_write: bus: %d, fn: %d, reg: %d, len: %d\n",
++static int copci_write(unsigned int seg, unsigned int bus, unsigned int devfn, int reg, int len, u32 value) {
++#if COPCI_DEBUG_IO
++	printk(KERN_INFO "copci_write: bus: %d, fn: %d, reg: %d, len: %d\n",
+ 		bus, devfn, reg, len);
+ #endif
+ 	return -EPERM;
+ }
+ 
+-struct pci_raw_ops pci_co_ops = {
+-	.read =         pci_co_read,
+-	.write =        pci_co_write,
++struct pci_raw_ops copci_ops = {
++	.read =         copci_read,
++	.write =        copci_write,
+ };
+ 
+ static int get_mac(int unit, unsigned char *address)
+@@ -105,7 +106,27 @@
+ 	return result;
+ }
+ 
+-static int add_new(int b, int d, int f, int id, int class) {
++#if 0
++static int get_irq(int type) {
++	unsigned long flags = 0;
++	co_network_request_t *net_request;
++	int result = 0, irq;
++
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_IRQ;
++	co_passage_page->params[0] = type;
++	co_switch_wrapper();
++	irq = co_passage_page->params[0];
++	co_passage_page_release(flags);
++	result = co_passage_page->params[1];
++
++
++	return result;
++}
++#endif
++
++static int add_new(int b, int d, int f, int id, int class, int type) {
+ 	struct device_list *newdev;
+ 
+ 	newdev = kzalloc(sizeof(struct device_list), GFP_KERNEL);
+@@ -120,6 +141,8 @@
+ 	get_short(newdev->regs, PCI_DEVICE_ID) = id;
+ 	get_short(newdev->regs, PCI_CLASS_DEVICE) = class;
+ 	get_short(newdev->regs, PCI_STATUS) = (PCI_STATUS_FAST_BACK | PCI_STATUS_DEVSEL_FAST);
++	get_byte(newdev->regs, PCI_INTERRUPT_LINE) = 0;
++
+ 	if (devices) {
+ 		last_device->next = newdev;
+ 		last_device = newdev;
+@@ -132,36 +155,33 @@
+ }
+ 
+ void pci_cooperative_init(void) {
+-	register int unit, d;
++	register int unit, d, f;
+ 	unsigned char addr[6];
+ 
+-#ifdef COPCI_DEBUG
++#if COPCI_DEBUG
+ 	printk(KERN_INFO "COPCI: Initializing\n");
+ #endif
+ 
+ 	/* Define our "devices" */
+ 	/* XXX do NOT add a VGA device here */
+ 	d = 0;
+-	add_new(0, d++, 0, PCI_DEVICE_ID_COFB, PCI_CLASS_DISPLAY_OTHER);
+-
+-	/* XXX IDE device causes ioport resources to be allocated */
+-//	add_new(0, d++, 0, PCI_DEVICE_ID_COIDE, PCI_CLASS_STORAGE_IDE);
+-	add_new(0, d++, 0, PCI_DEVICE_ID_COSCSI, PCI_CLASS_STORAGE_SCSI);
+-	add_new(0, d++, 0, PCI_DEVICE_ID_COAUDIO, PCI_CLASS_MULTIMEDIA_AUDIO);
++	add_new(0, d++, 0, PCI_DEVICE_ID_COFB, PCI_CLASS_DISPLAY_OTHER, CO_DEVICE_DISPLAY);
++//	add_new(0, d++, 0, PCI_DEVICE_ID_COIDE, PCI_CLASS_STORAGE_IDE, CO_DEVICE_IDE);
++	add_new(0, d++, 0, PCI_DEVICE_ID_COSCSI, PCI_CLASS_STORAGE_SCSI, CO_DEVICE_SCSI);
++	add_new(0, d++, 0, PCI_DEVICE_ID_COAUDIO, PCI_CLASS_MULTIMEDIA_AUDIO, CO_DEVICE_AUDIO);
+ 
+ 	/*
+-	 * Add the network cards and fill vendor area with init & addr
+-	 * XXX originally tried to add each network "port" as a function
+-	 * it appears that doing so requires pcibios ... (wont scan fns)
++	 * Add the network card and fill vendor area with init & addr
+ 	*/
+-	for(unit=0; unit < CO_MODULE_MAX_CONET; unit++) {
++	for(unit=f=0; unit < CO_MODULE_MAX_CONET; unit++) {
+ 		if (get_mac(unit, addr) != 0) {
+-#ifdef COPCI_DEBUG
+-			printk(KERN_INFO "COPCI: d: %d, unit %d, addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
+-				d, unit, addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
++#if COPCI_DEBUG
++			printk(KERN_INFO "COPCI: adding: d: %d, f: %d, unit %d, addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
++				d, f, unit, addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+ #endif
+ 			/* Add the device */
+-			add_new(0, d++, 0, PCI_DEVICE_ID_CONET, PCI_CLASS_NETWORK_ETHERNET);
++			add_new(0, d, f++, PCI_DEVICE_ID_CONET, PCI_CLASS_NETWORK_ETHERNET, CO_DEVICE_NETWORK);
++			if (f == 1) get_short(last_device->regs, PCI_HEADER_TYPE) = 0x80;
+ 
+ 			/* Put the host unit and mac in the vendor area */
+ 			get_byte(last_device->regs, PCI_CO_UNIT) = unit;
+@@ -174,7 +194,18 @@
+ 		}
+ 	}
+ 
+-	raw_pci_ops = &pci_co_ops;
++	raw_pci_ops = &copci_ops;
++
++#if COPCI_DEBUG
++	{
++		register struct device_list *lp;
++
++		printk(KERN_INFO "pci_cooperative_init: list:\n");
++		for(lp = devices; lp; lp = lp->next)
++			printk(KERN_INFO "d: %d, f: %d, id: %d\n", lp->device, lp->func, get_short(lp->regs, PCI_DEVICE_ID));
++
++	}
++#endif
+ 
+ 	return;
+ }
+Index: linux-2.6.22-source/arch/i386/pci/Makefile
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/pci/Makefile
++++ linux-2.6.22-source/arch/i386/pci/Makefile
+@@ -12,4 +12,8 @@
+ pci-$(CONFIG_X86_VISWS)		:= visws.o fixup.o
+ pci-$(CONFIG_X86_NUMAQ)		:= numa.o irq.o
+ 
+-obj-y				+= $(pci-y) common.o early.o
++obj-y				+= $(pci-y) common.o
++
++ifndef CONFIG_COOPERATIVE
++obj-y				+= early.o
++endif
+Index: linux-2.6.22-source/drivers/input/mouse/comouse.c
+===================================================================
+--- linux-2.6.22-source.orig/drivers/input/mouse/comouse.c
++++ linux-2.6.22-source/drivers/input/mouse/comouse.c
+@@ -1,73 +1,131 @@
++
+ /*
+- * Virtual mouse driver for Linux
++ * Cooperative mouse driver
+  *
+- * Skeleton based on:
+- *  $Id: comouse.c,v 1.1.6.1 2005/07/15 08:19:48 tamura Exp $
++ * Copyright (c) 2007 Steve Shoecraft <sshoecraft@earthlink.net>
++ * Copyright (c) 2005 Nuno Lucas <nuno.lucas@zmail.pt>
++ * Copyright (c) 2004 Dan Aloni
++ * Copyright (c) 1999-2001 Vojtech Pavlik
+  *
+- *  Copyright (c) 1999-2001 Vojtech Pavlik
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+  *
+- * Copyright (c) 2004 Dan Aloni
+  */
+ 
+ #include <linux/module.h>
+-#include <linux/slab.h>
+-#include <linux/interrupt.h>
+-#include <linux/input.h>
+-#include <linux/serio.h>
+ #include <linux/init.h>
++#include <linux/input.h>
++#include <linux/interrupt.h>
++#include <linux/cooperative_internal.h>
+ 
+-MODULE_AUTHOR("Dan Aloni <da-x@colinux.org>");
+-MODULE_DESCRIPTION("Virtual mouse driver");
++#define COMOUSE_DEBUG 1
++
++MODULE_AUTHOR("Steve Shoecraft <sshoecraft@earthlink.net");
++MODULE_DESCRIPTION("Cooperative Mouse Driver");
+ MODULE_LICENSE("GPL");
+ 
+-/*
+- * comouse_interrupt() handles incoming characters, either gathering them into
+- * packets or passing them to the command routine as command output.
+- */
++static struct input_dev *comouse_dev;
++
++static irqreturn_t comouse_isr(int irq, void *dev_id) {
++	co_message_node_t *node_message;
++
++	while ( co_get_message(&node_message, CO_DEVICE_MOUSE) ) {
++		co_linux_message_t *message = (co_linux_message_t *)&node_message->msg.data;
++		co_mouse_data_t* data = (co_mouse_data_t*) message->data;
++		unsigned len = message->size;
++
++		if ( sizeof(*data) != len ) {
++			printk( KERN_ERR "comouse: Invalid data packet!\n" );
++		} else {
++			/* Buttons */
++			input_report_key( comouse_dev, BTN_TOUCH, data->btns & 1 );
++			input_report_key( comouse_dev, BTN_LEFT, data->btns & 1 );
++			input_report_key( comouse_dev, BTN_RIGHT, data->btns & 2 );
++			input_report_key( comouse_dev, BTN_MIDDLE, data->btns & 4 );
++
++			/* Movement */
++			input_report_abs( comouse_dev, ABS_X, data->abs_x );
++			input_report_abs( comouse_dev, ABS_Y, data->abs_y );
++
++			/* Wheel */
++			if ( data->rel_z ) input_report_rel( comouse_dev, REL_WHEEL, data->rel_z );
++
++			input_sync( comouse_dev );
++#ifdef COMOUSE_DEBUG
++			printk( KERN_DEBUG "comouse: x:%d y:%d buttons:%u wheel: %d.\n",
++				data->abs_x, data->abs_y, data->btns, data->rel_z );
++#endif
++		}
++		co_free_message(node_message);
++	}
+ 
+-static irqreturn_t comouse_interrupt(struct serio *serio,
+-				     unsigned char data, unsigned int flags)
+-{
+ 	return IRQ_HANDLED;
+ }
+ 
+-/*
+- * comouse_disconnect() cleans up after we don't want talk
+- * to the mouse anymore.
+- */
++static int comouse_open(struct input_dev *dev) {
++	if (request_irq(MOUSE_IRQ, comouse_isr, 0, "comouse", NULL)) return -EBUSY;
++	return 0;
++}
+ 
+-static void comouse_disconnect(struct serio *serio)
+-{
++static void comouse_close(struct input_dev *dev) {
++	free_irq(MOUSE_IRQ, NULL);
+ }
+ 
+-/*
+- * comouse_connect() is a callback form the serio module when
+- * an unhandled serio port is found.
+- */
++static int __init comouse_init(void) {
++	int err;
+ 
+-static int comouse_connect(struct serio *serio, struct serio_driver *dev)
+-{
+-	return -ENODEV;
+-}
++	comouse_dev = input_allocate_device();
++	if (!comouse_dev) {
++		printk(KERN_ERR "comouse.c: Not enough memory for input device\n");
++		return -ENOMEM;
++	}
++
++	comouse_dev->name = "Cooperative Mouse";
++	comouse_dev->phys = "comouse/input0";
++	comouse_dev->id.bustype = BUS_HOST;
++	comouse_dev->id.vendor  = 0x0001;
++	comouse_dev->id.product = 0x0001;
++	comouse_dev->id.version = 0x0100;
++
++	/* Buttons */
++	comouse_dev->evbit[LONG(EV_KEY)] |= BIT(EV_KEY);
++	comouse_dev->keybit[LONG(BTN_TOUCH)] |= BIT(BTN_TOUCH);
++	comouse_dev->keybit[LONG(BTN_LEFT)] |= BIT(BTN_LEFT) | BIT(BTN_MIDDLE) | BIT(BTN_RIGHT);
++
++	/* Movement */
++	comouse_dev->evbit[LONG(EV_ABS)] |= BIT(EV_ABS);
++	input_set_abs_params(comouse_dev, ABS_X, 0, CO_MOUSE_MAX_X, 0, 0);
++	input_set_abs_params(comouse_dev, ABS_Y, 0, CO_MOUSE_MAX_Y, 0, 0);
++
++	/* Wheel */
++	comouse_dev->evbit[LONG(EV_REL)] |= BIT(EV_REL);
++	comouse_dev->relbit[LONG(REL_WHEEL)] |= BIT(REL_WHEEL);
++
++	comouse_dev->open  = comouse_open;
++	comouse_dev->close = comouse_close;
++
++	err = input_register_device(comouse_dev);
++	if (err) {
++		input_free_device(comouse_dev);
++		return err;
++	}
+ 
+-static struct serio_driver comouse_dev = {
+-	.interrupt =	comouse_interrupt,
+-	.connect =	comouse_connect,
+-	.disconnect =	comouse_disconnect,
+-	.driver		= {
+-		.name	= "comouse",
+-	},
+-};
+-
+-int __init comouse_init(void)
+-{
+-	serio_register_driver(&comouse_dev);
+ 	return 0;
+ }
+ 
+-void __exit comouse_exit(void)
+-{
+-	serio_unregister_driver(&comouse_dev);
++static void __exit comouse_exit(void) {
++	input_unregister_device(comouse_dev);
+ }
+ 
+ module_init(comouse_init);
+Index: linux-2.6.22-source/drivers/net/conet.c
+===================================================================
+--- linux-2.6.22-source.orig/drivers/net/conet.c
++++ linux-2.6.22-source/drivers/net/conet.c
+@@ -170,7 +170,6 @@
+ 	return &priv->stats;
+ }
+ 
+-#ifdef CONFIG_PCI
+ static struct pci_device_id conet_pci_ids[] = {
+ 	{ PCI_DEVICE(PCI_VENDOR_ID_CO, PCI_DEVICE_ID_CONET) },
+ 	{ 0 }
+@@ -286,145 +285,3 @@
+ 
+ module_init(conet_pci_init);
+ module_exit(conet_pci_exit);
+-#else
+-/*
+- * The old (non pci) init code
+-*/
+-
+-static int conet_get_mac(int unit, char *address)
+-{
+-	unsigned long flags = 0;
+-	co_network_request_t *net_request;
+-	int result = 0;
+-
+-	co_passage_page_assert_valid();
+-
+-	co_passage_page_acquire(&flags);
+-	co_passage_page->operation = CO_OPERATION_DEVICE;
+-	co_passage_page->params[0] = CO_DEVICE_NETWORK;
+-	net_request = (typeof(net_request))&co_passage_page->params[1];
+-	net_request->unit = unit;
+-	net_request->type = CO_NETWORK_GET_MAC;
+-	co_switch_wrapper();
+-	memcpy(address, net_request->mac_address, ETH_ALEN);
+-	result = net_request->result;
+-	co_passage_page_release(flags);
+-
+-	return result;
+-}
+-
+-static int conet_init(struct net_device *dev)
+-{
+-	struct conet_priv *priv = (struct conet_priv *)dev->priv;
+-
+-	memset(&priv->stats, 0, sizeof(priv->stats));
+-
+-	ether_setup(dev);
+-
+-	dev->open            = conet_open;
+-	dev->stop            = conet_stop;
+-	dev->hard_start_xmit = conet_hard_start_xmit;
+-	dev->get_stats       = conet_get_stats;
+-	dev->irq             = NETWORK_IRQ;
+-
+-	SET_MODULE_OWNER(dev);
+-
+-	return 0;
+-}
+-
+-static void conet_uninit(struct net_device *dev)
+-{
+-}
+-
+-static struct net_device *conet_create(int unit)
+-{
+-	struct net_device *dev;
+-	struct conet_priv *priv;
+-	int result = 0;
+-
+-	dev = kzalloc(sizeof(struct net_device), GFP_KERNEL);
+-	if (!dev) {
+-		return ERR_PTR(-ENOMEM);
+-	}
+-
+-	priv = kzalloc(sizeof(struct conet_priv), GFP_KERNEL);
+-	if (priv == NULL) {
+-		kfree(dev);
+-		return ERR_PTR(-ENOMEM);
+-	}
+-
+-	priv->unit = unit;
+-
+-	dev->priv = priv;
+-	dev->init = conet_init;
+-	dev->uninit = conet_uninit;
+-	strcpy(dev->name, "eth%d");
+-
+-	result = register_netdev(dev);
+-	if (result) {
+-		printk("conet: error %d registering device \"%s\"\n", result, dev->name);
+-		kfree(dev->priv);
+-		kfree(dev);
+-		return ERR_PTR(-ENODEV);
+-	}
+-
+-	printk("conet%d: initialized\n", priv->unit);
+-
+-	return dev;
+-}
+-
+-static void conet_destroy(struct net_device *dev)
+-{
+-	struct conet_priv *priv = (struct conet_priv *) dev->priv;
+-
+-	printk("conet%d: freed\n", priv->unit);
+-
+-	unregister_netdev(dev);
+-	kfree(dev->priv);
+-	kfree(dev);
+-}
+-
+-static int __init conet_init_module(void)
+-{
+-	int unit = 0, result;
+-	struct net_device *dev;
+-	char mac_address[6];
+-
+-	result = request_irq(NETWORK_IRQ, &conet_interrupt, IRQF_SAMPLE_RANDOM, "conet", NULL);
+-	if (result)
+-		return result;
+-
+-	printk("conet: loaded (max %d devices)\n", CO_MODULE_MAX_CONET);
+-
+-	for (unit=0; unit < CO_MODULE_MAX_CONET; unit++) {
+-		conet_dev[unit] = NULL;
+-
+-		result = conet_get_mac(unit, mac_address);
+-		if (!result)
+-			continue;
+-
+-		dev = conet_create(unit);
+-		if (!IS_ERR(dev))
+-			conet_dev[unit] = dev;
+-	}
+-
+-	return result;
+-}
+-
+-static void __exit conet_cleanup_module(void)
+-{
+-	int unit = 0;
+-
+-	free_irq(NETWORK_IRQ, NULL);
+-
+-	for (unit=0; unit < CO_MODULE_MAX_CONET; unit++) {
+-		if (!conet_dev[unit])
+-			continue;
+-
+-		conet_destroy(conet_dev[unit]);
+-	}
+-}
+-
+-module_init(conet_init_module);
+-module_exit(conet_cleanup_module);
+-#endif
+Index: linux-2.6.22-source/drivers/scsi/coscsi.c
+===================================================================
+--- linux-2.6.22-source.orig/drivers/scsi/coscsi.c
++++ linux-2.6.22-source/drivers/scsi/coscsi.c
+@@ -22,20 +22,118 @@
+ #include <scsi/scsi_host.h>
+ #include <scsi/scsi_ioctl.h>
+ 
++#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
+ #include <linux/cooperative_pci.h>
+ 
+-struct cosci_priv {
+-	struct pci_device *pdev;
+-};
+-
+ MODULE_AUTHOR("Steve Shoecraft <sshoecraft@earthlink.net>");
+ MODULE_DESCRIPTION("Cooperative Linux SCSI Driver");
+ MODULE_LICENSE("GPL");
+ 
++#define COSCSI_DEBUG 0
++#define COSCSI_DEBUG_ISR 0
++
++#define MAX_REQ 128
++static spinlock_t scsi_lock;
++
++static irqreturn_t coscsi_isr(int irq, void *dev_id)
++{
++	co_message_node_t *node_message;
++	int *result;
++	unsigned long flags;
++
++	spin_lock_irqsave(&scsi_lock, flags);
++#if COSCSI_DEBUG_ISR
++	printk(KERN_INFO "coscsi_isr: getting messages!\n");
++#endif
++	while (co_get_message(&node_message, CO_DEVICE_SCSI)) {
++		co_linux_message_t *message;
++		struct scsi_cmnd *scp;
++
++		/* scp is in the message unit */
++		message = (co_linux_message_t *)&node_message->msg.data;
++		scp = (struct scsi_cmnd *) message->unit;
++		if (!scp) continue;
++		result = (int *) &message->data;
++		scp->result = *result;
++#if COSCSI_DEBUG_ISR
++		printk(KERN_INFO "coscsi_isr: scp: %p, result: %d\n", scp, scp->result);
++#endif
++		scp->scsi_done(scp);
++
++		co_free_message(node_message);
++
++	}
++	spin_unlock_irqrestore(&scsi_lock, flags);
++
++        return IRQ_HANDLED;
++}
++
+ int coscsi_queue(struct scsi_cmnd *scp, void (*done)(struct scsi_cmnd *))
+ {
+-	printk(KERN_INFO "coscsi_queue: ...\n");
+-	scp->result = 0;
++	co_scsi_request_t *srp;
++	void *kaddr;
++	unsigned long flags;
++	unsigned char *buffer;
++	unsigned long buflen;
++
++#if COSCSI_DEBUG
++	printk(KERN_INFO "coscsi_queue: id: %d, lun: %d, cdb[0]: 0x%02x\n",
++		scp->device->id, scp->device->lun, scp->cmnd[0]);
++
++	printk(KERN_INFO "coscsi_queue: resid: %d, use_sg: %d\n", scp->resid, scp->use_sg);
++#endif
++
++	/* We can only handle 1 SG ... */
++	if (scp->use_sg > 1) panic("coscsi_queue: use_sg > 1!");
++
++	/* Save done */
++	scp->scsi_done = done;
++
++	/* Scatter/Gather */
++	if (scp->use_sg) {
++		struct scatterlist *sg;
++
++		sg = (struct scatterlist *)scp->request_buffer;
++#if COSCSI_DEBUG
++		printk(KERN_INFO "coscsi_queue: sg: page: %p, offset: %d, length: %d\n",
++			sg->page, sg->offset, sg->length);
++#endif
++		kaddr = (unsigned char *) kmap_atomic(sg->page, KM_USER0);
++		if (NULL == kaddr) return DID_ERROR << 16;
++//		buffer = (unsigned char *)kaddr + sg->offset;
++		buffer = page_address(sg->page) + sg->offset;
++		buflen = sg->length;
++	/* Direct */
++        } else {
++		buffer = scp->request_buffer;
++		buflen = scp->request_bufflen;
++	}
++#if COSCSI_DEBUG
++	printk(KERN_INFO "coscsi_queue: buffer: %p, buflen: %ld\n", buffer, buflen);
++#endif
++
++	/* Get the page */
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(&flags);
++
++	/* Setup parms */
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_SCSI;
++	co_passage_page->params[1] = scp->device->id;
++	srp = (co_scsi_request_t *)&co_passage_page->params[2];
++	memcpy(srp->cdb, scp->cmnd, 16);
++	srp->linux_scp = scp;
++	srp->buffer = buffer;
++	srp->buflen = buflen;
++
++	/* Do it */
++        co_switch_wrapper();
++
++	/* Release the page */
++        co_passage_page_release(flags);
++
++	if (scp->use_sg) kunmap_atomic(kaddr, KM_USER0);
+ 	return 0;
+ }
+ 
+@@ -44,11 +142,12 @@
+ 	.name			= "Cooperative Linux SCSI Adapter",
+ 	.proc_name		= "coscsi",
+ 	.queuecommand		= coscsi_queue,
+-	.can_queue		= 1,
++	.can_queue		= MAX_REQ,
+ 	.this_id		= 7,
+-	.sg_tablesize		= SG_ALL,
+-	.cmd_per_lun		= 1,
+-	.use_clustering		= DISABLE_CLUSTERING
++	.sg_tablesize		= SG_NONE,
++	.cmd_per_lun		= MAX_REQ/2,
++	.use_clustering		= DISABLE_CLUSTERING,
++	.skip_settle_delay	= 1,
+ };
+ 
+ static int __devinit coscsi_pci_probe( struct pci_dev *pdev, const struct pci_device_id *ent )
+@@ -65,14 +164,6 @@
+ 		return -ENOMEM;
+ 	}
+ 
+-	/* Get IRQ */
+-#if 0
+-        if (request_irq(pdev->irq, coscsi_isr, IRQF_RANDOM, "coscsi", priv)) {
+-                printk(KERN_ERR "COSCSI: register IRQ error!\n");
+-                goto err_put;
+-        }
+-#endif
+-
+ 	/* Add host */
+ 	rc = scsi_add_host(shost, &pdev->dev);
+ 	if (rc) {
+@@ -111,23 +202,27 @@
+ 
+ static int __init coscsi_pci_init(void)
+ {
+-#if 0
+-        int unit, rc;
++	int rc;
+ 
+-	rc = request_irq(10, &coscsi_interrupt, IRQF_SAMPLE_RANDOM, "coscsi", NULL);
++	rc = request_irq(SCSI_IRQ, &coscsi_isr, IRQF_SAMPLE_RANDOM, "coscsi", NULL);
+ 	if (rc) {
+-		printk(KERN_ERR "coscsi_pci_init: unable to get irq %d", NETWORK_IRQ);
++		printk(KERN_ERR "coscsi_pci_init: unable to get irq %d", SCSI_IRQ);
+ 		return rc;
+ 	}
+-#endif
+ 
++	spin_lock_init(&scsi_lock);
++
++#if COSCSI_DEBUG
+ 	printk(KERN_INFO "coscsi_pci_init: registering...\n");
++#endif
+ 	return pci_register_driver(&coscsi_pci_driver);
+ }
+ 
+ static void __exit coscsi_pci_exit(void)
+ {
++#if COSCSI_DEBUG
+ 	printk(KERN_INFO "coscsi_pci_exit: exiting\n");
++#endif
+         pci_unregister_driver(&coscsi_pci_driver);
+ }
+ 
+Index: linux-2.6.22-source/drivers/scsi/sd.c
+===================================================================
+--- linux-2.6.22-source.orig/drivers/scsi/sd.c
++++ linux-2.6.22-source/drivers/scsi/sd.c
+@@ -1515,7 +1515,11 @@
+ 	if (!scsi_device_online(sdp))
+ 		goto out;
+ 
++#ifdef CONFIG_COOPERATIVE
++	buffer = kmalloc(SD_BUF_SIZE, GFP_KERNEL);
++#else
+ 	buffer = kmalloc(SD_BUF_SIZE, GFP_KERNEL | __GFP_DMA);
++#endif
+ 	if (!buffer) {
+ 		sd_printk(KERN_WARNING, sdkp, "sd_revalidate_disk: Memory "
+ 			  "allocation failure.\n");
+Index: linux-2.6.22-source/drivers/scsi/sr.c
+===================================================================
+--- linux-2.6.22-source.orig/drivers/scsi/sr.c
++++ linux-2.6.22-source/drivers/scsi/sr.c
+@@ -726,7 +726,11 @@
+ 
+ 
+ 	/* allocate transfer buffer */
++#ifdef CONFIG_COOPERATIVE
++	buffer = kmalloc(512, GFP_KERNEL);
++#else
+ 	buffer = kmalloc(512, GFP_KERNEL | GFP_DMA);
++#endif
+ 	if (!buffer) {
+ 		printk(KERN_ERR "sr: out of memory.\n");
+ 		return;
+Index: linux-2.6.22-source/include/asm-i386/mach-default/irq_vectors.h
+===================================================================
+--- linux-2.6.22-source.orig/include/asm-i386/mach-default/irq_vectors.h
++++ linux-2.6.22-source/include/asm-i386/mach-default/irq_vectors.h
+@@ -69,7 +69,10 @@
+ 
+ #ifdef CONFIG_COOPERATIVE
+ #define KEYBOARD_IRQ 1
+-#define NETWORK_IRQ 2
++#define SOUND_IRQ 5
++#define NETWORK_IRQ 10
++#define SCSI_IRQ 11
++#define MOUSE_IRQ 12
+ #endif
+ 
+ /*
+Index: linux-2.6.22-source/include/linux/cooperative.h
+===================================================================
+--- linux-2.6.22-source.orig/include/linux/cooperative.h
++++ linux-2.6.22-source/include/linux/cooperative.h
+@@ -42,12 +42,14 @@
+ 	CO_OPERATION_FREE_PAGES,
+ 	CO_OPERATION_ALLOC_PAGES,
+ 	CO_OPERATION_PRINTK,
++	CO_OPERATION_SCSI,
+ } co_operation_t;
+ 
+ #define CO_MODULE_MAX_CONET    16
+ #define CO_MODULE_MAX_COBD     32
+ #define CO_MODULE_MAX_COFS     32
+ #define CO_MODULE_MAX_SERIAL   64
++#define CO_MODULE_MAX_COSCSI   32
+ 
+ typedef enum {
+ 	CO_MODULE_LINUX,
+@@ -71,6 +73,9 @@
+ 	CO_MODULE_SERIAL0,
+ 	CO_MODULE_SERIAL_END=CO_MODULE_SERIAL0+CO_MODULE_MAX_SERIAL-1,
+ 
++	CO_MODULE_COSCSI0,
++	CO_MODULE_COSCSI_END=CO_MODULE_COSCSI0+CO_MODULE_MAX_COSCSI-1,
++
+ 	CO_MODULES_MAX,
+ } co_module_t;
+ 
+@@ -103,6 +108,11 @@
+ 	CO_DEVICE_SERIAL,
+ 	CO_DEVICE_FILESYSTEM,
+ 
++	CO_DEVICE_MOUSE,
++	CO_DEVICE_SCSI,
++	CO_DEVICE_DISPLAY,
++	CO_DEVICE_AUDIO,
++
+ 	CO_DEVICES_TOTAL,
+ } co_device_t;
+ 
+@@ -111,6 +121,16 @@
+ 	int down;
+ } co_scan_code_t;
+ 
++#define CO_MOUSE_MAX_X 2048
++#define CO_MOUSE_MAX_Y 2048
++
++typedef struct {
++	unsigned	btns;
++	unsigned	abs_x;
++	unsigned	abs_y;
++	int		rel_z;
++} __attribute__((packed)) co_mouse_data_t;
++
+ typedef enum {
+ 	CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL=0,
+ 	CO_LINUX_MESSAGE_POWER_SHUTDOWN,
+@@ -145,6 +165,8 @@
+ 	CO_TERMINATE_BUG,
+ } co_termination_reason_t;
+ 
++#ifdef CO_KERNEL
++
+ #ifndef asmlinkage
+ #define asmlinkage __attribute__((regparm(0)))
+ #endif
+@@ -159,10 +181,6 @@
+ 	  &_from_.border2,			\
+ 	  &_to_.border2))
+ 
+-#define co_passage_page_func(_from_,_to_)				\
+-	co_passage_page_func_low(co_passage_page->_from_, co_passage_page->_to_)
+-
+-#ifdef CO_KERNEL
+ # ifdef CO_COLINUX_KERNEL
+ #  define co_passage_page  ((co_arch_passage_page_t *)(CO_VPTR_PASSAGE_PAGE))
+ #  define co_current (co_passage_page->linuxvm_state)
+@@ -174,7 +192,8 @@
+ # endif
+ 
+ # define co_switch() co_passage_page_func_low(co_current, co_other)
+-#endif
++
++#endif /* CO_KERNEL */
+ 
+ /*
+  * Defines operations on various virtual devices.
+@@ -293,6 +312,14 @@
+ # endif
+ 
+ typedef struct {
++	unsigned char cdb[16];
++	int buflen;
++	vm_ptr_t buffer;
++	void *linux_scp;
++	int rc;
++} __attribute__((packed)) co_scsi_request_t;
++
++typedef struct {
+ 	co_block_request_type_t type;
+ 	long rc;
+ 	union {
+@@ -316,7 +343,7 @@
+ 	int result;
+ } __attribute__((packed)) co_network_request_t;
+ 
+-#endif
++#endif /* CO_KERNEL */
+ 
+ typedef struct {
+ 	unsigned long api_version;
+Index: linux-2.6.22-source/lib/iomap.c
+===================================================================
+--- linux-2.6.22-source.orig/lib/iomap.c
++++ linux-2.6.22-source/lib/iomap.c
+@@ -59,6 +59,7 @@
+ 		bad_io_access(port, #is_pio );			\
+ } while (0)
+ 
++#ifndef CONFIG_COOPERATIVE
+ #ifndef pio_read16be
+ #define pio_read16be(port) swab16(inw(port))
+ #define pio_read32be(port) swab32(inl(port))
+@@ -224,6 +225,7 @@
+ EXPORT_SYMBOL(iowrite8_rep);
+ EXPORT_SYMBOL(iowrite16_rep);
+ EXPORT_SYMBOL(iowrite32_rep);
++#endif
+ 
+ /* Create a virtual mapping cookie for an IO port range */
+ void __iomem *ioport_map(unsigned long port, unsigned int nr)
