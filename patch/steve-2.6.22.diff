@@ -1,3 +1,45 @@
+Index: linux-2.6.22-source/arch/i386/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/Kconfig
++++ linux-2.6.22-source/arch/i386/Kconfig
+@@ -1070,7 +1070,6 @@
+ endmenu
+ 
+ menu "Bus options (PCI, PCMCIA, EISA, MCA, ISA)"
+-	depends on !COOPERATIVE
+ 
+ config PCI
+ 	bool "PCI support" if !X86_VISWS
+@@ -1107,6 +1106,9 @@
+ 	  direct access method and falls back to the BIOS if that doesn't
+ 	  work. If unsure, go with the default, which is "Any".
+ 
++config PCI_GOCO
++	bool "Cooperative"
++
+ config PCI_GOBIOS
+ 	bool "BIOS"
+ 
+@@ -1121,6 +1123,11 @@
+ 
+ endchoice
+ 
++config PCI_CO
++	bool
++ 	depends on PCI && PCI_GOCO && COOPERATIVE
++	default y
++
+ config PCI_BIOS
+ 	bool
+ 	depends on !X86_VISWS && PCI && (PCI_GOBIOS || PCI_GOANY)
+@@ -1142,6 +1149,7 @@
+ 
+ config ISA_DMA_API
+ 	bool
++	depends on !COOPERATIVE
+ 	default y
+ 
+ config ISA
 Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/cooperative.c
@@ -27,6 +69,26 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
  	default:
  		co_free_message(node_message);
  		break;
+Index: linux-2.6.22-source/arch/i386/kernel/cpu/cyrix.c
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/kernel/cpu/cyrix.c
++++ linux-2.6.22-source/arch/i386/kernel/cpu/cyrix.c
+@@ -252,6 +252,7 @@
+ 
+ 	case 4: /* MediaGX/GXm or Geode GXM/GXLV/GX1 */
+ #ifdef CONFIG_PCI
++#ifndef CONFIG_COOPERATIVE
+ 	{
+ 		u32 vendor, device;
+ 		/* It isn't really a PCI quirk directly, but the cure is the
+@@ -283,6 +284,7 @@
+ 			mark_tsc_unstable("cyrix 5510/5520 detected");
+ 	}
+ #endif
++#endif
+ 		c->x86_cache_size=16;	/* Yep 16K integrated cache thats it */
+ 
+ 		/* GXm supports extended cpuid levels 'ala' AMD */
 Index: linux-2.6.22-source/arch/i386/kernel/e820.c
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/e820.c
@@ -44,34 +106,62 @@ Index: linux-2.6.22-source/arch/i386/kernel/e820.c
  }
  early_param("memmap", parse_memmap);
 +#endif
+Index: linux-2.6.22-source/arch/i386/kernel/i8237.c
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/kernel/i8237.c
++++ linux-2.6.22-source/arch/i386/kernel/i8237.c
+@@ -23,6 +23,7 @@
+ 
+ static int i8237A_resume(struct sys_device *dev)
+ {
++#ifndef CONFIG_COOPERATIVE
+ 	unsigned long flags;
+ 	int i;
+ 
+@@ -41,6 +42,7 @@
+ 	enable_dma(4);
+ 
+ 	release_dma_lock(flags);
++#endif
+ 
+ 	return 0;
+ }
 Index: linux-2.6.22-source/arch/i386/pci/copci.c
 ===================================================================
---- linux-2.6.22-source.orig/arch/i386/pci/copci.c
+--- /dev/null
 +++ linux-2.6.22-source/arch/i386/pci/copci.c
-@@ -6,7 +6,8 @@
- #include <linux/cooperative_internal.h>
- #include "pci.h"
- 
--//#define COPCI_DEBUG
+@@ -0,0 +1,211 @@
++
++#include <linux/kernel.h>
++#include <linux/pci.h>
++#include <linux/pci_regs.h>
++#include <linux/cooperative_pci.h>
++#include <linux/cooperative_internal.h>
++#include "pci.h"
++
 +#define COPCI_DEBUG 0
 +#define COPCI_DEBUG_IO 0
- 
- struct device_list {
- 	int bus;
-@@ -22,15 +23,19 @@
- #define get_short(r,l) *((unsigned short *)(&r[l]))
- #define get_long(r,l) *((unsigned long *)(&r[l]))
- 
--static int pci_co_read(unsigned int seg, unsigned int bus, unsigned int devfn, int reg, int len, u32 *value)
++
++struct device_list {
++	int bus;
++	int device;
++	int func;
++	unsigned char regs[256];
++	struct device_list *next;
++};
++
++static struct device_list *devices = 0, *last_device;
++
++#define get_byte(r,l) *((unsigned char *)(&r[l]))
++#define get_short(r,l) *((unsigned short *)(&r[l]))
++#define get_long(r,l) *((unsigned long *)(&r[l]))
++
 +static int copci_read(unsigned int seg, unsigned int bus, unsigned int devfn, int reg, int len, u32 *value)
- {
- 	int device, func;
- 	unsigned long flags;
- 	struct device_list *dp;
- 
--#ifdef COPCI_DEBUG
--	printk(KERN_INFO "pci_co_read: bus: %02x, fn: %02x, reg: %02x, len: %d\n",
--		bus, devfn, reg, len);
++{
++	int device, func;
++	unsigned long flags;
++	struct device_list *dp;
++
 +	/* Linux has encoded the device & func; split them */
 +	device = devfn >> 3;
 +	func = devfn & 7;
@@ -79,57 +169,76 @@ Index: linux-2.6.22-source/arch/i386/pci/copci.c
 +#if COPCI_DEBUG_IO
 +	printk(KERN_INFO "copci_read: bus: %02x, devfn: %02x (device: %02x, func: %02x), reg: %02x, len: %d\n",
 +		bus, devfn, device, func, reg, len);
- #endif
- 
- 	if (reg + len > 255) {
-@@ -38,10 +43,6 @@
- 		return -EINVAL;
- 	}
- 
--	/* Linux has already encoded the device & func; split them */
--	device = devfn >> 3;
--	func = devfn & 7;
--
- 	spin_lock_irqsave(&pci_config_lock, flags);
- 
- 	*value = 0;
-@@ -65,23 +66,23 @@
- 
- 	spin_unlock_irqrestore(&pci_config_lock, flags);
- 
--#ifdef COPCI_DEBUG
--	printk(KERN_INFO "pci_co_read: value: 0x%08x\n", *value);
++#endif
++
++	if (reg + len > 255) {
++		*value = -1;
++		return -EINVAL;
++	}
++
++	spin_lock_irqsave(&pci_config_lock, flags);
++
++	*value = 0;
++	dp = devices;
++	while(dp) {
++		if (bus == dp->bus && device == dp->device && func == dp->func) {
++			switch(len) {
++			case 1:
++				*value = get_byte(dp->regs, reg);
++				break;
++			case 2:
++				*value = get_short(dp->regs, reg);
++				break;
++			case 4:
++				*value = get_long(dp->regs, reg);
++				break;
++			}
++		}
++		dp = dp->next;
++	}
++
++	spin_unlock_irqrestore(&pci_config_lock, flags);
++
 +#if COPCI_DEBUG_IO
 +	printk(KERN_INFO "copci_read: value: 0x%08x\n", *value);
- #endif
- 	return 0;
- }
- 
--static int pci_co_write(unsigned int seg, unsigned int bus, unsigned int devfn, int reg, int len, u32 value) {
--#ifdef COPCI_DEBUG
--	printk(KERN_INFO "pci_co_write: bus: %d, fn: %d, reg: %d, len: %d\n",
++#endif
++	return 0;
++}
++
 +static int copci_write(unsigned int seg, unsigned int bus, unsigned int devfn, int reg, int len, u32 value) {
 +#if COPCI_DEBUG_IO
 +	printk(KERN_INFO "copci_write: bus: %d, fn: %d, reg: %d, len: %d\n",
- 		bus, devfn, reg, len);
- #endif
- 	return -EPERM;
- }
- 
--struct pci_raw_ops pci_co_ops = {
--	.read =         pci_co_read,
--	.write =        pci_co_write,
++		bus, devfn, reg, len);
++#endif
++	return -EPERM;
++}
++
 +struct pci_raw_ops copci_ops = {
 +	.read =         copci_read,
 +	.write =        copci_write,
- };
- 
- static int get_mac(int unit, unsigned char *address)
-@@ -105,7 +106,27 @@
- 	return result;
- }
- 
--static int add_new(int b, int d, int f, int id, int class) {
++};
++
++static int get_mac(int unit, unsigned char *address)
++{
++	unsigned long flags = 0;
++	co_network_request_t *net_request;
++	int result = 0;
++
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_NETWORK;
++	net_request = (typeof(net_request))&co_passage_page->params[1];
++	net_request->unit = unit;
++	net_request->type = CO_NETWORK_GET_MAC;
++	co_switch_wrapper();
++	memcpy(address, net_request->mac_address, 6);
++	result = net_request->result;
++	co_passage_page_release(flags);
++
++	return result;
++}
++
 +#if 0
 +static int get_irq(int type) {
 +	unsigned long flags = 0;
@@ -151,73 +260,73 @@ Index: linux-2.6.22-source/arch/i386/pci/copci.c
 +#endif
 +
 +static int add_new(int b, int d, int f, int id, int class, int type) {
- 	struct device_list *newdev;
- 
- 	newdev = kzalloc(sizeof(struct device_list), GFP_KERNEL);
-@@ -120,6 +141,8 @@
- 	get_short(newdev->regs, PCI_DEVICE_ID) = id;
- 	get_short(newdev->regs, PCI_CLASS_DEVICE) = class;
- 	get_short(newdev->regs, PCI_STATUS) = (PCI_STATUS_FAST_BACK | PCI_STATUS_DEVSEL_FAST);
++	struct device_list *newdev;
++
++	newdev = kzalloc(sizeof(struct device_list), GFP_KERNEL);
++	if (!newdev) {
++		printk(KERN_ERR "COPCI: no memory for device info!\n");
++		return -ENOMEM;
++	}
++	newdev->bus = b;
++	newdev->device = d;
++	newdev->func = f;
++	get_short(newdev->regs, PCI_VENDOR_ID) = PCI_VENDOR_ID_CO;
++	get_short(newdev->regs, PCI_DEVICE_ID) = id;
++	get_short(newdev->regs, PCI_CLASS_DEVICE) = class;
++	get_short(newdev->regs, PCI_STATUS) = (PCI_STATUS_FAST_BACK | PCI_STATUS_DEVSEL_FAST);
 +	get_byte(newdev->regs, PCI_INTERRUPT_LINE) = 0;
 +
- 	if (devices) {
- 		last_device->next = newdev;
- 		last_device = newdev;
-@@ -132,36 +155,33 @@
- }
- 
- void pci_cooperative_init(void) {
--	register int unit, d;
++	if (devices) {
++		last_device->next = newdev;
++		last_device = newdev;
++	} else {
++		devices = newdev;
++		last_device = newdev;
++	}
++
++	return 0;
++}
++
++void pci_cooperative_init(void) {
 +	register int unit, d, f;
- 	unsigned char addr[6];
- 
--#ifdef COPCI_DEBUG
++	unsigned char addr[6];
++
 +#if COPCI_DEBUG
- 	printk(KERN_INFO "COPCI: Initializing\n");
- #endif
- 
- 	/* Define our "devices" */
- 	/* XXX do NOT add a VGA device here */
- 	d = 0;
--	add_new(0, d++, 0, PCI_DEVICE_ID_COFB, PCI_CLASS_DISPLAY_OTHER);
--
--	/* XXX IDE device causes ioport resources to be allocated */
--//	add_new(0, d++, 0, PCI_DEVICE_ID_COIDE, PCI_CLASS_STORAGE_IDE);
--	add_new(0, d++, 0, PCI_DEVICE_ID_COSCSI, PCI_CLASS_STORAGE_SCSI);
--	add_new(0, d++, 0, PCI_DEVICE_ID_COAUDIO, PCI_CLASS_MULTIMEDIA_AUDIO);
++	printk(KERN_INFO "COPCI: Initializing\n");
++#endif
++
++	/* Define our "devices" */
++	/* XXX do NOT add a VGA device here */
++	d = 0;
 +	add_new(0, d++, 0, PCI_DEVICE_ID_COFB, PCI_CLASS_DISPLAY_OTHER, CO_DEVICE_DISPLAY);
 +//	add_new(0, d++, 0, PCI_DEVICE_ID_COIDE, PCI_CLASS_STORAGE_IDE, CO_DEVICE_IDE);
 +	add_new(0, d++, 0, PCI_DEVICE_ID_COSCSI, PCI_CLASS_STORAGE_SCSI, CO_DEVICE_SCSI);
 +	add_new(0, d++, 0, PCI_DEVICE_ID_COAUDIO, PCI_CLASS_MULTIMEDIA_AUDIO, CO_DEVICE_AUDIO);
- 
- 	/*
--	 * Add the network cards and fill vendor area with init & addr
--	 * XXX originally tried to add each network "port" as a function
--	 * it appears that doing so requires pcibios ... (wont scan fns)
++
++	/*
 +	 * Add the network card and fill vendor area with init & addr
- 	*/
--	for(unit=0; unit < CO_MODULE_MAX_CONET; unit++) {
++	*/
 +	for(unit=f=0; unit < CO_MODULE_MAX_CONET; unit++) {
- 		if (get_mac(unit, addr) != 0) {
--#ifdef COPCI_DEBUG
--			printk(KERN_INFO "COPCI: d: %d, unit %d, addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
--				d, unit, addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
++		if (get_mac(unit, addr) != 0) {
 +#if COPCI_DEBUG
 +			printk(KERN_INFO "COPCI: adding: d: %d, f: %d, unit %d, addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
 +				d, f, unit, addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
- #endif
- 			/* Add the device */
--			add_new(0, d++, 0, PCI_DEVICE_ID_CONET, PCI_CLASS_NETWORK_ETHERNET);
++#endif
++			/* Add the device */
 +			add_new(0, d, f++, PCI_DEVICE_ID_CONET, PCI_CLASS_NETWORK_ETHERNET, CO_DEVICE_NETWORK);
 +			if (f == 1) get_short(last_device->regs, PCI_HEADER_TYPE) = 0x80;
- 
- 			/* Put the host unit and mac in the vendor area */
- 			get_byte(last_device->regs, PCI_CO_UNIT) = unit;
-@@ -174,7 +194,18 @@
- 		}
- 	}
- 
--	raw_pci_ops = &pci_co_ops;
++
++			/* Put the host unit and mac in the vendor area */
++			get_byte(last_device->regs, PCI_CO_UNIT) = unit;
++			get_byte(last_device->regs, PCI_CO_MAC1) = addr[0];
++			get_byte(last_device->regs, PCI_CO_MAC2) = addr[1];
++			get_byte(last_device->regs, PCI_CO_MAC3) = addr[2];
++			get_byte(last_device->regs, PCI_CO_MAC4) = addr[3];
++			get_byte(last_device->regs, PCI_CO_MAC5) = addr[4];
++			get_byte(last_device->regs, PCI_CO_MAC6) = addr[5];
++		}
++	}
++
 +	raw_pci_ops = &copci_ops;
 +
 +#if COPCI_DEBUG
@@ -230,9 +339,82 @@ Index: linux-2.6.22-source/arch/i386/pci/copci.c
 +
 +	}
 +#endif
++
++	return;
++}
+Index: linux-2.6.22-source/arch/i386/pci/init.c
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/pci/init.c
++++ linux-2.6.22-source/arch/i386/pci/init.c
+@@ -8,6 +8,9 @@
+ {
+ 	int type __maybe_unused = 0;
  
- 	return;
- }
++#ifdef CONFIG_PCI_CO
++	pci_cooperative_init();
++#endif
+ #ifdef CONFIG_PCI_DIRECT
+ 	type = pci_direct_probe();
+ #endif
+Index: linux-2.6.22-source/arch/i386/pci/Makefile
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/pci/Makefile
++++ linux-2.6.22-source/arch/i386/pci/Makefile
+@@ -1,5 +1,6 @@
+ obj-y				:= i386.o init.o
+ 
++obj-$(CONFIG_PCI_CO)		+= copci.o
+ obj-$(CONFIG_PCI_BIOS)		+= pcbios.o
+ obj-$(CONFIG_PCI_MMCONFIG)	+= mmconfig.o direct.o mmconfig-shared.o
+ obj-$(CONFIG_PCI_DIRECT)	+= direct.o
+@@ -10,5 +11,10 @@
+ 
+ pci-$(CONFIG_X86_VISWS)		:= visws.o fixup.o
+ pci-$(CONFIG_X86_NUMAQ)		:= numa.o irq.o
++pci-$(CONFIG_COOPERATIVE)	:= legacy.o irq_cooperative.o
+ 
+-obj-y				+= $(pci-y) common.o early.o
++obj-y				+= $(pci-y) common.o
++
++ifndef CONFIG_COOPERATIVE
++obj-y				+= early.o
++endif
+Index: linux-2.6.22-source/arch/i386/pci/pci.h
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/pci/pci.h
++++ linux-2.6.22-source/arch/i386/pci/pci.h
+@@ -93,6 +93,7 @@
+ extern void pci_pcbios_init(void);
+ extern void pci_mmcfg_init(int type);
+ extern void pcibios_sort(void);
++extern void pci_cooperative_init(void);
+ 
+ /* pci-mmconfig.c */
+ 
+Index: linux-2.6.22-source/drivers/char/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/drivers/char/Kconfig
++++ linux-2.6.22-source/drivers/char/Kconfig
+@@ -1085,6 +1085,7 @@
+ config DEVPORT
+ 	bool
+ 	depends on !M68K
++	depends on !COOPERATIVE
+ 	depends on ISA || PCI
+ 	default y
+ 
+Index: linux-2.6.22-source/drivers/crypto/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/drivers/crypto/Kconfig
++++ linux-2.6.22-source/drivers/crypto/Kconfig
+@@ -46,6 +46,7 @@
+ config CRYPTO_DEV_GEODE
+ 	tristate "Support for the Geode LX AES engine"
+ 	depends on X86_32 && PCI
++	depends on !COOPERATIVE
+ 	select CRYPTO_ALGAPI
+ 	select CRYPTO_BLKCIPHER
+ 	default m
 Index: linux-2.6.22-source/drivers/input/mouse/comouse.c
 ===================================================================
 --- linux-2.6.22-source.orig/drivers/input/mouse/comouse.c
@@ -420,23 +602,21 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 ===================================================================
 --- linux-2.6.22-source.orig/drivers/net/conet.c
 +++ linux-2.6.22-source/drivers/net/conet.c
-@@ -170,7 +170,6 @@
- 	return &priv->stats;
- }
+@@ -15,8 +15,10 @@
+ #include <linux/etherdevice.h>
+ #include <linux/skbuff.h>
+ #include <linux/ethtool.h>
++#include <linux/pci.h>
  
--#ifdef CONFIG_PCI
- static struct pci_device_id conet_pci_ids[] = {
- 	{ PCI_DEVICE(PCI_VENDOR_ID_CO, PCI_DEVICE_ID_CONET) },
- 	{ 0 }
-@@ -286,145 +285,3 @@
+ #include <linux/cooperative_internal.h>
++#include <linux/cooperative_pci.h>
+ #include <asm/irq.h>
  
- module_init(conet_pci_init);
- module_exit(conet_pci_exit);
--#else
--/*
-- * The old (non pci) init code
--*/
--
+ struct conet_priv {
+@@ -29,36 +31,11 @@
+ 
+ static struct net_device *conet_dev[CO_MODULE_MAX_CONET];
+ 
 -static int conet_get_mac(int unit, char *address)
 -{
 -	unsigned long flags = 0;
@@ -459,6 +639,34 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 -	return result;
 -}
 -
+ static int conet_open(struct net_device *dev)
+ {
+ 	struct conet_priv *priv = (struct conet_priv *)dev->priv;
+ 
+-	if (priv->enabled)
+-		return 0;
+-
+-	conet_get_mac(priv->unit, dev->dev_addr);
++	if (priv->enabled) return 0;
+ 
+ 	priv->enabled = 1;
+ 
+@@ -73,7 +50,7 @@
+ 
+ 	priv->enabled = 0;
+ 
+-	netif_stop_queue(dev); /* can't transmit any more */
++	netif_stop_queue(dev);
+ 
+ 	return 0;
+ }
+@@ -188,120 +165,123 @@
+ 
+ static struct net_device_stats* conet_get_stats(struct net_device *dev)
+ {
+-	return (struct net_device_stats *)dev->priv;
+-}
+-
 -static int conet_init(struct net_device *dev)
 -{
 -	struct conet_priv *priv = (struct conet_priv *)dev->priv;
@@ -466,7 +674,8 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 -	memset(&priv->stats, 0, sizeof(priv->stats));
 -
 -	ether_setup(dev);
--
++	struct conet_priv *priv = dev->priv;
+ 
 -	dev->open            = conet_open;
 -	dev->stop            = conet_stop;
 -	dev->hard_start_xmit = conet_hard_start_xmit;
@@ -476,31 +685,70 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 -	SET_MODULE_OWNER(dev);
 -
 -	return 0;
--}
--
++	return &priv->stats;
+ }
+ 
 -static void conet_uninit(struct net_device *dev)
 -{
 -}
--
++static struct pci_device_id conet_pci_ids[] = {
++	{ PCI_DEVICE(PCI_VENDOR_ID_CO, PCI_DEVICE_ID_CONET) },
++	{ 0 }
++};
+ 
 -static struct net_device *conet_create(int unit)
--{
--	struct net_device *dev;
--	struct conet_priv *priv;
++MODULE_DEVICE_TABLE(pci, conet_pci_ids);
++
++static int __devinit conet_pci_probe( struct pci_dev *pdev,
++                                    const struct pci_device_id *ent)
+ {
++	u8 unit, addr[6];
+ 	struct net_device *dev;
+ 	struct conet_priv *priv;
 -	int result = 0;
--
++	int rc;
+ 
 -	dev = kzalloc(sizeof(struct net_device), GFP_KERNEL);
 -	if (!dev) {
 -		return ERR_PTR(-ENOMEM);
 -	}
--
++//	printk(KERN_INFO "CONET: probing!\n");
+ 
 -	priv = kzalloc(sizeof(struct conet_priv), GFP_KERNEL);
 -	if (priv == NULL) {
 -		kfree(dev);
 -		return ERR_PTR(-ENOMEM);
--	}
--
--	priv->unit = unit;
--
++	unit = -1;
++	pci_read_config_byte(pdev, PCI_CO_UNIT, &unit);
++	pci_read_config_byte(pdev, PCI_CO_MAC1, &addr[0]);
++	pci_read_config_byte(pdev, PCI_CO_MAC2, &addr[1]);
++	pci_read_config_byte(pdev, PCI_CO_MAC3, &addr[2]);
++	pci_read_config_byte(pdev, PCI_CO_MAC4, &addr[3]);
++	pci_read_config_byte(pdev, PCI_CO_MAC5, &addr[4]);
++	pci_read_config_byte(pdev, PCI_CO_MAC6, &addr[5]);
++
++	dev = alloc_etherdev(sizeof(*priv));
++	if (dev == NULL) {
++		printk(KERN_ERR "conet%d: could not allocate memory for device.\n", unit);
++		rc = -ENOMEM;
++		goto error_out_pdev;
+ 	}
++	SET_MODULE_OWNER(dev);
++	SET_NETDEV_DEV(dev, &pdev->dev);
++	memcpy(dev->dev_addr, addr, 6);
++
++//	spin_lock_init(&priv->lock);
++
++	dev->open = conet_open;
++	dev->stop = conet_stop;
++	dev->hard_start_xmit = conet_hard_start_xmit;
++	dev->get_stats = conet_get_stats;
++	dev->irq = pdev->irq;
+ 
++	priv = netdev_priv(dev);
+ 	priv->unit = unit;
++	pci_set_drvdata(pdev, priv);
+ 
 -	dev->priv = priv;
 -	dev->init = conet_init;
 -	dev->uninit = conet_uninit;
@@ -512,53 +760,96 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 -		kfree(dev->priv);
 -		kfree(dev);
 -		return ERR_PTR(-ENODEV);
--	}
--
++	rc = register_netdev(dev);
++	if (rc) {
++		printk(KERN_ERR "conet%d: could not register device; rc: %d\n", unit, rc);
++		goto error_out_dev;
+ 	}
+ 
 -	printk("conet%d: initialized\n", priv->unit);
--
++	conet_dev[unit] = dev;
+ 
 -	return dev;
 -}
--
++	printk(KERN_INFO "conet%d: irq %d, HWAddr %02x:%02x:%02x:%02x:%02x:%02x\n",
++		unit, NETWORK_IRQ, addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
+ 
 -static void conet_destroy(struct net_device *dev)
 -{
 -	struct conet_priv *priv = (struct conet_priv *) dev->priv;
--
++	return 0;
++
++error_out_dev:
++	free_netdev(dev);
+ 
 -	printk("conet%d: freed\n", priv->unit);
--
++error_out_pdev:
++	pci_disable_device(pdev);
++	pci_set_drvdata(pdev, NULL);
+ 
 -	unregister_netdev(dev);
 -	kfree(dev->priv);
 -	kfree(dev);
--}
--
++	return rc;
+ }
+ 
 -static int __init conet_init_module(void)
--{
++static void __devexit conet_pci_remove(struct pci_dev *pdev)
+ {
 -	int unit = 0, result;
 -	struct net_device *dev;
 -	char mac_address[6];
--
++	struct conet_priv *priv = dev_get_drvdata(&pdev->dev);
++	struct net_device *net_dev = conet_dev[priv->unit];
+ 
 -	result = request_irq(NETWORK_IRQ, &conet_interrupt, IRQF_SAMPLE_RANDOM, "conet", NULL);
 -	if (result)
 -		return result;
--
++	unregister_netdev(net_dev);
++	free_netdev(net_dev);
++	dev_set_drvdata(&pdev->dev, NULL);
++}
+ 
 -	printk("conet: loaded (max %d devices)\n", CO_MODULE_MAX_CONET);
--
++static struct pci_driver conet_pci_driver = {
++	.name           = "conet",
++	.id_table       = conet_pci_ids,
++	.probe          = conet_pci_probe,
++	.remove         = __devexit_p(conet_pci_remove),
++};
+ 
 -	for (unit=0; unit < CO_MODULE_MAX_CONET; unit++) {
 -		conet_dev[unit] = NULL;
--
++static int __init conet_pci_init(void)
++{
++	int unit, rc;
+ 
 -		result = conet_get_mac(unit, mac_address);
 -		if (!result)
 -			continue;
--
++//	printk(KERN_INFO "CONET: Initializing...\n");
+ 
 -		dev = conet_create(unit);
 -		if (!IS_ERR(dev))
 -			conet_dev[unit] = dev;
--	}
--
++	rc = request_irq(NETWORK_IRQ, &conet_interrupt, IRQF_SAMPLE_RANDOM, "conet", NULL);
++	if (rc) {
++		printk(KERN_ERR "CONET: unable to get irq %d", NETWORK_IRQ);
++		return rc;
+ 	}
+ 
 -	return result;
--}
--
++	/* Init our units */
++	for (unit=0; unit < CO_MODULE_MAX_CONET; unit++)
++		conet_dev[unit] = NULL;
++
++//	printk(KERN_INFO "CONET: registering...\n");
++        return pci_register_driver(&conet_pci_driver);
+ }
+ 
 -static void __exit conet_cleanup_module(void)
--{
++static void __exit conet_pci_exit(void)
+ {
 -	int unit = 0;
 -
 -	free_irq(NETWORK_IRQ, NULL);
@@ -569,31 +860,50 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 -
 -		conet_destroy(conet_dev[unit]);
 -	}
--}
--
++        pci_unregister_driver(&conet_pci_driver);
+ }
+ 
 -module_init(conet_init_module);
 -module_exit(conet_cleanup_module);
--#endif
++module_init(conet_pci_init);
++module_exit(conet_pci_exit);
 Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 ===================================================================
---- linux-2.6.22-source.orig/drivers/scsi/coscsi.c
+--- /dev/null
 +++ linux-2.6.22-source/drivers/scsi/coscsi.c
-@@ -22,20 +22,118 @@
- #include <scsi/scsi_host.h>
- #include <scsi/scsi_ioctl.h>
- 
+@@ -0,0 +1,230 @@
++
++#include <linux/module.h>
++#include <linux/init.h>
++#include <linux/interrupt.h>
++#include <linux/blkdev.h>
++#include <linux/spinlock.h>
++#include <linux/errno.h>
++#include <linux/string.h>
++#include <linux/ioport.h>
++#include <linux/proc_fs.h>
++#include <linux/pci.h>
++#include <linux/stat.h>
++#include <linux/delay.h>
++#include <linux/io.h>
++#include <scsi/scsicam.h>
++
++#include <asm/system.h>
++
++#include <scsi/scsi.h>
++#include <scsi/scsi_cmnd.h>
++#include <scsi/scsi_device.h>
++#include <scsi/scsi_host.h>
++#include <scsi/scsi_ioctl.h>
++
 +#include <linux/cooperative.h>
 +#include <linux/cooperative_internal.h>
- #include <linux/cooperative_pci.h>
- 
--struct cosci_priv {
--	struct pci_device *pdev;
--};
--
- MODULE_AUTHOR("Steve Shoecraft <sshoecraft@earthlink.net>");
- MODULE_DESCRIPTION("Cooperative Linux SCSI Driver");
- MODULE_LICENSE("GPL");
- 
++#include <linux/cooperative_pci.h>
++
++MODULE_AUTHOR("Steve Shoecraft <sshoecraft@earthlink.net>");
++MODULE_DESCRIPTION("Cooperative Linux SCSI Driver");
++MODULE_LICENSE("GPL");
++
 +#define COSCSI_DEBUG 0
 +#define COSCSI_DEBUG_ISR 0
 +
@@ -633,10 +943,8 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +        return IRQ_HANDLED;
 +}
 +
- int coscsi_queue(struct scsi_cmnd *scp, void (*done)(struct scsi_cmnd *))
- {
--	printk(KERN_INFO "coscsi_queue: ...\n");
--	scp->result = 0;
++int coscsi_queue(struct scsi_cmnd *scp, void (*done)(struct scsi_cmnd *))
++{
 +	co_scsi_request_t *srp;
 +	void *kaddr;
 +	unsigned long flags;
@@ -700,74 +1008,129 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +        co_passage_page_release(flags);
 +
 +	if (scp->use_sg) kunmap_atomic(kaddr, KM_USER0);
- 	return 0;
- }
- 
-@@ -44,11 +142,12 @@
- 	.name			= "Cooperative Linux SCSI Adapter",
- 	.proc_name		= "coscsi",
- 	.queuecommand		= coscsi_queue,
--	.can_queue		= 1,
++	return 0;
++}
++
++struct scsi_host_template coscsi_template = {
++	.module			= THIS_MODULE,
++	.name			= "Cooperative Linux SCSI Adapter",
++	.proc_name		= "coscsi",
++	.queuecommand		= coscsi_queue,
 +	.can_queue		= MAX_REQ,
- 	.this_id		= 7,
--	.sg_tablesize		= SG_ALL,
--	.cmd_per_lun		= 1,
--	.use_clustering		= DISABLE_CLUSTERING
++	.this_id		= 7,
 +	.sg_tablesize		= SG_NONE,
 +	.cmd_per_lun		= MAX_REQ/2,
 +	.use_clustering		= DISABLE_CLUSTERING,
 +	.skip_settle_delay	= 1,
- };
- 
- static int __devinit coscsi_pci_probe( struct pci_dev *pdev, const struct pci_device_id *ent )
-@@ -65,14 +164,6 @@
- 		return -ENOMEM;
- 	}
- 
--	/* Get IRQ */
--#if 0
--        if (request_irq(pdev->irq, coscsi_isr, IRQF_RANDOM, "coscsi", priv)) {
--                printk(KERN_ERR "COSCSI: register IRQ error!\n");
--                goto err_put;
--        }
--#endif
--
- 	/* Add host */
- 	rc = scsi_add_host(shost, &pdev->dev);
- 	if (rc) {
-@@ -111,23 +202,27 @@
- 
- static int __init coscsi_pci_init(void)
- {
--#if 0
--        int unit, rc;
++};
++
++static int __devinit coscsi_pci_probe( struct pci_dev *pdev, const struct pci_device_id *ent )
++{
++	struct Scsi_Host *shost;
 +	int rc;
- 
--	rc = request_irq(10, &coscsi_interrupt, IRQF_SAMPLE_RANDOM, "coscsi", NULL);
++
++	printk(KERN_INFO "coscsi_pci_probe: adding host...\n");
++
++	/* Get shost */
++	shost = scsi_host_alloc(&coscsi_template, sizeof(void *));
++	if (!shost) {
++		printk(KERN_ERR "coscsi_pci_probe: scsi_host_alloc failed");
++		return -ENOMEM;
++	}
++
++	/* Add host */
++	rc = scsi_add_host(shost, &pdev->dev);
++	if (rc) {
++		printk(KERN_ERR "coscsi_pci_probe: scsi_add_host failed");
++		goto err_put;
++	}
++	pci_set_drvdata(pdev, shost);
++
++	/* Scan devs */
++	scsi_scan_host(shost);
++	return 0;
++
++err_put:
++	scsi_host_put(shost);
++	return rc;
++}
++
++static void __devexit coscsi_pci_remove(struct pci_dev *pdev)
++{
++//	struct cosci_priv *priv = dev_get_drvdata(&pdev->dev);
++
++	pci_set_drvdata(pdev, NULL);
++}
++
++static struct pci_device_id coscsi_pci_ids[] __devinitdata = {
++	{ PCI_DEVICE(PCI_VENDOR_ID_CO, PCI_DEVICE_ID_COSCSI) },
++	{ 0 }
++};
++
++static struct pci_driver coscsi_pci_driver = {
++	.name		= "coscsi",
++	.id_table	= coscsi_pci_ids,
++	.probe		= coscsi_pci_probe,
++	.remove		= __devexit_p(coscsi_pci_remove),
++};
++
++static int __init coscsi_pci_init(void)
++{
++	int rc;
++
 +	rc = request_irq(SCSI_IRQ, &coscsi_isr, IRQF_SAMPLE_RANDOM, "coscsi", NULL);
- 	if (rc) {
--		printk(KERN_ERR "coscsi_pci_init: unable to get irq %d", NETWORK_IRQ);
++	if (rc) {
 +		printk(KERN_ERR "coscsi_pci_init: unable to get irq %d", SCSI_IRQ);
- 		return rc;
- 	}
--#endif
- 
++		return rc;
++	}
++
 +	spin_lock_init(&scsi_lock);
 +
 +#if COSCSI_DEBUG
- 	printk(KERN_INFO "coscsi_pci_init: registering...\n");
++	printk(KERN_INFO "coscsi_pci_init: registering...\n");
 +#endif
- 	return pci_register_driver(&coscsi_pci_driver);
- }
- 
- static void __exit coscsi_pci_exit(void)
- {
++	return pci_register_driver(&coscsi_pci_driver);
++}
++
++static void __exit coscsi_pci_exit(void)
++{
 +#if COSCSI_DEBUG
- 	printk(KERN_INFO "coscsi_pci_exit: exiting\n");
++	printk(KERN_INFO "coscsi_pci_exit: exiting\n");
 +#endif
-         pci_unregister_driver(&coscsi_pci_driver);
- }
++        pci_unregister_driver(&coscsi_pci_driver);
++}
++
++module_init(coscsi_pci_init);
++module_exit(coscsi_pci_exit);
+Index: linux-2.6.22-source/drivers/scsi/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/drivers/scsi/Kconfig
++++ linux-2.6.22-source/drivers/scsi/Kconfig
+@@ -289,6 +289,12 @@
+ menu "SCSI low-level drivers"
+ 	depends on SCSI!=n
  
++config COSCSI
++	bool "Cooperative Linux support"
++	depends on COOPERATIVE
++	help
++	  SCSI Driver for Cooperative Linux
++
+ config ISCSI_TCP
+ 	tristate "iSCSI Initiator over TCP/IP"
+ 	depends on SCSI && INET
+Index: linux-2.6.22-source/drivers/scsi/Makefile
+===================================================================
+--- linux-2.6.22-source.orig/drivers/scsi/Makefile
++++ linux-2.6.22-source/drivers/scsi/Makefile
+@@ -59,6 +59,7 @@
+ obj-$(CONFIG_SCSI_ADVANSYS)	+= advansys.o
+ obj-$(CONFIG_SCSI_PSI240I)	+= psi240i.o
+ obj-$(CONFIG_SCSI_BUSLOGIC)	+= BusLogic.o
++obj-$(CONFIG_COSCSI)		+= coscsi.o
+ obj-$(CONFIG_SCSI_DPT_I2O)	+= dpt_i2o.o
+ obj-$(CONFIG_SCSI_U14_34F)	+= u14-34f.o
+ obj-$(CONFIG_SCSI_ARCMSR)	+= arcmsr/
 Index: linux-2.6.22-source/drivers/scsi/sd.c
 ===================================================================
 --- linux-2.6.22-source.orig/drivers/scsi/sd.c
@@ -800,6 +1163,34 @@ Index: linux-2.6.22-source/drivers/scsi/sr.c
  	if (!buffer) {
  		printk(KERN_ERR "sr: out of memory.\n");
  		return;
+Index: linux-2.6.22-source/drivers/usb/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/drivers/usb/Kconfig
++++ linux-2.6.22-source/drivers/usb/Kconfig
+@@ -10,6 +10,7 @@
+ # NOTE:  SL-811 option should be board-specific ...
+ config USB_ARCH_HAS_HCD
+ 	boolean
++	depends on !COOPERATIVE
+ 	default y if USB_ARCH_HAS_OHCI
+ 	default y if USB_ARCH_HAS_EHCI
+ 	default y if ARM				# SL-811
+@@ -18,6 +19,7 @@
+ # many non-PCI SOC chips embed OHCI
+ config USB_ARCH_HAS_OHCI
+ 	boolean
++	depends on !COOPERATIVE
+ 	# ARM:
+ 	default y if SA1111
+ 	default y if ARCH_OMAP
+@@ -38,6 +40,7 @@
+ # some non-PCI hcds implement EHCI
+ config USB_ARCH_HAS_EHCI
+ 	boolean
++	depends on !COOPERATIVE
+ 	default y if PPC_83xx
+ 	default y if SOC_AU1200
+ 	default PCI
 Index: linux-2.6.22-source/include/asm-i386/mach-default/irq_vectors.h
 ===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/mach-default/irq_vectors.h
@@ -820,6 +1211,15 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- linux-2.6.22-source.orig/include/linux/cooperative.h
 +++ linux-2.6.22-source/include/linux/cooperative.h
+@@ -20,7 +20,7 @@
+ 
+ #include <asm/cooperative.h>
+ 
+-#define CO_LINUX_API_VERSION    10
++#define CO_LINUX_API_VERSION    11
+ 
+ #pragma pack(0)
+ 
 @@ -42,12 +42,14 @@
  	CO_OPERATION_FREE_PAGES,
  	CO_OPERATION_ALLOC_PAGES,
@@ -830,7 +1230,8 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
  #define CO_MODULE_MAX_CONET    16
  #define CO_MODULE_MAX_COBD     32
  #define CO_MODULE_MAX_COFS     32
- #define CO_MODULE_MAX_SERIAL   64
+-#define CO_MODULE_MAX_SERIAL   64
++#define CO_MODULE_MAX_SERIAL   32
 +#define CO_MODULE_MAX_COSCSI   32
  
  typedef enum {
@@ -874,37 +1275,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
  typedef enum {
  	CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL=0,
  	CO_LINUX_MESSAGE_POWER_SHUTDOWN,
-@@ -145,6 +165,8 @@
- 	CO_TERMINATE_BUG,
- } co_termination_reason_t;
- 
-+#ifdef CO_KERNEL
-+
- #ifndef asmlinkage
- #define asmlinkage __attribute__((regparm(0)))
- #endif
-@@ -159,10 +181,6 @@
- 	  &_from_.border2,			\
- 	  &_to_.border2))
- 
--#define co_passage_page_func(_from_,_to_)				\
--	co_passage_page_func_low(co_passage_page->_from_, co_passage_page->_to_)
--
--#ifdef CO_KERNEL
- # ifdef CO_COLINUX_KERNEL
- #  define co_passage_page  ((co_arch_passage_page_t *)(CO_VPTR_PASSAGE_PAGE))
- #  define co_current (co_passage_page->linuxvm_state)
-@@ -174,7 +192,8 @@
- # endif
- 
- # define co_switch() co_passage_page_func_low(co_current, co_other)
--#endif
-+
-+#endif /* CO_KERNEL */
- 
- /*
-  * Defines operations on various virtual devices.
-@@ -293,6 +312,14 @@
+@@ -292,6 +312,14 @@
  # endif
  
  typedef struct {
@@ -919,15 +1290,33 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
  	co_block_request_type_t type;
  	long rc;
  	union {
-@@ -316,7 +343,7 @@
- 	int result;
- } __attribute__((packed)) co_network_request_t;
- 
--#endif
-+#endif /* CO_KERNEL */
- 
- typedef struct {
- 	unsigned long api_version;
+Index: linux-2.6.22-source/include/linux/cooperative_pci.h
+===================================================================
+--- /dev/null
++++ linux-2.6.22-source/include/linux/cooperative_pci.h
+@@ -0,0 +1,22 @@
++
++#ifndef __LINUX_COOPERATIVE_PCI_H
++#define __LINUX_COOPERATIVE_PCI_H
++
++/* PCI ids */
++#define PCI_VENDOR_ID_CO        0x1a55
++#define PCI_DEVICE_ID_COFB      0x0001
++#define PCI_DEVICE_ID_COIDE     0x0002
++#define PCI_DEVICE_ID_COSCSI    0x0003
++#define PCI_DEVICE_ID_COAUDIO   0x0004
++#define PCI_DEVICE_ID_CONET     0x0005
++
++/* NIC vendor registers */
++#define PCI_CO_UNIT             0x40
++#define PCI_CO_MAC1             0x41
++#define PCI_CO_MAC2             0x42
++#define PCI_CO_MAC3             0x43
++#define PCI_CO_MAC4             0x44
++#define PCI_CO_MAC5             0x45
++#define PCI_CO_MAC6             0x46
++
++#endif
 Index: linux-2.6.22-source/lib/iomap.c
 ===================================================================
 --- linux-2.6.22-source.orig/lib/iomap.c
@@ -948,3 +1337,37 @@ Index: linux-2.6.22-source/lib/iomap.c
  
  /* Create a virtual mapping cookie for an IO port range */
  void __iomem *ioport_map(unsigned long port, unsigned int nr)
+Index: linux-2.6.22-source/arch/i386/pci/irq_cooperative.c
+===================================================================
+--- /dev/null
++++ linux-2.6.22-source/arch/i386/pci/irq_cooperative.c
+@@ -0,0 +1,29 @@
++/*
++ *	Low-Level PCI Support for PC -- Routing of Interrupts
++ *
++ *	(c) 1999--2000 Martin Mares <mj@ucw.cz>
++ */
++
++#include <linux/types.h>
++#include <linux/kernel.h>
++#include <linux/pci.h>
++#include <linux/init.h>
++#include <linux/slab.h>
++#include <linux/interrupt.h>
++#include <linux/dmi.h>
++#include <asm/io.h>
++#include <asm/smp.h>
++#include <asm/io_apic.h>
++#include <linux/irq.h>
++#include <linux/acpi.h>
++
++#include "pci.h"
++
++/*
++ * Never use: 0, 1, 2 (timer, keyboard, and cascade)
++ */
++unsigned int pcibios_irq_mask = 0xfff8;
++
++int (*pcibios_enable_irq)(struct pci_dev *dev) = NULL;
++void (*pcibios_disable_irq)(struct pci_dev *dev) = NULL;
++
