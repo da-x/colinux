@@ -16,6 +16,7 @@
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/cobdpath.h>
 #include <colinux/os/alloc.h>
+#include <colinux/common/scsi_types.h>
 #include "macaddress.h"
 
 #include "daemon.h"
@@ -271,6 +272,66 @@ static void split_comma_separated(const char *source, comma_buffer_t *array)
 		if (*source != '\0')
 			source++;
 	}
+}
+
+static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_config_t *conf)
+{
+	bool_t exists;
+	char *param;
+	co_rc_t rc;
+
+	do {
+		int index;
+		co_scsi_dev_desc_t *scsi;
+
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "scsi",
+							     &index, CO_MODULE_MAX_COSCSI,
+							     &param, &exists);
+		if (!CO_OK(rc)) return rc;
+		if (!exists) break;
+
+		scsi = &conf->scsi_devs[index];
+
+		if (scsi->enabled) {
+			co_terminal_print("scsi%d double defined\n", index);
+			return CO_RC(INVALID_PARAMETER);
+		}
+		scsi->enabled = PTRUE;
+
+		/* Type, <path> */
+		{
+			char type[40];
+			comma_buffer_t array [] = {
+				{ sizeof(type), type },
+				{ sizeof(scsi->pathname), scsi->pathname },
+				{ 0, NULL }
+			};
+			split_comma_separated(param, array);
+			co_debug("scsi%d: type string: %s\n", index, type);
+			if (strcmp(type,"pass")==0)
+				scsi->type = SCSI_PTYPE_PASS;
+			else if (strcmp(type,"disk")==0)
+				scsi->type = SCSI_PTYPE_DISK;
+			else if (strcmp(type,"cdrom")==0)
+				scsi->type = SCSI_PTYPE_CDDVD;
+			else if (strcmp(type,"tape")==0)
+				scsi->type = SCSI_PTYPE_TAPE;
+			else if (strcmp(type,"changer")==0)
+				scsi->type = SCSI_PTYPE_CHANGER;
+			else
+				co_terminal_print("scsi%d: unknown type: %s\n", index, type);
+		}
+
+//		co_snprintf(scsi->pathname, sizeof(scsi->pathname), "%s", param);
+
+		rc = check_cobd_file(scsi->pathname, index);
+		if (!CO_OK(rc)) return rc;
+
+		co_canonize_cobd_path(&scsi->pathname);
+		co_debug_info("mapping scsi%d to %s", index, scsi->pathname);
+	} while (1);
+
+	return CO_RC(OK);
 }
 
 static co_rc_t config_parse_mac_address(const char *text, co_netdev_desc_t *net_dev)
@@ -633,6 +694,10 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 
 	if (exists)
 		co_debug_info("configuring %ld MB of virtual RAM", conf->ram_size);
+
+	rc = parse_args_config_scsi(cmdline, conf);
+	if (!CO_OK(rc))
+		return rc;
 
 	rc = parse_args_config_cobd(cmdline, conf);
 	if (!CO_OK(rc))

@@ -37,6 +37,12 @@ typedef struct co_block_dev_desc {
 	char alias[20];
 } co_block_dev_desc_t;
 
+typedef struct co_scsi_dev_desc {
+	bool_t enabled;
+	int type;
+	co_pathname_t pathname;
+} co_scsi_dev_desc_t;
+
 typedef enum {
 	CO_NETDEV_TYPE_BRIDGED_PCAP,
 	CO_NETDEV_TYPE_TAP,
@@ -177,6 +183,11 @@ typedef struct co_config {
 	 */
 	co_block_dev_desc_t block_devs[CO_MODULE_MAX_COBD];
 	long _UNUSED__block_root_device_index;
+
+	/*
+	 * SCSI devices
+	 */
+	co_scsi_dev_desc_t scsi_devs[CO_MODULE_MAX_COSCSI];
 
 	/*
 	 * Network devices

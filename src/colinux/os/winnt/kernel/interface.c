@@ -350,6 +350,8 @@ driver_unload(IN PDRIVER_OBJECT DriverObject)
 	IoDeleteDevice(DriverObject->DeviceObject);
 }
 
+PDEVICE_OBJECT coLinux_DeviceObject;
+
 NTSTATUS 
 NTAPI
 DriverEntry( 
@@ -402,6 +404,9 @@ DriverEntry(
 	DriverObject->DriverUnload                         = driver_unload;
 
 	rc = co_manager_load(manager);
+
+	/* Needed for IoAllocateWorkItem */
+	coLinux_DeviceObject = deviceObject;
 
 	return STATUS_SUCCESS;
 }

@@ -115,6 +115,29 @@ typedef struct co_monitor {
 					Linux (to be put in CR3 eventually */
 	co_pfn_t **pgd_pfns;
 
+#ifdef NOTYET
+	/*
+	 * Video memory
+	 *
+	 * video_buffer      : virtual address the video memory buffer
+	 * video_vm_address  : virtual address of the bufer in the guest (4MB aligned)
+	 * video_size        : size, in bytes, of the video memory.
+	 *			2048x1536x32 = 12M
+	 *			1920x1080x32 = 8M
+	 *			default=DeskTopSize() from windows and use 8M on unix
+	 *			override with parameter videomem=
+	 * video_user_address: virtual address of the buffer in user_space
+	 * video_user_handle : handle for the user address mapping
+	 * video_user_id     : PID of the video client process
+	 */
+	void *		video_buffer;
+	vm_ptr_t	video_vm_address;
+	unsigned long	video_size;
+	void *		video_user_address;
+	void *		video_user_handle;
+	co_id_t		video_user_id;
+#endif
+
 	/*
 	 * Devices
 	 */
@@ -129,6 +152,11 @@ typedef struct co_monitor {
 	co_timestamp_t timestamp_freq;
 	unsigned long long timestamp_reminder;
 	co_os_wait_t idle_wait;
+
+	/*
+	 * SCSI devices
+	 */
+	struct co_scsi_dev *scsi_devs[CO_MODULE_MAX_COSCSI];
 
 	/* 
 	 * Block devices
@@ -187,6 +215,9 @@ extern co_rc_t co_monitor_malloc(co_monitor_t *cmon, unsigned long bytes, void *
 extern co_rc_t co_monitor_free(co_monitor_t *cmon, void *ptr);
 
 extern co_rc_t co_monitor_message_from_user(co_monitor_t *monitor, struct co_manager_open_desc *opened, co_message_t *message);
+
+/* XXX needed for host printk */
+void incoming_message(co_monitor_t *cmon, co_message_t *message);
 
 /*
  * An accessors to values of our core's kernel symbols.

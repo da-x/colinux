@@ -327,6 +327,9 @@ char *co_module_repr(co_module_t module, co_module_name_t *str)
 	case CO_MODULE_CONET0...CO_MODULE_CONET_END - 1:
 		co_snprintf((char *)str, sizeof(*str), "net%d", module - CO_MODULE_CONET0); 
 		break;
+	case CO_MODULE_COSCSI0...CO_MODULE_COSCSI_END - 1:
+		co_snprintf((char *)str, sizeof(*str), "cobd%d", module - CO_MODULE_COBD0);
+		break;
 	case CO_MODULE_COBD0...CO_MODULE_COBD_END - 1:
 		co_snprintf((char *)str, sizeof(*str), "cobd%d", module - CO_MODULE_COBD0); 
 		break;
