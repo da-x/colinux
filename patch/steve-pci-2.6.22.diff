@@ -290,6 +290,18 @@ Index: linux-2.6.22-source/arch/i386/pci/Makefile
  obj-$(CONFIG_PCI_BIOS)		+= pcbios.o
  obj-$(CONFIG_PCI_MMCONFIG)	+= mmconfig.o direct.o mmconfig-shared.o
  obj-$(CONFIG_PCI_DIRECT)	+= direct.o
+@@ -10,5 +11,10 @@
+ 
+ pci-$(CONFIG_X86_VISWS)		:= visws.o fixup.o
+ pci-$(CONFIG_X86_NUMAQ)		:= numa.o irq.o
++pci-$(CONFIG_COOPERATIVE)	:= legacy.o irq_cooperative.o
+ 
+-obj-y				+= $(pci-y) common.o early.o
++obj-y				+= $(pci-y) common.o
++
++ifndef CONFIG_COOPERATIVE
++obj-y				+= early.o
++endif
 Index: linux-2.6.22-source/arch/i386/pci/pci.h
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/pci/pci.h
@@ -814,3 +826,37 @@ Index: linux-2.6.22-source/include/linux/cooperative_pci.h
 +#define PCI_CO_MAC6             0x46
 +
 +#endif
+Index: linux-2.6.22-source/arch/i386/pci/irq_cooperative.c
+===================================================================
+--- /dev/null
++++ linux-2.6.22-source/arch/i386/pci/irq_cooperative.c
+@@ -0,0 +1,29 @@
++/*
++ *	Low-Level PCI Support for PC -- Routing of Interrupts
++ *
++ *	(c) 1999--2000 Martin Mares <mj@ucw.cz>
++ */
++
++#include <linux/types.h>
++#include <linux/kernel.h>
++#include <linux/pci.h>
++#include <linux/init.h>
++#include <linux/slab.h>
++#include <linux/interrupt.h>
++#include <linux/dmi.h>
++#include <asm/io.h>
++#include <asm/smp.h>
++#include <asm/io_apic.h>
++#include <linux/irq.h>
++#include <linux/acpi.h>
++
++#include "pci.h"
++
++/*
++ * Never use: 0, 1, 2 (timer, keyboard, and cascade)
++ */
++unsigned int pcibios_irq_mask = 0xfff8;
++
++int (*pcibios_enable_irq)(struct pci_dev *dev) = NULL;
++void (*pcibios_disable_irq)(struct pci_dev *dev) = NULL;
++
