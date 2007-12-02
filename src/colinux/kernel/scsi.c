@@ -236,9 +236,8 @@ static void send_intr(co_monitor_t *mp, void *linux_scp, int rc) {
 	struct {
 		co_message_t mon;
 		co_linux_message_t linux;
-		char data[sizeof(int)];
+		int result;
 	} msg;
-	int *result;
 
 	msg.mon.from = CO_MODULE_COSCSI0;
 	msg.mon.to = CO_MODULE_LINUX;
@@ -247,9 +246,8 @@ static void send_intr(co_monitor_t *mp, void *linux_scp, int rc) {
 	msg.mon.size = sizeof(msg) - sizeof(msg.mon);
 	msg.linux.device = CO_DEVICE_SCSI;
 	msg.linux.unit = (int) linux_scp;
-	msg.linux.size = sizeof(int);
-	result = (int *) &msg.linux.data;
-	*result = rc;
+	msg.linux.size = sizeof(msg.result);
+	msg.result = rc;
 
 	co_monitor_message_from_user(mp, 0, (co_message_t *)&msg);
 }
