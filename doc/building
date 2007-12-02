@@ -613,7 +613,7 @@ PATH=.:$PATH is needed, if the executables aren't installed in your e.g
   cd /tmp
   tar xjf fltk-1.1.6-source.tar.bz2
   cd fltk-1.1.6
-  patch -p1 < colinux-source/patch/fltk-1.1.6-linux.diff
+  patch -p1 < colinux-source/patch/fltk-1.1.6-linux-patch.diff
   ./configure --prefix=$HOME/i686-pc-linux-local
   make -C src
   make -C src install
