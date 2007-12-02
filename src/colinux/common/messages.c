@@ -271,48 +271,6 @@ co_rc_t co_message_switch_dup_message(co_message_switch_t *ms, co_message_t *mes
 	return co_message_switch_message(ms, copy);
 }
 
-co_rc_t co_message_write_queue(co_queue_t *queue, char *buffer, unsigned long size,
-			       unsigned long *sent_count, unsigned long *sent_size)
-{
-	char *buffer_writeptr = buffer;
-	unsigned long size_left = size;
-	unsigned long queue_items;
-	co_rc_t rc;
-
-	queue_items = co_queue_size(queue);
-	while (queue_items > 0) {
-		co_message_queue_item_t *message_item;
-		unsigned long total_size;
-		co_message_t *message;
-			
-		rc = co_queue_pop_tail(queue, (void **)&message_item);
-		if (!CO_OK(rc))
-			break;
-
-		message = message_item->message;
-		total_size = message->size + sizeof(*message);
-
-		if (total_size > size_left) {
-			co_queue_add_tail(queue, message_item);
-			break;
-		}				
-			
-		memcpy(buffer_writeptr, message, total_size);
-
-		queue_items -= 1;
-		size_left -= total_size;
-		buffer_writeptr += total_size;
-		*sent_count += 1;
-
-		co_queue_free(queue,  message_item);
-		co_os_free(message);
-	}
-
-	*sent_size = buffer_writeptr - buffer;
-
-	return CO_RC(OK);
-}
-
 char *co_module_repr(co_module_t module, co_module_name_t *str)
 {
 	switch (module) {
