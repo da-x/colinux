@@ -22,18 +22,14 @@ extern void co_winnt_free_unicode(UNICODE_STRING *unicode_str);
 static co_rc_t status_convert(NTSTATUS status)
 {
 	switch (status) {
+	case STATUS_SUCCESS: return CO_RC(OK);
 	case STATUS_NO_SUCH_FILE:
 	case STATUS_OBJECT_NAME_NOT_FOUND: return CO_RC(NOT_FOUND);
 	case STATUS_CANNOT_DELETE:
 	case STATUS_ACCESS_DENIED: return CO_RC(ACCESS_DENIED);
 	case STATUS_INVALID_PARAMETER: return CO_RC(INVALID_PARAMETER);
+	default: return CO_RC(ERROR);
 	}
-
-	if (status != STATUS_SUCCESS) {
-		return CO_RC(ERROR);
-	}
-
-	return CO_RC(OK);
 }
 
 static co_rc_t scsi_file_detect_size(HANDLE handle, unsigned long long *out_size);
