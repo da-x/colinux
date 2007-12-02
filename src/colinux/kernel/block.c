@@ -113,9 +113,9 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned int index,
 			co_debug_error("cobd%d: close failed (count=%d, rc=%08x)", index, dev->use_count, (int)rc);
 		}
 		break;
+	}
 	default:
 		break;
-	}
 	}
 
 	return rc;
