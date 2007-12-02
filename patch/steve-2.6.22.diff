@@ -44,7 +44,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/cooperative.c
 +++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
-@@ -160,6 +160,24 @@
+@@ -158,6 +158,24 @@
  	}
  #endif
  
@@ -67,8 +67,8 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +	}
 +
  	default:
+ 		BUG_ON((unsigned long)message->device >= (unsigned long)CO_DEVICES_TOTAL);
  		co_free_message(node_message);
- 		break;
 Index: linux-2.6.22-source/arch/i386/kernel/cpu/cyrix.c
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/cpu/cyrix.c

@@ -1,8 +1,8 @@
-Index: linux-2.6.17-source/drivers/block/cobd.c
+Index: linux-2.6.22-source/drivers/block/cobd.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.17-source/drivers/block/cobd.c
-@@ -0,0 +1,538 @@
++++ linux-2.6.22-source/drivers/block/cobd.c
+@@ -0,0 +1,529 @@
 +/*
 + *  Copyright (C) 2003 Dan Aloni <da-x@colinux.org>
 + *
@@ -30,12 +30,10 @@ Index: linux-2.6.17-source/drivers/block/cobd.c
 +
 +#include <linux/devfs_fs_kernel.h>
 +
-+#define PBD_BLOCK_SIZE  512
-+
-+static int hardsect_size = 512;
-+static int hardsect_size_shift = 9;
++static int const hardsect_size = 512;
++static int const hardsect_size_shift = 9;
++static int const cobd_max = CO_MODULE_MAX_COBD;
 +static spinlock_t cobd_lock = SPIN_LOCK_UNLOCKED;
-+static int cobd_max;
 +
 +struct cobd_device {
 +	int unit;
@@ -43,11 +41,14 @@ Index: linux-2.6.17-source/drivers/block/cobd.c
 +	struct block_device *device;
 +};
 +
++static struct gendisk **cobd_disks;
++static struct cobd_device cobd_devs[CO_MODULE_MAX_COBD];
++
 +static int cobd_request(struct cobd_device *cobd, co_block_request_type_t type, co_block_request_t *out_request)
 +{
 +	co_block_request_t *request;
 +	unsigned long flags;
-+	long rc = 0;
++	long rc;
 +
 +	co_passage_page_assert_valid();
 +
@@ -154,12 +155,11 @@ Index: linux-2.6.17-source/drivers/block/cobd.c
 +/*
 + * Handle an I/O request.
 + */
-+static int cobd_transfer(struct cobd_device *cobd, unsigned long sector,
-+			 unsigned long nsect, char *buffer, int write)
++static int cobd_transfer(struct cobd_device *cobd, struct request *req)
 +{
 +	co_block_request_t *co_request;
 +	unsigned long flags;
-+	int ret = 0;
++	int ret;
 +
 +	co_passage_page_assert_valid();
 +
@@ -168,18 +168,16 @@ Index: linux-2.6.17-source/drivers/block/cobd.c
 +	co_passage_page->params[0] = CO_DEVICE_BLOCK;
 +	co_passage_page->params[1] = cobd->unit;
 +	co_request = (co_block_request_t *)&co_passage_page->params[2];
-+	if (!write)
++	if (!rq_data_dir(req))
 +		co_request->type = CO_BLOCK_READ;
 +	else
 +		co_request->type = CO_BLOCK_WRITE;
-+	co_request->offset = ((unsigned long long)sector) << hardsect_size_shift;
-+	co_request->size = nsect << hardsect_size_shift;
-+	co_request->address = buffer;
++	co_request->offset = ((unsigned long long)(req->sector)) << hardsect_size_shift;
++	co_request->size = req->current_nr_sectors << hardsect_size_shift;
++	co_request->address = req->buffer;
 +	co_request->rc = 0;
 +	co_switch_wrapper();
-+
-+	if (!co_request->rc)
-+		ret = 1;
++	ret = co_request->rc;
 +
 +	co_passage_page_release(flags);
 +	return ret;
@@ -199,9 +197,8 @@ Index: linux-2.6.17-source/drivers/block/cobd.c
 +		}
 +		cobd = (struct cobd_device *)(req->rq_disk->private_data);
 +
-+		ret = cobd_transfer(cobd, req->sector, req->current_nr_sectors,
-+				    req->buffer, rq_data_dir(req));
-+		end_request(req, ret);
++		ret = cobd_transfer(cobd, req);
++		end_request(req, ret ? 0 : 1);
 +        }
 +}
 +
@@ -212,10 +209,6 @@ Index: linux-2.6.17-source/drivers/block/cobd.c
 +	.ioctl   = cobd_ioctl,
 +};
 +
-+static struct gendisk **cobd_disks;
-+
-+static struct cobd_device cobd_devs[CO_MODULE_MAX_COBD];
-+
 +static int __init cobd_drives_init(void)
 +{
 +	int result, i;
@@ -224,8 +217,6 @@ Index: linux-2.6.17-source/drivers/block/cobd.c
 +		printk(KERN_WARNING "Unable to get major number %d for cobd device\n", COLINUX_MAJOR);
 +		return -EIO;
 +	}
-+
-+	cobd_max = CO_MODULE_MAX_COBD;
 +
 +	result = -ENOMEM; /* for the possible errors */
 +
