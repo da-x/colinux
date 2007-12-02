@@ -137,14 +137,11 @@ static co_rc_t transfer_file_block(co_monitor_t *cmon,
 	NTSTATUS status;
 	co_os_transfer_file_block_data_t *data;
 	co_rc_t rc = CO_RC_OK;
-	HANDLE FileHandle;
 
 	data = (co_os_transfer_file_block_data_t *)host_data;
 
-	FileHandle = data->file_handle;
-
 	if (CO_MONITOR_TRANSFER_FROM_HOST == dir) {
-		status = ZwReadFile(FileHandle,
+		status = ZwReadFile(data->file_handle,
 				    NULL,
 				    NULL,
 				    NULL, 
@@ -155,7 +152,7 @@ static co_rc_t transfer_file_block(co_monitor_t *cmon,
 				    NULL);
 	}
 	else {
-		status = ZwWriteFile(FileHandle,
+		status = ZwWriteFile(data->file_handle,
 				     NULL,
 				     NULL,
 				     NULL, 
