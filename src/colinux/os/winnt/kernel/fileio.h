@@ -22,7 +22,7 @@ extern co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned lo
 				 unsigned long file_attribute, unsigned long create_disposition,
 				 unsigned long options);
 
-extern co_rc_t co_os_file_block_read_write(co_monitor_t *linuxvm,
+extern co_rc_t co_os_file_block_read_write(co_monitor_t *monitor,
 					   HANDLE file_handle,
 					   unsigned long long offset,
 					   vm_ptr_t address,

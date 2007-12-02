@@ -174,7 +174,7 @@ static co_rc_t transfer_file_block(co_monitor_t *cmon,
 	return rc;
 }
 
-co_rc_t co_os_file_block_read_write(co_monitor_t *linuxvm,
+co_rc_t co_os_file_block_read_write(co_monitor_t *monitor,
 				    HANDLE file_handle,
 				    unsigned long long offset,
 				    vm_ptr_t address,
@@ -187,12 +187,12 @@ co_rc_t co_os_file_block_read_write(co_monitor_t *linuxvm,
 	data.offset.QuadPart = offset;
 	data.file_handle = file_handle;
 
-	rc = co_monitor_host_linuxvm_transfer(linuxvm, 
-					      &data, 
+	rc = co_monitor_host_linuxvm_transfer(monitor,
+					      &data,
 					      transfer_file_block,
 					      address,
 					      size,
-					      (read ? CO_MONITOR_TRANSFER_FROM_HOST : 
+					      (read ? CO_MONITOR_TRANSFER_FROM_HOST :
 					       CO_MONITOR_TRANSFER_FROM_LINUX));
 
 	return rc;
