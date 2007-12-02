@@ -2,11 +2,12 @@
 ;Written by NEBOR Regis
 ;Modified by Dan Aloni (c) 2004
 ;Modified 8/20/2004,2/4/2004 by George P Boutwell
-;Modified 11/2/2007 by Henry Nestler
+;Modified 11/28/2007 by Henry Nestler
 
 ;-------------------------------------
 
   !include "MUI.nsh"
+  !include "x64.nsh"
   !include Sections.nsh
   !include "coLinux_def.inc"
   !define PUBLISHER "www.colinux.org"
@@ -112,6 +113,13 @@ FunctionEnd
 SectionGroup "coLinux" SecGrpcoLinux
 
 Section
+
+  ;Check running 64 bit and block it (NSIS 2.21 and newer)
+  ${If} ${RunningX64}
+    MessageBox MB_OK "coLinux can't run on x64"
+    DetailPrint "Abort on 64 bit"
+    Abort
+  ${EndIf}
 
   ;-------------------------------------------Uninstall with old driver--
   ;----------------------------------------------------------------------

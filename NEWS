@@ -36,6 +36,7 @@
   * Uninstall old colinux with old exefile, path from registry uninstaller
     [Support Requests-1553923]
   * Update tapinstall.exe (alias devcon) from DDK 3790.1830 (Mar 24 2005)
+  * Block installing on 64 bit systems.
 
   Buildsystem:
   * Linux as host: Restructed build of colinux.ko, use kbuild system
