@@ -36,7 +36,7 @@ void co_monitor_unregister_and_free_block_devices(co_monitor_t *cmon)
 	}
 }
 
-co_block_dev_t *co_monitor_block_dev_from_index(co_monitor_t *cmon, unsigned int index)
+static co_block_dev_t *co_monitor_block_dev_from_index(co_monitor_t *cmon, unsigned int index)
 {
 	if (index >= CO_MODULE_MAX_COBD)
 		return NULL;
@@ -50,11 +50,9 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned int index,
 	co_block_dev_t *dev;
 	co_rc_t rc;
 
-	rc = CO_RC(ERROR);
-
 	dev = co_monitor_block_dev_from_index(cmon, index);
 	if (!dev)
-		return rc;
+		return CO_RC(ERROR);
 
 	rc = CO_RC_OK;
 

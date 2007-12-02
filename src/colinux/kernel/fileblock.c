@@ -12,7 +12,7 @@
 #include "fileblock.h"
 #include "monitor.h"
 
-co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
+static co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 				      co_block_dev_t *dev, 
 				      co_block_request_t *request)
 { 
@@ -75,7 +75,7 @@ co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 		if (CO_OK(rc))
 			request->disk_size = fdev->dev.size;
 
-		return rc;
+		break;
 	}    
 	default:
 		break;
