@@ -7,14 +7,18 @@
 #include <colinux/common/scsi_types.h>
 #include <colinux/kernel/transfer.h>
 #include <colinux/kernel/printk.h>
+#include <colinux/kernel/pages.h>
 #include <colinux/os/alloc.h>
+#include <colinux/os/kernel/alloc.h>
+#include <scsi/coscsi.h>
 
 #ifndef OBJ_KERNEL_HANDLE
 #define OBJ_KERNEL_HANDLE 0x00000200L
 #endif
 
 #define DEBUG_OPEN 0
-#define DEBUG_XFER 0
+#define DEBUG_IO 0
+#define COSCSI_DEBUG_SIZE 0
 
 extern co_rc_t co_winnt_utf8_to_unicode(const char *src, UNICODE_STRING *unicode_str);
 extern void co_winnt_free_unicode(UNICODE_STRING *unicode_str);
@@ -41,7 +45,6 @@ int scsi_file_open(co_scsi_dev_t *dp) {
 	UNICODE_STRING unipath;
 	ACCESS_MASK DesiredAccess;
 	ULONG OpenOptions;
-	FILE_STANDARD_INFORMATION fsi;
 	co_rc_t rc;
 
 #if DEBUG_OPEN
@@ -51,26 +54,13 @@ int scsi_file_open(co_scsi_dev_t *dp) {
 	rc = co_winnt_utf8_to_unicode(dp->conf->pathname, &unipath);
 	if (!CO_OK(rc)) return 1;
 
-	DesiredAccess = FILE_READ_DATA | FILE_WRITE_DATA | SYNCHRONIZE;
+	DesiredAccess = FILE_READ_DATA | FILE_WRITE_DATA;
+	DesiredAccess |= SYNCHRONIZE;
 
 	OpenOptions = FILE_SYNCHRONOUS_IO_NONALERT;
-
 //	OpenOptions |= FILE_NO_INTERMEDIATE_BUFFERING;
 //	OpenOptions |= FILE_RANDOM_ACCESS;
 //	OpenOptions |= FILE_WRITE_THROUGH;
-#if 0
-	switch(dp->conf->type) {
-	case SCSI_PTYPE_TAPE:
-		OpenOptions |= FILE_SEQUENTIAL_ONLY;
-		break;
-	case SCSI_PTYPE_DISK:
-	case SCSI_PTYPE_CDDVD:
-		OpenOptions |= FILE_RANDOM_ACCESS;
-		break;
-	default:
-		break;
-	}
-#endif
 
 	/* Kernel handle needed for IoQueueWorkItem */
 	InitializeObjectAttributes(&ObjectAttributes, &unipath,
@@ -89,25 +79,6 @@ int scsi_file_open(co_scsi_dev_t *dp) {
 	printk(dp->mp, "scsi_file_open: os_handle: %p\n", dp->os_handle);
 #endif
 
-	status = ZwQueryInformationFile(dp->os_handle,
-					&IoStatusBlock,
-					&fsi,
-					sizeof(fsi),
-					FileStandardInformation);
-
-	if (status == STATUS_SUCCESS) {
-		dp->size = fsi.EndOfFile.QuadPart;
-		co_debug("reported size: %llu KBs", (dp->size >> 10));
-		rc = CO_RC(OK);
-	} else {
-		rc = scsi_file_detect_size(dp->os_handle, &dp->size);
-		if (CO_OK(rc)) co_debug("detected size: %llu KBs", (dp->size >> 10));
-	}
-
-#if DEBUG_OPEN
-	printk(dp->mp, "scsi_file_open: detected size: %lld\n", dp->size);
-#endif
-
 	return 0;
 }
 
@@ -123,90 +94,125 @@ int scsi_file_close(co_scsi_dev_t *dp)
 	return (status != STATUS_SUCCESS);
 }
 
-static co_rc_t transfer_file_block(co_monitor_t *cmon,
-				  void *host_data, void *linuxvm,
-				  unsigned long size,
-				  co_monitor_transfer_dir_t dir)
-{
-	IO_STATUS_BLOCK isb;
-	NTSTATUS status;
-	co_rc_t rc = CO_RC_OK;
-	LARGE_INTEGER *offset;
-	scsi_worker_t *wp;
+/*
+ * Vectored read/write
+*/
+struct _req {
+	co_scsi_dev_t *dp;
+	co_scsi_io_t *iop;
+	PIO_WORKITEM pIoWorkItem;
+	NTOSAPI NTSTATUS DDKAPI (*func)( /*IN*/ HANDLE  FileHandle, /*IN*/ HANDLE  Event  /*OPTIONAL*/, /*IN*/ PIO_APC_ROUTINE  ApcRoutine  /*OPTIONAL*/, /*IN*/ PVOID  ApcContext  /*OPTIONAL*/, /*OUT*/ PIO_STATUS_BLOCK  IoStatusBlock, /*IN*/ PVOID  Buffer, /*IN*/ ULONG  Length, /*IN*/ PLARGE_INTEGER  ByteOffset  /*OPTIONAL*/, /*IN*/ PULONG  Key  /*OPTIONAL*/);
+};
 
-	wp = (scsi_worker_t *)host_data;
-	offset = (LARGE_INTEGER *) &wp->msg;
-#if DEBUG_XFER
-	printk(wp->mp, "scsi_file_xfer: os_handle: %p\n", wp->dp->os_handle);
-#endif
+static void send_intr(co_monitor_t *cmon, void *ctx, int rc) {
+	struct {
+		co_message_t mon;
+		co_linux_message_t linux;
+		int result;
+	} msg;
 
-	if (CO_MONITOR_TRANSFER_FROM_HOST == dir) {
-		status = ZwReadFile((HANDLE)wp->dp->os_handle,
-				    NULL,
-				    NULL,
-				    NULL,
-				    &isb,
-				    linuxvm,
-				    size,
-				    offset,
-				    NULL);
-	}
-	else {
-		status = ZwWriteFile((HANDLE)wp->dp->os_handle,
-				     NULL,
-				     NULL,
-				     NULL,
-				     &isb,
-				     linuxvm,
-				     size,
-				     offset,
-				     NULL);
-	}
+	msg.mon.from = CO_MODULE_COSCSI0;
+	msg.mon.to = CO_MODULE_LINUX;
+	msg.mon.priority = CO_PRIORITY_DISCARDABLE;
+	msg.mon.type = CO_MESSAGE_TYPE_OTHER;
+	msg.mon.size = sizeof(msg) - sizeof(msg.mon);
+	msg.linux.device = CO_DEVICE_SCSI;
+	msg.linux.unit = (int) ctx;
+	msg.linux.size = sizeof(msg.result);
+	msg.result = rc;
 
-#if DEBUG_XFER
-	printk(wp->mp, "scsi_file_xfer: status: %x\n", status);
-#endif
-
-	if (status != STATUS_SUCCESS) {
-		co_debug_error("block io failed: %p %lx (reason: %x)",
-				linuxvm, size, (int)status);
-		rc = status_convert(status);
-	}
-
-	offset->QuadPart += size;
-
-	return rc;
+	co_monitor_message_from_user(cmon, 0, (co_message_t *)&msg);
 }
 
-co_rc_t co_monitor_host_linuxvm_transfer( co_monitor_t *cmon, void *host_data, co_monitor_transfer_func_t host_func, vm_ptr_t vaddr, unsigned long size, co_monitor_transfer_dir_t dir);
-
-int scsi_file_rw(scsi_worker_t *wp, unsigned long long block, unsigned long num, int dir) {
-	unsigned long size, len;
-	co_monitor_t *mp = wp->mp;
-	co_scsi_request_t *srp = &wp->req;
-	co_scsi_dev_t *dp = wp->dp;
-	LARGE_INTEGER *offset;
+static VOID DDKAPI _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
+	struct _req *r = Context;
+	IO_STATUS_BLOCK isb;
+	LARGE_INTEGER Offset;
+	NTSTATUS status;
+	void *buffer;
+	co_pfn_t pfn;
+	unsigned char *page;
+	PIO_WORKITEM wip;
+	register int x;
 	co_rc_t rc;
 
-	/* Calc offset */
-	offset = (LARGE_INTEGER *) &wp->msg;
-	offset->QuadPart = block * dp->block_size;
-	size = dp->block_size * num;
-	len = (size < srp->buflen ? size : srp->buflen);
+	/* For each vector */
+	rc = CO_RC(OK);
+	for(x=0; x < r->iop->hdr.count; x++) {
+		/* Map page */
+                rc = co_monitor_get_pfn(r->dp->mp, r->iop->vec[x].buffer, &pfn);
+                if (!CO_OK(rc)) goto io_done;
+                page = co_os_map(r->dp->mp->manager, pfn);
+		buffer = page + (r->iop->vec[x].buffer & ~CO_ARCH_PAGE_MASK);
 
-#if DEBUG_XFER
-	printk(wp->mp, "scsi_file_read: block: %lld\n",block);
-	printk(wp->mp, "scsi_file_read: size: %ld, len: %ld\n",size,len);
-#endif
+		/* Transfer data */
+		Offset.QuadPart = r->iop->vec[x].offset;
+		status = r->func((HANDLE)r->dp->os_handle, NULL, NULL, NULL, &isb, buffer, r->iop->vec[x].size, &Offset, NULL);
+		if (status != STATUS_SUCCESS) rc = status_convert(status);
 
-	rc = co_monitor_host_linuxvm_transfer(mp, wp, transfer_file_block,
-		srp->buffer, len, (dir ? CO_MONITOR_TRANSFER_FROM_LINUX : CO_MONITOR_TRANSFER_FROM_HOST));
+		/* Unmap page */
+                co_os_unmap(r->dp->mp->manager, page, pfn);
 
-#if DEBUG_XFER
-	printk(wp->mp, "scsi_file_read: returning: %d\n", (CO_OK(rc) == 0));
-#endif
-	return (CO_OK(rc) == 0);
+		if (!CO_OK(rc)) break;
+	}
+
+io_done:
+	/* Send interrupt */
+	send_intr(r->dp->mp, r->iop->hdr.ctx, (CO_OK(rc) == 0));
+
+	/* Free WorkItem */
+	wip = r->pIoWorkItem;
+	co_os_free(r);
+        IoFreeWorkItem(wip);
 }
+
+extern PDEVICE_OBJECT coLinux_DeviceObject;
+
+int scsi_file_io(co_scsi_dev_t *dp, co_scsi_io_t *iop) {
+	struct _req *r;
+	register int x;
+
+#if COSCSI_DEBUG_IO
+	printk(dp->mp, "scsi_file_io: ctx: %p\n", iop->hdr.ctx);
+	printk(dp->mp, "scsi_file_io: count: %d\n", iop->hdr.count);
+	printk(dp->mp, "scsi_file_io: write: %d\n", iop->hdr.write);
+	printk(dp->mp, "scsi_file_io: vectors:\n");
+#endif
+
+	r = (struct _req *) co_os_malloc(sizeof(*r));
+	if (!r) return 1;
+	r->dp = dp;
+	r->iop = co_os_malloc(sizeof(co_scsi_io_header_t) + (sizeof(co_scsi_io_vec_t)*iop->hdr.count));
+	r->pIoWorkItem = IoAllocateWorkItem(coLinux_DeviceObject);
+	r->func = (iop->hdr.write ? ZwWriteFile : ZwReadFile);
+
+	/* Make a copy of the iop */
+	r->iop->hdr.ctx = iop->hdr.ctx;
+	r->iop->hdr.count = iop->hdr.count;
+	r->iop->hdr.write = iop->hdr.write;
+	for(x=0; x < iop->hdr.count; x++) {
+#if COSCSI_DEBUG_IO
+		printk(dp->mp, "scsi_file_io: vec[%d].buffer: %x\n", x, iop->vec[x].buffer);
+		printk(dp->mp, "scsi_file_io: vec[%d].offset: %lld\n", x, iop->vec[x].offset);
+		printk(dp->mp, "scsi_file_io: vec[%d].size: %ld\n", x, iop->vec[x].size);
+#endif
+		r->iop->vec[x].buffer = iop->vec[x].buffer;
+		r->iop->vec[x].offset = iop->vec[x].offset;
+		r->iop->vec[x].size = iop->vec[x].size;
+	}
+
+	/* Kick off the work item */
+	IoQueueWorkItem(r->pIoWorkItem, _scsi_io, DelayedWorkQueue, r);
+	return 0;
+}
+
+/*****************************************************************************************************
+ *
+ *
+ * 
+ *
+ *
+ *****************************************************************************************************/
 
 static bool_t probe_area(HANDLE handle, LARGE_INTEGER offset, char *test_buffer, unsigned long size)
 {
@@ -333,32 +339,28 @@ static co_rc_t scsi_file_detect_size(HANDLE handle, unsigned long long *out_size
 	return CO_RC(ERROR);
 }
 
-extern void scsi_worker(scsi_worker_t *);
+int scsi_file_size(co_scsi_dev_t *dp, unsigned long long *size) {
+	FILE_STANDARD_INFORMATION fsi;
+	IO_STATUS_BLOCK IoStatusBlock;
+	NTSTATUS status;
+	co_rc_t rc;
 
-#define Q_SIZE 256
-typedef struct {
-	PIO_WORKITEM pIoWorkItem;
-	scsi_worker_t *wp;
-} worker_info_t;
-static worker_info_t wq[Q_SIZE];
-static int index = 0;
+	rc = CO_RC(OK);
+	*size = 0;
 
-static VOID DDKAPI MyRoutine(PDEVICE_OBJECT DeviceObject, PVOID Context) {
-	worker_info_t *info = Context;
+	status = ZwQueryInformationFile(dp->os_handle,
+					&IoStatusBlock,
+					&fsi,
+					sizeof(fsi),
+					FileStandardInformation);
 
-	scsi_worker(info->wp);
-	IoFreeWorkItem(info->pIoWorkItem);
-}
+	if (status == STATUS_SUCCESS)
+		*size = fsi.EndOfFile.QuadPart;
+	else
+		rc = scsi_file_detect_size(dp->os_handle, size);
 
-extern PDEVICE_OBJECT coLinux_DeviceObject;
-
-void scsi_queue_worker(scsi_worker_t *wp, void (*func)(scsi_worker_t *)) {
-	worker_info_t *info;
-
-	info = &wq[index++];
-	if (index >= Q_SIZE) index = 0;
-	info->pIoWorkItem = IoAllocateWorkItem(coLinux_DeviceObject);
-	info->wp = wp;
-
-	IoQueueWorkItem(info->pIoWorkItem, MyRoutine, DelayedWorkQueue, info);
+#if COSCSI_DEBUG_SIZE
+	printk(dp->mp,"scsi_file_size: detected size: %llu KBs\n", (*size >> 10));
+#endif
+	return (CO_OK(rc) == 0);
 }

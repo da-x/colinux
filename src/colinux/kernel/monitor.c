@@ -26,13 +26,9 @@
 #include <colinux/arch/interrupt.h>
 #include <colinux/arch/mmu.h>
 
-#define COSCSI
-
 #include "monitor.h"
 #include "manager.h"
-#ifdef COSCSI
 #include "scsi.h"
-#endif
 #include "block.h"
 #include "fileblock.h"
 #include "transfer.h"
@@ -196,20 +192,6 @@ static bool_t device_request(co_monitor_t *cmon, co_device_t device, unsigned lo
 {
 	co_debug_lvl(context_switch, 14, "device: %d", device);
 	switch (device) {
-#ifdef COSCSI
-	case CO_DEVICE_SCSI: {
-		co_scsi_request_t *srp;
-		unsigned int target = params[0];
-
-		co_debug("scsi requested (target %d)", target);
-
-		srp = (co_scsi_request_t *)(&params[1]);
-
-		co_monitor_scsi_request(cmon, target, srp);
-
-		return PTRUE;
-	}
-#endif
 	case CO_DEVICE_BLOCK: {
 		co_block_request_t *request;
 		unsigned int unit = params[0];
@@ -574,6 +556,10 @@ static bool_t iteration(co_monitor_t *cmon)
 	case CO_OPERATION_IDLE:
 		return co_idle(cmon);
 
+	case CO_OPERATION_SCSI:
+		co_scsi_op(cmon);
+		return PTRUE;
+
 	case CO_OPERATION_MESSAGE_TO_MONITOR: {
 		co_message_t *message;
 		
@@ -652,7 +638,6 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 	co_rc_t rc = CO_RC_OK; 
 	unsigned int i;
 
-#ifdef COSCSI
 	for (i=0; i < CO_MODULE_MAX_COSCSI; i++) {
 		co_scsi_dev_t *dev;
 		co_scsi_dev_desc_t *cp = &cmon->config.scsi_devs[i];
@@ -661,18 +646,11 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 		rc = co_monitor_malloc(cmon, sizeof(co_scsi_dev_t), (void **)&dev);
 		if (!CO_OK(rc)) goto error_0;
 
-		rc = co_monitor_scsi_dev_init(dev, i, cp);
-		if (CO_OK(rc)) {
-			dev->conf = cp;
-			co_debug("scsi%d: enabled (%p)", i, dev);
-			cmon->scsi_devs[i] = dev;
-		} else {
-			co_monitor_free(cmon, dev);
-			co_debug_error("scsi%d: cannot enable (%08x)", i, (int)rc);
-			goto error_0;
-		}
+		co_memset(dev, 0, sizeof(*dev));
+		dev->conf = cp;
+
+		cmon->scsi_devs[i] = dev;
 	}
-#endif
 
 	for (i=0; i < CO_MODULE_MAX_COBD; i++) {
 		co_monitor_file_block_dev_t *dev;
@@ -714,10 +692,8 @@ error_2:
 	co_monitor_unregister_filesystems(cmon);
 error_1:
 	co_monitor_unregister_and_free_block_devices(cmon);
-#ifdef COSCSI
 error_0:
 	co_monitor_unregister_and_free_scsi_devices(cmon);
-#endif
 
 	return rc;
 }
@@ -1140,9 +1116,7 @@ static co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
 	if (!user_context)
 		cmon->shared_user_address = NULL;
 
-#ifdef COSCSI
 	co_monitor_unregister_and_free_scsi_devices(cmon);
-#endif
 	co_monitor_unregister_and_free_block_devices(cmon);
 	co_monitor_unregister_filesystems(cmon);
 	free_pseudo_physical_memory(cmon);
@@ -1222,9 +1196,7 @@ static co_rc_t co_monitor_user_reset(co_monitor_t *monitor)
 	if (!CO_OK(rc))
 		goto out;
 
-#ifdef COSCSI
 	co_monitor_unregister_and_free_scsi_devices(monitor);
-#endif
 	co_monitor_unregister_and_free_block_devices(monitor);
 	co_monitor_unregister_filesystems(monitor);
 

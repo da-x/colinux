@@ -356,6 +356,40 @@ Index: linux-2.6.22-source/arch/i386/pci/init.c
  #ifdef CONFIG_PCI_DIRECT
  	type = pci_direct_probe();
  #endif
+Index: linux-2.6.22-source/arch/i386/pci/irq_cooperative.c
+===================================================================
+--- /dev/null
++++ linux-2.6.22-source/arch/i386/pci/irq_cooperative.c
+@@ -0,0 +1,29 @@
++/*
++ *	Low-Level PCI Support for PC -- Routing of Interrupts
++ *
++ *	(c) 1999--2000 Martin Mares <mj@ucw.cz>
++ */
++
++#include <linux/types.h>
++#include <linux/kernel.h>
++#include <linux/pci.h>
++#include <linux/init.h>
++#include <linux/slab.h>
++#include <linux/interrupt.h>
++#include <linux/dmi.h>
++#include <asm/io.h>
++#include <asm/smp.h>
++#include <asm/io_apic.h>
++#include <linux/irq.h>
++#include <linux/acpi.h>
++
++#include "pci.h"
++
++/*
++ * Never use: 0, 1, 2 (timer, keyboard, and cascade)
++ */
++unsigned int pcibios_irq_mask = 0xfff8;
++
++int (*pcibios_enable_irq)(struct pci_dev *dev) = NULL;
++void (*pcibios_disable_irq)(struct pci_dev *dev) = NULL;
++
 Index: linux-2.6.22-source/arch/i386/pci/Makefile
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/pci/Makefile
@@ -871,7 +905,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/drivers/scsi/coscsi.c
-@@ -0,0 +1,230 @@
+@@ -0,0 +1,866 @@
 +
 +#include <linux/module.h>
 +#include <linux/init.h>
@@ -900,15 +934,92 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +#include <linux/cooperative_internal.h>
 +#include <linux/cooperative_pci.h>
 +
++#include <scsi/coscsi.h>
++
++#define COSCSI_VERSION "1.00"
++
 +MODULE_AUTHOR("Steve Shoecraft <sshoecraft@earthlink.net>");
-+MODULE_DESCRIPTION("Cooperative Linux SCSI Driver");
++MODULE_DESCRIPTION("Cooperative Linux SCSI Driver " COSCSI_VERSION);
 +MODULE_LICENSE("GPL");
++
++#ifdef min
++#undef min
++#endif
++#define min(a,b) ((a) < (b) ? (a) : (b))
 +
 +#define COSCSI_DEBUG 0
 +#define COSCSI_DEBUG_ISR 0
++#define COSCSI_DEBUG_HOST 0
++#define COSCSI_DEBUG_XFER 0
++#define COSCSI_DEBUG_COMM 0
++#define COSCSI_DEBUG_INQ 0
++#define COSCSI_DEBUG_SENSE 0
 +
-+#define MAX_REQ 128
++#if COSCSI_DEBUG_XFER || COSCSI_DEBUG_COMM || COSCSI_DEBUG_SENSE
++#define DUMP_DATA 1
++#else
++#define DUMP_DATA 0
++#endif
++
++#define LOGICAL_UNIT_NOT_READY 0x4
++#define INVALID_FIELD_IN_CDB 0x24
++#define MEDIUM_NOT_PRESENT 0x3a
++
++#define COSCSI_CMDS_PER_LUN	32
++#define COSCSI_CAN_QUEUE	CO_MODULE_MAX_COSCSI*COSCSI_CMDS_PER_LUN
++
++#include "coscsi_rom.h"
++
++struct coscsi_device {
++	int unit;
++	int type;
++	coscsi_rom_t *rom;
++	unsigned long flags;
++	unsigned long block_size;
++	unsigned long long max_lba;
++	unsigned long long size;
++	int bs_bits;
++	void *os_handle;
++	int key;
++	int asc;
++	int asq;
++	char msg[192];
++};
++typedef struct coscsi_device coscsi_device_t;
++
++struct coscsi_worker {
++	coscsi_device_t *dp;
++	struct scsi_cmnd *scp;
++};
++typedef struct coscsi_worker coscsi_worker_t;
++
++/* Private info */
++char scsi_rev[5];
++static coscsi_device_t devices[CO_MODULE_MAX_COSCSI];
 +static spinlock_t scsi_lock;
++
++#if DUMP_DATA
++static void _dump_data(char *str, void *data, int data_len) {
++        unsigned char *p;
++        int x,y,len;
++
++        printk(KERN_INFO "%s(%d bytes):\n",str,data_len);
++	len = min(16, data_len);
++        p = data;
++        for(x=y=0; x < len; x++) {
++                printk(KERN_INFO " %02x", p[x]);
++                y++;
++                if (y > 15) {
++                        printk(KERN_INFO "\n");
++                        y = 0;
++                }
++        }
++        if (y) printk(KERN_INFO "\n");
++}
++#define dump_data(s,a,b) _dump_data(s,a,b)
++#else
++#define dump_data(s,a,b) /* noop */
++#endif
 +
 +static irqreturn_t coscsi_isr(int irq, void *dev_id)
 +{
@@ -916,10 +1027,10 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	int *result;
 +	unsigned long flags;
 +
-+	spin_lock_irqsave(&scsi_lock, flags);
 +#if COSCSI_DEBUG_ISR
 +	printk(KERN_INFO "coscsi_isr: getting messages!\n");
 +#endif
++	spin_lock_irqsave(&scsi_lock, flags);
 +	while (co_get_message(&node_message, CO_DEVICE_SCSI)) {
 +		co_linux_message_t *message;
 +		struct scsi_cmnd *scp;
@@ -927,50 +1038,231 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +		/* scp is in the message unit */
 +		message = (co_linux_message_t *)&node_message->msg.data;
 +		scp = (struct scsi_cmnd *) message->unit;
-+		if (!scp) continue;
-+		result = (int *) &message->data;
-+		scp->result = *result;
 +#if COSCSI_DEBUG_ISR
-+		printk(KERN_INFO "coscsi_isr: scp: %p, result: %d\n", scp, scp->result);
++		printk(KERN_INFO "coscsi_isr: scp: %p\n", scp);
 +#endif
++		if (!scp) {
++			printk(KERN_ERR "coscsi_isr: scp is NULL!\n");
++			co_free_message(node_message);
++			continue;
++		}
++
++		result = (int *) &message->data;
++#if COSCSI_DEBUG_ISR
++		printk(KERN_INFO "coscsi_isr: result: %d\n", *result);
++#endif
++		scp->result = *result;
 +		scp->scsi_done(scp);
-+
 +		co_free_message(node_message);
-+
 +	}
 +	spin_unlock_irqrestore(&scsi_lock, flags);
 +
-+        return IRQ_HANDLED;
++	return IRQ_HANDLED;
 +}
 +
-+int coscsi_queue(struct scsi_cmnd *scp, void (*done)(struct scsi_cmnd *))
-+{
-+	co_scsi_request_t *srp;
-+	void *kaddr;
++/****************************************************************************************************
++ *
++ *
++ * HOST functions
++ *
++ *
++ ****************************************************************************************************/
++
++/*
++ * Open handle
++*/
++static int host_open(coscsi_device_t *dp) {
 +	unsigned long flags;
-+	unsigned char *buffer;
-+	unsigned long buflen;
++	int rc = 0;
 +
-+#if COSCSI_DEBUG
-+	printk(KERN_INFO "coscsi_queue: id: %d, lun: %d, cdb[0]: 0x%02x\n",
-+		scp->device->id, scp->device->lun, scp->cmnd[0]);
++#if COSCSI_DEBUG_HOST
++	printk(KERN_INFO "host_open: handle: %p\n", dp->os_handle);
++#endif
++	if (!dp->os_handle) {
++		co_passage_page_assert_valid();
++		co_passage_page_acquire(&flags);
++		co_passage_page->operation = CO_OPERATION_SCSI;
++		co_passage_page->params[0] = CO_SCSI_OPEN;
++		co_passage_page->params[1] = dp->unit;
 +
-+	printk(KERN_INFO "coscsi_queue: resid: %d, use_sg: %d\n", scp->resid, scp->use_sg);
++        	co_switch_wrapper();
++
++		rc = co_passage_page->params[0];
++		if (!rc) dp->os_handle = (void *) co_passage_page->params[1];
++        	co_passage_page_release(flags);
++	}
++
++#if COSCSI_DEBUG_HOST
++	printk(KERN_INFO "host_open: rc: %d, handle: %p\n", rc, dp->os_handle);
++#endif
++	return rc;
++}
++
++/*
++ * Close handle
++*/
++static int host_close(coscsi_device_t *dp) {
++	unsigned long flags;
++	int rc;
++
++#if COSCSI_DEBUG_HOST
++	printk(KERN_INFO "host_close: handle: %p\n", dp->os_handle);
++#endif
++	if (!dp->os_handle) return 0;
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_SCSI;
++	co_passage_page->params[0] = CO_SCSI_CLOSE;
++	co_passage_page->params[1] = dp->unit;
++
++       	co_switch_wrapper();
++
++	rc = co_passage_page->params[0];
++       	co_passage_page_release(flags);
++
++	dp->os_handle = 0;
++#if COSCSI_DEBUG_HOST
++	printk(KERN_INFO "host_close: rc: %d\n", rc);
++#endif
++	return rc;
++}
++
++/*
++ * Read/Write block(s)
++*/
++static int host_rw(coscsi_worker_t *wp, unsigned long long lba, unsigned long num, int dir)
++{
++	unsigned long flags;
++	unsigned long long offset;
++	unsigned long len;
++	co_scsi_io_t *iop;
++	int x,rc;
++
++#if COSCSI_DEBUG_HOST
++	printk(KERN_INFO "host_rw: lba: %lld, num: %ld, dir: %d\n", lba, num, dir);
++#endif
++	if (!wp->dp->os_handle) {
++		if (host_open(wp->dp))
++			return 1;
++	}
++
++	offset = lba * wp->dp->block_size;
++	len = num * wp->dp->block_size;
++
++#if COSCSI_DEBUG_HOST
++	printk(KERN_INFO "HOST_RW: ctx: %p\n", wp->scp);
++	printk(KERN_INFO "HOST_RW: offset: %lld\n", offset);
++	printk(KERN_INFO "HOST_RW: len: %ld\n", len);
++	printk(KERN_INFO "HOST_RW: dir: %d\n", dir);
 +#endif
 +
-+	/* We can only handle 1 SG ... */
-+	if (scp->use_sg > 1) panic("coscsi_queue: use_sg > 1!");
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_SCSI;
++	co_passage_page->params[0] = CO_SCSI_IO;
++	co_passage_page->params[1] = wp->dp->unit;
++	iop = (co_scsi_io_t *) &co_passage_page->params[2];
++	iop->hdr.ctx = wp->scp;
++	iop->hdr.write = dir;
++	if (wp->scp->use_sg) {
++		struct scatterlist *sg;
 +
-+	/* Save done */
-+	scp->scsi_done = done;
++		iop->hdr.count = wp->scp->use_sg;
++		sg = (struct scatterlist *)wp->scp->request_buffer;
++		for(x=0; x < wp->scp->use_sg; x++) {
++			iop->vec[x].buffer = page_address(sg->page) + sg->offset;
++			iop->vec[x].offset = offset;
++			iop->vec[x].size = sg->length;
++			offset += sg->length;
++			sg++;
++		}
++	/* Direct */
++        } else {
++		iop->hdr.count = 1;
++		iop->vec[0].buffer = wp->scp->request_buffer;
++		iop->vec[0].offset = offset;
++		iop->vec[0].size = min(len, wp->scp->request_bufflen);
++	}
++
++     	co_switch_wrapper();
++
++	rc = co_passage_page->params[0];
++       	co_passage_page_release(flags);
++
++#if COSCSI_DEBUG_HOST
++	printk(KERN_INFO "host_rw: rc: %d\n", rc);
++#endif
++	return rc;
++}
++
++/*
++ * File/Device size
++*/
++static int host_size(coscsi_device_t *dp) {
++	unsigned long flags;
++	int rc;
++
++#if COSCSI_DEBUG_HOST
++	printk(KERN_INFO "host_size: getting size...\n");
++#endif
++	if (!dp->os_handle) {
++		if (host_open(dp))
++			return 1;
++	}
++
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_SCSI;
++	co_passage_page->params[0] = CO_SCSI_SIZE;
++	co_passage_page->params[1] = dp->unit;
++
++       	co_switch_wrapper();
++
++	rc = co_passage_page->params[0];
++	dp->size = *((unsigned long long *)&co_passage_page->params[1]);
++       	co_passage_page_release(flags);
++
++	dp->max_lba = (dp->size >> dp->bs_bits) - 1;
++
++#if COSCSI_DEBUG_HOST
++	printk(KERN_INFO "host_size: rc: %d, size: %lld, max_lba: %lld\n", rc, dp->size, dp->max_lba);
++#endif
++
++	return rc;
++}
++
++/****************************************************************************************************
++ *
++ *
++ * SCSI functions
++ *
++ *
++ ****************************************************************************************************/
++
++static int check_condition(struct coscsi_device *dp, int key, int asc, int asq) {
++	dp->key = key;
++	dp->asc = asc;
++	dp->asq = asq;
++	return CHECK_CONDITION;
++}
++
++static int response(coscsi_worker_t *wp, void *data, int len) {
++	struct scsi_cmnd *scp = wp->scp;
++	unsigned char *buffer;
++	unsigned long buflen;
++	void *kaddr;
++	int act_len;
 +
 +	/* Scatter/Gather */
 +	if (scp->use_sg) {
 +		struct scatterlist *sg;
 +
++		/* Should never be more than 1 for non r/w transfers */
++		if (scp->use_sg > 1) panic("COSCSI: response: use_sg (%d) > 1!\n", scp->use_sg);
++
 +		sg = (struct scatterlist *)scp->request_buffer;
 +#if COSCSI_DEBUG
-+		printk(KERN_INFO "coscsi_queue: sg: page: %p, offset: %d, length: %d\n",
++		printk(KERN_INFO "response: sg: page: %p, offset: %d, length: %d\n",
 +			sg->page, sg->offset, sg->length);
 +#endif
 +		kaddr = (unsigned char *) kmap_atomic(sg->page, KM_USER0);
@@ -983,31 +1275,305 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +		buffer = scp->request_buffer;
 +		buflen = scp->request_bufflen;
 +	}
-+#if COSCSI_DEBUG
-+	printk(KERN_INFO "coscsi_queue: buffer: %p, buflen: %ld\n", buffer, buflen);
++	if (!buflen) return GOOD;
++
++	act_len = min(buflen, len);
++#if COSCSI_DEBUG_COMM
++	dump_data("response", data, act_len);
 +#endif
-+
-+	/* Get the page */
-+	co_passage_page_assert_valid();
-+	co_passage_page_acquire(&flags);
-+
-+	/* Setup parms */
-+	co_passage_page->operation = CO_OPERATION_DEVICE;
-+	co_passage_page->params[0] = CO_DEVICE_SCSI;
-+	co_passage_page->params[1] = scp->device->id;
-+	srp = (co_scsi_request_t *)&co_passage_page->params[2];
-+	memcpy(srp->cdb, scp->cmnd, 16);
-+	srp->linux_scp = scp;
-+	srp->buffer = buffer;
-+	srp->buflen = buflen;
-+
-+	/* Do it */
-+        co_switch_wrapper();
-+
-+	/* Release the page */
-+        co_passage_page_release(flags);
++	memcpy(buffer, data, act_len);
 +
 +	if (scp->use_sg) kunmap_atomic(kaddr, KM_USER0);
++	return GOOD;
++}
++
++static int unit_ready(coscsi_worker_t *wp) {
++	int error, rc;
++
++	rc = GOOD;
++	error = (wp->dp->os_handle == 0 ? host_open(wp->dp) : 0);
++	if (error) {
++		switch(wp->dp->type) {
++		case TYPE_ROM:
++		case TYPE_TAPE:
++			rc = check_condition(wp->dp, NOT_READY, MEDIUM_NOT_PRESENT, 0x2);
++			break;
++		default:
++			rc = check_condition(wp->dp, NOT_READY, LOGICAL_UNIT_NOT_READY, 0x2);
++			break;
++		}
++	}
++
++	return rc;
++}
++
++static int inquiry(coscsi_worker_t *wp) {
++	int x, alloc_len;
++	coscsi_page_t *inq;
++
++#if COSCSI_DEBUG_INQ
++	printk(KERN_INFO "scsi_inq: rom: %p\n", wp->dp->rom->inq);
++#endif
++	if (!wp->dp->rom->inq)
++		return check_condition(wp->dp, ILLEGAL_REQUEST, INVALID_FIELD_IN_CDB, 0);
++	else
++		inq = wp->dp->rom->inq;
++
++	alloc_len = (wp->scp->cmnd[3] << 8) + wp->scp->cmnd[4];
++#if COSCSI_DEBUG_INQ
++	printk(KERN_INFO "scsi_inq: alloc_len: %d, buflen: %d\n", alloc_len, wp->scp->request_bufflen);
++#endif
++
++	/* EVPD? */
++	if (wp->scp->cmnd[1] & 1) {
++		for(x=1; inq[x].page; x++) {
++			if (wp->scp->cmnd[2] == inq[x].num)
++				return response(wp, inq[x].page, min(alloc_len, inq[x].size));
++		}
++		return check_condition(wp->dp, ILLEGAL_REQUEST, INVALID_FIELD_IN_CDB, 0);
++	} else {
++		/* Standard page */
++		strcpy((char *)&inq[0].page[8], "coLinux");
++		inq[0].page[1] = ((wp->dp->type == TYPE_ROM || wp->dp->type == TYPE_TAPE) ? 0x80 : 0);
++		memcpy(&inq[0].page[16], wp->dp->rom->name, strlen(wp->dp->rom->name)+1);
++		memcpy(&inq[0].page[32], scsi_rev, min(4, strlen(scsi_rev)+1));
++		return response(wp, inq[0].page, min(alloc_len, inq[0].size));
++	}
++}
++
++static int read_capacity(coscsi_worker_t *wp) {
++	coscsi_device_t *dp = wp->dp;
++
++	/* Get the size */
++	if (host_size(dp)) return check_condition(wp->dp, HARDWARE_ERROR, 0x3e, 1);
++
++	/* Ask host for size */
++	if (dp->max_lba > 0xfffffffe || wp->scp->cmnd[8] & 1) {
++		dp->msg[0] = 0xff;
++		dp->msg[1] = 0xff;
++		dp->msg[2] = 0xff;
++		dp->msg[3] = 0xff;
++	} else {
++		dp->msg[0] = (wp->dp->max_lba >> 24);
++		dp->msg[1] = (wp->dp->max_lba >> 16) & 0xff;
++		dp->msg[2] = (wp->dp->max_lba >> 8) & 0xff;
++		dp->msg[3] = wp->dp->max_lba & 0xff;
++	}
++	dp->msg[4] = (wp->dp->block_size >> 24);
++	dp->msg[5] = (wp->dp->block_size >> 16) & 0xff;
++	dp->msg[6] = (wp->dp->block_size >> 8) & 0xff;
++	dp->msg[7] = wp->dp->block_size & 0xff;
++
++	return response(wp, &dp->msg, 8);
++}
++
++static int mode_sense(coscsi_worker_t *wp) {
++	unsigned char *ap;
++	int offset, bd_len, page;
++	coscsi_page_t *pages = wp->dp->rom->mode;
++	coscsi_device_t *dp = wp->dp;
++	register int x;
++
++	memset(dp->msg, 0, 0x12);
++	offset = 4;
++	bd_len = 8;
++
++	dp->msg[2] = 0x10; /* DPOFUA */
++	dp->msg[3] = bd_len;
++
++	ap = dp->msg + offset;
++	if (dp->max_lba > 0xfffffffe) {
++		ap[0] = 0xff;
++		ap[1] = 0xff;
++		ap[2] = 0xff;
++		ap[3] = 0xff;
++	} else {
++		ap[0] = (dp->max_lba >> 24) & 0xff;
++		ap[1] = (dp->max_lba >> 16) & 0xff;
++		ap[2] = (dp->max_lba >> 8) & 0xff;
++		ap[3] = dp->max_lba & 0xff;
++	}
++	ap[6] = (dp->block_size >> 8) & 0xff;
++	ap[7] = dp->block_size & 0xff;
++
++	offset += bd_len;
++	ap = dp->msg + offset;
++#if COSCSI_DEBUG_SENSE
++	printk(KERN_INFO "mode_sense: ap: %p, offset: %d\n", ap, offset);
++#endif
++	page = wp->scp->cmnd[2] & 0x3f;
++	if (page == 0x3f) {
++		/* All pages */
++		if (wp->scp->cmnd[3] == 0 || wp->scp->cmnd[3] == 0xFF) {
++			for(x=0; pages[x].page; x++) {
++#if COSCSI_DEBUG_SENSE
++				dump_data("page", pages[x].page, pages[x].size);
++#endif
++				memcpy(ap, pages[x].page, pages[x].size);
++				ap += pages[x].size;
++				offset += pages[x].size;
++			}
++		} else {
++			return check_condition(wp->dp, ILLEGAL_REQUEST, INVALID_FIELD_IN_CDB, 0);
++		}
++	} else {
++		/* Specific page */
++		int found = 0;
++		for(x=0; pages[x].page; x++) {
++#if COSCSI_DEBUG_SENSE
++			printk(KERN_INFO "mode_sense: pages[%d].num: %d, page: %d\n", x, pages[x].num, page);
++#endif
++			if (pages[x].num == page) {
++#if COSCSI_DEBUG_SENSE
++				dump_data("page", pages[x].page, pages[x].size);
++#endif
++				memcpy(ap, pages[x].page, pages[x].size);
++				offset += pages[x].size;
++				found = 1;
++				break;
++			}
++		}
++		if (!found) return check_condition(wp->dp, ILLEGAL_REQUEST, INVALID_FIELD_IN_CDB, 0);
++	}
++#if COSCSI_DEBUG_SENSE
++	printk(KERN_INFO "scsi_mode_sense: offset: %d\n", offset);
++#endif
++	dp->msg[0] = offset - 1;
++	return response(wp, dp->msg, min(wp->scp->cmnd[4], offset));
++}
++
++static int read_write(coscsi_worker_t *wp) {
++	unsigned long long lba;
++	unsigned long num;
++	unsigned char *cmd = wp->scp->cmnd;
++
++	if ((*cmd) == READ_16 || (*cmd) == WRITE_16) {
++		register int k;
++
++		for (lba = 0, k = 0; k < 8; k++) {
++			if (k > 0) lba <<= 8;
++			lba += cmd[2 + k];
++		}
++		num = cmd[13] + (cmd[12] << 8) + (cmd[11] << 16) + (cmd[10] << 24);
++	} else if ((*cmd) == READ_12 || (*cmd) == WRITE_12) {
++		lba = cmd[5] + (cmd[4] << 8) + (cmd[3] << 16) + (cmd[2] << 24);
++		num = cmd[9] + (cmd[8] << 8) + (cmd[7] << 16) + (cmd[6] << 24);
++	} else if ((*cmd) == READ_10 || (*cmd) == WRITE_10) {
++		lba = (cmd[2] << 24) + (cmd[3] << 16) + (cmd[4] << 8) + cmd[5];
++		num = (cmd[7] << 8) + cmd[8];
++	} else {
++		lba = ((cmd[1] & 0x1f) << 16) + (cmd[2] << 8) + cmd[3];
++		num = (cmd[4] == 0) ? 256 : cmd[4];
++	}
++
++#if COSCSI_DEBUG_XFER
++	printk(KERN_INFO "read_write: lba: %lld, num: %ld\n", lba, num);
++#endif
++
++	if (host_rw(wp, lba, num, (cmd[0] & 2) >> 1))
++		return check_condition(wp->dp, HARDWARE_ERROR, 0x3e, 1);
++	else
++		return GOOD;
++}
++
++int coscsi_queue(struct scsi_cmnd *scp, void (*done)(struct scsi_cmnd *)) {
++	coscsi_device_t *dp;
++	coscsi_worker_t worker;
++	int rc;
++
++#if COSCSI_DEBUG
++	printk(KERN_INFO "coscsi_queue: id: %d, lun: %d, cdb[0]: 0x%02x\n",
++		scp->device->id, scp->device->lun, scp->cmnd[0]);
++#endif
++
++#if COSCSI_DEBUG_COMM
++	dump_data("request", &scp->cmnd, sizeof(scp->cmnd));
++#endif
++
++	/* Get device pointer */
++	dp = &devices[scp->device->id];
++
++	/* Setup worker */
++	worker.dp = dp;
++	worker.scp = scp;
++
++	/* Do we have the requested device? */
++	if ((scp->device->id >= CO_MODULE_MAX_COSCSI) || (dp->rom == 0)) {
++		if (scp->cmnd[0] == INQUIRY) {
++			char temp[96];
++			memset(temp,0,sizeof(temp));
++			temp[0] = 0x7f;
++			temp[3] = 2;
++			temp[4] = 92;
++			scp->result = response(&worker, temp, min(scp->cmnd[4],96));
++		} else
++			scp->result = check_condition(dp, ILLEGAL_REQUEST, INVALID_FIELD_IN_CDB, 0);
++		goto req_done;
++	}
++
++	/* Process command */
++	scp->scsi_done = done;
++	switch(scp->cmnd[0]) {
++	case INQUIRY:
++		scp->result = inquiry(&worker);
++		break;
++	case TEST_UNIT_READY:
++		scp->result = unit_ready(&worker);
++		break;
++	case REQUEST_SENSE:
++		if (scp->cmnd[1] & 1) {
++			dp->msg[0] = 0x72;
++			dp->msg[1] = dp->key;
++			dp->msg[2] = dp->asc;
++			dp->msg[3] = dp->asq;
++		} else {
++			dp->msg[0] = 0x70;
++			dp->msg[2] = dp->key;
++			dp->msg[7] = 0xa;
++			dp->msg[12] = dp->asc;
++			dp->msg[13] = dp->asq;
++		}
++		scp->result = response(&worker, &dp->msg, min(scp->cmnd[4], 18));
++		break;
++	case READ_CAPACITY:
++		scp->result = read_capacity(&worker);
++		break;
++	case REPORT_LUNS:
++		/* We only support 1 lun right now */
++		memset(dp->msg, 0, 16);
++		dp->msg[3] = 1;
++		scp->result = response(&worker, &dp->msg, 16);
++		break;
++	case MODE_SENSE:
++		scp->result = mode_sense(&worker);
++		break;
++	case READ_6:
++	case READ_10:
++	case READ_16:
++	case WRITE_6:
++	case WRITE_10:
++	case WRITE_16:
++		/* r/w may be async */
++		rc = read_write(&worker);
++//		printk(KERN_INFO "coscsi_queue: read_write rc: %d\n", rc);
++		if (rc == GOOD) goto req_out;
++		scp->result = rc;
++		break;
++	case SYNCHRONIZE_CACHE:
++		scp->result = GOOD;
++		break;
++	default:
++		scp->result = check_condition(dp, ILLEGAL_REQUEST, INVALID_FIELD_IN_CDB, 0);
++		break;
++	}
++
++req_done:
++	done(scp);
++req_out:
++#if COSCSI_DEBUG_COMM
++	printk(KERN_INFO "coscsi_queue: scp->result: %02x (code: %x)\n", scp->result, scp->result & 0xffff);
++	printk(KERN_INFO "------------------------------------------------------------------------\n");
++#endif
 +	return 0;
 +}
 +
@@ -1016,14 +1582,25 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	.name			= "Cooperative Linux SCSI Adapter",
 +	.proc_name		= "coscsi",
 +	.queuecommand		= coscsi_queue,
-+	.can_queue		= MAX_REQ,
-+	.this_id		= 7,
-+	.sg_tablesize		= SG_NONE,
-+	.cmd_per_lun		= MAX_REQ/2,
++	.can_queue		= COSCSI_CAN_QUEUE,
++	.this_id		= CO_MODULE_MAX_COSCSI,
++	.sg_tablesize		= 128,				/* XXX do not increase */
++	.cmd_per_lun		= COSCSI_CMDS_PER_LUN,
 +	.use_clustering		= DISABLE_CLUSTERING,
 +	.skip_settle_delay	= 1,
 +};
 +
++/****************************************************************************************************
++ *
++ *
++ * PCI functions
++ *
++ *
++ ****************************************************************************************************/
++
++/*
++ * PCI Probe - probe for a single device
++*/
 +static int __devinit coscsi_pci_probe( struct pci_dev *pdev, const struct pci_device_id *ent )
 +{
 +	struct Scsi_Host *shost;
@@ -1037,6 +1614,15 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +		printk(KERN_ERR "coscsi_pci_probe: scsi_host_alloc failed");
 +		return -ENOMEM;
 +	}
++
++	/* Set params */
++	shost->irq = pdev->irq;
++	shost->max_channel = 0;
++	shost->max_lun = 1;
++//	shost->max_id = CO_MODULE_MAX_COSCSI;
++	shost->max_id = 1;
++//	shost->max_sectors = 1024;
++//	shost->unique_id = host->host_no;
 +
 +	/* Add host */
 +	rc = scsi_add_host(shost, &pdev->dev);
@@ -1055,13 +1641,19 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	return rc;
 +}
 +
++/*
++ * PCI Remove - hotplug removal
++*/
 +static void __devexit coscsi_pci_remove(struct pci_dev *pdev)
 +{
 +//	struct cosci_priv *priv = dev_get_drvdata(&pdev->dev);
 +
++	/* XXX need to shutdown everything here */
++
 +	pci_set_drvdata(pdev, NULL);
 +}
 +
++/* We only support the COSCSI adapter :) */
 +static struct pci_device_id coscsi_pci_ids[] __devinitdata = {
 +	{ PCI_DEVICE(PCI_VENDOR_ID_CO, PCI_DEVICE_ID_COSCSI) },
 +	{ 0 }
@@ -1074,9 +1666,76 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	.remove		= __devexit_p(coscsi_pci_remove),
 +};
 +
-+static int __init coscsi_pci_init(void)
-+{
++extern int coio_test(void);
++
++/*
++ * PCI Init - module load
++*/
++static int __init coscsi_pci_init(void) {
++	unsigned long flags;
++	coscsi_device_t *dp;
++	register char *ptr;
++	register int x;
 +	int rc;
++
++	for(x = 0, ptr = COSCSI_VERSION; *ptr; ptr++) {
++		if (*ptr == '.') continue;
++		scsi_rev[x++] = *ptr;
++	}
++	scsi_rev[x] = 0;
++#if COSCSI_DEBUG
++	printk(KERN_INFO "coscsi_pci_init: scsi_rev: %s\n", scsi_rev);
++#endif
++
++	/* Clear devices */
++	memset(&devices, 0, sizeof(devices));
++
++	/* Get our config from the host */
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_SCSI;
++	co_passage_page->params[0] = CO_SCSI_GET_CONFIG;
++
++	/* Do it */
++        co_switch_wrapper();
++
++	/* Get the result */
++	for(x=0; x < CO_MODULE_MAX_COSCSI; x++) {
++		if ((co_passage_page->params[x] & 0x80) == 0)
++			continue;
++		dp = &devices[x];
++		dp->unit = x;
++		dp->type = co_passage_page->params[x] & 0x7f;
++		switch(dp->type) {
++		case TYPE_DISK:
++			dp->rom = &disk_rom;
++			dp->block_size = 512;
++			dp->bs_bits = 9;
++			break;
++		case TYPE_ROM:
++			dp->rom = &cd_rom;
++			dp->block_size = 2048;
++			dp->bs_bits = 11;
++			break;
++		case TYPE_TAPE:
++//			dp->rom = &tape_rom;
++			dp->block_size = 4096;
++			dp->bs_bits = 12;
++			break;
++		default:
++			dp->unit = -1;
++			break;
++		}
++	}
++
++	/* Release the page */
++        co_passage_page_release(flags);
++
++#if COSCSI_DEBUG
++	for(x=0; x < CO_MODULE_MAX_COSCSI; x++) {
++		dp = &devices[x];
++		printk(KERN_INFO "coscsi_pci_init: device: %d, type: %d, rom: %p\n", x, dp->type, dp->rom);
++	}
++#endif
 +
 +	rc = request_irq(SCSI_IRQ, &coscsi_isr, IRQF_SAMPLE_RANDOM, "coscsi", NULL);
 +	if (rc) {
@@ -1086,14 +1745,25 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +
 +	spin_lock_init(&scsi_lock);
 +
-+#if COSCSI_DEBUG
 +	printk(KERN_INFO "coscsi_pci_init: registering...\n");
-+#endif
 +	return pci_register_driver(&coscsi_pci_driver);
 +}
 +
-+static void __exit coscsi_pci_exit(void)
-+{
++/*
++ * PCI Exit - module unload
++*/
++static void __exit coscsi_pci_exit(void) {
++	register int x;
++
++#if COSCSI_DEBUG
++	printk(KERN_INFO "coscsi_pci_exit: closing handles\n");
++#endif
++
++	/* Close the handles */
++	for(x=0; x < CO_MODULE_MAX_COSCSI; x++) host_close(&devices[x]);
++
++	/* Unmap the page */
++
 +#if COSCSI_DEBUG
 +	printk(KERN_INFO "coscsi_pci_exit: exiting\n");
 +#endif
@@ -1102,6 +1772,133 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +
 +module_init(coscsi_pci_init);
 +module_exit(coscsi_pci_exit);
+Index: linux-2.6.22-source/drivers/scsi/coscsi_rom.h
+===================================================================
+--- /dev/null
++++ linux-2.6.22-source/drivers/scsi/coscsi_rom.h
+@@ -0,0 +1,122 @@
++
++#ifndef __COSCSI_ROM_H
++#define __COSCSI_ROM_H
++
++/* Mode/Inq page data */
++struct coscsi_page {
++	int num;
++	unsigned char *page;
++	int size;
++};
++typedef struct coscsi_page coscsi_page_t;
++
++struct coscsi_rom {
++        char *name;
++        coscsi_page_t *inq;
++	coscsi_page_t *mode;
++};
++typedef struct coscsi_rom coscsi_rom_t;
++
++/*
++ * Disk pages
++*/
++
++static unsigned char disk_inq_00[] = {
++	0x00,0x00,0x05,0x02,0x5c,0x00,0x00,0x60,	/* 00 - 07 */
++	0x63,0x6f,0x4c,0x69,0x6e,0x75,0x78,0x00,	/* 08 - 15 */
++	0x43,0x4f,0x44,0x49,0x53,0x4b,0x00,0x00,	/* 16 - 23 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 24 - 31 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 32 - 39 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 40 - 47 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 48 - 55 */
++	0x00,0x00,0x00,0x77,0x00,0x14,0x03,0x3d,	/* 56 - 63 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 64 - 71 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 72 - 79 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 80 - 87 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 88 - 95 */
++};
++
++static unsigned char disk_inq_80[] = {
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 00 - 07 */
++};
++
++static unsigned char disk_inq_83[] = {
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 00 - 07 */
++};
++
++static unsigned char disk_inq_b0[] = {
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 00 - 07 */
++};
++
++static coscsi_page_t disk_inq_pages[] = {
++	{ 0x00, disk_inq_00, sizeof(disk_inq_00) },	/* Standard page */
++	{ 0x80, disk_inq_80, sizeof(disk_inq_80) },	/* Unit Serial Number */
++	{ 0x83, disk_inq_83, sizeof(disk_inq_83) },	/* Device Identification */
++	{ 0xB0, disk_inq_b0, sizeof(disk_inq_b0) },	/* Block limits (SBC) */
++	{ 0, 0, 0 }
++};
++
++static unsigned char disk_mode_08[] = {
++	0x08, 0x12, 0x14, 0x00, 0xff, 0xff, 0x00, 0x00,
++	0xff, 0xff, 0xff, 0xff, 0x80, 0x14, 0x00, 0x00,
++	0x00, 0x00, 0x00, 0x00
++};
++
++static coscsi_page_t disk_mode_pages[] = {
++	{ 0x08, disk_mode_08, sizeof(disk_mode_08) },
++	{ 0, 0, 0 }
++};
++
++static coscsi_rom_t disk_rom = {
++	.name =		"CODISK",
++	.inq = 		disk_inq_pages,
++	.mode =		disk_mode_pages,
++};
++
++/*
++ * CD pages
++*/
++static unsigned char cd_inq_00[] = {
++	0x05,0x00,0x05,0x02,0x5c,0x00,0x00,0x60,	/* 00 - 07 */
++	0x63,0x6f,0x4c,0x69,0x6e,0x75,0x78,0x00,	/* 08 - 15 */
++	0x43,0x4f,0x44,0x49,0x53,0x4b,0x00,0x00,	/* 16 - 23 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 24 - 31 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 32 - 39 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 40 - 47 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 48 - 55 */
++	0x00,0x00,0x00,0x77,0x00,0x14,0x03,0x3d,	/* 56 - 63 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 64 - 71 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 72 - 79 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 80 - 87 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 88 - 95 */
++};
++
++static unsigned char cd_inq_83[] = {
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 00 - 07 */
++};
++
++static coscsi_page_t cd_inq_pages[] = {
++	{ 0x00, cd_inq_00, sizeof(cd_inq_00) },	/* Standard page */
++	{ 0x83, cd_inq_83, sizeof(cd_inq_83) },	/* Device Identification */
++	{ 0, 0, 0 }
++};
++
++unsigned char cd_mode_2a[] = {
++	0x2a,0x1c,0x09,0x00,0x00,0x00,0x21,0x00, 	/* 00 - 07 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 08 - 15 */
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 16 - 23 */
++	0x00,0x00,0x00,0x00,0x00
++};
++
++static coscsi_page_t cd_mode_pages[] = {
++	{ 0x2a, cd_mode_2a, sizeof(cd_mode_2a) },
++	{ 0, 0, 0 }
++};
++
++static coscsi_rom_t cd_rom = {
++	.name =		"COCDROM",
++	.inq = 		cd_inq_pages,
++	.mode =		cd_mode_pages,
++};
++
++#endif
 Index: linux-2.6.22-source/drivers/scsi/Kconfig
 ===================================================================
 --- linux-2.6.22-source.orig/drivers/scsi/Kconfig
@@ -1275,21 +2072,6 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
  typedef enum {
  	CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL=0,
  	CO_LINUX_MESSAGE_POWER_SHUTDOWN,
-@@ -292,6 +312,14 @@
- # endif
- 
- typedef struct {
-+	unsigned char cdb[16];
-+	int buflen;
-+	vm_ptr_t buffer;
-+	void *linux_scp;
-+	int rc;
-+} __attribute__((packed)) co_scsi_request_t;
-+
-+typedef struct {
- 	co_block_request_type_t type;
- 	long rc;
- 	union {
 Index: linux-2.6.22-source/include/linux/cooperative_pci.h
 ===================================================================
 --- /dev/null
@@ -1317,6 +2099,41 @@ Index: linux-2.6.22-source/include/linux/cooperative_pci.h
 +#define PCI_CO_MAC6             0x46
 +
 +#endif
+Index: linux-2.6.22-source/include/scsi/coscsi.h
+===================================================================
+--- /dev/null
++++ linux-2.6.22-source/include/scsi/coscsi.h
+@@ -0,0 +1,30 @@
++
++#ifndef __SCSI_COSCSI_H
++#define __SCSI_COSCSI_H
++
++typedef enum {
++	CO_SCSI_GET_CONFIG,
++	CO_SCSI_OPEN,
++	CO_SCSI_CLOSE,
++	CO_SCSI_SIZE,
++	CO_SCSI_IO,
++} CO_SCSI_OPS;
++
++typedef struct {
++	void *ctx;
++	unsigned short count;
++	unsigned short write;
++} __attribute__((packed)) co_scsi_io_header_t;
++
++typedef struct {
++	vm_ptr_t buffer;
++	unsigned long long offset;
++	unsigned long size;
++} __attribute__((packed)) co_scsi_io_vec_t;
++
++typedef struct {
++	co_scsi_io_header_t hdr;
++	co_scsi_io_vec_t vec[];
++} __attribute__((packed)) co_scsi_io_t;
++
++#endif
 Index: linux-2.6.22-source/lib/iomap.c
 ===================================================================
 --- linux-2.6.22-source.orig/lib/iomap.c
@@ -1337,37 +2154,3 @@ Index: linux-2.6.22-source/lib/iomap.c
  
  /* Create a virtual mapping cookie for an IO port range */
  void __iomem *ioport_map(unsigned long port, unsigned int nr)
-Index: linux-2.6.22-source/arch/i386/pci/irq_cooperative.c
-===================================================================
---- /dev/null
-+++ linux-2.6.22-source/arch/i386/pci/irq_cooperative.c
-@@ -0,0 +1,29 @@
-+/*
-+ *	Low-Level PCI Support for PC -- Routing of Interrupts
-+ *
-+ *	(c) 1999--2000 Martin Mares <mj@ucw.cz>
-+ */
-+
-+#include <linux/types.h>
-+#include <linux/kernel.h>
-+#include <linux/pci.h>
-+#include <linux/init.h>
-+#include <linux/slab.h>
-+#include <linux/interrupt.h>
-+#include <linux/dmi.h>
-+#include <asm/io.h>
-+#include <asm/smp.h>
-+#include <asm/io_apic.h>
-+#include <linux/irq.h>
-+#include <linux/acpi.h>
-+
-+#include "pci.h"
-+
-+/*
-+ * Never use: 0, 1, 2 (timer, keyboard, and cascade)
-+ */
-+unsigned int pcibios_irq_mask = 0xfff8;
-+
-+int (*pcibios_enable_irq)(struct pci_dev *dev) = NULL;
-+void (*pcibios_disable_irq)(struct pci_dev *dev) = NULL;
-+

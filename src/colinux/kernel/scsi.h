@@ -4,24 +4,9 @@
 
 #include <colinux/common/config.h>
 #include <colinux/common/scsi_types.h>
+#include <scsi/coscsi.h>
 
 #include "monitor.h"
-
-/* Mode/Inq page data */
-struct scsi_page {
-	int num;
-	unsigned char *page;
-	int size;
-};
-typedef struct scsi_page scsi_page_t;
-
-struct scsi_rom {
-	char *name;			/* Device name */
-	int *commands;			/* commands */
-	scsi_page_t *inq;
-	scsi_page_t *mode;
-};
-typedef struct scsi_rom scsi_rom_t;
 
 struct co_scsi_dev;
 typedef struct co_scsi_dev co_scsi_dev_t;
@@ -30,43 +15,20 @@ typedef struct co_scsi_dev co_scsi_dev_t;
 struct co_scsi_dev {
 	co_monitor_t *mp;
 	co_scsi_dev_desc_t *conf;
-	scsi_rom_t *rom;
-	unsigned long flags;
-	unsigned long long size;
-	unsigned long block_size;
-	unsigned long long max_lba;
-	int bs_bits;
 	void *os_handle;
-	int key;
-	int asc;
-	int asq;
 };
 //} PACKED_STRUCT;
 
-/* Flags */
-#define SCSI_DF_RMB	1		/* Removeable */
-
-typedef struct {
-	co_scsi_dev_t *dp;
-	co_monitor_t *mp;
-	co_scsi_request_t req;
-	unsigned char msg[512];
-} scsi_worker_t;
-
 extern co_rc_t co_monitor_scsi_dev_init(co_scsi_dev_t *dev, int unit, co_scsi_dev_desc_t *conf);
 extern void co_monitor_scsi_register_device(struct co_monitor *cmon, unsigned int unit, co_scsi_dev_t *dev);
-extern co_rc_t co_monitor_scsi_request(struct co_monitor *cmon, unsigned int unit, co_scsi_request_t *srp);
-extern void co_monitor_scsi_unregister_device(struct co_monitor *cmon, unsigned int unit);
 extern void co_monitor_unregister_and_free_scsi_devices(struct co_monitor *cmon);
+extern void co_scsi_op(co_monitor_t *);
 
 /* O/S interface */
 extern int scsi_file_open(co_scsi_dev_t *);
 extern int scsi_file_close(co_scsi_dev_t *);
-extern int scsi_file_rw(scsi_worker_t *,unsigned long long, unsigned long, int);
-extern void scsi_queue_worker(scsi_worker_t *,void (*func)(scsi_worker_t *));
-
-/* Open flags */
-#define SCSI_FILE_SEQ 1		/* Sequential operation */
+extern int scsi_file_io(co_scsi_dev_t *, co_scsi_io_t *);
+extern int scsi_file_size(co_scsi_dev_t *,unsigned long long *);
 
 /* Additional Sense Code (ASC) */
 #define NO_ADDITIONAL_SENSE 0x0

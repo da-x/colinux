@@ -402,7 +402,7 @@ DriverEntry(
 
 	rc = co_manager_load(manager);
 
-	/* Needed for IoAllocateWorkItem */
+	/* Needed for IoWorkItem */
 	coLinux_DeviceObject = deviceObject;
 
 	return STATUS_SUCCESS;
