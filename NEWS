@@ -141,6 +141,7 @@
     - Remove honypot ports 517, 518 and 7648 from udp listen.
       talk and Cu-Seeme are not implement, still remove the table mow.
     - Runtime debug code disabled.
+    - Mac is usable as config.
   * Introduce a new build system:
     - Target kernel dir splitt into source and objects.  New params
       --targetkernelsource and --targetkernelbuild as replacement for
