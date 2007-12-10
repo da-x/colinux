@@ -116,14 +116,16 @@ static co_rc_t get_params_list(char *filename, int *count, char ***list_output)
 	}
 	
 	if (size > 0) {
-		char *filescan = buf, *param_start = NULL, *param_end, cur_char;
+		unsigned char *filescan = buf, *param_start = NULL, *param_end, cur_char;
 		param_parse_state_t state = PARAM_PARSE_STATE_INIT;
 		param_parse_state_action_t *action;
 
-		buf[size - 1] = '\0';
 		do {
-			cur_char = *filescan;
-			action = &parser_states[state][(unsigned char)cur_char];
+			if (filescan < &buf[size])
+				cur_char = *filescan;
+			else
+				cur_char = 0;
+			action = &parser_states[state][cur_char];
 			state = action->new_state;
 
 			switch (action->mark) {
