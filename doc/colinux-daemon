@@ -241,8 +241,8 @@ don't depend on each other.  The parameters are case sensitive.
 	BIG HINT: In firewalls on your Windows host should allow the outgoing
 	connections for the programm colinux-slirp-net-daemon.exe.
 
-	Use any number <X> of these to specify network interfaces,
-	<MAC> is currently ignored, <redirections> are optional.
+	Use any number <X> of these to specify network interfaces, <MAC> and
+	<redirections> are optional.
 
 	<redirections> take the form tcp|upd:hostport:linuxport[:count],
 	multiple redirections are seperated by /, ie tcp:2222:22/tcp:8080:80
@@ -262,6 +262,7 @@ don't depend on each other.  The parameters are case sensitive.
 						# 4000 --> 80
 						# 4001 --> 81
 						# 4002 --> 82
+	eth0=slirp,00:11:11:11:11:11	# Configure MAC address
 
 	Inside coLinux use a DHCP-Client to get the parameters, or set static
 	parameters (hard coded, no others please):
@@ -294,7 +295,7 @@ don't depend on each other.  The parameters are case sensitive.
 	Example:
 	eth0=tuntap				# Use the first TAP device.
 	eth0=tuntap,"Local Area Network"	# You name it.
-	eth0=tuntap,,11:22:33:44:55:66		# Set a MAC address.
+	eth0=tuntap,,00:22:22:22:22:22		# Set a MAC address.
 
     ethX=pcap-bridge,<network connection name>,<MAC>,<promisc>
 
@@ -325,7 +326,7 @@ don't depend on each other.  The parameters are case sensitive.
 
 	Samples:
 	eth0=pcap-bridge,"Local Area Network"	# Uses PCAP bridging.
-	eth0=pcap-bridge,"Local Area Network",11:22:33:44:55:66,nopromisc
+	eth0=pcap-bridge,"Local Area Network",00:33:33:33:33:33,nopromisc
 						# Define a MAC address and
 						# disable the Promiscuous mode.
 

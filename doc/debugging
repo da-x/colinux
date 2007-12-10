@@ -235,6 +235,12 @@ http://www.microsoft.com/whdc/devtools/debugging/symbolpkg.mspx
 approx. 200MB. But worth downloading and installing IMHO. Install they,
 if you wish to see more Windows names (see example follow).
 
+Symbols can online use. This loads symbols only for used files and stores
+it on local cache (typicaly 4MB). For example, to download symbols to
+c:\websymbols, you would add the following to your symbol path:
+SRV*c:\websymbols*http://msdl.microsoft.com/download/symbols
+Read more on http://www.microsoft.com/whdc/devtools/debugging/debugstart.mspx
+
 Please don't change or replace the file "linux.sys" from there you got the
 crash before the next step!
 
