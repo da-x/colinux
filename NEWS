@@ -3,6 +3,7 @@
   * #1324092: cofs rename replace existing file.
   * #1791993: Ship modules with root as owner and group.
   * Fix cofs chdir with wildcards on existing upper/lower directory.
+  * Don't drop last char from config, if last line no ends with CRLF.
 
   Console and daemons:
   * New menu entries in FLTK console
