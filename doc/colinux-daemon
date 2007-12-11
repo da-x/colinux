@@ -155,9 +155,13 @@ don't depend on each other.  The parameters are case sensitive.
 	<path to image file> is typicali a filname of your image file,
 	for example the base root fs, you have extracted.
 
-	It automatically adds \DosDevices\ where needed.  Make sure
-	you use double-slashes in the situations where command shell
-	escaping forces you to (the @configfile needs no escaping).
+	It automatically adds \DosDevices\ where needed.  Make sure you use
+	double-slashes in the situations where command shell escaping forces
+	you to (the @configfile needs no escaping).
+
+	If verbose output is anabled, coLinux prints more about the configured
+	and canonized device paths. In this case a "\DosDevice\C:\..." would
+	normal see as "\??\C:\..." - windows internal name.
 
 	<path to image file> can be also a partition using standard
 	\Device\HarddiskX\PartitionY format.  Harddisk starts by 0,
