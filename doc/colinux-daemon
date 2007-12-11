@@ -225,6 +225,15 @@ don't depend on each other.  The parameters are case sensitive.
 	Consult README.TXT about installation and use of network types,
 	and the page 'Network' in Wiki with lots of example combinations.
 
+	For all network interfaces can configure a <MAC>, if you wish a
+	constant hardware identification number.  Set six hex numers starts
+	with 02:xx:xx:xx:xx:xx as locally administered address.  Use different
+	numbers for every interfaces in your network environment.  Every MAC
+	should exist only ones per time in your network.  If <MAC> is not set,
+	colinux	builds a random number on every start.  This can be irritate
+	routers, dhcp cache tables and some udev based distributions.  It's
+	better to setting the MAC here.
+
     ethX=slirp,<MAC>,<redirections>
 
 	Slirp, the simplest way to internet. It needs no changes or installs
@@ -241,8 +250,10 @@ don't depend on each other.  The parameters are case sensitive.
 	BIG HINT: In firewalls on your Windows host should allow the outgoing
 	connections for the programm colinux-slirp-net-daemon.exe.
 
-	Use any number <X> of these to specify network interfaces, <MAC> and
-	<redirections> are optional.
+	Use any number <X> of these to specify network interfaces.
+	<MAC> and <redirections> are optional.
+
+	Set a <MAC>, if you wish a constant hardware identification number.
 
 	<redirections> take the form tcp|upd:hostport:linuxport[:count],
 	multiple redirections are seperated by /, ie tcp:2222:22/tcp:8080:80
@@ -262,7 +273,7 @@ don't depend on each other.  The parameters are case sensitive.
 						# 4000 --> 80
 						# 4001 --> 81
 						# 4002 --> 82
-	eth0=slirp,00:11:11:11:11:11	# Configure MAC address
+	eth0=slirp,02:00:00:00:00:01	# Configure MAC address
 
 	Inside coLinux use a DHCP-Client to get the parameters, or set static
 	parameters (hard coded, no others please):
@@ -282,20 +293,21 @@ don't depend on each other.  The parameters are case sensitive.
 	Beginners should use tunetap only in the typicaly way as SSH login
 	or VNC network connection between windows host and coLinux guest.
 
-	Use any number <X> of these to specify network interfaces,
+	Use any number <X> of these to specify network interfaces.
 	<network connection name> and <MAC> are optional.
 
 	<network connection name> is the name of TAP adapter, installed on
 	your host system, mostly named "Local Connection 1".  Without name
 	coLinux use the first TAP adapter.  Let the name empty, if you have
-	only one TAP driver installed.
+	only one TAP driver installed.  Other TAP devices (from VPN) does
+	no interference here.
+
 	Set a <MAC>, if you wish a constant hardware identification number.
-	Othercase colinux builds a random number.
 
 	Example:
 	eth0=tuntap				# Use the first TAP device.
 	eth0=tuntap,"Local Area Network"	# You name it.
-	eth0=tuntap,,00:22:22:22:22:22		# Set a MAC address.
+	eth0=tuntap,,02:00:00:00:00:02		# Set a MAC address.
 
     ethX=pcap-bridge,<network connection name>,<MAC>,<promisc>
 
@@ -310,7 +322,7 @@ don't depend on each other.  The parameters are case sensitive.
 	network card in your network, and this not works in some IT security
 	policy.  Some wireless cards don't work with pcap-bridge, while the
 	MAC is differ on the same one connection channel.
-	Pcap-bridge don't work without a real netwoking connection.  This
+	Pcap-bridge does not work without a real netwoking connection.  This
 	means, you can not use this network type, if your real network adapter
 	is not connected (unplugged).
 
@@ -319,14 +331,16 @@ don't depend on each other.  The parameters are case sensitive.
 	wireless card.  Use Quotation marks for spaces in name.  It is typical
 	"Local Connection".  <MAC> and <promisc> are optional.
 
+	Set a <MAC>, if you wish a constant hardware identification number.
+
 	Default is 'promisc', Promiscuous mode allow to receive packets
 	that not directly adressed to that adapter (sniffing mode).  This
-	works for Ethernet adapters.  Some cases (Wireless cards) works
+	works for cable Ethernet adapters.  Some cases (Wireless cards) works
 	only with 'nopromisc'.
 
 	Samples:
 	eth0=pcap-bridge,"Local Area Network"	# Uses PCAP bridging.
-	eth0=pcap-bridge,"Local Area Network",00:33:33:33:33:33,nopromisc
+	eth0=pcap-bridge,"Local Area Network",02:00:00:00:00:03,nopromisc
 						# Define a MAC address and
 						# disable the Promiscuous mode.
 
