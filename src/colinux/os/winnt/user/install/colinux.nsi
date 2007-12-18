@@ -16,8 +16,8 @@
   Name "Cooperative Linux ${VERSION}"
   OutFile "coLinux.exe"
 
-  ShowInstDetails show
-  ShowUninstDetails show
+  ;ShowInstDetails show
+  ;ShowUninstDetails show
 
   ;Folder selection page
   InstallDir "$PROGRAMFILES\coLinux"
