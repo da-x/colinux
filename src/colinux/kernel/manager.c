@@ -24,17 +24,19 @@ co_manager_t *co_global_manager = NULL;
 
 static void set_hostmem_usage_limit(co_manager_t *manager)
 {
-	if (manager->hostmem_amount >= 256 * 0x100000) {
+	if (manager->hostmem_amount >= 256) {
 		/* more than 256MB */
 		/* use_limit = host - 64mb */
-		manager->hostmem_usage_limit = manager->hostmem_amount - 64 * 0x100000;
+		manager->hostmem_usage_limit = manager->hostmem_amount - 64;
 	} else {
 		/* less then 256MB */
 		/* use_limit = host * (3/4) */
-		manager->hostmem_usage_limit = ((manager->hostmem_amount/0x100000)*3/4) * 0x100000;
+		manager->hostmem_usage_limit = manager->hostmem_amount*3/4;
 	}
 
-	co_debug("machine RAM use limit: %ld MB" , manager->hostmem_amount/0x100000);
+	co_debug("machine RAM use limit: %ld MB" , manager->hostmem_usage_limit);
+
+	manager->hostmem_usage_limit <<= 20; /* Megify */
 }
 
 co_rc_t co_manager_load(co_manager_t *manager)
@@ -56,15 +58,15 @@ co_rc_t co_manager_load(co_manager_t *manager)
 	if (!CO_OK(rc))
 		goto out_err_mutex;
 
+	/* Calculate amount in mega bytes, not overruns the 4GB limit of unsigned long integer */
+	manager->hostmem_amount = manager->hostmem_pages >> (20-CO_ARCH_PAGE_SHIFT);
+	co_debug("machine has %ld MB of RAM", manager->hostmem_amount);
+
 	if (manager->hostmem_pages > 0x100000) {
 		co_debug_error("error, machines with more than 4GB are not currently supported");
 		rc = CO_RC(ERROR);
 		goto out_err_mutex;
 	}
-
-	co_debug("machine has %ld MB of RAM", manager->hostmem_pages >> 8);
-
-	manager->hostmem_amount = manager->hostmem_pages << CO_ARCH_PAGE_SHIFT;
 
 	set_hostmem_usage_limit(manager);
 

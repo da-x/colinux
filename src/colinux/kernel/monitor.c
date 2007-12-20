@@ -993,9 +993,9 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 		 * RAM.
 		 */
 
-		if (cmon->manager->hostmem_amount >= 128*1024*1024) {
+		if (cmon->manager->hostmem_amount >= 128) {
 			/* Use quarter */
-			cmon->memory_size = cmon->manager->hostmem_amount/(1024*1024*4);
+			cmon->memory_size = cmon->manager->hostmem_amount/4;
 		} else {
 			cmon->memory_size = 16;
 		}
