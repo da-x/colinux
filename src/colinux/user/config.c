@@ -302,26 +302,28 @@ static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_confi
 
 		/* Type, <path> */
 		{
-			char type[40];
+			char type[10];
 			comma_buffer_t array [] = {
 				{ sizeof(type), type },
 				{ sizeof(scsi->pathname), scsi->pathname },
 				{ 0, NULL }
 			};
+
 			split_comma_separated(param, array);
-			co_debug("scsi%d: type string: %s\n", index, type);
-			if (strcmp(type,"pass")==0)
+			if (strcmp(type,"pass") == 0)
 				scsi->type = SCSI_PTYPE_PASS;
-			else if (strcmp(type,"disk")==0)
+			else if (strcmp(type,"disk") == 0)
 				scsi->type = SCSI_PTYPE_DISK;
-			else if (strcmp(type,"cdrom")==0)
+			else if (strcmp(type,"cdrom") == 0)
 				scsi->type = SCSI_PTYPE_CDDVD;
-			else if (strcmp(type,"tape")==0)
+			else if (strcmp(type,"tape") == 0)
 				scsi->type = SCSI_PTYPE_TAPE;
-			else if (strcmp(type,"changer")==0)
+			else if (strcmp(type,"changer") == 0)
 				scsi->type = SCSI_PTYPE_CHANGER;
-			else
+			else {
 				co_terminal_print("scsi%d: unknown type: %s\n", index, type);
+				return CO_RC(INVALID_PARAMETER);
+			}
 		}
 
 		rc = check_cobd_file(scsi->pathname, "scsi", index);
