@@ -32,7 +32,7 @@ typedef struct {
  * novice users.
  */
 
-static co_rc_t check_cobd_file (co_pathname_t pathname, int index)
+static co_rc_t check_cobd_file (co_pathname_t pathname, char *name, int index)
 {
 #ifdef COLINUX_DEBUG
 	co_rc_t rc;
@@ -54,17 +54,17 @@ static co_rc_t check_cobd_file (co_pathname_t pathname, int index)
 
 	rc = co_os_file_load(pathname, &buf, &size, 1024);
 	if (!CO_OK(rc)) {
-		co_terminal_print("cobd%d: error reading file\n", index);
+		co_terminal_print("%s%d: Error reading file (%s)\n", name, index, pathname);
 		return rc;
 	}
 
 	if (size != 1024) {
-		co_terminal_print("cobd%d: file to small (%s)\n", index, pathname);
+		co_terminal_print("%s%d: File to small (%s)\n", name, index, pathname);
 		rc = CO_RC(INVALID_PARAMETER);
 	} else
 	if (memcmp(buf, magic_bz2, sizeof(magic_bz2)) == 0 ||
 	    memcmp(buf, magic_7z, sizeof(magic_7z)) == 0) {
-		co_terminal_print("cobd%d: Image file must be unpack before (%s)\n", index, pathname);
+		co_terminal_print("%s%d: Image file must be unpack before (%s)\n", name, index, pathname);
 		rc = CO_RC(INVALID_PARAMETER);
 	}
 
@@ -104,7 +104,7 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 
 		co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
 
-		rc = check_cobd_file(cobd->pathname, index);
+		rc = check_cobd_file(cobd->pathname, "cobd", index);
 		if (!CO_OK(rc))
 			return rc;
 
@@ -138,7 +138,7 @@ static co_rc_t allocate_by_alias(co_config_t *conf, const char *prefix, const ch
 	cobd->enabled = PTRUE;
 	co_snprintf(cobd->pathname, sizeof(cobd->pathname), "%s", param);
 
-	rc = check_cobd_file (cobd->pathname, i);
+	rc = check_cobd_file (cobd->pathname, "cobd", i);
 	if (!CO_OK(rc))
 		return rc;
 
@@ -324,9 +324,7 @@ static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_confi
 				co_terminal_print("scsi%d: unknown type: %s\n", index, type);
 		}
 
-//		co_snprintf(scsi->pathname, sizeof(scsi->pathname), "%s", param);
-
-		rc = check_cobd_file(scsi->pathname, index);
+		rc = check_cobd_file(scsi->pathname, "scsi", index);
 		if (!CO_OK(rc)) return rc;
 
 		co_canonize_cobd_path(&scsi->pathname);
