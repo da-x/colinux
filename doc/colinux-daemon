@@ -172,6 +172,31 @@ don't depend on each other.  The parameters are case sensitive.
 	cobd1=C:\temp\swapfs.img
 	cobd2=\Device\Cdrom0
 
+    scsiX=<type>,<path to image file>
+
+	Use any number <X> of these to specify the block device image file.
+	
+	<type> is 'disk' or 'cdrom'.
+
+	<path to image file> is typicaly a filname of your image file,
+	for example the base root fs, you have extracted.  This can be an
+	image of disk (/dev/hda), instead the partition self (dev/hda1).
+	Linux kernel scans for partition tables, fdisk is usable.
+	
+	<path to image file> can be a raw disk drive, with format
+	"\\.\PhysicalDriveX", where X starts with 0 for first harddisk.	Be
+	carefully with these configs, you risk datas on your drive C:.
+	Don't mount a partition that is in use on windows side!
+
+	For scsi0 the the device inside coLinux is /dev/sda, if type is cdrom
+	or the image file is a part of partition self (all current images).
+	If file has partition tables, the devices /dev/sda1, /dev/sda2, ...
+	are usable.
+
+	Example:
+	scsi0=disk,file.img
+	scsi1=cdrom,file.iso
+
     alias=<path to image file> | :cobdX
 
 	This makes life a lot easier. If you map an device node
