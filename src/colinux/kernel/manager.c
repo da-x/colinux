@@ -45,6 +45,7 @@ co_rc_t co_manager_load(co_manager_t *manager)
 
 	co_memset(manager, 0, sizeof(*manager));
 	
+	co_debug_startup();
 	co_debug("loaded to host kernel");
 
 	co_list_init(&manager->opens);

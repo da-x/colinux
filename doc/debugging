@@ -1,6 +1,17 @@
 coLinux debugging
 =================
 
+Table of Contents
+
+    colinux-debug-daemon.exe
+    Command Line Parameters
+    Short guide to see more error messages
+    Stepguide for colinux-daebug-daemon
+    Example debuging over network
+    Howto see debug prints from kernel driver
+    Howto use Windows crash dump
+
+
 colinux-debug-daemon.exe
 ------------------------
 
@@ -46,7 +57,7 @@ Command Line Parameters
 	Shows a short help text
 
 
-Short start to see more error messages
+Short guide to see more error messages
 --------------------------------------
 
 Open a windows command prompt, change into coLinux install directory and
@@ -190,6 +201,46 @@ Typicaly output for debug.txt are such lines:
     4|00000000.496827397|colinux-daemon|src/colinux/user/config.c:co_parse_config_args:713|using 'vmlinux' as kernel image
     5|00000000.496828810|colinux-daemon|src/colinux/user/config.c:parse_config_args:635|configuring 32 MB of virtual RAM
     ...
+
+
+Howto see debug prints from kernel driver
+-----------------------------------------
+
+Run regedit, create a registry key "HKEY_LOCAL_MACHINE\SOFTWARE\coLinux",
+create a new DWORD with Name "Debug" and set the value to 1F (hex).
+Or create such file colinux-debug.reg and import it:
+
+	Windows Registry Editor Version 5.00
+
+	[HKEY_LOCAL_MACHINE\SOFTWARE\coLinux]
+	"Debug"=dword:0000001f
+
+Download DbgView.exe from http://www.sysinternals.com
+( http://technet.microsoft.com/en-us/sysinternals/bb896647.aspx ),
+run the DbgView.exe,
+relaod the coLinux driver with:
+
+    cd CurentColinuxPath
+    colinux-daemon.exe --remove-driver
+    colinux-daemon.exe --install-driver
+
+Start coLinux with "colinux-daemon @YourConfig"
+Watch the output from DbgView, typicaly will see such lines:
+
+    [m:colinux-driver f:0 l:10 src/colinux/kernel/manager.c:49:co_manager_load] loaded to host kernel
+    [m:colinux-driver f:0 l:10 src/colinux/kernel/manager.c:63:co_manager_load] machine has 480 MB of RAM
+    [m:colinux-driver f:0 l:10 src/colinux/kernel/manager.c:37:set_hostmem_usage_limit] machine RAM use limit: 416 MB
+
+Every line has the follow format:
+
+    m: module
+    f: facility (0=misc)
+    l: level
+    following by filename, linenumber, function name and the text.
+
+The registry key will only read on driver loading, typicaly on booting Windows.
+Debug outputs decreases coLinux running speed. Remember to remove the registry
+key Debug, or set it to "0" for normal running mode.
 
 
 Howto use Windows crash dump
