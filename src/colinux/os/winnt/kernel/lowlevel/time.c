@@ -49,7 +49,9 @@ unsigned long co_os_get_cpu_khz(void)
 	NTSTATUS status;
 	static ULONG mhz = 0;
 	static RTL_QUERY_REGISTRY_TABLE query[2] = {{
-		.Flags = RTL_QUERY_REGISTRY_REQUIRED | RTL_QUERY_REGISTRY_DIRECT,
+		.Flags = RTL_QUERY_REGISTRY_REQUIRED
+		       | RTL_QUERY_REGISTRY_DIRECT
+		       | RTL_QUERY_REGISTRY_NOEXPAND,
 		.Name = L"~MHz",
 		.EntryContext = &mhz,
 		.DefaultType = REG_DWORD,
