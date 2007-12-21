@@ -23,7 +23,7 @@ static NTAPI void manager_irp_cancel(
 	PDEVICE_OBJECT DeviceObject,
 	PIRP Irp)
 {
-	co_manager_t *manager = NULL;
+	co_manager_t *manager;
 	co_manager_open_desc_t opened = NULL;
 	bool_t myIRP = PFALSE;
 

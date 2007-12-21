@@ -220,9 +220,9 @@ Index: linux-2.6.22-source/arch/i386/pci/copci.c
 +
 +static int get_mac(int unit, unsigned char *address)
 +{
-+	unsigned long flags = 0;
++	unsigned long flags;
 +	co_network_request_t *net_request;
-+	int result = 0;
++	int result;
 +
 +	co_passage_page_assert_valid();
 +	co_passage_page_acquire(&flags);
@@ -241,9 +241,9 @@ Index: linux-2.6.22-source/arch/i386/pci/copci.c
 +
 +#if 0
 +static int get_irq(int type) {
-+	unsigned long flags = 0;
++	unsigned long flags;
 +	co_network_request_t *net_request;
-+	int result = 0, irq;
++	int result, irq;
 +
 +	co_passage_page_assert_valid();
 +	co_passage_page_acquire(&flags);
@@ -905,7 +905,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/drivers/scsi/coscsi.c
-@@ -0,0 +1,866 @@
+@@ -0,0 +1,863 @@
 +
 +#include <linux/module.h>
 +#include <linux/init.h>
@@ -1686,9 +1686,6 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +#if COSCSI_DEBUG
 +	printk(KERN_INFO "coscsi_pci_init: scsi_rev: %s\n", scsi_rev);
 +#endif
-+
-+	/* Clear devices */
-+	memset(&devices, 0, sizeof(devices));
 +
 +	/* Get our config from the host */
 +	co_passage_page_acquire(&flags);
