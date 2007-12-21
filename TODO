@@ -68,7 +68,6 @@
 
  * cobd:
    * Reimplement as asynchronous.
-   * Add partitions table support.
 
  * Root file system images: 
    * Fix and improve the Debian image.
@@ -83,10 +82,6 @@
      * And call it with a n+1 release name.
    * Post more images on SourceForge. Send me URLs of ready images. I will
      not accept images that are tied to specific coLinux releases.
-
- * Linux as host
-   * CoLinux don't run, if host kernel is configured with CONFIG_REGPARM.  In
-     function co_manager_load should 'manager == co_global_manager', but isn't.
 
  * Odd things to investigate:
    * Some iptables functionality not working? (see ML)

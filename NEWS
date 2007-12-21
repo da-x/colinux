@@ -1,8 +1,18 @@
 * Version 0.8.0
+  * scsi: New device for images with partition tables and works async.
+    Usage "scsi0=disk,file.img" or "scsi1=cdrom,file.iso" (Steve Shoecraft)
+  * Added virtual pci device handling. "lspci" is working (Steve Shoecraft)
+
+  Debugging:
+  * Enable host kernel debug via registry [HLM\SOFTWARE\coLinux] "Debug"
+
+* Version 0.7.2
   Bugfixes:
   * #1324092: cofs rename replace existing file.
   * #1791993: Ship modules with root as owner and group.
+  * #1853578: memory usage limit: 0 MB on machines with 4 GB RAM.
   * Fix cofs chdir with wildcards on existing upper/lower directory.
+  * Don't drop last char from config, if last line no ends with CRLF.
 
   Console and daemons:
   * New menu entries in FLTK console
@@ -10,7 +20,7 @@
     Reboot:    Sends ctrl-alt-del, init process goes into runlevel 6
     Shutdown:  Calls "/sbin/shutdown -h now" with fallback to "/sbin/halt"
                Shutdown will automatic call from stopping as service,
-               of if the user click close close on the colinux-daemon.
+               or if user clicks close on the colinux-daemon.
   * New: "colinux-daemon -p pidFile" stores ID of coLinux in file pidFile.
     "colinux-console-fltk|nt -p pidFile" attach the monitor from stored
     ID.  With this mechanism can open a /named/ console without knowing
@@ -36,6 +46,7 @@
   * Uninstall old colinux with old exefile, path from registry uninstaller
     [Support Requests-1553923]
   * Update tapinstall.exe (alias devcon) from DDK 3790.1830 (Mar 24 2005)
+  * Block installing on 64 bit systems.
 
   Buildsystem:
   * Linux as host: Restructed build of colinux.ko, use kbuild system
@@ -140,6 +151,7 @@
     - Remove honypot ports 517, 518 and 7648 from udp listen.
       talk and Cu-Seeme are not implement, still remove the table mow.
     - Runtime debug code disabled.
+    - Mac is usable as config.
   * Introduce a new build system:
     - Target kernel dir splitt into source and objects.  New params
       --targetkernelsource and --targetkernelbuild as replacement for
