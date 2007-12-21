@@ -41,7 +41,7 @@ void co_debug_system(const char *fmt, ...)
 
 	va_start(ap, fmt);
 	co_vsnprintf(buf, sizeof(buf), fmt, ap);
-        DbgPrint("%s\n", buf);
+	DbgPrint("%s", buf);
 	va_end(ap);
 }
 
