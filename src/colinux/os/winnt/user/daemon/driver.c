@@ -38,7 +38,7 @@ static co_rc_t co_win32_manager_is_installed(bool_t *installed)
 	rc = co_os_manager_is_installed(installed);
 	if (!CO_OK(rc)) {
 		if (CO_RC_GET_CODE(rc) == CO_RC_ACCESS_DENIED)
-			co_terminal_print("access defined, not enough privileges\n");
+			co_terminal_print("access denied, not enough privileges\n");
 		else
 			co_terminal_print("error, unable to determine if driver is installed (rc %x)\n", (int)rc);
 	}
@@ -108,7 +108,7 @@ co_rc_t co_winnt_remove_driver(void)
 			co_terminal_print("driver version is %d while expected version %d\n", 
 					 status.periphery_api_version, CO_LINUX_PERIPHERY_API_VERSION);
 		} else {
-			co_terminal_print("detected a old buggy driver version\n");
+			co_terminal_print("detected an old buggy driver version\n");
 		}
 
 		co_os_manager_close(handle);
@@ -192,8 +192,8 @@ static co_rc_t co_winnt_install_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LP
 				   NULL); 
  
 	if (schService == NULL) {
-		co_terminal_print_last_error("daemon");
-		return CO_RC(ERROR_INSTALLING_DRIVER); 
+		co_terminal_print_last_error("Install lowlevel driver failed");
+		return CO_RC(ERROR_INSTALLING_DRIVER);
 	}
 
 	/* Possible error: ERROR_SERVICE_EXISTS */
