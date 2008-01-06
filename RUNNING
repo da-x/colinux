@@ -47,6 +47,7 @@ To run Cooperative Linux, please follow these instructions before trying to
 run anything.
 
 1. Run the downloaded installer file to begin the installation.
+   Under Vista must run the installer via 'run as ...' and the admin account.
    
 2. Choose an installation directory. It is better to choose c:\coLinux because
    this way you don't need to edit the configuration file since the pathnames
@@ -116,7 +117,7 @@ run anything.
 
 7. Run coLinux. The current directory should be the installation directory,
    if not, then you need to change paths (especially for vmlinux) in the
-   config file..
+   config file.
 
 	a. Run as an regular application.
 
@@ -173,6 +174,7 @@ Common Problems
 ---------------
 
     "Unable to mount root fs"
+
 	Generally this means that the root filesystem image is
 	missing, was specified incorrectly, or not uncompressed.
 
@@ -181,6 +183,11 @@ Common Problems
 	readable from current working directory, try it with a
 	simple "DIR ..." on command prompt.
 
+    "Vista admin"
+
+	Under Vista an user within administrator group must run the file
+	C:\Windows\system32\cmd.exe from explorer context menu "run as ..." and
+	admin account to installing the driver or service from command line.
 
   Additional problems not know at time of release are typically
 documented on the Wiki (http://colinux.wikia.com/), look
