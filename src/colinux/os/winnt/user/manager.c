@@ -103,8 +103,7 @@ static co_rc_t co_winnt_check_driver(IN LPCTSTR DriverName, bool_t *installed)
 
 	schSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
 	if (schSCManager == NULL) {
-		DWORD last_error = GetLastError();
-		if (last_error == ERROR_ACCESS_DENIED)
+		if (GetLastError() == ERROR_ACCESS_DENIED)
 			return CO_RC(ACCESS_DENIED);
 
 		return CO_RC(ERROR_ACCESSING_DRIVER); 
