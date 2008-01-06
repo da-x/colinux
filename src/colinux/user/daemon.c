@@ -53,7 +53,7 @@ void co_daemon_print_header(void)
 		return;
 
 	co_terminal_print("Cooperative Linux Daemon, " COLINUX_VERSION "\n");
-	co_terminal_print("Compiled on " __DATE__ " " __TIME__ "\n");
+	co_terminal_print("Daemon compiled on %s\n", COLINUX_COMPILE_TIME);
 	co_terminal_print("\n");
 	printed_already = 1;
 }

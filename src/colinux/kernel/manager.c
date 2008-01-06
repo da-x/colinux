@@ -8,6 +8,7 @@
  */
 
 #include <colinux/common/libc.h>
+#include <colinux/common/version.h>
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/os/kernel/monitor.h>
 #include <colinux/os/kernel/manager.h>
@@ -19,6 +20,10 @@
 #include "monitor.h"
 #include "pages.h"
 #include "reversedpfns.h"
+
+#ifndef min
+#define min(a,b) ((a)<(b)?(a):(b))
+#endif
 
 co_manager_t *co_global_manager = NULL;
 
@@ -293,6 +298,7 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 	switch (ioctl) {
 	case CO_MANAGER_IOCTL_STATUS: {
 		co_manager_ioctl_status_t *params;
+		const static char compile_time[] = { COLINUX_COMPILE_TIME };
 
 		params = (typeof(params))(io_buffer);
 		params->state = manager->state;
@@ -300,6 +306,13 @@ co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 		params->periphery_api_version = CO_LINUX_PERIPHERY_API_VERSION;
 		params->linux_api_version = CO_LINUX_API_VERSION;
 
+		if (out_size < sizeof(*params)) {
+			// Fallback: old daemon ask status
+			*return_size = sizeof(*params) - sizeof(params->compile_time);
+			return CO_RC(OK);
+		}
+
+		co_memcpy(params->compile_time, compile_time, min(sizeof(params->compile_time)-1, sizeof(compile_time)));
 		*return_size = sizeof(*params);
 		return CO_RC(OK);
 	}

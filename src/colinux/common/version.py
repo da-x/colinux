@@ -9,6 +9,7 @@ def main_by_string(input_string):
     output_lines.append('#define __COLINUX_VERSION_H__')
     output_lines.append('')
     output_lines.append('#define COLINUX_VERSION      "%s"' % (version, ))
+    output_lines.append('#define COLINUX_COMPILE_TIME "%s"' % (time.ctime(), ))
     output_lines.append('')
     output_lines.append('#endif')
     output_lines.append('')
