@@ -77,20 +77,7 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 	       const char *filename, int line, const char *func,
 	       const char *fmt, ...)
 {
-	long packet_size = 0;
-
-	packet_size += sizeof(co_debug_type_t) + co_strlen(module) + 1;
-	packet_size += sizeof(co_debug_type_t) + co_strlen(filename) + 1;
-	packet_size += sizeof(co_debug_type_t) + co_strlen(func) + 1;
-	packet_size += sizeof(co_debug_type_t) + sizeof(co_timestamp_t);
-	packet_size += sizeof(co_debug_type_t) + sizeof(unsigned long);
-	packet_size += sizeof(co_debug_type_t) + sizeof(unsigned long);
-	packet_size += sizeof(co_debug_type_t) + sizeof(unsigned char);
-	packet_size += sizeof(co_debug_type_t) + sizeof(unsigned char);
-	packet_size += sizeof(co_debug_type_t) + 120;
-
-	{
-	char buffer[packet_size];
+	char buffer[512];
 	co_debug_tlv_t *sub_tlv = (co_debug_tlv_t *)buffer;
 	va_list ap;
 
@@ -111,7 +98,6 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 
 	co_debug_level_system(module, facility, level, filename, line, func, sub_tlv->value);
 	co_debug_buf(buffer, sub_tlv->value + sub_tlv->length - buffer);
-	}
 }
 #endif
 

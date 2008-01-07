@@ -78,6 +78,7 @@ typedef struct {
 	int monitors_count;
 	int periphery_api_version;
 	int linux_api_version;
+	char compile_time[28];
 } co_manager_ioctl_status_t;
 
 /* interface for CO_MANAGER_IOCTL_INFO: */
