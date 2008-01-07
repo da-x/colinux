@@ -30,6 +30,7 @@ void co_trace_ent_name(void *ptr, const char *name)
 	reenter--;
 }
 
+#ifdef COLINUX_DEBUG
 static inline co_debug_tlv_t *tlv_add_const_string(co_debug_type_t type, const char *str, co_debug_tlv_t *sub_tlv)
 {
 	sub_tlv->type = type;
@@ -65,7 +66,6 @@ static inline co_debug_tlv_t *tlv_add_char(co_debug_type_t type, unsigned long d
 	return (co_debug_tlv_t *)&sub_tlv->value[sub_tlv->length];
 }
 
-#ifdef COLINUX_DEBUG
 static int co_debug_local_index;
 #define X(facility, static_level, default_dynamic_level) .facility##_level=default_dynamic_level,
 co_debug_levels_t co_global_debug_levels = {
