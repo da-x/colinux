@@ -77,7 +77,7 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 	       const char *filename, int line, const char *func,
 	       const char *fmt, ...)
 {
-	char buffer[512];
+	char buffer[512]; /* Typicaly headerlength app. 110 bytes */
 	co_debug_tlv_t *sub_tlv = (co_debug_tlv_t *)buffer;
 	va_list ap;
 
