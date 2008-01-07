@@ -195,7 +195,7 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char 
 	return CO_RC(ERROR);
 }
 
-int co_winnt_daemon_remove_service(const char *service_name) 
+co_rc_t co_winnt_daemon_remove_service(const char *service_name) 
 {
 	SC_HANDLE schService;
 	SC_HANDLE schSCManager;
