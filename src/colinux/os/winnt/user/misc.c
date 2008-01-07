@@ -122,17 +122,3 @@ void co_terminal_print_last_error(const char *message)
 		co_terminal_print("%s: success\n", message);
 	}
 }
-
-bool_t co_winnt_is_winxp_or_better(void)
-{
-	bool_t bRetVal = PFALSE;
-	OSVERSIONINFO info = { sizeof(OSVERSIONINFO) };
-	if (GetVersionEx(&info)) {
-		if (info.dwMajorVersion > 5)
-			bRetVal = PTRUE;
-		else if (info.dwMajorVersion == 5 && info.dwMinorVersion > 0)
-			bRetVal = PTRUE;
-	}
-
-	return bRetVal;
-}

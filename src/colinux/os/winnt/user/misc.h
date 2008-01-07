@@ -15,6 +15,5 @@
 
 extern bool_t co_winnt_get_last_error(char *error_message, int buf_size);
 extern void co_terminal_print_last_error(const char *message);
-extern bool_t co_winnt_is_winxp_or_better(void);
 
 #endif

@@ -157,7 +157,6 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char 
 	char command[1024];
 	char patched_commandline[MAX_CMD_LINE_PATCHED];
 	char error_message[1024];
-	char *service_user_name = NULL;
 
 	co_terminal_print("daemon: installing service '%s'\n", service_name);
 	if (!GetModuleFileName(0, exe_name, sizeof(exe_name))) {
@@ -176,16 +175,10 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char 
 	co_snprintf(command, sizeof(command), "\"%s\" %s", exe_name, patched_commandline);
 	co_terminal_print("daemon: service command line: %s\n", command);
 
-#if (0)
-	/* broken somehow for recent TAP driver */
-	if (co_winnt_is_winxp_or_better())
-		service_user_name = "NT AUTHORITY\\NetworkService";
-#endif
-
 	schService = CreateService(schSCManager, service_name, service_name, 
 				   SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START, 
 				   SERVICE_ERROR_NORMAL, command, NULL, NULL, CO_DRIVER_DEPENDENCY_NAME, 
-				   service_user_name, NULL);
+				   NULL, NULL);
 
 	if (schService != 0) {	
 	        co_winnt_set_service_restart_options(schService);
