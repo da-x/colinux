@@ -329,7 +329,10 @@ don't depend on each other.  The parameters are case sensitive.
 	your host system, mostly named "Local Connection 1".  Without name
 	coLinux use the first TAP adapter.  Let the name empty, if you have
 	only one TAP driver installed.  Other TAP devices (from VPN) does
-	no interference here.
+	no interference here. If have more as one TAP (coLinux) driver
+	installed, then *must* set the name. Good idea is to rename the	network
+	connection inside windows networking overview into more readable
+	name, for example "TAP-coLinux".
 
 	Set a <MAC>, if you wish a constant hardware identification number.
 
@@ -358,7 +361,11 @@ don't depend on each other.  The parameters are case sensitive.
 	Use any number <X> of these to specify network interfaces.
 	<network connection name> must be a name of your real ethernet or
 	wireless card.  Use Quotation marks for spaces in name.  It is typical
-	"Local Connection".  <MAC> and <promisc> are optional.
+	"Local Connection". The name is optional, if have only pcap-bridge
+	interface (and no tuntap). If you have tuntap or more as one network
+	cards in your windows then plesae set the name here.
+
+	<MAC> and <promisc> are optional.
 
 	Set a <MAC>, if you wish a constant hardware identification number.
 
