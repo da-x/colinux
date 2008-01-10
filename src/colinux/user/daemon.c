@@ -469,7 +469,7 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 
 	rc = co_elf_image_read(&daemon->elf_data, daemon->buf, size);
 	if (!CO_OK(rc)) {
-		co_terminal_print("error reading image (%ld bytes)\n", size);
+		co_terminal_print("%s: error reading image (%ld bytes)\n", daemon->config.vmlinux_path, size);
 		goto out_free_vmlinux; 
 	}
 
