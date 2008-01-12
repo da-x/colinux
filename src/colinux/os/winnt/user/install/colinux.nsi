@@ -545,7 +545,7 @@ Section "Uninstall"
   ; Cleanup registry
   DeleteRegKey HKLM ${REGUNINSTAL}
   DeleteRegKey HKLM ${REGEVENTS}
-  DeleteRegKey /ifempty HKCU "Software\coLinux"
+  DeleteRegKey HKCU "Software\coLinux"
 
 SectionEnd
 
