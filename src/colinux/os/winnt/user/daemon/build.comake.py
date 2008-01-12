@@ -6,5 +6,6 @@ targets['daemon.o'] = Target(
     Input('driver.o'),
     Input('cmdline.o'),
     Input('misc.o'),
+    Input('registry.o'),
     ],
 )

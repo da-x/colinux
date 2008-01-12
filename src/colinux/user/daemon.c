@@ -11,6 +11,7 @@
 #include <colinux/common/common.h>
 #include <colinux/common/version.h>
 #include <colinux/common/libc.h>
+#include <colinux/os/user/config.h>
 #include <colinux/os/user/file.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/exec.h>
@@ -264,8 +265,36 @@ co_rc_t co_daemon_load_symbol(co_daemon_t *daemon,
 }
 
 static
-void co_daemon_prepare_net_macs(co_daemon_t *daemon)
+co_rc_t co_net_config_macs_read(int monitor_index, int device_index, unsigned char *binary)
 {
+	co_rc_t rc;
+	char mac_string[32];
+
+	rc = co_config_user_string_read(monitor_index, "eth", device_index, "mac", mac_string, sizeof(mac_string));
+	if (!CO_OK(rc))
+		return rc;
+
+	co_debug_info("eth%d: MAC found in registry: %s", device_index, mac_string);
+	return co_parse_mac_address(mac_string, binary);
+}
+
+static
+void co_net_config_macs_write(int monitor_index, int device_index, const unsigned char *mac)
+{
+	co_rc_t rc;
+	char mac_string[32];
+
+	co_debug_info("eth%d: MAC random generated, store into registry", device_index);
+	co_build_mac_address(mac_string, sizeof(mac_string), mac);
+	rc = co_config_user_string_write(monitor_index, "eth", device_index, "mac", mac_string);
+	if (!CO_OK(rc))
+		co_terminal_print("eth%d: Store random MAC into registry failed\n", device_index);
+}
+
+static
+void co_daemon_prepare_net_macs(co_daemon_t *daemon, int monitor_index)
+{
+	co_rc_t rc;
 	int i;
 
 	for (i=0; i < CO_MODULE_MAX_CONET; i++) { 
@@ -275,11 +304,15 @@ void co_daemon_prepare_net_macs(co_daemon_t *daemon)
 		if (net_dev->enabled == PFALSE)
 			continue;
 			
-		if (net_dev->manual_mac_address == PFALSE) {
-			unsigned long rand_mac = rand();
-			int i;
+		if (net_dev->manual_mac_address != PFALSE)
+			continue;
 
-			for (i=0; i < 10; i++)
+		rc = co_net_config_macs_read(monitor_index, i, net_dev->mac_address);
+		if (!CO_OK(rc)) {
+			unsigned long rand_mac = rand();
+			int c;
+
+			for (c=0; c < 10; c++)
 				rand_mac *= rand() + 1234;
 
 			net_dev->mac_address[0] = 0;
@@ -288,6 +321,8 @@ void co_daemon_prepare_net_macs(co_daemon_t *daemon)
 			net_dev->mac_address[3] = rand_mac >> 020;
 			net_dev->mac_address[4] = rand_mac >> 010;
 			net_dev->mac_address[5] = rand_mac >> 000;
+
+			co_net_config_macs_write(monitor_index, i, net_dev->mac_address);
 		}
 	}
 }
@@ -436,7 +471,7 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 	if (!CO_OK(rc))
 		goto out_close;
 
-	co_daemon_prepare_net_macs(daemon);
+	co_daemon_prepare_net_macs(daemon, status.monitors_count);
 
 	create_params.config = daemon->config;
 
