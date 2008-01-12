@@ -263,6 +263,7 @@ co_rc_t co_daemon_load_symbol(co_daemon_t *daemon,
 	return rc;
 }
 
+static
 void co_daemon_prepare_net_macs(co_daemon_t *daemon)
 {
 	int i;
@@ -291,6 +292,7 @@ void co_daemon_prepare_net_macs(co_daemon_t *daemon)
 	}
 }
 
+static
 co_rc_t co_load_initrd(co_daemon_t *daemon)
 {
 	co_rc_t rc;
@@ -349,6 +351,7 @@ memory_usage_limit_resached(co_manager_ioctl_create_t *create_params)
 			  info.hostmem_used / 0x100000);
 }
 
+static
 co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 {
 	co_manager_ioctl_create_t create_params = {0, };
