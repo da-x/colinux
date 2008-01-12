@@ -24,7 +24,7 @@ typedef struct co_user_monitor {
 	co_reactor_user_t reactor_user;
 } co_user_monitor_t;
 
-extern co_rc_t co_user_monitor_create(co_user_monitor_t **out_mon, co_manager_ioctl_create_t *params);
+extern co_rc_t co_user_monitor_create(co_user_monitor_t **out_mon, co_manager_ioctl_create_t *params, co_manager_handle_t handle);
 extern co_rc_t co_user_monitor_open(co_reactor_t reactor, co_reactor_user_receive_func_t receive,
 				    co_id_t id, co_module_t *modules, int num_modules, 
 				    co_user_monitor_t **out_mon);
