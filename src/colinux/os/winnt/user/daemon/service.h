@@ -21,7 +21,4 @@ extern bool_t co_winnt_daemon_initialize_service(co_start_parameters_t *start_pa
 extern void co_ntevent_print(const char *format, ...)
 	__attribute__ ((format (printf, 1, 2)));
 
-extern co_rc_t co_winnt_install_driver(void);
-extern co_rc_t co_winnt_remove_driver(void);
-
 #endif
