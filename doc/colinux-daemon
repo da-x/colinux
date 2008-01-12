@@ -459,6 +459,22 @@ Environment settings
 	set COLINUX_CONSOLE_FONT=:12
 
 
+Used keys in Windows Registry
+-----------------------------
+
+# Automatic generated MAC, monitor number 'M', network device index 'X'
+[HKEY_CURRENT_USER\Software\coLinux\monitor\M\ethX]
+"mac"="00:ff:XX:XX:XX:XX"
+
+# Debug level for kernel driver load
+[HKEY_LOCAL_MACHINE\SOFTWARE\coLinux]
+"Debug"=dword:0000001f
+
+# Message file for event logging, if running as service
+[HKEY_LOCAL_MACHINE\SYSTEM\\CurrentControlSet\Services\Eventlog\Application\coLinux]
+"EventMessageFile"="C:\coLinux\colinux-daemon.exe"
+
+
 Special keys in consoles
 ------------------------
 
