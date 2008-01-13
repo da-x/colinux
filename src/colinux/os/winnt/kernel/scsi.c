@@ -15,8 +15,8 @@
 #define OBJ_KERNEL_HANDLE 0x00000200L
 #endif
 
-#define DEBUG_OPEN 0
-#define DEBUG_IO 0
+#define COSCSI_DEBUG_OPEN 0
+#define COSCSI_DEBUG_IO 0
 #define COSCSI_DEBUG_SIZE 0
 
 extern co_rc_t co_winnt_utf8_to_unicode(const char *src, UNICODE_STRING *unicode_str);
@@ -46,7 +46,7 @@ int scsi_file_open(co_scsi_dev_t *dp) {
 	ULONG OpenOptions;
 	co_rc_t rc;
 
-#if DEBUG_OPEN
+#if COSCSI_DEBUG_OPEN
 	co_debug_system("scsi_file_open: pathname: %s", dp->conf->pathname);
 #endif
 
@@ -74,7 +74,7 @@ int scsi_file_open(co_scsi_dev_t *dp) {
 		return 1;
 	}
 
-#if DEBUG_OPEN
+#if COSCSI_DEBUG_OPEN
 	co_debug_system("scsi_file_open: os_handle: %p", dp->os_handle);
 #endif
 
