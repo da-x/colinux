@@ -6,7 +6,6 @@
 #include <colinux/kernel/scsi.h>
 #include <colinux/common/scsi_types.h>
 #include <colinux/kernel/transfer.h>
-#include <colinux/kernel/printk.h>
 #include <colinux/kernel/pages.h>
 #include <colinux/os/alloc.h>
 #include <colinux/os/kernel/alloc.h>
@@ -48,7 +47,7 @@ int scsi_file_open(co_scsi_dev_t *dp) {
 	co_rc_t rc;
 
 #if DEBUG_OPEN
-	printk(dp->mp, "scsi_file_open: pathname: %s\n", dp->conf->pathname);
+	co_debug_system("scsi_file_open: pathname: %s", dp->conf->pathname);
 #endif
 
 	rc = co_winnt_utf8_to_unicode(dp->conf->pathname, &unipath);
@@ -76,7 +75,7 @@ int scsi_file_open(co_scsi_dev_t *dp) {
 	}
 
 #if DEBUG_OPEN
-	printk(dp->mp, "scsi_file_open: os_handle: %p\n", dp->os_handle);
+	co_debug_system("scsi_file_open: os_handle: %p", dp->os_handle);
 #endif
 
 	return 0;
@@ -173,10 +172,10 @@ int scsi_file_io(co_scsi_dev_t *dp, co_scsi_io_t *iop) {
 	register int x;
 
 #if COSCSI_DEBUG_IO
-	printk(dp->mp, "scsi_file_io: ctx: %p\n", iop->hdr.ctx);
-	printk(dp->mp, "scsi_file_io: count: %d\n", iop->hdr.count);
-	printk(dp->mp, "scsi_file_io: write: %d\n", iop->hdr.write);
-	printk(dp->mp, "scsi_file_io: vectors:\n");
+	co_debug_system("scsi_file_io: ctx: %p", iop->hdr.ctx);
+	co_debug_system("scsi_file_io: count: %d", iop->hdr.count);
+	co_debug_system("scsi_file_io: write: %d", iop->hdr.write);
+	co_debug_system("scsi_file_io: vectors:");
 #endif
 
 	r = (struct _req *) co_os_malloc(sizeof(*r));
@@ -192,9 +191,9 @@ int scsi_file_io(co_scsi_dev_t *dp, co_scsi_io_t *iop) {
 	r->iop->hdr.write = iop->hdr.write;
 	for(x=0; x < iop->hdr.count; x++) {
 #if COSCSI_DEBUG_IO
-		printk(dp->mp, "scsi_file_io: vec[%d].buffer: %x\n", x, iop->vec[x].buffer);
-		printk(dp->mp, "scsi_file_io: vec[%d].offset: %lld\n", x, iop->vec[x].offset);
-		printk(dp->mp, "scsi_file_io: vec[%d].size: %ld\n", x, iop->vec[x].size);
+		co_debug_system("scsi_file_io: vec[%d].buffer: %x", x, iop->vec[x].buffer);
+		co_debug_system("scsi_file_io: vec[%d].offset: %lld", x, iop->vec[x].offset);
+		co_debug_system("scsi_file_io: vec[%d].size: %ld", x, iop->vec[x].size);
 #endif
 		r->iop->vec[x].buffer = iop->vec[x].buffer;
 		r->iop->vec[x].offset = iop->vec[x].offset;
@@ -360,7 +359,7 @@ int scsi_file_size(co_scsi_dev_t *dp, unsigned long long *size) {
 		rc = scsi_file_detect_size(dp->os_handle, size);
 
 #if COSCSI_DEBUG_SIZE
-	printk(dp->mp,"scsi_file_size: detected size: %llu KBs\n", (*size >> 10));
+	co_debug_system("scsi_file_size: detected size: %llu KBs", (*size >> 10));
 #endif
 	return (CO_OK(rc) == 0);
 }

@@ -216,9 +216,6 @@ extern co_rc_t co_monitor_free(co_monitor_t *cmon, void *ptr);
 
 extern co_rc_t co_monitor_message_from_user(co_monitor_t *monitor, struct co_manager_open_desc *opened, co_message_t *message);
 
-/* XXX needed for host printk */
-void incoming_message(co_monitor_t *cmon, co_message_t *message);
-
 /*
  * An accessors to values of our core's kernel symbols.
  */

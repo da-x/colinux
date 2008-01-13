@@ -8,7 +8,6 @@
 
 #include "scsi.h"
 #include "monitor.h"
-#include "printk.h"
 #include "transfer.h"
 #include "pages.h"
 
