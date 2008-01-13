@@ -100,7 +100,7 @@ struct _req {
 	co_scsi_dev_t *dp;
 	co_scsi_io_t *iop;
 	PIO_WORKITEM pIoWorkItem;
-	NTOSAPI NTSTATUS DDKAPI (*func)( /*IN*/ HANDLE  FileHandle, /*IN*/ HANDLE  Event  /*OPTIONAL*/, /*IN*/ PIO_APC_ROUTINE  ApcRoutine  /*OPTIONAL*/, /*IN*/ PVOID  ApcContext  /*OPTIONAL*/, /*OUT*/ PIO_STATUS_BLOCK  IoStatusBlock, /*IN*/ PVOID  Buffer, /*IN*/ ULONG  Length, /*IN*/ PLARGE_INTEGER  ByteOffset  /*OPTIONAL*/, /*IN*/ PULONG  Key  /*OPTIONAL*/);
+	/*NTOSAPI*/ NTSTATUS DDKAPI (*func)( /*IN*/ HANDLE  FileHandle, /*IN*/ HANDLE  Event  /*OPTIONAL*/, /*IN*/ PIO_APC_ROUTINE  ApcRoutine  /*OPTIONAL*/, /*IN*/ PVOID  ApcContext  /*OPTIONAL*/, /*OUT*/ PIO_STATUS_BLOCK  IoStatusBlock, /*IN*/ PVOID  Buffer, /*IN*/ ULONG  Length, /*IN*/ PLARGE_INTEGER  ByteOffset  /*OPTIONAL*/, /*IN*/ PULONG  Key  /*OPTIONAL*/);
 };
 
 static void send_intr(co_monitor_t *cmon, void *ctx, int rc) {
