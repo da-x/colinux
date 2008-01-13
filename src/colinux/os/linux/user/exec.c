@@ -24,7 +24,7 @@ co_rc_t co_launch_process(int *pid, char *command_line, ...)
 	int ret;
 	
 	va_start(ap, command_line);
-	vsnprintf(buf, sizeof(buf), command_line, ap);
+	co_vsnprintf(buf, sizeof(buf), command_line, ap);
 	va_end(ap);
 
 	snprintf(buf2, sizeof(buf2), "%s &", buf);

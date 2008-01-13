@@ -39,7 +39,7 @@ static void co_terminal_printv(const char *format, va_list ap)
 	char buf[0x100];
 	int len;
 
-	vsnprintf(buf, sizeof(buf), format, ap);
+	co_vsnprintf(buf, sizeof(buf), format, ap);
 
 	printf("%s", buf);
 
