@@ -55,7 +55,7 @@ void co_winnt_free_unicode(UNICODE_STRING *unicode_str)
 	unicode_str->Buffer = NULL;
 }
 
-static co_rc_t status_convert(NTSTATUS status)
+co_rc_t co_status_convert(NTSTATUS status)
 {
 	switch (status) {
 	case STATUS_SUCCESS: return CO_RC(OK);
@@ -106,7 +106,7 @@ co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned long open
 
 	co_winnt_free_unicode(&unipath);
 
-	return status_convert(status);
+	return co_status_convert(status);
 }
 
 co_rc_t co_os_file_open(char *pathname, PHANDLE FileHandle, unsigned long open_flags)
@@ -120,7 +120,7 @@ co_rc_t co_os_file_close(PHANDLE FileHandle)
 
 	status = ZwClose(FileHandle);
 
-	return status_convert(status);
+	return co_status_convert(status);
 }
 
 typedef struct {
@@ -166,7 +166,7 @@ static co_rc_t transfer_file_block(co_monitor_t *cmon,
 	if (status != STATUS_SUCCESS) {
 		co_debug_error("block io failed: %p %lx (reason: %x)",
 				linuxvm, size, (int)status);
-		rc = status_convert(status);
+		rc = co_status_convert(status);
 	}
 
 	data->offset.QuadPart += size;
@@ -229,7 +229,7 @@ co_rc_t co_os_change_file_information(char *filename,
 
 	co_os_file_close(handle);
 
-	return status_convert(status);
+	return co_status_convert(status);
 }
 
 co_rc_t co_os_set_file_information(char *filename,
@@ -250,7 +250,7 @@ co_rc_t co_os_set_file_information(char *filename,
 
 	co_os_file_close(handle);
 
-	return status_convert(status);
+	return co_status_convert(status);
 }
 
 co_rc_t co_os_file_read_write(co_monitor_t *linuxvm, char *filename, 
@@ -390,7 +390,7 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 
 	if (!NT_SUCCESS(status)) {
 		co_debug_lvl(filesystem, 5, "error %x ZwCreateFile('%s')", (int)status, dirname);
-                rc = status_convert(status);
+                rc = co_status_convert(status);
                 goto error_2;
         }
  
@@ -407,7 +407,7 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 			
 			if (!NT_SUCCESS(status)) {
 				co_debug_lvl(filesystem, 5, "error %x ZwQueryDirectoryFile('%s')", (int)status, filename);
-				rc = status_convert(status);
+				rc = co_status_convert(status);
 				goto error_3;
 			} else {
 				LastAccessTime = entry_buffer.entry2.LastAccessTime;
@@ -418,7 +418,7 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 			}
 		} else {
 			co_debug_lvl(filesystem, 5, "error %x ZwQueryDirectoryFile('%s')", (int)status, filename);
-			rc = status_convert(status);
+			rc = co_status_convert(status);
 			goto error_3;
 		}
         } else {
@@ -512,7 +512,7 @@ retry:
 
 	co_winnt_free_unicode(&unipath);
 
-	return status_convert(status);
+	return co_status_convert(status);
 }
 
 co_rc_t co_os_file_rmdir(char *filename)
@@ -566,7 +566,7 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 
 	status = ZwSetInformationFile(handle, &io_status, rename_info, block_size,
 				      FileRenameInformation);
-	rc = status_convert(status);
+	rc = co_status_convert(status);
 
 	if (!CO_OK(rc))
 		co_debug_lvl(filesystem, 5, "error %x ZwSetInformationFile rename %s,%s", (int)status, filename, dest_filename);
@@ -625,7 +625,7 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 	
 	if (!NT_SUCCESS(status)) {
 		co_debug_lvl(filesystem, 5, "error %x ZwCreateFile('%s')", (int)status, dirname);
-		rc = status_convert(status);
+		rc = co_status_convert(status);
 		goto error;
 	}
 
@@ -736,7 +736,7 @@ co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *
 		statfs->st.namelen = sizeof(co_pathname_t);
 	}
 
-	rc = status_convert(status);
+	rc = co_status_convert(status);
 
 	co_os_file_close(handle);
 	return rc;

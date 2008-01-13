@@ -11,6 +11,8 @@
 #include <colinux/os/kernel/alloc.h>
 #include <scsi/coscsi.h>
 
+#include "fileio.h"
+
 #ifndef OBJ_KERNEL_HANDLE
 #define OBJ_KERNEL_HANDLE 0x00000200L
 #endif
@@ -18,24 +20,6 @@
 #define COSCSI_DEBUG_OPEN 0
 #define COSCSI_DEBUG_IO 0
 #define COSCSI_DEBUG_SIZE 0
-
-extern co_rc_t co_winnt_utf8_to_unicode(const char *src, UNICODE_STRING *unicode_str);
-extern void co_winnt_free_unicode(UNICODE_STRING *unicode_str);
-
-static co_rc_t status_convert(NTSTATUS status)
-{
-	switch (status) {
-	case STATUS_SUCCESS: return CO_RC(OK);
-	case STATUS_NO_SUCH_FILE:
-	case STATUS_OBJECT_NAME_NOT_FOUND: return CO_RC(NOT_FOUND);
-	case STATUS_CANNOT_DELETE:
-	case STATUS_ACCESS_DENIED: return CO_RC(ACCESS_DENIED);
-	case STATUS_INVALID_PARAMETER: return CO_RC(INVALID_PARAMETER);
-	default: return CO_RC(ERROR);
-	}
-}
-
-static co_rc_t scsi_file_detect_size(HANDLE handle, unsigned long long *out_size);
 
 int scsi_file_open(co_scsi_dev_t *dp) {
 	NTSTATUS status;
@@ -133,29 +117,31 @@ static VOID DDKAPI _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 	unsigned char *page;
 	PIO_WORKITEM wip;
 	register int x;
-	co_rc_t rc;
+	co_rc_t rc = CO_RC(OK);
 
 	/* For each vector */
-	rc = CO_RC(OK);
 	for(x=0; x < r->iop->hdr.count; x++) {
 		/* Map page */
-                rc = co_monitor_get_pfn(r->dp->mp, r->iop->vec[x].buffer, &pfn);
-                if (!CO_OK(rc)) goto io_done;
-                page = co_os_map(r->dp->mp->manager, pfn);
+		rc = co_monitor_get_pfn(r->dp->mp, r->iop->vec[x].buffer, &pfn);
+		if (!CO_OK(rc))
+			break;
+
+		page = co_os_map(r->dp->mp->manager, pfn);
 		buffer = page + (r->iop->vec[x].buffer & ~CO_ARCH_PAGE_MASK);
 
 		/* Transfer data */
 		Offset.QuadPart = r->iop->vec[x].offset;
 		status = r->func((HANDLE)r->dp->os_handle, NULL, NULL, NULL, &isb, buffer, r->iop->vec[x].size, &Offset, NULL);
-		if (status != STATUS_SUCCESS) rc = status_convert(status);
 
 		/* Unmap page */
-                co_os_unmap(r->dp->mp->manager, page, pfn);
+		co_os_unmap(r->dp->mp->manager, page, pfn);
 
-		if (!CO_OK(rc)) break;
+		if (status != STATUS_SUCCESS) {
+			rc = co_status_convert(status);
+			break;
+		}
 	}
 
-io_done:
 	/* Send interrupt */
 	send_intr(r->dp->mp, r->iop->hdr.ctx, (CO_OK(rc) == 0));
 
