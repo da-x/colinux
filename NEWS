@@ -1,10 +1,15 @@
 * Version 0.8.0
+  * Add build date to exe file properties.
+  * View build time of ntkernel driver with --status-driver.
+  * Check ELF header before accessing kernel vmlinux (fix exception).
+  * Random created MAC stored in Registry to have same on every start.
+    [HKCU\Software\coLinux]
   * scsi: New device for images with partition tables and works async.
     Usage "scsi0=disk,file.img" or "scsi1=cdrom,file.iso" (Steve Shoecraft)
   * Added virtual pci device handling. "lspci" is working (Steve Shoecraft)
 
   Debugging:
-  * Enable host kernel debug via registry [HLM\SOFTWARE\coLinux] "Debug"
+  * Enable host kernel debug via registry [HKLM\SOFTWARE\coLinux] "Debug"
 
 * Version 0.7.2
   Bugfixes:
