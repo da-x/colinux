@@ -28,6 +28,7 @@
   * Holds multiple kernel versions in patch series files
     (2.6.12, 2.6.13, 2.6.14, 2.6.15, 2.6.17, 2.6.22)
   * cloop updated to 2.06 (compressed loop blockdevice from Knoppix)
+  * Hotplug enabled, udev usable
 
   Installer:
   * Text was to big for description box in installer. [Bugs item #1819219]
