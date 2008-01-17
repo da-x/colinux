@@ -19,7 +19,7 @@ static void call_intr(void *func)
 	    "    pushl %%eax"        /* eip (2:) */  "\n" 
 	    "    jmp *%0"            /* jmp func */  "\n" 
 	    "2:  sti"                                "\n" 
-	    : : "m"(func): "eax", "esp");
+	    : : "r"(func): "eax", "esp");
 }
 
 void co_monitor_arch_real_hardware_interrupt(co_monitor_t *cmon)
