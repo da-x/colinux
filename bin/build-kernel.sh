@@ -170,7 +170,7 @@ EOF
 		OPT="O=\"$COLINUX_TARGET_KERNEL_BUILD\""
 	fi
 
-	make ARCH=$TARGET_ARCH $OPT silentoldconfig >>$COLINUX_BUILD_LOG 2>&1 \
+	make ARCH=$TARGET_ARCH $OPT silentoldconfig >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR \
 	|| error_exit 1 "Kernel $KERNEL_VERSION config failed (check 'make oldconfig' on kerneltree)"
 }
 
@@ -178,7 +178,7 @@ compile_kernel()
 {
 	echo "Making Kernel $KERNEL_VERSION"
 	cd "$COLINUX_TARGET_KERNEL_BUILD" || exit 1
-	make ARCH=$TARGET_ARCH vmlinux >>$COLINUX_BUILD_LOG 2>&1 \
+	make ARCH=$TARGET_ARCH vmlinux >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR \
 	|| error_exit 1 "Kernel $KERNEL_VERSION make failed"
 }
 
@@ -198,7 +198,7 @@ compile_modules()
 	    ARCH=$TARGET_ARCH \
 	    INSTALL_MOD_PATH="$COLINUX_TARGET_MODULE_PATH" \
 	    DEPMOD=$COLINUX_DEPMOD \
-	    modules modules_install >>$COLINUX_BUILD_LOG 2>&1 \
+	    modules modules_install >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR \
 	|| error_exit 1 "Kernel $KERNEL_VERSION make modules failed"
 }
 
@@ -224,7 +224,9 @@ archive_modules()
 build_kernel()
 {
 	echo "log: $COLINUX_BUILD_LOG"
+	echo "err: $COLINUX_BUILD_ERR"
 	mkdir -p `dirname $COLINUX_BUILD_LOG`
+	mkdir -p `dirname $COLINUX_BUILD_ERR`
 
 	# Full user control for compile (kernel developers)
 	if [ "$1" != "--no-download" -a "$COLINUX_KERNEL_UNTAR" = "yes" \

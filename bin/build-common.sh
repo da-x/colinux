@@ -168,6 +168,10 @@ if [ -z "$COLINUX_BUILD_LOG" ] ; then
     COLINUX_BUILD_LOG="$TOPDIR/build-colinux-$$.log"
 fi
 
+if [ -z "$COLINUX_BUILD_ERR" ] ; then
+    COLINUX_BUILD_ERR="$TOPDIR/build-colinux-$$.err"
+fi
+
 # Install directory set?
 if [ -z "$COLINUX_INSTALL_DIR" ] ; then
     echo "Please specify the $""COLINUX_INSTALL_DIR in user-build.cfg (e.g, /home/$USER/colinux/dist)"
@@ -218,13 +222,15 @@ download_file()
 #
 error_exit()
 {
-	# Show errors in log file with tail or less, only if errorlevel < 10
+	# Show errors in log file with tail, if errorlevel < 10
 	if [ $1 -lt 10 ]; then
-		echo -e "\n  --- ERROR LOG:"
+		echo -e "\n  --- BUILD LOG $COLINUX_BUILD_LOG:"
 		tail -n 20 $COLINUX_BUILD_LOG
-		# less $COLINUX_BUILD_LOG
+		if [ -s $COLINUX_BUILD_ERR ]; then
+			echo -e "\n  --- ERROR LOG $COLINUX_BUILD_ERR:"
+			tail -n 20 $COLINUX_BUILD_ERR
+		fi
 		echo "$2"
-		echo "  --- log available: $COLINUX_BUILD_LOG"
 	else
 		echo "$2"
 	fi
