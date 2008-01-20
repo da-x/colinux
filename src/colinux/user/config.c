@@ -16,10 +16,14 @@
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/cobdpath.h>
 #include <colinux/os/alloc.h>
-#include <colinux/common/scsi_types.h>
 #include "macaddress.h"
 
+/* for types */
+#include <scsi/coscsi.h>
+
 #include "daemon.h"
+
+#include <stdlib.h>
 
 typedef struct {
     int size;
@@ -278,14 +282,22 @@ static void split_comma_separated(const char *source, comma_buffer_t *array)
 
 static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_config_t *conf)
 {
+	char type[10], path[256], size[16];
+	co_scsi_dev_desc_t *scsi;
 	bool_t exists;
 	char *param;
+	/* Type, Path, Size */
+	comma_buffer_t array [] = {
+		{ sizeof(type), type },
+		{ sizeof(path), path },
+		{ sizeof(size), size },
+		{ 0, NULL }
+	};
 	co_rc_t rc;
+	int index;
+
 
 	do {
-		int index;
-		co_scsi_dev_desc_t *scsi;
-
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "scsi",
 							     &index, CO_MODULE_MAX_COSCSI,
 							     &param, &exists);
@@ -300,37 +312,43 @@ static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_confi
 		}
 		scsi->enabled = PTRUE;
 
-		/* Type, <path> */
-		{
-			char type[10];
-			comma_buffer_t array [] = {
-				{ sizeof(type), type },
-				{ sizeof(scsi->pathname), scsi->pathname },
-				{ 0, NULL }
-			};
-
-			split_comma_separated(param, array);
-			if (strcmp(type,"pass") == 0)
-				scsi->type = SCSI_PTYPE_PASS;
-			else if (strcmp(type,"disk") == 0)
-				scsi->type = SCSI_PTYPE_DISK;
-			else if (strcmp(type,"cdrom") == 0)
-				scsi->type = SCSI_PTYPE_CDDVD;
-			else if (strcmp(type,"tape") == 0)
-				scsi->type = SCSI_PTYPE_TAPE;
-			else if (strcmp(type,"changer") == 0)
-				scsi->type = SCSI_PTYPE_CHANGER;
-			else {
-				co_terminal_print("scsi%d: unknown type: %s\n", index, type);
-				return CO_RC(INVALID_PARAMETER);
-			}
+		split_comma_separated(param, array);
+		if (strcmp(type,"pass") == 0)
+			scsi->type = SCSI_PTYPE_PASS;
+		else if (strcmp(type,"disk") == 0)
+			scsi->type = SCSI_PTYPE_DISK;
+		else if (strcmp(type,"cdrom") == 0)
+			scsi->type = SCSI_PTYPE_CDDVD;
+		else if (strcmp(type,"cdrw") == 0)
+			scsi->type = SCSI_PTYPE_WORM;
+		else if (strcmp(type,"tape") == 0)
+			scsi->type = SCSI_PTYPE_TAPE;
+		else if (strcmp(type,"changer") == 0)
+			scsi->type = SCSI_PTYPE_CHANGER;
+		else {
+			co_terminal_print("scsi%d: unknown type: %s\n", index, type);
+			return CO_RC(INVALID_PARAMETER);
 		}
+		strcpy(scsi->pathname, path);
+		scsi->size = atoi(size);
 
-		rc = check_cobd_file(scsi->pathname, "scsi", index);
-		if (!CO_OK(rc)) return rc;
+		switch(scsi->type) {
+		case SCSI_PTYPE_PASS:
+			co_debug_info("scsi%d: pass-through to %s", index, scsi->pathname);
+			break;
+		case SCSI_PTYPE_CHANGER:
+			co_debug_info("scsi%d: %d slot autochanger for devices %s", index, scsi->size, scsi->pathname);
+			break;
+		default:
+			if (!scsi->size) {
+				rc = check_cobd_file(scsi->pathname, "scsi", index);
+				if (!CO_OK(rc)) return rc;
+			}
 
-		co_canonize_cobd_path(&scsi->pathname);
-		co_debug_info("mapping scsi%d to %s", index, scsi->pathname);
+			co_canonize_cobd_path(&scsi->pathname);
+			co_debug_info("scsi%d: %s -> %s (size: %d)", index, type, scsi->pathname, scsi->size);
+			break;
+		}
 	} while (1);
 
 	return CO_RC(OK);

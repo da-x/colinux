@@ -37,10 +37,19 @@ typedef struct co_block_dev_desc {
 	char alias[20];
 } co_block_dev_desc_t;
 
+typedef struct co_video_dev_desc {
+	int x,y;
+} co_video_dev_desc_t;
+
+typedef struct co_audio_dev_desc {
+	int type;
+} co_audio_dev_desc_t;
+
 typedef struct co_scsi_dev_desc {
 	bool_t enabled;
 	int type;
 	co_pathname_t pathname;
+	int size;
 } co_scsi_dev_desc_t;
 
 typedef enum {
@@ -185,6 +194,11 @@ typedef struct co_config {
 	long _UNUSED__block_root_device_index;
 
 	/*
+	 * Video devices
+	 */
+	co_video_dev_desc_t video_devs[CO_MODULE_MAX_COVIDEO];
+
+	/*
 	 * SCSI devices
 	 */
 	co_scsi_dev_desc_t scsi_devs[CO_MODULE_MAX_COSCSI];
@@ -203,6 +217,11 @@ typedef struct co_config {
 	 * Serial devices
 	 */
 	co_serialdev_desc_t serial_devs[CO_MODULE_MAX_SERIAL];
+
+	/*
+	 * Audio devices
+	 */
+	co_audio_dev_desc_t audio_devs[CO_MODULE_MAX_COAUDIO];
 
 	/*
 	 * Executable programs

@@ -17,4 +17,8 @@ cloop-core-2.06.diff
 cloop-2.6.22.diff
 squashfs3.2-core.diff
 squashfs3.2-2.6.22.diff
+audio-core.diff
+audio-2.6.22.diff
+video-core.diff
+video-2.6.22.diff
 steve-2.6.22.diff

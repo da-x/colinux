@@ -1,71 +1,102 @@
 
+/*
+ * This source code is a part of coLinux source package.
+ *
+ * Copyright (C) 2008 Steve Shoecraft <sshoecraft@earthlink.net>
+ *
+ * The code is licensed under the GPL.  See the COPYING file in
+ * the root directory.
+ *
+ */
+
 #include <colinux/common/libc.h>
 #include <colinux/common/version.h>
-#include <scsi/scsi.h>
 #include <colinux/os/alloc.h>
 #include <colinux/os/kernel/alloc.h>
 #include <linux/cooperative.h>
+
+#include <scsi/coscsi.h>
+
+#define COSCSI_DEBUG 0
 
 #include "scsi.h"
 #include "monitor.h"
 #include "transfer.h"
 #include "pages.h"
 
-void co_scsi_op(co_monitor_t *cmon) {
-	co_scsi_dev_t *dp;
+static struct co_scsi_dev *get_dp(co_monitor_t *cmon, int unit) {
+	struct co_scsi_dev *dp;
 
-	co_debug("co_scsi_op: op: %lx", co_passage_page->params[0]);
+#if COSCSI_DEBUG
+	co_debug("unit: %d, max: %d\n", unit, CO_MODULE_MAX_COSCSI);
+#endif
+	if (unit < CO_MODULE_MAX_COSCSI)
+		dp = cmon->scsi_devs[unit];
+	else
+		return 0;
+
+	if (!dp) return 0;
+
+	return dp;
+}
+
+void co_scsi_op(co_monitor_t *cmon) {
+	struct co_scsi_dev *dp = get_dp(cmon,co_passage_page->params[1]);
+
+#if COSCSI_DEBUG
+	co_debug("co_scsi_op: op: %lx, unit: %lx, dp: %p\n",
+		co_passage_page->params[0], co_passage_page->params[1], dp);
+#endif
+
 	switch(co_passage_page->params[0]) {
-	case CO_SCSI_GET_CONFIG:
+	case CO_SCSI_GET_CONFIG: /* 0 */
 		{
 			register int x;
 
 			for(x=0; x < CO_MODULE_MAX_COSCSI; x++) {
 				if (cmon->scsi_devs[x])
-					co_passage_page->params[x] = cmon->scsi_devs[x]->conf->type | 0x80;
+					co_passage_page->params[x] =  cmon->scsi_devs[x]->conf->type | COSCSI_DEVICE_ENABLED;
 				else
 					co_passage_page->params[x] = 0;
 			}
 		}
 		break;
-	case CO_SCSI_OPEN:
+	case CO_SCSI_OPEN: /* 1 */
 		{
-			dp = cmon->scsi_devs[co_passage_page->params[1]];
-			dp->mp = cmon;
-			co_passage_page->params[0] = scsi_file_open(dp);
+			co_passage_page->params[0] = scsi_file_open(cmon, dp);
 			co_passage_page->params[1] = (unsigned long) dp->os_handle;
 		}
 		break;
-	case CO_SCSI_CLOSE:
+	case CO_SCSI_CLOSE: /* 2 */
 		{
-			dp = cmon->scsi_devs[co_passage_page->params[1]];
-			dp->mp = cmon;
-			co_passage_page->params[0] = scsi_file_close(dp);
-			dp->os_handle = 0;
+			co_passage_page->params[0] = scsi_file_close(cmon, dp);
 		}
 		break;
-	case CO_SCSI_IO:
-		{
-			co_scsi_io_t *iop;
-
-			dp = cmon->scsi_devs[co_passage_page->params[1]];
-			dp->mp = cmon; 
-			iop = (co_scsi_io_t *) &co_passage_page->params[2];
-			co_passage_page->params[0] = scsi_file_io(dp, iop);
-		}
-		break;
-	case CO_SCSI_SIZE:
+	case CO_SCSI_SIZE: /* 3 */
 		{
 			unsigned long long size;
 
-			dp = cmon->scsi_devs[co_passage_page->params[1]];
-			dp->mp = cmon;
-			co_passage_page->params[0] = scsi_file_size(dp, &size);
+			co_passage_page->params[0] = scsi_file_size(cmon, dp, &size);
 			*((unsigned long long *)&co_passage_page->params[1]) = size;
 		}
 		break;
+	case CO_SCSI_IO: /* 4 */
+		{
+			co_scsi_io_t *iop;
+
+			iop = (co_scsi_io_t *) &co_passage_page->params[2];
+			co_passage_page->params[0] = scsi_file_io(cmon, dp, iop);
+		}
+		break;
+	case CO_SCSI_PASS: /* 5 */
+		{
+			co_scsi_pass_t *pass = (co_scsi_pass_t *) &co_passage_page->params[2];
+
+			co_passage_page->params[0] = scsi_pass(cmon, dp, pass);
+		}
+		break;
 	default:
-		co_debug("co_scsi_op: unknown operation!");
+		co_debug("co_scsi_op: unknown operation!\n");
 		break;
 	}
 }
@@ -79,7 +110,7 @@ void co_monitor_unregister_and_free_scsi_devices(co_monitor_t *mp)
 		co_scsi_dev_t *dp = mp->scsi_devs[i];
 		if (!dp) continue;
 
-		if (dp->os_handle) scsi_file_close(dp);
+		if (dp->os_handle) scsi_file_close(mp, dp);
 
 		mp->scsi_devs[i] = NULL;
 		co_monitor_free(mp, dp);
