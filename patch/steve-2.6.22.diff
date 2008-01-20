@@ -24,7 +24,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  
  endchoice
  
-+config PCI_CO
++config PCI_COOPERATIVE
 +	bool
 + 	depends on PCI && PCI_GOCO && COOPERATIVE
 +	default y
@@ -350,7 +350,7 @@ Index: linux-2.6.22-source/arch/i386/pci/init.c
  {
  	int type __maybe_unused = 0;
  
-+#ifdef CONFIG_PCI_CO
++#ifdef CONFIG_PCI_COOPERATIVE
 +	pci_cooperative_init();
 +#endif
  #ifdef CONFIG_PCI_DIRECT
@@ -397,7 +397,7 @@ Index: linux-2.6.22-source/arch/i386/pci/Makefile
 @@ -1,5 +1,6 @@
  obj-y				:= i386.o init.o
  
-+obj-$(CONFIG_PCI_CO)		+= copci.o
++obj-$(CONFIG_PCI_COOPERATIVE)	+= copci.o
  obj-$(CONFIG_PCI_BIOS)		+= pcbios.o
  obj-$(CONFIG_PCI_MMCONFIG)	+= mmconfig.o direct.o mmconfig-shared.o
  obj-$(CONFIG_PCI_DIRECT)	+= direct.o
@@ -1904,7 +1904,7 @@ Index: linux-2.6.22-source/drivers/scsi/Kconfig
  menu "SCSI low-level drivers"
  	depends on SCSI!=n
  
-+config COSCSI
++config SCSI_COOPERATIVE
 +	bool "Cooperative Linux support"
 +	depends on COOPERATIVE
 +	help
@@ -1921,7 +1921,7 @@ Index: linux-2.6.22-source/drivers/scsi/Makefile
  obj-$(CONFIG_SCSI_ADVANSYS)	+= advansys.o
  obj-$(CONFIG_SCSI_PSI240I)	+= psi240i.o
  obj-$(CONFIG_SCSI_BUSLOGIC)	+= BusLogic.o
-+obj-$(CONFIG_COSCSI)		+= coscsi.o
++obj-$(CONFIG_SCSI_COOPERATIVE)	+= coscsi.o
  obj-$(CONFIG_SCSI_DPT_I2O)	+= dpt_i2o.o
  obj-$(CONFIG_SCSI_U14_34F)	+= u14-34f.o
  obj-$(CONFIG_SCSI_ARCMSR)	+= arcmsr/

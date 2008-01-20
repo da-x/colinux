@@ -9,7 +9,7 @@ Index: linux-2.6.22-source/drivers/net/Kconfig
  
  	  If you don't know what to use this for, you don't need it.
  
-+config COOPERATIVE_CONET
++config CONET_COOPERATIVE
 +	tristate 'Cooperative Virtual Ethernet driver support'
 +	depends on COOPERATIVE
 +
@@ -51,7 +51,7 @@ Index: linux-2.6.22-source/drivers/net/Makefile
  
  # This is also a 82596 and should probably be merged
  obj-$(CONFIG_LP486E) += lp486e.o
-+obj-$(CONFIG_COOPERATIVE_CONET) += conet.o
++obj-$(CONFIG_CONET_COOPERATIVE) += conet.o
  
  obj-$(CONFIG_ETH16I) += eth16i.o
  obj-$(CONFIG_ZORRO8390) += zorro8390.o

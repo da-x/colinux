@@ -379,7 +379,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +		break;
 +	}
 +
-+#ifdef CONFIG_COOPERATIVE_CONET
++#ifdef CONFIG_CONET_COOPERATIVE
 +	case CO_DEVICE_NETWORK: {
 +		co_queue_incoming_message(node_message);
 +
@@ -390,7 +390,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +	}
 +#endif
 +
-+#ifdef CONFIG_COSERIAL
++#ifdef CONFIG_SERIAL_COOPERATIVE
 +	case CO_DEVICE_SERIAL: {
 +		co_queue_incoming_message(node_message);
 +
