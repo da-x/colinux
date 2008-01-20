@@ -1,9 +1,9 @@
 Serial support
 
-Index: linux-2.6.13-source/drivers/char/cocd.c
+Index: linux-2.6.13-source/drivers/char/coserial.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.17-source/drivers/char/cocd.c
++++ linux-2.6.17-source/drivers/char/coserial.c
 @@ -0,0 +1,389 @@
 +/*
 + *  Copyright (C) 2004 Dan Aloni <da-x@colinux.org>

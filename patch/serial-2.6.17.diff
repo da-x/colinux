@@ -11,14 +11,14 @@ Index: linux-2.6.17-source/drivers/char/Makefile
  obj-$(CONFIG_CYCLADES)		+= cyclades.o
  obj-$(CONFIG_STALLION)		+= stallion.o
  obj-$(CONFIG_ISTALLION)		+= istallion.o
-+obj-$(CONFIG_COOPERATIVE)     	+= cocd.o
++obj-$(CONFIG_COOPERATIVE)     	+= coserial.o
  obj-$(CONFIG_DIGIEPCA)		+= epca.o
  obj-$(CONFIG_SPECIALIX)		+= specialix.o
  obj-$(CONFIG_MOXA_INTELLIO)	+= moxa.o
-Index: linux-2.6.17-source/drivers/char/cocd.c
+Index: linux-2.6.17-source/drivers/char/coserial.c
 ===================================================================
---- linux-2.6.17-source.orig/drivers/char/cocd.c
-+++ linux-2.6.17-source/drivers/char/cocd.c
+--- linux-2.6.17-source.orig/drivers/char/coserial.c
++++ linux-2.6.17-source/drivers/char/coserial.c
 @@ -93,13 +93,9 @@
  				return;
  			}
