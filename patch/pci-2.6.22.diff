@@ -1,0 +1,148 @@
+Index: linux-2.6.22-source/arch/i386/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/Kconfig
++++ linux-2.6.22-source/arch/i386/Kconfig
+@@ -1070,7 +1070,6 @@
+ endmenu
+ 
+ menu "Bus options (PCI, PCMCIA, EISA, MCA, ISA)"
+-	depends on !COOPERATIVE
+ 
+ config PCI
+ 	bool "PCI support" if !X86_VISWS
+@@ -1107,6 +1106,9 @@
+ 	  direct access method and falls back to the BIOS if that doesn't
+ 	  work. If unsure, go with the default, which is "Any".
+ 
++config PCI_GOCO
++	bool "Cooperative"
++
+ config PCI_GOBIOS
+ 	bool "BIOS"
+ 
+@@ -1121,6 +1123,11 @@
+ 
+ endchoice
+ 
++config PCI_COOPERATIVE
++	bool
++ 	depends on PCI && PCI_GOCO && COOPERATIVE
++	default y
++
+ config PCI_BIOS
+ 	bool
+ 	depends on !X86_VISWS && PCI && (PCI_GOBIOS || PCI_GOANY)
+@@ -1142,6 +1149,7 @@
+ 
+ config ISA_DMA_API
+ 	bool
++	depends on !COOPERATIVE
+ 	default y
+ 
+ config ISA
+Index: linux-2.6.22-source/arch/i386/kernel/cpu/cyrix.c
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/kernel/cpu/cyrix.c
++++ linux-2.6.22-source/arch/i386/kernel/cpu/cyrix.c
+@@ -252,6 +252,7 @@
+ 
+ 	case 4: /* MediaGX/GXm or Geode GXM/GXLV/GX1 */
+ #ifdef CONFIG_PCI
++#ifndef CONFIG_COOPERATIVE
+ 	{
+ 		u32 vendor, device;
+ 		/* It isn't really a PCI quirk directly, but the cure is the
+@@ -283,6 +284,7 @@
+ 			mark_tsc_unstable("cyrix 5510/5520 detected");
+ 	}
+ #endif
++#endif
+ 		c->x86_cache_size=16;	/* Yep 16K integrated cache thats it */
+ 
+ 		/* GXm supports extended cpuid levels 'ala' AMD */
+Index: linux-2.6.22-source/arch/i386/kernel/e820.c
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/kernel/e820.c
++++ linux-2.6.22-source/arch/i386/kernel/e820.c
+@@ -35,6 +35,7 @@
+ #ifdef CONFIG_PCI
+ EXPORT_SYMBOL(pci_mem_start);
+ #endif
++#ifndef CONFIG_COOPERATIVE
+ extern int user_defined_memmap;
+ struct resource data_resource = {
+ 	.name	= "Kernel data",
+@@ -910,3 +911,4 @@
+ 	return 0;
+ }
+ early_param("memmap", parse_memmap);
++#endif
+Index: linux-2.6.22-source/arch/i386/kernel/i8237.c
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/kernel/i8237.c
++++ linux-2.6.22-source/arch/i386/kernel/i8237.c
+@@ -23,6 +23,7 @@
+ 
+ static int i8237A_resume(struct sys_device *dev)
+ {
++#ifndef CONFIG_COOPERATIVE
+ 	unsigned long flags;
+ 	int i;
+ 
+@@ -41,6 +42,7 @@
+ 	enable_dma(4);
+ 
+ 	release_dma_lock(flags);
++#endif
+ 
+ 	return 0;
+ }
+Index: linux-2.6.22-source/arch/i386/pci/init.c
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/pci/init.c
++++ linux-2.6.22-source/arch/i386/pci/init.c
+@@ -8,6 +8,9 @@
+ {
+ 	int type __maybe_unused = 0;
+ 
++#ifdef CONFIG_PCI_COOPERATIVE
++	pci_cooperative_init();
++#endif
+ #ifdef CONFIG_PCI_DIRECT
+ 	type = pci_direct_probe();
+ #endif
+Index: linux-2.6.22-source/arch/i386/pci/Makefile
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/pci/Makefile
++++ linux-2.6.22-source/arch/i386/pci/Makefile
+@@ -1,5 +1,6 @@
+ obj-y				:= i386.o init.o
+ 
++obj-$(CONFIG_PCI_COOPERATIVE)	+= copci.o
+ obj-$(CONFIG_PCI_BIOS)		+= pcbios.o
+ obj-$(CONFIG_PCI_MMCONFIG)	+= mmconfig.o direct.o mmconfig-shared.o
+ obj-$(CONFIG_PCI_DIRECT)	+= direct.o
+@@ -10,5 +11,10 @@
+ 
+ pci-$(CONFIG_X86_VISWS)		:= visws.o fixup.o
+ pci-$(CONFIG_X86_NUMAQ)		:= numa.o irq.o
++pci-$(CONFIG_COOPERATIVE)	:= legacy.o irq_cooperative.o
+ 
+-obj-y				+= $(pci-y) common.o early.o
++obj-y				+= $(pci-y) common.o
++
++ifndef CONFIG_COOPERATIVE
++obj-y				+= early.o
++endif
+Index: linux-2.6.22-source/arch/i386/pci/pci.h
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/pci/pci.h
++++ linux-2.6.22-source/arch/i386/pci/pci.h
+@@ -93,6 +93,7 @@
+ extern void pci_pcbios_init(void);
+ extern void pci_mmcfg_init(int type);
+ extern void pcibios_sort(void);
++extern void pci_cooperative_init(void);
+ 
+ /* pci-mmconfig.c */
+ 

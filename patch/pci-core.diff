@@ -1,0 +1,307 @@
+Index: linux-2.6.22-source/arch/i386/pci/copci.c
+===================================================================
+--- /dev/null
++++ linux-2.6.22-source/arch/i386/pci/copci.c
+@@ -0,0 +1,212 @@
++
++#include <linux/kernel.h>
++#include <linux/pci.h>
++#include <linux/pci_regs.h>
++#include <linux/cooperative_pci.h>
++#include <linux/cooperative_internal.h>
++#include "pci.h"
++
++#define COPCI_DEBUG 0
++#define COPCI_DEBUG_IO 0
++
++struct device_list {
++	int bus;
++	int device;
++	int func;
++	unsigned char regs[256];
++	struct device_list *next;
++};
++
++static struct device_list *devices = 0, *last_device;
++
++#define get_byte(r,l) *((unsigned char *)(&r[l]))
++#define get_short(r,l) *((unsigned short *)(&r[l]))
++#define get_long(r,l) *((unsigned long *)(&r[l]))
++
++static int copci_read(unsigned int seg, unsigned int bus, unsigned int devfn, int reg, int len, u32 *value)
++{
++	int device, func;
++	unsigned long flags;
++	struct device_list *dp;
++
++	/* Linux has encoded the device & func; split them */
++	device = devfn >> 3;
++	func = devfn & 7;
++
++#if COPCI_DEBUG_IO
++	printk(KERN_INFO "copci_read: bus: %02x, devfn: %02x (device: %02x, func: %02x), reg: %02x, len: %d\n",
++		bus, devfn, device, func, reg, len);
++#endif
++
++	if (reg + len > 255) {
++		*value = -1;
++		return -EINVAL;
++	}
++
++	spin_lock_irqsave(&pci_config_lock, flags);
++
++	*value = 0;
++	dp = devices;
++	while(dp) {
++		if (bus == dp->bus && device == dp->device && func == dp->func) {
++			switch(len) {
++			case 1:
++				*value = get_byte(dp->regs, reg);
++				break;
++			case 2:
++				*value = get_short(dp->regs, reg);
++				break;
++			case 4:
++				*value = get_long(dp->regs, reg);
++				break;
++			}
++		}
++		dp = dp->next;
++	}
++
++	spin_unlock_irqrestore(&pci_config_lock, flags);
++
++#if COPCI_DEBUG_IO
++	printk(KERN_INFO "copci_read: value: 0x%08x\n", *value);
++#endif
++	return 0;
++}
++
++static int copci_write(unsigned int seg, unsigned int bus, unsigned int devfn, int reg, int len, u32 value) {
++#if COPCI_DEBUG_IO
++	printk(KERN_INFO "copci_write: bus: %d, fn: %d, reg: %d, len: %d\n",
++		bus, devfn, reg, len);
++#endif
++	return -EPERM;
++}
++
++struct pci_raw_ops copci_ops = {
++	.read =         copci_read,
++	.write =        copci_write,
++};
++
++static int get_mac(int unit, unsigned char *address)
++{
++	unsigned long flags;
++	co_network_request_t *net_request;
++	int result;
++
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_NETWORK;
++	net_request = (typeof(net_request))&co_passage_page->params[1];
++	net_request->unit = unit;
++	net_request->type = CO_NETWORK_GET_MAC;
++	co_switch_wrapper();
++	memcpy(address, net_request->mac_address, 6);
++	result = net_request->result;
++	co_passage_page_release(flags);
++
++	return result;
++}
++
++#if 0
++static int get_irq(int type) {
++	unsigned long flags;
++	co_network_request_t *net_request;
++	int result, irq;
++
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_IRQ;
++	co_passage_page->params[0] = type;
++	co_switch_wrapper();
++	irq = co_passage_page->params[0];
++	co_passage_page_release(flags);
++	result = co_passage_page->params[1];
++
++
++	return result;
++}
++#endif
++
++static int add_new(int b, int d, int f, int id, int class, int type) {
++	struct device_list *newdev;
++
++	newdev = kzalloc(sizeof(struct device_list), GFP_KERNEL);
++	if (!newdev) {
++		printk(KERN_ERR "COPCI: no memory for device info!\n");
++		return -ENOMEM;
++	}
++	newdev->bus = b;
++	newdev->device = d;
++	newdev->func = f;
++	get_short(newdev->regs, PCI_VENDOR_ID) = PCI_VENDOR_ID_CO;
++	get_short(newdev->regs, PCI_DEVICE_ID) = id;
++	get_short(newdev->regs, PCI_CLASS_DEVICE) = class;
++	get_short(newdev->regs, PCI_COMMAND) = PCI_COMMAND_FAST_BACK;
++	get_short(newdev->regs, PCI_STATUS) = (PCI_STATUS_FAST_BACK | PCI_STATUS_DEVSEL_FAST);
++	get_byte(newdev->regs, PCI_INTERRUPT_LINE) = 0;
++
++	if (devices) {
++		last_device->next = newdev;
++		last_device = newdev;
++	} else {
++		devices = newdev;
++		last_device = newdev;
++	}
++
++	return 0;
++}
++
++void pci_cooperative_init(void) {
++	register int unit, d, f;
++	unsigned char addr[6];
++
++#if COPCI_DEBUG
++	printk(KERN_INFO "COPCI: Initializing\n");
++#endif
++
++	/* Define our "devices" */
++	/* XXX do NOT add a VGA device here */
++	d = 0;
++	add_new(0, d++, 0, PCI_DEVICE_ID_COFB, PCI_CLASS_DISPLAY_OTHER, CO_DEVICE_DISPLAY);
++//	add_new(0, d++, 0, PCI_DEVICE_ID_COIDE, PCI_CLASS_STORAGE_IDE, CO_DEVICE_IDE);
++	add_new(0, d++, 0, PCI_DEVICE_ID_COSCSI, PCI_CLASS_STORAGE_SCSI, CO_DEVICE_SCSI);
++	add_new(0, d++, 0, PCI_DEVICE_ID_COAUDIO, PCI_CLASS_MULTIMEDIA_AUDIO, CO_DEVICE_AUDIO);
++
++	/*
++	 * Add the network card and fill vendor area with init & addr
++	*/
++	for(unit=f=0; unit < CO_MODULE_MAX_CONET; unit++) {
++		if (get_mac(unit, addr) != 0) {
++#if COPCI_DEBUG
++			printk(KERN_INFO "COPCI: adding: d: %d, f: %d, unit %d, addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
++				d, f, unit, addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
++#endif
++			/* Add the device */
++			add_new(0, d, f++, PCI_DEVICE_ID_CONET, PCI_CLASS_NETWORK_ETHERNET, CO_DEVICE_NETWORK);
++			if (f == 1) get_short(last_device->regs, PCI_HEADER_TYPE) = 0x80;
++
++			/* Put the host unit and mac in the vendor area */
++			get_byte(last_device->regs, PCI_CO_UNIT) = unit;
++			get_byte(last_device->regs, PCI_CO_MAC1) = addr[0];
++			get_byte(last_device->regs, PCI_CO_MAC2) = addr[1];
++			get_byte(last_device->regs, PCI_CO_MAC3) = addr[2];
++			get_byte(last_device->regs, PCI_CO_MAC4) = addr[3];
++			get_byte(last_device->regs, PCI_CO_MAC5) = addr[4];
++			get_byte(last_device->regs, PCI_CO_MAC6) = addr[5];
++		}
++	}
++
++	raw_pci_ops = &copci_ops;
++
++#if COPCI_DEBUG
++	{
++		register struct device_list *lp;
++
++		printk(KERN_INFO "pci_cooperative_init: list:\n");
++		for(lp = devices; lp; lp = lp->next)
++			printk(KERN_INFO "d: %d, f: %d, id: %d\n", lp->device, lp->func, get_short(lp->regs, PCI_DEVICE_ID));
++
++	}
++#endif
++
++	return;
++}
+Index: linux-2.6.22-source/arch/i386/pci/irq_cooperative.c
+===================================================================
+--- /dev/null
++++ linux-2.6.22-source/arch/i386/pci/irq_cooperative.c
+@@ -0,0 +1,36 @@
++/*
++ *	Low-Level PCI Support for PC -- Routing of Interrupts
++ *
++ *	(c) 1999--2000 Martin Mares <mj@ucw.cz>
++ */
++
++#include <linux/types.h>
++#include <linux/kernel.h>
++#include <linux/pci.h>
++#include <linux/init.h>
++#include <linux/slab.h>
++#include <linux/interrupt.h>
++#include <linux/dmi.h>
++#include <asm/io.h>
++#include <asm/smp.h>
++#include <asm/io_apic.h>
++#include <linux/irq.h>
++#include <linux/acpi.h>
++
++#include "pci.h"
++
++/*
++ * Never use: 0, 1, 2 (timer, keyboard, and cascade)
++ */
++unsigned int pcibios_irq_mask = 0xfff8;
++
++static int copci_enable_irq(struct pci_dev *pdev) {
++	return 0;
++}
++
++static void copci_disable_irq(struct pci_dev *pdev) {
++	return;
++}
++
++int (*pcibios_enable_irq)(struct pci_dev *dev) = copci_enable_irq;
++void (*pcibios_disable_irq)(struct pci_dev *dev) = copci_disable_irq;
+Index: linux-2.6.22-source/include/linux/cooperative_pci.h
+===================================================================
+--- /dev/null
++++ linux-2.6.22-source/include/linux/cooperative_pci.h
+@@ -0,0 +1,22 @@
++
++#ifndef __LINUX_COOPERATIVE_PCI_H
++#define __LINUX_COOPERATIVE_PCI_H
++
++/* PCI ids */
++#define PCI_VENDOR_ID_CO        0x1a55
++#define PCI_DEVICE_ID_COFB      0x0001
++#define PCI_DEVICE_ID_COIDE     0x0002
++#define PCI_DEVICE_ID_COSCSI    0x0003
++#define PCI_DEVICE_ID_COAUDIO   0x0004
++#define PCI_DEVICE_ID_CONET     0x0005
++
++/* NIC vendor registers */
++#define PCI_CO_UNIT             0x40
++#define PCI_CO_MAC1             0x41
++#define PCI_CO_MAC2             0x42
++#define PCI_CO_MAC3             0x43
++#define PCI_CO_MAC4             0x44
++#define PCI_CO_MAC5             0x45
++#define PCI_CO_MAC6             0x46
++
++#endif
+Index: linux-2.6.22-source/include/linux/copci.h
+===================================================================
+--- /dev/null
++++ linux-2.6.22-source/include/linux/copci.h
+@@ -0,0 +1,17 @@
++
++#ifndef _LINUX_COPCI_H_
++#define _LINUX_COPCI_H_
++
++typedef struct {
++	unsigned char type;
++	unsigned char unit;
++	unsigned char irq;
++	unsigned char data[13];
++} copci_devinfo_t;
++
++typedef struct {
++	int count;
++	copci_devinfo_t devs[32];
++} copci_config_t;
++
++#endif

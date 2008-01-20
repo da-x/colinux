@@ -240,7 +240,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,331 @@
+@@ -0,0 +1,349 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -400,6 +400,24 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +		break;
 +	}
 +#endif
++
++	case CO_DEVICE_SCSI: {
++		co_queue_incoming_message(node_message);
++
++		irq_enter();
++		__do_IRQ(SCSI_IRQ);
++		irq_exit();
++		break;
++	}
++
++	case CO_DEVICE_MOUSE: {
++		co_queue_incoming_message(node_message);
++
++		irq_enter();
++		__do_IRQ(MOUSE_IRQ);
++		irq_exit();
++		break;
++	}
 +
 +	default:
 +		BUG_ON((unsigned long)message->device >= (unsigned long)CO_DEVICES_TOTAL);
@@ -1516,13 +1534,16 @@ Index: linux-2.6.22-source/include/asm-i386/mach-default/irq_vectors.h
 ===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/mach-default/irq_vectors.h
 +++ linux-2.6.22-source/include/asm-i386/mach-default/irq_vectors.h
-@@ -67,6 +67,11 @@
+@@ -67,6 +67,14 @@
  
  #define TIMER_IRQ 0
  
 +#ifdef CONFIG_COOPERATIVE
 +#define KEYBOARD_IRQ 1
-+#define NETWORK_IRQ 2
++#define SOUND_IRQ 5
++#define NETWORK_IRQ 10
++#define SCSI_IRQ 11
++#define MOUSE_IRQ 12
 +#endif
 +
  /*
@@ -1724,7 +1745,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -0,0 +1,346 @@
+@@ -0,0 +1,373 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1747,7 +1768,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +
 +#include <asm/cooperative.h>
 +
-+#define CO_LINUX_API_VERSION    10
++#define CO_LINUX_API_VERSION    11
 +
 +#pragma pack(0)
 +
@@ -1769,12 +1790,16 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_OPERATION_FREE_PAGES,
 +	CO_OPERATION_ALLOC_PAGES,
 +	CO_OPERATION_PRINTK,
++	CO_OPERATION_SCSI,
 +} co_operation_t;
 +
 +#define CO_MODULE_MAX_CONET    16
 +#define CO_MODULE_MAX_COBD     32
 +#define CO_MODULE_MAX_COFS     32
-+#define CO_MODULE_MAX_SERIAL   64
++#define CO_MODULE_MAX_SERIAL   32
++#define CO_MODULE_MAX_COSCSI   32
++#define CO_MODULE_MAX_COVIDEO	2
++#define CO_MODULE_MAX_COAUDIO	2
 +
 +typedef enum {
 +	CO_MODULE_LINUX,
@@ -1798,6 +1823,14 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_MODULE_SERIAL0,
 +	CO_MODULE_SERIAL_END=CO_MODULE_SERIAL0+CO_MODULE_MAX_SERIAL-1,
 +
++	CO_MODULE_COSCSI0,
++	CO_MODULE_COSCSI_END=CO_MODULE_COSCSI0+CO_MODULE_MAX_COSCSI-1,
++
++	CO_MODULE_COVIDEO0,
++	CO_MODULE_COVIDEO_END=CO_MODULE_COVIDEO0+CO_MODULE_MAX_COVIDEO-1,
++
++	CO_MODULE_COAUDIO0,
++	CO_MODULE_COAUDIO_END=CO_MODULE_COAUDIO0+CO_MODULE_MAX_COAUDIO-1,
 +	CO_MODULES_MAX,
 +} co_module_t;
 +
@@ -1830,6 +1863,11 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_DEVICE_SERIAL,
 +	CO_DEVICE_FILESYSTEM,
 +
++	CO_DEVICE_MOUSE,
++	CO_DEVICE_SCSI,
++	CO_DEVICE_DISPLAY,
++	CO_DEVICE_AUDIO,
++
 +	CO_DEVICES_TOTAL,
 +} co_device_t;
 +
@@ -1837,6 +1875,16 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	unsigned char code;
 +	int down;
 +} co_scan_code_t;
++
++#define CO_MOUSE_MAX_X 2048
++#define CO_MOUSE_MAX_Y 2048
++
++typedef struct {
++	unsigned	btns;
++	unsigned	abs_x;
++	unsigned	abs_y;
++	int		rel_z;
++} __attribute__((packed)) co_mouse_data_t;
 +
 +typedef enum {
 +	CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL=0,
@@ -3140,3 +3188,75 @@ Index: linux-2.6.22-source/arch/i386/kernel/ioport_cooperative.c
 +{
 +	return -EPERM;
 +}
+Index: linux-2.6.22-source/lib/iomap.c
+===================================================================
+--- linux-2.6.22-source.orig/lib/iomap.c
++++ linux-2.6.22-source/lib/iomap.c
+@@ -59,6 +59,7 @@
+ 		bad_io_access(port, #is_pio );			\
+ } while (0)
+ 
++#ifndef CONFIG_COOPERATIVE
+ #ifndef pio_read16be
+ #define pio_read16be(port) swab16(inw(port))
+ #define pio_read32be(port) swab32(inl(port))
+@@ -224,6 +225,7 @@
+ EXPORT_SYMBOL(iowrite8_rep);
+ EXPORT_SYMBOL(iowrite16_rep);
+ EXPORT_SYMBOL(iowrite32_rep);
++#endif
+ 
+ /* Create a virtual mapping cookie for an IO port range */
+ void __iomem *ioport_map(unsigned long port, unsigned int nr)
+Index: linux-2.6.22-source/drivers/char/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/drivers/char/Kconfig
++++ linux-2.6.22-source/drivers/char/Kconfig
+@@ -1078,6 +1078,7 @@
+ config DEVPORT
+ 	bool
+ 	depends on !M68K
++	depends on !COOPERATIVE
+ 	depends on ISA || PCI
+ 	default y
+ 
+Index: linux-2.6.22-source/drivers/crypto/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/drivers/crypto/Kconfig
++++ linux-2.6.22-source/drivers/crypto/Kconfig
+@@ -46,6 +46,7 @@
+ config CRYPTO_DEV_GEODE
+ 	tristate "Support for the Geode LX AES engine"
+ 	depends on X86_32 && PCI
++	depends on !COOPERATIVE
+ 	select CRYPTO_ALGAPI
+ 	select CRYPTO_BLKCIPHER
+ 	default m
+Index: linux-2.6.22-source/drivers/usb/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/drivers/usb/Kconfig
++++ linux-2.6.22-source/drivers/usb/Kconfig
+@@ -10,6 +10,7 @@
+ # NOTE:  SL-811 option should be board-specific ...
+ config USB_ARCH_HAS_HCD
+ 	boolean
++	depends on !COOPERATIVE
+ 	default y if USB_ARCH_HAS_OHCI
+ 	default y if USB_ARCH_HAS_EHCI
+ 	default y if ARM				# SL-811
+@@ -18,6 +19,7 @@
+ # many non-PCI SOC chips embed OHCI
+ config USB_ARCH_HAS_OHCI
+ 	boolean
++	depends on !COOPERATIVE
+ 	# ARM:
+ 	default y if SA1111
+ 	default y if ARCH_OMAP
+@@ -38,6 +40,7 @@
+ # some non-PCI hcds implement EHCI
+ config USB_ARCH_HAS_EHCI
+ 	boolean
++	depends on !COOPERATIVE
+ 	default y if PPC_83xx
+ 	default y if SOC_AU1200
+ 	default PCI

@@ -1,0 +1,77 @@
+Index: linux-2.6.22-source/drivers/scsi/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/drivers/scsi/Kconfig
++++ linux-2.6.22-source/drivers/scsi/Kconfig
+@@ -289,6 +289,12 @@
+ menu "SCSI low-level drivers"
+ 	depends on SCSI!=n
+ 
++config SCSI_COOPERATIVE
++	bool "Cooperative Linux support"
++	depends on COOPERATIVE
++	help
++	  SCSI Driver for Cooperative Linux
++
+ config ISCSI_TCP
+ 	tristate "iSCSI Initiator over TCP/IP"
+ 	depends on SCSI && INET
+Index: linux-2.6.22-source/drivers/scsi/Makefile
+===================================================================
+--- linux-2.6.22-source.orig/drivers/scsi/Makefile
++++ linux-2.6.22-source/drivers/scsi/Makefile
+@@ -59,6 +59,7 @@
+ obj-$(CONFIG_SCSI_ADVANSYS)	+= advansys.o
+ obj-$(CONFIG_SCSI_PSI240I)	+= psi240i.o
+ obj-$(CONFIG_SCSI_BUSLOGIC)	+= BusLogic.o
++obj-$(CONFIG_SCSI_COOPERATIVE)	+= coscsi.o
+ obj-$(CONFIG_SCSI_DPT_I2O)	+= dpt_i2o.o
+ obj-$(CONFIG_SCSI_U14_34F)	+= u14-34f.o
+ obj-$(CONFIG_SCSI_ARCMSR)	+= arcmsr/
+Index: linux-2.6.22-source/drivers/scsi/sd.c
+===================================================================
+--- linux-2.6.22-source.orig/drivers/scsi/sd.c
++++ linux-2.6.22-source/drivers/scsi/sd.c
+@@ -1515,7 +1515,11 @@
+ 	if (!scsi_device_online(sdp))
+ 		goto out;
+ 
++#ifdef CONFIG_COOPERATIVE
++	buffer = kmalloc(SD_BUF_SIZE, GFP_KERNEL);
++#else
+ 	buffer = kmalloc(SD_BUF_SIZE, GFP_KERNEL | __GFP_DMA);
++#endif
+ 	if (!buffer) {
+ 		sd_printk(KERN_WARNING, sdkp, "sd_revalidate_disk: Memory "
+ 			  "allocation failure.\n");
+Index: linux-2.6.22-source/drivers/scsi/sr.c
+===================================================================
+--- linux-2.6.22-source.orig/drivers/scsi/sr.c
++++ linux-2.6.22-source/drivers/scsi/sr.c
+@@ -726,7 +726,11 @@
+ 
+ 
+ 	/* allocate transfer buffer */
++#ifdef CONFIG_COOPERATIVE
++	buffer = kmalloc(512, GFP_KERNEL);
++#else
+ 	buffer = kmalloc(512, GFP_KERNEL | GFP_DMA);
++#endif
+ 	if (!buffer) {
+ 		printk(KERN_ERR "sr: out of memory.\n");
+ 		return;
+Index: linux-2.6.22-source/include/linux/blkdev.h
+===================================================================
+--- linux-2.6.22-source.orig/include/linux/blkdev.h
++++ linux-2.6.22-source/include/linux/blkdev.h
+@@ -793,7 +793,11 @@
+ extern void blk_rq_bio_prep(request_queue_t *, struct request *, struct bio *);
+ extern int blkdev_issue_flush(struct block_device *, sector_t *);
+ 
++#ifdef CONFIG_COOPERATIVE
++#define MAX_PHYS_SEGMENTS 256
++#else
+ #define MAX_PHYS_SEGMENTS 128
++#endif
+ #define MAX_HW_SEGMENTS 128
+ #define SAFE_MAX_SECTORS 255
+ #define BLK_DEF_MAX_SECTORS 1024
