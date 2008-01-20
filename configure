@@ -21,6 +21,7 @@ distdir="\$USER_TOPDIR/dist"
 downloaddir=NONE
 builddir="\$USER_TOPDIR/build"
 logfile="\$USER_TOPDIR/log/build-colinux-\$\$.log"
+errfile="\$USER_TOPDIR/log/build-colinux-\$\$.err"
 targetkernelsource="\$BUILD_DIR/linux-\$KERNEL_VERSION-source"
 targetkernelbuild="\$BUILD_DIR/linux-\$KERNEL_VERSION-build"
 targetkerneldir=NONE
@@ -106,6 +107,8 @@ Options:
   --logfile=ARG           logfile for build process, open append.
                           use \$\$ for process id and separate files.
                           [\$TOPDIR/log/build-colinux-\$\$.log]
+  --errfile=ARG           error file for build process, open append.
+                          [\$TOPDIR/log/build-colinux-\$\$.err]
   --kernel-untar          Untar can overwrite kernel tree, if exist.  Is good
                           for clean builds or automation builds.
   --disable-kernel-untar  Never overwrite kernel sources. (default)
@@ -211,6 +214,11 @@ EOF
     prev=logfile ;;
   --logfile=*)
     logfile="$optarg" ;;
+
+  --errfile)
+    prev=errfile ;;
+  --errfile=*)
+    errfile="$optarg" ;;
 
   --no-create)
     no_create=yes ;;
@@ -744,6 +752,7 @@ COLINUX_INSTALL_DIR="$distdir"
 # Logfile of building (append)
 #
 COLINUX_BUILD_LOG="$logfile"
+COLINUX_BUILD_ERR="$errfile"
 
 # Overwrite kerneltree before rebuild? yes/no
 # yes: Build script will overwrite kerneltree and config.

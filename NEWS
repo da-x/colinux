@@ -8,6 +8,9 @@
     Usage "scsi0=disk,file.img" or "scsi1=cdrom,file.iso" (Steve Shoecraft)
   * Added virtual pci device handling. "lspci" is working (Steve Shoecraft)
 
+  Buildsystem:
+  * New option --errfile use for different file from stdout and stderr.
+
   Debugging:
   * Enable host kernel debug via registry [HKLM\SOFTWARE\coLinux] "Debug"
 
