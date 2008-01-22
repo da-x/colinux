@@ -2219,7 +2219,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -0,0 +1,449 @@
+@@ -0,0 +1,427 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2250,9 +2250,6 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +co_message_queue_t co_outgoing_messages;
 +co_message_queue_t co_incoming_messages;
 +co_message_queue_t *co_incoming_queued_messages;
-+
-+static unsigned long temp_storage_size = 0;
-+static unsigned char temp_storage[CO_VPTR_IO_AREA_SIZE];
 +
 +void co_start_kernel(void)
 +{
@@ -2380,27 +2377,17 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +
 +	local_irq_save(flags);
 +
-+	if (list_empty(&co_incoming_messages.list)) {
-+		local_irq_restore(flags);
-+		return;
-+	}
++	/*
++	 * Pop a message from the incoming queue.
++	 */
++	while (!list_empty(&co_incoming_messages.list)) {
++		co_message_node_t *message;
 +
-+	for (;;) {
-+		co_message_node_t *message = NULL;
-+
-+		/*
-+		 * Pop a message from the incoming queue.
-+		 */
-+		if (!list_empty(&co_incoming_messages.list)) {
-+			message = list_entry(co_incoming_messages.list.next,
-+					     co_message_node_t, node);
-+			BUG_ON((unsigned long)message->msg.from >= (unsigned long)CO_MODULES_MAX);
-+			BUG_ON((unsigned long)message->msg.to >= (unsigned long)CO_MODULES_MAX);
-+			list_del(&message->node);
-+		}
-+
-+		if (!message)
-+			break;
++		message = list_entry(co_incoming_messages.list.next,
++				     co_message_node_t, node);
++		BUG_ON((unsigned long)message->msg.from >= (unsigned long)CO_MODULES_MAX);
++		BUG_ON((unsigned long)message->msg.to >= (unsigned long)CO_MODULES_MAX);
++		list_del(&message->node);
 +
 +		/*
 +		 * Let the interrupt routine of the arch dependant code
@@ -2427,16 +2414,8 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	new_jiffies = co_passage_page->params[1];
 +
 +	if (co_messages_active  &&  io_size > 0  &&  io_size <= CO_VPTR_IO_AREA_SIZE) {
-+		temp_storage_size = io_size;
-+		memcpy(temp_storage, co_io_buffer->buffer, io_size);
-+	}
-+
-+	co_io_buffer->messages_waiting = 0;
-+
-+	if (temp_storage_size) {
-+		unsigned char *io_buffer = temp_storage;
-+		unsigned char *io_buffer_end = &temp_storage[temp_storage_size];
-+		co_passage_page_ref_down();
++		unsigned char *io_buffer = co_io_buffer->buffer;
++		unsigned char *io_buffer_end = &co_io_buffer->buffer[io_size];
 +
 +		while (io_buffer < io_buffer_end) {
 +			co_message_t *message = (co_message_t *)io_buffer;
@@ -2450,10 +2429,9 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +			co_message_add_to_incoming(message, size);
 +			io_buffer += size;
 +		}
-+		co_passage_page_ref_up();
-+		temp_storage_size = 0;
 +	}
 +
++	co_io_buffer->messages_waiting = 0;
 +	co_passage_page_release(flags);
 +
 +	memset (&null_regs, 0, sizeof(null_regs));
