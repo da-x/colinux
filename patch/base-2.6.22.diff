@@ -3044,7 +3044,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/i8259_cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/i8259_cooperative.c
-@@ -0,0 +1,101 @@
+@@ -0,0 +1,102 @@
 +/*
 + *  linux/arch/i386/kernel/i8259_cooperative.c
 + */
@@ -3063,6 +3063,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/i8259_cooperative.c
 +{
 +	unsigned long flags;
 +
++	co_passage_page_assert_valid();
 +	co_passage_page_acquire(&flags);
 +	co_passage_page->operation = CO_OPERATION_FORWARD_INTERRUPT;
 +	co_passage_page->params[0] = (~regs->orig_eax) + 0x20; /* IRQ number */
