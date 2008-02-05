@@ -8,13 +8,13 @@
 #
 # Needs the file linux.sys with debugging information. This file exist
 # in zip archive daemons-*.dbg.zip, or in project build directory
-# src/colinux/os/winnt/build. The file must give it as first parameter
+# src/colinux/os/winnt/build. The file must give as first parameter
 # to the script, or should exist in currenty directory. Please use a file
 # from exactly same build, that triggered the minidump.
 #
-# Script input and outputs are stdin and stdout, please use redirections.
+# Input and outputs are stdin and stdout, please use redirections.
 #
-# Needs installed tools i686-pc-mingw32-nm (from coLinux build system, native
+# Needs installed tools i686-pc-mingw32-nm from coLinux build system (native
 # nm also usable), bc (command line calcualtor), sed, tr, cut, paste.
 #
 # Example from "!analyze -v" of minidump, before converted...
