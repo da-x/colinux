@@ -229,7 +229,7 @@ build_binutils_guest()
 	rm -rf "binutils-$COLINUX_GCC_GUEST_TARGET"
 	mkdir "binutils-$COLINUX_GCC_GUEST_TARGET"
 	cd "binutils-$COLINUX_GCC_GUEST_TARGET"
-	"$BUILD_DIR/$BINUTILS/configure" \
+	"../$BINUTILS/configure" \
 		--program-prefix="${COLINUX_GCC_GUEST_TARGET}-" \
 		--prefix="$PREFIX/$COLINUX_GCC_GUEST_TARGET" \
 		--disable-nls \
@@ -279,7 +279,7 @@ build_gcc_guest()
 	rm -rf "gcc-$COLINUX_GCC_GUEST_TARGET"
 	mkdir "gcc-$COLINUX_GCC_GUEST_TARGET"
 	cd "gcc-$COLINUX_GCC_GUEST_TARGET"
-	"$BUILD_DIR/$GCC/configure" -v \
+	"../$GCC/configure" -v \
 		--program-prefix="${COLINUX_GCC_GUEST_TARGET}-" \
 		--prefix="$PREFIX/$COLINUX_GCC_GUEST_TARGET" \
 		--disable-nls \
