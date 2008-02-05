@@ -207,6 +207,11 @@ not change the gcc version to an older version. Read the coLinux changelog
 (inside Subversion) about the problems with older gcc versions and the
 fixes. If you are up to it then compile gcc-4.2.0 for MinGW and Linux.
 
+Since coLinux version 0.7.2 the gcc dosn't longer depends on one major gcc
+version. The ABI is runtime checked and inside the building now. This opens
+more gcc versiond for kernel builds (tested from 3.4.x up to gcc 4.3.0).
+Usebility of installed gcc can check with "./configure --no-create".
+
 
 4.2 Compiling the Cooperative Linux kernel (the vmlinux file)
 
