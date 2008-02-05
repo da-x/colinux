@@ -26,7 +26,7 @@ The following options are specific to Windows NT/XP/2000.
 	To run the service you should use the windows service managment
 	console or the command line tool "net start".
 
-	Sample:
+	Example:
 	colinux-daemon @example.conf --install-service "coLinux"
 	net start "coLinux"
 
@@ -35,7 +35,7 @@ The following options are specific to Windows NT/XP/2000.
 	Allows you to remove the Cooperative Linux service.
 	Please shut down coLinux, before removing the service.
 
-	Sample:
+	Example:
 	net stop "coLinux"
 	colinux-daemon --remove-service "coLinux"
 
@@ -171,7 +171,7 @@ don't depend on each other.  The parameters are case sensitive.
 	Partitions should only use non beginners to make a "dualboot"
 	runable.
 
-	Example:
+	Examples:
 	cobd0=rootfs.img
 	cobd1=C:\temp\swapfs.img
 	cobd2=\Device\Cdrom0
@@ -197,7 +197,7 @@ don't depend on each other.  The parameters are case sensitive.
 	If file has partition tables, the devices /dev/sda1, /dev/sda2, ...
 	are usable.
 
-	Example:
+	Examples:
 	scsi0=disk,file.img
 	scsi1=cdrom,file.iso
 
@@ -238,7 +238,7 @@ don't depend on each other.  The parameters are case sensitive.
 	coLinux has admin rights on this mount point.  Read-only-mount is
 	a good idea.
 
-	Example:
+	Examples:
 	cofs0=C:\coLinux	# (Directory)
 	cofs1=R:\		# (CDROM drive, USB drive etc.).
 
@@ -292,7 +292,7 @@ don't depend on each other.  The parameters are case sensitive.
 	counts for port array.  More redirections have the same form and
 	are seperated by "/".
 
-	Example:
+	Examples:
 	eth0=slirp			# Simplest slirp mode (outgoing only)
 	eth0=slirp,,tcp:22:22		# Forwards SSH from host to guest
 	eth0=slirp,,tcp:2222:22		# Forwards 2222 on host to guest 22
@@ -336,7 +336,7 @@ don't depend on each other.  The parameters are case sensitive.
 
 	Set a <MAC>, if you wish a constant hardware identification number.
 
-	Example:
+	Examples:
 	eth0=tuntap				# Use the first TAP device.
 	eth0=tuntap,"Local Area Network"	# You name it.
 	eth0=tuntap,,02:00:00:00:00:02		# Set a MAC address.
@@ -363,7 +363,7 @@ don't depend on each other.  The parameters are case sensitive.
 	wireless card.  Use Quotation marks for spaces in name.  It is typical
 	"Local Connection". The name is optional, if have only pcap-bridge
 	interface (and no tuntap). If you have tuntap or more as one network
-	cards in your windows then plesae set the name here.
+	cards in your windows then please set the name here.
 
 	<MAC> and <promisc> are optional.
 
@@ -374,7 +374,10 @@ don't depend on each other.  The parameters are case sensitive.
 	works for cable Ethernet adapters.  Some cases (Wireless cards) works
 	only with 'nopromisc'.
 
-	Samples:
+	For this type of networking must install the Windows Packet Capture
+	Library "WinPcap.dll" from  http://www.winpcap.org/install/
+
+	Examples:
 	eth0=pcap-bridge,"Local Area Network"	# Uses PCAP bridging.
 	eth0=pcap-bridge,"Local Area Network",02:00:00:00:00:03,nopromisc
 						# Define a MAC address and
@@ -391,7 +394,7 @@ don't depend on each other.  The parameters are case sensitive.
 	(mode settings) are not supported from virtual machine side.  Inside
 	coLinux can only run with one baudrate and mode from startup setting.
 
-	Samples:
+	Examples:
 	ttys0=COM1	# Connects the serial device /dev/ttyS0 from linux
 			# to host system COM1.  Please set the line
 			# parameters for serial port on hostsystem,
