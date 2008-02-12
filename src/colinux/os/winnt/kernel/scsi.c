@@ -116,7 +116,6 @@ static void send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc, int delta
 }
 #endif
 
-typedef /*NTOSAPI*/ NTSTATUS DDKAPI (*xfer_func_t)( /*IN*/ HANDLE  FileHandle, /*IN*/ HANDLE  Event  /*OPTIONAL*/, /*IN*/ PIO_APC_ROUTINE  ApcRoutine  /*OPTIONAL*/, /*IN*/ PVOID  ApcContext  /*OPTIONAL*/, /*OUT*/ PIO_STATUS_BLOCK  IoStatusBlock, /*IN*/ PVOID  Buffer, /*IN*/ ULONG  Length, /*IN*/ PLARGE_INTEGER  ByteOffset  /*OPTIONAL*/, /*IN*/ PULONG  Key  /*OPTIONAL*/);
 extern PDEVICE_OBJECT coLinux_DeviceObject;
 
 struct page {
@@ -129,7 +128,7 @@ struct _io_req {
 	co_scsi_dev_t *dp;
 	co_scsi_io_t io;
 	PIO_WORKITEM pIoWorkItem;
-	xfer_func_t func;
+	bool_t read;
 #if !COSCSI_ASYNC
 	int result;
 #endif
@@ -142,19 +141,12 @@ static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 #endif
 	struct _io_req *r = Context;
 	struct scatterlist *sg;
-	IO_STATUS_BLOCK isb;
 	LARGE_INTEGER Offset;
-	NTSTATUS status;
-	void *buffer;
-	co_pfn_t sg_pfn, pfn;
-	unsigned char *sg_page, *page;
-	int bytes_req, bytes_xfer;
+	co_pfn_t sg_pfn;
+	unsigned char *sg_page;
 	PIO_WORKITEM wip;
-	vm_ptr_t vaddr;
-	int x,len,size;
+	int x;
 	co_rc_t rc;
-
-	bytes_req = bytes_xfer = 0;
 
 	/* Map the SG */
 	rc = co_monitor_get_pfn(r->mp, r->io.sg, &sg_pfn);
@@ -166,45 +158,16 @@ static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 	sg = (struct scatterlist *) (sg_page + (r->io.sg & ~CO_ARCH_PAGE_MASK));
 
 	/* For each vector */
-	rc = CO_RC(OK);
 	Offset.QuadPart = r->io.offset;
 	for(x=0; x < r->io.count; x++, sg++) {
-		vaddr = sg->dma_address + CO_ARCH_KERNEL_OFFSET;
-		size = sg->length;
-		bytes_req += size;
-		while(size) {
-			len = ((vaddr + CO_ARCH_PAGE_SIZE) & CO_ARCH_PAGE_MASK) - vaddr;
-			if (len > size) len = size;
-
-			/* Map page */
-			rc = co_monitor_get_pfn(r->mp, vaddr, &pfn);
-			if (!CO_OK(rc)) {
-				co_debug_system("scsi_host_io: error mapping page!\n");
-				break;
-			}
-			page = co_os_map(r->mp->manager, pfn);
-			buffer = page + (vaddr & ~CO_ARCH_PAGE_MASK);
-
-			/* Transfer data */
-			status = r->func((HANDLE)r->dp->os_handle, NULL, NULL, NULL, &isb, buffer, len, &Offset, NULL);
-
-			/* Unmap page */
-			co_os_unmap(r->mp->manager, page, pfn);
-
-			/* Check status */
-			if (status != STATUS_SUCCESS) {
-				co_debug("ntstatus: %X\n", (int) status);
-				rc = CO_RC(ERROR);
-				break;
-			}
-
-			/* Update counters */
-			size -= len;
-			vaddr += len;
-			Offset.QuadPart += len;
-			bytes_xfer += len;
-		}
-		if (!CO_OK(rc)) break;
+		rc = co_os_file_block_read_write(r->mp,
+					(HANDLE)r->dp->os_handle,
+					Offset.QuadPart,
+					sg->dma_address + CO_ARCH_KERNEL_OFFSET,
+					sg->length,
+					r->read);
+		if (!CO_OK(rc))	break;
+		Offset.QuadPart += sg->length;
 	}
 
 	co_os_unmap(r->mp->manager, sg_page, sg_pfn);
@@ -212,7 +175,7 @@ static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 io_done:
 #if COSCSI_ASYNC
 	/* Send interrupt */
-	send_intr(r->mp, r->dp->unit, r->io.scp, (CO_OK(rc) == 0), bytes_req - bytes_xfer);
+	send_intr(r->mp, r->dp->unit, r->io.scp, (CO_OK(rc) == 0), 0);
 #endif
 
 	/* Free WorkItem */
@@ -241,7 +204,7 @@ int scsi_file_io(co_monitor_t *mp, co_scsi_dev_t *dp, co_scsi_io_t *io) {
 	r->dp = dp;
 	co_memcpy(&r->io, io, sizeof(*io));
 	r->pIoWorkItem = IoAllocateWorkItem(coLinux_DeviceObject);
-	r->func = (io->write ? ZwWriteFile : ZwReadFile);
+	r->read = !io->write;
 
 	/* Submit the req */
 #if COSCSI_DEBUG_IO
