@@ -140,6 +140,7 @@ static co_rc_t co_os_file_block_detect_size_harddisk(HANDLE handle, unsigned lon
 		*out_size = length.Length.QuadPart;
 		return CO_RC(OK);
 	}
+	co_debug("ZwDeviceIoControlFile IOCTL_DISK_GET_LENGTH_INFO fail status %X", (int)status);
 
 	return CO_RC(ERROR);
 }
@@ -161,6 +162,7 @@ static co_rc_t co_os_file_block_detect_size_standard(HANDLE handle, unsigned lon
 		co_debug("reported size: %llu KBs", (*out_size >> 10));
 		return CO_RC(OK);
 	}
+	co_debug("ZwQueryInformationFile FileStandardInformation fail status %X", (int)status);
 
 	return CO_RC(ERROR);
 }
@@ -194,25 +196,30 @@ co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned lo
 	co_rc_t rc;
 	bool_t opened = PFALSE;
 
-	co_debug("device %s", fdev->pathname);
-
 	if (fdev->sysdep == NULL) {
+		co_debug("open device %s", fdev->pathname);
 		rc = co_os_file_open(fdev->pathname, &FileHandle, FILE_READ_DATA);
 		if (!CO_OK(rc))
 			return rc;
 
 		opened = TRUE;
-	}
-	else {
+	} else if (fdev->disksize) {
+		co_debug("cached size: %llu KBs", (fdev->disksize >> 10));
+		*size = fdev->disksize;
+		return CO_RC(OK);
+	} else {
+		co_debug("sysdep device %s", fdev->pathname);
 		FileHandle = (HANDLE)(fdev->sysdep);
 	}
 
-	rc = co_os_file_get_size(FileHandle, size);
+	rc = co_os_file_get_size(FileHandle, &fdev->disksize);
 	if (CO_OK(rc))
-		co_debug("detected size: %llu KBs", (*size >> 10));
+		co_debug("detected size: %llu KBs", (fdev->disksize >> 10));
 	
 	if (opened)
 		co_os_file_close(FileHandle);
+
+	*size = fdev->disksize;
 
 	return rc;
 }
@@ -239,6 +246,7 @@ co_rc_t co_os_file_block_close(co_monitor_file_block_dev_t *fdev)
 	co_os_file_close(FileHandle);
 
 	fdev->sysdep = NULL;
+	fdev->disksize = 0;
 
 	return CO_RC(OK);
 }
