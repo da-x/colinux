@@ -51,13 +51,8 @@ int scsi_file_open(co_monitor_t *cmon, co_scsi_dev_t *dp) {
 	rc = co_winnt_utf8_to_unicode(dp->conf->pathname, &unipath);
 	if (!CO_OK(rc)) return 1;
 
-	DesiredAccess = FILE_READ_DATA | FILE_WRITE_DATA;
-	DesiredAccess |= SYNCHRONIZE;
-
+	DesiredAccess = FILE_READ_DATA | FILE_WRITE_DATA | SYNCHRONIZE;
 	OpenOptions = FILE_SYNCHRONOUS_IO_NONALERT;
-//	OpenOptions |= FILE_NO_INTERMEDIATE_BUFFERING;
-//	OpenOptions |= FILE_RANDOM_ACCESS;
-//	OpenOptions |= FILE_WRITE_THROUGH;
 
 	/* Kernel handle needed for IoQueueWorkItem */
 	InitializeObjectAttributes(&ObjectAttributes, &unipath,
@@ -93,8 +88,9 @@ int scsi_file_close(co_monitor_t *cmon, co_scsi_dev_t *dp)
 	return (status != STATUS_SUCCESS);
 }
 
+/* Async is defined in kernel header! */
 #if COSCSI_ASYNC
-static void send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc, int delta) {
+static void send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc) {
 	struct {
 		co_message_t mon;
 		co_linux_message_t linux;
@@ -110,7 +106,7 @@ static void send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc, int delta
 	msg.linux.unit = unit;
 	msg.info.ctx = ctx;
 	msg.info.result = rc;
-	msg.info.delta = delta;
+	msg.info.delta = 0;
 
 	co_monitor_message_from_user(cmon, 0, (co_message_t *)&msg);
 }
@@ -118,9 +114,6 @@ static void send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc, int delta
 
 extern PDEVICE_OBJECT coLinux_DeviceObject;
 
-struct page {
-	int bogus;
-};
 #include <asm/scatterlist.h>
 
 struct _io_req {
@@ -175,7 +168,7 @@ static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 io_done:
 #if COSCSI_ASYNC
 	/* Send interrupt */
-	send_intr(r->mp, r->dp->unit, r->io.scp, (CO_OK(rc) == 0), 0);
+	send_intr(r->mp, r->dp->unit, r->io.scp, (CO_OK(rc) == 0));
 #endif
 
 	/* Free WorkItem */
