@@ -29,7 +29,6 @@
 #endif
 
 #define COSCSI_DEBUG_OPEN 0
-#define COSCSI_DEBUG_SIZE 0
 #define COSCSI_DEBUG_IO 0
 #define COSCSI_DEBUG_PASS 0
 
@@ -366,153 +365,10 @@ err_out:
 	return 1;
 }
 
-static bool_t probe_area(HANDLE handle, LARGE_INTEGER offset, char *test_buffer, unsigned long size)
-{
-	IO_STATUS_BLOCK isb;
-	NTSTATUS status;
-
-	status = ZwReadFile(handle, NULL, NULL,
-			    NULL, &isb, test_buffer, size,
-			    &offset, NULL);
-
-	if (status != STATUS_SUCCESS)
-		return PFALSE;
-
-	return PTRUE;
-}
-
-static co_rc_t scsi_file_detect_size_binary_search(HANDLE handle, unsigned long long *out_size)
-{
-	/*
-	 * Binary search the size of the device.
-	 *
-	 * Yep, it's ugly.
-	 *
-	 * I haven't found a more reliable way. I thought about switching between
-	 * IOCTL_DISK_GET_DRIVE_GEOMETRY, IOCTL_DISK_GET_PARTITION_INFORMATION,
-	 * and even IOCTL_CDROM_GET_DRIVE_GEOMETRY depending on the device's type,
-	 * but I'm not sure if would work in all cases.
-	 *
-	 * This *would* work in all cases.
-	 */
-
-	LARGE_INTEGER scan_bit;
-	LARGE_INTEGER build_size;
-	unsigned long test_buffer_size = 0x100;
-	unsigned long test_buffer_size_max = 0x4000;
-	char *test_buffer;
-
-	test_buffer = co_os_malloc(test_buffer_size_max);
-	if (!test_buffer)
-		return CO_RC(OUT_OF_MEMORY);
-
-	build_size.QuadPart = 0;
-
-	while (test_buffer_size <= test_buffer_size_max) {
-		if (probe_area(handle, build_size, test_buffer, test_buffer_size))
-			break;
-
-		test_buffer_size <<= 1;
-	}
-
-	if (test_buffer_size >= test_buffer_size_max) {
-		co_debug_error("size is zero");
-		*out_size = 0;
-		co_os_free(test_buffer);
-		return CO_RC(ERROR);
-	}
-
-	scan_bit.QuadPart = 1;
-
-	/*
-	 * Find the smallest invalid power of 2.
-	 */
-	while (scan_bit.QuadPart != 0) {
-		if (!probe_area(handle, scan_bit, test_buffer, test_buffer_size))
-			break;
-		scan_bit.QuadPart <<= 1;
-	}
-
-	if (scan_bit.QuadPart == 0)
-		return CO_RC(ERROR);
-
-	while (scan_bit.QuadPart) {
-		LARGE_INTEGER with_bit;
-
-		scan_bit.QuadPart >>= 1;
-		with_bit.QuadPart = build_size.QuadPart | scan_bit.QuadPart;
-		if (probe_area(handle, with_bit, test_buffer, test_buffer_size))
-			build_size = with_bit;
-	}
-
-	build_size.QuadPart += test_buffer_size;
-
-	*out_size = build_size.QuadPart;
-
-	co_os_free(test_buffer);
-	return CO_RC(OK);
-}
-
-static co_rc_t scsi_file_detect_size_harddisk(HANDLE handle, unsigned long long *out_size)
-{
-	GET_LENGTH_INFORMATION length;
-	IO_STATUS_BLOCK block;
-	NTSTATUS status;
-
-	length.Length.QuadPart = 0;
-
-	status = ZwDeviceIoControlFile(handle, NULL, NULL, NULL, &block,
-				       IOCTL_DISK_GET_LENGTH_INFO,
-				       NULL, 0, &length, sizeof(length));
-
-	if (status == STATUS_SUCCESS) {
-		co_debug("IOCTL_DISK_GET_LENGTH_INFO returned success");
-		*out_size = length.Length.QuadPart;
-		return CO_RC(OK);
-	}
-
-	return CO_RC(ERROR);
-}
-
-static co_rc_t scsi_file_detect_size(HANDLE handle, unsigned long long *out_size)
-{
-	co_rc_t rc;
-
-	rc = scsi_file_detect_size_harddisk(handle, out_size);
-	if (CO_OK(rc)) return rc;
-
-	/*
-	 * Fall back to binary search.
-	 */
-	rc = scsi_file_detect_size_binary_search(handle, out_size);
-	if (CO_OK(rc)) return rc;
-
-	*out_size = 0;
-	return CO_RC(ERROR);
-}
-
 int scsi_file_size(co_monitor_t *cmon, co_scsi_dev_t *dp, unsigned long long *size) {
-	FILE_STANDARD_INFORMATION fsi;
-	IO_STATUS_BLOCK IoStatusBlock;
-	NTSTATUS status;
 	co_rc_t rc;
 
-	rc = CO_RC(OK);
-	*size = 0;
+	rc = co_os_file_get_size(dp->os_handle, size);
 
-	status = ZwQueryInformationFile(dp->os_handle,
-					&IoStatusBlock,
-					&fsi,
-					sizeof(fsi),
-					FileStandardInformation);
-
-	if (status == STATUS_SUCCESS)
-		*size = fsi.EndOfFile.QuadPart;
-	else
-		rc = scsi_file_detect_size(dp->os_handle, size);
-
-#if COSCSI_DEBUG_SIZE
-	co_debug_system("scsi_file_size: detected size: %llu KBs", (*size >> 10));
-#endif
 	return (CO_OK(rc) == 0);
 }

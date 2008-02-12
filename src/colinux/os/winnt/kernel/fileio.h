@@ -15,6 +15,8 @@
 
 #include "ddk.h"
 
+co_rc_t co_os_file_get_size(HANDLE handle, unsigned long long *out_size);
+
 co_rc_t co_winnt_utf8_to_unicode(const char *src, UNICODE_STRING *unicode_str);
 void co_winnt_free_unicode(UNICODE_STRING *unicode_str);
 co_rc_t co_status_convert(NTSTATUS status);
