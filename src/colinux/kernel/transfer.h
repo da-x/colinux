@@ -56,6 +56,25 @@ extern co_rc_t co_monitor_host_linuxvm_transfer(
 	);
 
 /*
+ * map and unmap splitted
+ */
+
+co_rc_t co_monitor_host_linuxvm_transfer_map(
+	struct co_monitor *cmon,
+	vm_ptr_t vaddr,
+	unsigned long size,
+	unsigned char **start,
+	unsigned char **page,
+	co_pfn_t *ppfn
+	);
+
+void co_monitor_host_linuxvm_transfer_unmap(
+	struct co_monitor *cmon,
+	unsigned char *page,
+	co_pfn_t pfn
+	);
+
+/*
  * memcpy-like transfer implementation:
  */
 

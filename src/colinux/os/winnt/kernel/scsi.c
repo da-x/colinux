@@ -16,7 +16,6 @@
 
 #include <colinux/kernel/scsi.h>
 #include <colinux/kernel/transfer.h>
-#include <colinux/kernel/pages.h>
 #include <colinux/os/alloc.h>
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/common/libc.h>
@@ -142,13 +141,13 @@ static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 	co_rc_t rc;
 
 	/* Map the SG */
-	rc = co_monitor_get_pfn(r->mp, r->io.sg, &sg_pfn);
+	rc = co_monitor_host_linuxvm_transfer_map(r->mp, r->io.sg,
+					r->io.count * sizeof(struct scatterlist),
+					(void*)&sg, &sg_page, &sg_pfn);
 	if (!CO_OK(rc)) {
 		co_debug_system("scsi_io: error mapping sg");
 		goto io_done;
 	}
-	sg_page = co_os_map(r->mp->manager, sg_pfn);
-	sg = (struct scatterlist *) (sg_page + (r->io.sg & ~CO_ARCH_PAGE_MASK));
 
 	/* For each vector */
 	Offset.QuadPart = r->io.offset;
@@ -163,7 +162,7 @@ static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 		Offset.QuadPart += sg->length;
 	}
 
-	co_os_unmap(r->mp->manager, sg_page, sg_pfn);
+	co_monitor_host_linuxvm_transfer_unmap(r->mp, sg_page, sg_pfn);
 
 io_done:
 #if COSCSI_ASYNC
@@ -229,13 +228,12 @@ int scsi_pass(co_monitor_t *cmon, co_scsi_dev_t *dp, co_scsi_pass_t *pass) {
 
 	/* Map buffer page */
 	if (pass->buflen) {
-		rc = co_monitor_get_pfn(cmon, pass->buffer, &pfn);
+		rc = co_monitor_host_linuxvm_transfer_map(cmon, pass->buffer, pass->buflen,
+					(void*)&buffer, &page, &pfn);
 		if (!CO_OK(rc)) {
 			co_debug_system("scsi_pass: get_pfn: %x", (int)rc);
 			goto err_out;
 		}
-		page = co_os_map(cmon->manager, pfn);
-		buffer = page + (pass->buffer & ~CO_ARCH_PAGE_MASK);
 	} else {
 		page = 0;
 		buffer = 0;
@@ -312,7 +310,7 @@ int scsi_pass(co_monitor_t *cmon, co_scsi_dev_t *dp, co_scsi_pass_t *pass) {
 #endif
 
 	/* Unmap page */
-	if (page) co_os_unmap(cmon->manager, page, pfn);
+	if (page) co_monitor_host_linuxvm_transfer_unmap(cmon, page, pfn);
 
 	if (status == STATUS_SUCCESS)
 		return req.Spt.ScsiStatus >> 1;
