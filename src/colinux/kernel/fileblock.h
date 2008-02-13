@@ -41,7 +41,6 @@ struct co_monitor_file_block_dev {
 	co_monitor_file_block_operations_t *op;
 
 	struct co_os_file_block_sysdep *sysdep;
-	unsigned long long disksize;
 };
 
 co_rc_t co_monitor_file_block_init(co_monitor_file_block_dev_t *dev, co_pathname_t *pathname);

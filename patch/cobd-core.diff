@@ -2,7 +2,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/drivers/block/cobd.c
-@@ -0,0 +1,529 @@
+@@ -0,0 +1,532 @@
 +/*
 + *  Copyright (C) 2003 Dan Aloni <da-x@colinux.org>
 + *
@@ -94,8 +94,11 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 +	if (cobd->device  &&  cobd->device != inode->i_bdev)
 +		return -EBUSY;
 +
-+	if (cobd_stat(cobd, &stat_request))
-+		return -ENODEV;
++	if (cobd->refcount == 0) {
++		if (cobd_stat(cobd, &stat_request)) {
++			return -ENODEV;
++		}
++	}
 +
 +	result = 0;
 +
@@ -118,7 +121,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 +		return result;
 +
 +	if (cobd->refcount == 1) {
-+		set_capacity(inode->i_bdev->bd_disk, stat_request.disk_size >> 9);
++		set_capacity(inode->i_bdev->bd_disk, stat_request.disk_size >> hardsect_size_shift);
 +		cobd->device = inode->i_bdev;
 +	}
 +
