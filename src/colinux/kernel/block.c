@@ -14,6 +14,7 @@
 
 void co_monitor_block_register_device(co_monitor_t *cmon, unsigned int index, co_block_dev_t *dev)
 {
+	dev->unit = index;
 	cmon->block_devs[index] = dev;
 }
 
@@ -57,6 +58,7 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned int index,
 	rc = CO_RC_OK;
 
 	switch (request->type) { 
+	case CO_BLOCK_ASYNC_OPEN:
 	case CO_BLOCK_OPEN: {
 		co_debug("cobd%d: open (count=%d)", index, dev->use_count);
 		if (dev->use_count >= 1) { 
@@ -93,6 +95,7 @@ co_rc_t co_monitor_block_request(co_monitor_t *cmon, unsigned int index,
 	rc = (dev->service)(cmon, dev, request);
 
 	switch (request->type) { 
+	case CO_BLOCK_ASYNC_OPEN:
 	case CO_BLOCK_OPEN: {
 		if (CO_OK(rc)) {
 			co_debug("cobd%d: open success (count=%d)", index, dev->use_count);

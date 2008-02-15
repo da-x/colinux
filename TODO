@@ -66,9 +66,6 @@
      is not working fine (I can see IPv6 traffic though in coLinux).
    * Tune performance (i.e reduce round trip time and increase bandwidth).
 
- * cobd:
-   * Reimplement as asynchronous.
-
  * Root file system images: 
    * Fix and improve the Debian image.
      * Add ssh to it. the fact that we will end with the same sshd private keys

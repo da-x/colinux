@@ -27,6 +27,27 @@
 
 #define FILE_SHARE_DIRECTORY (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
 
+typedef struct {
+	co_monitor_t *monitor;
+	co_pfn_t pfn;
+	unsigned char *page;
+	unsigned char *start;
+	struct {
+		co_message_t message;
+		co_linux_message_t linux_message;
+		void * irq_request;
+	} msg;
+	IO_STATUS_BLOCK isb;
+	LARGE_INTEGER offset;
+	unsigned long size;
+} callback_context_t;
+
+
+typedef struct {
+	HANDLE file_handle;
+	LARGE_INTEGER offset;
+} co_os_transfer_file_block_data_t;
+
 co_rc_t co_winnt_utf8_to_unicode(const char *src, UNICODE_STRING *unicode_str)
 {
 	co_rc_t rc;
@@ -58,6 +79,7 @@ void co_winnt_free_unicode(UNICODE_STRING *unicode_str)
 co_rc_t co_status_convert(NTSTATUS status)
 {
 	switch (status) {
+	case STATUS_PENDING:
 	case STATUS_SUCCESS: return CO_RC(OK);
 	case STATUS_NO_SUCH_FILE: 
 	case STATUS_OBJECT_NAME_NOT_FOUND: return CO_RC(NOT_FOUND);
@@ -89,15 +111,15 @@ co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned long open
 				   NULL);
 
 	status = ZwCreateFile(FileHandle, 
-			      open_flags | SYNCHRONIZE,
+			      open_flags,
 			      &ObjectAttributes,
 			      &IoStatusBlock,
 			      NULL,
 			      file_attribute,
-			      (open_flags == FILE_LIST_DIRECTORY) ?
+			      (open_flags == (FILE_LIST_DIRECTORY | SYNCHRONIZE)) ?
 				 FILE_SHARE_DIRECTORY : 0,
 			      create_disposition,
-			      options | FILE_SYNCHRONOUS_IO_NONALERT,
+			      options,
 			      NULL,
 			      0);
 
@@ -111,7 +133,7 @@ co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned long open
 
 co_rc_t co_os_file_open(char *pathname, PHANDLE FileHandle, unsigned long open_flags)
 {   
-	return co_os_file_create(pathname, FileHandle, open_flags, 0, FILE_OPEN, 0);
+	return co_os_file_create(pathname, FileHandle, open_flags | SYNCHRONIZE, 0, FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT);
 }
 
 co_rc_t co_os_file_close(PHANDLE FileHandle)
@@ -122,11 +144,6 @@ co_rc_t co_os_file_close(PHANDLE FileHandle)
 
 	return co_status_convert(status);
 }
-
-typedef struct {
-	LARGE_INTEGER offset;
-	HANDLE file_handle;
-} co_os_transfer_file_block_data_t;
 
 static co_rc_t transfer_file_block(co_monitor_t *cmon, 
 				  void *host_data, void *linuxvm, 
@@ -194,6 +211,97 @@ co_rc_t co_os_file_block_read_write(co_monitor_t *monitor,
 					      size,
 					      (read ? CO_MONITOR_TRANSFER_FROM_HOST :
 					       CO_MONITOR_TRANSFER_FROM_LINUX));
+
+	return rc;
+}
+
+static void CALLBACK transfer_file_block_callback(callback_context_t *context, PIO_STATUS_BLOCK IoStatusBlock, ULONG Reserved)
+{
+	co_debug_lvl(filesystem, 10, "cobd%d callback info=%ld size=%ld", context->msg.linux_message.unit, context->size, (long)IoStatusBlock->Information);
+	co_monitor_host_linuxvm_transfer_unmap(context->monitor, context->page, context->pfn);
+
+	// TODO: Set ret level
+	if ((unsigned long)IoStatusBlock->Information != context->size)
+		co_debug("cobd%d callback size failed: %ld != %ld\n", context->msg.linux_message.unit, (unsigned long)IoStatusBlock->Information, context->size);
+
+	co_monitor_message_from_user(context->monitor, 0, &context->msg.message);
+	co_os_free(context);
+}
+
+co_rc_t co_os_file_block_async_read_write(co_monitor_t *monitor,
+				    HANDLE file_handle,
+				    unsigned long long offset,
+				    vm_ptr_t address,
+				    unsigned long size,
+				    bool_t read,
+				    int unit,
+				    void *irq_request)
+{
+	co_rc_t rc;
+	NTSTATUS status;
+
+	// Prepare callback
+	callback_context_t *context = co_os_malloc(sizeof (callback_context_t));
+	if (!context)
+		return CO_RC(OUT_OF_MEMORY);
+	co_memset(context, 0, sizeof(callback_context_t));
+
+	context->monitor = monitor;
+	context->offset.QuadPart = offset;
+	context->size = size;
+	context->msg.message.from = CO_MODULE_COBD0 + unit;
+	context->msg.message.to = CO_MODULE_LINUX;
+	context->msg.message.priority = CO_PRIORITY_DISCARDABLE;
+	context->msg.message.type = CO_MESSAGE_TYPE_OTHER;
+	context->msg.message.size = sizeof (context->msg) - sizeof (context->msg.message);
+	context->msg.linux_message.device = CO_DEVICE_BLOCK;
+	context->msg.linux_message.unit = unit;
+	context->msg.linux_message.size = sizeof (context->msg.irq_request);
+	context->msg.irq_request = irq_request;
+
+	// map linux kernal memory into host memory
+	rc = co_monitor_host_linuxvm_transfer_map(
+		monitor,
+		address,
+		size,
+		&context->start,
+		&context->page,
+		&context->pfn);
+
+	if (CO_OK(rc)) {
+		if (read) {
+			status = ZwReadFile(file_handle,
+				    NULL,
+				    (PIO_APC_ROUTINE) transfer_file_block_callback,
+				    context,
+				    &context->isb,
+				    context->start,
+				    size,
+				    &context->offset,
+				    NULL);
+			co_debug_lvl(filesystem, 10, "cobd%d read status %X", unit, (int)status);
+		} else {
+			status = ZwWriteFile(file_handle,
+				     NULL,
+				     (PIO_APC_ROUTINE) transfer_file_block_callback,
+				     context,
+				     &context->isb,
+				     context->start,
+				     size,
+				     &context->offset,
+				     NULL);
+			co_debug_lvl(filesystem, 10, "cobd%d write status %X", unit, (int)status);
+		}
+
+		if (status != STATUS_SUCCESS && status != STATUS_PENDING) {
+			co_debug("block io failed: %p %lx (reason: %x)\n", context->start, size, (int)status);
+			rc = co_status_convert(status);
+			co_monitor_host_linuxvm_transfer_unmap(monitor, context->page, context->pfn);
+		}
+	}
+
+	if (!CO_OK(rc))
+		co_os_free(context);
 
 	return rc;
 }
@@ -525,8 +633,8 @@ co_rc_t co_os_file_mkdir(char *dirname)
 	HANDLE handle;
 	co_rc_t rc;
 
-	rc = co_os_file_create(dirname, &handle, FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES,
-		FILE_ATTRIBUTE_DIRECTORY, FILE_CREATE, FILE_DIRECTORY_FILE);
+	rc = co_os_file_create(dirname, &handle, FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE,
+		FILE_ATTRIBUTE_DIRECTORY, FILE_CREATE, FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT);
 	if (CO_OK(rc)) {
 		co_os_file_close(handle);
 	}
@@ -584,8 +692,8 @@ co_rc_t co_os_file_mknod(char *filename)
 	co_rc_t rc;
 	HANDLE handle;
 
-	rc = co_os_file_create(filename, &handle, FILE_READ_DATA | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES,
-			       FILE_ATTRIBUTE_NORMAL, FILE_CREATE, 0);
+	rc = co_os_file_create(filename, &handle, FILE_READ_DATA | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE,
+			       FILE_ATTRIBUTE_NORMAL, FILE_CREATE, FILE_SYNCHRONOUS_IO_NONALERT);
 
 	if (CO_OK(rc)) {
 		co_os_file_close(handle);
@@ -708,9 +816,12 @@ co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *
 
 	len = strlen(pathname);
 	do {
-		rc = co_os_file_create(pathname, &handle, 
-				       FILE_LIST_DIRECTORY, 0,
-				       FILE_OPEN, FILE_DIRECTORY_FILE | FILE_OPEN_FOR_FREE_SPACE_QUERY);
+		rc = co_os_file_create(pathname,
+				&handle, 
+				FILE_LIST_DIRECTORY | SYNCHRONIZE,
+				0,
+				FILE_OPEN,
+				FILE_DIRECTORY_FILE | FILE_OPEN_FOR_FREE_SPACE_QUERY | FILE_SYNCHRONOUS_IO_NONALERT);
 		
 		if (CO_OK(rc)) 
 			break;

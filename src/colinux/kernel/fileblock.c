@@ -83,7 +83,24 @@ static co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 
 		break;
 	}    
+
+	case CO_BLOCK_ASYNC_OPEN: {
+		if (fdev->state != CO_MONITOR_FILE_BLOCK_CLOSED) {
+			co_debug("monitor: cobd not closed!\n");
+			break;
+		}
+
+		co_debug("monitor: cobd opened (%s)\n", fdev->pathname);
+			
+		rc = fdev->op->async_open(cmon, fdev);
+		if (CO_OK(rc))
+			fdev->state = CO_MONITOR_FILE_BLOCK_OPENED;
+
+		break;
+	}
+
 	default:
+		co_debug("monitor: file_block_service type unknown!\n");
 		break;
 	}
 

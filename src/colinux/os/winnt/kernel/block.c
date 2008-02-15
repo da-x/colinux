@@ -22,7 +22,12 @@
 static co_rc_t co_os_file_block_read(co_monitor_t *linuxvm, co_block_dev_t *dev, 
 			      co_monitor_file_block_dev_t *fdev, co_block_request_t *request)
 {
-	return co_os_file_block_read_write(linuxvm, (HANDLE)(fdev->sysdep),
+	if (request->irq_request)
+		return co_os_file_block_async_read_write(linuxvm, (HANDLE)(fdev->sysdep),
+					   request->offset, request->address,
+					   request->size, PTRUE, dev->unit, request->irq_request);
+	else
+		return co_os_file_block_read_write(linuxvm, (HANDLE)(fdev->sysdep),
 					   request->offset, request->address,
 					   request->size, PTRUE);
 }
@@ -31,7 +36,12 @@ static co_rc_t co_os_file_block_read(co_monitor_t *linuxvm, co_block_dev_t *dev,
 static co_rc_t co_os_file_block_write(co_monitor_t *linuxvm, co_block_dev_t *dev, 
 			       co_monitor_file_block_dev_t *fdev, co_block_request_t *request)
 {
-	return co_os_file_block_read_write(linuxvm, (HANDLE)(fdev->sysdep),
+	if (request->irq_request)
+		return co_os_file_block_async_read_write(linuxvm, (HANDLE)(fdev->sysdep),
+					   request->offset, request->address,
+					   request->size, PFALSE, dev->unit, request->irq_request);
+	else
+		return co_os_file_block_read_write(linuxvm, (HANDLE)(fdev->sysdep),
 					   request->offset, request->address,
 					   request->size, PFALSE);
 }
@@ -216,7 +226,22 @@ static co_rc_t co_os_file_block_open(co_monitor_t *linuxvm, co_monitor_file_bloc
 	HANDLE FileHandle;
 	co_rc_t rc;
 
+	/* Sync open */
 	rc = co_os_file_open(fdev->pathname, &FileHandle, FILE_READ_DATA | FILE_WRITE_DATA);
+	if (!CO_OK(rc))
+		return rc;
+
+	fdev->sysdep = (struct co_os_file_block_sysdep *)(FileHandle);
+	return CO_RC(OK);
+}
+
+static co_rc_t co_os_file_block_async_open(co_monitor_t *linuxvm, co_monitor_file_block_dev_t *fdev)
+{
+	HANDLE FileHandle;
+	co_rc_t rc;
+
+	/* Async open */
+	rc = co_os_file_create(fdev->pathname, &FileHandle, FILE_READ_DATA | FILE_WRITE_DATA, 0, FILE_OPEN, 0);
 	if (!CO_OK(rc))
 		return rc;
 
@@ -243,4 +268,5 @@ co_monitor_file_block_operations_t co_os_file_block_default_operations = {
 	.read = co_os_file_block_read,
 	.write = co_os_file_block_write,
 	.get_size = co_os_file_block_get_size,
+	.async_open = co_os_file_block_async_open,
 };
