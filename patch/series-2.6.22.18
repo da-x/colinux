@@ -27,4 +27,3 @@ audio-2.6.22.diff
 video-core.diff
 video-2.6.22.diff
 cobd-async-2.6.22.diff
-fix.vmsplice.exploit-2.6.22.patch

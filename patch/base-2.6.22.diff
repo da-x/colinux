@@ -214,7 +214,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
  obj-$(CONFIG_X86_BIOS_REBOOT)	+= reboot.o
  obj-$(CONFIG_MCA)		+= mca.o
  obj-$(CONFIG_X86_MSR)		+= msr.o
-@@ -39,11 +40,21 @@
+@@ -38,11 +39,21 @@
  obj-$(CONFIG_VM86)		+= vm86.o
  obj-$(CONFIG_EARLY_PRINTK)	+= early_printk.o
  obj-$(CONFIG_HPET_TIMER) 	+= hpet.o
@@ -978,7 +978,7 @@ Index: linux-2.6.22-source/arch/i386/mm/fault.c
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/mm/fault.c
 +++ linux-2.6.22-source/arch/i386/mm/fault.c
-@@ -274,7 +274,7 @@
+@@ -275,7 +275,7 @@
  	 * an interrupt in the middle of a task switch..
  	 */
  	pgd_paddr = read_cr3();
@@ -987,7 +987,7 @@ Index: linux-2.6.22-source/arch/i386/mm/fault.c
  	if (!pmd_k)
  		return -1;
  	pte_k = pte_offset_kernel(pmd_k, address);
-@@ -538,7 +538,8 @@
+@@ -539,7 +539,8 @@
  		printk("%08lx\n", regs->eip);
  
  		page = read_cr3();
@@ -997,7 +997,7 @@ Index: linux-2.6.22-source/arch/i386/mm/fault.c
  #ifdef CONFIG_X86_PAE
  		printk(KERN_ALERT "*pdpt = %016Lx\n", page);
  		if ((page >> PAGE_SHIFT) < max_low_pfn
-@@ -564,6 +565,7 @@
+@@ -565,6 +566,7 @@
  			page &= PAGE_MASK;
  			page = ((__typeof__(page) *) __va(page))[(address >> PAGE_SHIFT)
  			                                         & (PTRS_PER_PTE - 1)];

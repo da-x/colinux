@@ -20,6 +20,12 @@
   * mingw 3.14
   * w32api 3.11
 
+* Version 0.7.3
+  Kernel:
+  * Kernel has been updated to 2.6.22.18
+  * Fix for splice local root exploit is included, details on
+    http://www.kernel.org/pub/linux/kernel/v2.6/ChangeLog-2.6.22.18
+
 * Version 0.7.2
   Bugfixes:
   * #1324092: cofs rename replace existing file.
@@ -50,6 +56,7 @@
   * Holds multiple kernel versions in patch series files
     (2.6.12, 2.6.13, 2.6.14, 2.6.15, 2.6.17, 2.6.22)
   * cloop updated to 2.06 (compressed loop blockdevice from Knoppix)
+  * Hotplug enabled, udev usable
 
   Installer:
   * Text was to big for description box in installer. [Bugs item #1819219]
