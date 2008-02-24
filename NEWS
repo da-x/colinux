@@ -1,3 +1,9 @@
+* Version 0.7.3
+  Kernel:
+  * Kernel has been updated to 2.6.22.18
+  * Fix for splice local root exploit in included, details on
+    http://www.kernel.org/pub/linux/kernel/v2.6/ChangeLog-2.6.22.18
+
 * Version 0.7.2
   Bugfixes:
   * #1324092: cofs rename replace existing file.
