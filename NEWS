@@ -9,6 +9,7 @@
   * Added virtual pci device handling. "lspci" is working (Steve Shoecraft)
   * Bugfix get_size for double opened block devices. Remove workarrount.
   * Use "setcobd=async" to enable asynchronous mode for cobd devices.
+  * Feature Requests #1421120: Fixup "vim fsync" error on cofs.
 
   Buildsystem:
   * New option --errfile use for different file from stdout and stderr.

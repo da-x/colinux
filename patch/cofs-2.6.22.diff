@@ -63,7 +63,7 @@ Index: linux-2.6.22-source/fs/cofusefs/file.c
  	}
  
  	return out.h.error;
-@@ -258,12 +258,12 @@
+@@ -244,12 +244,12 @@
  
  	if(fc->flags & FUSE_LARGE_READ) {
  		/* Don't allow this to get mixed up with writes */
@@ -79,7 +79,7 @@ Index: linux-2.6.22-source/fs/cofusefs/file.c
  }
  
  static int write_buffer(struct inode *inode, struct page *page,
-@@ -343,10 +343,10 @@
+@@ -329,10 +329,10 @@
  	unsigned int s = sizeof(struct fuse_in) + sizeof(struct fuse_out) +
  		sizeof(struct fuse_write_in);
  
@@ -92,7 +92,7 @@ Index: linux-2.6.22-source/fs/cofusefs/file.c
  	out = (struct fuse_out *)(in + 1);
  	inarg = (struct fuse_write_in *)(out + 1);
  
-@@ -422,8 +422,11 @@
+@@ -408,8 +408,11 @@
  }
  
  static struct file_operations fuse_file_operations = {

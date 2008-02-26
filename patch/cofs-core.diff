@@ -1064,7 +1064,7 @@ Index: linux-2.6.17-source/fs/cofusefs/file.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.17-source/fs/cofusefs/file.c
-@@ -0,0 +1,457 @@
+@@ -0,0 +1,443 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
@@ -1131,26 +1131,12 @@ Index: linux-2.6.17-source/fs/cofusefs/file.c
 +
 +static int fuse_fsync(struct file *file, struct dentry *de, int datasync)
 +{
-+	struct inode *inode = de->d_inode;
-+	struct fuse_conn *fc = INO_FC(inode);
-+	struct fuse_in in = FUSE_IN_INIT;
-+	struct fuse_out out = FUSE_OUT_INIT;
-+	struct fuse_fsync_in inarg;
-+
-+	memset(&inarg, 0, sizeof(inarg));
-+	inarg.datasync = datasync;
-+
-+	in.h.opcode = FUSE_FSYNC;
-+	in.h.ino = inode->i_ino;
-+	in.numargs = 1;
-+	in.args[0].size = sizeof(inarg);
-+	in.args[0].value = &inarg;
-+	request_send(fc, &in, &out);
-+	return out.h.error;
 +
 +	/* FIXME: need to ensure, that all write requests issued
 +           before this request are completed.  Should userspace take
 +           care of this? */
++
++	return 0;
 +}
 +
 +static int fuse_readpage(struct file *file, struct page *page)
