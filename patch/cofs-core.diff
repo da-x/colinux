@@ -2,7 +2,7 @@ Index: linux-2.6.17-source/fs/cofusefs/dev.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.17-source/fs/cofusefs/dev.c
-@@ -0,0 +1,227 @@
+@@ -0,0 +1,235 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
@@ -200,10 +200,18 @@ Index: linux-2.6.17-source/fs/cofusefs/dev.c
 +		cofuse_request_end(flags, out);
 +		return;
 +	}
++	default: {
++		static unsigned long warn_bit_array;
++		unsigned long mask = 1 << in->h.opcode;
++
++		if (!(warn_bit_array & mask)) {
++			warn_bit_array |= mask;
++			printk("cofuse: unsuppored request %d\n", in->h.opcode);
++		}
++	}
 +	}
 +
-+	/* printk("cofuse: request_send %d\n", in->h.opcode); */
-+	out->h.error = -EIO;
++	out->h.error = -ENOSYS;
 +}
 +
 +int request_send_nonblock(struct fuse_conn *fc, struct fuse_in *in,
