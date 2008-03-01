@@ -7,7 +7,7 @@
 
   Installer:
   * Update image ArchLinux-2007.08-2
-  * Text '* Notes' sometimes was only shown as '*', ajust field sizes
+  * Text '* Notes' sometimes was only shown as '*', adjust field sizes
 
 * Version 0.7.2
   Bugfixes:
