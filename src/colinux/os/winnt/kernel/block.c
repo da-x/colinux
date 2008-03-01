@@ -118,6 +118,7 @@ static co_rc_t co_os_file_block_detect_size_binary_search(HANDLE handle, unsigne
 	build_size.QuadPart += test_buffer_size;
 
 	*out_size = build_size.QuadPart;
+	co_debug("detected size: %llu KBs", (build_size.QuadPart >> 10));
 
 	co_os_free(test_buffer);
 	return CO_RC(OK);
@@ -136,17 +137,44 @@ static co_rc_t co_os_file_block_detect_size_harddisk(HANDLE handle, unsigned lon
 				       NULL, 0, &length, sizeof(length));
 
 	if (status == STATUS_SUCCESS) {
-		co_debug("IOCTL_DISK_GET_LENGTH_INFO returned success");
 		*out_size = length.Length.QuadPart;
+		co_debug("returned size: %llu KBs", (*out_size >> 10));
 		return CO_RC(OK);
 	}
+	co_debug("fail status %X", (int)status);
 
 	return CO_RC(ERROR);
 }
 
-static co_rc_t co_os_file_block_detect_size(HANDLE handle, unsigned long long *out_size)
+static co_rc_t co_os_file_block_detect_size_standard(HANDLE handle, unsigned long long *out_size)
+{
+	NTSTATUS status;
+	IO_STATUS_BLOCK IoStatusBlock;
+	FILE_STANDARD_INFORMATION fsi;
+
+	status = ZwQueryInformationFile(handle,
+					&IoStatusBlock,
+					&fsi,
+					sizeof(fsi),
+					FileStandardInformation);
+
+	if (status == STATUS_SUCCESS) {
+		*out_size = fsi.EndOfFile.QuadPart;
+		co_debug("reported size: %llu KBs", (*out_size >> 10));
+		return CO_RC(OK);
+	} if (status != STATUS_INVALID_DEVICE_REQUEST)
+		co_debug("fail status %X", (int)status);
+
+	return CO_RC(ERROR);
+}
+
+co_rc_t co_os_file_get_size(HANDLE handle, unsigned long long *out_size)
 {
 	co_rc_t rc;
+
+	rc = co_os_file_block_detect_size_standard(handle, out_size);
+	if (CO_OK(rc))
+		return rc;
 
 	rc = co_os_file_block_detect_size_harddisk(handle, out_size);
 	if (CO_OK(rc))
@@ -163,53 +191,27 @@ static co_rc_t co_os_file_block_detect_size(HANDLE handle, unsigned long long *o
 	return CO_RC(ERROR);
 }
 
-co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned long long *size)
+static co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsigned long long *size)
 {
-	NTSTATUS status;
 	HANDLE FileHandle;
-	IO_STATUS_BLOCK IoStatusBlock;
-	FILE_STANDARD_INFORMATION fsi;
 	co_rc_t rc;
-	bool_t opened = PFALSE;
+
+	if (fdev->sysdep != NULL)
+		return CO_RC(ERROR);
 
 	co_debug("device %s", fdev->pathname);
+	rc = co_os_file_open(fdev->pathname, &FileHandle, FILE_READ_DATA);
+	if (!CO_OK(rc))
+		return rc;
 
-	if (fdev->sysdep == NULL) {
-		rc = co_os_file_open(fdev->pathname, &FileHandle, FILE_READ_DATA);
-		if (!CO_OK(rc))
-			return rc;
+	rc = co_os_file_get_size(FileHandle, size);
 
-		opened = TRUE;
-	}
-	else {
-		FileHandle = (HANDLE)(fdev->sysdep);
-	}
-
-	status = ZwQueryInformationFile(FileHandle,
-					&IoStatusBlock,
-					&fsi,
-					sizeof(fsi),
-					FileStandardInformation);
-
-	if (status == STATUS_SUCCESS) {
-		*size = fsi.EndOfFile.QuadPart;
-		co_debug("reported size: %llu KBs", (*size >> 10));
-		rc = CO_RC(OK);
-	}
-	else {
-		rc = co_os_file_block_detect_size(FileHandle, size);
-		if (CO_OK(rc)) {
-			co_debug("detected size: %llu KBs", (*size >> 10));
-		}
-	}
-	
-	if (opened)
-		co_os_file_close(FileHandle);
+	co_os_file_close(FileHandle);
 
 	return rc;
 }
 
-co_rc_t co_os_file_block_open(co_monitor_t *linuxvm, co_monitor_file_block_dev_t *fdev)
+static co_rc_t co_os_file_block_open(co_monitor_t *linuxvm, co_monitor_file_block_dev_t *fdev)
 {
 	HANDLE FileHandle;
 	co_rc_t rc;
@@ -222,7 +224,7 @@ co_rc_t co_os_file_block_open(co_monitor_t *linuxvm, co_monitor_file_block_dev_t
 	return CO_RC(OK);
 }
 
-co_rc_t co_os_file_block_close(co_monitor_file_block_dev_t *fdev)
+static co_rc_t co_os_file_block_close(co_monitor_file_block_dev_t *fdev)
 {
 	HANDLE FileHandle;
 

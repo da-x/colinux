@@ -12,7 +12,7 @@
 #include "fileblock.h"
 #include "monitor.h"
 
-co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
+static co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 				      co_block_dev_t *dev, 
 				      co_block_request_t *request)
 { 
@@ -60,7 +60,7 @@ co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 			co_debug_error("monitor: close: cobd not open!");
 			break;
 		}
-	
+
 		co_debug("monitor: cobd closed (%s)", fdev->pathname);
 
 		fdev->op->close(fdev);
@@ -69,13 +69,19 @@ co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 		rc = CO_RC_OK;
 		break;
 	}
+
 	case CO_BLOCK_STAT: {
+		if (fdev->state != CO_MONITOR_FILE_BLOCK_CLOSED) {
+			co_debug_error("monitor: cobd must be closed!");
+			break;
+		}
+
 		rc = fdev->op->get_size((co_monitor_file_block_dev_t *)dev, &fdev->dev.size);
 
 		if (CO_OK(rc))
 			request->disk_size = fdev->dev.size;
 
-		return rc;
+		break;
 	}    
 	default:
 		break;
