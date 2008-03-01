@@ -9,6 +9,7 @@
   Installer:
   * Update image ArchLinux-2007.08-2
   * Text '* Notes' sometimes was only shown as '*', adjust field sizes
+  * Feature Requests #1898468: expose install folder as variable %COLINUX%
 
 * Version 0.7.2
   Bugfixes:
