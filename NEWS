@@ -9,7 +9,6 @@
   * Added virtual pci device handling. "lspci" is working (Steve Shoecraft)
   * Bugfix get_size for double opened block devices. Remove workarrount.
   * Use "setcobd=async" to enable asynchronous mode for cobd devices.
-  * Feature Requests #1421120: Fixup "vim fsync" error on cofs.
 
   Buildsystem:
   * New option --errfile use for different file from stdout and stderr.
@@ -26,6 +25,11 @@
   * Kernel has been updated to 2.6.22.18
   * Fix for splice local root exploit is included, details on
     http://www.kernel.org/pub/linux/kernel/v2.6/ChangeLog-2.6.22.18
+  * Feature Requests #1421120: Fixup "vim fsync" error on cofs.
+
+  Installer:
+  * Update image ArchLinux-2007.08-2
+  * Text '* Notes' sometimes was only shown as '*', ajust field sizes
 
 * Version 0.7.2
   Bugfixes:
