@@ -422,12 +422,7 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 	if (!CO_OK(rc)) 
 		goto out;
 
-	if (co_get_symbol_by_name(daemon->elf_data, "per_cpu__gdt_page"))
-		// >= 2.6.22
-		rc = co_daemon_load_symbol(daemon, "per_cpu__gdt_page", &import->kernel_gdt_table);
-	else
-		// <= 2.6.17
-		rc = co_daemon_load_symbol(daemon, "cpu_gdt_table", &import->kernel_gdt_table);
+	rc = co_daemon_load_symbol(daemon, "per_cpu__gdt_page", &import->kernel_gdt_table);
 	if (!CO_OK(rc))
 		goto out;
 

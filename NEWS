@@ -4,11 +4,13 @@
   * Check ELF header before accessing kernel vmlinux (fix exception).
   * Bug #1861876: Random created MAC stored in Registry to have same on
     every start. [HKCU\Software\coLinux]
+  * Bugfix get_size for double opened block devices. Remove workarrount.
+  * Use "setcobd=async" to enable asynchronous mode for cobd devices.
+
+  Kernel:
   * scsi: New device for images with partition tables and works async.
     Usage "scsi0=disk,file.img" or "scsi1=cdrom,file.iso" (Steve Shoecraft)
   * Added virtual pci device handling. "lspci" is working (Steve Shoecraft)
-  * Bugfix get_size for double opened block devices. Remove workarrount.
-  * Use "setcobd=async" to enable asynchronous mode for cobd devices.
 
   Buildsystem:
   * New option --errfile use for different file from stdout and stderr.
@@ -29,7 +31,7 @@
 
   Installer:
   * Update image ArchLinux-2007.08-2
-  * Text '* Notes' sometimes was only shown as '*', ajust field sizes
+  * Text '* Notes' sometimes was only shown as '*', adjust field sizes
 
 * Version 0.7.2
   Bugfixes:

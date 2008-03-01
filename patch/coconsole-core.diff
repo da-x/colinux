@@ -1,8 +1,8 @@
-Index: linux-2.6.17-source/drivers/video/console/cocon.c
+Index: linux-2.6.22-source/drivers/video/console/cocon.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.17-source/drivers/video/console/cocon.c
-@@ -0,0 +1,487 @@
++++ linux-2.6.22-source/drivers/video/console/cocon.c
+@@ -0,0 +1,486 @@
 +/*
 + *  linux/drivers/video/cocon.c -- Cooperative Linux console VGA driver
 + *
@@ -15,7 +15,6 @@ Index: linux-2.6.17-source/drivers/video/console/cocon.c
 + *  Dan Aloni <da-x@gmx.net>, 2003-2004 (c)
 + */
 +
-+#include <linux/config.h>
 +#include <linux/module.h>
 +#include <linux/types.h>
 +#include <linux/sched.h>
@@ -184,7 +183,7 @@ Index: linux-2.6.17-source/drivers/video/console/cocon.c
 +	co_send_message_restore(flags);
 +}
 +
-+static u8 cocon_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink, u8 underline, u8 reverse)
++static u8 cocon_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink, u8 underline, u8 reverse, u8 italic)
 +{
 +	u8 attr = color;
 +

@@ -1,7 +1,7 @@
-Index: linux-2.6.17-source/fs/cofusefs/dev.c
+Index: linux-2.6.22-source/fs/cofusefs/dev.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.17-source/fs/cofusefs/dev.c
++++ linux-2.6.22-source/fs/cofusefs/dev.c
 @@ -0,0 +1,235 @@
 +/*
 +    FUSE: Filesystem in Userspace
@@ -238,11 +238,11 @@ Index: linux-2.6.17-source/fs/cofusefs/dev.c
 + * c-basic-offset: 8
 + * End:
 + */
-Index: linux-2.6.17-source/fs/cofusefs/dir.c
+Index: linux-2.6.22-source/fs/cofusefs/dir.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.17-source/fs/cofusefs/dir.c
-@@ -0,0 +1,817 @@
++++ linux-2.6.22-source/fs/cofusefs/dir.c
+@@ -0,0 +1,818 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
@@ -256,6 +256,8 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 +#include <linux/pagemap.h>
 +#include <linux/slab.h>
 +#include <linux/file.h>
++#include <linux/jiffies.h>
++#include <linux/sched.h>
 +
 +static struct inode_operations fuse_dir_inode_operations;
 +static struct inode_operations fuse_file_inode_operations;
@@ -271,14 +273,13 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 +static void change_attributes(struct inode *inode, struct fuse_attr *attr)
 +{
 +	if(S_ISREG(inode->i_mode) && i_size_read(inode) != attr->size)
-+		invalidate_inode_pages(inode->i_mapping);
++		invalidate_mapping_pages(inode->i_mapping, 0, -1);
 +
 +	inode->i_mode    = (inode->i_mode & S_IFMT) + (attr->mode & 07777);
 +	inode->i_nlink   = attr->nlink;
 +	inode->i_uid     = attr->uid;
 +	inode->i_gid     = attr->gid;
 +	i_size_write(inode, attr->size);
-+	inode->i_blksize = PAGE_CACHE_SIZE;
 +	inode->i_blocks  = attr->blocks;
 +	inode->i_atime.tv_sec   = attr->atime;
 +	inode->i_atime.tv_nsec  = 0;
@@ -308,7 +309,7 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 +		init_special_inode(inode, inode->i_mode,
 +				   new_decode_dev(attr->rdev));
 +	}
-+	inode->u.generic_ip = inode;
++	inode->i_private = inode;
 +}
 +
 +struct inode *fuse_iget(struct super_block *sb, ino_t ino,
@@ -318,7 +319,7 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 +
 +	inode = iget(sb, ino);
 +	if(inode) {
-+		if(!inode->u.generic_ip)
++		if (!inode->i_private)
 +			fuse_init_inode(inode, attr);
 +
 +		change_attributes(inode, attr);
@@ -1060,11 +1061,11 @@ Index: linux-2.6.17-source/fs/cofusefs/dir.c
 + * c-basic-offset: 8
 + * End:
 + */
-Index: linux-2.6.17-source/fs/cofusefs/file.c
+Index: linux-2.6.22-source/fs/cofusefs/file.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.17-source/fs/cofusefs/file.c
-@@ -0,0 +1,443 @@
++++ linux-2.6.22-source/fs/cofusefs/file.c
+@@ -0,0 +1,446 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
@@ -1109,7 +1110,7 @@ Index: linux-2.6.17-source/fs/cofusefs/file.c
 +	in.args[0].value = &inarg;
 +	request_send(fc, &in, &out);
 +	if(!out.h.error && !(fc->flags & FUSE_KERNEL_CACHE)) {
-+		invalidate_inode_pages(inode->i_mapping);
++		invalidate_mapping_pages(inode->i_mapping, 0, -1);
 +	}
 +
 +	return out.h.error;
@@ -1311,12 +1312,12 @@ Index: linux-2.6.17-source/fs/cofusefs/file.c
 +
 +	if(fc->flags & FUSE_LARGE_READ) {
 +		/* Don't allow this to get mixed up with writes */
-+		down(&inode->i_sem);
++		mutex_lock(&inode->i_mutex);
 +		fuse_file_bigread(mapping, inode, *ppos, count);
-+		up(&inode->i_sem);
++		mutex_unlock(&inode->i_mutex);
 +	}
 +
-+	return generic_file_read(filp, buf, count, ppos);
++	return do_sync_read(filp, buf, count, ppos);
 +}
 +
 +static int write_buffer(struct inode *inode, struct page *page,
@@ -1396,10 +1397,10 @@ Index: linux-2.6.17-source/fs/cofusefs/file.c
 +	unsigned int s = sizeof(struct fuse_in) + sizeof(struct fuse_out) +
 +		sizeof(struct fuse_write_in);
 +
-+	in = kmalloc(s, GFP_NOFS);
++	in = kzalloc(s, GFP_NOFS);
 +	if(!in)
 +		return -ENOMEM;
-+	memset(in, 0, s);
++
 +	out = (struct fuse_out *)(in + 1);
 +	inarg = (struct fuse_write_in *)(out + 1);
 +
@@ -1475,8 +1476,11 @@ Index: linux-2.6.17-source/fs/cofusefs/file.c
 +}
 +
 +static struct file_operations fuse_file_operations = {
++	.llseek		= generic_file_llseek,
 +	.read		= fuse_file_read,
-+	.write		= generic_file_write,
++	.aio_read	= generic_file_aio_read,
++	.write		= do_sync_write,
++	.aio_write	= generic_file_aio_write,
 +	.mmap		= generic_file_mmap,
 +	.open		= fuse_open,
 +	.release	= fuse_release,
@@ -1508,11 +1512,11 @@ Index: linux-2.6.17-source/fs/cofusefs/file.c
 + * c-basic-offset: 8
 + * End:
 + */
-Index: linux-2.6.17-source/fs/cofusefs/fuse_i.h
+Index: linux-2.6.22-source/fs/cofusefs/fuse_i.h
 ===================================================================
 --- /dev/null
-+++ linux-2.6.17-source/fs/cofusefs/fuse_i.h
-@@ -0,0 +1,245 @@
++++ linux-2.6.22-source/fs/cofusefs/fuse_i.h
+@@ -0,0 +1,244 @@
 +/*
 +    COFUSE: Filesystem in an host of Cooperative Linux
 +    Copyright (C) 2004 Dan Aloni <da-x@colinux.org>
@@ -1526,8 +1530,6 @@ Index: linux-2.6.17-source/fs/cofusefs/fuse_i.h
 +
 +
 +#include <linux/version.h>
-+#include <linux/config.h>
-+#include <linux/cooperative_internal.h>
 +
 +#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0) && LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
 +#error Kernel version 2.5.* not supported
@@ -1538,6 +1540,7 @@ Index: linux-2.6.17-source/fs/cofusefs/fuse_i.h
 +#include <linux/fs.h>
 +#include <linux/list.h>
 +#include <linux/spinlock.h>
++#include <linux/cooperative_internal.h>
 +
 +/** Read combining parameters */
 +#define FUSE_BLOCK_SHIFT 16
@@ -1758,11 +1761,11 @@ Index: linux-2.6.17-source/fs/cofusefs/fuse_i.h
 +	unsigned long flags;
 +	char name[0x80];
 +};
-Index: linux-2.6.17-source/fs/cofusefs/inode.c
+Index: linux-2.6.22-source/fs/cofusefs/inode.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.17-source/fs/cofusefs/inode.c
-@@ -0,0 +1,441 @@
++++ linux-2.6.22-source/fs/cofusefs/inode.c
+@@ -0,0 +1,440 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001	Miklos Szeredi (miklos@szeredi.hu)
@@ -1839,8 +1842,9 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 +	stbuf->f_namelen = attr->namelen;
 +}
 +
-+static int fuse_statfs(struct super_block *sb, struct kstatfs *buf)
++static int fuse_statfs(struct dentry *dentry, struct kstatfs *buf)
 +{
++	struct super_block *sb = dentry->d_sb;
 +	struct fuse_conn *fc = SB_FC(sb);
 +	struct fuse_in in = FUSE_IN_INIT;
 +	struct fuse_out out = FUSE_OUT_INIT;
@@ -1899,11 +1903,9 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 +	if (cofs_volumes[index])
 +		return cofs_volumes[index];
 +
-+	conn = kmalloc(sizeof(struct fuse_conn), GFP_KERNEL);
++	conn = kzalloc(sizeof(struct fuse_conn), GFP_KERNEL);
 +	if (!conn)
 +		return NULL;
-+
-+	memset(conn, 0, sizeof(*conn));
 +
 +	if (*next == ':')
 +		snprintf(conn->opt_pathname, sizeof(conn->opt_pathname), "%s", next+1);
@@ -2146,9 +2148,9 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 +        return c;
 +}
 +
-+static struct super_block *fuse_get_sb(struct file_system_type *fs_type,
++static int fuse_get_sb(struct file_system_type *fs_type,
 +				       int flags, const char *dev_name,
-+				       void *raw_data)
++				       void *raw_data, struct vfsmount *mnt)
 +{
 +	struct cofuse_mount_data co_md = {0, };
 +	struct fuse_mount_data md = {0, };
@@ -2163,7 +2165,7 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 +
 +	ret = parse_options(&co_md, raw_data);
 +	if (ret == -1)
-+		return ERR_PTR(-EINVAL);
++		return -EINVAL;
 +
 +	md.rootmode = S_IFDIR | S_IRWXU | S_IRUGO | S_IXUGO;
 +	md.flags = FUSE_ALLOW_OTHER | FUSE_DEFAULT_PERMISSIONS | co_md.flags;
@@ -2171,7 +2173,7 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 +	co_md.fuse = &md;
 +	snprintf(co_md.name, sizeof(co_md.name), "%s", dev_name);
 +
-+	return get_sb_nodev(fs_type, flags, &co_md, fuse_read_super);
++	return get_sb_nodev(fs_type, flags, &co_md, fuse_read_super, mnt);
 +}
 +
 +static struct file_system_type fuse_fs_type = {
@@ -2182,7 +2184,7 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 +	.fs_flags	= FS_BINARY_MOUNTDATA,
 +};
 +
-+int fuse_fs_init()
++int __init fuse_fs_init()
 +{
 +	int res;
 +
@@ -2204,10 +2206,10 @@ Index: linux-2.6.17-source/fs/cofusefs/inode.c
 + * c-basic-offset: 8
 + * End:
 + */
-Index: linux-2.6.17-source/fs/cofusefs/util.c
+Index: linux-2.6.22-source/fs/cofusefs/util.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.17-source/fs/cofusefs/util.c
++++ linux-2.6.22-source/fs/cofusefs/util.c
 @@ -0,0 +1,69 @@
 +/*
 +    FUSE: Filesystem in Userspace
@@ -2278,10 +2280,10 @@ Index: linux-2.6.17-source/fs/cofusefs/util.c
 + * c-basic-offset: 8
 + * End:
 + */
-Index: linux-2.6.17-source/include/linux/cooperative_fs.h
+Index: linux-2.6.22-source/include/linux/cooperative_fs.h
 ===================================================================
 --- /dev/null
-+++ linux-2.6.17-source/include/linux/cooperative_fs.h
++++ linux-2.6.22-source/include/linux/cooperative_fs.h
 @@ -0,0 +1,270 @@
 +/*
 +    FUSE: Filesystem in Userspace
