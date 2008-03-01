@@ -171,7 +171,10 @@ co_rc_t co_elf_image_read(co_elf_data_t **pl_out, void *elf_buf, unsigned long s
 	pl->header = (Elf32_Ehdr *)elf_buf;
 	pl->buffer = elf_buf;
 	pl->size = size;
-    
+
+	if (memcmp(pl->header->e_ident, "\x7F""ELF", 4))
+		return CO_RC(ERROR_READING_VMLINUX_FILE);
+
 	pl->section_string_table_section =\
 		co_get_section_header(pl, pl->header->e_shstrndx);
     

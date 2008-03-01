@@ -1,4 +1,7 @@
 * Version 0.7.3
+  Bugfixes:
+  * Check ELF header before accessing kernel vmlinux (fix exception).
+
   Kernel:
   * Kernel has been updated to 2.6.22.18
   * Fix for splice local root exploit is included, details on
