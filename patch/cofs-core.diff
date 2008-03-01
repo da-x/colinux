@@ -206,7 +206,7 @@ Index: linux-2.6.22-source/fs/cofusefs/dev.c
 +
 +		if (!(warn_bit_array & mask)) {
 +			warn_bit_array |= mask;
-+			printk("cofuse: unsuppored request %d\n", in->h.opcode);
++			printk(KERN_WARNING "cofuse: unsuppored request %d\n", in->h.opcode);
 +		}
 +	}
 +	}
