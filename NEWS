@@ -5,6 +5,10 @@
     http://www.kernel.org/pub/linux/kernel/v2.6/ChangeLog-2.6.22.18
   * Feature Requests #1421120: Fixup "vim fsync" error on cofs.
 
+  Installer:
+  * Update image ArchLinux-2007.08-2
+  * Text '* Notes' sometimes was only shown as '*', ajust field sizes
+
 * Version 0.7.2
   Bugfixes:
   * #1324092: cofs rename replace existing file.
