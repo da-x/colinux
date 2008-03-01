@@ -282,7 +282,7 @@ Section "Root Filesystem image Download" SeccoLinuxImage
     StrCmp $R1 "1" End
 
     !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_ARCHLINUX}" "State"
-    StrCpy $R0 "ArchLinux-0.7.2-ext3-512mb.7z"
+    StrCpy $R0 "ArchLinux-2007.08-2-ext3-256m.7z"
     StrCmp $R1 "1" tryDownload
 
     !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_DEBIAN}" "State"
