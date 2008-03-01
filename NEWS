@@ -12,6 +12,9 @@
     Usage "scsi0=disk,file.img" or "scsi1=cdrom,file.iso" (Steve Shoecraft)
   * Added virtual pci device handling. "lspci" is working (Steve Shoecraft)
 
+  Installer:
+  * Feature Requests #1898468: expose install folder as variable %COLINUX%
+
   Buildsystem:
   * New option --errfile use for different file from stdout and stderr.
 

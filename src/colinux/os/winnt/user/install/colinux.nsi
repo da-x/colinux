@@ -9,6 +9,8 @@
   !include "MUI.nsh"
   !include "x64.nsh"
   !include Sections.nsh
+  !define ALL_USERS
+  !include WriteEnvStr.nsh
   !include "coLinux_def.inc"
   !define PUBLISHER "www.colinux.org"
 
@@ -461,6 +463,11 @@ SectionEnd
 ;Post-install section
 
 Section -post
+    ; Store CoLinux installation path into evironment variable
+    Push COLINUX
+    Push $INSTDIR
+    Call WriteEnvStr
+
     nsExec::ExecToStack '"$INSTDIR\colinux-daemon.exe" --remove-driver'
     Pop $R0 # return value/error/timeout
     Pop $R1 # Log
@@ -541,6 +548,10 @@ Section "Uninstall"
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR\netdriver"
   RMDir "$INSTDIR"
+
+  # remove the variable
+  Push COLINUX
+  Call un.DeleteEnvStr
 
   ; Cleanup registry
   DeleteRegKey HKLM ${REGUNINSTAL}
