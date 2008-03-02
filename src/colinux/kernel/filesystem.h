@@ -14,6 +14,8 @@
 #include <colinux/common/common.h>
 #include <colinux/common/config.h>
 
+#include <linux/cooperative_fs.h>
+
 typedef struct  co_filesystem_name {
 	co_list_t node;
 	unsigned char type;

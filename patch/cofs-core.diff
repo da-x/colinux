@@ -1516,7 +1516,7 @@ Index: linux-2.6.22-source/fs/cofusefs/fuse_i.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/fs/cofusefs/fuse_i.h
-@@ -0,0 +1,244 @@
+@@ -0,0 +1,245 @@
 +/*
 +    COFUSE: Filesystem in an host of Cooperative Linux
 +    Copyright (C) 2004 Dan Aloni <da-x@colinux.org>
@@ -1541,6 +1541,7 @@ Index: linux-2.6.22-source/fs/cofusefs/fuse_i.h
 +#include <linux/list.h>
 +#include <linux/spinlock.h>
 +#include <linux/cooperative_internal.h>
++#include <linux/cooperative_fs.h>
 +
 +/** Read combining parameters */
 +#define FUSE_BLOCK_SHIFT 16

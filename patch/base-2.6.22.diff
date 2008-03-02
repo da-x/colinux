@@ -1745,7 +1745,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -0,0 +1,373 @@
+@@ -0,0 +1,371 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -2115,8 +2115,6 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +#endif
 +
 +#pragma pack()
-+
-+#include "cooperative_fs.h"
 +
 +#endif
 Index: linux-2.6.22-source/include/linux/cooperative_internal.h
