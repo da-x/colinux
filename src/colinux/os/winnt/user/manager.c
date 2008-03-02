@@ -94,7 +94,7 @@ co_rc_t co_os_manager_ioctl(
 	return CO_RC(OK);
 }
  
-co_rc_t co_winnt_check_driver(IN LPCTSTR DriverName, bool_t *installed) 
+static co_rc_t co_winnt_check_driver(IN LPCTSTR DriverName, bool_t *installed)
 { 
 	SC_HANDLE schService; 
 	SC_HANDLE schSCManager; 

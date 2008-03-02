@@ -31,6 +31,9 @@
 #include "driver.h"
 #include "service.h"
 
+static co_rc_t co_winnt_driver_remove_lowlevel(void);
+static co_rc_t co_winnt_driver_install_lowlevel(void);
+
 static co_rc_t co_win32_manager_is_installed(bool_t *installed)
 {
 	co_rc_t rc;
@@ -355,12 +358,12 @@ static co_rc_t co_winnt_load_driver_lowlevel_by_name(char *name, char *path)
 	return CO_RC(OK);
 } 
 
-co_rc_t co_winnt_driver_remove_lowlevel(void)
+static co_rc_t co_winnt_driver_remove_lowlevel(void)
 {
 	return co_winnt_unload_driver_lowlevel_by_name(CO_DRIVER_NAME);
 }
 
-co_rc_t co_winnt_driver_install_lowlevel(void)
+static co_rc_t co_winnt_driver_install_lowlevel(void)
 {
 	return co_winnt_load_driver_lowlevel_by_name(CO_DRIVER_NAME, COLINUX_DRIVER_FILE);
 }

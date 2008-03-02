@@ -19,7 +19,4 @@ extern co_rc_t co_winnt_install_driver(void);
 extern co_rc_t co_winnt_initialize_driver(void);
 extern co_rc_t co_winnt_remove_driver(void);
 
-extern co_rc_t co_winnt_driver_remove_lowlevel(void);
-extern co_rc_t co_winnt_driver_install_lowlevel(void);
-
 #endif
