@@ -440,6 +440,10 @@ Environment settings
 Used keys in Windows Registry
 -----------------------------
 
+# Automatic generated MAC, monitor number 'M', network device index 'X'
+[HKEY_CURRENT_USER\Software\coLinux\monitor\M\ethX]
+"mac"="00:ff:XX:XX:XX:XX"
+
 # Message file for event logging, if running as service
 [HKEY_LOCAL_MACHINE\SYSTEM\\CurrentControlSet\Services\Eventlog\Application\coLinux]
 "EventMessageFile"="C:\coLinux\colinux-daemon.exe"

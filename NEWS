@@ -3,6 +3,9 @@
   * Check ELF header before accessing kernel vmlinux (fix exception).
 
   Daemon:
+  * Bug #1861876: Random created MAC stored in Registry to have same on
+    every start. [HKCU\Software\coLinux]
+  * Add build date to exe file properties.
   * View build time of ntkernel driver with --status-driver.
 
   Kernel:
