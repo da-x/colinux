@@ -354,6 +354,8 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 {
 	co_manager_ioctl_create_t create_params = {0, };
 	co_symbols_import_t *import;
+	co_manager_handle_t handle;
+	co_manager_ioctl_status_t status;
 	co_rc_t rc;
 
 	import = &create_params.import;
@@ -394,15 +396,13 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 
 	rc = co_daemon_load_symbol_and_data(daemon, "co_info", &import->kernel_co_info,
 					    &create_params.info, sizeof(create_params.info));
-	if (!CO_OK(rc)) {
+	if (!CO_OK(rc))
 		goto out;
-	}
 
 	rc = co_daemon_load_symbol_and_data(daemon, "co_arch_info", &import->kernel_co_arch_info,
 					    &create_params.arch_info, sizeof(create_params.arch_info));
-	if (!CO_OK(rc)) {
+	if (!CO_OK(rc))
 		goto out;
-	}
 
 	if (create_params.info.api_version != CO_LINUX_API_VERSION) {
 		co_terminal_print("colinux: error, expected kernel API version %d, got %ld\n",
@@ -425,21 +425,29 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 		goto out;
 	}
 
+	handle = co_os_manager_open();
+	if (!handle)
+		return CO_RC(ERROR_ACCESSING_DRIVER);
+
+	// Don't create monitor, if API_VERSION mismatch
+	rc = co_manager_status(handle, &status);
+	if (!CO_OK(rc))
+		goto out_close;
+
 	co_daemon_prepare_net_macs(daemon);
 
 	create_params.config = daemon->config;
 
-	rc = co_user_monitor_create(&daemon->monitor, &create_params);
+	rc = co_user_monitor_create(&daemon->monitor, &create_params, handle);
 	if (!CO_OK(rc)) {
-		if (CO_RC_GET_CODE(rc) == CO_RC_HOSTMEM_USE_LIMIT_REACHED) { 
+		if (CO_RC_GET_CODE(rc) == CO_RC_HOSTMEM_USE_LIMIT_REACHED)
 			memory_usage_limit_resached(&create_params);
-		}
-		goto out;
+		goto out_close;
 	}
 
 	daemon->shared = (co_monitor_user_kernel_shared_t *)create_params.shared_user_address;
 	if (!daemon->shared)
-		return CO_RC(ERROR); 
+		return CO_RC(ERROR);
 
 	daemon->shared->userspace_msgwait_count = 0;
 	daemon->id = create_params.id;
@@ -447,6 +455,10 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 	rc = co_load_initrd(daemon);
 
 out:
+	return rc;
+
+out_close:
+	co_os_manager_close(handle);
 	return rc;
 }
 
@@ -460,7 +472,6 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 {
 	co_rc_t rc;
 	unsigned long size;
-	co_manager_ioctl_status_t status;
 
 	rc = co_os_file_load(daemon->config.vmlinux_path, &daemon->buf, &size, 0);
 	if (!CO_OK(rc)) {
@@ -481,11 +492,6 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 		co_debug_error("error initializing");
 		goto out_free_vmlinux;
 	}
-
-	// Don't start, if API_VERSION mismatch
-	rc = co_manager_status(daemon->monitor->handle, &status);
-	if (!CO_OK(rc))
-		goto out_destroy;
 
 	rc = co_elf_image_load(daemon);
 	if (!CO_OK(rc)) {

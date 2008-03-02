@@ -24,9 +24,8 @@ co_rc_t co_manager_io_monitor_simple(co_manager_handle_t handle, co_monitor_ioct
 	return co_manager_io_monitor_unisize(handle, op, &ioctl, sizeof(ioctl));
 }
 
-co_rc_t co_user_monitor_create(co_user_monitor_t **out_mon, co_manager_ioctl_create_t *params)
+co_rc_t co_user_monitor_create(co_user_monitor_t **out_mon, co_manager_ioctl_create_t *params, co_manager_handle_t handle)
 {
-	co_manager_handle_t handle;
 	co_user_monitor_t *mon;
 	co_rc_t rc;
 
@@ -36,24 +35,16 @@ co_rc_t co_user_monitor_create(co_user_monitor_t **out_mon, co_manager_ioctl_cre
 
 	memset(mon, 0, sizeof(*mon));
 
-	handle = co_os_manager_open();
-	if (!handle) {
-		co_os_free(mon);
-		return CO_RC(ERROR_ACCESSING_DRIVER);
-	}
-
 	rc = co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_CREATE,
 				 params, sizeof(*params), params, sizeof(*params), NULL);
 
 	if (!CO_OK(rc)) {
 		co_os_free(mon);
-		co_os_manager_close(handle);
 		return rc;
 	}
 
 	if (!CO_OK(params->rc)) {
 		co_os_free(mon);
-		co_os_manager_close(handle);
 		return params->rc;
 	}
 	
