@@ -11,15 +11,15 @@ TARGET_FILE=$2
 # Get kernel and gcc version
 . bin/build-common.sh --get-vars
 
-# coLinux full version with "-preXX"
-CO_VERSION_STRING=`cat $VERSION_FILE`
+# coLinux full version with "-preXX" and build date
+CO_VERSION_STRING=`cat $VERSION_FILE`-`date +%Y%m%d`
 
 # Get 4 digit words from full version
-VERSION=`echo $CO_VERSION_STRING | sed -n -e 's/\([0-9\.]\+\)-[^0-9]*\([0-9]\+\).*/\1,\2/p'`
+VERSION=`sed -n -e 's/\([0-9\.]\+\)-[^0-9]*\([0-9]\+\).*/\1,\2/p' < $VERSION_FILE`
 
-# Fallback without -preXX
+# Fallback 3 digit words without -preXX
 test -z "$VERSION" && \
-VERSION=`echo $CO_VERSION_STRING | sed -e 's/\([0-9\.]\+\).*/\1/'`.0
+VERSION=`sed -e 's/\([0-9\.]\+\).*/\1/' < $VERSION_FILE`.0
 
 # Transform into comma format
 CO_VERSION_DWORD=`echo $VERSION | sed -e 's/\./,/g'`
