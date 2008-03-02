@@ -240,7 +240,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,332 @@
+@@ -0,0 +1,331 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -352,8 +352,6 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +
 +	message = (co_linux_message_t *)&node_message->msg.data;
 +
-+	BUG_ON((unsigned long)message->device >= (unsigned long)CO_DEVICES_TOTAL);
-+
 +	switch (message->device) {
 +	case CO_DEVICE_POWER: {
 +		co_linux_message_power_t *type = (co_linux_message_power_t *)message->data;
@@ -404,6 +402,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +#endif
 +
 +	default:
++		BUG_ON((unsigned long)message->device >= (unsigned long)CO_DEVICES_TOTAL);
 +		co_free_message(node_message);
 +		break;
 +	}

@@ -60,10 +60,10 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  
 -#include <linux/devfs_fs_kernel.h>
 -
- #define PBD_BLOCK_SIZE  512
- 
- static int hardsect_size = 512;
-@@ -252,12 +249,9 @@
+ static int const hardsect_size = 512;
+ static int const hardsect_size_shift = 9;
+ static int const cobd_max = CO_MODULE_MAX_COBD;
+@@ -243,12 +240,9 @@
  		disk->first_minor = i;
  		disk->fops = &cobd_fops;
  		sprintf(disk->disk_name, "cobd%d", i);
@@ -76,7 +76,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  	for (i=0; i < cobd_max; i++)
  		add_disk(cobd_disks[i]);
  
-@@ -268,7 +262,6 @@
+@@ -259,7 +253,6 @@
  fail_malloc4:
  	while (i--)
  		blk_cleanup_queue(cobd_disks[i]->queue);
@@ -84,7 +84,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  	i = cobd_max;
  
  fail_malloc3:
-@@ -384,12 +377,11 @@
+@@ -375,12 +368,11 @@
  	if (alias->gendisk == NULL) {
  		static struct gendisk **gendisks;
  
@@ -98,7 +98,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  
  		if (!alias->major->registered) {
  			if (register_blkdev(alias->major->number, alias->major->name)) {
-@@ -403,7 +395,6 @@
+@@ -394,7 +386,6 @@
  		}
  
  		alias->gendisk = gendisks;
@@ -106,7 +106,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  	}
  
  	if (alias->gendisk[index] != NULL) {
-@@ -433,7 +424,6 @@
+@@ -424,7 +415,6 @@
  		sprintf(disk->disk_name, "%s%d", alias->name, index);
  	else
  		sprintf(disk->disk_name, "%s", alias->name);
@@ -114,7 +114,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  	disk->private_data = cobd;
  	add_disk(disk);
  	alias->gendisk[index] = disk;
-@@ -480,7 +470,6 @@
+@@ -471,7 +461,6 @@
  		put_disk(cobd_disks[i]);
  	}
  
@@ -122,7 +122,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  	if (unregister_blkdev(COLINUX_MAJOR, "cobd"))
  		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
  
-@@ -507,7 +496,6 @@
+@@ -498,7 +487,6 @@
  			put_disk(disk);
  		}
  
