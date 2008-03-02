@@ -65,7 +65,7 @@ static inline co_debug_tlv_t *tlv_add_char(co_debug_type_t type, unsigned long d
 	return (co_debug_tlv_t *)&sub_tlv->value[sub_tlv->length];
 }
 
-int co_debug_local_index = 0;
+static int co_debug_local_index;
 #define X(facility, static_level, default_dynamic_level) .facility##_level=default_dynamic_level,
 co_debug_levels_t co_global_debug_levels = {
 	CO_DEBUG_LIST
