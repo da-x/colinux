@@ -308,7 +308,7 @@ co_rc_t co_message_write_queue(co_queue_t *queue, char *buffer, unsigned long si
 char *co_module_repr(co_module_t module, co_module_name_t *str)
 {
 	switch (module) {
-	case CO_MODULE_LINUX: co_snprintf((char *)str, sizeof(*str), "monitor"); break;
+	case CO_MODULE_LINUX: co_snprintf((char *)str, sizeof(*str), "linux"); break;
 	case CO_MODULE_MONITOR: co_snprintf((char *)str, sizeof(*str), "monitor"); break;
 	case CO_MODULE_DAEMON: co_snprintf((char *)str, sizeof(*str), "daemon"); break;
 	case CO_MODULE_IDLE: co_snprintf((char *)str, sizeof(*str), "idle"); break;
