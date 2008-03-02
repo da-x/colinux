@@ -66,7 +66,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  	co_request->offset = ((unsigned long long)(req->sector)) << hardsect_size_shift;
  	co_request->size = req->current_nr_sectors << hardsect_size_shift;
  	co_request->address = req->buffer;
-@@ -193,10 +193,47 @@
+@@ -193,10 +193,49 @@
  		cobd = (struct cobd_device *)(req->rq_disk->private_data);
  
  		ret = cobd_transfer(cobd, req);
@@ -87,6 +87,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 +
 +	while (co_get_message(&input, CO_DEVICE_BLOCK)) {
 +		co_linux_message_t *message;
++		co_block_intr_t *intr;
 +		struct request *req;
 +
 +		message = (co_linux_message_t *)&input->msg.data;
@@ -95,12 +96,13 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 +			goto goto_next_message;
 +		}
 +
-+		req = *(struct request **)message->data;
++		BUG_ON(message->size != sizeof(co_block_intr_t));
++		intr = (co_block_intr_t *)message->data;
++		req = intr->irq_request;
 +		BUG_ON(!req);
 +
 +		spin_lock(&cobd_lock);
-+		/* TODO: Forward errors */
-+		end_request(req, 1);
++		end_request(req, intr->uptodate);
 +		do_cobd_request(req->q);
 +		spin_unlock(&cobd_lock);
 +
@@ -114,7 +116,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  static struct block_device_operations cobd_fops = {
  	.owner   = THIS_MODULE,
  	.open    = cobd_open,
-@@ -208,9 +245,17 @@
+@@ -208,9 +247,17 @@
  {
  	int result, i;
  
@@ -133,7 +135,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  	}
  
  	result = -ENOMEM; /* for the possible errors */
-@@ -266,6 +311,9 @@
+@@ -266,6 +313,9 @@
  	if (unregister_blkdev(COLINUX_MAJOR, "cobd"))
  		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
  
@@ -143,7 +145,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  	return result;
  }
  
-@@ -464,6 +512,8 @@
+@@ -464,6 +514,8 @@
  	if (unregister_blkdev(COLINUX_MAJOR, "cobd"))
  		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
  
@@ -152,7 +154,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  	kfree(cobd_disks);
  }
  
-@@ -514,6 +564,22 @@
+@@ -514,6 +566,22 @@
  	cobd_drives_exit();
  }
  
@@ -212,3 +214,15 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
  		};
  		struct {
  			char alias[20];
+@@ -335,6 +337,11 @@
+ } __attribute__((packed)) co_block_request_t;
+ 
+ typedef struct {
++	void * irq_request;
++	int uptodate;
++} __attribute__((packed)) co_block_intr_t;
++
++typedef struct {
+ 	co_network_request_type_t type;
+ 	unsigned int unit;
+ 	char mac_address[6];

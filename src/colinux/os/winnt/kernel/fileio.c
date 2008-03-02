@@ -35,7 +35,7 @@ typedef struct {
 	struct {
 		co_message_t message;
 		co_linux_message_t linux_message;
-		void * irq_request;
+		co_block_intr_t intr;
 	} msg;
 	IO_STATUS_BLOCK isb;
 	LARGE_INTEGER offset;
@@ -217,13 +217,19 @@ co_rc_t co_os_file_block_read_write(co_monitor_t *monitor,
 
 static void CALLBACK transfer_file_block_callback(callback_context_t *context, PIO_STATUS_BLOCK IoStatusBlock, ULONG Reserved)
 {
-	co_debug_lvl(filesystem, 10, "cobd%d callback info=%ld size=%ld", context->msg.linux_message.unit, context->size, (long)IoStatusBlock->Information);
+	co_debug_lvl(filesystem, 10, "cobd%d callback size=%ld info=%ld status=%X",
+			context->msg.linux_message.unit, context->size,
+			(long)IoStatusBlock->Information, (int)IoStatusBlock->Status);
+
+	if (IoStatusBlock->Status == STATUS_SUCCESS)
+		context->msg.intr.uptodate = 1;
+	else
+		co_debug("cobd%d callback failed size=%ld info=%ld status=%X",
+			    context->msg.linux_message.unit, context->size,
+			    (unsigned long)IoStatusBlock->Information,
+			    (int)IoStatusBlock->Status);
+
 	co_monitor_host_linuxvm_transfer_unmap(context->monitor, context->page, context->pfn);
-
-	// TODO: Set ret level
-	if ((unsigned long)IoStatusBlock->Information != context->size)
-		co_debug("cobd%d callback size failed: %ld != %ld\n", context->msg.linux_message.unit, (unsigned long)IoStatusBlock->Information, context->size);
-
 	co_monitor_message_from_user(context->monitor, 0, &context->msg.message);
 	co_os_free(context);
 }
@@ -256,8 +262,8 @@ co_rc_t co_os_file_block_async_read_write(co_monitor_t *monitor,
 	context->msg.message.size = sizeof (context->msg) - sizeof (context->msg.message);
 	context->msg.linux_message.device = CO_DEVICE_BLOCK;
 	context->msg.linux_message.unit = unit;
-	context->msg.linux_message.size = sizeof (context->msg.irq_request);
-	context->msg.irq_request = irq_request;
+	context->msg.linux_message.size = sizeof (context->msg.intr);
+	context->msg.intr.irq_request = irq_request;
 
 	// map linux kernal memory into host memory
 	rc = co_monitor_host_linuxvm_transfer_map(
@@ -294,7 +300,7 @@ co_rc_t co_os_file_block_async_read_write(co_monitor_t *monitor,
 		}
 
 		if (status != STATUS_SUCCESS && status != STATUS_PENDING) {
-			co_debug("block io failed: %p %lx (reason: %x)\n", context->start, size, (int)status);
+			co_debug("block io failed: %p %lx (reason: %x)", context->start, size, (int)status);
 			rc = co_status_convert(status);
 			co_monitor_host_linuxvm_transfer_unmap(monitor, context->page, context->pfn);
 		}
