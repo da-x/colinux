@@ -9,7 +9,7 @@
 
 #include <colinux/arch/interrupt.h>
 
-static void call_intr(void *func)
+static inline void call_intr(void *func)
 {
 	asm("    call 1f"                            "\n" 
 	    "1:  popl %%eax"                         "\n" 
