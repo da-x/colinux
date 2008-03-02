@@ -294,7 +294,9 @@ static co_rc_t co_winnt_unload_driver_lowlevel_by_name(char *name)
 	schSCManager = OpenSCManager (NULL,                 // machine (NULL == local) 
 				      NULL,                 // database (NULL == default) 
 				      SC_MANAGER_ALL_ACCESS // access required 
-		); 
+				     );
+	if (schSCManager == NULL)
+		return CO_RC(ERROR_ACCESSING_DRIVER); 
  
 	co_debug("stopping driver service");
 	rc = co_winnt_stop_driver_lowlevel(schSCManager, name);  
@@ -328,7 +330,10 @@ static co_rc_t co_winnt_load_driver_lowlevel_by_name(char *name, char *path)
 
 	schSCManager = OpenSCManager(NULL,                 // machine (NULL == local) 
 				     NULL,                 // database (NULL == default) 
-				     SC_MANAGER_ALL_ACCESS /* access required */ );
+				     SC_MANAGER_ALL_ACCESS // access required
+				     );
+	if (schSCManager == NULL)
+		return CO_RC(ERROR_ACCESSING_DRIVER); 
 
 	rc = co_winnt_install_driver_lowlevel(schSCManager, name, driverfullpath);
 	if (!CO_OK(rc)) {
