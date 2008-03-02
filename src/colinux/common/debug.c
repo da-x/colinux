@@ -105,12 +105,11 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 	sub_tlv->type = CO_DEBUG_TYPE_STRING;
 
 	va_start(ap, fmt);
-	co_vsnprintf(sub_tlv->value, sizeof(buffer) - (sub_tlv->value - (char *)buffer) - 1, fmt, ap);
+	sub_tlv->length = co_vsnprintf(sub_tlv->value, sizeof(buffer) - (sub_tlv->value - buffer) - 1, fmt, ap) + 1;
 	va_end(ap);
-	sub_tlv->length = co_strlen(sub_tlv->value) + 1;
 
 	co_debug_level_system(module, facility, level, filename, line, func, sub_tlv->value);
-	co_debug_buf(buffer, (&sub_tlv->value[sub_tlv->length]) - buffer);
+	co_debug_buf(buffer, sub_tlv->value + sub_tlv->length - buffer);
 	}
 }
 
