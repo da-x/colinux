@@ -24,10 +24,13 @@ VERSION=`sed -e 's/\([0-9\.]\+\).*/\1/' < $VERSION_FILE`.0
 # Transform into comma format
 CO_VERSION_DWORD=`echo $VERSION | sed -e 's/\./,/g'`
 
+# Get gcc version from current running (not from config file defined)
+GCC_VERSION_STRING="`$TARGET-gcc -dumpversion`"
+
 cat > $TARGET_FILE << EOF
 #define CO_VERSION_STRING "$CO_VERSION_STRING"
 #define CO_VERSION_DWORD $CO_VERSION_DWORD
 #define CO_KERNEL_STRING "$KERNEL_VERSION"
-#define CO_GCC_STRING "$GCC_VERSION"
+#define CO_GCC_STRING "$GCC_VERSION_STRING"
 EOF
 
