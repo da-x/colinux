@@ -134,8 +134,10 @@ co_rc_t co_winnt_status_driver(int verbose)
 	co_manager_handle_t handle;
 	co_manager_ioctl_status_t status = {0, };
 
-	if (verbose)
+	if (verbose) {
 		co_terminal_print("checking if the driver is installed\n");
+		strcpy(status.compile_time, "<unknown>");
+	}
 
 	rc = co_win32_manager_is_installed(&installed);
 	if (!CO_OK(rc))
@@ -167,6 +169,7 @@ co_rc_t co_winnt_status_driver(int verbose)
 		co_terminal_print("current number of monitors: %d\n", status.monitors_count);
 		co_terminal_print("current linux api version: %d\n", status.linux_api_version);
 		co_terminal_print("current periphery api version: %d\n", status.periphery_api_version);
+		co_terminal_print("Driver compiled on: %s\n", status.compile_time);
 	}
 	co_os_manager_close(handle);
 

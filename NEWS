@@ -2,6 +2,9 @@
   Bugfixes:
   * Check ELF header before accessing kernel vmlinux (fix exception).
 
+  Daemon:
+  * View build time of ntkernel driver with --status-driver.
+
   Kernel:
   * Kernel has been updated to 2.6.22.18
   * Fix for splice local root exploit is included, details on
