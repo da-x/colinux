@@ -60,6 +60,8 @@ struct co_osdep_manager {
 	unsigned long mdls_allocated;
 	unsigned long pages_allocated;
 	unsigned long pages_mapped;
+	unsigned long long hostmem_min_physical_address;
+	unsigned long long hostmem_max_physical_address;
 };
 
 #define fixme_IoSetCancelRoutine(Irp, func) \

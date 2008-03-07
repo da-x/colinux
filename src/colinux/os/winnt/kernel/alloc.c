@@ -23,6 +23,9 @@ static co_rc_t co_winnt_new_mdl_bucket(struct co_manager *manager)
 	co_os_pfn_ptr_t *pfn_ptrs;
 	int i;
 	co_rc_t rc;
+	const PHYSICAL_ADDRESS LowAddress  = { .QuadPart = manager->osdep->hostmem_min_physical_address };
+	const PHYSICAL_ADDRESS HighAddress = { .QuadPart = manager->osdep->hostmem_max_physical_address };
+	const PHYSICAL_ADDRESS SkipBytes   = { .QuadPart = 0 };
 
 	mdl_ptr = co_os_malloc(sizeof(*mdl_ptr));
 	if (!mdl_ptr)
@@ -33,15 +36,7 @@ static co_rc_t co_winnt_new_mdl_bucket(struct co_manager *manager)
 		rc = CO_RC(OUT_OF_MEMORY);
 		goto error_free_mdl_ptr;
 	}
-	
-	PHYSICAL_ADDRESS LowAddress;
-	PHYSICAL_ADDRESS HighAddress;
-	PHYSICAL_ADDRESS SkipBytes;
-	
-	LowAddress.QuadPart = 0x100000 * 16; /* >16MB We don't want to steal DMA memory */
-	HighAddress.QuadPart = 0x100000000LL; /* We don't support PGE yet */
-	SkipBytes.QuadPart = 0;
-	
+
 	mdl_ptr->use_count = 0;
 	mdl_ptr->pfn_ptrs = pfn_ptrs; 
 	mdl_ptr->mdl = MmAllocatePagesForMdl(LowAddress, HighAddress, SkipBytes,
