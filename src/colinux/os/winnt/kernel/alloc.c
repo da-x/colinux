@@ -27,7 +27,7 @@ static inline PMDL co_winnt_MmAllocatePagesForMdl(co_osdep_manager_t osdep)
 				     PAGE_SIZE * PFN_ALLOCATION_COUNT);
 }
 
-static co_rc_t co_winnt_new_mdl_bucket(struct co_manager *manager)
+static co_rc_t co_winnt_new_mdl_bucket(co_osdep_manager_t osdep)
 {
 	co_os_mdl_ptr_t *mdl_ptr;
 	co_os_pfn_ptr_t *pfn_ptrs;
@@ -46,7 +46,7 @@ static co_rc_t co_winnt_new_mdl_bucket(struct co_manager *manager)
 
 	mdl_ptr->use_count = 0;
 	mdl_ptr->pfn_ptrs = pfn_ptrs; 
-	mdl_ptr->mdl = co_winnt_MmAllocatePagesForMdl(manager->osdep);
+	mdl_ptr->mdl = co_winnt_MmAllocatePagesForMdl(osdep);
 
 	if (mdl_ptr->mdl == NULL) {
 		rc = CO_RC(OUT_OF_MEMORY);
@@ -59,8 +59,8 @@ static co_rc_t co_winnt_new_mdl_bucket(struct co_manager *manager)
 		goto error_free_mdl;
 	}
 
-	manager->osdep->mdls_allocated++;
-	co_list_add_head(&mdl_ptr->node, &manager->osdep->mdl_list);
+	osdep->mdls_allocated++;
+	co_list_add_head(&mdl_ptr->node, &osdep->mdl_list);
 	
 	for (i=0; i < PFN_ALLOCATION_COUNT; i++) {
 		co_pfn_t pfn = ((co_pfn_t *)(mdl_ptr->mdl+1))[i];
@@ -68,8 +68,8 @@ static co_rc_t co_winnt_new_mdl_bucket(struct co_manager *manager)
 		pfn_ptrs[i].type = CO_OS_PFN_PTR_TYPE_MDL;
 		pfn_ptrs[i].pfn = pfn;
 		pfn_ptrs[i].mdl = mdl_ptr;
-		co_list_add_head(&pfn_ptrs[i].unused, &manager->osdep->pages_unused);
-		co_list_add_head(&pfn_ptrs[i].node, &manager->osdep->pages_hash[PFN_HASH(pfn)]);
+		co_list_add_head(&pfn_ptrs[i].unused, &osdep->pages_unused);
+		co_list_add_head(&pfn_ptrs[i].node, &osdep->pages_hash[PFN_HASH(pfn)]);
 	}
 
 	return CO_RC(OK);
@@ -86,7 +86,7 @@ error_free_mdl_ptr:
 	return rc;
 }
 
-static co_rc_t co_winnt_new_mapped_allocated_page(struct co_manager *manager, co_pfn_t *pfn)
+static co_rc_t co_winnt_new_mapped_allocated_page(co_osdep_manager_t osdep, co_pfn_t *pfn)
 {
 	co_os_pfn_ptr_t *pfn_ptr;
 	void *page;
@@ -104,8 +104,8 @@ static co_rc_t co_winnt_new_mapped_allocated_page(struct co_manager *manager, co
 	pfn_ptr->type = CO_OS_PFN_PTR_TYPE_PAGE;
 	pfn_ptr->pfn = co_os_virt_to_phys(page) >> CO_ARCH_PAGE_SHIFT;
 	pfn_ptr->page = page;
-	co_list_add_head(&pfn_ptr->node, &manager->osdep->pages_hash[PFN_HASH(pfn_ptr->pfn)]);
-	co_list_add_head(&pfn_ptr->mapped_allocated_node, &manager->osdep->mapped_allocated_list);
+	co_list_add_head(&pfn_ptr->node, &osdep->pages_hash[PFN_HASH(pfn_ptr->pfn)]);
+	co_list_add_head(&pfn_ptr->mapped_allocated_node, &osdep->mapped_allocated_list);
 	*pfn = pfn_ptr->pfn;
 
 	return CO_RC(OK);
@@ -129,7 +129,7 @@ static void co_winnt_free_mdl_bucket_no_lists(co_osdep_manager_t osdep, co_os_md
 	osdep->mdls_allocated--;
 }
 
-static void co_winnt_free_mdl_bucket(struct co_manager *manager, co_os_mdl_ptr_t *mdl_ptr)
+static void co_winnt_free_mdl_bucket(co_osdep_manager_t osdep, co_os_mdl_ptr_t *mdl_ptr)
 {
 	co_os_pfn_ptr_t *pfn_ptrs = mdl_ptr->pfn_ptrs;
 	int i;
@@ -139,29 +139,29 @@ static void co_winnt_free_mdl_bucket(struct co_manager *manager, co_os_mdl_ptr_t
 		co_list_del(&pfn_ptrs[i].node);
 	}
 	
-	co_winnt_free_mdl_bucket_no_lists(manager->osdep, mdl_ptr);
+	co_winnt_free_mdl_bucket_no_lists(osdep, mdl_ptr);
 }
  
-static void co_os_get_unused_mdl_page(struct co_manager *manager, co_pfn_t *pfn)
+static void co_os_get_unused_mdl_page(co_osdep_manager_t osdep, co_pfn_t *pfn)
 {
 	co_os_pfn_ptr_t *pfn_ptr;
 
-	pfn_ptr = co_list_entry(manager->osdep->pages_unused.next, co_os_pfn_ptr_t, unused);
+	pfn_ptr = co_list_entry(osdep->pages_unused.next, co_os_pfn_ptr_t, unused);
 	pfn_ptr->mdl->use_count++;
 	co_list_del(&pfn_ptr->unused);
 	*pfn = pfn_ptr->pfn;
-	manager->osdep->pages_allocated++;
+	osdep->pages_allocated++;
 }
 
-static void co_winnt_put_unused_mdl_page(struct co_manager *manager, co_os_pfn_ptr_t *pfn_ptr)
+static void co_winnt_put_unused_mdl_page(co_osdep_manager_t osdep, co_os_pfn_ptr_t *pfn_ptr)
 {
 	co_os_mdl_ptr_t *mdl_ptr = pfn_ptr->mdl;
 	
 	mdl_ptr->use_count--;
-	co_list_add_head(&pfn_ptr->unused, &manager->osdep->pages_unused);
+	co_list_add_head(&pfn_ptr->unused, &osdep->pages_unused);
 	if (mdl_ptr->use_count == 0)
-		co_winnt_free_mdl_bucket(manager, mdl_ptr);
-	manager->osdep->pages_allocated--;
+		co_winnt_free_mdl_bucket(osdep, mdl_ptr);
+	osdep->pages_allocated--;
 }
 
 void co_winnt_free_all_pages(co_osdep_manager_t osdep)
@@ -184,32 +184,34 @@ void co_winnt_free_all_pages(co_osdep_manager_t osdep)
 
 co_rc_t co_os_get_page(struct co_manager *manager, co_pfn_t *pfn)
 {
+	co_osdep_manager_t osdep = manager->osdep;
 	co_rc_t rc = CO_RC(OK);
 
-	co_os_mutex_acquire(manager->osdep->mutex);
+	co_os_mutex_acquire(osdep->mutex);
 
-	if (!co_list_empty(&manager->osdep->pages_unused)) {
-		co_os_get_unused_mdl_page(manager, pfn);
+	if (!co_list_empty(&osdep->pages_unused)) {
+		co_os_get_unused_mdl_page(osdep, pfn);
 		goto out;
 	}
 	
-	rc = co_winnt_new_mdl_bucket(manager);
+	rc = co_winnt_new_mdl_bucket(osdep);
 	if (CO_OK(rc)) {
-		co_os_get_unused_mdl_page(manager, pfn);
+		co_os_get_unused_mdl_page(osdep, pfn);
 	} else {
-		rc = co_winnt_new_mapped_allocated_page(manager, pfn);
+		rc = co_winnt_new_mapped_allocated_page(osdep, pfn);
 	}
 
 out:
-	co_os_mutex_release(manager->osdep->mutex);
+	co_os_mutex_release(osdep->mutex);
 	return rc;
 }
 
 void co_os_put_page(struct co_manager *manager, co_pfn_t pfn)
 {
-	co_os_mutex_acquire(manager->osdep->mutex);
+	co_osdep_manager_t osdep = manager->osdep;
+	co_os_mutex_acquire(osdep->mutex);
 
-	co_list_t *list = &manager->osdep->pages_hash[PFN_HASH(pfn)];
+	co_list_t *list = &osdep->pages_hash[PFN_HASH(pfn)];
 	co_os_pfn_ptr_t *pfn_ptr;
 
 	co_list_each_entry(pfn_ptr, list, node) {
@@ -217,14 +219,14 @@ void co_os_put_page(struct co_manager *manager, co_pfn_t pfn)
 			continue;
 
 		if (pfn_ptr->type == CO_OS_PFN_PTR_TYPE_MDL)
-			co_winnt_put_unused_mdl_page(manager, pfn_ptr);
+			co_winnt_put_unused_mdl_page(osdep, pfn_ptr);
 		else
-			co_winnt_free_mapped_allocated_page(manager->osdep, pfn_ptr);
+			co_winnt_free_mapped_allocated_page(osdep, pfn_ptr);
 		
 		break;
 	}
 
-	co_os_mutex_release(manager->osdep->mutex);
+	co_os_mutex_release(osdep->mutex);
 }
 
 void *co_os_map(struct co_manager *manager, co_pfn_t pfn)
