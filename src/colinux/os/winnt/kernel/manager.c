@@ -15,7 +15,7 @@
 
 static void setup_host_memory_range(co_manager_t *manager, co_osdep_manager_t osdep)
 {
-	const long long MaxHighAddress = (long long) manager->hostmem_pages << CO_ARCH_PAGE_SHIFT;
+	const long long MaxHighAddress = (long long) (manager->hostmem_pages - 1) << CO_ARCH_PAGE_SHIFT;
 	PPHYSICAL_MEMORY_RANGE pMemMap;
 	PHYSICAL_ADDRESS LowAddress;
 	PHYSICAL_ADDRESS HighAddress;
@@ -40,7 +40,7 @@ static void setup_host_memory_range(co_manager_t *manager, co_osdep_manager_t os
 			continue; /* to small */
 
 		HighAddress.QuadPart = pMemMap->BaseAddress.QuadPart \
-				     + pMemMap->NumberOfBytes.QuadPart;
+				     + pMemMap->NumberOfBytes.QuadPart - 1;
 		if (HighAddress.QuadPart < 0x1000000)
 			continue; /* all under 16MB, reserved for DMA */
 
