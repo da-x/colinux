@@ -17,15 +17,22 @@
 
 #include "manager.h"
 
+static inline PMDL co_winnt_MmAllocatePagesForMdl(co_osdep_manager_t osdep)
+{
+	PHYSICAL_ADDRESS LowAddress  = { .QuadPart = osdep->hostmem_min_physical_address };
+	PHYSICAL_ADDRESS HighAddress = { .QuadPart = osdep->hostmem_max_physical_address };
+	PHYSICAL_ADDRESS SkipBytes   = { .QuadPart = 0 };
+
+	return MmAllocatePagesForMdl(LowAddress, HighAddress, SkipBytes,
+				     PAGE_SIZE * PFN_ALLOCATION_COUNT);
+}
+
 static co_rc_t co_winnt_new_mdl_bucket(struct co_manager *manager)
 {
 	co_os_mdl_ptr_t *mdl_ptr;
 	co_os_pfn_ptr_t *pfn_ptrs;
 	int i;
 	co_rc_t rc;
-	const PHYSICAL_ADDRESS LowAddress  = { .QuadPart = manager->osdep->hostmem_min_physical_address };
-	const PHYSICAL_ADDRESS HighAddress = { .QuadPart = manager->osdep->hostmem_max_physical_address };
-	const PHYSICAL_ADDRESS SkipBytes   = { .QuadPart = 0 };
 
 	mdl_ptr = co_os_malloc(sizeof(*mdl_ptr));
 	if (!mdl_ptr)
@@ -39,8 +46,7 @@ static co_rc_t co_winnt_new_mdl_bucket(struct co_manager *manager)
 
 	mdl_ptr->use_count = 0;
 	mdl_ptr->pfn_ptrs = pfn_ptrs; 
-	mdl_ptr->mdl = MmAllocatePagesForMdl(LowAddress, HighAddress, SkipBytes,
-					     PAGE_SIZE * PFN_ALLOCATION_COUNT);
+	mdl_ptr->mdl = co_winnt_MmAllocatePagesForMdl(manager->osdep);
 
 	if (mdl_ptr->mdl == NULL) {
 		rc = CO_RC(OUT_OF_MEMORY);
