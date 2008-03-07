@@ -63,9 +63,9 @@ static void setup_host_memory_range(co_manager_t *manager, co_osdep_manager_t os
 			osdep->hostmem_min_physical_address = LowAddress.QuadPart;
 			osdep->hostmem_max_physical_address = HighAddress.QuadPart;
 
-		co_debug("Range[%d] 0x%lx 0x%lx use as %lx %lx", i,
-			pMemMap->BaseAddress.LowPart, pMemMap->NumberOfBytes.LowPart,
-			LowAddress.LowPart, HighAddress.LowPart);
+			co_debug("Range[%d] 0x%lx 0x%lx use as %lx %lx", i,
+				pMemMap->BaseAddress.LowPart, pMemMap->NumberOfBytes.LowPart,
+				LowAddress.LowPart, HighAddress.LowPart);
 		}
 	}
 	co_debug("to many ranges");
