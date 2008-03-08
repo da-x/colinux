@@ -400,18 +400,12 @@ This needs a Compiler, devel-libraries and a lot of tools:
     ncurses-devel
     ... and many more devel packets ...
 
-Create a new directory, extract coLinux source in this directory, set
-scripts executable and ran the download script in "bin" directory.
+Create a new directory, extract coLinux source in this directory.
 
     mkdir $HOME/colinux-devel
     cd $HOME/colinux-devel
-    tar xzf colinux-20061210.tar.gz
-    cd colinux-20061210/bin
-    chmod +x *.sh
-    ./build-all.sh --download-only
+    tar xzf colinux-20080302.tar.gz
     
-Files will be downloaded into directory $HOME/colinux-devel/download.
-
 
 5.2.2 Running the compiling script
 
@@ -438,7 +432,6 @@ The build process based on build-all works completly at top-level
 directory colinux-devel. The cross-compiler was also installed in users
 directory (not system wide). We never need root rights for installing
 headers, libs or programs.
-
 
 After Downloading a new version of coLinux source, should only extract source
 at same top level directory and run the last scripts build-kernel.sh and
@@ -485,7 +478,7 @@ Source tree before building, after download:
     |	... ...
     +-- download/
         +-- binutils-2.17.50-20070129-1-src.tar.gz
-        +-- colinux-20061210.tar.gz
+        +-- colinux-20080302.tar.gz
         +-- fltk-1.1.6-source.tar.bz2
         +-- gcc-core-4.1.2.tar.bz2
         +-- gcc-g++-4.1.2.tar.bz2
@@ -498,7 +491,7 @@ Source tree before building, after download:
 
 Source tree after building cross compiler and coLinux binaries:
 /colinux-devel					$USER_TOPDIR
-    +-- colinux-20061210/
+    +-- colinux-20080302/
     |   ... Colinux sources
     +-- build/					$BUILD_DIR
     |   +-- binutils-2.17.50-20070129-1/	(cross working dirs,
