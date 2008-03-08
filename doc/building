@@ -262,11 +262,14 @@ Module build and install:
 
 4.3 Testing new kernel builds
 
-Then test to run this unchanged kernel with your daemons.
+Backup the current file "vmlinux" from coLinux install directory and copy
+the new file from kernel build tree to the coLinux install directory.
 
-Be sure to save all your work and the disk cache, before you run your
-new kernel. On windows, only a reboot save the disk cache. I suggest
-you reboot windows _before_ you start the new kernel!
+Than test to run this unchanged kernel with your daemons.
+
+Be sure to save all your work and the disk cache, before you run your new
+kernel first time. On windows, only a reboot save the disk cache. I suggest
+you, reboot windows _before_ you start the new kernel!
 
 After these steps you can modify kernel config or add some special patches
 and rebuild your special kernel.
