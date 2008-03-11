@@ -1,3 +1,7 @@
+ * Kernel:
+   * Merge coLinux kernel patch with official kernels paravirt_ops.
+     "lguest" in kernel code is a good start point.
+
  * Consoles:
    * Make the consoles scrollable/resizable.
    * Add select, copy and paste to and from console and to and from
