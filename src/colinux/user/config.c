@@ -36,6 +36,16 @@ typedef struct {
  * novice users.
  */
 
+static int is_device(char *pathname) {
+        if (co_strncmp(pathname, "\\Device\\", 8) == 0  ||
+            co_strncmp(pathname, "\\DosDevices\\", 12) == 0 ||
+            co_strncmp(pathname, "\\Volume{", 8) == 0 ||
+            co_strncmp(pathname, "\\\\.\\", 4) == 0)
+		return 1;
+	else
+		return 0;
+}
+
 static co_rc_t check_cobd_file (co_pathname_t pathname, char *name, int index)
 {
 #ifdef COLINUX_DEBUG
@@ -50,11 +60,7 @@ static co_rc_t check_cobd_file (co_pathname_t pathname, char *name, int index)
 
 	co_remove_quotation_marks(pathname);
 
-	if (co_strncmp(pathname, "\\Device\\", 8) == 0  ||
-	    co_strncmp(pathname, "\\DosDevices\\", 12) == 0 ||
-	    co_strncmp(pathname, "\\Volume{", 8) == 0 ||
-	    co_strncmp(pathname, "\\\\.\\", 4) == 0) 
-		return CO_RC(OK);  /* Can't check partitions or raw devices */
+	if (is_device(pathname)) return CO_RC(OK);  /* Can't check partitions or raw devices */
 
 	rc = co_os_file_load(pathname, &buf, &size, 1024);
 	if (!CO_OK(rc)) {
@@ -280,6 +286,117 @@ static void split_comma_separated(const char *source, comma_buffer_t *array)
 	}
 }
 
+static co_rc_t parse_args_config_pci(co_command_line_params_t cmdline, co_config_t *conf)
+{
+	char func[8],type[16],unit[8];
+	struct co_pci_desc *pci;
+	bool_t exists;
+	char *param;
+	comma_buffer_t array [] = {
+		{ sizeof(func), func },
+		{ sizeof(type), type },
+		{ sizeof(unit), unit },
+		{ 0, NULL }
+	};
+	co_rc_t rc;
+	int index;
+
+	do {
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "pci", &index, 32, &param, &exists);
+		if (!CO_OK(rc)) return rc;
+		if (!exists) break;
+
+		pci = co_os_malloc(sizeof(*pci));
+		if (!pci) {
+			co_terminal_print("unable to alloc pci%d!\n", index);
+			return CO_RC(OUT_OF_MEMORY);
+		}
+
+		split_comma_separated(param, array);
+
+		if (index > 31) {
+			co_terminal_print("pci: device: %d out of range (0-31)!", index);
+			return CO_RC(INVALID_PARAMETER);
+		}
+		pci->dev = index;
+		pci->func = atoi(func);
+		if (pci->func > 7) {
+			co_terminal_print("pci%d: function: %s out of range (0-7)\n", index, func);
+			return CO_RC(INVALID_PARAMETER);
+		}
+		if (strcmp(type,"video") == 0)
+			pci->type = CO_DEVICE_VIDEO;
+		else if (strcmp(type,"audio") == 0)
+			pci->type = CO_DEVICE_AUDIO;
+		else if (strcmp(type,"scsi") == 0)
+			pci->type = CO_DEVICE_SCSI;
+#ifdef CO_DEVICE_IDE
+		else if (strcmp(type,"ide") == 0)
+			pci->type = CO_DEVICE_IDE;
+#endif
+		else if (strcmp(type,"network") == 0 || strcmp(type,"net") == 0)
+			pci->type = CO_DEVICE_NETWORK;
+		pci->unit = atoi(unit);
+		pci->next = 0;
+
+		co_debug_info("pci%d: func: %d, type: %d, unit: %d", pci->dev, pci->func, pci->type, pci->unit);
+
+		if (!conf->pci)
+			conf->pci = conf->pci_last = pci;
+		else {
+			conf->pci_last->next = pci;
+			conf->pci_last = pci;
+		}
+	} while (1);
+
+	return CO_RC(OK);
+}
+
+static co_rc_t parse_args_config_video(co_command_line_params_t cmdline, co_config_t *conf)
+{
+	char size[16];
+	co_video_dev_desc_t *video;
+	bool_t exists;
+	char *param;
+	comma_buffer_t array [] = {
+		{ sizeof(size), size },
+		{ 0, NULL }
+	};
+	co_rc_t rc;
+	int index;
+
+
+	do {
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "video",
+							     &index, CO_MODULE_MAX_COSCSI,
+							     &param, &exists);
+		if (!CO_OK(rc)) return rc;
+		if (!exists) break;
+
+		video = &conf->video_devs[index];
+		if (video->enabled) {
+			co_terminal_print("video%d double defined\n", index);
+			return CO_RC(INVALID_PARAMETER);
+		}
+
+		split_comma_separated(param, array);
+
+		/* Video size must be non-zero */
+		video->size = atoi(size);
+		if (video->size < 1 || video->size > 16) {
+			co_terminal_print("video%d: invalid size (%d)\n", index, video->size);
+			return CO_RC(INVALID_PARAMETER);
+		}
+		video->size *= (1024 * 1024);
+
+		co_debug_info("video%d: size: %dK", index, video->size >> 10);
+
+		video->enabled = PTRUE;
+	} while (1);
+
+	return CO_RC(OK);
+}
+
 static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_config_t *conf)
 {
 	char type[10], path[256], size[16];
@@ -330,6 +447,7 @@ static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_confi
 			return CO_RC(INVALID_PARAMETER);
 		}
 		strcpy(scsi->pathname, path);
+		scsi->is_dev = is_device(path);
 		scsi->size = atoi(size);
 
 		switch(scsi->type) {
@@ -715,6 +833,10 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 	if (exists)
 		co_debug_info("configuring %ld MB of virtual RAM", conf->ram_size);
 
+	rc = parse_args_config_video(cmdline, conf);
+	if (!CO_OK(rc))
+		return rc;
+
 	rc = parse_args_config_scsi(cmdline, conf);
 	if (!CO_OK(rc))
 		return rc;
@@ -732,6 +854,11 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 		return rc;
 
 	rc = parse_args_config_cofs(cmdline, conf);
+	if (!CO_OK(rc))
+		return rc;
+
+	/* Must be last (after all other devs are defined) */
+	rc = parse_args_config_pci(cmdline, conf);
 	if (!CO_OK(rc))
 		return rc;
 

@@ -19,6 +19,7 @@ download_files()
 	download_file "$FLTK_ARCHIVE" "$FLTK_URL"
 	download_file "$W32API_SRC_ARCHIVE" "$MINGW_URL"
 	download_file "$WINPCAP_SRC_ARCHIVE" "$WINPCAP_URL"
+	download_file "$WX_ARCHIVE" "$WX_URL"
 }
 
 check_md5sums()
@@ -27,7 +28,8 @@ check_md5sums()
 	cd "$TOPDIR"
 
 	if [ -f $PREFIX/$TARGET/lib/libfltk.a -a \
-	     -f $PREFIX/$TARGET/lib/libwin32k.a ]
+	     -f $PREFIX/$TARGET/lib/libwin32k.a -a \
+	     -f $PREFIX/$TARGET/lib/libwx_$WX_TOOLKIT.a ]
 	then
 
 	    if md5sum -c $W32LIBS_CHECKSUM >/dev/null 2>&1
@@ -35,9 +37,10 @@ check_md5sums()
 		# Check versions
 		if [ "`cat $VERSION_CACHE/.fltk.version 2>/dev/null`" = "$FLTK_VERSION" -a \
 		     "`cat $VERSION_CACHE/.w32api.version 2>/dev/null`" = "$W32API_VERSION" -a \
-		     "`cat $VERSION_CACHE/.winpcap.version 2>/dev/null`" = "$WINPCAP_VERSION" ]
+		     "`cat $VERSION_CACHE/.winpcap.version 2>/dev/null`" = "$WINPCAP_VERSION" -a \
+		     "`cat $VERSION_CACHE/.wx.version 2>/dev/null`" = "$WX_VERSION" ]
 		then
-		    echo "Skip w32api.h, libfltk.a, libwin32k.a"
+		    echo "Skip w32api.h, libfltk.a, libwin32k.a, libwx_$WX_TOOLKIT.a"
 		    echo " - already installed on $PREFIX/$TARGET/lib"
 		    exit 0
 		else
@@ -59,6 +62,7 @@ create_md5sums()
 	echo "$FLTK_VERSION" >$VERSION_CACHE/.fltk.version
 	echo "$W32API_VERSION" >$VERSION_CACHE/.w32api.version
 	echo "$WINPCAP_VERSION" >$VERSION_CACHE/.winpcap.version
+	echo "$WX_VERSION" >$VERSION_CACHE/.wx.version
 
 	mkdir -p $MD5DIR
 	cd "$TOPDIR"
@@ -69,6 +73,7 @@ create_md5sums()
 	    $VERSION_CACHE/.fltk.version \
 	    $VERSION_CACHE/.w32api.version \
 	    $VERSION_CACHE/.winpcap.version \
+	    $VERSION_CACHE/.wx.version \
 	    > $W32LIBS_CHECKSUM
 	test $? -ne 0 && error_exit 10 "can not create md5sum"
 	cd "$BINDIR"
@@ -218,6 +223,284 @@ build_winpcap_src()
 	install_winpcap_src
 }
 
+#
+# wxWidgets
+#
+
+extract_wx()
+{
+	echo "Extracting wxWidgets"
+	mkdir -p "$BUILD_DIR"
+	cd "$BUILD_DIR"
+	rm -rf "$WX"
+	gzip -dc "$SOURCE_DIR/$WX_ARCHIVE" | tar x
+	test $? -ne 0 && error_exit 10 "wxWidgets extract failed"
+}
+
+patch_wx()
+{
+	if [ -f "$TOPDIR/patch/$WX.diff" ]; then
+		cd "$BUILD_DIR/$WX"
+		patch -p1 < "$TOPDIR/patch/$WX.diff"
+		test $? -ne 0 && error_exit 10 "wxWidgets patch failed"
+	fi
+}
+
+configure_wx()
+{
+	echo "Configuring wxWidgets"
+	cd "$BUILD_DIR/$WX"
+
+	./configure \
+	 --build=$BUILD \
+	 --host=$TARGET \
+	 --prefix=$PREFIX/$TARGET \
+	 --with-$WX_TOOLKIT \
+	 --enable-gui \
+	 --enable-monolithic \
+	 --disable-plugins \
+	 --disable-universal \
+	 --disable-nanox \
+	 --disable-gpe \
+	 --disable-shared \
+	 --enable-optimise \
+	 --disable-debug \
+	 --disable-stl \
+	 --disable-omf \
+	 --disable-debug_flag \
+	 --disable-debug_info \
+	 --disable-debug_gdb \
+	 --disable-debug_cntxt \
+	 --disable-mem_tracing \
+	 --disable-profile \
+	 --disable-no_rtti \
+	 --enable-no_exceptions \
+	 --disable-permissive \
+	 --disable-no_deps \
+	 --disable-universal_binary \
+	 --disable-compat24 \
+	 --disable-objc_uniquifying \
+	 --disable-abi-incompatible-features \
+	 --enable-intl \
+	 --enable-config \
+	 --disable-protocols \
+	 --disable-ftp \
+	 --disable-http \
+	 --disable-fileproto \
+	 --disable-sockets \
+	 --disable-ole \
+	 --enable-dataobj \
+	 --disable-ipc \
+	 --disable-apple_ieee \
+	 --disable-arcstream \
+	 --disable-backtrace \
+	 --disable-catch_segvs \
+	 --enable-cmdline \
+	 --disable-datetime \
+	 --disable-debugreport \
+	 --disable-dialupman \
+	 --enable-dynlib \
+	 --enable-dynamicloader \
+	 --disable-exceptions \
+	 --disable-ffile \
+	 --enable-file \
+	 --disable-filesystem \
+	 --enable-fontmap \
+	 --disable-fs_archive \
+	 --disable-fs_inet \
+	 --disable-fs_zip \
+	 --disable-geometry \
+	 --enable-log \
+	 --enable-longlong \
+	 --disable-mimetype \
+	 --disable-mslu \
+	 --disable-snglinst \
+	 --enable-std_iostreams \
+	 --enable-std_string \
+	 --enable-stdpaths \
+	 --disable-stopwatch \
+	 --enable-streams \
+	 --disable-sysoptions \
+	 --disable-tarstream \
+	 --enable-textbuf \
+	 --enable-textfile \
+	 --enable-timer \
+	 --disable-unicode \
+	 --disable-sound \
+	 --disable-mediactrl \
+	 --disable-gstreamer8 \
+	 --disable-printfposparam \
+	 --disable-zipstream \
+	 --disable-url \
+	 --disable-variant \
+	 --disable-protocol \
+	 --disable-protocol-http \
+	 --disable-protocol-ftp \
+	 --disable-protocol-file \
+	 --disable-threads \
+	 --disable-docview \
+	 --disable-help \
+	 --disable-mshtmlhelp \
+	 --disable-html \
+	 --disable-htmlhelp \
+	 --disable-xrc \
+	 --disable-aui \
+	 --disable-constraints \
+	 --disable-printarch \
+	 --disable-mdi \
+	 --disable-mdidoc \
+	 --disable-loggui \
+	 --enable-logwin \
+	 --disable-logdialog \
+	 --disable-webkit \
+	 --disable-richtext \
+	 --disable-graphics_ctx \
+	 --disable-postscript \
+	 --disable-prologio \
+	 --disable-resources \
+	 --disable-clipboard \
+	 --disable-dnd \
+	 --disable-metafile \
+	 --disable-controls \
+	 --disable-accel \
+	 --disable-animatectrl \
+	 --enable-button \
+	 --enable-bmpbutton \
+	 --disable-bmpcombobox \
+	 --disable-calendar \
+	 --disable-caret \
+	 --enable-checkbox \
+	 --disable-checklst \
+	 --disable-choice \
+	 --disable-choicebook \
+	 --disable-collpane \
+	 --disable-colourpicker \
+	 --disable-combobox \
+	 --disable-comboctrl \
+	 --disable-datepick \
+	 --disable-dirpicker \
+	 --disable-display \
+	 --disable-detect_sm \
+	 --disable-filepicker \
+	 --disable-fontpicker \
+	 --disable-gauge \
+	 --disable-grid \
+	 --disable-dataviewctrl \
+	 --disable-hyperlink \
+	 --enable-imaglist \
+	 --disable-listbook \
+	 --disable-listbox \
+	 --disable-listctrl \
+	 --enable-notebook \
+	 --disable-odcombobox \
+	 --enable-radiobox \
+	 --enable-radiobtn \
+	 --disable-sash \
+	 --enable-scrollbar \
+	 --disable-searchctrl \
+	 --enable-slider \
+	 --enable-spinbtn \
+	 --disable-spinctrl \
+	 --disable-splitter \
+	 --enable-statbmp \
+	 --enable-statbox \
+	 --enable-statline \
+	 --enable-stattext \
+	 --enable-statusbar \
+	 --disable-tabdialog \
+	 --enable-textctrl \
+	 --enable-togglebtn \
+	 --enable-toolbar \
+	 --disable-tbarnative \
+	 --disable-treebook \
+	 --disable-toolbook \
+	 --disable-treectrl \
+	 --disable-tipwindow \
+	 --disable-popupwin \
+	 --disable-commondlg \
+	 --disable-aboutdlg \
+	 --disable-choicedlg \
+	 --disable-coldlg \
+	 --disable-filedlg \
+	 --disable-finddlg \
+	 --disable-fontdlg \
+	 --disable-dirdlg \
+	 --enable-msgdlg \
+	 --disable-numberdlg \
+	 --disable-splash \
+	 --disable-textdlg \
+	 --disable-tipdlg \
+	 --disable-progressdlg \
+	 --disable-wizarddlg \
+	 --enable-menus \
+	 --disable-miniframe \
+	 --disable-tooltips \
+	 --disable-splines \
+	 --enable-mousewheel \
+	 --disable-validators \
+	 --disable-busyinfo \
+	 --disable-joystick \
+	 --disable-metafiles \
+	 --disable-dragimage \
+	 --disable-accessibility \
+	 --disable-dccache \
+	 --disable-palette \
+	 --enable-image \
+	 --disable-gif \
+	 --disable-pcx \
+	 --disable-tga \
+	 --disable-iff \
+	 --disable-pnm \
+	 --enable-xpm \
+	 --disable-icocur \
+	 --enable-official_build \
+	 --disable-omf \
+	 --without-subdirs \
+	 --without-libpng \
+	 --without-libjpeg \
+	 --without-libtiff \
+	 --with-libxpm \
+	 BUILD=release
+	>>$COLINUX_BUILD_LOG 2>&1
+	status=$?
+	test $status -ne 0 && error_exit 1 "wxWidgets configure failed"
+}
+
+make_wx()
+{
+	echo "Making wxWidgets"
+	cd "$BUILD_DIR/$WX"
+	echo "Build log: $COLINUX_BUILD_LOG"
+	make BUILD=release >>$COLINUX_BUILD_LOG 2>&1
+	test $? -ne 0 && error_exit 1 "wxWidgets make failed"
+}
+
+install_wx()
+{
+	echo "Installing wxWidgets"
+	cd "$BUILD_DIR/$WX"
+	make install || exit 1
+	cd "$PREFIX/bin" && ln -sf "$PREFIX/$TARGET/bin/wx-config" .
+	cd "$PREFIX/$TARGET/lib"
+	pwd
+	for f in libwx*.a
+	do
+		n=`echo $f | awk '{ print substr($0,1,index($0,"-")-1) }'`.a
+		ln -sf $f $n
+	done
+	cd "$PREFIX/$TARGET/include"
+	ln -sf `ls -td wx-*/wx | head -1` .
+}
+
+build_wx()
+{
+	extract_wx
+	patch_wx
+	configure_wx
+	make_wx
+	install_wx
+}
+
 # ALL
 
 clean_up()
@@ -227,7 +510,7 @@ clean_up()
 	# Installation should have been successful, so clean-up
 	#  after ourselves an little bit.
 	cd $BUILD_DIR
-	rm -rf "$FLTK" "$W32API_SRC" "$WINPCAP_SRC"
+	rm -rf "$FLTK" "$W32API_SRC" "$WINPCAP_SRC" "$WX"
 }
 
 build_colinux_libs()
@@ -242,9 +525,18 @@ build_colinux_libs()
 	echo "log: $COLINUX_BUILD_LOG"
 	mkdir -p `dirname $COLINUX_BUILD_LOG`
 
-	build_fltk
-	build_w32api_src
-	build_winpcap_src
+	if [ "`cat $VERSION_CACHE/.fltk.version 2>/dev/null`" != "$FLTK_VERSION" ]; then
+		build_fltk
+	fi
+	if [ "`cat $VERSION_CACHE/.w32api.version 2>/dev/null`" != "$W32API_VERSION" ]; then
+		build_w32api_src
+	fi
+	if [ "`cat $VERSION_CACHE/.winpcap.version 2>/dev/null`" != "$WINPCAP_VERSION" ]; then
+		build_winpcap_src
+	fi
+	if [ "`cat $VERSION_CACHE/.wx.version 2>/dev/null`" != "$WX_VERSION" ]; then
+		build_wx
+	fi
 
 	clean_up
 	create_md5sums

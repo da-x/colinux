@@ -27,9 +27,6 @@
 static struct co_scsi_dev *get_dp(co_monitor_t *cmon, int unit) {
 	struct co_scsi_dev *dp;
 
-#if COSCSI_DEBUG
-	co_debug("unit: %d, max: %d\n", unit, CO_MODULE_MAX_COSCSI);
-#endif
 	if (unit < CO_MODULE_MAX_COSCSI)
 		dp = cmon->scsi_devs[unit];
 	else
@@ -37,28 +34,37 @@ static struct co_scsi_dev *get_dp(co_monitor_t *cmon, int unit) {
 
 	if (!dp) return 0;
 
+#if COSCSI_DEBUG
+	co_debug("dp: %p", dp);
+#endif
 	return dp;
 }
 
-void co_scsi_op(co_monitor_t *cmon) {
-	struct co_scsi_dev *dp = get_dp(cmon,co_passage_page->params[1]);
+void co_scsi_request(co_monitor_t *cmon, int op, int unit) {
+	struct co_scsi_dev *dp;
 
 #if COSCSI_DEBUG
-	co_debug("co_scsi_op: op: %lx, unit: %lx, dp: %p\n",
-		co_passage_page->params[0], co_passage_page->params[1], dp);
+	co_debug("co_scsi_op: op: %x, unit: %x\n", op, unit);
 #endif
 
-	switch(co_passage_page->params[0]) {
+ 	dp = get_dp(cmon,unit);
+	if (!dp && op != CO_SCSI_GET_CONFIG) {
+		co_passage_page->params[0] = 1;
+		return;
+	}
+
+	switch(op) {
 	case CO_SCSI_GET_CONFIG: /* 0 */
 		{
 			register int x;
 
 			for(x=0; x < CO_MODULE_MAX_COSCSI; x++) {
 				if (cmon->scsi_devs[x])
-					co_passage_page->params[x] =  cmon->scsi_devs[x]->conf->type | COSCSI_DEVICE_ENABLED;
+					co_passage_page->params[x+1] =  cmon->scsi_devs[x]->conf->type | COSCSI_DEVICE_ENABLED;
 				else
-					co_passage_page->params[x] = 0;
+					co_passage_page->params[x+1] = 0;
 			}
+			co_passage_page->params[0] = 0;
 		}
 		break;
 	case CO_SCSI_OPEN: /* 1 */
@@ -82,15 +88,14 @@ void co_scsi_op(co_monitor_t *cmon) {
 		break;
 	case CO_SCSI_IO: /* 4 */
 		{
-			co_scsi_io_t *iop;
+			co_scsi_io_t *iop = (co_scsi_io_t *) &co_passage_page->params[3];
 
-			iop = (co_scsi_io_t *) &co_passage_page->params[2];
 			co_passage_page->params[0] = scsi_file_io(cmon, dp, iop);
 		}
 		break;
 	case CO_SCSI_PASS: /* 5 */
 		{
-			co_scsi_pass_t *pass = (co_scsi_pass_t *) &co_passage_page->params[2];
+			co_scsi_pass_t *pass = (co_scsi_pass_t *) &co_passage_page->params[3];
 
 			co_passage_page->params[0] = scsi_pass(cmon, dp, pass);
 		}
@@ -103,18 +108,18 @@ void co_scsi_op(co_monitor_t *cmon) {
 
 void co_monitor_unregister_and_free_scsi_devices(co_monitor_t *mp)
 {
-	long i;
+	int i;
 
-	co_debug("co_monitor_unregister_and_free_scsi_devices");
 	for (i=0; i < CO_MODULE_MAX_COSCSI; i++) {
 		co_scsi_dev_t *dp = mp->scsi_devs[i];
 		if (!dp) continue;
 
+#if COSCSI_DEBUG
+		co_debug("unit: %d, handle: %p", i, dp->os_handle);
+#endif
 		if (dp->os_handle) scsi_file_close(mp, dp);
 
 		mp->scsi_devs[i] = NULL;
 		co_monitor_free(mp, dp);
 	}
-
-	co_debug("co_monitor_unregister_and_free_scsi_devices --> DONE");
 }

@@ -12,28 +12,19 @@
  *
  */
 
-/*
- * Video memory
- *
- * video_buffer      : virtual address the video memory buffer
- * video_vm_address  : virtual address of the bufer in the guest (4MB aligned)
- * video_size        : size, in bytes, of the video memory.
- *                      2048x1536x32 = 12M
- *                      1920x1080x32 = 8M
- *                      default=DeskTopSize() from windows and use 8M on unix
- *                      override with parameter videomem=
- * video_user_address: virtual address of the buffer in user_space
- * video_user_handle : handle for the user address mapping
- * video_user_id     : PID of the video client process
-*/
-
 struct co_video_dev {
-        void *          video_buffer;
-        vm_ptr_t        video_vm_address;
-        unsigned long   video_size;
-        void *          video_user_address;
-        void *          video_user_handle;
-        co_id_t         video_user_id;
+	int unit;
+	int size;			/* Size */
+	void *buffer;			/* Page-aligned buffer */
+	int x,y,bpp;			/* Current mode */
 };
+
+typedef struct co_video_dev co_video_dev_t;
+
+extern void co_video_request(co_monitor_t *, int, int);
+extern int co_monitor_video_device_init(co_monitor_t *, int, co_video_dev_desc_t *);
+extern void co_monitor_unregister_video_devices(co_monitor_t *);
+extern co_rc_t co_video_attach(co_monitor_t *, co_monitor_ioctl_video_t *);
+extern co_rc_t co_video_detach(co_monitor_t *, co_monitor_ioctl_video_t *);
 
 #endif

@@ -34,6 +34,8 @@
 #include "transfer.h"
 #include "filesystem.h"
 #include "pages.h"
+#include "pci.h"
+#include "video.h"
 
 co_rc_t co_monitor_malloc(co_monitor_t *cmon, unsigned long bytes, void **ptr)
 {
@@ -249,6 +251,19 @@ static bool_t device_request(co_monitor_t *cmon, co_device_t device, unsigned lo
 		co_monitor_file_system(cmon, params[0], params[1], &params[2]);
 		return PTRUE;
 	}
+
+	case CO_DEVICE_PCI:
+		co_pci_request(cmon, params[0]);
+		return PTRUE;
+
+	case CO_DEVICE_SCSI:
+		co_scsi_request(cmon, params[0], params[1]);
+		return PTRUE;
+
+	case CO_DEVICE_VIDEO:
+		co_video_request(cmon, params[0], params[1]);
+		return PTRUE;
+
 	default:
 		break;
 	}	
@@ -450,6 +465,54 @@ static co_rc_t co_alloc_pages(co_monitor_t *cmon, vm_ptr_t address, int num_page
 	return rc;
 }
 
+/* Send the physical pages of a buffer to the guest */
+static void co_monitor_getpp(co_monitor_t *cmon, void *pp_buffer, void *host_buffer, int host_buffer_size) {
+	vm_ptr_t vaddr;
+	co_pfn_t pfn;
+	char *page;
+	unsigned long *pp, pa, t;
+	void *buffer;
+	int i,size,len;
+	co_rc_t rc;
+
+	vaddr = (vm_ptr_t) pp_buffer;
+	buffer = host_buffer;
+
+	size = host_buffer_size >> 10;
+	while(size > 0) {
+		rc = co_monitor_get_pfn(cmon, vaddr, &pfn);
+		if (!CO_OK(rc)) {
+			co_debug_error("unable to get pfn for vaddr %08lX", vaddr);
+			co_passage_page->params[0] = 1;
+			return;
+		}
+
+		len = ((vaddr + CO_ARCH_PAGE_SIZE) & CO_ARCH_PAGE_MASK) - vaddr;
+		if (len > size) len = size;
+
+		page = co_os_map(cmon->manager, pfn);
+
+		pp = (unsigned long *)(page + (vaddr & ~CO_ARCH_PAGE_MASK));
+		co_memset(pp, 0, len);
+
+		t = vaddr;
+		for(i=0; i < len; i += 4) {
+			pa = co_os_virt_to_phys(buffer);
+
+			*pp++ = pa;
+			t += CO_ARCH_PAGE_SIZE;
+			buffer += CO_ARCH_PAGE_SIZE;
+		}
+		co_os_unmap(cmon->manager, page, pfn);
+
+		size -= len;
+		vaddr += len;
+	}
+
+	co_passage_page->params[0] = 0;
+	return;
+}
+
 void incoming_message(co_monitor_t *cmon, co_message_t *message)
 {
 	co_manager_open_desc_t opened;
@@ -556,8 +619,9 @@ static bool_t iteration(co_monitor_t *cmon)
 	case CO_OPERATION_IDLE:
 		return co_idle(cmon);
 
-	case CO_OPERATION_SCSI:
-		co_scsi_op(cmon);
+	case CO_OPERATION_GETPP:
+		co_monitor_getpp(cmon, (void *)co_passage_page->params[0], (void *)co_passage_page->params[1],
+			co_passage_page->params[2]);
 		return PTRUE;
 
 	case CO_OPERATION_MESSAGE_TO_MONITOR: {
@@ -686,8 +750,27 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 
 	}
 
+	for(i=0; i < CO_MODULE_MAX_COVIDEO; i++) {
+		co_video_dev_desc_t *cp = &cmon->config.video_devs[i];
+		co_video_dev_t *dev;
+
+		if (!cp->enabled) continue;
+
+		rc = co_monitor_malloc(cmon, sizeof(co_video_dev_t), (void **)&dev);
+		if (!CO_OK(rc)) goto error_3;
+		cmon->video_devs[i] = dev;
+
+		rc = co_monitor_video_device_init(cmon, i, cp);
+		if (!CO_OK(rc)) goto error_3;
+
+        }
+
+	rc = co_pci_setconfig(cmon);
+
 	return rc;
 
+error_3:
+	co_monitor_unregister_video_devices(cmon);
 error_2:
 	co_monitor_unregister_filesystems(cmon);
 error_1:
@@ -1119,6 +1202,7 @@ static co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
 	co_monitor_unregister_and_free_scsi_devices(cmon);
 	co_monitor_unregister_and_free_block_devices(cmon);
 	co_monitor_unregister_filesystems(cmon);
+	co_monitor_unregister_video_devices(cmon);
 	free_pseudo_physical_memory(cmon);
 	manager->hostmem_used -= cmon->memory_size;
 	co_os_free(cmon->io_buffer);
@@ -1199,6 +1283,7 @@ static co_rc_t co_monitor_user_reset(co_monitor_t *monitor)
 	co_monitor_unregister_and_free_scsi_devices(monitor);
 	co_monitor_unregister_and_free_block_devices(monitor);
 	co_monitor_unregister_filesystems(monitor);
+	co_monitor_unregister_video_devices(monitor);
 
 	rc = load_configuration(monitor);
 	if (!CO_OK(rc)) {
@@ -1292,6 +1377,22 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 		params = (typeof(params))(io_buffer);
 
 		return co_monitor_user_get_console(cmon, params);
+	}
+	case CO_MONITOR_IOCTL_VIDEO_ATTACH: {
+		co_monitor_ioctl_video_t *params;
+
+		*return_size = sizeof(*params);
+		params = (typeof(params))(io_buffer);
+
+		return co_video_attach(cmon, params);
+	}
+	case CO_MONITOR_IOCTL_VIDEO_DETACH: {
+		co_monitor_ioctl_video_t *params;
+
+		*return_size = sizeof(*params);
+		params = (typeof(params))(io_buffer);
+
+		return co_video_detach(cmon, params);
 	}
 	default:
 		break;

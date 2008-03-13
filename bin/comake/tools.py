@@ -174,9 +174,12 @@ class Compiler(Executer):
         compiler_libs = tool_run_inf.options.get('compiler_libs', [])
         parameters += ["-L" + path for path in compiler_lib_paths]
         parameters += ["-l" + path for path in compiler_libs]
+        if actual_compile == 0:
+		linker_add = tool_run_inf.options.get('linker_add', [])
+		parameters += linker_add
         if count_archives > 1:
             parameters.append('-Wl,--end-group')
-        
+
         parameters.append('-o')
         parameters.append(tool_run_inf.target.pathname)
 
@@ -199,6 +202,8 @@ class Linker(Executer):
             parameters.append('-r')
             
         parameters.extend(input_pathnames)   
+	linker_add = tool_run_inf.options.get('linker_add', [])
+	parameters += linker_add
         parameters.append('-o')
         parameters.append(tool_run_inf.target.pathname)
         command_line = ' '.join(parameters)

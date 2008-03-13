@@ -132,6 +132,14 @@ typedef struct co_monitor {
 	co_os_wait_t idle_wait;
 
 	/*
+	 * PCI Space
+	*/
+	struct {
+		unsigned char type;
+		unsigned char unit;
+	} pci_space[32][8];
+
+	/*
 	 * Video devices
 	*/
 	struct co_video_dev *video_devs[CO_MODULE_MAX_COVIDEO];

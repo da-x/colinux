@@ -31,6 +31,28 @@
 #define COSCSI_DEBUG_IO 0
 #define COSCSI_DEBUG_PASS 0
 
+#if COSCSI_DEBUG_OPEN || COSCSI_DEBUG_IO || COSCSI_DEBUG_PASS
+static char *iostatus_string(IO_STATUS_BLOCK IoStatusBlock) {
+
+	switch(IoStatusBlock.Information) {
+	case FILE_CREATED:
+		return "FILE_CREATED";
+	case FILE_OPENED:
+		return "FILE_OPENED";
+	case FILE_OVERWRITTEN:
+		return "FILE_OVERWRITTEN";
+	case FILE_SUPERSEDED:
+		return "FILE_SUPERSEDED";
+	case FILE_EXISTS:
+		return "FILE_EXISTS";
+	case FILE_DOES_NOT_EXIST:
+		return "FILE_DOES_NOT_EXIST";
+	default:
+		return "unknown";
+	}
+}
+#endif
+
 /*
  * Open
 */
@@ -40,37 +62,58 @@ int scsi_file_open(co_monitor_t *cmon, co_scsi_dev_t *dp) {
 	IO_STATUS_BLOCK IoStatusBlock;
 	UNICODE_STRING unipath;
 	ACCESS_MASK DesiredAccess;
-	ULONG OpenOptions;
+	ULONG FileAttributes, CreateDisposition, CreateOptions;
 	co_rc_t rc;
 
 #if COSCSI_DEBUG_OPEN
-	co_debug_system("scsi_file_open: pathname: %s", dp->conf->pathname);
+	co_debug("scsi_file_open: pathname: %s", dp->conf->pathname);
 #endif
 
 	rc = co_winnt_utf8_to_unicode(dp->conf->pathname, &unipath);
 	if (!CO_OK(rc)) return 1;
 
 	DesiredAccess = FILE_READ_DATA | FILE_WRITE_DATA | SYNCHRONIZE;
-	OpenOptions = FILE_SYNCHRONOUS_IO_NONALERT;
+	FileAttributes = FILE_ATTRIBUTE_NORMAL;
+	CreateDisposition = (dp->conf->is_dev ? FILE_OPEN : FILE_OPEN_IF);
+	CreateOptions = FILE_SYNCHRONOUS_IO_NONALERT;
 
 	/* Kernel handle needed for IoQueueWorkItem */
 	InitializeObjectAttributes(&ObjectAttributes, &unipath,
 				OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL, NULL);
 
-	status = ZwOpenFile((HANDLE *)&dp->os_handle, DesiredAccess, &ObjectAttributes, &IoStatusBlock, 0, OpenOptions);
+again:
+	status = ZwCreateFile((HANDLE *)&dp->os_handle, DesiredAccess, &ObjectAttributes, &IoStatusBlock, 0,
+			FileAttributes, 0, CreateDisposition, CreateOptions, NULL, 0);
+#if COSCSI_DEBUG_OPEN
+	co_debug("ZwCreateFile: status: %x, iostatus: %s", (int)status, iostatus_string(IoStatusBlock));
+#endif
 
 	co_winnt_free_unicode(&unipath);
 
-	if (status != STATUS_SUCCESS) {
-		co_debug_lvl(filesystem, 5, "error %x ZwOpenFile('%s')", (int)status, dp->conf->pathname);
-		return 1;
+	/* If a size is specified, extend/trunc the file */
+	if (status == STATUS_SUCCESS && dp->conf->size != 0 && dp->conf->is_dev == 0) {
+		FILE_END_OF_FILE_INFORMATION eof;
+
+		eof.EndOfFile.QuadPart = (unsigned long long)dp->conf->size * 1048576LL;
+#if COSCSI_DEBUG_OPEN
+		co_debug("eof.EndOfFile.QuadPart: %lld", eof.EndOfFile.QuadPart);
+#endif
+		status = ZwSetInformationFile(dp->os_handle, &IoStatusBlock, &eof, sizeof(eof), FileEndOfFileInformation);
+#if COSCSI_DEBUG_OPEN
+		co_debug("ZwSetInformationFile: status: %x, iostatus: %s", (int)status, iostatus_string(IoStatusBlock));
+#endif
+		if (status == STATUS_SUCCESS) {
+			dp->conf->size = 0;
+			ZwClose(dp->os_handle);
+			goto again;
+		}
 	}
 
 #if COSCSI_DEBUG_OPEN
-	co_debug_system("scsi_file_open: os_handle: %p", dp->os_handle);
+	co_debug("scsi_file_open: os_handle: %p", dp->os_handle);
 #endif
 
-	return 0;
+	return (status != STATUS_SUCCESS);
 }
 
 /*
@@ -145,7 +188,7 @@ static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 					r->io.count * sizeof(struct scatterlist),
 					(void*)&sg, &sg_page, &sg_pfn);
 	if (!CO_OK(rc)) {
-		co_debug_system("scsi_io: error mapping sg");
+		co_debug("scsi_io: error mapping sg");
 		goto io_done;
 	}
 
@@ -231,7 +274,7 @@ int scsi_pass(co_monitor_t *cmon, co_scsi_dev_t *dp, co_scsi_pass_t *pass) {
 		rc = co_monitor_host_linuxvm_transfer_map(cmon, pass->buffer, pass->buflen,
 					(void*)&buffer, &page, &pfn);
 		if (!CO_OK(rc)) {
-			co_debug_system("scsi_pass: get_pfn: %x", (int)rc);
+			co_debug("scsi_pass: get_pfn: %x", (int)rc);
 			goto err_out;
 		}
 	} else {
@@ -240,9 +283,9 @@ int scsi_pass(co_monitor_t *cmon, co_scsi_dev_t *dp, co_scsi_pass_t *pass) {
 	}
 
 #if COSCSI_DEBUG_PASS
-	co_debug_system("scsi_pass: handle: %p, buffer: %p, buflen: %d\n",
+	co_debug("scsi_pass: handle: %p, buffer: %p, buflen: %d\n",
 		dp->os_handle, buffer, pass->buflen);
-	co_debug_system("scsi_pass: cdb_len: %d, write: %d\n", pass->cdb_len, pass->write);
+	co_debug("scsi_pass: cdb_len: %d, write: %d\n", pass->cdb_len, pass->write);
 #endif
 
 	co_memset(&req, 0, sizeof(req));
@@ -277,7 +320,7 @@ int scsi_pass(co_monitor_t *cmon, co_scsi_dev_t *dp, co_scsi_pass_t *pass) {
 		);
 
 #if COSCSI_DEBUG_PASS
-	co_debug_system("scsi_pass: ntstatus: %X, ScsiStatus: %d\n", status, (req.Spt.ScsiStatus >> 1));
+	co_debug("scsi_pass: ntstatus: %X, ScsiStatus: %d\n", status, (req.Spt.ScsiStatus >> 1));
 #endif
 
 #if 0
@@ -291,14 +334,14 @@ int scsi_pass(co_monitor_t *cmon, co_scsi_dev_t *dp, co_scsi_pass_t *pass) {
 		case 0x12:
 		case 0x46:
 		case 0x1A:
-			co_debug_system("data:\n");
+			co_debug("data:\n");
 			p = buffer;
 			line[0] = 0;
 			for(x=y=0; x < pass->buflen; x++) {
 				sprintf(temp,"0x%02x, ", p[x]);
 				if (strlen(line) + strlen(temp) >= sizeof(line)-1) {
 					strcat(line,"\n");
-					co_debug_system(line);
+					co_debug(line);
 					line[0] = 0;
 				} else
 					strcat(line, temp);
@@ -322,7 +365,13 @@ err_out:
 int scsi_file_size(co_monitor_t *cmon, co_scsi_dev_t *dp, unsigned long long *size) {
 	co_rc_t rc;
 
-	rc = co_os_file_get_size(dp->os_handle, size);
+	if (!dp->conf->size) {
+		rc = co_os_file_get_size(dp->os_handle, size);
 
-	return (CO_OK(rc) == 0);
+		return (CO_OK(rc) == 0);
+	} else {
+		*size = dp->conf->size * 1048576;
+
+		return 0;
+	}
 }

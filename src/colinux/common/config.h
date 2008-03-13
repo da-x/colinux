@@ -37,8 +37,17 @@ typedef struct co_block_dev_desc {
 	char alias[20];
 } co_block_dev_desc_t;
 
+struct co_pci_desc {
+	unsigned char dev;
+	unsigned char func;
+	unsigned char type;
+	unsigned char unit;
+	struct co_pci_desc *next;
+};
+
 typedef struct co_video_dev_desc {
-	int x,y;
+	bool_t enabled;
+	int size;
 } co_video_dev_desc_t;
 
 typedef struct co_audio_dev_desc {
@@ -47,9 +56,10 @@ typedef struct co_audio_dev_desc {
 
 typedef struct co_scsi_dev_desc {
 	bool_t enabled;
-	int type;
-	co_pathname_t pathname;
-	int size;
+	int type;				/* SCSI type */
+	co_pathname_t pathname;			/* Path */
+	int is_dev;				/* 0 = file, 1 = device */
+	int size;				/* Size, for files */
 } co_scsi_dev_desc_t;
 
 typedef enum {
@@ -192,6 +202,11 @@ typedef struct co_config {
 	 */
 	co_block_dev_desc_t block_devs[CO_MODULE_MAX_COBD];
 	long _UNUSED__block_root_device_index;
+
+	/*
+	 * PCI config (fixed @ 32)
+	 */
+	struct co_pci_desc *pci, *pci_last;
 
 	/*
 	 * Video devices

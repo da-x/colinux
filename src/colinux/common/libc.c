@@ -23,6 +23,11 @@ void *co_memcpy(void *dest, const void *src, long n)
 	return memcpy(dest, src, n);
 }
 
+int co_memcmp(void *s1, void *s2, int n)
+{
+	return memcmp(s1, s2, n);
+}
+
 void *co_memmove(void *dest, const void *src, long n)
 {
 	return memmove(dest, src, n);

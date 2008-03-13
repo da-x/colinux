@@ -30,7 +30,7 @@ struct co_scsi_dev {
 extern co_rc_t co_monitor_scsi_dev_init(co_scsi_dev_t *dev, int unit, co_scsi_dev_desc_t *conf);
 extern void co_monitor_scsi_register_device(struct co_monitor *cmon, unsigned int unit, co_scsi_dev_t *dev);
 extern void co_monitor_unregister_and_free_scsi_devices(struct co_monitor *cmon);
-extern void co_scsi_op(co_monitor_t *);
+extern void co_scsi_request(co_monitor_t *, int op, int unit);
 
 /* O/S interface */
 extern int scsi_file_open(co_monitor_t *, co_scsi_dev_t *);

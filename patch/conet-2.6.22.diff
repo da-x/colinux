@@ -5,18 +5,19 @@ Index: linux-2.6.22-source/drivers/net/Kconfig
 ===================================================================
 --- linux-2.6.22-source.orig/drivers/net/Kconfig
 +++ linux-2.6.22-source/drivers/net/Kconfig
-@@ -119,6 +119,10 @@
+@@ -119,6 +119,11 @@
  
  	  If you don't know what to use this for, you don't need it.
  
 +config CONET_COOPERATIVE
-+	tristate 'Cooperative Virtual Ethernet driver support'
++	bool 'Cooperative Virtual Ethernet driver support'
 +	depends on COOPERATIVE
++	select MII
 +
  config NET_SB1000
  	tristate "General Instruments Surfboard 1000"
  	depends on PNP
-@@ -152,7 +156,7 @@
+@@ -152,7 +157,7 @@
  #
  
  menu "Ethernet (10 or 100Mbit)"
@@ -25,7 +26,7 @@ Index: linux-2.6.22-source/drivers/net/Kconfig
  
  config NET_ETHERNET
  	bool "Ethernet (10 or 100Mbit)"
-@@ -1900,7 +1904,7 @@
+@@ -1900,7 +1905,7 @@
  
  menuconfig NETDEV_1000
  	bool "Ethernet (1000 Mbit)"
@@ -34,7 +35,7 @@ Index: linux-2.6.22-source/drivers/net/Kconfig
  	default y
  
  if NETDEV_1000
-@@ -2338,7 +2342,7 @@
+@@ -2338,7 +2343,7 @@
  
  menuconfig NETDEV_10000
  	bool "Ethernet (10000 Mbit)"
