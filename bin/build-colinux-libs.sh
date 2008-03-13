@@ -40,7 +40,7 @@ check_md5sums()
 		     "`cat $VERSION_CACHE/.winpcap.version 2>/dev/null`" = "$WINPCAP_VERSION" -a \
 		     "`cat $VERSION_CACHE/.wx.version 2>/dev/null`" = "$WX_VERSION" ]
 		then
-		    echo "Skip w32api.h, libfltk.a, libwin32k.a, libwx_$WX_TOOLKIT.a"
+		    echo "Skip w32api, libfltk, libwin32k, libwx"
 		    echo " - already installed on $PREFIX/$TARGET/lib"
 		    exit 0
 		else
@@ -70,10 +70,6 @@ create_md5sums()
 	    patch/$FLTK-win32.diff \
 	    $W32API_PATCH \
 	    $PREFIX/$TARGET/include/w32api.h \
-	    $VERSION_CACHE/.fltk.version \
-	    $VERSION_CACHE/.w32api.version \
-	    $VERSION_CACHE/.winpcap.version \
-	    $VERSION_CACHE/.wx.version \
 	    > $W32LIBS_CHECKSUM
 	test $? -ne 0 && error_exit 10 "can not create md5sum"
 	cd "$BINDIR"
