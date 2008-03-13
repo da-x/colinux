@@ -20,7 +20,7 @@ static int pci_space_find(co_monitor_t *cmon, int type, int unit) {
 
 	for(x=0; x < COPCI_MAX_SLOTS; x++) {
 		for(y=0; y < COPCI_MAX_FUNCS; y++) {
-			if (cmon->pci_space[x][y].type == type && cmon->pci_space[x][y].unit == unit)
+			if (cmon->config.pci[x][y].type == type && cmon->config.pci[x][y].unit == unit)
 				return 1;
 		}
 	}
@@ -31,12 +31,12 @@ static void pci_space_add(co_monitor_t *cmon, int func, int type, int unit) {
 	register int x;
 
 	for(x=0; x < COPCI_MAX_SLOTS; x++) {
-		if (cmon->pci_space[x][0].type == 0 || cmon->pci_space[x][0].type == type) {
+		if (cmon->config.pci[x][0].type == 0 || cmon->config.pci[x][0].type == type) {
 			if (pci_space_find(cmon, type, unit) == 0) { 
-				if (func && cmon->pci_space[x][0].type == 0) func = 0;
+				if (func && cmon->config.pci[x][0].type == 0) func = 0;
 				co_debug("adding type %d to slot %d func %d", type, x, func);
-				cmon->pci_space[x][func].type = type;
-				cmon->pci_space[x][func].unit = unit;
+				cmon->config.pci[x][func].type = type;
+				cmon->config.pci[x][func].unit = unit;
 			}
 			break;
 		}
@@ -48,28 +48,28 @@ static void dump_space(co_monitor_t *cmon) {
 
 	for(x=0; x < COPCI_MAX_SLOTS; x++) {
 		for(y=0; y < COPCI_MAX_FUNCS; y++) {
-			if (cmon->pci_space[x][y].type)
+			if (cmon->config.pci[x][y].type)
 				co_debug("pci_space[%d][%d]: type: %d, unit: %d", x, y,
-					cmon->pci_space[x][y].type, cmon->pci_space[x][y].unit);
+					cmon->config.pci[x][y].type, cmon->config.pci[x][y].unit);
 		}
 	}
 }
 
 co_rc_t co_pci_setconfig(co_monitor_t *cmon) {
-	struct co_pci_desc *pci;
 	co_netdev_desc_t *netp;
-	register int x,y;
+	register int x,y,z;
 
-	co_memset(cmon->pci_space, 0, sizeof(cmon->pci_space));
-
-	/* 1st, add the user settings */
-	pci = cmon->config.pci;
-	while(pci) {
-		co_debug("user: dev: %d, func: %d, type: %d, unit: %d", pci->dev, pci->func, pci->type, pci->unit);
-		if (pci->func && cmon->pci_space[pci->dev][0].type == 0) pci->func = 0;
-		cmon->pci_space[pci->dev][pci->func].type = pci->type;
-		cmon->pci_space[pci->dev][pci->func].unit = pci->unit;
-		pci = pci->next;
+	/* Fixup user settings */
+	for(x=0; x < 32; x++) {
+		for(y=z=0; y < 8; y++) {
+			if (!cmon->config.pci[x][y].type) continue;
+			if (y && cmon->config.pci[x][z].type == 0) {
+				cmon->config.pci[x][z].type = cmon->config.pci[x][y].type;
+				cmon->config.pci[x][z].unit = cmon->config.pci[x][y].unit;
+				cmon->config.pci[x][y].type = cmon->config.pci[x][y].unit = 0;
+				z++;
+			}
+		}
 	}
 	co_debug("*********** user settings:");
 	dump_space(cmon);
@@ -137,11 +137,11 @@ void co_pci_request(co_monitor_t *cmon, int op) {
 			count =0;
 			for(x=0; x < COPCI_MAX_SLOTS; x++) {
 				for(y=0; y < COPCI_MAX_FUNCS; y++) {
-					if (cmon->pci_space[x][y].type) {
+					if (cmon->config.pci[x][y].type) {
 						cp->dev = x;
 						cp->func = y;
-						cp->type = cmon->pci_space[x][y].type;
-						cp->unit = cmon->pci_space[x][y].unit;
+						cp->type = cmon->config.pci[x][y].type;
+						cp->unit = cmon->config.pci[x][y].unit;
 						count++;
 						cp++;
 					}

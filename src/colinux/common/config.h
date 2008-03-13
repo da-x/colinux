@@ -37,21 +37,13 @@ typedef struct co_block_dev_desc {
 	char alias[20];
 } co_block_dev_desc_t;
 
-struct co_pci_desc {
-	unsigned char dev;
-	unsigned char func;
-	unsigned char type;
-	unsigned char unit;
-	struct co_pci_desc *next;
-};
-
 typedef struct co_video_dev_desc {
 	bool_t enabled;
 	int size;
 } co_video_dev_desc_t;
 
 typedef struct co_audio_dev_desc {
-	int type;
+	bool_t enabled;
 } co_audio_dev_desc_t;
 
 typedef struct co_scsi_dev_desc {
@@ -204,9 +196,12 @@ typedef struct co_config {
 	long _UNUSED__block_root_device_index;
 
 	/*
-	 * PCI config (fixed @ 32)
+	 * PCI config (32 devs, 8 funcs/dev)
 	 */
-	struct co_pci_desc *pci, *pci_last;
+	struct {
+		unsigned char type;
+		unsigned char unit;
+	} pci[32][8];
 
 	/*
 	 * Video devices

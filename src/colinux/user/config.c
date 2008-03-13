@@ -289,7 +289,7 @@ static void split_comma_separated(const char *source, comma_buffer_t *array)
 static co_rc_t parse_args_config_pci(co_command_line_params_t cmdline, co_config_t *conf)
 {
 	char func[8],type[16],unit[8];
-	struct co_pci_desc *pci;
+	int d,f,t,u;
 	bool_t exists;
 	char *param;
 	comma_buffer_t array [] = {
@@ -306,47 +306,97 @@ static co_rc_t parse_args_config_pci(co_command_line_params_t cmdline, co_config
 		if (!CO_OK(rc)) return rc;
 		if (!exists) break;
 
-		pci = co_os_malloc(sizeof(*pci));
-		if (!pci) {
-			co_terminal_print("unable to alloc pci%d!\n", index);
-			return CO_RC(OUT_OF_MEMORY);
-		}
-
 		split_comma_separated(param, array);
 
-		if (index > 31) {
+		if (index < 0 || index > 31) {
 			co_terminal_print("pci: device: %d out of range (0-31)!", index);
 			return CO_RC(INVALID_PARAMETER);
 		}
-		pci->dev = index;
-		pci->func = atoi(func);
-		if (pci->func > 7) {
+		d = index;
+		f = atoi(func);
+		if (f < 0 || f > 7) {
 			co_terminal_print("pci%d: function: %s out of range (0-7)\n", index, func);
 			return CO_RC(INVALID_PARAMETER);
 		}
-		if (strcmp(type,"video") == 0)
-			pci->type = CO_DEVICE_VIDEO;
-		else if (strcmp(type,"audio") == 0)
-			pci->type = CO_DEVICE_AUDIO;
-		else if (strcmp(type,"scsi") == 0)
-			pci->type = CO_DEVICE_SCSI;
-#ifdef CO_DEVICE_IDE
-		else if (strcmp(type,"ide") == 0)
-			pci->type = CO_DEVICE_IDE;
-#endif
-		else if (strcmp(type,"network") == 0 || strcmp(type,"net") == 0)
-			pci->type = CO_DEVICE_NETWORK;
-		pci->unit = atoi(unit);
-		pci->next = 0;
-
-		co_debug_info("pci%d: func: %d, type: %d, unit: %d", pci->dev, pci->func, pci->type, pci->unit);
-
-		if (!conf->pci)
-			conf->pci = conf->pci_last = pci;
-		else {
-			conf->pci_last->next = pci;
-			conf->pci_last = pci;
+		u = atoi(unit);
+		if (strcmp(type,"video") == 0) {
+			t = CO_DEVICE_VIDEO;
+			if (u < 0 || u >= CO_MODULE_MAX_COVIDEO) {
+				co_terminal_print("pci%d: unit: %s out of range for a video device (0-%d)\n", index, unit,
+					CO_MODULE_MAX_COVIDEO-1);
+				return CO_RC(INVALID_PARAMETER);
+			}
+			if (!conf->video_devs[u].enabled) {
+				co_terminal_print("pci%d: video unit %d is not enabled.\n", index, u);
+				return CO_RC(INVALID_PARAMETER);
+			}
 		}
+		else if (strcmp(type,"audio") == 0) {
+			t = CO_DEVICE_AUDIO;
+			if (u < 0 || u >= CO_MODULE_MAX_COAUDIO) {
+				co_terminal_print("pci%d: unit: %s out of range for a audio device (0-%d)\n", index, unit,
+					CO_MODULE_MAX_COAUDIO-1);
+				return CO_RC(INVALID_PARAMETER);
+			}
+			if (!conf->audio_devs[u].enabled) {
+				co_terminal_print("pci%d: audio unit %d is not enabled.\n", index, u);
+				return CO_RC(INVALID_PARAMETER);
+			}
+		}
+#ifdef CO_DEVICE_IDE
+		else if (strcmp(type,"ide") == 0) {
+			int x,found;
+
+			t = CO_DEVICE_IDE;
+			found = 0;
+			for(x=0; x < CO_MODULE_MAX_COIDE; x++) {
+				if (conf->ide_devs[x].enabled) {
+					found = 1;
+					break;
+				}
+			}
+			if (!found) {
+				co_terminal_print("pci%d: no ide devices are enabled.\n", index);
+				return CO_RC(INVALID_PARAMETER);
+			}
+		}
+#endif
+		else if (strcmp(type,"scsi") == 0) {
+			int x,found;
+
+			t = CO_DEVICE_SCSI;
+			found = 0;
+			for(x=0; x < CO_MODULE_MAX_COSCSI; x++) {
+				if (conf->scsi_devs[x].enabled) {
+					found = 1;
+					break;
+				}
+			}
+			if (!found) {
+				co_terminal_print("pci%d: no scsi devices are enabled.\n", index);
+				return CO_RC(INVALID_PARAMETER);
+			}
+		}
+		else if (strcmp(type,"network") == 0 || strcmp(type,"net") == 0) {
+			t = CO_DEVICE_NETWORK;
+			if (u < 0 || u >= CO_MODULE_MAX_CONET) {
+				co_terminal_print("pci%d: unit: %s out of range for a network device (0-%d)\n", index, unit,
+					CO_MODULE_MAX_CONET-1);
+				return CO_RC(INVALID_PARAMETER);
+			}
+			if (!conf->net_devs[u].enabled) {
+				co_terminal_print("pci%d: network unit %d is not enabled.\n", index, u);
+				return CO_RC(INVALID_PARAMETER);
+			}
+		} else {
+			co_terminal_print("pci%d: unknown device type: %s\n", index, type);
+			return CO_RC(INVALID_PARAMETER);
+		}
+
+		co_debug_info("pci%d: func: %d, type: %d, unit: %d", d, f, t, u);
+
+		conf->pci[d][f].type = t;
+		conf->pci[d][f].unit = u;
 	} while (1);
 
 	return CO_RC(OK);
