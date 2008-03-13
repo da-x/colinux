@@ -8,6 +8,7 @@ targets['executables'] = Target(
     Input('colinux-bridged-net-daemon.exe'),
     Input('colinux-slirp-net-daemon.exe'),
     Input('colinux-serial-daemon.exe'),
+    Input('colinux-console-wx.exe'),
     Input('linux.sys'),
     ],
     tool = Empty(),
@@ -30,6 +31,18 @@ def generate_options(compiler_def_type, libs=None, lflags=None):
             'user32', 'gdi32', 'ws2_32', 'ntdll', 'kernel32', 'ole32', 'uuid', 'gdi32',
             'msvcrt', 'crtdll', 'shlwapi', 
         ]),
+    )
+
+def generate_wx_options():
+    return Options(
+        overriders = dict(
+            compiler_def_type = 'g++',
+            compiler_strip = True,
+        ),
+        appenders = dict(
+		compiler_flags = [ '`wx-config --cxxflags`' ],
+		linker_add = [ '`wx-config --libs`' ],
+	)
     )
 
 user_dep = [Input('../user/user-all.a')]
@@ -94,6 +107,14 @@ targets['colinux-console-nt.exe'] = Target(
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('g++'),
+)
+
+targets['colinux-console-wx.exe'] = Target(
+	inputs = user_res + [
+		Input('../../../user/console-wx/build.o'),
+	],
+	tool = Compiler(),
+	mono_options = generate_wx_options(),
 )
 
 targets['colinux-debug-daemon.exe'] = Target(

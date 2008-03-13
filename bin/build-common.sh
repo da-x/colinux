@@ -94,6 +94,15 @@ WINPCAP_VERSION="4.0.1"
 WINPCAP_URL=http://www.winpcap.org/archive
 WINPCAP_SRC_ARCHIVE=${WINPCAP_VERSION}-${WINPCAP_SRC}.zip
 
+WX_VERSION="2.8.7"
+WX_URL=http://superb-east.dl.sourceforge.net/sourceforge/wxwindows
+WX=wxWidgets-$WX_VERSION
+WX_ARCHIVE=$WX.tar.gz
+if [ "$COLINUX_HOST_OS" = "winnt" ]; then
+	WX_TOOLKIT="msw"
+else
+	WX_TOOLKIT="gtk"
+fi
 
 # KERNEL_VERSION: full kernel version (e.g. 2.6.11)
 # KERNEL_DIR: sub-dir in www.kernel.org for the download (e.g. v2.6)

@@ -12,6 +12,7 @@
 
 extern void *co_memset(void *s, int c, long n);
 extern void *co_memcpy(void *dest, const void *src, long n);
+extern int co_memcmp(void *s1, void *, int);
 extern void *co_memmove(void *dest, const void *src, long n);
 extern void co_bzero(void *s, long n);
 extern const char *co_strstr(const char *haystack, const char *needle);

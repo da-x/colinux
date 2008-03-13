@@ -2,11 +2,12 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/drivers/net/conet.c
-@@ -0,0 +1,287 @@
+@@ -0,0 +1,434 @@
 +/*
 + *  Copyright (C) 2003-2004 Dan Aloni <da-x@gmx.net>
 + *  Copyright (C) 2004 Pat Erley
 + *  Copyright (C) 2004 George Boutwell
++ *  Copyright (C) 2007 Steve Shoecraft <sshoecraft@earthlink.net>
 + *
 + *  Cooperative Linux Network Device implementation
 + */
@@ -20,19 +21,29 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +#include <linux/etherdevice.h>
 +#include <linux/skbuff.h>
 +#include <linux/ethtool.h>
++#include <linux/mii.h>
 +#include <linux/pci.h>
 +
 +#include <linux/cooperative_internal.h>
 +#include <linux/cooperative_pci.h>
 +#include <asm/irq.h>
 +
++#define DRV_NAME 	"conet"
++#define DRV_VERSION	"1.02"
++
 +struct conet_priv {
 +	struct net_device_stats stats;
-+	int status;
 +	int unit;
-+	int enabled;
-+	int handling;
++	unsigned short flags;
++	struct pci_dev *pdev;
++	spinlock_t rx_lock;
++	spinlock_t ioctl_lock;
++	struct mii_if_info mii_if;
 +};
++
++#define CONET_FLAG_ENABLED	0x01
++#define CONET_FLAG_HANDLING	0x02
++#define CONET_FLAG_DEBUG	0x80
 +
 +static struct net_device *conet_dev[CO_MODULE_MAX_CONET];
 +
@@ -40,9 +51,9 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +{
 +	struct conet_priv *priv = (struct conet_priv *)dev->priv;
 +
-+	if (priv->enabled) return 0;
++	if (priv->flags & CONET_FLAG_ENABLED) return 0;
 +
-+	priv->enabled = 1;
++	priv->flags |= CONET_FLAG_ENABLED;
 +
 +	netif_start_queue(dev);
 +
@@ -53,7 +64,7 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +{
 +	struct conet_priv *priv = (struct conet_priv *)dev->priv;
 +
-+	priv->enabled = 0;
++	priv->flags &= ~CONET_FLAG_ENABLED;
 +
 +	netif_stop_queue(dev);
 +
@@ -131,6 +142,7 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +static irqreturn_t conet_interrupt(int irq, void *dev_id)
 +{
 +	co_message_node_t *node_message;
++
 +	while (co_get_message(&node_message, CO_DEVICE_NETWORK)) {
 +		struct net_device *dev;
 +		struct conet_priv *priv;
@@ -154,15 +166,21 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +		}
 +
 +		priv = (struct conet_priv *)dev->priv;
-+		if (priv->handling) {
++		spin_lock(&priv->rx_lock);
++#if 0
++		if (priv->flags & CONET_FLAG_HANDLING) {
 +			co_free_message(node_message);
 +			continue;
 +		}
 +
-+		priv->handling = 1;
++		priv->flags |= CONET_FLAG_HANDLING;
 +		conet_rx(dev, message);
 +		co_free_message(node_message);
-+		priv->handling = 0;
++		priv->flags &= ~CONET_FLAG_HANDLING;
++#endif
++		conet_rx(dev, message);
++		co_free_message(node_message);
++		spin_unlock(&priv->rx_lock);
 +	}
 +
 +	return IRQ_HANDLED;
@@ -174,6 +192,122 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +
 +	return &priv->stats;
 +}
++
++static int conet_get_settings(struct net_device *dev, struct ethtool_cmd *cmd)
++{
++	/* We support 100-baseT Full duplex TP */
++	cmd->port = PORT_TP;
++	cmd->duplex = DUPLEX_FULL;
++	cmd->supported = SUPPORTED_TP | SUPPORTED_100baseT_Full;
++	cmd->speed = SPEED_100;
++	return 0;
++}
++
++static int conet_set_settings(struct net_device *dev, struct ethtool_cmd *cmd)
++{
++	/* We support TP Full duplex 100 */
++	if (cmd->port != PORT_TP || cmd->duplex != DUPLEX_FULL || cmd->speed != SPEED_100)
++		return -EOPNOTSUPP;
++	return 0;
++}
++
++static void conet_get_drvinfo(struct net_device *dev, struct ethtool_drvinfo *info)
++{
++	struct conet_priv *priv = netdev_priv(dev);
++
++	strcpy(info->driver, DRV_NAME);
++	strcpy(info->version, DRV_VERSION);
++	strcpy(info->bus_info, pci_name(priv->pdev));
++}
++
++static u32 conet_get_link(struct net_device *dev)
++{
++	/* Always connected */
++	return 1;
++}
++
++static u32 conet_get_msglevel(struct net_device *dev)
++{
++	struct conet_priv *priv = netdev_priv(dev);
++
++        return ((priv->flags & CONET_FLAG_DEBUG) != 0);
++}
++
++static void conet_set_msglevel(struct net_device *dev, u32 level)
++{
++	struct conet_priv *priv = netdev_priv(dev);
++
++	if (level)
++		priv->flags |= CONET_FLAG_DEBUG;
++	else
++		priv->flags &= ~CONET_FLAG_DEBUG;
++}
++
++static int conet_mdio_read(struct net_device *dev, int id, int reg)
++{
++	struct conet_priv *priv = netdev_priv(dev);
++	int val;
++
++	if (priv->flags & CONET_FLAG_DEBUG)
++		printk(KERN_INFO "conet%d: mdio_read: id: %d, reg: %d\n", priv->unit, id, reg);
++	switch(reg) {
++	case MII_BMCR:			/* Basic mode control register */
++		val = BMCR_FULLDPLX | BMCR_SPEED100;
++		break;
++	case MII_BMSR:			/* Basic mode status register  */
++		val = BMSR_LSTATUS | BMSR_100FULL;
++		break;
++	default:
++		val = 0;
++		break;
++	}
++	return val;
++}
++
++static void conet_mdio_write(struct net_device *dev, int id, int reg, int val)
++{
++	struct conet_priv *priv = netdev_priv(dev);
++
++	if (priv->flags & CONET_FLAG_DEBUG)
++		printk(KERN_INFO "conet%d: mdio_write: id: %d, reg: %d, val: %d\n", priv->unit, id, reg, val);
++	return;
++}
++
++static int conet_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
++{
++	struct conet_priv *priv = netdev_priv(dev);
++	int rc;
++
++	spin_lock(&priv->ioctl_lock);
++	rc = generic_mii_ioctl(&priv->mii_if, if_mii(rq), cmd, NULL);
++	spin_unlock(&priv->ioctl_lock);
++
++	return rc;
++}
++
++static const struct ethtool_ops conet_ethtool_ops = {
++	.get_settings           = conet_get_settings,
++	.set_settings           = conet_set_settings,
++	.get_drvinfo            = conet_get_drvinfo,
++	.get_link               = conet_get_link,
++	.get_msglevel           = conet_get_msglevel,
++	.set_msglevel           = conet_set_msglevel,
++#if 0
++	.nway_reset             = conet_nway_reset,
++	.get_ringparam          = conet_get_ringparam,
++	.set_ringparam          = conet_set_ringparam,
++	.get_tx_csum            = ethtool_op_get_tx_csum,
++	.get_sg                 = ethtool_op_get_sg,
++	.get_tso                = ethtool_op_get_tso,
++	.get_strings            = conet_get_strings,
++	.self_test_count        = conet_self_test_count,
++	.self_test              = conet_ethtool_test,
++	.phys_id                = conet_phys_id,
++	.get_regs_len           = conet_get_regs_len,
++	.get_regs               = conet_get_regs,
++	.get_perm_addr          = ethtool_op_get_perm_addr,
++#endif
++};
 +
 +static struct pci_device_id conet_pci_ids[] = {
 +	{ PCI_DEVICE(PCI_VENDOR_ID_CO, PCI_DEVICE_ID_CONET) },
@@ -211,16 +345,29 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +	SET_NETDEV_DEV(dev, &pdev->dev);
 +	memcpy(dev->dev_addr, addr, 6);
 +
-+//	spin_lock_init(&priv->lock);
++	spin_lock_init(&priv->ioctl_lock);
++	spin_lock_init(&priv->rx_lock);
 +
 +	dev->open = conet_open;
 +	dev->stop = conet_stop;
 +	dev->hard_start_xmit = conet_hard_start_xmit;
++	dev->ethtool_ops = &conet_ethtool_ops;
 +	dev->get_stats = conet_get_stats;
++	dev->do_ioctl = conet_ioctl;
 +	dev->irq = pdev->irq;
 +
 +	priv = netdev_priv(dev);
 +	priv->unit = unit;
++	priv->pdev = pdev;
++
++	priv->mii_if.full_duplex = 1;
++	priv->mii_if.phy_id_mask = 0x1f;
++	priv->mii_if.reg_num_mask = 0x1f;
++	priv->mii_if.dev = dev;
++	priv->mii_if.mdio_read = conet_mdio_read;
++	priv->mii_if.mdio_write = conet_mdio_write;
++	priv->mii_if.phy_id = 1;
++
 +	pci_set_drvdata(pdev, priv);
 +
 +	rc = register_netdev(dev);
@@ -257,7 +404,7 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +}
 +
 +static struct pci_driver conet_pci_driver = {
-+	.name           = "conet",
++	.name           = DRV_NAME,
 +	.id_table       = conet_pci_ids,
 +	.probe          = conet_pci_probe,
 +	.remove         = __devexit_p(conet_pci_remove),

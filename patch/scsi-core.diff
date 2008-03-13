@@ -2,30 +2,21 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/drivers/scsi/coscsi.c
-@@ -0,0 +1,1139 @@
+@@ -0,0 +1,1152 @@
 +
 +#include <linux/module.h>
-+#include <linux/init.h>
 +#include <linux/interrupt.h>
-+#include <linux/blkdev.h>
-+#include <linux/spinlock.h>
-+#include <linux/errno.h>
-+#include <linux/string.h>
-+#include <linux/ioport.h>
-+#include <linux/proc_fs.h>
 +#include <linux/pci.h>
-+#include <linux/stat.h>
 +#include <linux/delay.h>
-+#include <linux/io.h>
-+#include <scsi/scsicam.h>
 +
 +#include <asm/system.h>
++#include <asm/dma-mapping.h>
++#include <asm/string.h>
 +
 +#include <scsi/scsi.h>
 +#include <scsi/scsi_cmnd.h>
 +#include <scsi/scsi_device.h>
 +#include <scsi/scsi_host.h>
-+#include <scsi/scsi_ioctl.h>
 +
 +#include <linux/cooperative.h>
 +#include <linux/cooperative_internal.h>
@@ -203,9 +194,10 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	if (!dp->os_handle) {
 +		co_passage_page_assert_valid();
 +		co_passage_page_acquire(&flags);
-+		co_passage_page->operation = CO_OPERATION_SCSI;
-+		co_passage_page->params[0] = CO_SCSI_OPEN;
-+		co_passage_page->params[1] = dp->unit;
++		co_passage_page->operation = CO_OPERATION_DEVICE;
++		co_passage_page->params[0] = CO_DEVICE_SCSI;
++		co_passage_page->params[1] = CO_SCSI_OPEN;
++		co_passage_page->params[2] = dp->unit;
 +
 +        	co_switch_wrapper();
 +
@@ -234,9 +226,10 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	if (!dp->os_handle) return 0;
 +	co_passage_page_assert_valid();
 +	co_passage_page_acquire(&flags);
-+	co_passage_page->operation = CO_OPERATION_SCSI;
-+	co_passage_page->params[0] = CO_SCSI_CLOSE;
-+	co_passage_page->params[1] = dp->unit;
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_SCSI;
++	co_passage_page->params[1] = CO_SCSI_CLOSE;
++	co_passage_page->params[2] = dp->unit;
 +
 +       	co_switch_wrapper();
 +
@@ -284,12 +277,13 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	/* Get passage page */
 +	co_passage_page_assert_valid();
 +	co_passage_page_acquire(&flags);
-+	co_passage_page->operation = CO_OPERATION_SCSI;
-+	co_passage_page->params[0] = CO_SCSI_IO;
-+	co_passage_page->params[1] = wp->dp->unit;
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_SCSI;
++	co_passage_page->params[1] = CO_SCSI_IO;
++	co_passage_page->params[2] = wp->dp->unit;
 +
 +	/* Setup iop */
-+	iop = (co_scsi_io_t *) &co_passage_page->params[2];
++	iop = (co_scsi_io_t *) &co_passage_page->params[3];
 +	iop->scp = scp;
 +	iop->offset = lba * scp->device->sector_size;
 +	iop->count = count;
@@ -350,9 +344,10 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +
 +	co_passage_page_assert_valid();
 +	co_passage_page_acquire(&flags);
-+	co_passage_page->operation = CO_OPERATION_SCSI;
-+	co_passage_page->params[0] = CO_SCSI_SIZE;
-+	co_passage_page->params[1] = dp->unit;
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_SCSI;
++	co_passage_page->params[1] = CO_SCSI_SIZE;
++	co_passage_page->params[2] = dp->unit;
 +
 +       	co_switch_wrapper();
 +
@@ -410,11 +405,12 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +
 +	co_passage_page_assert_valid();
 +	co_passage_page_acquire(&flags);
-+	co_passage_page->operation = CO_OPERATION_SCSI;
-+	co_passage_page->params[0] = CO_SCSI_PASS;
-+	co_passage_page->params[1] = dp->unit;
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_SCSI;
++	co_passage_page->params[1] = CO_SCSI_PASS;
++	co_passage_page->params[2] = dp->unit;
 +
-+	pass = (co_scsi_pass_t *) &co_passage_page->params[2];
++	pass = (co_scsi_pass_t *) &co_passage_page->params[3];
 +	memcpy(&pass->cdb, &scp->cmnd, 16);
 +	pass->cdb_len = scp->cmd_len;
 +	pass->write = (scp->sc_data_direction == DMA_TO_DEVICE);
@@ -510,15 +506,6 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +
 +static int inquiry(coscsi_worker_t *wp) {
 +	int x, alloc_len;
-+	coscsi_page_t *inq;
-+
-+#if COSCSI_DEBUG_INQ
-+	if (wp->dp->debug) printk(KERN_INFO "scsi_inq: rom: %p\n", wp->dp->rom->inq);
-+#endif
-+	if (!wp->dp->rom->inq)
-+		return check_condition(wp->dp, ILLEGAL_REQUEST, INVALID_FIELD_IN_CDB, 0);
-+	else
-+		inq = wp->dp->rom->inq;
 +
 +	alloc_len = (wp->scp->cmnd[3] << 8) + wp->scp->cmnd[4];
 +#if COSCSI_DEBUG_INQ
@@ -527,18 +514,44 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +
 +	/* EVPD? */
 +	if (wp->scp->cmnd[1] & 1) {
-+		for(x=1; inq[x].page; x++) {
-+			if (wp->scp->cmnd[2] == inq[x].num)
-+				return response(wp, inq[x].page, min(alloc_len, inq[x].size));
++		coscsi_page_t *vpd = wp->dp->rom->vpd;
++		int page = wp->scp->cmnd[2];
++
++#if COSCSI_DEBUG_INQ
++		if (wp->dp->debug) printk(KERN_INFO "scsi_inq: sending VPD page %d\n", page);
++#endif
++		/* For page 00, generate dynamically */
++		if (page == 0) {
++			unsigned char data[32];
++			int i;
++
++			memset(data, 0, sizeof(data));
++			data[0] = wp->dp->rom->std.page[0];
++			i = 4;
++			for(x=0; vpd[x].page; x++) data[i++] = vpd[x].num;
++			data[3] = i - 3;
++
++			return response(wp, data, min(alloc_len, sizeof(data)));
++		} else {
++			for(x=0; vpd[x].page; x++) {
++				if (vpd[x].num == page)
++					return response(wp, vpd[x].page, min(alloc_len, vpd[x].size));
++			}
++			return check_condition(wp->dp, ILLEGAL_REQUEST, INVALID_FIELD_IN_CDB, 0);
 +		}
-+		return check_condition(wp->dp, ILLEGAL_REQUEST, INVALID_FIELD_IN_CDB, 0);
++
++	/* Standard page */
 +	} else {
-+		/* Standard page */
-+		strcpy((char *)&inq[0].page[8], "coLinux");
-+		inq[0].page[1] = ((wp->dp->type == TYPE_ROM || wp->dp->type == TYPE_TAPE) ? 0x80 : 0);
-+		memcpy(&inq[0].page[16], wp->dp->rom->name, strlen(wp->dp->rom->name)+1);
-+		memcpy(&inq[0].page[32], scsi_rev, min(4, strlen(scsi_rev)+1));
-+		return response(wp, inq[0].page, min(alloc_len, inq[0].size));
++		unsigned char *std = wp->dp->rom->std.page;
++
++#if COSCSI_DEBUG_INQ
++		printk(KERN_INFO "scsi_inq: sending STD page\n");
++#endif
++		strcpy((char *)&std[8], "coLinux");
++		std[1] = ((wp->dp->type == TYPE_ROM || wp->dp->type == TYPE_TAPE) ? 0x80 : 0);
++		memcpy(&std[16], wp->dp->rom->name, strlen(wp->dp->rom->name)+1);
++		memcpy(&std[32], scsi_rev, min(4, strlen(scsi_rev)+1));
++		return response(wp, std, min(alloc_len, wp->dp->rom->std.size));
 +	}
 +}
 +
@@ -569,20 +582,20 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +}
 +
 +static int mode_sense(coscsi_worker_t *wp) {
-+	unsigned char *ap;
++	unsigned char data[256],*ap;
 +	int offset, bd_len, page;
 +	coscsi_page_t *pages = wp->dp->rom->mode;
 +	coscsi_device_t *dp = wp->dp;
 +	register int x;
 +
-+	memset(dp->msg, 0, 0x12);
++	memset(data, 0, sizeof(data));
 +	offset = 4;
 +	bd_len = 8;
 +
-+	dp->msg[2] = 0x10; /* DPOFUA */
-+	dp->msg[3] = bd_len;
++	data[2] = 0x10; /* DPOFUA */
++	data[3] = bd_len;
 +
-+	ap = dp->msg + offset;
++	ap = data + offset;
 +	if (dp->max_lba > 0xfffffffe) {
 +		ap[0] = 0xff;
 +		ap[1] = 0xff;
@@ -599,7 +612,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	ap[7] = dp->block_size & 0xff;
 +
 +	offset += bd_len;
-+	ap = dp->msg + offset;
++	ap = data + offset;
 +#if COSCSI_DEBUG_SENSE
 +	if (dp->debug) printk(KERN_INFO "mode_sense: ap: %p, offset: %d\n", ap, offset);
 +#endif
@@ -640,8 +653,8 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +#if COSCSI_DEBUG_SENSE
 +	if (dp->debug) printk(KERN_INFO "scsi_mode_sense: offset: %d\n", offset);
 +#endif
-+	dp->msg[0] = offset - 1;
-+	return response(wp, dp->msg, min(wp->scp->cmnd[4], offset));
++	data[0] = offset - 1;
++	return response(wp, data, min(wp->scp->cmnd[4], offset));
 +}
 +
 +/*
@@ -966,47 +979,48 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	/* Get our config from the host */
 +	memset(&devices, 0, sizeof(devices));
 +	co_passage_page_acquire(&flags);
-+	co_passage_page->operation = CO_OPERATION_SCSI;
-+	co_passage_page->params[0] = CO_SCSI_GET_CONFIG;
-+	co_passage_page->params[1] = 0;
-+
-+	/* Do it */
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_SCSI;
++	co_passage_page->params[1] = CO_SCSI_GET_CONFIG;
++	co_passage_page->params[2] = 0;
 +        co_switch_wrapper();
 +
 +	/* Get the result */
-+	for(x=0; x < CO_MODULE_MAX_COSCSI; x++) {
-+		if ((co_passage_page->params[x] & COSCSI_DEVICE_ENABLED) == 0)
-+			continue;
-+		dp = &devices[x];
-+		dp->unit = x;
-+		dp->type = co_passage_page->params[x] & 0x1f;
-+		dp->debug = 1;
-+		switch(dp->type) {
-+		case TYPE_DISK:
-+			dp->rom = &disk_rom;
-+			dp->block_size = 512;
-+			dp->bs_bits = 9;
-+			break;
-+		case TYPE_ROM:
-+		case TYPE_WORM:
-+			dp->rom = &cd_rom;
-+			dp->block_size = 2048;
-+			dp->bs_bits = 11;
-+			break;
-+		case TYPE_PASS:
-+			dp->rom = (void *) ~0L;
-+			break;
-+		case TYPE_MEDIUM_CHANGER:
-+//			dp->rom = &changer_rom;
-+			break;
-+		case TYPE_TAPE:
-+//			dp->rom = &tape_rom;
-+			dp->block_size = 1048576;
-+			dp->bs_bits = 12;
-+			break;
-+		default:
-+			dp->unit = -1;
-+			break;
++	if (!co_passage_page->params[0]) {
++		for(x=0; x < CO_MODULE_MAX_COSCSI; x++) {
++			if ((co_passage_page->params[x+1] & COSCSI_DEVICE_ENABLED) == 0)
++				continue;
++			dp = &devices[x];
++			dp->unit = x;
++			dp->type = co_passage_page->params[x+1] & 0x1f;
++			dp->debug = 1;
++			switch(dp->type) {
++			case TYPE_DISK:
++				dp->rom = &disk_rom;
++				dp->block_size = 512;
++				dp->bs_bits = 9;
++				break;
++			case TYPE_ROM:
++			case TYPE_WORM:
++				dp->rom = &cd_rom;
++				dp->block_size = 2048;
++				dp->bs_bits = 11;
++				break;
++			case TYPE_PASS:
++				dp->rom = (void *) ~0L;
++				break;
++			case TYPE_MEDIUM_CHANGER:
++//				dp->rom = &changer_rom;
++				break;
++			case TYPE_TAPE:
++//				dp->rom = &tape_rom;
++				dp->block_size = 1048576;
++				dp->bs_bits = 12;
++				break;
++			default:
++				dp->unit = -1;
++				break;
++			}
 +		}
 +	}
 +
@@ -1017,8 +1031,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	printk(KERN_INFO "SCSI: device configuration:\n");
 +	for(x=0; x < CO_MODULE_MAX_COSCSI; x++) {
 +		dp = &devices[x];
-+		printk(KERN_INFO "scsi%02d: type: %02d, rom: %p, name: %s\n",
-+			dp->unit, dp->type, dp->rom);
++		printk(KERN_INFO "scsi%02d: type: %02d, rom: %p\n", dp->unit, dp->type, dp->rom);
 +	}
 +#endif
 +
@@ -1146,7 +1159,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi_rom.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/drivers/scsi/coscsi_rom.h
-@@ -0,0 +1,123 @@
+@@ -0,0 +1,142 @@
 +
 +#ifndef __COSCSI_ROM_H
 +#define __COSCSI_ROM_H
@@ -1159,9 +1172,12 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi_rom.h
 +};
 +typedef struct coscsi_page coscsi_page_t;
 +
++#define COSCSI_ROM_PAGE(n,p) { n, p, sizeof(p) }
++
 +struct coscsi_rom {
 +        char *name;
-+        coscsi_page_t *inq;
++        coscsi_page_t std;
++        coscsi_page_t *vpd;
 +	coscsi_page_t *mode;
 +};
 +typedef struct coscsi_rom coscsi_rom_t;
@@ -1170,8 +1186,9 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi_rom.h
 + * Disk pages
 +*/
 +
-+static unsigned char disk_inq_00[] = {
-+	0x00,0x00,0x05,0x02,0x5c,0x00,0x00,0x60,	/* 00 - 07 */
++/* Standard Inquiry page */
++static unsigned char disk_std_page[] = {
++	0x00,0x00,0x05,0x02,0x5c,0x00,0x01,0x20,	/* 00 - 07 */
 +	0x63,0x6f,0x4c,0x69,0x6e,0x75,0x78,0x00,	/* 08 - 15 */
 +	0x43,0x4f,0x44,0x49,0x53,0x4b,0x00,0x00,	/* 16 - 23 */
 +	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 24 - 31 */
@@ -1185,23 +1202,36 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi_rom.h
 +	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 88 - 95 */
 +};
 +
-+static unsigned char disk_inq_80[] = {
++#if 0
++/* Supported VPD Pages */
++static unsigned char disk_vpd_00[] = {
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 00 - 07 */
++};
++#endif
++
++#if 0
++/* Unit Serial Number VPD page */
++static unsigned char disk_vpd_80[] = {
++	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 00 - 07 */
++};
++#endif
++
++/* Device Identification VPD page */
++static unsigned char disk_vpd_83[] = {
 +	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 00 - 07 */
 +};
 +
-+static unsigned char disk_inq_83[] = {
-+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 00 - 07 */
++/* Block Limits VPD page */
++static unsigned char disk_vpd_b0[] = {
++	0x00,0xB0,0x00,0x10,0x00,0x00,0x00,0x00,	/* 00 - 07 */
 +};
 +
-+static unsigned char disk_inq_b0[] = {
-+	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 00 - 07 */
-+};
-+
-+static coscsi_page_t disk_inq_pages[] = {
-+	{ 0x00, disk_inq_00, sizeof(disk_inq_00) },	/* Standard page */
-+	{ 0x80, disk_inq_80, sizeof(disk_inq_80) },	/* Unit Serial Number */
-+	{ 0x83, disk_inq_83, sizeof(disk_inq_83) },	/* Device Identification */
-+	{ 0xB0, disk_inq_b0, sizeof(disk_inq_b0) },	/* Block limits (SBC) */
++static coscsi_page_t disk_vpd_pages[] = {
++#if 0
++	COSCSI_ROM_PAGE(0x80, disk_vpd_80),		/* Unit Serial Number */
++#endif
++	COSCSI_ROM_PAGE(0x83, disk_vpd_83),		/* Device Identification */
++	COSCSI_ROM_PAGE(0xb0, disk_vpd_b0),		/* Block limits (SBC) */
 +	{ 0, 0, 0 }
 +};
 +
@@ -1212,13 +1242,14 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi_rom.h
 +};
 +
 +static coscsi_page_t disk_mode_pages[] = {
-+	{ 0x08, disk_mode_08, sizeof(disk_mode_08) },
++	COSCSI_ROM_PAGE(0x08, disk_mode_08),
 +	{ 0, 0, 0 }
 +};
 +
 +static coscsi_rom_t disk_rom = {
 +	.name =		"CODISK",
-+	.inq = 		disk_inq_pages,
++	.std =		COSCSI_ROM_PAGE(0, disk_std_page),
++	.vpd =		disk_vpd_pages,
 +	.mode =		disk_mode_pages,
 +};
 +
@@ -1226,7 +1257,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi_rom.h
 + * CD pages
 +*/
 +
-+static unsigned char cd_inq_00[] = {
++static unsigned char cd_std_page[] = {
 +	0x05,0x80,0x02,0x02,0x1f,0x00,0x00,0x10,	/* 00 - 07 */
 +	0x4f,0x50,0x30,0x34,0x32,0x5a,0x20,0x49,	/* 08 - 15 */
 +	0x52,0x53,0x30,0x36,0x50,0x20,0x20,0x20,	/* 16 - 23 */
@@ -1242,13 +1273,13 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi_rom.h
 +	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 88 - 95 */
 +};
 +
-+static unsigned char cd_inq_83[] = {
++/* Device Identification VPD page */
++static unsigned char cd_vpd_83[] = {
 +	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,	/* 00 - 07 */
 +};
 +
-+static coscsi_page_t cd_inq_pages[] = {
-+	{ 0x00, cd_inq_00, sizeof(cd_inq_00) },	/* Standard page */
-+	{ 0x83, cd_inq_83, sizeof(cd_inq_83) },	/* Device Identification */
++static coscsi_page_t cd_vpd_pages[] = {
++	COSCSI_ROM_PAGE(0x83, cd_vpd_83),		/* Device Identification */
 +	{ 0, 0, 0 }
 +};
 +
@@ -1259,13 +1290,14 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi_rom.h
 +};
 +
 +static coscsi_page_t cd_mode_pages[] = {
-+	{ 0x2a, cd_mode_2a, sizeof(cd_mode_2a) },
++	COSCSI_ROM_PAGE(0x2a, cd_mode_2a),
 +	{ 0, 0, 0 }
 +};
 +
 +static coscsi_rom_t cd_rom = {
 +	.name =		"COCD",
-+	.inq = 		cd_inq_pages,
++	.std =		COSCSI_ROM_PAGE(0, cd_std_page),
++	.vpd = 		cd_vpd_pages,
 +	.mode =		cd_mode_pages,
 +};
 +
