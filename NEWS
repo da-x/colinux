@@ -14,6 +14,7 @@
     http://www.kernel.org/pub/linux/kernel/v2.6/ChangeLog-2.6.22.18
   * Feature Requests #1421120: Fixup "vim fsync" error on cofs.
   * Bugfix get_size for double opened block devices.
+  * Fix BSOD on "stty rows N" where n>25. Disable resize. (Paolo Minazzi)
 
   Installer:
   * Update image ArchLinux-2007.08-2
