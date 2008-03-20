@@ -19,7 +19,7 @@
 
 static inline PMDL co_winnt_MmAllocatePagesForMdl(co_osdep_manager_t osdep)
 {
-	PHYSICAL_ADDRESS LowAddress  = { .QuadPart = osdep->hostmem_min_physical_address };
+	PHYSICAL_ADDRESS LowAddress  = { .QuadPart = 0x1000000 }; /* all under 16MB, reserved for DMA */
 	PHYSICAL_ADDRESS HighAddress = { .QuadPart = osdep->hostmem_max_physical_address };
 	PHYSICAL_ADDRESS SkipBytes   = { .QuadPart = 0 };
 

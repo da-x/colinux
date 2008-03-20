@@ -15,60 +15,8 @@
 
 static void setup_host_memory_range(co_manager_t *manager, co_osdep_manager_t osdep)
 {
-	const long long MaxHighAddress = (long long) (manager->hostmem_pages - 1) << CO_ARCH_PAGE_SHIFT;
-	PPHYSICAL_MEMORY_RANGE pMemMap;
-	PHYSICAL_ADDRESS LowAddress;
-	PHYSICAL_ADDRESS HighAddress;
-	int i;
-	long long size = 0;
-
-	/* defaults */
-	osdep->hostmem_min_physical_address = 0x1000000; /* Skip 16MB DMA */
-	osdep->hostmem_max_physical_address = MaxHighAddress;
-
-	pMemMap = MmGetPhysicalMemoryRanges();
-	if (!pMemMap)
-		return;
-
-	/* find biggest usable frame in maps */
-	for (i = 0; i < 64; pMemMap++, i++) {
-
-		if (!pMemMap->BaseAddress.QuadPart && !pMemMap->NumberOfBytes.QuadPart)
-			return; /* end of list */
-
-		if (pMemMap->NumberOfBytes.LowPart < PAGE_SIZE * PFN_ALLOCATION_COUNT)
-			continue; /* to small */
-
-		HighAddress.QuadPart = pMemMap->BaseAddress.QuadPart \
-				     + pMemMap->NumberOfBytes.QuadPart - 1;
-		if (HighAddress.QuadPart < 0x1000000)
-			continue; /* all under 16MB, reserved for DMA */
-
-		/* max supported in reverse map, and */
-		/* we don't support PGE yet (4GB) */
-		if (HighAddress.QuadPart > MaxHighAddress)
-			HighAddress.QuadPart = MaxHighAddress;
-
-		LowAddress.QuadPart = pMemMap->BaseAddress.QuadPart;
-
-		/* >16MB We don't want to steal DMA memory */
-		if (LowAddress.QuadPart < 0x1000000)
-			LowAddress.QuadPart = 0x1000000;
-
-		if (HighAddress.QuadPart <= LowAddress.QuadPart)
-			continue; /* empty now */
-
-		if (HighAddress.QuadPart - LowAddress.QuadPart > size) {
-			size = HighAddress.QuadPart - LowAddress.QuadPart;
-			osdep->hostmem_min_physical_address = LowAddress.QuadPart;
-			osdep->hostmem_max_physical_address = HighAddress.QuadPart;
-
-			co_debug("Range[%d] 0x%lx 0x%lx use as %lx %lx", i,
-				pMemMap->BaseAddress.LowPart, pMemMap->NumberOfBytes.LowPart,
-				LowAddress.LowPart, HighAddress.LowPart);
-		}
-	}
-	co_debug("to many ranges");
+	osdep->hostmem_max_physical_address =
+		(long long) (manager->hostmem_pages - 1) << CO_ARCH_PAGE_SHIFT;
 }
 
 co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
