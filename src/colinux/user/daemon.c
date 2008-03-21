@@ -143,6 +143,8 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 #ifdef COLINUX_DEBUG
 	if (co_global_debug_levels.misc_level < verbose_level)
 		co_global_debug_levels.misc_level = verbose_level;
+#else
+	co_terminal_print("daemon: \"-v\" ignored, COLINUX_DEBUG was not compiled in.\n");
 #endif
 
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-h", &start_parameters->show_help);
