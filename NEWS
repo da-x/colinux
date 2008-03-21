@@ -21,6 +21,9 @@
   * Text '* Notes' sometimes was only shown as '*', adjust field sizes
   * Feature Requests #1898468: expose install folder as variable %COLINUX%
 
+  Buildsystem:
+  * New option --errfile use different file for stdout and stderr.
+
 * Version 0.7.2
   Bugfixes:
   * #1324092: cofs rename replace existing file.

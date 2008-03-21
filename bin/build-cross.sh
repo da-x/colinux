@@ -87,10 +87,10 @@ configure_binutils()
 	rm -rf "binutils-$TARGET"
 	mkdir "binutils-$TARGET"
 	cd "binutils-$TARGET"
-	"$BUILD_DIR/$BINUTILS/configure" \
+	"../$BINUTILS/configure" \
 		--prefix="$PREFIX" --target=$TARGET \
 		--disable-nls \
-		>>$COLINUX_BUILD_LOG 2>&1
+		>>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR
 	test $? -ne 0 && error_exit 1 "configure binutils failed"
 }
 
@@ -98,7 +98,7 @@ build_binutils()
 {
 	echo "Building binutils"
 	cd "$BUILD_DIR/binutils-$TARGET"
-	make $BUILD_FLAGS >>$COLINUX_BUILD_LOG 2>&1
+	make $BUILD_FLAGS >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR
 	test $? -ne 0 && error_exit 1 "make binutils failed"
 }
 
@@ -106,7 +106,7 @@ install_binutils()
 {
 	echo "Installing binutils"
 	cd "$BUILD_DIR/binutils-$TARGET"
-	make install >>$COLINUX_BUILD_LOG 2>&1
+	make install >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR
 	test $? -ne 0 && error_exit 1 "install binutils failed"
 }
 
@@ -143,7 +143,7 @@ configure_gcc()
 	rm -rf "gcc-$TARGET"
 	mkdir "gcc-$TARGET"
 	cd "gcc-$TARGET"
-	"$BUILD_DIR/$GCC/configure" -v \
+	"../$GCC/configure" -v \
 		--prefix="$PREFIX" --target=$TARGET \
 		--with-headers="$PREFIX/$TARGET/include" \
 		--with-gnu-as --with-gnu-ld \
@@ -151,7 +151,7 @@ configure_gcc()
 		--without-newlib --disable-multilib \
 		--enable-languages="c,c++" \
 		$DISABLE_CHECKING \
-		>>$COLINUX_BUILD_LOG 2>&1
+		>>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR
 	test $? -ne 0 && error_exit 1 "configure gcc failed"
 }
 
@@ -159,7 +159,7 @@ build_gcc()
 {
 	echo "Building gcc"
 	cd "$BUILD_DIR/gcc-$TARGET"
-	make $BUILD_FLAGS >>$COLINUX_BUILD_LOG 2>&1
+	make $BUILD_FLAGS >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR
 	test $? -ne 0 && error_exit 1 "make gcc failed"
 }
 
@@ -167,7 +167,7 @@ install_gcc()
 {
 	echo "Installing gcc"
 	cd "$BUILD_DIR/gcc-$TARGET"
-	make install >>$COLINUX_BUILD_LOG 2>&1
+	make install >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR
 	test $? -ne 0 && error_exit 1 "install gcc failed"
 }
 
@@ -233,15 +233,15 @@ build_binutils_guest()
 		--program-prefix="${COLINUX_GCC_GUEST_TARGET}-" \
 		--prefix="$PREFIX/$COLINUX_GCC_GUEST_TARGET" \
 		--disable-nls \
-		>>$COLINUX_BUILD_LOG 2>&1
+		>>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR
 	test $? -ne 0 && error_exit 1 "configure guest binutils failed"
 
 	echo "Building guest binutils"
-	make $BUILD_FLAGS >>$COLINUX_BUILD_LOG 2>&1
+	make $BUILD_FLAGS >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR
 	test $? -ne 0 && error_exit 1 "make guest binutils failed"
 
 	echo "Installing guest binutils"
-	make install >>$COLINUX_BUILD_LOG 2>&1
+	make install >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR
 	test $? -ne 0 && error_exit 1 "install guest binutils failed"
 }
 
@@ -285,15 +285,15 @@ build_gcc_guest()
 		--disable-nls \
 		--enable-languages="c,c++" \
 		$DISABLE_CHECKING \
-		>>$COLINUX_BUILD_LOG 2>&1
+		>>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR
 	test $? -ne 0 && error_exit 1 "configure gcc failed"
 
 	echo "Building guest gcc"
-	make $BUILD_FLAGS >>$COLINUX_BUILD_LOG 2>&1
+	make $BUILD_FLAGS >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR
 	test $? -ne 0 && error_exit 1 "make guest gcc failed"
 
 	echo "Installing guest gcc"
-	make install >>$COLINUX_BUILD_LOG 2>&1
+	make install >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR
 	test $? -ne 0 && error_exit 1 "install guest gcc failed"
 
 	# remove info and man pages
@@ -324,6 +324,8 @@ build_cross()
 
 	echo "log: $COLINUX_BUILD_LOG"
 	mkdir -p `dirname $COLINUX_BUILD_LOG`
+	echo "err: $COLINUX_BUILD_ERR"
+	mkdir -p `dirname $COLINUX_BUILD_ERR`
 
 	install_libs
 
