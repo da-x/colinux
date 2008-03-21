@@ -16,6 +16,7 @@
 
 CO_TRACE_STOP;
 
+#ifdef COLINUX_TRACE
 void co_trace_ent_name(void *ptr, const char *name)
 {
 	static int reenter = 0;
@@ -29,6 +30,7 @@ void co_trace_ent_name(void *ptr, const char *name)
 
 	reenter--;
 }
+#endif
 
 static inline co_debug_tlv_t *tlv_add_const_string(co_debug_type_t type, const char *str, co_debug_tlv_t *sub_tlv)
 {
