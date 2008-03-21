@@ -18,8 +18,8 @@
   Name "Cooperative Linux ${VERSION}"
   OutFile "coLinux.exe"
 
-  ShowInstDetails show
-  ShowUninstDetails show
+  ;ShowInstDetails show
+  ;ShowUninstDetails show
 
   ;Folder selection page
   InstallDir "$PROGRAMFILES\coLinux"
@@ -116,7 +116,7 @@ SectionGroup "coLinux" SecGrpcoLinux
 
 Section
 
-  ;Check running 64 bit and block it
+  ;Check running 64 bit and block it (NSIS 2.21 and newer)
   ${If} ${RunningX64}
     MessageBox MB_OK "coLinux can't run on x64"
     DetailPrint "Abort on 64 bit"
