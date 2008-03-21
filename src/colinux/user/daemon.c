@@ -140,8 +140,10 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-v",
 							  &verbose_specified, &verbose_level);
 
+#ifdef COLINUX_DEBUG
 	if (co_global_debug_levels.misc_level < verbose_level)
 		co_global_debug_levels.misc_level = verbose_level;
+#endif
 
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-h", &start_parameters->show_help);
 

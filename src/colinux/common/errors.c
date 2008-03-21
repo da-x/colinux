@@ -10,7 +10,9 @@
 #include "common.h"
 #include "debug.h"
 
+#ifdef COLINUX_DEBUG
 static int file_id_max;
+#endif
 
 #define X(name) "CO_RC_ERROR_"#name,
 static const char *co_errors_strings[] = {
@@ -38,6 +40,7 @@ void co_rc_format_error(co_rc_t rc, char *buf, int size)
 			code_string = "<unknown error>";
 		}
 
+#ifdef COLINUX_DEBUG
 		if (file_id_max == 0) {
 			while (colinux_obj_filenames[file_id_max])
 				file_id_max++;
@@ -49,6 +52,10 @@ void co_rc_format_error(co_rc_t rc, char *buf, int size)
 		} else {
 			file_string = "<unknown file>";
 		}
+#else
+		file_id = 0;
+		file_string = "<unknown file>";
+#endif
  
 		co_snprintf(buf, size, "error - %s, line %ld, file %s (%d)",
 			    code_string, CO_RC_GET_LINE(rc), file_string, file_id);

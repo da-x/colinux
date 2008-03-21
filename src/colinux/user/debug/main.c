@@ -325,6 +325,7 @@ typedef struct {
 	unsigned long facility_offset;
 } facility_descriptor_t;
 
+#ifdef COLINUX_DEBUG
 static facility_descriptor_t facility_descriptors[] = {
 #define X(facility, static_level, default_dynamic_level) \
 	{#facility, (((unsigned long)&(((co_debug_levels_t *)0)->facility##_level)))/sizeof(int)},
@@ -389,6 +390,9 @@ void co_update_settings(void)
 out:
 	co_os_manager_close(handle);
 }
+#else
+void co_update_settings(void) { return; }
+#endif
 
 
 static co_rc_t co_debug_parse_args(co_command_line_params_t cmdline, co_debug_parameters_t *parameters)

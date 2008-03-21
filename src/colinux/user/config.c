@@ -33,6 +33,7 @@ typedef struct {
 
 static co_rc_t check_cobd_file (co_pathname_t pathname, int index)
 {
+#ifdef COLINUX_DEBUG
 	co_rc_t rc;
 	char *buf;
 	unsigned long size;
@@ -68,6 +69,9 @@ static co_rc_t check_cobd_file (co_pathname_t pathname, int index)
 
 	co_os_file_free(buf);
 	return rc;
+#else
+	return CO_RC(OK);  /* No debugging compiled in */
+#endif
 }
 
 static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_config_t *conf)

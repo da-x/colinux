@@ -82,6 +82,8 @@ CO_DEBUG_LIST;
 
 /*----------------------------------------------------------------------------*/
 
+#define COLINUX_DEFINE_MODULE(str) /* str */
+
 #endif
 
 typedef enum {

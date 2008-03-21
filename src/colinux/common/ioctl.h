@@ -105,11 +105,13 @@ typedef struct {
 	unsigned long filled;
 } co_manager_ioctl_debug_reader_t;
 
+#ifdef COLINUX_DEBUG
 /* interface for CO_MANAGER_IOCTL_DEBUG_LEVELS: */
 typedef struct {
 	co_debug_levels_t levels;
 	bool_t modify;
 } co_manager_ioctl_debug_levels_t;
+#endif
 
 /* interface for CO_MANAGER_IOCTL_MONITOR_LIST: */
 typedef struct {

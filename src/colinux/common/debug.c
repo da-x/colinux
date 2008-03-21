@@ -32,6 +32,7 @@ void co_trace_ent_name(void *ptr, const char *name)
 }
 #endif
 
+#ifdef COLINUX_DEBUG
 static inline co_debug_tlv_t *tlv_add_const_string(co_debug_type_t type, const char *str, co_debug_tlv_t *sub_tlv)
 {
 	sub_tlv->type = type;
@@ -100,6 +101,7 @@ void co_debug_(const char *module, co_debug_facility_t facility, int level,
 	co_debug_level_system(module, facility, level, filename, line, func, sub_tlv->value);
 	co_debug_buf(buffer, sub_tlv->value + sub_tlv->length - buffer);
 }
+#endif
 
 CO_TRACE_CONTINUE;
 
