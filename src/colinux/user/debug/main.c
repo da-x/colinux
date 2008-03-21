@@ -483,6 +483,10 @@ co_rc_t co_debug_main(int argc, char *argv[])
 		return CO_RC(OK);	
 	}
 
+#ifndef COLINUX_DEBUG
+	fprintf(stderr, "Warning: Some informations are not available, COLINUX_DEBUG was not compiled in.\n");
+#endif
+
 	if (parameters.output_filename_specified) {
 		output_file = fopen(parameters.output_filename, "ab");
 		if (!output_file)
