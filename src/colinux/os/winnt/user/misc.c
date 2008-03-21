@@ -114,10 +114,10 @@ bool_t co_winnt_get_last_error(char *error_message, int buf_size)
 
 void co_terminal_print_last_error(const char *message)
 {
-	char last_error[0x100];
+	char last_error[0x200];
 
 	if (co_winnt_get_last_error(last_error, sizeof(last_error))) {
-		co_terminal_print("%s: last error: %s", message, last_error);
+		co_terminal_print("%s: %s", message, last_error);
 	} else {
 		co_terminal_print("%s: success\n", message);
 	}
