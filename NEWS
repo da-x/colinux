@@ -1,17 +1,10 @@
 * Version 0.8.0
-  * Add build date to exe file properties.
-  * View build time of ntkernel driver with --status-driver.
-  * Bug #1861876: Random created MAC stored in Registry to have same on
-    every start. [HKCU\Software\coLinux]
   * Use "setcobd=async" to enable asynchronous mode for cobd devices.
 
   Kernel:
   * scsi: New device for images with partition tables and works async.
     Usage "scsi0=disk,file.img" or "scsi1=cdrom,file.iso" (Steve Shoecraft)
   * Added virtual pci device handling. "lspci" is working (Steve Shoecraft)
-
-  Buildsystem:
-  * New option --errfile use for different file from stdout and stderr.
 
   Debugging:
   * Enable host kernel debug via registry [HKLM\SOFTWARE\coLinux] "Debug"
@@ -23,6 +16,14 @@
 * Version 0.7.3
   Bugfixes:
   * Check ELF header before accessing kernel vmlinux (fix exception).
+  * Fix problems with memory hole from shared video cards and the
+    error message "PFN to high".
+
+  Daemon:
+  * Bug #1861876: Random created MAC stored in Registry to have same on
+    every start. [HKCU\Software\coLinux]
+  * Add build date to exe file properties.
+  * View build time of ntkernel driver with --status-driver.
 
   Kernel:
   * Kernel has been updated to 2.6.22.18
@@ -30,11 +31,15 @@
     http://www.kernel.org/pub/linux/kernel/v2.6/ChangeLog-2.6.22.18
   * Feature Requests #1421120: Fixup "vim fsync" error on cofs.
   * Bugfix get_size for double opened block devices.
+  * Fix BSOD on "stty rows N" where n>25. Disable resize. (Paolo Minazzi)
 
   Installer:
   * Update image ArchLinux-2007.08-2
   * Text '* Notes' sometimes was only shown as '*', adjust field sizes
   * Feature Requests #1898468: expose install folder as variable %COLINUX%
+
+  Buildsystem:
+  * New option --errfile use different file for stdout and stderr.
 
 * Version 0.7.2
   Bugfixes:
