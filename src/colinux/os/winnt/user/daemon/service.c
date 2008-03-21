@@ -111,7 +111,7 @@ void co_winnt_change_directory_for_service(int argc, char **argv)
 
 			co_debug("cd '%s'", p);
 			if (SetCurrentDirectory(p) == 0)
-				co_terminal_print_last_error("daemon: Set working directory for service failed.\n");
+				co_terminal_print_last_error("daemon: Set working directory for service failed");
 
 			return;
 		}
@@ -156,7 +156,6 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char 
 	char exe_name[512];
 	char command[1024];
 	char patched_commandline[MAX_CMD_LINE_PATCHED];
-	char error_message[1024];
 
 	co_terminal_print("daemon: installing service '%s'\n", service_name);
 	if (!GetModuleFileName(0, exe_name, sizeof(exe_name))) {
@@ -166,7 +165,7 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char 
 
 	schSCManager = OpenSCManager(0, 0, SC_MANAGER_ALL_ACCESS);
 	if (schSCManager == 0) {
-		co_terminal_print("daemon: cannot open service control maanger. Install failed.\n");
+		co_terminal_print_last_error("daemon: cannot open service control manager for install");
 		return CO_RC(ERROR);
 	}
 
@@ -188,8 +187,7 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char 
 		return CO_RC(OK);
 	}
 
-	co_winnt_get_last_error(error_message, sizeof(error_message));
-	co_terminal_print("daemon: failed to install service: %s\n", error_message);
+	co_terminal_print_last_error("daemon: failed to install service");
 	CloseServiceHandle(schSCManager);
 
 	return CO_RC(ERROR);
@@ -199,36 +197,35 @@ co_rc_t co_winnt_daemon_remove_service(const char *service_name)
 {
 	SC_HANDLE schService;
 	SC_HANDLE schSCManager;
-	char error_message[1024];
+	co_rc_t rc;
 
 	co_terminal_print("daemon: removing service '%s'\n", service_name);
 
 	schSCManager = OpenSCManager(0, 0, SC_MANAGER_ALL_ACCESS);
-	if (schSCManager == 0) {
-		co_terminal_print("daemon: cannot open service control manager. Remove failed.\n");
-		return CO_RC(ERROR);
-	}
+	if (schSCManager) {
+		schService = OpenService(schSCManager, service_name, SERVICE_ALL_ACCESS);
+		if (schService) {
+			if (DeleteService(schService))	{
+				co_terminal_print("daemon: service '%s' removed successfully.\n", service_name);
+				rc = CO_RC(OK);
+			} else {
+				co_terminal_print_last_error("daemon: failed to remove service. DeleteService failed");
+				rc = CO_RC(ERROR);
+			}
 
-	schService = OpenService(schSCManager, service_name, SERVICE_ALL_ACCESS);
-	if (schService == 0) {
-		co_winnt_get_last_error(error_message, sizeof(error_message));
-		co_terminal_print("daemon: failed to remove service. OpenService() failed\n");
+			CloseServiceHandle(schService);
+		} else {
+			co_terminal_print_last_error("daemon: failed to remove service. OpenService failed");
+			rc = CO_RC(ERROR);
+		}
+
 		CloseServiceHandle(schSCManager);
-		return CO_RC(ERROR);
+	} else {
+		co_terminal_print_last_error("daemon: failed to remove service. Open service control manager failed");
+		rc = CO_RC(ERROR);
 	}
 
-	if (!DeleteService(schService))	{
-		co_winnt_get_last_error(error_message, sizeof(error_message));
-		co_terminal_print("daemon: failed to remove service: %s\n", error_message);
-		CloseServiceHandle(schService);
-		return CO_RC(ERROR);
-	}
-
-	CloseServiceHandle(schService);
-	CloseServiceHandle(schSCManager);
-	co_terminal_print("daemon: service '%s' removed successfully.\n", service_name);
-
-	return CO_RC(OK);
+	return rc;
 }
 
 static co_start_parameters_t *daemon_start_parameters;
