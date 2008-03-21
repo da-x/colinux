@@ -113,12 +113,9 @@ co_rc_t co_winnt_remove_driver(void)
 		} else {
 			co_terminal_print("detected an old buggy driver version\n");
 		}
-
-		co_os_manager_close(handle);
-		co_winnt_driver_remove_lowlevel();
-		return rc;
-	}		
-
+		co_terminal_print("Remove driver anyway\n");
+		rc = CO_RC(ERROR_ACCESSING_DRIVER);
+	} else
 	if (status.monitors_count != 0) {
 		co_terminal_print("monitors are running, cannot remove driver\n");
 		co_os_manager_close(handle);
@@ -127,7 +124,7 @@ co_rc_t co_winnt_remove_driver(void)
 
 	co_os_manager_close(handle);
 	co_winnt_driver_remove_lowlevel();
-	return CO_RC(OK);
+	return rc;
 }	
 
 co_rc_t co_winnt_status_driver(int verbose)
