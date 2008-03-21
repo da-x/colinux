@@ -37,9 +37,7 @@ co_rc_t co_os_wait_create(co_os_wait_t *wait_out)
 
 void co_os_wait_sleep(co_os_wait_t wait)
 {
-	NTSTATUS status;
-		
-	status = KeWaitForSingleObject(&wait->event, UserRequest, UserMode, TRUE, NULL);
+	KeWaitForSingleObject(&wait->event, UserRequest, UserMode, TRUE, NULL);
 }
 
 void co_os_wait_wakeup(co_os_wait_t wait)
