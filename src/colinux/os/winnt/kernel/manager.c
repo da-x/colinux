@@ -17,6 +17,10 @@ static void setup_host_memory_range(co_manager_t *manager, co_osdep_manager_t os
 {
 	osdep->hostmem_max_physical_address =
 		(long long) (manager->hostmem_pages - 1) << CO_ARCH_PAGE_SHIFT;
+
+	/* We don't support PGE yet */
+	if (osdep->hostmem_max_physical_address >= 0x100000000LL)
+		osdep->hostmem_max_physical_address = 0x100000000LL-1;
 }
 
 co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
