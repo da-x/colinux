@@ -13,6 +13,16 @@
 #include <colinux/common/libc.h>
 #include <colinux/os/alloc.h>
 
+static void setup_host_memory_range(co_manager_t *manager, co_osdep_manager_t osdep)
+{
+	osdep->hostmem_max_physical_address =
+		(long long) (manager->hostmem_pages - 1) << CO_ARCH_PAGE_SHIFT;
+
+	/* We don't support PGE yet */
+	if (osdep->hostmem_max_physical_address >= 0x100000000LL)
+		osdep->hostmem_max_physical_address = 0x100000000LL-1;
+}
+
 co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
 {
 	co_rc_t rc = CO_RC(OK);
@@ -36,6 +46,8 @@ co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
 	MmResetDriverPaging(&co_global_manager);
 	
 	rc = co_os_mutex_create(&dep->mutex);
+
+	setup_host_memory_range(manager, dep);
 
 	return rc;
 }

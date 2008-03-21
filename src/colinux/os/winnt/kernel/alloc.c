@@ -17,6 +17,16 @@
 
 #include "manager.h"
 
+static inline PMDL co_winnt_MmAllocatePagesForMdl(co_osdep_manager_t osdep)
+{
+	PHYSICAL_ADDRESS LowAddress  = { .QuadPart = 0x1000000 }; /* all under 16MB, reserved for DMA */
+	PHYSICAL_ADDRESS HighAddress = { .QuadPart = osdep->hostmem_max_physical_address };
+	PHYSICAL_ADDRESS SkipBytes   = { .QuadPart = 0 };
+
+	return MmAllocatePagesForMdl(LowAddress, HighAddress, SkipBytes,
+				     PAGE_SIZE * PFN_ALLOCATION_COUNT);
+}
+
 static co_rc_t co_winnt_new_mdl_bucket(co_osdep_manager_t osdep)
 {
 	co_os_mdl_ptr_t *mdl_ptr;
@@ -33,19 +43,10 @@ static co_rc_t co_winnt_new_mdl_bucket(co_osdep_manager_t osdep)
 		rc = CO_RC(OUT_OF_MEMORY);
 		goto error_free_mdl_ptr;
 	}
-	
-	PHYSICAL_ADDRESS LowAddress;
-	PHYSICAL_ADDRESS HighAddress;
-	PHYSICAL_ADDRESS SkipBytes;
-	
-	LowAddress.QuadPart = 0x100000 * 16; /* >16MB We don't want to steal DMA memory */
-	HighAddress.QuadPart = 0x100000000LL; /* We don't support PGE yet */
-	SkipBytes.QuadPart = 0;
-	
+
 	mdl_ptr->use_count = 0;
 	mdl_ptr->pfn_ptrs = pfn_ptrs; 
-	mdl_ptr->mdl = MmAllocatePagesForMdl(LowAddress, HighAddress, SkipBytes,
-					     PAGE_SIZE * PFN_ALLOCATION_COUNT);
+	mdl_ptr->mdl = co_winnt_MmAllocatePagesForMdl(osdep);
 
 	if (mdl_ptr->mdl == NULL) {
 		rc = CO_RC(OUT_OF_MEMORY);

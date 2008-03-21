@@ -1,6 +1,8 @@
 * Version 0.7.3
   Bugfixes:
   * Check ELF header before accessing kernel vmlinux (fix exception).
+  * Fix problems with memory hole from shared video cards and the
+    error message "PFN to high".
 
   Daemon:
   * Bug #1861876: Random created MAC stored in Registry to have same on
