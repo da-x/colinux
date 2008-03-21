@@ -16,9 +16,11 @@
 
 static void report_status(const char *event, co_manager_debug_t *debug)
 {
+#if 0
 	co_debug_system("colinux-debug: %s: sections: %d, total: %ld, filled: %ld",
 			event, debug->sections_count, debug->sections_total_size,
 			debug->sections_total_filled);
+#endif
 }
 
 static co_rc_t create_section(co_debug_section_t **section_out)
