@@ -164,9 +164,6 @@ static NTSTATUS manager_write(co_manager_t *manager, co_manager_open_desc_t open
 			message_size = message->size + sizeof(*message);
 			size_left -= message_size;
 			if (size_left >= 0) {
-				if (message->from == CO_MODULE_CONET0)
-					co_debug_lvl(network, 14, "message written (sent): %p", message);
-
 				co_monitor_message_from_user(opened->monitor, opened, message);
 			}
 			position += message_size;
@@ -195,7 +192,7 @@ static NTSTATUS manager_dispatch(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 	co_manager_t        *manager;
 	co_rc_t             rc;
 	co_manager_ioctl_t  ioctl;
-	co_manager_open_desc_t opened = NULL;
+	co_manager_open_desc_t opened;
 
 	Irp->IoStatus.Status = ntStatus;
 	Irp->IoStatus.Information = 0;
