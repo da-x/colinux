@@ -461,6 +461,11 @@ Environment settings
 	Change font size only.  Default font "Terminal" is still active:
 	set COLINUX_CONSOLE_FONT=:12
 
+    COLINUX=<Install path>
+
+	Installer sets the path to your coLinux installation in environment
+	for all users.
+
 
 Used keys in Windows Registry
 -----------------------------

@@ -27,6 +27,12 @@
 
   Kernel:
   * Kernel has been updated to 2.6.22.18
+  * Kernel config added: More Netfilters (NF_NAT and more), Network Security
+    Marking, RAID and LVM as module (MD), extended attributes for ext2/ext3/
+    reiser/jfs/xfs, Quota, Kernel automounter support, eCrypt filesystem,
+    and more...
+  * Removed: KALLSYMS_ALL (Debugging symbols)
+  * SELINUX support. To enable, set selinux=1 in colinux.conf
   * Fix for splice local root exploit is included, details on
     http://www.kernel.org/pub/linux/kernel/v2.6/ChangeLog-2.6.22.18
   * Feature Requests #1421120: Fixup "vim fsync" error on cofs.
