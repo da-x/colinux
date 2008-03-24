@@ -134,7 +134,7 @@ int scsi_file_close(co_monitor_t *cmon, co_scsi_dev_t *dp)
 
 /* Async is defined in kernel header! */
 #if COSCSI_ASYNC
-static void send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc) {
+static void send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc, int delta) {
 	struct {
 		co_message_t mon;
 		co_linux_message_t linux;
@@ -150,7 +150,7 @@ static void send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc) {
 	msg.linux.unit = unit;
 	msg.info.ctx = ctx;
 	msg.info.result = rc;
-	msg.info.delta = 0;
+	msg.info.delta = delta;
 
 	co_monitor_message_from_user(cmon, 0, (co_message_t *)&msg);
 }
@@ -221,6 +221,11 @@ static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 	int x;
 	co_rc_t rc;
 	scsi_transfer_file_block_data_t data;
+	int bytes_req = 0;
+
+	data.file_handle = (HANDLE)r->dp->os_handle;
+	data.offset.QuadPart = r->io.offset;
+	data.func = r->func;
 
 	/* Map the SG */
 	rc = co_monitor_host_linuxvm_transfer_map(r->mp, r->io.sg,
@@ -231,12 +236,9 @@ static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 		goto io_done;
 	}
 
-	data.file_handle = (HANDLE)r->dp->os_handle;
-	data.offset.QuadPart = r->io.offset;
-	data.func = r->func;
-
 	/* For each vector */
 	for(x=0; x < r->io.count; x++, sg++) {
+		bytes_req += sg->length;
 		rc = co_monitor_host_linuxvm_transfer(
 				r->mp,
 				&data,
@@ -252,7 +254,7 @@ static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 io_done:
 #if COSCSI_ASYNC
 	/* Send interrupt */
-	send_intr(r->mp, r->dp->unit, r->io.scp, (CO_OK(rc) == 0));
+	send_intr(r->mp, r->dp->unit, r->io.scp, (CO_OK(rc) == 0), bytes_req - (int)(data.offset.QuadPart - r->io.offset));
 #endif
 
 	/* Free WorkItem */
