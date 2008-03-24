@@ -31,6 +31,8 @@
 #define COSCSI_DEBUG_IO 0
 #define COSCSI_DEBUG_PASS 0
 
+typedef /*NTOSAPI*/ NTSTATUS DDKAPI (*xfer_func_t)( /*IN*/ HANDLE  FileHandle, /*IN*/ HANDLE  Event  /*OPTIONAL*/, /*IN*/ PIO_APC_ROUTINE  ApcRoutine  /*OPTIONAL*/, /*IN*/ PVOID  ApcContext  /*OPTIONAL*/, /*OUT*/ PIO_STATUS_BLOCK  IoStatusBlock, /*IN*/ PVOID  Buffer, /*IN*/ ULONG  Length, /*IN*/ PLARGE_INTEGER  ByteOffset  /*OPTIONAL*/, /*IN*/ PULONG  Key  /*OPTIONAL*/);
+
 #if COSCSI_DEBUG_OPEN || COSCSI_DEBUG_IO || COSCSI_DEBUG_PASS
 static char *iostatus_string(IO_STATUS_BLOCK IoStatusBlock) {
 
@@ -163,11 +165,48 @@ struct _io_req {
 	co_scsi_dev_t *dp;
 	co_scsi_io_t io;
 	PIO_WORKITEM pIoWorkItem;
-	bool_t read;
+	xfer_func_t func;
 #if !COSCSI_ASYNC
 	int result;
 #endif
 };
+
+typedef struct {
+	HANDLE file_handle;
+	LARGE_INTEGER offset;
+	xfer_func_t func;
+} scsi_transfer_file_block_data_t;
+
+static co_rc_t scsi_transfer_file_block(co_monitor_t *cmon, 
+				  void *host_data, void *linuxvm, 
+				  unsigned long size, 
+				  co_monitor_transfer_dir_t dir)
+{
+	IO_STATUS_BLOCK isb;
+	NTSTATUS status;
+	scsi_transfer_file_block_data_t *data = host_data;
+
+	status = data->func(data->file_handle,
+				NULL,
+				NULL,
+				NULL, 
+				&isb,
+				linuxvm,
+				size,
+				&data->offset,
+				NULL);
+
+	if (status != STATUS_SUCCESS) {
+		co_debug_error("scsi io failed: %p %lx (reason: %x)",
+				linuxvm, size, (int)status);
+		return co_status_convert(status);
+	}
+
+	data->offset.QuadPart += size;
+
+	return CO_RC_OK;
+}
+
 
 #if COSCSI_ASYNC
 static VOID DDKAPI _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
@@ -176,12 +215,12 @@ static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 #endif
 	struct _io_req *r = Context;
 	struct scatterlist *sg;
-	LARGE_INTEGER Offset;
 	co_pfn_t sg_pfn;
 	unsigned char *sg_page;
 	PIO_WORKITEM wip;
 	int x;
 	co_rc_t rc;
+	scsi_transfer_file_block_data_t data;
 
 	/* Map the SG */
 	rc = co_monitor_host_linuxvm_transfer_map(r->mp, r->io.sg,
@@ -192,17 +231,20 @@ static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 		goto io_done;
 	}
 
+	data.file_handle = (HANDLE)r->dp->os_handle;
+	data.offset.QuadPart = r->io.offset;
+	data.func = r->func;
+
 	/* For each vector */
-	Offset.QuadPart = r->io.offset;
 	for(x=0; x < r->io.count; x++, sg++) {
-		rc = co_os_file_block_read_write(r->mp,
-					(HANDLE)r->dp->os_handle,
-					Offset.QuadPart,
-					sg->dma_address + CO_ARCH_KERNEL_OFFSET,
-					sg->length,
-					r->read);
+		rc = co_monitor_host_linuxvm_transfer(
+				r->mp,
+				&data,
+				scsi_transfer_file_block,
+				sg->dma_address + CO_ARCH_KERNEL_OFFSET,
+				sg->length,
+				0);
 		if (!CO_OK(rc))	break;
-		Offset.QuadPart += sg->length;
 	}
 
 	co_monitor_host_linuxvm_transfer_unmap(r->mp, sg_page, sg_pfn);
@@ -239,7 +281,7 @@ int scsi_file_io(co_monitor_t *mp, co_scsi_dev_t *dp, co_scsi_io_t *io) {
 	r->dp = dp;
 	co_memcpy(&r->io, io, sizeof(*io));
 	r->pIoWorkItem = IoAllocateWorkItem(coLinux_DeviceObject);
-	r->read = !io->write;
+	r->func = (io->write ? ZwWriteFile : ZwReadFile);
 
 	/* Submit the req */
 #if COSCSI_DEBUG_IO
