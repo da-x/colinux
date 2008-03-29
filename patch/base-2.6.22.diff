@@ -2715,14 +2715,14 @@ Index: linux-2.6.22-source/mm/page_alloc.c
  	}
  }
  
-+static int co_persistent_alloc_pages(unsigned long address, int order)
++static int co_persistent_alloc_pages(unsigned long address, int size)
 +{
 +	int result, retries_left;
 +
 +	retries_left = 10;
 +
 +	while (retries_left > 0) {
-+		result = co_alloc_pages(address, order);
++		result = co_alloc_pages(address, size);
 +		if (result) {
 +			unsigned long cache_size;
 +			/*
@@ -2732,8 +2732,8 @@ Index: linux-2.6.22-source/mm/page_alloc.c
 +			 */
 +			cache_size = global_page_state(NR_FILE_PAGES)-total_swapcache_pages;
 +			cache_size /= 2;
-+			if (cache_size < ((1 << order)*2))
-+				cache_size = (1 << order)*2;
++			if (cache_size < size*2)
++				cache_size = size*2;
 +			shrink_all_memory(cache_size);
 +		} else
 +			return 0;
