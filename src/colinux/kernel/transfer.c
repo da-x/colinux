@@ -55,14 +55,6 @@ co_rc_t co_monitor_host_linuxvm_transfer_map(
 	return CO_RC(OK);
 }
 
-void co_monitor_host_linuxvm_transfer_unmap(
-	co_monitor_t *cmon,
-	unsigned char *page,
-	co_pfn_t pfn
-) {
-	co_os_unmap(cmon->manager, page, pfn);
-}
-
 /*
  * This code allows direct copying from and to the Linux kernel address space.
  *

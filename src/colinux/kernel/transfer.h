@@ -15,6 +15,8 @@
  */
 
 #include "manager.h"
+#include <colinux/os/kernel/alloc.h>
+#include <colinux/kernel/monitor.h>
 
 struct co_monitor;
 
@@ -68,11 +70,14 @@ co_rc_t co_monitor_host_linuxvm_transfer_map(
 	co_pfn_t *ppfn
 	);
 
-void co_monitor_host_linuxvm_transfer_unmap(
-	struct co_monitor *cmon,
+static inline void co_monitor_host_linuxvm_transfer_unmap(
+	co_monitor_t *cmon,
 	unsigned char *page,
 	co_pfn_t pfn
-	);
+) {
+	co_os_unmap(cmon->manager, page, pfn);
+}
+
 
 /*
  * memcpy-like transfer implementation:
