@@ -2121,7 +2121,7 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative_internal.h
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,99 @@
 +/*
 + *  linux/include/linux/cooperative_internal.h
 + *
@@ -2165,9 +2165,6 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +			    unsigned long size,
 +			    const char *data);
 +extern unsigned long co_get_host_time(void);
-+extern co_message_t *co_send_message_save(unsigned long *flags);
-+extern co_message_t *co_get_message_save(unsigned long *flags);
-+extern void co_send_message_restore(unsigned long flags);
 +
 +extern void cocd_interrupt(void);
 +extern void co_shedule_shutdown(void);
@@ -2194,6 +2191,27 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +#define co_io_buffer ((co_io_buffer_t *)CO_VPTR_IO_AREA_START)
 +#define cooperative_mode_enabled()     1
 +
++static inline co_message_t *co_send_message_save(unsigned long *flags)
++{
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(flags);
++
++	if (co_io_buffer->messages_waiting) {
++		co_passage_page_release(*flags);
++		return NULL;
++	}
++
++	co_passage_page->operation = CO_OPERATION_MESSAGE_TO_MONITOR;
++	co_io_buffer->messages_waiting = 1;
++	return ((co_message_t *)co_io_buffer->buffer);
++}
++
++static inline void co_send_message_restore(unsigned long flags)
++{
++	co_switch_wrapper();
++	co_passage_page_release(flags);
++}
++
 +#else
 +
 +#define co_printk(line, size)          do {} while (0)
@@ -2219,7 +2237,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -0,0 +1,406 @@
+@@ -0,0 +1,385 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2259,27 +2277,6 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +
 +	/* should never be reached */
 +	co_terminate(CO_TERMINATE_END);
-+}
-+
-+co_message_t *co_send_message_save(unsigned long *flags)
-+{
-+	co_passage_page_assert_valid();
-+	co_passage_page_acquire(flags);
-+
-+	if (co_io_buffer->messages_waiting) {
-+		co_passage_page_release(*flags);
-+		return NULL;
-+	}
-+
-+	co_passage_page->operation = CO_OPERATION_MESSAGE_TO_MONITOR;
-+	co_io_buffer->messages_waiting = 1;
-+	return ((co_message_t *)co_io_buffer->buffer);
-+}
-+
-+void co_send_message_restore(unsigned long flags)
-+{
-+	co_switch_wrapper();
-+	co_passage_page_release(flags);
 +}
 +
 +void co_send_message(co_module_t from,
