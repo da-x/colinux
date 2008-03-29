@@ -513,14 +513,12 @@ static void co_monitor_getpp(co_monitor_t *cmon, void *pp_buffer, void *host_buf
 	return;
 }
 
+static
 void incoming_message(co_monitor_t *cmon, co_message_t *message)
 {
 	co_manager_open_desc_t opened;
 	co_rc_t rc;
 
-	if (message->to == CO_MODULE_CONET0)
-		co_debug_lvl(network, 14, "message received: %p %p", cmon, message);
-	
 	co_os_mutex_acquire(cmon->connected_modules_write_lock);
 	opened = cmon->connected_modules[message->to];
 	if (opened != NULL)
@@ -533,9 +531,6 @@ void incoming_message(co_monitor_t *cmon, co_message_t *message)
 		co_manager_send(cmon->manager, opened, message);
 		co_manager_close(cmon->manager, opened);
 	}
-
-	if (message->to == CO_MODULE_CONET0)
-		co_debug_lvl(network, 14, "message received end: %p %p", cmon, message);
 
 	switch (message->to) {
 	case CO_MODULE_CONSOLE:
@@ -1300,7 +1295,6 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t *monitor, co_monitor_ioc
 	unsigned long size;
 	int y;
 
-	message = NULL;
 	size = (((char *)(&message->putcs + 1)) - ((char *)message)) + 
 		(monitor->console->x * sizeof(co_console_cell_t));
 
