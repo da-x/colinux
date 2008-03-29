@@ -2581,19 +2581,19 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +}
 +
 +
-+void co_free_pages(unsigned long vaddr, int order)
++void co_free_pages(unsigned long vaddr, int size)
 +{
 +	unsigned long flags;
 +
 +	co_passage_page_acquire(&flags);
 +	co_passage_page->operation = CO_OPERATION_FREE_PAGES;
 +	co_passage_page->params[0] = vaddr;
-+	co_passage_page->params[1] = order;
++	co_passage_page->params[1] = size;
 +	co_switch_wrapper();
 +	co_passage_page_release(flags);
 +}
 +
-+int co_alloc_pages(unsigned long vaddr, int order)
++int co_alloc_pages(unsigned long vaddr, int size)
 +{
 +	unsigned long flags;
 +	long result;
@@ -2601,7 +2601,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	co_passage_page_acquire(&flags);
 +	co_passage_page->operation = CO_OPERATION_ALLOC_PAGES;
 +	co_passage_page->params[0] = vaddr;
-+	co_passage_page->params[1] = order;
++	co_passage_page->params[1] = size;
 +	co_switch_wrapper();
 +	result = (long)co_passage_page->params[4];
 +	co_passage_page_release(flags);
