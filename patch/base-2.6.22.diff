@@ -240,7 +240,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,349 @@
+@@ -0,0 +1,322 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -273,7 +273,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +	".previous\n"
 +	"");
 +
-+static int co_passage_page_holding_count = 0;
++int co_passage_page_holding_count = 0;
 +
 +static void co_early_cpu_init(void)
 +{
@@ -473,33 +473,6 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +	}
 +
 +	co_switch_wrapper_protected();
-+}
-+
-+void co_passage_page_acquire(unsigned long *flags)
-+{
-+	local_irq_save(*flags);
-+	co_passage_page_holding_count++;
-+}
-+
-+void co_passage_page_ref_down(void)
-+{
-+	co_passage_page_holding_count--;
-+}
-+
-+void co_passage_page_ref_up(void)
-+{
-+	co_passage_page_holding_count++;
-+}
-+
-+int co_passage_page_held(void)
-+{
-+	return co_passage_page_holding_count;
-+}
-+
-+void co_passage_page_release(unsigned long flags)
-+{
-+	co_passage_page_holding_count--;
-+	local_irq_restore(flags);
 +}
 +
 +void co_debug(const char *fmt, ...)
@@ -2121,7 +2094,7 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative_internal.h
-@@ -0,0 +1,99 @@
+@@ -0,0 +1,121 @@
 +/*
 + *  linux/include/linux/cooperative_internal.h
 + *
@@ -2143,6 +2116,12 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +	struct list_head node;
 +	co_message_t msg;
 +} co_message_node_t;
++
++extern co_boot_params_t co_boot_params;
++extern int co_passage_page_holding_count;
++
++#define co_io_buffer ((co_io_buffer_t *)CO_VPTR_IO_AREA_START)
++#define cooperative_mode_enabled()     1
 +
 +extern void co_debug(const char *fmt, ...)
 +	__attribute__ ((format (printf, 1, 2)));
@@ -2176,20 +2155,36 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +
 +extern void *co_map_buffer(void *, int);
 +
-+extern int co_passage_page_held(void);
-+extern void co_passage_page_acquire(unsigned long *flags);
-+extern void co_passage_page_release(unsigned long flags);
-+extern void co_passage_page_ref_down(void);
-+extern void co_passage_page_ref_up(void);
++static inline void co_passage_page_acquire(unsigned long *flags)
++{
++	local_irq_save(*flags);
++	co_passage_page_holding_count++;
++}
++
++static inline void co_passage_page_ref_down(void)
++{
++	co_passage_page_holding_count--;
++}
++
++static inline void co_passage_page_ref_up(void)
++{
++	co_passage_page_holding_count++;
++}
++
++static inline int co_passage_page_held(void)
++{
++	return co_passage_page_holding_count;
++}
++
++static inline void co_passage_page_release(unsigned long flags)
++{
++	co_passage_page_holding_count--;
++	local_irq_restore(flags);
++}
 +
 +#define co_passage_page_assert_valid() do {	\
 +	BUG_ON(co_passage_page_held());		\
 +} while (0)
-+
-+extern co_boot_params_t co_boot_params;
-+
-+#define co_io_buffer ((co_io_buffer_t *)CO_VPTR_IO_AREA_START)
-+#define cooperative_mode_enabled()     1
 +
 +static inline co_message_t *co_send_message_save(unsigned long *flags)
 +{
