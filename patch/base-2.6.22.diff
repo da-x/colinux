@@ -2146,7 +2146,7 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +
 +extern void co_debug(const char *fmt, ...)
 +	__attribute__ ((format (printf, 1, 2)));
-+extern void co_printk(const char *line);
++extern void co_printk(const char *line, int size);
 +
 +extern void co_switch_wrapper(void);
 +extern void co_callback(unsigned long flags, struct pt_regs *regs);
@@ -2219,7 +2219,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -0,0 +1,427 @@
+@@ -0,0 +1,425 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2457,16 +2457,14 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	co_callback(flags, NULL);
 +}
 +
-+void co_printk(const char *line)
++void co_printk(const char *line, int size)
 +{
 +	unsigned long flags;
-+	int size;
 +	char *dest;
 +
 +	co_passage_page_assert_valid();
 +
 +	co_passage_page_acquire(&flags);
-+	size = strlen(line);
 +	co_passage_page->operation = CO_OPERATION_PRINTK;
 +	co_passage_page->params[0] = size;
 +	if (size > 200)
@@ -2687,7 +2685,7 @@ Index: linux-2.6.22-source/kernel/printk.c
  	/* Emit the output into the temporary buffer */
  	printed_len = vscnprintf(printk_buf, sizeof(printk_buf), fmt, args);
  
-+	co_printk(printk_buf);
++	co_printk(printk_buf, printed_len);
 +
  	/*
  	 * Copy the output into log_buf.  If the caller didn't provide
