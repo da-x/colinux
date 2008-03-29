@@ -2711,7 +2711,7 @@ Index: linux-2.6.22-source/mm/page_alloc.c
  
  #include <asm/tlbflush.h>
  #include <asm/div64.h>
-@@ -270,10 +271,45 @@
+@@ -270,10 +271,43 @@
  	}
  }
  
@@ -2719,9 +2719,7 @@ Index: linux-2.6.22-source/mm/page_alloc.c
 +{
 +	int result, retries_left;
 +
-+	retries_left = 10;
-+
-+	while (retries_left > 0) {
++	for (retries_left = 10; retries_left > 0; retries_left--) {
 +		result = co_alloc_pages(address, size);
 +		if (result) {
 +			unsigned long cache_size;
@@ -2735,9 +2733,9 @@ Index: linux-2.6.22-source/mm/page_alloc.c
 +			if (cache_size < size*2)
 +				cache_size = size*2;
 +			shrink_all_memory(cache_size);
-+		} else
++		} else {
 +			return 0;
-+		retries_left--;
++		}
 +	}
 +
 +	return result;
@@ -2757,7 +2755,7 @@ Index: linux-2.6.22-source/mm/page_alloc.c
  	VM_BUG_ON((gfp_flags & (__GFP_WAIT | __GFP_HIGHMEM)) == __GFP_HIGHMEM);
  	/*
  	 * clear_highpage() will use KM_USER0, so it's a bug to use __GFP_ZERO
-@@ -396,6 +432,9 @@
+@@ -396,6 +430,9 @@
  	unsigned long page_idx;
  	int order_size = 1 << order;
  
@@ -2767,7 +2765,7 @@ Index: linux-2.6.22-source/mm/page_alloc.c
  	if (unlikely(PageCompound(page)))
  		destroy_compound_page(page, order);
  
-@@ -1370,6 +1409,13 @@
+@@ -1370,6 +1407,13 @@
  		show_mem();
  	}
  got_pg:
