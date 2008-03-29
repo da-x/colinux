@@ -659,14 +659,16 @@ Tips for cleanup the image:
 
 Final clean and resize the image:
 - You should have an image file, named "image.old" here
-- Create an new empty file, use your favorite size as count.
-  This is the best to compress it very small.
+- Create an new empty file.  This is the best to compress it very small.
+  Use your favorite size as count. Blocksize is 1MB, the count=1024 in
+  the example creates a file with size of 1GB. Increase the count for
+  bigger images.
 
-	dd if=/dev/zero of=/tmp/image.new bs=1k count=1024k
+	dd if=/dev/zero of=/tmp/image.new bs=1M count=1024
 
-  For coLinux version >= 0.7.1 the image files image.new can live on a "cofs"
+  For coLinux version >= 0.7.1 the old and new image files can live on "cofs"
   mounted file system.  That means, you can create the new image directly in
-  your Windows (... of=/mmt/cofs-Windows/image.new ...).
+  your Windows filesystem (... of=/mmt/cofs-Windows/image.new ...).
 
 - Create a filesystem on the new file
 
