@@ -2196,7 +2196,7 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +
 +#else
 +
-+#define co_printk(line)                do {} while (0)
++#define co_printk(line, size)          do {} while (0)
 +#define co_terminate(reason)           do {} while (0)
 +#define cooperative_mode_enabled()     0
 +
