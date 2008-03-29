@@ -1789,7 +1789,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_OPERATION_TRACE_POINT,
 +	CO_OPERATION_FREE_PAGES,
 +	CO_OPERATION_ALLOC_PAGES,
-+	CO_OPERATION_PRINTK,
++	CO_OPERATION_PRINTK_unused,
 +	CO_OPERATION_GETPP,
 +} co_operation_t;
 +
@@ -2460,21 +2460,21 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +void co_printk(const char *line, int size)
 +{
 +	unsigned long flags;
-+	char *dest;
++	co_message_t *co_message;
 +
-+	co_passage_page_assert_valid();
-+
-+	co_passage_page_acquire(&flags);
-+	co_passage_page->operation = CO_OPERATION_PRINTK;
-+	co_passage_page->params[0] = size;
-+	if (size > 200)
-+		size = 200;
-+	dest = (char *)(&co_passage_page->params[1]);
-+	memcpy(dest, line, size);
-+	dest[size] = '\0';
-+
-+	co_switch_wrapper();
-+	co_passage_page_release(flags);
++	co_message = co_send_message_save(&flags);
++	if (co_message) {
++		co_message->from = CO_MODULE_LINUX;
++		co_message->to = CO_MODULE_PRINTK;
++		co_message->priority = CO_PRIORITY_DISCARDABLE;
++		co_message->type = CO_MESSAGE_TYPE_STRING;
++		if (size > 200)
++			size = 200;
++		co_message->size = size + 1;
++		memcpy(co_message->data, line, size);
++		co_message->data[size] = '\0';
++		co_send_message_restore(flags);
++	}
 +}
 +
 +void co_debug_line(char *line)
