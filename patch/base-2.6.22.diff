@@ -2219,7 +2219,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -0,0 +1,425 @@
+@@ -0,0 +1,406 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2282,33 +2282,6 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	co_passage_page_release(flags);
 +}
 +
-+void co_send_message_s(co_message_t *message, const char *data)
-+{
-+	unsigned long flags;
-+	co_message_t *buffer;
-+
-+	if ((sizeof(co_message_t) + message->size) > CO_VPTR_IO_AREA_SIZE - sizeof(co_io_buffer_t))
-+		return;
-+
-+	if (co_passage_page_held())
-+		return;
-+
-+	buffer = (co_message_t *)co_io_buffer->buffer;
-+
-+	co_passage_page_acquire(&flags);
-+	if (co_io_buffer->messages_waiting) {
-+		co_passage_page_release(flags);
-+		return;
-+	}
-+
-+	co_passage_page->operation = CO_OPERATION_MESSAGE_TO_MONITOR;
-+	co_io_buffer->messages_waiting = 1;
-+	*buffer = *message;
-+	memcpy(buffer->data, data, message->size);
-+	co_switch_wrapper();
-+	co_passage_page_release(flags);
-+}
-+
 +void co_send_message(co_module_t from,
 +		     co_module_t to,
 +		     co_priority_t priority,
@@ -2316,15 +2289,23 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +		     unsigned long size,
 +		     const char *data)
 +{
-+	co_message_t params;
++	unsigned long flags;
++	co_message_t *buffer;
 +
-+	params.from = from;
-+	params.to = to;
-+	params.priority = priority;
-+	params.type = type;
-+	params.size = size;
++	BUG_ON((sizeof(co_message_t) + size) > CO_VPTR_IO_AREA_SIZE - sizeof(co_io_buffer_t));
 +
-+	co_send_message_s(&params, data);
++	buffer = co_send_message_save(&flags);
++	if (!buffer)
++		return;
++
++	buffer->from = from;
++	buffer->to = to;
++	buffer->priority = priority;
++	buffer->type = type;
++	buffer->size = size;
++	memcpy(buffer->data, data, size);
++
++	co_send_message_restore(flags);
 +}
 +
 +static void co_message_add_to_incoming(co_message_t *message, unsigned long size)
