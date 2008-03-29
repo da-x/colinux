@@ -2711,7 +2711,7 @@ Index: linux-2.6.22-source/mm/page_alloc.c
  
  #include <asm/tlbflush.h>
  #include <asm/div64.h>
-@@ -270,10 +271,43 @@
+@@ -270,10 +271,44 @@
  	}
  }
  
@@ -2746,7 +2746,8 @@ Index: linux-2.6.22-source/mm/page_alloc.c
  {
  	int i;
  
-+	if (cooperative_mode_enabled()) {
++	if (cooperative_mode_enabled() &&
++	    !TestSetPageCoHostMapped(page)) {
 +		int result;
 +		result = co_persistent_alloc_pages((unsigned long)page_address(page), 1 << order);
 +		BUG_ON(result != 0);
@@ -2755,21 +2756,24 @@ Index: linux-2.6.22-source/mm/page_alloc.c
  	VM_BUG_ON((gfp_flags & (__GFP_WAIT | __GFP_HIGHMEM)) == __GFP_HIGHMEM);
  	/*
  	 * clear_highpage() will use KM_USER0, so it's a bug to use __GFP_ZERO
-@@ -396,6 +430,9 @@
+@@ -396,6 +431,11 @@
  	unsigned long page_idx;
  	int order_size = 1 << order;
  
-+	if (cooperative_mode_enabled())
++	if (cooperative_mode_enabled()) {
 +		co_free_pages((unsigned long)page_address(page), order_size);
++		ClearPageCoHostMapped(page);
++	}
 +
  	if (unlikely(PageCompound(page)))
  		destroy_compound_page(page, order);
  
-@@ -1370,6 +1407,13 @@
+@@ -1370,6 +1410,14 @@
  		show_mem();
  	}
  got_pg:
-+	if (cooperative_mode_enabled()) {
++	if (cooperative_mode_enabled() &&
++	    !TestSetPageCoHostMapped(page)) {
 +		int result = co_persistent_alloc_pages((unsigned long)page_address(page), 1 << order);
 +		if (result) {
 +			__free_pages(page, order);
@@ -3352,3 +3356,26 @@ Index: linux-2.6.22-source/arch/i386/mm/comap.c
 +	}
 +}
 +#endif
+Index: linux-2.6.22-source/include/linux/page-flags.h
+===================================================================
+--- linux-2.6.22-source.orig/include/linux/page-flags.h
++++ linux-2.6.22-source/include/linux/page-flags.h
+@@ -90,6 +90,8 @@
+ #define PG_reclaim		17	/* To be reclaimed asap */
+ #define PG_buddy		19	/* Page is free, on buddy lists */
+ 
++#define PG_co_host_mapped	20	/* Page is mapped on colinux host */
++
+ /* PG_owner_priv_1 users should have descriptive aliases */
+ #define PG_checked		PG_owner_priv_1 /* Used by some filesystems */
+ 
+@@ -270,6 +272,9 @@
+ #define SetPageUncached(page)	set_bit(PG_uncached, &(page)->flags)
+ #define ClearPageUncached(page)	clear_bit(PG_uncached, &(page)->flags)
+ 
++#define ClearPageCoHostMapped(page)	clear_bit(PG_co_host_mapped, &(page)->flags)
++#define TestSetPageCoHostMapped(page)	test_and_set_bit(PG_co_host_mapped, &(page)->flags)
++
+ struct page;	/* forward declaration */
+ 
+ extern void cancel_dirty_page(struct page *page, unsigned int account_size);
