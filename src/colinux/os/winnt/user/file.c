@@ -19,7 +19,7 @@ co_rc_t co_os_file_load(co_pathname_t pathname, char **out_buf, unsigned long *o
 {
 	HANDLE handle;
 	BOOL ret;
-	unsigned long size, size_read;
+	unsigned long size, size_read, high;
 	co_rc_t rc = CO_RC_OK;
 	char *buf;
 
@@ -38,9 +38,9 @@ co_rc_t co_os_file_load(co_pathname_t pathname, char **out_buf, unsigned long *o
 		goto out;
 	}
 
-	size = GetFileSize(handle, NULL);
+	size = GetFileSize(handle, &high);
 
-	if (max_size && size > max_size)
+	if (max_size && (size > max_size || high))
 		size = max_size;
 
 	buf = (char *)malloc(size);
