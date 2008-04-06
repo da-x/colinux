@@ -620,6 +620,7 @@ check_exec_tool "wget" "wget --version" ""
 check_exec_tool "Python interpreter" "python -V" "2.3.x" ""
 check_exec_tool "patch" "patch --version" ""
 check_exec_tool "make" "make --version" ""
+check_exec_tool "bunzip2" "bunzip2 --version" ""
 
 case $colinux_os in
   linux) # for Linux as host
