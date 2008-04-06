@@ -212,6 +212,31 @@ download_file()
 	fi
 }
 
+# Arg1: gzip or bzip2 tar archive
+# Arg2: destination directory
+tar_unpack_to()
+{
+	local tool
+
+	case "$SOURCE_DIR/$1" in
+		*.tar.gz|*.tgz)
+			tool=gzip
+		;;
+		*.tar.bz2)
+			tool=bunzip2
+		;;
+		*)
+			echo "$FUNCNAME($LINENO): unknown extension for $1" >&2
+			exit 1
+		;;
+	esac
+
+	mkdir -p "$2"
+	cd "$2"
+	$tool -dc "$SOURCE_DIR/$1" | tar x \
+	|| { echo "unpack failed for $1" >&2; exit 1; }
+}
+
 #
 # Show errors from actual logfile, than exit build process
 # Arg1: Errorlevel
@@ -221,17 +246,17 @@ error_exit()
 {
 	# Show errors in log file with tail, if errorlevel < 10
 	if [ $1 -lt 10 ]; then
-		echo -e "\n  --- BUILD LOG $COLINUX_BUILD_LOG:"
-		tail -n 20 $COLINUX_BUILD_LOG
+		if [ -s $COLINUX_BUILD_LOG ]; then
+			echo -e "\n  --- BUILD LOG $COLINUX_BUILD_LOG:"
+			tail -n 20 $COLINUX_BUILD_LOG
+		fi
 		if [ -s $COLINUX_BUILD_ERR ]; then
 			echo -e "\n  --- ERROR LOG $COLINUX_BUILD_ERR:"
 			tail -n 20 $COLINUX_BUILD_ERR
 		fi
-		echo "$2"
-	else
-		echo "$2"
 	fi
 
+	echo "$2"
 	exit $1
 }
 

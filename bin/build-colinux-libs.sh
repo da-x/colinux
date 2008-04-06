@@ -81,11 +81,8 @@ create_md5sums()
 extract_fltk()
 {
 	echo "Extracting FLTK"
-	mkdir -p "$BUILD_DIR"
-	cd "$BUILD_DIR"
-	rm -rf "$FLTK"
-	bzip2 -dc "$SOURCE_DIR/$FLTK_ARCHIVE" | tar x
-	test $? -ne 0 && error_exit 10 "FLTK extract failed"
+	rm -rf "$BUILD_DIR/$FLTK"
+	tar_unpack_to "$FLTK_ARCHIVE" "$BUILD_DIR"
 }
 
 patch_fltk()
@@ -136,10 +133,8 @@ build_fltk()
 extract_w32api_src()
 {
 	echo "Extracting w32api source"
-	cd "$BUILD_DIR"
-	rm -rf "$W32API_SRC"
-	gzip -dc "$SOURCE_DIR/$W32API_SRC_ARCHIVE" | tar x
-	test $? -ne 0 && error_exit 10 "w32api extract failed"
+	rm -rf "$BUILD_DIR/$W32API_SRC"
+	tar_unpack_to "$W32API_SRC_ARCHIVE" "$BUILD_DIR"
 }
 
 patch_w32api_src()

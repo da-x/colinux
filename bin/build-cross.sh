@@ -53,19 +53,15 @@ check_installed()
 install_libs()
 {
 	echo "Installing cross libs and includes"
-	mkdir -p "$PREFIX/$TARGET"
-	cd "$PREFIX/$TARGET"
-	gzip -dc "$SOURCE_DIR/$MINGW_ARCHIVE" | tar x
-	gzip -dc "$SOURCE_DIR/$W32API_ARCHIVE" | tar x
+	tar_unpack_to $MINGW_ARCHIVE "$PREFIX/$TARGET"
+	tar_unpack_to $W32API_ARCHIVE "$PREFIX/$TARGET"
 }
 
 extract_binutils()
 {
 	echo "Extracting binutils"
-	mkdir -p "$BUILD_DIR"
-	cd "$BUILD_DIR"
-	rm -rf "$BINUTILS"
-	gzip -dc "$SOURCE_DIR/$BINUTILS_ARCHIVE" | tar x
+	rm -rf "$BUILD_DIR/$BINUTILS"
+	tar_unpack_to "$BINUTILS_ARCHIVE" "$BUILD_DIR"
 }
 
 patch_binutils()
@@ -120,10 +116,9 @@ clean_binutils()
 extract_gcc()
 {
 	echo "Extracting gcc"
-	cd "$BUILD_DIR"
-	rm -rf "$GCC"
-	bunzip2 -dc "$SOURCE_DIR/$GCC_ARCHIVE1" | tar x
-	bunzip2 -dc "$SOURCE_DIR/$GCC_ARCHIVE2" | tar x
+	rm -rf "$BUILD_DIR/$GCC"
+	tar_unpack_to "$GCC_ARCHIVE1" "$BUILD_DIR"
+	tar_unpack_to "$GCC_ARCHIVE2" "$BUILD_DIR"
 }
 
 patch_gcc()
@@ -229,7 +224,7 @@ build_binutils_guest()
 	rm -rf "binutils-$COLINUX_GCC_GUEST_TARGET"
 	mkdir "binutils-$COLINUX_GCC_GUEST_TARGET"
 	cd "binutils-$COLINUX_GCC_GUEST_TARGET"
-	"$BUILD_DIR/$BINUTILS/configure" \
+	"../$BINUTILS/configure" \
 		--program-prefix="${COLINUX_GCC_GUEST_TARGET}-" \
 		--prefix="$PREFIX/$COLINUX_GCC_GUEST_TARGET" \
 		--disable-nls \
@@ -279,7 +274,7 @@ build_gcc_guest()
 	rm -rf "gcc-$COLINUX_GCC_GUEST_TARGET"
 	mkdir "gcc-$COLINUX_GCC_GUEST_TARGET"
 	cd "gcc-$COLINUX_GCC_GUEST_TARGET"
-	"$BUILD_DIR/$GCC/configure" -v \
+	"../$GCC/configure" -v \
 		--program-prefix="${COLINUX_GCC_GUEST_TARGET}-" \
 		--prefix="$PREFIX/$COLINUX_GCC_GUEST_TARGET" \
 		--disable-nls \
