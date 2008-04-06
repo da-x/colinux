@@ -226,6 +226,30 @@ download_file()
 	fi
 }
 
+# Arg1: gzip or bzip2 tar archive
+# Arg2: destination directory
+tar_unpack_to()
+{
+	local tool
+
+	case "$SOURCE_DIR/$1" in
+		*.tar.gz|*.tgz)
+			tool=gzip
+		;;
+		*.tar.bz2)
+			tool=bunzip2
+		;;
+		*)
+			echo "$FUNCNAME($LINENO): unknown extension for $1" >&2
+			exit 1
+		;;
+	esac
+
+	mkdir -p "$2"
+	cd "$2"
+	$tool -dc "$SOURCE_DIR/$1" | tar x
+}
+
 #
 # Show errors from actual logfile, than exit build process
 # Arg1: Errorlevel
