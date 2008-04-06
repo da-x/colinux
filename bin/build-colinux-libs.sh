@@ -69,7 +69,6 @@ create_md5sums()
 	md5sum -b \
 	    patch/$FLTK-win32.diff \
 	    $W32API_PATCH \
-	    $PREFIX/$TARGET/include/w32api.h \
 	    > $W32LIBS_CHECKSUM
 	test $? -ne 0 && error_exit 10 "can not create md5sum"
 	cd "$BINDIR"
