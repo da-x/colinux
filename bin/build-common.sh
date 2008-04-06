@@ -247,7 +247,8 @@ tar_unpack_to()
 
 	mkdir -p "$2"
 	cd "$2"
-	$tool -dc "$SOURCE_DIR/$1" | tar x
+	$tool -dc "$SOURCE_DIR/$1" | tar x \
+	|| { echo "unpack failed for $1" >&2; exit 1; }
 }
 
 #
