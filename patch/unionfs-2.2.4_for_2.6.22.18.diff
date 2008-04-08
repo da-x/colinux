@@ -577,7 +577,7 @@ diff --git a/fs/Makefile b/fs/Makefile
 index 720c29d..951f411 100644
 --- a/fs/Makefile
 +++ b/fs/Makefile
-@@ -118,3 +118,4 @@ obj-$(CONFIG_HPPFS)		+= hppfs/
+@@ -120,3 +120,4 @@ obj-$(CONFIG_HPPFS)		+= hppfs/
  obj-$(CONFIG_DEBUG_FS)		+= debugfs/
  obj-$(CONFIG_OCFS2_FS)		+= ocfs2/
  obj-$(CONFIG_GFS2_FS)           += gfs2/
