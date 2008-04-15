@@ -7,6 +7,8 @@
   * Added virtual pci device handling. "lspci" is working (Steve Shoecraft)
   * Add PG_co_host_mapped to save many OS switching times.
   * unionfs-2.2.4 added as module. (Marwan Al-Sabbagh)
+  * Bugfix the freeze after "Using IPI Shortcut mode" and other randomly
+    crashes at mounting the root file system with types ext2 or ext3.
 
   Debugging:
   * Enable host kernel debug via registry [HKLM\SOFTWARE\coLinux] "Debug"
