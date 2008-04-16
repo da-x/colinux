@@ -1158,7 +1158,19 @@ Index: linux-2.6.17-source/arch/i386/mm/fault.c
 ===================================================================
 --- linux-2.6.17-source.orig/arch/i386/mm/fault.c
 +++ linux-2.6.17-source/arch/i386/mm/fault.c
-@@ -267,7 +267,7 @@
+@@ -259,6 +259,11 @@
+ 	unsigned long pgd_paddr;
+ 	pmd_t *pmd_k;
+ 	pte_t *pte_k;
++
++	/* Make sure we are in vmalloc area */
++	if (!(address >= VMALLOC_START && address < VMALLOC_END))
++		return -1;
++
+ 	/*
+ 	 * Synchronize this task's top level page-table
+ 	 * with the 'reference' page table.
+@@ -267,7 +272,7 @@
  	 * an interrupt in the middle of a task switch..
  	 */
  	pgd_paddr = read_cr3();
@@ -1167,7 +1179,7 @@ Index: linux-2.6.17-source/arch/i386/mm/fault.c
  	if (!pmd_k)
  		return -1;
  	pte_k = pte_offset_kernel(pmd_k, address);
-@@ -531,7 +531,8 @@
+@@ -531,7 +536,8 @@
  		printk("%08lx\n", regs->eip);
  	}
  	page = read_cr3();
@@ -1177,7 +1189,7 @@ Index: linux-2.6.17-source/arch/i386/mm/fault.c
  	if (oops_may_print())
  		printk(KERN_ALERT "*pde = %08lx\n", page);
  	/*
-@@ -545,6 +546,7 @@
+@@ -545,6 +551,7 @@
  		page &= PAGE_MASK;
  		address &= 0x003ff000;
  		page = ((unsigned long *) __va(page))[address >> PAGE_SHIFT];

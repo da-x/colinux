@@ -1117,7 +1117,18 @@ Index: linux-2.6.15-source/arch/i386/mm/fault.c
  		printk(KERN_ALERT "*pte = %08lx\n", page);
  	}
  #endif
-@@ -529,7 +531,7 @@
+@@ -514,6 +516,10 @@
+ 
+ vmalloc_fault:
+ 	{
++		/* Make sure we are in vmalloc area */
++		if (!(address >= VMALLOC_START && address < VMALLOC_END))
++			goto no_context;
++
+ 		/*
+ 		 * Synchronize this task's top level page-table
+ 		 * with the 'reference' page table.
+@@ -529,7 +535,7 @@
  		pte_t *pte_k;
  
  		pgd_paddr = read_cr3();
