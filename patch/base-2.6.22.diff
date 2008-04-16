@@ -960,7 +960,19 @@ Index: linux-2.6.22-source/arch/i386/mm/fault.c
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/mm/fault.c
 +++ linux-2.6.22-source/arch/i386/mm/fault.c
-@@ -275,7 +275,7 @@
+@@ -267,6 +267,11 @@
+ 	unsigned long pgd_paddr;
+ 	pmd_t *pmd_k;
+ 	pte_t *pte_k;
++
++	/* Make sure we are in vmalloc area */
++	if (!(address >= VMALLOC_START && address < VMALLOC_END))
++		return -1;
++
+ 	/*
+ 	 * Synchronize this task's top level page-table
+ 	 * with the 'reference' page table.
+@@ -275,7 +280,7 @@
  	 * an interrupt in the middle of a task switch..
  	 */
  	pgd_paddr = read_cr3();
@@ -969,7 +981,7 @@ Index: linux-2.6.22-source/arch/i386/mm/fault.c
  	if (!pmd_k)
  		return -1;
  	pte_k = pte_offset_kernel(pmd_k, address);
-@@ -539,7 +539,8 @@
+@@ -539,7 +544,8 @@
  		printk("%08lx\n", regs->eip);
  
  		page = read_cr3();
@@ -979,7 +991,7 @@ Index: linux-2.6.22-source/arch/i386/mm/fault.c
  #ifdef CONFIG_X86_PAE
  		printk(KERN_ALERT "*pdpt = %016Lx\n", page);
  		if ((page >> PAGE_SHIFT) < max_low_pfn
-@@ -565,6 +566,7 @@
+@@ -565,6 +571,7 @@
  			page &= PAGE_MASK;
  			page = ((__typeof__(page) *) __va(page))[(address >> PAGE_SHIFT)
  			                                         & (PTRS_PER_PTE - 1)];

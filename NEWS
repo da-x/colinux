@@ -3,6 +3,8 @@
   * Check ELF header before accessing kernel vmlinux (fix exception).
   * Fix problems with memory hole from shared video cards and the
     error message "PFN to high".
+  * Bugfix host freeze after "Using IPI Shortcut mode" and other randomly
+    crashes at mounting the root file system with types ext2 or ext3.
 
   Daemon:
   * Add build date to exe file properties.
