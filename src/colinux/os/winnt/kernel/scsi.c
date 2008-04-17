@@ -9,7 +9,7 @@
  *
  */
 
-#define USE_Q 1
+#define USE_Q 0
 
 #include "ddk.h"
 #include <ddk/ntifs.h>
