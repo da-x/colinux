@@ -96,10 +96,12 @@ int scsi_file_open(co_monitor_t *cmon, co_scsi_dev_t *dp) {
 	CreateOptions = FILE_SYNCHRONOUS_IO_NONALERT;
 
 	/* Kernel handle needed for IoQueueWorkItem */
+	co_debug("init attr");
 	InitializeObjectAttributes(&ObjectAttributes, &unipath,
 				OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL, NULL);
 
 again:
+	co_debug("opening...");
 	status = ZwCreateFile((HANDLE *)&dp->os_handle, DesiredAccess, &ObjectAttributes, &IoStatusBlock, 0,
 			FileAttributes, 0, CreateDisposition, CreateOptions, NULL, 0);
 #if COSCSI_DEBUG_OPEN
@@ -119,8 +121,11 @@ again:
 		co_debug("ZwSetInformationFile: status: %x, iostatus: %s", (int)status, iostatus_string(IoStatusBlock));
 #endif
 		if (status == STATUS_SUCCESS) {
+			co_debug("setting size...");
 			dp->conf->size = 0;
+			co_debug("closing...");
 			ZwClose(dp->os_handle);
+			co_debug("opening again...");
 			goto again;
 		}
 	}
