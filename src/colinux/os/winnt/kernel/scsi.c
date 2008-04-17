@@ -408,13 +408,6 @@ err_out:
 int scsi_file_size(co_monitor_t *cmon, co_scsi_dev_t *dp, unsigned long long *size) {
 	co_rc_t rc;
 
-	if (!dp->conf->size) {
-		rc = co_os_file_get_size(dp->os_handle, size);
-
-		return (CO_OK(rc) == 0);
-	} else {
-		*size = dp->conf->size * 1048576;
-
-		return 0;
-	}
+	rc = co_os_file_get_size(dp->os_handle, size);
+	return (CO_OK(rc) == 0);
 }
