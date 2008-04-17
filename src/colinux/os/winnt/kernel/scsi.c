@@ -33,6 +33,22 @@
 
 typedef /*NTOSAPI*/ NTSTATUS DDKAPI (*xfer_func_t)( /*IN*/ HANDLE  FileHandle, /*IN*/ HANDLE  Event  /*OPTIONAL*/, /*IN*/ PIO_APC_ROUTINE  ApcRoutine  /*OPTIONAL*/, /*IN*/ PVOID  ApcContext  /*OPTIONAL*/, /*OUT*/ PIO_STATUS_BLOCK  IoStatusBlock, /*IN*/ PVOID  Buffer, /*IN*/ ULONG  Length, /*IN*/ PLARGE_INTEGER  ByteOffset  /*OPTIONAL*/, /*IN*/ PULONG  Key  /*OPTIONAL*/);
 
+extern PDEVICE_OBJECT coLinux_DeviceObject;
+
+#include <asm/scatterlist.h>
+
+struct _io_req {
+	int in_use;
+	co_monitor_t *mp;
+	co_scsi_dev_t *dp;
+	co_scsi_io_t io;
+	IO_STATUS_BLOCK isb;
+	PIO_WORKITEM pIoWorkItem;
+	xfer_func_t func;
+#if !COSCSI_ASYNC
+	int result;
+#endif
+};
 #if COSCSI_DEBUG_OPEN || COSCSI_DEBUG_IO || COSCSI_DEBUG_PASS
 static char *iostatus_string(IO_STATUS_BLOCK IoStatusBlock) {
 
@@ -134,7 +150,7 @@ int scsi_file_close(co_monitor_t *cmon, co_scsi_dev_t *dp)
 
 /* Async is defined in kernel header! */
 #if COSCSI_ASYNC
-static void send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc, int delta) {
+static void scsi_send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc, int delta) {
 	struct {
 		co_message_t mon;
 		co_linux_message_t linux;
@@ -155,21 +171,6 @@ static void send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc, int delta
 	co_monitor_message_from_user(cmon, 0, (co_message_t *)&msg);
 }
 #endif
-
-extern PDEVICE_OBJECT coLinux_DeviceObject;
-
-#include <asm/scatterlist.h>
-
-struct _io_req {
-	co_monitor_t *mp;
-	co_scsi_dev_t *dp;
-	co_scsi_io_t io;
-	PIO_WORKITEM pIoWorkItem;
-	xfer_func_t func;
-#if !COSCSI_ASYNC
-	int result;
-#endif
-};
 
 typedef struct {
 	HANDLE file_handle;
@@ -207,11 +208,10 @@ static co_rc_t scsi_transfer_file_block(co_monitor_t *cmon,
 	return CO_RC_OK;
 }
 
-
 #if COSCSI_ASYNC
-static VOID DDKAPI _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
+static VOID DDKAPI _scsi_dio(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 #else
-static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
+static int _scsi_dio(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 #endif
 	struct _io_req *r = Context;
 	struct scatterlist *sg;
@@ -254,13 +254,13 @@ static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 io_done:
 #if COSCSI_ASYNC
 	/* Send interrupt */
-	send_intr(r->mp, r->dp->unit, r->io.scp, (CO_OK(rc) == 0), bytes_req - (int)(data.offset.QuadPart - r->io.offset));
+	scsi_send_intr(r->mp, r->dp->unit, r->io.scp, (CO_OK(rc) == 0), bytes_req - (int)(data.offset.QuadPart - r->io.offset));
 #endif
 
 	/* Free WorkItem */
 	wip = r->pIoWorkItem;
 	co_os_free(r);
-        IoFreeWorkItem(wip);
+	IoFreeWorkItem(wip);
 
 #if COSCSI_ASYNC == 0
 	return (CO_OK(rc) == 0);
@@ -290,7 +290,7 @@ int scsi_file_io(co_monitor_t *mp, co_scsi_dev_t *dp, co_scsi_io_t *io) {
 	co_debug("submitting req...\n");
 #endif
 #if COSCSI_ASYNC
-	IoQueueWorkItem(r->pIoWorkItem, _scsi_io, CriticalWorkQueue, r);
+	IoQueueWorkItem(r->pIoWorkItem, _scsi_dio, CriticalWorkQueue, r);
 	return 0;
 #else
 	return _scsi_io(coLinux_DeviceObject, r);
@@ -327,8 +327,7 @@ int scsi_pass(co_monitor_t *cmon, co_scsi_dev_t *dp, co_scsi_pass_t *pass) {
 	}
 
 #if COSCSI_DEBUG_PASS
-	co_debug("scsi_pass: handle: %p, buffer: %p, buflen: %d\n",
-		dp->os_handle, buffer, pass->buflen);
+	co_debug("scsi_pass: handle: %p, buffer: %p, buflen: %ld\n", dp->os_handle, buffer, pass->buflen);
 	co_debug("scsi_pass: cdb_len: %d, write: %d\n", pass->cdb_len, pass->write);
 #endif
 
@@ -364,7 +363,7 @@ int scsi_pass(co_monitor_t *cmon, co_scsi_dev_t *dp, co_scsi_pass_t *pass) {
 		);
 
 #if COSCSI_DEBUG_PASS
-	co_debug("scsi_pass: ntstatus: %X, ScsiStatus: %d\n", status, (req.Spt.ScsiStatus >> 1));
+	co_debug("scsi_pass: ntstatus: %X, ScsiStatus: %d\n", (int)status, (req.Spt.ScsiStatus >> 1));
 #endif
 
 #if 0
