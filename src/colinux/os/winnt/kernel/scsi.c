@@ -106,8 +106,6 @@ again:
 	co_debug("ZwCreateFile: status: %x, iostatus: %s", (int)status, iostatus_string(IoStatusBlock));
 #endif
 
-	co_winnt_free_unicode(&unipath);
-
 	/* If a size is specified, extend/trunc the file */
 	if (status == STATUS_SUCCESS && dp->conf->size != 0 && dp->conf->is_dev == 0) {
 		FILE_END_OF_FILE_INFORMATION eof;
@@ -130,6 +128,8 @@ again:
 #if COSCSI_DEBUG_OPEN
 	co_debug("scsi_file_open: os_handle: %p", dp->os_handle);
 #endif
+
+	co_winnt_free_unicode(&unipath);
 
 	return (status != STATUS_SUCCESS);
 }
