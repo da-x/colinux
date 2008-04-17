@@ -2,7 +2,7 @@ Index: linux-2.6.22-source/drivers/video/covideo.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/drivers/video/covideo.c
-@@ -0,0 +1,585 @@
+@@ -0,0 +1,589 @@
 +
 +#include <linux/module.h>
 +#include <linux/pci.h>
@@ -20,8 +20,8 @@ Index: linux-2.6.22-source/drivers/video/covideo.c
 +MODULE_DESCRIPTION("Cooperative Linux Video Driver");
 +MODULE_LICENSE("GPL");
 +
-+#define COVIDEO_DEBUG 1
-+#define COVIDEO_MEMTEST 1
++#define COVIDEO_DEBUG 0
++#define COVIDEO_MEMTEST 0
 +
 +#if COVIDEO_DEBUG
 +#define dprintk(m) printk m
@@ -479,7 +479,9 @@ Index: linux-2.6.22-source/drivers/video/covideo.c
 +		return 0;
 +	}
 +
++#if COVIDEO_DEBUG
 +	printk(KERN_INFO "covideo%d: buffer: %p, size: %d\n", unit, buffer, size);
++#endif
 +
 +#if COVIDEO_MEMTEST
 +	/* Test buffer */
@@ -498,7 +500,9 @@ Index: linux-2.6.22-source/drivers/video/covideo.c
 +	info->screen_size = size;
 +	info->fbops = &covideo_ops;
 +
++#if COVIDEO_DEBUG
 +	printk(KERN_INFO "covideo%d: calling find_mode...\n", unit);
++#endif
 +	rc = fb_find_mode(&info->var, info, NULL, NULL, 0, NULL, 8);
 +	if (!rc || (rc == 4)) info->var = covideo_default;
 +

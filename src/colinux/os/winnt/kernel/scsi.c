@@ -9,6 +9,8 @@
  *
  */
 
+#define USE_Q 1
+
 #include "ddk.h"
 #include <ddk/ntifs.h>
 #include <ddk/ntdddisk.h>
@@ -49,6 +51,13 @@ struct _io_req {
 	int result;
 #endif
 };
+
+#if USE_Q
+#define IO_QUEUE_SIZE 64
+static struct _io_req io_queue[IO_QUEUE_SIZE];
+static int next_entry = 0;
+#endif
+
 #if COSCSI_DEBUG_OPEN || COSCSI_DEBUG_IO || COSCSI_DEBUG_PASS
 static char *iostatus_string(IO_STATUS_BLOCK IoStatusBlock) {
 
@@ -264,7 +273,11 @@ io_done:
 
 	/* Free WorkItem */
 	wip = r->pIoWorkItem;
+#if USE_Q
+	r->in_use = 0;
+#else
 	co_os_free(r);
+#endif
 	IoFreeWorkItem(wip);
 
 #if COSCSI_ASYNC == 0
@@ -282,8 +295,19 @@ int scsi_file_io(co_monitor_t *mp, co_scsi_dev_t *dp, co_scsi_io_t *io) {
 #if COSCSI_DEBUG_IO
 	co_debug("setting up req...\n");
 #endif
+#if USE_Q
+again:
+#if CO_DEBUG_IO
+	co_debug("next_entry: %d", next_entry);
+#endif
+        r = &io_queue[next_entry++];
+        if (next_entry >= IO_QUEUE_SIZE) next_entry = 0;
+        if (r->in_use) goto again;
+	r->in_use = 1;
+#else
 	r = (struct _io_req *) co_os_malloc(sizeof(*r));
 	if (!r) return 1;
+#endif
 	r->mp = mp;
 	r->dp = dp;
 	co_memcpy(&r->io, io, sizeof(*io));
