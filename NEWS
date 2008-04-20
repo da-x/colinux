@@ -1,14 +1,16 @@
 * Version 0.8.0
   * Use "setcobd=async" to enable asynchronous mode for cobd devices.
 
+  Daemon:
+  * New network "ndis-bridge" works in kernel mode and is the faster
+    alternative to pcap-bridge. (Ligong Liu)
+
   Kernel:
   * scsi: New device for images with partition tables and works async.
     Usage "scsi0=disk,file.img" or "scsi1=cdrom,file.iso" (Steve Shoecraft)
   * Added virtual pci device handling. "lspci" is working (Steve Shoecraft)
-  * Add PG_co_host_mapped to save many OS switching times.
+  * Add PG_co_host_mapped, save many OS switching times: speed up coLinux.
   * unionfs-2.2.4 added as module. (Marwan Al-Sabbagh)
-  * Bugfix the freeze after "Using IPI Shortcut mode" and other randomly
-    crashes at mounting the root file system with types ext2 or ext3.
 
   Debugging:
   * Enable host kernel debug via registry [HKLM\SOFTWARE\coLinux] "Debug"
@@ -22,12 +24,15 @@
   * Check ELF header before accessing kernel vmlinux (fix exception).
   * Fix problems with memory hole from shared video cards and the
     error message "PFN to high".
+  * Bugfix host freeze after "Using IPI Shortcut mode" and other randomly
+    crashes at mounting the root file system with types ext2 or ext3.
 
   Daemon:
+  * Add build date to exe file properties.
+  * View build timestamp of ntkernel driver with --status-driver.
   * Bug #1861876: Random created MAC stored in Registry to have same on
     every start. [HKCU\Software\coLinux]
-  * Add build date to exe file properties.
-  * View build time of ntkernel driver with --status-driver.
+  * Bugfix: Image files >=4GB fails with size error on parameter "-v 3".
 
   Kernel:
   * Kernel has been updated to 2.6.22.18
