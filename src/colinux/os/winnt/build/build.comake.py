@@ -6,6 +6,7 @@ targets['executables'] = Target(
     Input('colinux-debug-daemon.exe'),
     Input('colinux-console-nt.exe'),
     Input('colinux-bridged-net-daemon.exe'),
+    Input('colinux-ndis-net-daemon.exe'),
     Input('colinux-slirp-net-daemon.exe'),
     Input('colinux-serial-daemon.exe'),
     Input('colinux-console-wx.exe'),
@@ -69,6 +70,14 @@ targets['colinux-net-daemon.exe'] = Target(
 targets['colinux-bridged-net-daemon.exe'] = Target(
     inputs = user_res + [
        Input('../user/conet-bridged-daemon/build.o'),
+    ] + user_dep,
+    tool = Compiler(),
+    mono_options = generate_options('gcc', libs=['wpcap']),
+)
+
+targets['colinux-ndis-net-daemon.exe'] = Target(
+    inputs = user_res + [
+       Input('../user/conet-ndis-daemon/build.o'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('gcc', libs=['wpcap']),
@@ -148,7 +157,7 @@ def script_cmdline(scripter, tool_run_inf):
         "-Wl,--entry,_DriverEntry@8 "
         "-Wl,%s "
         "-mdll -nostartfiles -nostdlib "
-        "-o %s %s -lntoskrnl -lhal -lgcc ") %
+        "-o %s %s -lndis -lntoskrnl -lhal -lgcc ") %
     (scripter.get_cross_build_tool('gcc', tool_run_inf),
      inputs[1].pathname,
      tool_run_inf.target.pathname,
@@ -199,7 +208,7 @@ def script_cmdline(scripter, tool_run_inf):
         "-Wl,--base-file,%s " 
 	"-Wl,--entry,_DriverEntry@8 "
 	"-nostartfiles -nostdlib "
-        "-o junk.tmp %s -lntoskrnl -lhal -lgcc ; "
+        "-o junk.tmp %s -lndis -lntoskrnl -lhal -lgcc ; "
 	"rm -f junk.tmp") %
     (scripter.get_cross_build_tool('gcc', tool_run_inf),
      tool_run_inf.target.pathname,

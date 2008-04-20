@@ -204,6 +204,14 @@ extern co_rc_t co_monitor_free(co_monitor_t *cmon, void *ptr);
 
 extern co_rc_t co_monitor_message_from_user(co_monitor_t *monitor, struct co_manager_open_desc *opened, co_message_t *message);
 
+/* support kernel mode conet module */
+extern bool_t co_conet_register_protocol(co_monitor_t *monitor);
+extern bool_t co_conet_unregister_protocol(co_monitor_t *monitor);
+extern bool_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcfg_id, int promise, char mac[6]);
+extern bool_t co_conet_unbind_adapter(co_monitor_t *monitor, int conet_unit);
+extern bool_t co_conet_inject_packet_to_adapter(co_monitor_t *monitor, int conet_unit, void *packet_data, int length);
+extern co_rc_t co_monitor_filter_linux_message(co_monitor_t *monitor, co_message_t *message);
+
 /*
  * An accessors to values of our core's kernel symbols.
  */

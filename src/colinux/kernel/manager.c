@@ -145,6 +145,10 @@ co_rc_t co_manager_send(co_manager_t *manager, co_manager_open_desc_t opened, co
 	bool_t ret;
 	co_rc_t rc = CO_RC_OK;
 
+	// ligong liu, support kernel mode conet, filter for conet message
+	if ( co_monitor_filter_linux_message(opened->monitor, message) == CO_RC_OK )
+		return CO_RC_OK;
+
 	co_os_mutex_acquire(opened->lock);
 
 	ret = co_os_manager_userspace_try_send_direct(manager, opened, message);

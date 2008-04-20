@@ -58,6 +58,9 @@ typedef enum {
 	CO_NETDEV_TYPE_BRIDGED_PCAP,
 	CO_NETDEV_TYPE_TAP,
 	CO_NETDEV_TYPE_SLIRP,
+	CO_NETDEV_TYPE_NDIS_BRIDGE,		/* kernel mode conet bridge */
+	CO_NETDEV_TYPE_NDIS_NAT,		/* kernel mode conet NAT */
+	CO_NETDEV_TYPE_NDIS_HOST		/* kernel mode conet HOST only network */
 } co_netdev_type_t;
 
 #define CO_NETDEV_DESC_STR_SIZE 0x40

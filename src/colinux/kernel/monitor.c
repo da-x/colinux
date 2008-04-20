@@ -1361,6 +1361,23 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 
 		return co_video_detach(cmon, params);
 	}
+	case CO_MONITOR_IOCTL_CONET_BIND_ADAPTER: {
+		co_monitor_ioctl_conet_bind_adapter_t *params;
+
+		params = (typeof(params))(io_buffer);
+		if ( params->conet_proto == CO_CONET_BRIDGE )
+			return co_conet_bind_adapter(cmon, params->conet_unit, params->netcfg_id, 
+							params->promisc_mode, params->mac_address);
+		else
+			return rc;
+	}
+	case CO_MONITOR_IOCTL_CONET_UNBIND_ADAPTER: {
+		co_monitor_ioctl_conet_unbind_adapter_t *params;
+
+		params = (typeof(params))(io_buffer);
+		
+		return co_conet_unbind_adapter(cmon, params->conet_unit);
+	}
 	default:
 		break;
 	}
@@ -1397,4 +1414,22 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 	}
 
 	return rc;
+}
+
+// support kernel mode conet module, filter out conet message, return CO_RC_OK if the message was handled.
+co_rc_t co_monitor_filter_linux_message(co_monitor_t *monitor, co_message_t *message)
+{
+	co_debug("enter: monitor = %p, message = %p",
+		monitor, message);
+
+	if (monitor != NULL && message != NULL && message->from == CO_MODULE_LINUX &&
+	     message->to >= CO_MODULE_CONET0 && message->to <= CO_MODULE_CONET_END &&
+	     co_conet_inject_packet_to_adapter(monitor, message->to-CO_MODULE_CONET0, 
+						(void *)(message+1), message->size) ) {
+		co_debug("leave: conet message handled");
+		return CO_RC_OK;
+	} else {
+		co_debug("leave: other message");
+		return CO_RC_ERROR;
+	}
 }

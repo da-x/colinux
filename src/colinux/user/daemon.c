@@ -668,6 +668,16 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 			break;
 		}
 
+		case CO_NETDEV_TYPE_NDIS_BRIDGE: {
+			char mac_address[18];
+
+			co_build_mac_address(mac_address, sizeof(mac_address), net_dev->mac_address);
+
+			rc = co_launch_process(NULL, "colinux-ndis-net-daemon -i %d -u %d %s -mac %s -p %d",
+					daemon->id, i, interface_name, mac_address, net_dev->promisc_mode);
+			break;
+		}
+
 		default:
 			rc = CO_RC(ERROR);
 			break;
