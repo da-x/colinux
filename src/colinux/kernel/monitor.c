@@ -509,6 +509,19 @@ static void co_monitor_getpp(co_monitor_t *cmon, void *pp_buffer, void *host_buf
 	return;
 }
 
+// support kernel mode conet module, filter out conet message, return CO_RC_OK if the message was handled.
+static co_rc_t co_monitor_filter_linux_message(co_monitor_t *monitor, co_message_t *message)
+{
+	if (message->from == CO_MODULE_LINUX &&
+	     message->to >= CO_MODULE_CONET0 && message->to <= CO_MODULE_CONET_END &&
+	     co_conet_inject_packet_to_adapter(monitor, message->to - CO_MODULE_CONET0,
+						(void *)(message+1), message->size) ) {
+		return CO_RC_OK;
+	} else {
+		return CO_RC(ERROR);
+	}
+}
+
 static
 void incoming_message(co_monitor_t *cmon, co_message_t *message)
 {
@@ -524,7 +537,9 @@ void incoming_message(co_monitor_t *cmon, co_message_t *message)
 	co_os_mutex_release(cmon->connected_modules_write_lock);
 	
 	if (CO_OK(rc)) {
-		co_manager_send(cmon->manager, opened, message);
+		// ligong liu, support kernel mode conet, filter for conet message
+		if ( co_monitor_filter_linux_message(cmon, message) != CO_RC_OK )
+			co_manager_send(cmon->manager, opened, message);
 		co_manager_close(cmon->manager, opened);
 	}
 
@@ -1414,22 +1429,4 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 	}
 
 	return rc;
-}
-
-// support kernel mode conet module, filter out conet message, return CO_RC_OK if the message was handled.
-co_rc_t co_monitor_filter_linux_message(co_monitor_t *monitor, co_message_t *message)
-{
-	co_debug("enter: monitor = %p, message = %p",
-		monitor, message);
-
-	if (monitor != NULL && message != NULL && message->from == CO_MODULE_LINUX &&
-	     message->to >= CO_MODULE_CONET0 && message->to <= CO_MODULE_CONET_END &&
-	     co_conet_inject_packet_to_adapter(monitor, message->to-CO_MODULE_CONET0, 
-						(void *)(message+1), message->size) ) {
-		co_debug("leave: conet message handled");
-		return CO_RC_OK;
-	} else {
-		co_debug("leave: other message");
-		return CO_RC_ERROR;
-	}
 }
