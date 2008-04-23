@@ -283,17 +283,18 @@ static struct _io_req *get_next_entry(co_scsi_dev_t *dp) {
 #endif
 	r = &io_queue[next_entry++];
 	if (next_entry >= IO_QUEUE_SIZE) next_entry = 0;
-	if (r->in_use) {
-		register int x;
+	if (!r->in_use) {
+		r->in_use = 1;
+		return r;
+	}
 
 #if COSCSI_DEBUG_IO
-		co_debug("next entry in use!");
+	co_debug("next entry in use!");
 #endif
-again:
+	while(1) {
 		/* Try to find a free slot */
-		for(x=0; x < IO_QUEUE_SIZE; x++) {
-			if (io_queue[x].in_use == 0) {
-				r = &io_queue[x];
+		for(r = io_queue; r < &io_queue[IO_QUEUE_SIZE]; r++) {
+			if (r->in_use == 0) {
 				r->in_use = 1;
 				return r;
 			}
@@ -304,10 +305,7 @@ again:
 		co_debug("sleeping...");
 #endif
 		co_os_msleep(100);
-		goto again;
 	}
-	r->in_use = 1;
-	return r;
 }
 
 /*
