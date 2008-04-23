@@ -9,8 +9,6 @@
  *
  */
 
-#define USE_Q 0
-
 #include "ddk.h"
 #include <ddk/ntifs.h>
 #include <ddk/ntdddisk.h>
@@ -52,11 +50,9 @@ struct _io_req {
 #endif
 };
 
-#if USE_Q
-#define IO_QUEUE_SIZE 64
+#define IO_QUEUE_SIZE CO_ARCH_PAGE_SIZE/sizeof(struct _io_req)
 static struct _io_req io_queue[IO_QUEUE_SIZE];
 static int next_entry = 0;
-#endif
 
 #if COSCSI_DEBUG_OPEN || COSCSI_DEBUG_IO || COSCSI_DEBUG_PASS
 static char *iostatus_string(IO_STATUS_BLOCK IoStatusBlock) {
@@ -92,6 +88,8 @@ int scsi_file_open(co_monitor_t *cmon, co_scsi_dev_t *dp) {
 	ULONG FileAttributes, CreateDisposition, CreateOptions;
 	co_rc_t rc;
 
+	co_debug("_io_req size: %d, IO_QUEUE_SIZE: %d", sizeof(struct _io_req), IO_QUEUE_SIZE);
+
 #if COSCSI_DEBUG_OPEN
 	co_debug("scsi_file_open: pathname: %s", dp->conf->pathname);
 #endif
@@ -105,12 +103,10 @@ int scsi_file_open(co_monitor_t *cmon, co_scsi_dev_t *dp) {
 	CreateOptions = FILE_SYNCHRONOUS_IO_NONALERT;
 
 	/* Kernel handle needed for IoQueueWorkItem */
-	co_debug("init attr");
 	InitializeObjectAttributes(&ObjectAttributes, &unipath,
 				OBJ_KERNEL_HANDLE | OBJ_CASE_INSENSITIVE, NULL, NULL);
 
 again:
-	co_debug("opening...");
 	status = ZwCreateFile((HANDLE *)&dp->os_handle, DesiredAccess, &ObjectAttributes, &IoStatusBlock, 0,
 			FileAttributes, 0, CreateDisposition, CreateOptions, NULL, 0);
 #if COSCSI_DEBUG_OPEN
@@ -130,11 +126,8 @@ again:
 		co_debug("ZwSetInformationFile: status: %x, iostatus: %s", (int)status, iostatus_string(IoStatusBlock));
 #endif
 		if (status == STATUS_SUCCESS) {
-			co_debug("setting size...");
 			dp->conf->size = 0;
-			co_debug("closing...");
 			ZwClose(dp->os_handle);
-			co_debug("opening again...");
 			goto again;
 		}
 	}
@@ -171,6 +164,9 @@ static void scsi_send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc, int 
 		co_scsi_intr_t info;
 	} msg;
 
+#if COSCSI_DEBUG_IO
+	co_debug("unit: %d, ctx: %p, rc: %d, delta: %d", unit, ctx, rc, delta);
+#endif
 	msg.mon.from = CO_MODULE_COSCSI0;
 	msg.mon.to = CO_MODULE_LINUX;
 	msg.mon.priority = CO_PRIORITY_DISCARDABLE;
@@ -231,7 +227,6 @@ static int _scsi_dio(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 	struct scatterlist *sg;
 	co_pfn_t sg_pfn;
 	unsigned char *sg_page;
-	PIO_WORKITEM wip;
 	int x;
 	co_rc_t rc;
 	scsi_transfer_file_block_data_t data;
@@ -272,17 +267,47 @@ io_done:
 #endif
 
 	/* Free WorkItem */
-	wip = r->pIoWorkItem;
-#if USE_Q
+	IoFreeWorkItem(r->pIoWorkItem);
 	r->in_use = 0;
-#else
-	co_os_free(r);
-#endif
-	IoFreeWorkItem(wip);
 
 #if COSCSI_ASYNC == 0
 	return (CO_OK(rc) == 0);
 #endif
+}
+
+static struct _io_req *get_next_entry(co_scsi_dev_t *dp) {
+	struct _io_req *r;
+
+#if COSCSI_DEBUG_IO
+	co_debug("next_entry: %d", next_entry);
+#endif
+	r = &io_queue[next_entry++];
+	if (next_entry >= IO_QUEUE_SIZE) next_entry = 0;
+	if (r->in_use) {
+		register int x;
+
+#if COSCSI_DEBUG_IO
+		co_debug("next entry in use!");
+#endif
+again:
+		/* Try to find a free slot */
+		for(x=0; x < IO_QUEUE_SIZE; x++) {
+			if (io_queue[x].in_use == 0) {
+				r = &io_queue[x];
+				r->in_use = 1;
+				return r;
+			}
+		}
+
+		/* If we got here, we didn't find one */
+#if COSCSI_DEBUG_IO
+		co_debug("sleeping...");
+#endif
+		co_os_msleep(100);
+		goto again;
+	}
+	r->in_use = 1;
+	return r;
 }
 
 /*
@@ -295,19 +320,7 @@ int scsi_file_io(co_monitor_t *mp, co_scsi_dev_t *dp, co_scsi_io_t *io) {
 #if COSCSI_DEBUG_IO
 	co_debug("setting up req...\n");
 #endif
-#if USE_Q
-again:
-#if CO_DEBUG_IO
-	co_debug("next_entry: %d", next_entry);
-#endif
-        r = &io_queue[next_entry++];
-        if (next_entry >= IO_QUEUE_SIZE) next_entry = 0;
-        if (r->in_use) goto again;
-	r->in_use = 1;
-#else
-	r = (struct _io_req *) co_os_malloc(sizeof(*r));
-	if (!r) return 1;
-#endif
+	r = get_next_entry(dp);
 	r->mp = mp;
 	r->dp = dp;
 	co_memcpy(&r->io, io, sizeof(*io));
@@ -322,7 +335,7 @@ again:
 	IoQueueWorkItem(r->pIoWorkItem, _scsi_dio, CriticalWorkQueue, r);
 	return 0;
 #else
-	return _scsi_io(coLinux_DeviceObject, r);
+	return _scsi_dio(coLinux_DeviceObject, r);
 #endif
 }
 

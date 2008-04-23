@@ -2,7 +2,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/drivers/scsi/coscsi.c
-@@ -0,0 +1,1161 @@
+@@ -0,0 +1,1154 @@
 +
 +#include <linux/module.h>
 +#include <linux/interrupt.h>
@@ -289,32 +289,25 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	iop->sg = scp->request_buffer;
 +	iop->reqlen = total = num * scp->device->sector_size;
 +
-+#if 0
-+	total = 0;
-+	/* Copy the info to the passage page */
-+	for(x=0; x < count; x++, sg++) {
-+		iop->vec[x].buffer = page_address(sg->page) + sg->offset;
-+		iop->vec[x].size = sg->length;
-+		total += sg->length;
-+	}
-+#endif
-+
 +	/* Do it */
 +     	co_switch_wrapper();
 +
 +	rc = co_passage_page->params[0];
 +       	co_passage_page_release(flags);
++
 +	dma_unmap_sg(&scp->device->host->shost_gendev, sg, scp->use_sg, scp->sc_data_direction);
 +
 +#if COSCSI_DUMP_STATS
-+	if (count > max_segs) {
-+		max_segs = count;
-+		printk(KERN_INFO "COSCSI: max_segs: %d\n", max_segs);
-+	}
++	if (rc == GOOD) {
++		if (count > max_segs) {
++			max_segs = count;
++			printk(KERN_INFO "COSCSI: max_segs: %d\n", max_segs);
++		}
 +
-+	if (total > max_xfer) {
-+		max_xfer = total;
-+		printk(KERN_INFO "COSCSI: max_xfer: %dKB\n", max_xfer >> 10);
++		if (total > max_xfer) {
++			max_xfer = total;
++			printk(KERN_INFO "COSCSI: max_xfer: %dKB\n", max_xfer >> 10);
++		}
 +	}
 +#endif
 +
