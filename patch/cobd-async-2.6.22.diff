@@ -198,7 +198,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- linux-2.6.22-source.orig/include/linux/cooperative.h
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -303,6 +303,7 @@
+@@ -304,6 +304,7 @@
  	CO_BLOCK_WRITE,
  	CO_BLOCK_CLOSE,
  	CO_BLOCK_GET_ALIAS,
@@ -206,7 +206,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
  } co_block_request_type_t;
  
  typedef enum {
-@@ -328,6 +329,7 @@
+@@ -329,6 +330,7 @@
  			unsigned long long size;
  			unsigned long long disk_size;
  			vm_ptr_t address;
@@ -214,7 +214,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
  		};
  		struct {
  			char alias[20];
-@@ -336,6 +338,11 @@
+@@ -337,6 +339,11 @@
  } __attribute__((packed)) co_block_request_t;
  
  typedef struct {

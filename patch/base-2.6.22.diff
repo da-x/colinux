@@ -142,7 +142,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	help
  	  kexec is a system call that implements the ability to shutdown your
  	  current kernel, and to start another kernel.  It is like a reboot
-@@ -898,6 +908,10 @@
+@@ -898,6 +908,17 @@
  	  enable suspend on SMP systems. CPUs can be controlled through
  	  /sys/devices/system/cpu.
  
@@ -150,10 +150,17 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
 +	bool 'Cooperative Mode'
 +	default y
 +
++config COLINUX_STATS
++	bool 'Cooperative Linux stats'
++	depends on COOPERATIVE
++	default y
++	help
++	  OS switch counters readable in /proc/colinux/stats.
++
  config COMPAT_VDSO
  	bool "Compat VDSO support"
  	default y
-@@ -917,7 +931,7 @@
+@@ -917,7 +938,7 @@
  	depends on HIGHMEM
  
  menu "Power management options (ACPI, APM)"
@@ -162,7 +169,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  
  source kernel/power/Kconfig
  
-@@ -1056,6 +1070,7 @@
+@@ -1056,6 +1077,7 @@
  endmenu
  
  menu "Bus options (PCI, PCMCIA, EISA, MCA, ISA)"
@@ -170,7 +177,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  
  config PCI
  	bool "PCI support" if !X86_VISWS
-@@ -1264,7 +1279,7 @@
+@@ -1264,7 +1286,7 @@
  
  config X86_BIOS_REBOOT
  	bool
@@ -240,7 +247,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,322 @@
+@@ -0,0 +1,325 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -472,6 +479,9 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +		co_terminate(CO_TERMINATE_STACK_OVERFLOW);
 +	}
 +
++#ifdef CONFIG_COLINUX_STATS
++	co_proc_counts.switches[co_passage_page->operation]++;
++#endif
 +	co_switch_wrapper_protected();
 +}
 +
@@ -1730,7 +1740,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -0,0 +1,371 @@
+@@ -0,0 +1,372 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1776,6 +1786,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_OPERATION_ALLOC_PAGES,
 +	CO_OPERATION_PRINTK_unused,
 +	CO_OPERATION_GETPP,
++	CO_OPERATION_MAX	/* Must be last entry all times */
 +} co_operation_t;
 +
 +#define CO_MODULE_MAX_CONET    16
@@ -2106,7 +2117,7 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative_internal.h
-@@ -0,0 +1,121 @@
+@@ -0,0 +1,129 @@
 +/*
 + *  linux/include/linux/cooperative_internal.h
 + *
@@ -2131,6 +2142,14 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +
 +extern co_boot_params_t co_boot_params;
 +extern int co_passage_page_holding_count;
++
++#ifdef CONFIG_COLINUX_STATS
++typedef struct co_proc_counts {
++	unsigned long switches[CO_OPERATION_MAX];
++} co_proc_counts_t;
++
++extern co_proc_counts_t co_proc_counts;
++#endif
 +
 +#define co_io_buffer ((co_io_buffer_t *)CO_VPTR_IO_AREA_START)
 +#define cooperative_mode_enabled()     1
@@ -2244,7 +2263,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -0,0 +1,385 @@
+@@ -0,0 +1,449 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2260,6 +2279,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +#include <linux/interrupt.h>
 +#include <linux/mm.h>
 +#include <linux/slab.h>
++#include <linux/proc_fs.h>
 +#include <linux/cooperative_internal.h>
 +
 +CO_TRACE_STOP;
@@ -2275,6 +2295,10 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +co_message_queue_t co_outgoing_messages;
 +co_message_queue_t co_incoming_messages;
 +co_message_queue_t *co_incoming_queued_messages;
++
++#ifdef CONFIG_COLINUX_STATS
++co_proc_counts_t co_proc_counts;
++#endif
 +
 +void co_start_kernel(void)
 +{
@@ -2395,6 +2419,9 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +		return;
 +	}
 +
++#ifdef CONFIG_COLINUX_STATS
++	co_proc_counts.switches[CO_OPERATION_MESSAGE_FROM_MONITOR]++;
++#endif
 +	io_size = co_passage_page->params[0];
 +	new_jiffies = co_passage_page->params[1];
 +
@@ -2625,6 +2652,62 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +}
 +
 +__initcall(initcall_message_queues);
++
++#ifdef CONFIG_COLINUX_STATS
++static int co_guest_read_status(char *page, char **start, off_t off, int count, int *eof, void *clear)
++{
++	co_proc_counts_t hold;
++	int len;
++
++	local_irq_disable();
++	hold = co_proc_counts;
++	if (clear)
++		memset(&co_proc_counts, 0, sizeof(co_proc_counts));
++	local_irq_enable();
++
++	len = sprintf(page,	"idle:\t%lu\n"
++				"msgto:\t%lu\n"
++				"mfrom:\t%lu\n"
++				"intr:\t%lu\n"
++				"dev:\t%lu\n"
++				"time:\t%lu\n"
++				"hpt:\t%lu\n"
++				"free:\t%lu\n"
++				"alloc:\t%lu\n"
++				"getpp:\t%lu\n",
++			hold.switches[CO_OPERATION_IDLE],
++			hold.switches[CO_OPERATION_MESSAGE_TO_MONITOR],
++			hold.switches[CO_OPERATION_MESSAGE_FROM_MONITOR],
++			hold.switches[CO_OPERATION_FORWARD_INTERRUPT],
++			hold.switches[CO_OPERATION_DEVICE],
++			hold.switches[CO_OPERATION_GET_TIME],
++			hold.switches[CO_OPERATION_GET_HIGH_PREC_TIME],
++			hold.switches[CO_OPERATION_FREE_PAGES],
++			hold.switches[CO_OPERATION_ALLOC_PAGES],
++			hold.switches[CO_OPERATION_GETPP]);
++
++	return len;
++}
++
++static __init int co_create_proc_stats(void)
++{
++	struct proc_dir_entry *co_guest_dir;
++
++	co_guest_dir = proc_mkdir("colinux", NULL);
++	if(co_guest_dir) {
++		create_proc_read_entry("stats",
++					0444, co_guest_dir,
++					co_guest_read_status, NULL);
++		create_proc_read_entry("stats_clear",
++					0444, co_guest_dir,
++					co_guest_read_status, (void*)1);
++	}
++
++	return 0;
++}
++
++__initcall(co_create_proc_stats);
++#endif /* CONFIG_COLINUX_STATS */
 +
 +EXPORT_SYMBOL(co_terminate);
 +EXPORT_SYMBOL(co_terminate_bug);

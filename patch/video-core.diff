@@ -618,7 +618,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- linux-2.6.22-source.orig/include/linux/cooperative.h
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -117,7 +117,7 @@
+@@ -118,7 +118,7 @@
  
  	CO_DEVICE_MOUSE,
  	CO_DEVICE_SCSI,
