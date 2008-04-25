@@ -4,26 +4,6 @@ cobd reimplement as asynchronous
   Running in async mode can see as counts from interrupt 15.
   Without this parameter, the old sync mode will be use.
 
-Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
-===================================================================
---- linux-2.6.22-source.orig/arch/i386/kernel/cooperative.c
-+++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
-@@ -168,6 +168,15 @@
- 		break;
- 	}
- 
-+	case CO_DEVICE_BLOCK: {
-+		co_queue_incoming_message(node_message);
-+
-+		irq_enter();
-+		__do_IRQ(BLOCKDEV_IRQ);
-+		irq_exit();
-+		break;
-+	}
-+
- 	default:
- 		BUG_ON((unsigned long)message->device >= (unsigned long)CO_DEVICES_TOTAL);
- 		co_free_message(node_message);
 Index: linux-2.6.22-source/drivers/block/cobd.c
 ===================================================================
 --- linux-2.6.22-source.orig/drivers/block/cobd.c
@@ -209,3 +189,15 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
  	co_network_request_type_t type;
  	unsigned int unit;
  	char mac_address[6];
+Index: linux-2.6.22-source/kernel/cooperative.c
+===================================================================
+--- linux-2.6.22-source.orig/kernel/cooperative.c
++++ linux-2.6.22-source/kernel/cooperative.c
+@@ -130,6 +130,7 @@
+ #endif
+ 	case CO_DEVICE_SCSI: irq = SCSI_IRQ; break;
+ 	case CO_DEVICE_MOUSE: irq = MOUSE_IRQ; break;
++	case CO_DEVICE_BLOCK: irq = BLOCKDEV_IRQ; break;
+ 	default:
+ 		BUG_ON((unsigned long)message->device >= (unsigned long)CO_DEVICES_TOTAL);
+ 		co_free_message(node_message);

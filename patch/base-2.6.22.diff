@@ -247,7 +247,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,317 @@
+@@ -0,0 +1,244 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -350,79 +350,6 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +{
 +	co_early_cpu_init();
 +	co_start_kernel();
-+}
-+
-+/* called with disabled interrupts */
-+void co_handle_incoming_message(co_message_node_t *node_message)
-+{
-+	co_linux_message_t *message;
-+
-+	message = (co_linux_message_t *)&node_message->msg.data;
-+
-+	switch (message->device) {
-+	case CO_DEVICE_POWER: {
-+		co_queue_incoming_message(node_message);
-+
-+		irq_enter();
-+		__do_IRQ(POWER_IRQ);
-+		irq_exit();
-+		break;
-+	}
-+
-+	case CO_DEVICE_KEYBOARD: {
-+		co_queue_incoming_message(node_message);
-+
-+		irq_enter();
-+		__do_IRQ(KEYBOARD_IRQ);
-+		irq_exit();
-+		break;
-+	}
-+
-+#ifdef CONFIG_CONET_COOPERATIVE
-+	case CO_DEVICE_NETWORK: {
-+		co_queue_incoming_message(node_message);
-+
-+		irq_enter();
-+		__do_IRQ(NETWORK_IRQ);
-+		irq_exit();
-+		break;
-+	}
-+#endif
-+
-+#ifdef CONFIG_SERIAL_COOPERATIVE
-+	case CO_DEVICE_SERIAL: {
-+		co_queue_incoming_message(node_message);
-+
-+		irq_enter();
-+		__do_IRQ(SERIAL_IRQ);
-+		irq_exit();
-+		break;
-+	}
-+#endif
-+
-+	case CO_DEVICE_SCSI: {
-+		co_queue_incoming_message(node_message);
-+
-+		irq_enter();
-+		__do_IRQ(SCSI_IRQ);
-+		irq_exit();
-+		break;
-+	}
-+
-+	case CO_DEVICE_MOUSE: {
-+		co_queue_incoming_message(node_message);
-+
-+		irq_enter();
-+		__do_IRQ(MOUSE_IRQ);
-+		irq_exit();
-+		break;
-+	}
-+
-+	default:
-+		BUG_ON((unsigned long)message->device >= (unsigned long)CO_DEVICES_TOTAL);
-+		co_free_message(node_message);
-+		break;
-+	}
 +}
 +
 +static void co_switch_wrapper_protected(void)
@@ -2112,7 +2039,7 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative_internal.h
-@@ -0,0 +1,129 @@
+@@ -0,0 +1,127 @@
 +/*
 + *  linux/include/linux/cooperative_internal.h
 + *
@@ -2171,8 +2098,6 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +			    const char *data);
 +extern unsigned long co_get_host_time(void);
 +
-+extern void co_handle_incoming_message(co_message_node_t *message);
-+extern void co_queue_incoming_message(co_message_node_t *message);
 +extern int co_get_message(co_message_node_t **message, co_device_t device);
 +static inline void co_free_message(co_message_node_t *message)
 +{
@@ -2258,7 +2183,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -0,0 +1,438 @@
+@@ -0,0 +1,453 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2370,6 +2295,41 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +
 +		count--;
 +	}
++}
++
++/* called with disabled interrupts */
++static void co_handle_incoming_message(co_message_node_t *node_message)
++{
++	co_linux_message_t *message;
++	co_message_queue_t *queue;
++	int irq;
++
++	message = (co_linux_message_t *)&node_message->msg.data;
++	switch (message->device) {
++	case CO_DEVICE_POWER: irq = POWER_IRQ; break;
++	case CO_DEVICE_KEYBOARD: irq = KEYBOARD_IRQ; break;
++#ifdef CONFIG_CONET_COOPERATIVE
++	case CO_DEVICE_NETWORK: irq = NETWORK_IRQ; break;
++#endif
++#ifdef CONFIG_SERIAL_COOPERATIVE
++	case CO_DEVICE_SERIAL: irq = SERIAL_IRQ; break;
++#endif
++	case CO_DEVICE_SCSI: irq = SCSI_IRQ; break;
++	case CO_DEVICE_MOUSE: irq = MOUSE_IRQ; break;
++	default:
++		BUG_ON((unsigned long)message->device >= (unsigned long)CO_DEVICES_TOTAL);
++		co_free_message(node_message);
++		return;
++	}
++
++	/* Add to the queue */
++	queue = &co_incoming_queued_messages[message->device];
++	list_add(&node_message->node, &queue->list);
++	queue->num_messages++;
++
++	irq_enter();
++	__do_IRQ(irq);
++	irq_exit();
 +}
 +
 +static void co_handle_incoming_messages(void)
@@ -2526,26 +2486,6 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	co_passage_page_release(flags);
 +
 +	return time;
-+}
-+
-+/* called with disabled interrupts */
-+void co_queue_incoming_message(co_message_node_t *node_message)
-+{
-+	co_linux_message_t *message;
-+	co_message_queue_t *queue;
-+
-+	if (!co_messages_active)
-+		return;
-+
-+	message = (co_linux_message_t *)&node_message->msg.data;
-+	if (message->device < 0 || (message->device >= CO_DEVICES_TOTAL))
-+		return;
-+
-+	queue = &co_incoming_queued_messages[message->device];
-+
-+	/* Add to the queue */
-+	list_add(&node_message->node, &queue->list);
-+	queue->num_messages++;
 +}
 +
 +int co_get_message(co_message_node_t **message, co_device_t device)
