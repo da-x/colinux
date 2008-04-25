@@ -2258,7 +2258,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -0,0 +1,440 @@
+@@ -0,0 +1,438 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2528,11 +2528,11 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	return time;
 +}
 +
++/* called with disabled interrupts */
 +void co_queue_incoming_message(co_message_node_t *node_message)
 +{
 +	co_linux_message_t *message;
 +	co_message_queue_t *queue;
-+	unsigned long flags;
 +
 +	if (!co_messages_active)
 +		return;
@@ -2544,10 +2544,8 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	queue = &co_incoming_queued_messages[message->device];
 +
 +	/* Add to the queue */
-+	local_irq_save(flags);
 +	list_add(&node_message->node, &queue->list);
 +	queue->num_messages++;
-+	local_irq_restore(flags);
 +}
 +
 +int co_get_message(co_message_node_t **message, co_device_t device)
