@@ -2117,7 +2117,7 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative_internal.h
-@@ -0,0 +1,128 @@
+@@ -0,0 +1,131 @@
 +/*
 + *  linux/include/linux/cooperative_internal.h
 + *
@@ -2181,7 +2181,10 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +extern void co_handle_incoming_message(co_message_node_t *message);
 +extern void co_queue_incoming_message(co_message_node_t *message);
 +extern int co_get_message(co_message_node_t **message, co_device_t device);
-+extern void co_free_message(co_message_node_t *message);
++static inline void co_free_message(co_message_node_t *message)
++{
++	kfree(message);
++}
 +
 +extern void *co_map_buffer(void *, int);
 +
@@ -2262,7 +2265,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -0,0 +1,449 @@
+@@ -0,0 +1,440 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2488,10 +2491,6 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	}
 +}
 +
-+void co_debug_line(char *line)
-+{
-+}
-+
 +void co_terminate_bug(int code, int line, const char *file)
 +{
 +	unsigned long flags;
@@ -2581,11 +2580,6 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +
 +	*message = node;
 +	return 1;
-+}
-+
-+void co_free_message(co_message_node_t *message)
-+{
-+	kfree(message);
 +}
 +
 +co_info_t co_info = {
