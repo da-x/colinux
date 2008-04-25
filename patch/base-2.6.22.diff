@@ -402,7 +402,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +		co_queue_incoming_message(node_message);
 +
 +		irq_enter();
-+		cocd_interrupt();
++		__do_IRQ(SERIAL_IRQ);
 +		irq_exit();
 +		break;
 +	}
@@ -2117,7 +2117,7 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative_internal.h
-@@ -0,0 +1,129 @@
+@@ -0,0 +1,128 @@
 +/*
 + *  linux/include/linux/cooperative_internal.h
 + *
@@ -2176,7 +2176,6 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +			    const char *data);
 +extern unsigned long co_get_host_time(void);
 +
-+extern void cocd_interrupt(void);
 +extern void co_shedule_shutdown(void);
 +
 +extern void co_handle_incoming_message(co_message_node_t *message);
