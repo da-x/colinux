@@ -247,7 +247,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,325 @@
+@@ -0,0 +1,317 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -361,19 +361,11 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +
 +	switch (message->device) {
 +	case CO_DEVICE_POWER: {
-+		co_linux_message_power_t *type = (co_linux_message_power_t *)message->data;
-+		switch (type->type) {
-+		case CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL:
-+			ctrl_alt_del();
-+			break;
-+		case CO_LINUX_MESSAGE_POWER_SHUTDOWN:
-+			co_shedule_shutdown();
-+			break;
-+		case CO_LINUX_MESSAGE_POWER_OFF:
-+			machine_power_off();
-+			break;
-+		}
-+		co_free_message(node_message);
++		co_queue_incoming_message(node_message);
++
++		irq_enter();
++		__do_IRQ(POWER_IRQ);
++		irq_exit();
 +		break;
 +	}
 +
@@ -1529,16 +1521,19 @@ Index: linux-2.6.22-source/include/asm-i386/mach-default/irq_vectors.h
 ===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/mach-default/irq_vectors.h
 +++ linux-2.6.22-source/include/asm-i386/mach-default/irq_vectors.h
-@@ -67,6 +67,14 @@
+@@ -67,6 +67,17 @@
  
  #define TIMER_IRQ 0
  
 +#ifdef CONFIG_COOPERATIVE
 +#define KEYBOARD_IRQ 1
++#define SERIAL_IRQ 3
 +#define SOUND_IRQ 5
++#define POWER_IRQ 9
 +#define NETWORK_IRQ 10
 +#define SCSI_IRQ 11
 +#define MOUSE_IRQ 12
++#define BLOCKDEV_IRQ 15
 +#endif
 +
  /*
@@ -2117,7 +2112,7 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative_internal.h
-@@ -0,0 +1,131 @@
+@@ -0,0 +1,129 @@
 +/*
 + *  linux/include/linux/cooperative_internal.h
 + *
@@ -2175,8 +2170,6 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +			    unsigned long size,
 +			    const char *data);
 +extern unsigned long co_get_host_time(void);
-+
-+extern void co_shedule_shutdown(void);
 +
 +extern void co_handle_incoming_message(co_message_node_t *message);
 +extern void co_queue_incoming_message(co_message_node_t *message);
@@ -2995,7 +2988,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/reboot_cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/reboot_cooperative.c
-@@ -0,0 +1,88 @@
+@@ -0,0 +1,133 @@
 +/*
 + *  linux/arch/i386/kernel/reboot_cooperative.c
 + */
@@ -3004,6 +2997,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/reboot_cooperative.c
 +#include <linux/reboot.h>
 +#include <linux/kthread.h>
 +#include <linux/syscalls.h>
++#include <linux/interrupt.h>
 +#include <linux/cooperative_internal.h>
 +
 +/* sys_reboot needs this dummy. */
@@ -3044,7 +3038,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/reboot_cooperative.c
 +/*
 + * This function will call from interrupt context.
 + */
-+void co_shedule_shutdown(void)
++static void co_shedule_shutdown(void)
 +{
 +	static DECLARE_WORK(shutdown_work, deferred_shutdown);
 +
@@ -3084,6 +3078,50 @@ Index: linux-2.6.22-source/arch/i386/kernel/reboot_cooperative.c
 +{
 +	co_terminate(CO_TERMINATE_HALT);
 +}
++
++static irqreturn_t power_interrupt(int irq, void *dev_id)
++{
++	co_message_node_t *node_message;
++
++	if (co_get_message(&node_message, CO_DEVICE_POWER)) {
++		co_linux_message_t *message;
++		co_linux_message_power_t *type;
++
++		message = (co_linux_message_t *)&node_message->msg.data;
++		type = (co_linux_message_power_t *)message->data;
++		switch (type->type) {
++		case CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL:
++			ctrl_alt_del();
++			break;
++		case CO_LINUX_MESSAGE_POWER_SHUTDOWN:
++			co_shedule_shutdown();
++			break;
++		case CO_LINUX_MESSAGE_POWER_OFF:
++			machine_power_off();
++			break;
++		default:
++			printk(KERN_ERR "power interrupt: buggy type %d\n", type->type);
++		}
++		co_free_message(node_message);
++	}
++
++	return IRQ_HANDLED;
++}
++
++static int __init co_power_init(void)
++{
++	int rc;
++
++	rc = request_irq(POWER_IRQ, &power_interrupt, IRQF_SAMPLE_RANDOM, "power", NULL);
++	if (rc) {
++		printk(KERN_ERR "POWER: unable to get irq %d", POWER_IRQ);
++		return rc;
++	}
++
++	return 0;
++}
++
++__initcall(co_power_init);
 Index: linux-2.6.22-source/arch/i386/mach-default/setup.c
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/mach-default/setup.c

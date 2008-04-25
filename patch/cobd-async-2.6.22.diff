@@ -8,7 +8,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/cooperative.c
 +++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
-@@ -176,6 +176,15 @@
+@@ -168,6 +168,15 @@
  		break;
  	}
  
@@ -177,23 +177,6 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  module_init(cobd_init);
  module_exit(cobd_exit);
  
-Index: linux-2.6.22-source/include/asm-i386/mach-default/irq_vectors.h
-===================================================================
---- linux-2.6.22-source.orig/include/asm-i386/mach-default/irq_vectors.h
-+++ linux-2.6.22-source/include/asm-i386/mach-default/irq_vectors.h
-@@ -69,10 +69,12 @@
- 
- #ifdef CONFIG_COOPERATIVE
- #define KEYBOARD_IRQ 1
-+#define SERIAL_IRQ 3
- #define SOUND_IRQ 5
- #define NETWORK_IRQ 10
- #define SCSI_IRQ 11
- #define MOUSE_IRQ 12
-+#define BLOCKDEV_IRQ 15
- #endif
- 
- /*
 Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- linux-2.6.22-source.orig/include/linux/cooperative.h
