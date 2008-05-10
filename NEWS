@@ -1,9 +1,10 @@
 * Version 0.8.0
   * Use "setcobd=async" to enable asynchronous mode for cobd devices.
 
-  Daemon:
+  Console and daemons:
   * New network "ndis-bridge" works in kernel mode and is the faster
     alternative to pcap-bridge. (Ligong Liu)
+  * Workarround for flooded nt-console on Vista unresponsive key inputs.
 
   Kernel:
   * scsi: New device for images with partition tables and works async.
