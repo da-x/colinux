@@ -20,20 +20,13 @@ co_rc_t co_os_get_page(struct co_manager *manager, co_pfn_t *pfn)
         struct page *page;
 	void *ret;
 
-        page = alloc_pages(GFP_KERNEL | __GFP_REPEAT, 0);
+	/* alloc and zero the page */
+        page = alloc_pages(GFP_KERNEL | __GFP_REPEAT | __GFP_ZERO, 0);
         if (!page)
                 return CO_RC(ERROR);
 	
 	*pfn = page_to_pfn(page);
 
-	/* zero the page */
-
-	ret = kmap(page);
-	if (ret) {
-		memset(ret, 0, PAGE_SIZE);
-		kunmap(ret);
-	}
-	
 	return CO_RC(OK);
 }
 

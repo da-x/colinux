@@ -28,11 +28,6 @@ co_rc_t co_queue_free(co_queue_t *queue, void *ptr)
 	return CO_RC(OK);
 }
 
-unsigned long co_queue_size(co_queue_t *queue)
-{
-	return queue->items_count;
-}
-
 co_rc_t co_queue_malloc(co_queue_t *queue, long bytes, void **ptr)
 {
 	co_queue_item_t *item;
