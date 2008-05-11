@@ -144,12 +144,26 @@ co_rc_t co_manager_send(co_manager_t *manager, co_manager_open_desc_t opened, co
 {
 	bool_t ret;
 	co_rc_t rc = CO_RC_OK;
+	int loop;
 
 	co_os_mutex_acquire(opened->lock);
 
 	ret = co_os_manager_userspace_try_send_direct(manager, opened, message);
-	if (!ret)
+	if (!ret) {
 		rc = co_message_dup_to_queue(message, &opened->out_queue);
+
+		loop = 50;
+		while (co_queue_size(&opened->out_queue) > CO_QUEUE_COUNT_LIMIT_BEFORE_SLEEP) {
+			co_debug("queue %d items_count %ld", message->to, opened->out_queue.items_count);
+			co_os_mutex_release(opened->lock);
+			co_os_msleep(100);
+			co_os_mutex_acquire(opened->lock);
+			if (--loop == 0) {
+				co_debug_error("queue %d timeout", message->to);
+				rc = CO_RC(ERROR);
+			}
+		}
+	}
 
 	co_os_mutex_release(opened->lock);
 
