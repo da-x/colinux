@@ -148,13 +148,14 @@ co_rc_t co_manager_send(co_manager_t *manager, co_manager_open_desc_t opened, co
 	co_os_mutex_acquire(opened->lock);
 
 	ret = co_os_manager_userspace_try_send_direct(manager, opened, message);
-	if (!ret) {
+	if (!ret && opened->active) {
 		rc = co_message_dup_to_queue(message, &opened->out_queue);
 
 		if (co_queue_size(&opened->out_queue) > CO_QUEUE_COUNT_LIMIT_BEFORE_SLEEP)
 			co_debug("queue %d items %ld", message->to, opened->out_queue.items_count);
 
-		while (co_queue_size(&opened->out_queue) > CO_QUEUE_COUNT_LIMIT_BEFORE_SLEEP) {
+		while (co_queue_size(&opened->out_queue) > CO_QUEUE_COUNT_LIMIT_BEFORE_SLEEP
+		       && opened->active) {
 			co_os_mutex_release(opened->lock);
 			co_os_msleep(100);
 			co_os_mutex_acquire(opened->lock);
