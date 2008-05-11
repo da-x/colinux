@@ -82,8 +82,6 @@ static co_rc_t packet_read_async(co_winnt_reactor_packet_user_t handle)
 			co_debug_error("Error: 0x%lx", error);
 			return CO_RC(ERROR);
 		}
-	} else {
-		handle->user.received(&handle->user, handle->buffer, handle->size);
 	}
 
 	return CO_RC(OK);
