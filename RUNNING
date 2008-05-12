@@ -16,7 +16,8 @@ http://www.sourceforge.net/projects/colinux
 
 NOTES ON UPGRADING:
 
- 1. XML config files have been removed.  Use the command-line
+ Upgrading from coLinux 0.6.4 and before
+ -- XML config files have been removed.  Use the command-line
     syntax in a name=value per line plain text file instead:
 
 	kernel=vlinux
@@ -30,15 +31,16 @@ NOTES ON UPGRADING:
 
     Locate for tool "colinux-xml2cfg", a XML to CFG converter for coLinux.
 
- 2. Gentoo users need to be careful, Gentoo tends to use devfs when
-    upgrading from 0.6.1 and so block device names change from cobdX to cobd/X
-    and render the image unbootable.  For more details and solutions see the
-    2.6 related information on the Wiki.
-
- 3. The file initrd contains no modules.  Modules are only in the file
+ -- The file initrd contains no modules.  Modules are only in the file
     vmlinux-modules.tar.gz.  The initrd extracts modules over device cofs31
     automaticly, if you configure it as "initrd=initrd.gz" in config file.
     After modules are installed, you can remove the initrd from config.
+
+ Upgrading from coLinux 0.6.1 and before
+ -- Gentoo users need to be careful, Gentoo tends to use devfs when
+    upgrading from 0.6.1 and so block device names change from cobdX to cobd/X
+    and render the image unbootable.  For more details and solutions see the
+    2.6 related information on the Wiki.
 
 
 RUNNING:
