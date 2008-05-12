@@ -14,6 +14,8 @@
 #include "queue.h"
 #include "common.h"
 
+#define CO_QUEUE_COUNT_LIMIT_BEFORE_SLEEP 1024
+
 typedef co_rc_t (*co_switch_rule_func_t)(void *data, co_message_t *message);
 
 typedef enum {

@@ -12,6 +12,9 @@
   * Bug #1861876: Random created MAC stored in Registry to have same on
     every start. [HKCU\Software\coLinux]
   * Bugfix: Image files >=4GB fails with size error on parameter "-v 3".
+  * Workarround for unresponsive key inputs on Vista flooded nt-console.
+    Linux driver will sleep now, if message queues have to many entries and
+    user task is busy. Network daemons drivers changed also into this mode.
 
   Kernel:
   * Kernel has been updated to 2.6.22.18

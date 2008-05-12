@@ -79,3 +79,14 @@ void co_os_timer_destroy(co_os_timer_t timer)
 	if (timer != NULL) 
 		co_os_free(timer);
 }
+
+void co_os_msleep(unsigned int msecs)
+{
+	KTIMER Timer;
+	LARGE_INTEGER DueTime;
+
+	DueTime.QuadPart = msecs * 1000 * (-1);
+	KeInitializeTimer(&Timer);
+	KeSetTimer(&Timer, DueTime, NULL);
+	KeWaitForSingleObject(&Timer, Executive, KernelMode, FALSE, NULL);
+}
