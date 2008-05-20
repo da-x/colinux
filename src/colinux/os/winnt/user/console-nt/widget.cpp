@@ -122,8 +122,8 @@ console_widget_NT_t::set_window(console_window_t * W)
         fs = GetConsoleFontSize(output, cfi.nFont);
         r.top = 0;
         r.left = 0;
-        r.bottom = fs.Y * 25;
-        r.right = fs.X * 80;
+        r.bottom = fs.Y * CO_CONSOLE_HEIGHT;
+        r.right = fs.X * CO_CONSOLE_WIDTH;
         AdjustWindowRect(&r, WS_CAPTION|WS_SYSMENU|WS_THICKFRAME
                              |WS_MINIMIZEBOX|WS_MAXIMIZEBOX, 0);
 
@@ -137,12 +137,12 @@ console_widget_NT_t::set_window(console_window_t * W)
         cci.bVisible = 0;
         SetConsoleCursorInfo(output, &cci);
 
-	size.X = 80 ;
-        size.Y = 25 ;
-	region.Top = 0;
-	region.Left = 0;
-        region.Right = 79;
-        region.Bottom = 24;
+        size.X = CO_CONSOLE_WIDTH;
+        size.Y = CO_CONSOLE_HEIGHT;
+        region.Top = 0;
+        region.Left = 0;
+        region.Right = CO_CONSOLE_WIDTH-1;
+        region.Bottom = CO_CONSOLE_HEIGHT-1;
 
         if( ! SetConsoleWindowInfo( output , TRUE , &region ) )
          co_debug("SetConsoleWindowInfo() error 0x%lx", GetLastError());

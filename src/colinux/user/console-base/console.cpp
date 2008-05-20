@@ -155,7 +155,7 @@ co_rc_t console_window_t::start()
 	if (!CO_OK(rc))
 		return rc;
 
-	log("Coopeartive Linux console started\n");
+	log("Cooperative Linux console started\n");
 
 	if (start_parameters.attach_id != CO_INVALID_ID)
 		instance_id = start_parameters.attach_id;

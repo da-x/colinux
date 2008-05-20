@@ -1662,7 +1662,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -0,0 +1,372 @@
+@@ -0,0 +1,378 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1893,6 +1893,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_OPERATION_CONSOLE_SET_ORIGIN,
 +	CO_OPERATION_CONSOLE_SAVE_SCREEN,
 +	CO_OPERATION_CONSOLE_INVERT_REGION,
++	CO_OPERATION_CONSOLE_SIZES,
 +} co_operation_console_t;
 +
 +
@@ -1945,6 +1946,11 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +			co_console_unit bottom;
 +			co_console_unit right;
 +		} bmove;
++		struct {
++			co_console_unit rows;
++			co_console_unit cols;
++			co_console_unit backbuf;
++		} sizes;
 +		co_cursor_pos_t cursor;
 +	};
 +} __attribute__((packed)) co_console_message_t;
