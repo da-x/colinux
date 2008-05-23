@@ -111,6 +111,7 @@ console_widget_NT_t::set_window(console_window_t * W)
 	COORD fs;
 	HWND hwnd;
 	RECT r;
+	DWORD error = 0;
 
 	window = W;
 
@@ -130,7 +131,7 @@ console_widget_NT_t::set_window(console_window_t * W)
 	hwnd = GetConsoleWindow();
 	SetWindowPos(hwnd, HWND_TOP, 0, 0,
                      r.right - r.left, r.bottom - r.top,
-                     SWP_NOMOVE|SWP_SHOWWINDOW);
+                     SWP_NOMOVE);
 
         GetConsoleCursorInfo(output, &cursor);
         cci = cursor;
@@ -144,8 +145,10 @@ console_widget_NT_t::set_window(console_window_t * W)
         region.Right = CO_CONSOLE_WIDTH-1;
         region.Bottom = CO_CONSOLE_HEIGHT-1;
 
-        if( ! SetConsoleWindowInfo( output , TRUE , &region ) )
-         co_debug("SetConsoleWindowInfo() error 0x%lx", GetLastError());
+	if( ! SetConsoleWindowInfo( output , TRUE , &region ) ) {
+		error = GetLastError();
+		co_debug("SetConsoleWindowInfo() error 0x%lx", error);
+	}
 
 	screen =
 	    (CHAR_INFO *) co_os_malloc(sizeof (CHAR_INFO) * size.X * size.Y);
@@ -164,6 +167,14 @@ console_widget_NT_t::set_window(console_window_t * W)
 	SetConsoleCursorInfo(buffer, &cci);
 
 	SetConsoleActiveScreenBuffer(buffer);
+
+	// Fixup, if resize failed from smaller start window
+	if (error == ERROR_INVALID_PARAMETER) {
+		SetWindowPos(hwnd, HWND_TOP, 0, 0,
+                	r.right - r.left + GetSystemMetrics(SM_CYVSCROLL),
+			r.bottom - r.top + GetSystemMetrics(SM_CYHSCROLL),
+                	SWP_NOMOVE);
+	}
 
 	return CO_RC(OK);
 }
