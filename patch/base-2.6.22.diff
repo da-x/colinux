@@ -901,24 +901,15 @@ Index: linux-2.6.22-source/arch/i386/mm/fault.c
  	if (!pmd_k)
  		return -1;
  	pte_k = pte_offset_kernel(pmd_k, address);
-@@ -539,7 +544,8 @@
+@@ -539,7 +544,7 @@
  		printk("%08lx\n", regs->eip);
  
  		page = read_cr3();
 -		page = ((__typeof__(page) *) __va(page))[address >> PGDIR_SHIFT];
 +		page = ((__typeof__(page) *) __va(CO_P_TO_PP(page)))[address >> PGDIR_SHIFT];
-+		page = CO_P_TO_PP(page);
  #ifdef CONFIG_X86_PAE
  		printk(KERN_ALERT "*pdpt = %016Lx\n", page);
  		if ((page >> PAGE_SHIFT) < max_low_pfn
-@@ -565,6 +571,7 @@
- 			page &= PAGE_MASK;
- 			page = ((__typeof__(page) *) __va(page))[(address >> PAGE_SHIFT)
- 			                                         & (PTRS_PER_PTE - 1)];
-+			page = CO_P_TO_PP(page);
- 			printk(KERN_ALERT "*pte = %0*Lx\n", sizeof(page)*2, (u64)page);
- 		}
- 	}
 Index: linux-2.6.22-source/arch/i386/mm/init.c
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/mm/init.c
