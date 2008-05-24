@@ -1179,24 +1179,15 @@ Index: linux-2.6.17-source/arch/i386/mm/fault.c
  	if (!pmd_k)
  		return -1;
  	pte_k = pte_offset_kernel(pmd_k, address);
-@@ -531,7 +536,8 @@
+@@ -531,7 +536,7 @@
  		printk("%08lx\n", regs->eip);
  	}
  	page = read_cr3();
 -	page = ((unsigned long *) __va(page))[address >> 22];
 +	page = ((unsigned long *) __va(CO_P_TO_PP(page)))[address >> 22];
-+	page = CO_P_TO_PP(page);
  	if (oops_may_print())
  		printk(KERN_ALERT "*pde = %08lx\n", page);
  	/*
-@@ -545,6 +551,7 @@
- 		page &= PAGE_MASK;
- 		address &= 0x003ff000;
- 		page = ((unsigned long *) __va(page))[address >> PAGE_SHIFT];
-+		page = CO_P_TO_PP(page);
- 		printk(KERN_ALERT "*pte = %08lx\n", page);
- 	}
- #endif
 Index: linux-2.6.17-source/arch/i386/mm/init.c
 ===================================================================
 --- linux-2.6.17-source.orig/arch/i386/mm/init.c

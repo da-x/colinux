@@ -1446,25 +1446,16 @@ diff -urN a/arch/i386/kernel/vmlinux.lds.S b/arch/i386/kernel/vmlinux.lds.S
 diff -urN a/arch/i386/mm/fault.c b/arch/i386/mm/fault.c
 --- a/arch/i386/mm/fault.c
 +++ b/arch/i386/mm/fault.c
-@@ -447,7 +447,8 @@
+@@ -447,7 +447,7 @@
  	printk(KERN_ALERT " printing eip:\n");
  	printk("%08lx\n", regs->eip);
  	asm("movl %%cr3,%0":"=r" (page));
 -	page = ((unsigned long *) __va(page))[address >> 22];
 +	page = ((unsigned long *) __va(CO_P_TO_PP(page)))[address >> 22];
-+	page = CO_P_TO_PP(page);
  	printk(KERN_ALERT "*pde = %08lx\n", page);
  	/*
  	 * We must not directly access the pte in the highpte
-@@ -460,6 +461,7 @@
- 		page &= PAGE_MASK;
- 		address &= 0x003ff000;
- 		page = ((unsigned long *) __va(page))[address >> PAGE_SHIFT];
-+		page = CO_P_TO_PP(page);
- 		printk(KERN_ALERT "*pte = %08lx\n", page);
- 	}
- #endif
-@@ -506,6 +508,10 @@
+@@ -506,6 +506,10 @@
  
  vmalloc_fault:
  	{
@@ -1475,7 +1466,7 @@ diff -urN a/arch/i386/mm/fault.c b/arch/i386/mm/fault.c
  		/*
  		 * Synchronize this task's top level page-table
  		 * with the 'reference' page table.
-@@ -521,7 +527,7 @@
+@@ -521,7 +525,7 @@
  		pte_t *pte_k;
  
  		asm("movl %%cr3,%0":"=r" (pgd_paddr));

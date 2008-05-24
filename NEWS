@@ -30,6 +30,7 @@
   * Feature Requests #1421120: Fixup "vim fsync" error on cofs.
   * Bugfix get_size for double opened block devices.
   * Fix BSOD on "stty rows N" where n>25. Disable resize. (Paolo Minazzi)
+  * Bugfix: CR3 wrong converted for register dumps inside page fault handler.
 
   Installer:
   * Update image ArchLinux-2007.08-2

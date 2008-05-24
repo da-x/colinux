@@ -1395,25 +1395,16 @@ Index: linux-2.6.14-source/arch/i386/mm/fault.c
 ===================================================================
 --- linux-2.6.14-source.orig/arch/i386/mm/fault.c
 +++ linux-2.6.14-source/arch/i386/mm/fault.c
-@@ -456,7 +456,8 @@
+@@ -456,7 +456,7 @@
  	printk(KERN_ALERT " printing eip:\n");
  	printk("%08lx\n", regs->eip);
  	page = read_cr3();
 -	page = ((unsigned long *) __va(page))[address >> 22];
 +	page = ((unsigned long *) __va(CO_P_TO_PP(page)))[address >> 22];
-+	page = CO_P_TO_PP(page);
  	printk(KERN_ALERT "*pde = %08lx\n", page);
  	/*
  	 * We must not directly access the pte in the highpte
-@@ -469,6 +470,7 @@
- 		page &= PAGE_MASK;
- 		address &= 0x003ff000;
- 		page = ((unsigned long *) __va(page))[address >> PAGE_SHIFT];
-+		page = CO_P_TO_PP(page);
- 		printk(KERN_ALERT "*pte = %08lx\n", page);
- 	}
- #endif
-@@ -514,6 +516,10 @@
+@@ -514,6 +514,10 @@
  
  vmalloc_fault:
  	{
@@ -1424,7 +1415,7 @@ Index: linux-2.6.14-source/arch/i386/mm/fault.c
  		/*
  		 * Synchronize this task's top level page-table
  		 * with the 'reference' page table.
-@@ -529,7 +535,7 @@
+@@ -529,7 +533,7 @@
  		pte_t *pte_k;
  
  		pgd_paddr = read_cr3();
