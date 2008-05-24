@@ -15,6 +15,7 @@
   * Workarround for unresponsive key inputs on Vista flooded nt-console.
     Linux driver will sleep now, if message queues have to many entries and
     user task is busy. Network daemons drivers changed also into this mode.
+  * Incrase NT console screen to most as can without scrollbars at startup.
 
   Kernel:
   * Kernel has been updated to 2.6.22.18
