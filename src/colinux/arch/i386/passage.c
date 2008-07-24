@@ -146,16 +146,19 @@ asm(""							\
     "    subl %eax, (%esp)"                  "\n"			\
     "    subl %eax, %esp"                    "\n"			\
 									\
+    /* bit31:PG=0 Disable Paging */						\
     "    movl %cr0, %eax"                    "\n"			\
     "    andl $0x7fffffff, %eax"             "\n"			\
     "    movl %eax, %cr0"                    "\n"			\
 									\
+    /* bit5:PAE=1 Enable PAE */						\
     "    movl "CO_ARCH_STATE_STACK_CR4"(%ecx), %eax"  "\n"		\
     "    andl $0x00000020, %eax"  "\n"					\
     "    movl %eax, %cr4" "\n"						\
     "    movl "CO_ARCH_STATE_STACK_TEMP_CR3"(%ecx), %eax"  "\n"		\
     "    movl %eax, %cr3" "\n"						\
 									\
+    /* bit31:PG=1 Enable Paging */						\
     "    movl %cr0, %eax"                    "\n"			\
     "    orl $0x80000000, %eax"              "\n"			\
     "    movl %eax, %cr0"                    "\n"			\
