@@ -12,6 +12,11 @@
 #include "manager.h"
 #include <colinux/kernel/debug.h>
 
+void co_debug_startup(void)
+{
+	/* Dummy */
+}
+
 void co_debug_system(const char *fmt, ...)
 {
 	char buf[0x100];

@@ -45,6 +45,7 @@ typedef enum {
 #undef X
 } co_debug_facility_t;
 
+extern void co_debug_startup(void);
 extern void co_debug_system(const char *fmt, ...)
 	__attribute__ ((format (printf, 1, 2)));
 extern void co_debug_level_system(const char *module, co_debug_facility_t facility, int level,
@@ -77,6 +78,7 @@ CO_DEBUG_LIST;
 
 /*------------------------------ Production Mode -----------------------------*/
 
+#define co_debug_startup()                         do {} while(0)
 #define co_debug_lvl(facility, level, fmt, ...)    do {} while(0)
 #define co_debug_system(fmt, ...)                  do {} while(0)
 
