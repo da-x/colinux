@@ -49,7 +49,7 @@ BUILD=i686-pc-linux
 # Updated by Sam Lantinga <slouken@libsdl.org>
 # These are the files from the current MingW release
 
-MINGW_VERSION="3.11"
+MINGW_VERSION="3.14"
 MINGW_URL=http://heanet.dl.sourceforge.net/sourceforge/mingw
 MINGW=mingw-runtime-$MINGW_VERSION
 MINGW_ARCHIVE=$MINGW.tar.gz
