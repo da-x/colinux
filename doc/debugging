@@ -1,6 +1,20 @@
 coLinux debugging
 =================
 
+Table of Contents
+
+    colinux-debug-daemon.exe
+    Command Line Parameters
+    Short guide to see more error messages
+    Stepguide for colinux-daebug-daemon
+    Example debuging over network
+    Howto see debug prints from kernel driver
+    Howto use Windows crash dump
+    Howto see label names from minidump - script way
+    Howto convert label names from minidump - manualy way
+    Testing different versions
+
+
 colinux-debug-daemon.exe
 ------------------------
 
@@ -46,7 +60,7 @@ Command Line Parameters
 	Shows a short help text
 
 
-Short start to see more error messages
+Short guide to see more error messages
 --------------------------------------
 
 Open a windows command prompt, change into coLinux install directory and
@@ -192,6 +206,46 @@ Typicaly output for debug.txt are such lines:
     ...
 
 
+Howto see debug prints from kernel driver
+-----------------------------------------
+
+Run regedit, create a registry key "HKEY_LOCAL_MACHINE\SOFTWARE\coLinux",
+create a new DWORD with Name "Debug" and set the value to 1F (hex).
+Or create such file colinux-debug.reg and import it:
+
+	Windows Registry Editor Version 5.00
+
+	[HKEY_LOCAL_MACHINE\SOFTWARE\coLinux]
+	"Debug"=dword:0000001f
+
+Download DbgView.exe from http://www.sysinternals.com
+( http://technet.microsoft.com/en-us/sysinternals/bb896647.aspx ),
+run the DbgView.exe,
+relaod the coLinux driver with:
+
+    cd CurentColinuxPath
+    colinux-daemon.exe --remove-driver
+    colinux-daemon.exe --install-driver
+
+Start coLinux with "colinux-daemon @YourConfig"
+Watch the output from DbgView, typicaly will see such lines:
+
+    [m:colinux-driver f:0 l:10 src/colinux/kernel/manager.c:49:co_manager_load] loaded to host kernel
+    [m:colinux-driver f:0 l:10 src/colinux/kernel/manager.c:63:co_manager_load] machine has 480 MB of RAM
+    [m:colinux-driver f:0 l:10 src/colinux/kernel/manager.c:37:set_hostmem_usage_limit] machine RAM use limit: 416 MB
+
+Every line has the follow format:
+
+    m: module
+    f: facility (0=misc)
+    l: level
+    following by filename, linenumber, function name and the text.
+
+The registry key will only read on driver loading, typicaly on booting Windows.
+Debug outputs decreases coLinux running speed. Remember to remove the registry
+key Debug, or set it to "0" for normal running mode.
+
+
 Howto use Windows crash dump
 ----------------------------
 
@@ -286,9 +340,41 @@ labels with "nt+..." would see with the windows names, for example:
   f7a54c58 805749d1 8155bea8 81497ed0 814fbe78 nt!IofCallDriver+0x32
   f7a54d00 8056d33c 000007c4 00000000 00000000 nt!SeQueryAuthenticationIdToken+0x6c6
 
-Is a liddle bit better to read. But names from linux.sys can't see. They
-must convert by hands. You need the coLinux build environment under Linux.
-Or objdump.exe from mingw32 to run directly under windows.
+Is a liddle bit better to read. But names from linux.sys can't see.
+
+
+Howto see label names from minidump - script way
+------------------------------------------------
+
+Locate the file bin/mindump-repaint-labels.sh inside coLinux source.
+Unpack linux.sys from archive daemons-*.dbg.zip from same build date
+as the BSOD was triggered. If you have self build coLinux, then use the
+file from src/colinux/os/winnt/build/linux.sys.
+"minidump.txt" in the example is the saved output from "!analyze -v".
+Run the script with paths to your files:
+
+    mindump-repaint-labels.sh linux.sys < minidump.txt > backtrace.txt
+
+View into file backtrace.txt, the caller stack should be more readable now:
+
+  f7a54b04 f79a9a48 1111777a f79b02f0 8b606015 nt!KeBugCheck+0x14
+  f7a54b34 f79a8a07 00000000 f79b02f0 8b606015 linux!co_os_malloc+0x28		(linux+0x9a48)
+  f7a54b54 f79a609d 8147e000 00000001 814844cc linux!co_monitor_os_init+0x17	(linux+0x8a07)
+  f7a54b84 f79a206a 8155bf60 814e2000 f7a54bb4 linux!co_monitor_create+0x18D	(linux+0x609d)
+  f7a54bc4 f79a7189 8155bf60 00000011 814e2000 linux!co_manager_ioctl+0x2E8	(linux+0x206a)
+  f7a54c34 804eddf9 8155bea8 81497ed0 806d02d0 linux!dispatch_wrapper+0x419	(linux+0x7189)
+  f7a54c58 805749d1 8155bea8 81497ed0 814fbe78 nt!IofCallDriver+0x32
+  f7a54d00 8056d33c 000007c4 00000000 00000000 nt!SeQueryAuthenticationIdToken+0x6c6
+
+Please double check, that you use the right linux.sys from crash. Other case
+the label names would give function calls, that never would find in source.
+
+
+Howto convert label names from minidump - manualy way
+-----------------------------------------------------
+
+If the must convert by hands, you need the coLinux build environment under
+Linux. Or objdump.exe from mingw32 to run directly under windows.
 There start:
 
   i686-pc-mingw32-objdump -D linux.sys > linux.sys.dump
@@ -364,6 +450,10 @@ For example the "call *0x23174" can find in the dump as:
 This example was written down by forcing BugCheck with a special hacked
 source via a "co_os_alloc(0)". In the real run you would have other
 addresses in the stack list.
+
+
+Testing different versions
+--------------------------
 
 If you can't analyse the stack self, you can send it to coLinux developers.
 Very interesting is the exactly build date of the file linux.sys. Please give
