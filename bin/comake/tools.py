@@ -201,7 +201,7 @@ class Linker(Executer):
             parameters.append('-r')
             
         parameters.extend(input_pathnames)   
-	parameters += tool_run_inf.options.get('linker_add', [])
+        parameters += tool_run_inf.options.get('linker_add', [])
         parameters.append('-o')
         parameters.append(tool_run_inf.target.pathname)
         command_line = ' '.join(parameters)

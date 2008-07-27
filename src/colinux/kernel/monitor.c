@@ -522,8 +522,7 @@ static co_rc_t co_monitor_filter_linux_message(co_monitor_t *monitor, co_message
 	}
 }
 
-static
-void incoming_message(co_monitor_t *cmon, co_message_t *message)
+static void incoming_message(co_monitor_t *cmon, co_message_t *message)
 {
 	co_manager_open_desc_t opened;
 	co_rc_t rc;
