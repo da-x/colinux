@@ -2082,8 +2082,8 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +extern void co_idle_processor(void);
 +extern void co_terminate(co_termination_reason_t reason);
 +extern void co_terminate_bug(int code, int line, const char *file);
-+extern void co_free_pages(unsigned long vaddr, int order);
-+extern int co_alloc_pages(unsigned long vaddr, int order);
++extern void co_free_pages(unsigned long vaddr, int pages);
++extern int co_alloc_pages(unsigned long vaddr, int pages);
 +extern void co_start_kernel(void);
 +extern void co_arch_start_kernel(void);
 +
@@ -2541,14 +2541,14 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +}
 +
 +
-+void co_free_pages(unsigned long vaddr, int size)
++void co_free_pages(unsigned long vaddr, int pages)
 +{
 +	unsigned long flags;
 +
 +	co_passage_page_acquire(&flags);
 +	co_passage_page->operation = CO_OPERATION_FREE_PAGES;
 +	co_passage_page->params[0] = vaddr;
-+	co_passage_page->params[1] = size;
++	co_passage_page->params[1] = pages;
 +	co_switch_wrapper();
 +	co_passage_page_release(flags);
 +}
@@ -2731,12 +2731,12 @@ Index: linux-2.6.22-source/mm/page_alloc.c
  	}
  }
  
-+static int co_persistent_alloc_pages(unsigned long address, int size)
++static int co_persistent_alloc_pages(unsigned long address, int pages)
 +{
 +	int result, retries_left;
 +
 +	for (retries_left = 10; retries_left > 0; retries_left--) {
-+		result = co_alloc_pages(address, size);
++		result = co_alloc_pages(address, pages);
 +		if (result) {
 +			unsigned long cache_size;
 +			/*
@@ -2746,8 +2746,8 @@ Index: linux-2.6.22-source/mm/page_alloc.c
 +			 */
 +			cache_size = global_page_state(NR_FILE_PAGES)-total_swapcache_pages;
 +			cache_size /= 2;
-+			if (cache_size < size*2)
-+				cache_size = size*2;
++			if (cache_size < pages*2)
++				cache_size = pages*2;
 +			shrink_all_memory(cache_size);
 +		} else {
 +			return 0;
