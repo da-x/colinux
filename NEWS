@@ -4,7 +4,6 @@
   Console and daemons:
   * New network "ndis-bridge" works in kernel mode and is the faster
     alternative to pcap-bridge. (Ligong Liu)
-  * Workarround for flooded nt-console on Vista unresponsive key inputs.
 
   Kernel:
   * scsi: New device for images with partition tables and works async.
@@ -34,6 +33,10 @@
   * Bug #1861876: Random created MAC stored in Registry to have same on
     every start. [HKCU\Software\coLinux]
   * Bugfix: Image files >=4GB fails with size error on parameter "-v 3".
+  * Workarround for unresponsive key inputs on Vista flooded nt-console.
+    Linux driver will sleep now, if message queues have to many entries and
+    user task is busy. Network daemons drivers changed also into this mode.
+  * Incrase NT console screen to most as can without scrollbars at startup.
 
   Kernel:
   * Kernel has been updated to 2.6.22.18
@@ -48,6 +51,7 @@
   * Feature Requests #1421120: Fixup "vim fsync" error on cofs.
   * Bugfix get_size for double opened block devices.
   * Fix BSOD on "stty rows N" where n>25. Disable resize. (Paolo Minazzi)
+  * Bugfix: CR3 wrong converted for register dumps inside page fault handler.
 
   Installer:
   * Update image ArchLinux-2007.08-2
