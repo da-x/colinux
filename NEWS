@@ -11,6 +11,7 @@
   * Added virtual pci device handling. "lspci" is working (Steve Shoecraft)
   * Add PG_co_host_mapped, save many OS switching times: speed up coLinux.
   * unionfs-2.2.4 added as module. (Marwan Al-Sabbagh)
+  * New: /proc/colinux/stats show counts of OS switches.
 
   Debugging:
   * Enable host kernel debug via registry [HKLM\SOFTWARE\coLinux] "Debug"
