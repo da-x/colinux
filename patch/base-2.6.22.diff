@@ -3100,7 +3100,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/i8259_cooperative.c
 +	co_passage_page_assert_valid();
 +	co_passage_page_acquire(&flags);
 +	co_passage_page->operation = CO_OPERATION_FORWARD_INTERRUPT;
-+	co_passage_page->params[0] = (~regs->orig_eax) + 0x20; /* IRQ number */
++	co_passage_page->params[0] = (~regs->orig_eax) + FIRST_EXTERNAL_VECTOR; /* IRQ number */
 +	co_passage_page->host_state.flags &= ~(1 << 9); /* Turn IF off */
 +	co_switch_wrapper();
 +	co_callback(flags, regs);
