@@ -18,7 +18,6 @@
 co_rc_t co_os_get_page(struct co_manager *manager, co_pfn_t *pfn)
 {
         struct page *page;
-	void *ret;
 
 	/* alloc and zero the page */
         page = alloc_pages(GFP_KERNEL | __GFP_REPEAT | __GFP_ZERO, 0);

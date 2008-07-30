@@ -206,6 +206,7 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 	case CO_OPERATION_CONSOLE_SET_ORIGIN:
 	case CO_OPERATION_CONSOLE_SAVE_SCREEN:
 	case CO_OPERATION_CONSOLE_INVERT_REGION:
+	case CO_OPERATION_CONSOLE_SIZES:
 		break;
 	}
 

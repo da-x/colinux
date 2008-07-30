@@ -143,8 +143,6 @@ co_rc_t console_window_t::send_ctrl_alt_del()
 
 co_rc_t console_window_t::start()
 {
-	co_rc_t rc;
-
 	widget = co_console_widget_create();
 	if (!widget)
 		return CO_RC(ERROR);
