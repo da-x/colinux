@@ -839,7 +839,7 @@ NDIS_STATUS DDKAPI co_conet_proto_pnp_handler(
 	return Status;
 }
 
-void ntos(co_id_t id, char *buf)
+static void ntos(co_id_t id, char *buf)
 {
 	co_id_t i,n;
 	char *p;
@@ -861,7 +861,7 @@ void ntos(co_id_t id, char *buf)
 	}
 }
 
-bool_t co_conet_register_protocol(co_monitor_t *monitor)
+co_rc_t co_conet_register_protocol(co_monitor_t *monitor)
 {
 	co_monitor_osdep_t		*osdep = monitor->osdep;
 	NDIS_PROTOCOL_CHARACTERISTICS   protoChar;
@@ -875,7 +875,7 @@ bool_t co_conet_register_protocol(co_monitor_t *monitor)
 	if ( osdep->conet_protocol ) {
 		co_debug("leave: protocol %s already registered",
 			osdep->protocol_name);
-		return TRUE;
+		return CO_RC_OK;
 	}
 
 	NdisZeroMemory(&protoChar, sizeof(NDIS_PROTOCOL_CHARACTERISTICS));
@@ -888,7 +888,7 @@ bool_t co_conet_register_protocol(co_monitor_t *monitor)
 	if ( Status != STATUS_SUCCESS ) {
 		co_debug("leave: convert protocol name %s to unicode fail, Status = %x",
 			osdep->protocol_name, Status);
-		return FALSE;
+		return CO_RC(ERROR);
 	}
 	
 	protoChar.MajorNdisVersion	      = 0x05;
@@ -918,7 +918,7 @@ bool_t co_conet_register_protocol(co_monitor_t *monitor)
 	if ( !NT_SUCCESS(Status) || !protoHandle ) {
 		co_debug("leave: register %s protocol fail, Status = %x",
 			osdep->protocol_name, Status);
-		return FALSE;
+		return CO_RC(ERROR);
 	}
 
 	osdep->conet_protocol = protoHandle;
@@ -928,10 +928,10 @@ bool_t co_conet_register_protocol(co_monitor_t *monitor)
 	co_debug("leave: register %s protocol success, protocol handle %p",
 		osdep->protocol_name, osdep->conet_protocol);
 
-	return TRUE;
+	return CO_RC_OK;
 }
 
-bool_t co_conet_unregister_protocol(co_monitor_t *monitor)
+co_rc_t co_conet_unregister_protocol(co_monitor_t *monitor)
 {
 	co_monitor_osdep_t	*osdep = monitor->osdep;
 	conet_adapter_t		*adapter, *adapter_next;	
@@ -962,10 +962,10 @@ bool_t co_conet_unregister_protocol(co_monitor_t *monitor)
 		co_debug("conet bridge protocol not registered");
 
 	co_debug("leave");
-	return TRUE;
+	return CO_RC_OK;
 }
 
-bool_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcfg_id, int promisc, char macaddr[6])
+co_rc_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcfg_id, int promisc, char macaddr[6])
 {
 	co_monitor_osdep_t	*osdep = monitor->osdep;
 	conet_adapter_t		*adapter;	
@@ -981,7 +981,7 @@ bool_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcfg
 
 	if ( !osdep->conet_protocol ) {
 		co_debug("conet bridge protocol for monitor %ld not registered!", monitor->id);
-		return FALSE;
+		return CO_RC(ERROR);
 	}
 
 	co_os_mutex_acquire(osdep->conet_mutex);
@@ -989,7 +989,7 @@ bool_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcfg
 		if ( adapter->conet_unit == conet_unit ) {
 			co_os_mutex_release(osdep->conet_mutex);
 			co_debug("leave: adapter already opened, adapter = %p", adapter);
-			return TRUE;
+			return CO_RC_OK;
 		}
 	}
 	co_os_mutex_release(osdep->conet_mutex);
@@ -998,7 +998,7 @@ bool_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcfg
 	Status = RtlAnsiStringToUnicodeString(&AdapterName, &AnsiAdapterName, TRUE);
 	if ( Status != STATUS_SUCCESS ) {
 		co_debug("leave: convert netcfg_id %s to unicode failed", netcfg_id);
-		return FALSE;
+		return CO_RC(ERROR);
 	}
 
 	co_debug("create conet_adapter instance ...");
@@ -1007,7 +1007,7 @@ bool_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcfg
 	{
 		co_debug("leave: create conet_adapter instance failed");
 		RtlFreeUnicodeString(&AdapterName);
-		return FALSE;
+		return CO_RC(ERROR);
         }
 
 	adapter->promisc = promisc;
@@ -1020,10 +1020,10 @@ bool_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcfg
 	RtlFreeUnicodeString(&AdapterName);
 
         if ( Status != NDIS_STATUS_SUCCESS ) {
-            co_debug("leave: bind adapter %p to protocol %s fail, Status %x", 
+		co_debug("leave: bind adapter %p to protocol %s fail, Status %x", 
 	    		adapter, osdep->protocol_name, Status);
-	    co_conet_free_adapter(adapter);
-            return FALSE;
+		co_conet_free_adapter(adapter);
+		return CO_RC(ERROR);
         }
 
 	if ( adapter->promisc ) {
@@ -1058,10 +1058,10 @@ bool_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcfg
 	co_os_mutex_release(osdep->conet_mutex);
 
 	co_debug("bind adapter %p to protocol %s success", adapter, osdep->protocol_name);
-	return TRUE;
+	return CO_RC_OK;
 }
 
-bool_t co_conet_unbind_adapter(co_monitor_t *monitor, int conet_unit)
+co_rc_t co_conet_unbind_adapter(co_monitor_t *monitor, int conet_unit)
 {
 	co_monitor_osdep_t	*osdep = monitor->osdep;
 	conet_adapter_t		*adapter;	
@@ -1071,7 +1071,7 @@ bool_t co_conet_unbind_adapter(co_monitor_t *monitor, int conet_unit)
 
 	if ( !osdep->conet_protocol ) {
 		co_debug("conet bridge protocol for monitor %ld not registered!", monitor->id);
-		return FALSE;
+		return CO_RC(ERROR);
 	}
 
 	co_os_mutex_acquire(osdep->conet_mutex);
@@ -1087,16 +1087,16 @@ bool_t co_conet_unbind_adapter(co_monitor_t *monitor, int conet_unit)
 	
 			co_conet_free_adapter(adapter);
 			co_debug("leave: adapter unbind and freed");
-			return TRUE;
+			return CO_RC_OK;
 		}
 	}
 	co_os_mutex_release(osdep->conet_mutex);
 
 	co_debug("leave: adapter not found");
-	return FALSE;
+	return CO_RC(ERROR);
 }
 
-bool_t co_conet_inject_packet_to_adapter(co_monitor_t *monitor, int conet_unit, void *packet_data, int length)
+co_rc_t co_conet_inject_packet_to_adapter(co_monitor_t *monitor, int conet_unit, void *packet_data, int length)
 {
 	co_monitor_osdep_t	*osdep = monitor->osdep;
 	conet_adapter_t		*adapter = NULL;
@@ -1110,7 +1110,7 @@ bool_t co_conet_inject_packet_to_adapter(co_monitor_t *monitor, int conet_unit, 
 
 	if ( !osdep->conet_protocol ) {
 		co_debug("conet bridge protocol for monitor %ld not registered!", monitor->id);
-		return FALSE;
+		return CO_RC(ERROR);
 	}
 
 	co_list_each_entry(adapter, &osdep->conet_adapters, list_node) {
@@ -1123,14 +1123,14 @@ bool_t co_conet_inject_packet_to_adapter(co_monitor_t *monitor, int conet_unit, 
 
 	if ( !binding_handle ) {
 		co_debug("leave: adapter not found, discard packet");
-		return FALSE;
+		return CO_RC(ERROR);
 	}
 
 	co_debug("allocate packet ...");
 	NdisAllocatePacket(&Status, (PNDIS_PACKET*)(&packet), adapter->packet_pool);
 	if ( Status != NDIS_STATUS_SUCCESS) {
 		co_debug("leave: allocate packet fail, Status = %x", Status);
-		return FALSE;
+		return CO_RC(ERROR);
 	}
 
 	co_debug("allocate packet buffer...");
@@ -1143,7 +1143,7 @@ bool_t co_conet_inject_packet_to_adapter(co_monitor_t *monitor, int conet_unit, 
 	if ( Status != NDIS_STATUS_SUCCESS ) {
 		co_debug("leave: allocate packet buffer fail, size = %d", length);
 		NdisFreePacket((PNDIS_PACKET)packet);
-		return FALSE;
+		return CO_RC(ERROR);
 	}
 
 	co_debug("copy packet data to packet buffer");
@@ -1164,5 +1164,5 @@ bool_t co_conet_inject_packet_to_adapter(co_monitor_t *monitor, int conet_unit, 
 	}
 
 	co_debug("leave: success");
-	return TRUE;
+	return CO_RC_OK;
 }

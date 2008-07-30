@@ -513,10 +513,11 @@ static void co_monitor_getpp(co_monitor_t *cmon, void *pp_buffer, void *host_buf
 static co_rc_t co_monitor_filter_linux_message(co_monitor_t *monitor, co_message_t *message)
 {
 	if (message->from == CO_MODULE_LINUX &&
-	     message->to >= CO_MODULE_CONET0 && message->to <= CO_MODULE_CONET_END &&
-	     co_conet_inject_packet_to_adapter(monitor, message->to - CO_MODULE_CONET0,
-						(void *)(message+1), message->size) ) {
-		return CO_RC_OK;
+	    message->to >= CO_MODULE_CONET0 &&
+	    message->to <= CO_MODULE_CONET_END) {
+		return co_conet_inject_packet_to_adapter(monitor,
+				message->to - CO_MODULE_CONET0,
+				(void *)(message+1), message->size);
 	} else {
 		return CO_RC(ERROR);
 	}
