@@ -174,32 +174,4 @@ NDIS_STATUS DDKAPI co_conet_proto_pnp_handler(
 	IN PNET_PNP_EVENT	pNetPnPEvent
 	);
 
-bool_t co_conet_register_protocol(
-	co_monitor_t		*monitor
-	);
-
-bool_t co_conet_unregister_protocol(
-	co_monitor_t		*monitor
-	);
-
-bool_t co_conet_bind_adapter(
-	co_monitor_t		*monitor, 
-	int			conet_unit, 
-	char			*netcfg_id, 
-	int			promisc, 
-	char			macaddr[6]
-	);
-
-bool_t co_conet_unbind_adapter(
-	co_monitor_t		*monitor, 
-	int			conet_unit
-	);
-
-bool_t co_conet_inject_packet_to_adapter(
-	co_monitor_t		*monitor, 
-	int			conet_unit, 
-	void			*packet_data, 
-	int			length
-	);
-
 #endif
