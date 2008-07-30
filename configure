@@ -435,17 +435,17 @@ check_exec_tool()
   if ($2) </dev/null >/dev/null 2>&1; then
     if [ -n "$3" ]; then
       # get needed version, transform the 'x' into 0
-      eval `echo $3 | sed -r -e \
-        's/([0-9]+)\.([0-9x]+)\.([0-9x]+)/v1=\1 v2=\2 v3=\3/' -e 'y/x/0/'`
+      eval `echo $3 | sed -e \
+        's/\([0-9]\+\)\.\([0-9x]\+\)\.\([0-9x]\+\)/v1=\1 v2=\2 v3=\3/' -e 'y/x/0/'`
 
       # get installed version
-      eval `($2) 2>&1 | sed -n -r -e \
-        's/[^0-9]*([0-9]+)\.([0-9]+)\.([0-9]+).*/i1=\1 i2=\2 i3=\3/p'`
+      eval `($2) 2>&1 | sed -n -e \
+        's/[^0-9]*\([0-9]\+\)\.\([0-9]\+\)\.\([0-9]\+\).*/i1=\1 i2=\2 i3=\3/p'`
 
       if [ "$v3" = "0" -a -z "$i1" ]; then
         # get installed version with two numbers
-        eval `($2) 2>&1 | sed -n -r -e \
-          's/[^0-9]*([0-9]+)\.([0-9]+).*/i1=\1 i2=\2/p'`
+        eval `($2) 2>&1 | sed -n -e \
+          's/[^0-9]*\([0-9]\+\)\.\([0-9]\+\).*/i1=\1 i2=\2/p'`
 	i3="0"
       fi
 
@@ -468,8 +468,8 @@ check_exec_tool()
       if [ -n "$4" ]; then
 	local m1="" m2="" m3=""
 	# get needed version, transform the 'x' into 999
-	eval `echo $4 | sed -r -e \
-	    's/([0-9]+)\.([0-9x]+)\.([0-9x]+)/m1=\1 m2=\2 m3=\3/'`
+	eval `echo $4 | sed -e \
+	    's/\([0-9]\+\)\.\([0-9x]\+\)\.\([0-9x]\+\)/m1=\1 m2=\2 m3=\3/'`
 	test "$m2" = "x" && m2="999"
 	test "$m3" = "x" && m3="999"
 	if [ $i1 -gt $m1 -o \
@@ -511,8 +511,8 @@ gcc_helper()
 
 	# ABI from local GCC
 	touch /tmp/colinux-$$.c
-	LOCAL_ABI=`gcc -E -dM /tmp/colinux-$$.c 2>/dev/null | sed -n -r -e \
-          's/^#define __GXX_ABI_VERSION ([0-9]+)$/\1/p'`
+	LOCAL_ABI=`gcc -E -dM /tmp/colinux-$$.c 2>/dev/null | sed -n -e \
+          's/^#define __GXX_ABI_VERSION \([0-9]\+\)$/\1/p'`
 	rm /tmp/colinux-$$.c
 
 	# ABI from known mingw compilers

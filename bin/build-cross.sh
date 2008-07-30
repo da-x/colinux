@@ -186,7 +186,7 @@ check_binutils_guest()
 	local PATH="$PATH:$COLINUX_GCC_GUEST_PATH"
 	ver=`${COLINUX_GCC_GUEST_TARGET}-as --version 2>/dev/null || \
 		as --version 2>/dev/null | \
-		sed -n -r -e 's/^.+ ([0-9]+\.[0-9]+\.[0-9]+).+$/\1/p'`
+		sed -n -e 's/^.\+ \([0-9]\+\.[0-9]\+\.[0-9]\+\).\+$/\1/p'`
 
 	if [ -z "$ver" ]
 	then

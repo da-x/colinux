@@ -96,7 +96,7 @@ do
 	start=false
     elif $start
     then
-	offset=`echo "$name" | sed -n -r -e 's/^linux\+0x(.+)$/\1/p' | tr [[:lower:]] [[:upper:]]`
+	offset=`echo "$name" | sed -n -e 's/^linux+0x\(.\+\)$/\1/p' | tr [[:lower:]] [[:upper:]]`
 	if [ -n "$offset" ]
 	then
 	    # Add offset 0x10000 and convert from hex into decimal
