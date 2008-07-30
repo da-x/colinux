@@ -66,3 +66,8 @@ void co_os_timer_destroy(co_os_timer_t timer)
 {
 	co_os_free((struct timer_list *)timer);
 }
+
+void co_os_msleep(unsigned int msecs)
+{
+	msleep(msecs);
+}
