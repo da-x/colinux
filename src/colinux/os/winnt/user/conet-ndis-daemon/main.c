@@ -8,7 +8,6 @@
 
 #include <windows.h>
 #include <winsock2.h>
-#include <pcap.h>
 
 #include <stdio.h>
 
