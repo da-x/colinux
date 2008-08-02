@@ -51,7 +51,7 @@ co_user_monitor_t *g_monitor_handle = NULL;
 start_parameters_t *daemon_parameters;
 char netcfg_id[256];
 
-co_rc_t monitor_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
+static co_rc_t monitor_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
 {
 	return CO_RC(OK);
 }
@@ -194,11 +194,9 @@ static co_rc_t conet_init(void)
  * parameters
  */
 
-void co_net_syntax()
+static void co_net_syntax()
 {
 	co_terminal_print("Cooperative Linux Bridged Network Daemon\n");
-	co_terminal_print("Alejandro R. Sedeno, 2004 (c)\n");
-	co_terminal_print("Dan Aloni, 2003-2004 (c)\n");
 	co_terminal_print("Ligong Liu, 2008 (c)\n");
 	co_terminal_print("\n");
 	co_terminal_print("syntax: \n");
@@ -338,7 +336,7 @@ handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 	return CO_RC(OK);	
 }
 
-int
+static int
 conet_ndis_main(int argc, char *argv[])
 {
 	co_rc_t rc;
