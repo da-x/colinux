@@ -307,9 +307,6 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 		message = message_item->message;
 		size = message->size + sizeof(*message);
 
-		if (message->from == CO_MODULE_CONET0)
-			co_debug_lvl(network, 14, "message sent to linux: %p", message);
-		
 		if (io_buffer + size > io_buffer_end) {
 			break;
 		}
