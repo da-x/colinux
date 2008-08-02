@@ -30,7 +30,7 @@ conf_missing:
 
 endif
 
-.PHONY: colinux clean distclean help
+.PHONY: colinux clean distclean hostclean help
 
 # Include host OS specific makefile
 ifneq ($(HOSTOS),)
@@ -45,15 +45,8 @@ dump:
 	@cd src && python ../bin/make.py colinux --dump
 endif
 
-clean:
+clean: hostclean
 	make -C src clean
-	find src \( -name '.tmp_versions' \
-		-o -name '.module.*_build' \
-		\) -type d -print | xargs rm -rf
-	find src bin \( -name '*.o' -o -name '*.pyc' \
-		-o -name '.*.cmd' -o -name 'colinux.mod.c' \
-		-o -name 'Module.symvers' \
-		\) -type f -print | xargs rm -f
 
 distclean: clean
 ifneq ($(USER_CFG),)

@@ -41,3 +41,5 @@ package: src/colinux/os/winnt/user/install/premaid/linux.sys
 # Create installer (need wine and running X11)
 installer: src/colinux/os/winnt/user/install/premaid/linux.sys
 	@cd src && make installer
+
+hostclean:
