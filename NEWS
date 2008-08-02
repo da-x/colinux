@@ -20,6 +20,9 @@
   * mingw 3.14
   * w32api 3.11
 
+  Docs:
+  * Wiki moved from colinux.wikia.com to http://wiki.colinux.org
+
 * Version 0.7.3
   Bugfixes:
   * Check ELF header before accessing kernel vmlinux (fix exception).
