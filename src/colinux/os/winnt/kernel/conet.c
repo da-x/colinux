@@ -25,11 +25,11 @@
 // #define CONET_DEBUG
 
 #ifdef CONET_DEBUG
-# define conet_debug(fmt, args...) co_debug(fmt, ## args )
+# define conet_debug(fmt, args...) co_debug_lvl(network, 10, fmt, ## args )
 #else
 # define conet_debug(fmt, args...)
 #endif
-#define conet_err_debug(fmt, args...) co_debug(fmt, ## args )
+#define conet_err_debug(fmt, args...) co_debug_lvl(network, 3, fmt, ## args )
 
 static inline USHORT
 co_conet_ntohs (
