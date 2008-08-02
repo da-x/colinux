@@ -22,6 +22,15 @@
 #include <colinux/os/winnt/monitor.h>
 #include <colinux/os/winnt/kernel/conet.h>
 
+// #define CONET_DEBUG
+
+#ifdef CONET_DEBUG
+# define conet_debug(fmt, args...) co_debug(fmt, ## args )
+#else
+# define conet_debug(fmt, args...)
+#endif
+#define conet_err_debug(fmt, args...) co_debug(fmt, ## args )
+
 static inline USHORT
 co_conet_ntohs (
 	IN	USHORT		netshort
@@ -100,28 +109,28 @@ static VOID DDKAPI co_conet_transfer_message_routine(PDEVICE_OBJECT DeviceObject
 	message = context->message;
 	work_item = context->work_item;
 
-	co_debug("enter: context = %p, monitor = %p, message = %p, work item = %p",
+	conet_debug("enter: context = %p, monitor = %p, message = %p, work item = %p",
 		context, monitor, message, work_item);
 
 	rc = co_queue_malloc(&monitor->linux_message_queue, sizeof(co_message_queue_item_t), (void **)&queue_item);
 	if ( CO_OK(rc) ) {
-		co_debug("queue message %p to linux message queue", message);
+		conet_debug("queue message %p to linux message queue", message);
 		queue_item->message = message;
 		co_os_mutex_acquire(monitor->linux_message_queue_mutex);
 		co_queue_add_head(&monitor->linux_message_queue, queue_item);
 		co_os_mutex_release(monitor->linux_message_queue_mutex);
-		co_debug("wake up colinux");
+		conet_debug("wake up colinux");
 		co_os_wait_wakeup(monitor->idle_wait);
 	} else {
-		co_debug("allocate queue item fail, ignore message %p", message);
+		conet_err_debug("allocate queue item fail, ignore message %p", message);
 		co_os_free(message);
 	}
 
-	co_debug("free context %p, free work item %p", context, work_item);
+	conet_debug("free context %p, free work item %p", context, work_item);
 	co_os_free(context);
 	IoFreeWorkItem(work_item);
 
-	co_debug("leave");
+	conet_debug("leave");
 }
 
 void co_conet_transfer_message(conet_adapter_t *adapter, co_message_t *message)
@@ -129,24 +138,24 @@ void co_conet_transfer_message(conet_adapter_t *adapter, co_message_t *message)
 	conet_message_transfer_context_t *context;
 	extern PDEVICE_OBJECT coLinux_DeviceObject;
 
-	co_debug("enter: adapter = %p, message = %p", adapter, message);
+	conet_debug("enter: adapter = %p, message = %p", adapter, message);
 
 	context = (conet_message_transfer_context_t *)co_os_malloc(sizeof(conet_message_transfer_context_t));
 	if ( context ) {
 		context->work_item = IoAllocateWorkItem(coLinux_DeviceObject);
 		if ( !context->work_item ) {
 			co_os_free(context);
-			co_debug("leave: allocate io work item for colinux device fail");
+			conet_err_debug("leave: allocate io work item for colinux device fail");
 			return;
 		}
 
-		co_debug("queue work item to co_conet_transfer_message_routine delay wor queue");
+		conet_debug("queue work item to co_conet_transfer_message_routine delay wor queue");
 		context->monitor = adapter->monitor;
 		context->message = message;
 		IoQueueWorkItem(context->work_item, co_conet_transfer_message_routine, DelayedWorkQueue, context);
 	}
 	
-	co_debug("leave: success");
+	conet_debug("leave: success");
 }
 
 conet_adapter_t *co_conet_create_adapter(co_monitor_t *monitor, int conet_unit)
@@ -154,12 +163,12 @@ conet_adapter_t *co_conet_create_adapter(co_monitor_t *monitor, int conet_unit)
 	conet_adapter_t *adapter;
 	NDIS_STATUS	Status;
 
-	co_debug("enter: monitor = %p, id = %ld, conet_unit = %d",
+	conet_debug("enter: monitor = %p, id = %ld, conet_unit = %d",
 		monitor, monitor->id, conet_unit);
 
 	adapter = (conet_adapter_t*)co_os_malloc(sizeof(conet_adapter_t));
 	if ( !adapter ) {
-		co_debug("leave: allocate conet adapter fail");
+		conet_err_debug("leave: allocate conet adapter fail");
 		return NULL;
 	}
 
@@ -170,24 +179,24 @@ conet_adapter_t *co_conet_create_adapter(co_monitor_t *monitor, int conet_unit)
 	adapter->binding_handle = NULL;
 	NdisInitializeEvent(&adapter->binding_event);
 
-	co_debug("allocating packet pool ...");
+	conet_debug("allocating packet pool ...");
 	NdisAllocatePacketPool(&Status, &adapter->packet_pool, CONET_MAX_PACKET_DESCRIPTOR, CONET_MAX_PACKET_SIZE); 
 	if ( Status != NDIS_STATUS_SUCCESS ) {
-		co_debug("leave: allocating packet pool fail, Status %x", Status);
+		conet_err_debug("leave: allocating packet pool fail, Status %x", Status);
 		co_os_free(adapter);
 		return NULL;
 	}
 
-	co_debug("allocating buffer pool ...");
+	conet_debug("allocating buffer pool ...");
 	NdisAllocateBufferPool(&Status, &adapter->buffer_pool, CONET_MAX_PACKET_BUFFER);
 	if ( Status != NDIS_STATUS_SUCCESS ) {
-		co_debug("leave: allocating buffer pool fail, Status %x", Status);
+		conet_err_debug("leave: allocating buffer pool fail, Status %x", Status);
 		NdisFreePacketPool(adapter->packet_pool);
 		co_os_free(adapter);
 		return NULL;
 	}
 
-	co_debug("reset promisc mode and clear mac address");
+	conet_debug("reset promisc mode and clear mac address");
 	adapter->general_status = NDIS_STATUS_MEDIA_CONNECT;
 	adapter->promisc = FALSE;
 	RtlZeroMemory(adapter->macaddr, sizeof(adapter->macaddr));
@@ -197,7 +206,7 @@ conet_adapter_t *co_conet_create_adapter(co_monitor_t *monitor, int conet_unit)
 	NdisAllocateSpinLock(&adapter->pending_send_lock);
 	co_list_init(&adapter->pending_send_list);
 
-	co_debug("leave: create conet adapter %p success", adapter);
+	conet_debug("leave: create conet adapter %p success", adapter);
 	return adapter;
 }
 
@@ -205,10 +214,10 @@ void co_conet_free_adapter(conet_adapter_t *adapter)
 {
 	conet_packet_t	*packet, *next_packet;
 
-	co_debug("enter: adapter = %p", adapter);
+	conet_debug("enter: adapter = %p", adapter);
 
 	if ( adapter ) {
-		co_debug("free pending transfer packet ...");
+		conet_debug("free pending transfer packet ...");
 		NdisAcquireSpinLock(&adapter->pending_transfer_lock);
 		co_list_each_entry_safe(packet, next_packet, &adapter->pending_transfer_list, list_node) {
 			co_list_del(&packet->list_node);
@@ -216,7 +225,7 @@ void co_conet_free_adapter(conet_adapter_t *adapter)
 		}
 		NdisReleaseSpinLock(&adapter->pending_transfer_lock);
 
-		co_debug("free pending send packet ...");
+		conet_debug("free pending send packet ...");
 		NdisAcquireSpinLock(&adapter->pending_send_lock);
 		co_list_each_entry_safe(packet, next_packet, &adapter->pending_send_list, list_node) {
 			co_list_del(&packet->list_node);
@@ -227,15 +236,15 @@ void co_conet_free_adapter(conet_adapter_t *adapter)
 		NdisFreeSpinLock(&adapter->pending_transfer_lock);
 		NdisFreeSpinLock(&adapter->pending_send_lock);
 
-		co_debug("free packet pool and buffer pool...");
+		conet_debug("free packet pool and buffer pool...");
 		NdisFreePacketPool(adapter->packet_pool);
 		NdisFreeBufferPool(adapter->buffer_pool);
 
-		co_debug("free adapter %p", adapter);
+		conet_debug("free adapter %p", adapter);
 		co_os_free(adapter);
 	}
 
-	co_debug("leave: adapter = %p", adapter);
+	conet_debug("leave: adapter = %p", adapter);
 }
 
 void DDKAPI co_conet_proto_bind_adapter(
@@ -259,9 +268,9 @@ void DDKAPI co_conet_proto_bind_adapter(
 	adapter = context->adapter;
 	osdep = monitor->osdep;
 
-	co_debug("enter: monitor = %p, adapter = %p", monitor, adapter);
+	conet_debug("enter: monitor = %p, adapter = %p", monitor, adapter);
 
-	co_debug("enter: NdisOpenAdapter(protocol_handle = %p, DeviceName = %ls)",
+	conet_debug("enter: NdisOpenAdapter(protocol_handle = %p, DeviceName = %ls)",
 		osdep->conet_protocol, DeviceName->Buffer);
 	NdisOpenAdapter(Status,
 			&OpenErrorStatus,
@@ -276,13 +285,13 @@ void DDKAPI co_conet_proto_bind_adapter(
 			NULL);
 
         if ( *Status == NDIS_STATUS_PENDING ) {
-		co_debug("wait NdisOpenAdapter to complete ...");
+		conet_debug("wait NdisOpenAdapter to complete ...");
 		NdisWaitEvent(&adapter->binding_event, 0);
 		*Status = adapter->binding_status;
-		co_debug("NdisOpenAdapter completed, Status = %x", *Status);
+		conet_debug("NdisOpenAdapter completed, Status = %x", *Status);
         }
 
-	co_debug("leave: Status = %x, binding_handle = %p", 
+	conet_debug("leave: Status = %x, binding_handle = %p", 
 		*Status, adapter->binding_handle);
 }
 
@@ -294,21 +303,21 @@ void DDKAPI co_conet_proto_unbind_adapter(
 {
 	conet_adapter_t		*adapter = (conet_adapter_t*)ProtocolBindingContext;
 
-	co_debug("enter: adapter = %p", adapter);
+	conet_debug("enter: adapter = %p", adapter);
 
-	co_debug("NdisCloseAdapter(binding_handle = %p)",
+	conet_debug("NdisCloseAdapter(binding_handle = %p)",
 		adapter->binding_handle);
 	NdisResetEvent(&adapter->binding_event);
 	NdisCloseAdapter(Status, adapter->binding_handle);
 
 	if ( *Status == NDIS_STATUS_PENDING ) {
-		co_debug("wait NdisCloseAdapter to complete ...");
+		conet_debug("wait NdisCloseAdapter to complete ...");
 		NdisWaitEvent(&adapter->binding_event, 0);
 		*Status = adapter->binding_status;
-		co_debug("NdisCloseAdapter completed, Status = %x", *Status);
+		conet_debug("NdisCloseAdapter completed, Status = %x", *Status);
 	}
 
-	co_debug("leave: Status = %x", *Status);
+	conet_debug("leave: Status = %x", *Status);
 }
 
 void DDKAPI co_conet_proto_open_adapter_complete(
@@ -319,7 +328,7 @@ void DDKAPI co_conet_proto_open_adapter_complete(
 {
 	conet_adapter_t	*adapter = (conet_adapter_t*)ProtocolBindingContext;
 
-	co_debug("adapter = %p, Status = %x",
+	conet_debug("adapter = %p, Status = %x",
 		adapter, Status);
 	adapter->binding_status = Status;
 	NdisSetEvent(&adapter->binding_event);
@@ -332,7 +341,7 @@ void DDKAPI co_conet_proto_close_adapter_complete(
 {
 	conet_adapter_t	*adapter = (conet_adapter_t*)ProtocolBindingContext;
 
-	co_debug("adapter = %p, Status = %x",
+	conet_debug("adapter = %p, Status = %x",
 		adapter, Status);
 	adapter->binding_status = Status;
 	NdisSetEvent(&adapter->binding_event);
@@ -347,30 +356,30 @@ bool_t co_conet_proto_filter_packet(
 
 	if ( co_conet_ntohs(pEthHdr->h_proto) == ETH_P_IP ) {
 		if ( RtlCompareMemory(pEthHdr->h_dest, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) == 6 ) {
-			co_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x broadcast",
+			conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x broadcast",
 				pEthHdr->h_dest[0], pEthHdr->h_dest[1], pEthHdr->h_dest[2],
 				pEthHdr->h_dest[3], pEthHdr->h_dest[4], pEthHdr->h_dest[5]);
 			return TRUE;
 		} else if ( RtlCompareMemory(pEthHdr->h_dest, adapter->macaddr, 6) == 6 ) {
-			co_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x MAC match",
+			conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x MAC match",
 				pEthHdr->h_dest[0], pEthHdr->h_dest[1], pEthHdr->h_dest[2],
 				pEthHdr->h_dest[3], pEthHdr->h_dest[4], pEthHdr->h_dest[5]);
 			return TRUE;
 		} else {
-			co_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x not match",
+			conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x not match",
 				pEthHdr->h_dest[0], pEthHdr->h_dest[1], pEthHdr->h_dest[2],
 				pEthHdr->h_dest[3], pEthHdr->h_dest[4], pEthHdr->h_dest[5]);
 			return FALSE;
 		}
 	}
 	else if ( co_conet_ntohs(pEthHdr->h_proto) == ETH_P_ARP ) {
-		co_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x ARP packet",
+		conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x ARP packet",
 			pEthHdr->h_dest[0], pEthHdr->h_dest[1], pEthHdr->h_dest[2],
 			pEthHdr->h_dest[3], pEthHdr->h_dest[4], pEthHdr->h_dest[5]);
 		return TRUE;
 	}
 	else {
-		co_debug("not IP or ARP protocol");
+		conet_debug("not IP or ARP protocol");
 		return FALSE;
 	}
 }
@@ -390,11 +399,11 @@ NDIS_STATUS DDKAPI co_conet_proto_receive(
 	PNDIS_BUFFER		pHeaderBuffer, TransferBuffer;
 	NDIS_STATUS		Status;
 
-	co_debug("enter: adapter = %p, Header = %p/%d, Buffer = %p/%d, PacketSize = %d",
+	conet_debug("enter: adapter = %p, Header = %p/%d, Buffer = %p/%d, PacketSize = %d",
 		adapter, HeaderBuffer, HeaderBufferSize, LookAheadBuffer, LookAheadBufferSize, PacketSize);
 
 	if ( HeaderBufferSize + PacketSize > CONET_MAX_PACKET_SIZE ) {
-		co_debug("leave: packet is too big, ignore");
+		conet_debug("leave: packet is too big, ignore");
 		return NDIS_STATUS_SUCCESS; // ignore big packet
 	}
 
@@ -405,20 +414,20 @@ NDIS_STATUS DDKAPI co_conet_proto_receive(
 			char data[HeaderBufferSize + LookAheadBufferSize];
 		} *message;
 
-		co_debug("receive a full packet, filter MAC address");
+		conet_debug("receive a full packet, filter MAC address");
 
 		if ( !co_conet_proto_filter_packet(adapter, HeaderBuffer) ) {
-			co_debug("leave: not our packet");
+			conet_debug("leave: not our packet");
 			return NDIS_STATUS_SUCCESS;
 		}
 
 		message = (struct conet_message *)co_os_malloc(sizeof(struct conet_message));
 		if ( !message ) {
-			co_debug("leave: allocate message fail");
+			conet_debug("leave: allocate message fail");
 			return NDIS_STATUS_SUCCESS;
 		}
 
-		co_debug("indicate packet to colinux");
+		conet_debug("indicate packet to colinux");
 		message->message.from = CO_MODULE_CONET0 + adapter->conet_unit;
 		message->message.to = CO_MODULE_LINUX;
 		message->message.priority = CO_PRIORITY_DISCARDABLE;
@@ -430,24 +439,24 @@ NDIS_STATUS DDKAPI co_conet_proto_receive(
 		NdisMoveMemory(message->data, HeaderBuffer, HeaderBufferSize);
 		NdisMoveMemory(message->data + HeaderBufferSize, LookAheadBuffer, LookAheadBufferSize);
 
-		co_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
+		conet_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
 			adapter->conet_unit);
-		co_debug("type CO_MESSAGE_TYPE_OTHER, device CO_DEVICE_NETWORK");
+		conet_debug("type CO_MESSAGE_TYPE_OTHER, device CO_DEVICE_NETWORK");
 
 		co_conet_transfer_message(adapter, (co_message_t *)message);
 
-		co_debug("leave: co_conet_transfer_message complete success");
+		conet_debug("leave: co_conet_transfer_message complete success");
 		return NDIS_STATUS_SUCCESS;
 	}
 
-	co_debug("allocate packet ...");
+	conet_debug("allocate packet ...");
 	NdisAllocatePacket(&Status, (PNDIS_PACKET*)(&packet), adapter->packet_pool);
 	if ( Status != NDIS_STATUS_SUCCESS ) {
-		co_debug("leave: allocate packet fail, Status = %x", Status);
+		conet_err_debug("leave: allocate packet fail, Status = %x", Status);
 		return Status;
 	}
 
-	co_debug("allocate packet buffer...");
+	conet_debug("allocate packet buffer...");
 	NdisAllocateBuffer(&Status,
 			  &pHeaderBuffer,
 			  adapter->buffer_pool,
@@ -455,18 +464,18 @@ NDIS_STATUS DDKAPI co_conet_proto_receive(
 			  HeaderBufferSize + LookAheadBufferSize);
 
 	if ( Status != NDIS_STATUS_SUCCESS ) {
-		co_debug("leave: allocate packet buffer fail, size = %d, Status = %x", 
+		conet_err_debug("leave: allocate packet buffer fail, size = %d, Status = %x", 
 			HeaderBufferSize + LookAheadBufferSize, Status);
 		NdisFreePacket((PNDIS_PACKET)packet);
 		return NDIS_STATUS_SUCCESS;
 	}
 
-	co_debug("move header and look ahead buffer to packet buffer");
+	conet_debug("move header and look ahead buffer to packet buffer");
 	NdisChainBufferAtFront((PNDIS_PACKET)packet, pHeaderBuffer);
 	NdisMoveMemory(packet->packet_buffer, HeaderBuffer, HeaderBufferSize);
 	NdisMoveMemory(&packet->packet_buffer[HeaderBufferSize], LookAheadBuffer, LookAheadBufferSize);	
 
-	co_debug("allocate another packet buffer...");
+	conet_debug("allocate another packet buffer...");
 	NdisAllocateBuffer(&Status,
 			&TransferBuffer,
 			adapter->packet_pool,
@@ -474,7 +483,7 @@ NDIS_STATUS DDKAPI co_conet_proto_receive(
 			PacketSize - LookAheadBufferSize);
 
 	if ( Status != NDIS_STATUS_SUCCESS ) {
-		co_debug("leave: allocate packet buffer fails, size = %d", 
+		conet_err_debug("leave: allocate packet buffer fails, size = %d", 
 			PacketSize - LookAheadBufferSize);
 		NdisFreePacket((PNDIS_PACKET)packet);
 		return NDIS_STATUS_SUCCESS;
@@ -490,7 +499,7 @@ NDIS_STATUS DDKAPI co_conet_proto_receive(
 	co_list_add_head(&packet->list_node, &adapter->pending_transfer_list);
 	NdisReleaseSpinLock(&adapter->pending_transfer_lock);
 
-	co_debug("start NdisTransferData ...");
+	conet_debug("start NdisTransferData ...");
 	NdisTransferData(&packet->transfer_status,
 			adapter->binding_handle,
 			MacReceiveContext,
@@ -500,14 +509,14 @@ NDIS_STATUS DDKAPI co_conet_proto_receive(
 			&packet->bytes_transferred);
 	
 	if ( packet->transfer_status != NDIS_STATUS_PENDING ) {
-		co_debug("NdisTransferData complete, start process");
+		conet_debug("NdisTransferData complete, start process");
 		co_conet_proto_transfer_complete(ProtocolBindingContext,
 						 (PNDIS_PACKET)packet,
 						  packet->transfer_status,
 						  packet->bytes_transferred);
 	}
 
-	co_debug("leave: success");
+	conet_debug("leave: success");
 	return NDIS_STATUS_SUCCESS;	
 }
 
@@ -515,9 +524,11 @@ void DDKAPI co_conet_proto_receive_complete(
 	IN NDIS_HANDLE		ProtocolBindingContext
 	)
 {
+#ifdef CONET_DEBUG
 	conet_adapter_t		*adapter = (conet_adapter_t*)ProtocolBindingContext;
+#endif
 
-	co_debug("adapter = %p", adapter);
+	conet_debug("adapter = %p", adapter);
 }
 
 void DDKAPI co_conet_proto_request_complete(
@@ -526,9 +537,11 @@ void DDKAPI co_conet_proto_request_complete(
 	IN NDIS_STATUS		Status
 	)
 {
+#ifdef CONET_DEBUG
 	conet_adapter_t		*adapter = (conet_adapter_t*)ProtocolBindingContext;
+#endif
 
-	co_debug("adapter = %p, NdisRequest = %p", adapter, Request);
+	conet_debug("adapter = %p, NdisRequest = %p", adapter, Request);
 	co_os_free(Request);
 }
 
@@ -541,12 +554,12 @@ void DDKAPI co_conet_proto_send_complete(
 	conet_adapter_t		*adapter = (conet_adapter_t*)ProtocolBindingContext;
 	conet_packet_t		*packet = (conet_packet_t*)Packet;
 
-	co_debug("adapter = %p, Packet = %p", adapter, Packet);
+	conet_debug("adapter = %p, Packet = %p", adapter, Packet);
 	NdisAcquireSpinLock(&adapter->pending_send_lock);
 	co_list_del(&packet->list_node);
 	NdisReleaseSpinLock(&adapter->pending_send_lock);
 
-	co_debug("NdisFreePacket, Packet = %p", Packet);
+	conet_debug("NdisFreePacket, Packet = %p", Packet);
 	NdisFreePacket(Packet);
 }
 
@@ -555,8 +568,10 @@ void DDKAPI co_conet_proto_reset_complete(
 	IN NDIS_STATUS		Status
 	)
 {
+#ifdef CONET_DEBUG
 	conet_adapter_t		*adapter = (conet_adapter_t*)ProtocolBindingContext;
-	co_debug("adapter = %p", adapter);
+#endif
+	conet_debug("adapter = %p", adapter);
 }
 
 void DDKAPI co_conet_proto_status(
@@ -568,7 +583,7 @@ void DDKAPI co_conet_proto_status(
 {
 	conet_adapter_t		*adapter = (conet_adapter_t*)ProtocolBindingContext;
 
-	co_debug("adapter = %p, Status = %x", adapter, Status);
+	conet_debug("adapter = %p, Status = %x", adapter, Status);
 	adapter->general_status = Status;
 }
 
@@ -584,18 +599,18 @@ void DDKAPI co_conet_proto_status_complete(
 		int connected;
 	} *message;
 
-	co_debug("enter: adapter = %p", adapter);
+	conet_debug("enter: adapter = %p", adapter);
 
 	if ( adapter->general_status != NDIS_STATUS_MEDIA_CONNECT &&
 	     adapter->general_status != NDIS_STATUS_MEDIA_DISCONNECT ) 
 	{
-		co_debug("leave: not media status, ignore");
+		conet_debug("leave: not media status, ignore");
 		return;
 	}
 
 	message = (struct conet_message *)co_os_malloc(sizeof(struct conet_message));
 	if ( !message ) {
-		co_debug("leave: allocate message fail");
+		conet_err_debug("leave: allocate message fail");
 		return;
 	}
 
@@ -609,15 +624,15 @@ void DDKAPI co_conet_proto_status_complete(
 	message->linux.size = sizeof(int);
 	message->connected = (adapter->general_status == NDIS_STATUS_MEDIA_CONNECT) ? TRUE : FALSE;
 
-	co_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
+	conet_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
 		adapter->conet_unit);
-	co_debug("type CO_MESSAGE_TYPE_STRING, device CO_DEVICE_NETWORK");
+	conet_debug("type CO_MESSAGE_TYPE_STRING, device CO_DEVICE_NETWORK");
 
 	co_conet_transfer_message(adapter, (co_message_t *)message);
 
-	co_debug("co_conet_transfer_message complete");
+	conet_debug("co_conet_transfer_message complete");
 
-	co_debug("leave: adapter = %p, notify message to colinux", adapter);
+	conet_debug("leave: adapter = %p, notify message to colinux", adapter);
 }
 
 void DDKAPI co_conet_proto_transfer_complete(
@@ -632,23 +647,23 @@ void DDKAPI co_conet_proto_transfer_complete(
 	PNDIS_BUFFER		TransferBuffer;
 	UINT			TotalPacketLength;
 
-	co_debug("enter: adapter = %p, Packet = %p, Status = %x, BytesTransferred = %d", 
+	conet_debug("enter: adapter = %p, Packet = %p, Status = %x, BytesTransferred = %d", 
 		adapter, Packet, Status, BytesTransferred);
 
 	NdisAcquireSpinLock(&adapter->pending_transfer_lock);
 	co_list_del(&packet->list_node);
 	NdisReleaseSpinLock(&adapter->pending_transfer_lock);
 
-	co_debug("unchain buffer from front and chain to back");
+	conet_debug("unchain buffer from front and chain to back");
 	NdisUnchainBufferAtFront(Packet, &TransferBuffer);
 	NdisChainBufferAtBack(Packet, TransferBuffer);
 
 	NdisQueryPacketLength(Packet, &TotalPacketLength);
-	co_debug("query packet length, TotalPacketLength = %d",
+	conet_debug("query packet length, TotalPacketLength = %d",
 		TotalPacketLength);
 
 	if ( !co_conet_proto_filter_packet(adapter, packet->packet_buffer) ) {
-		co_debug("not our packet");
+		conet_debug("not our packet");
 	} else {
 		struct conet_message {
 			co_message_t message;
@@ -658,7 +673,7 @@ void DDKAPI co_conet_proto_transfer_complete(
 
 		message = (struct conet_message *)co_os_malloc(sizeof(struct conet_message));
 		if ( !message ) {
-			co_debug("allocate message fail");
+			conet_err_debug("allocate message fail");
 		} else {
 			message->message.from = CO_MODULE_CONET0 + adapter->conet_unit;
 			message->message.to = CO_MODULE_LINUX;
@@ -670,20 +685,20 @@ void DDKAPI co_conet_proto_transfer_complete(
 			message->linux.size = TotalPacketLength;
 			NdisMoveMemory(message->data, packet->packet_buffer, TotalPacketLength);
 
-			co_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
+			conet_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
 				adapter->conet_unit);
-			co_debug("type CO_MESSAGE_TYPE_OTHER, device CO_DEVICE_NETWORK");
+			conet_debug("type CO_MESSAGE_TYPE_OTHER, device CO_DEVICE_NETWORK");
 
 			co_conet_transfer_message(adapter, (co_message_t *)message);
 
-			co_debug("co_conet_queue_message complete");
+			conet_debug("co_conet_queue_message complete");
 		}
 	}
 
-	co_debug("NdisFreePacket(Packet = %p)", Packet);
+	conet_debug("NdisFreePacket(Packet = %p)", Packet);
 	NdisFreePacket(Packet);
 
-	co_debug("leave");
+	conet_debug("leave");
 }
 
 int DDKAPI co_conet_proto_receive_packet(
@@ -698,7 +713,7 @@ int DDKAPI co_conet_proto_receive_packet(
 	UINT			CurrentLength;
 	int			i;
 
-	co_debug("enter: adapter = %p, Packet = %p", adapter, Packet);
+	conet_debug("enter: adapter = %p, Packet = %p", adapter, Packet);
 
 	NdisQueryPacket(Packet,
 			(PUINT)NULL,		// Physical Buffer Count
@@ -707,7 +722,7 @@ int DDKAPI co_conet_proto_receive_packet(
 			&TotalPacketLength	// TotalPacketLength
 			);
 
-	co_debug("first buffer %p, TotalPacketLength %d",
+	conet_debug("first buffer %p, TotalPacketLength %d",
 		CurrentBuffer, TotalPacketLength);
 
 	if ( TotalPacketLength > 0 ) {
@@ -720,7 +735,7 @@ int DDKAPI co_conet_proto_receive_packet(
 
 		message = (struct conet_message *)co_os_malloc(sizeof(struct conet_message));
 		if ( !message ) {
-			co_debug("leave: allocate message fail, return 0");
+			conet_err_debug("leave: allocate message fail, return 0");
 			return 0;
 		}
 	
@@ -728,7 +743,7 @@ int DDKAPI co_conet_proto_receive_packet(
 		while (CurrentBuffer) {
 			NdisQueryBufferSafe(CurrentBuffer, (PVOID)&VirtualAddress, &CurrentLength, 
 						NormalPagePriority);
-			co_debug("move packet data from buffer %p, length %d to message buffer",
+			conet_debug("move packet data from buffer %p, length %d to message buffer",
 				VirtualAddress, CurrentLength);
 			NdisMoveMemory(&message->data[i], VirtualAddress, CurrentLength);
 			i += CurrentLength;
@@ -736,7 +751,7 @@ int DDKAPI co_conet_proto_receive_packet(
 		}
 
 		if ( !co_conet_proto_filter_packet(adapter, message->data) ) {
-			co_debug("not our packet");
+			conet_debug("not our packet");
 			co_os_free(message);
 		} else {
 			message->message.from = CO_MODULE_CONET0 + adapter->conet_unit;
@@ -748,16 +763,16 @@ int DDKAPI co_conet_proto_receive_packet(
 			message->linux.unit = adapter->conet_unit;
 			message->linux.size = TotalPacketLength;
 
-			co_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
+			conet_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
 				adapter->conet_unit);
-			co_debug("type CO_MESSAGE_TYPE_OTHER, device CO_DEVICE_NETWORK");
+			conet_debug("type CO_MESSAGE_TYPE_OTHER, device CO_DEVICE_NETWORK");
 
 			co_conet_transfer_message(adapter, (co_message_t *)message);
-			co_debug("co_conet_transfer_message complete");
+			conet_debug("co_conet_transfer_message complete");
 		}
 	}
 
-	co_debug("leave: return 0");
+	conet_debug("leave: return 0");
 	return 0;
 }
    
@@ -766,11 +781,13 @@ NDIS_STATUS DDKAPI co_conet_proto_pnp_handler(
 	IN PNET_PNP_EVENT	pNetPnPEvent
 	)
 {
+#ifdef CONET_DEBUG
 	conet_adapter_t		*adapter = (conet_adapter_t*)ProtocolBindingContext;
+#endif
 	NDIS_STATUS		Status  = NDIS_STATUS_SUCCESS;
 	PNET_DEVICE_POWER_STATE	powerState;
  
-	co_debug("enter: adapter = %p, PnPEvent = %p", adapter, pNetPnPEvent);
+	conet_debug("enter: adapter = %p, PnPEvent = %p", adapter, pNetPnPEvent);
 
 	switch(pNetPnPEvent->NetEvent)
 	{
@@ -779,64 +796,64 @@ NDIS_STATUS DDKAPI co_conet_proto_pnp_handler(
 		switch (*powerState) 
 		{
 		case NetDeviceStateD0:
-			co_debug("NetEventsetPower NetDeviceStataD0, success");
+			conet_debug("NetEventsetPower NetDeviceStataD0, success");
 			Status = NDIS_STATUS_SUCCESS;
 			break;
 		case NetDeviceStateD1:
-			co_debug("NetEventsetPower NetDeviceStataD1, success");
+			conet_debug("NetEventsetPower NetDeviceStataD1, success");
 			Status = NDIS_STATUS_SUCCESS;
 			break;
 		case NetDeviceStateD2:
-			co_debug("NetEventsetPower NetDeviceStataD2, success");
+			conet_debug("NetEventsetPower NetDeviceStataD2, success");
 			Status = NDIS_STATUS_SUCCESS;
 			break;
 		case NetDeviceStateD3:
-			co_debug("NetEventsetPower NetDeviceStataD3, success");
+			conet_debug("NetEventsetPower NetDeviceStataD3, success");
 			Status = NDIS_STATUS_SUCCESS;
 			break;
 		default:
-			co_debug("NetEventsetPower unknown power state %d, not supported",
+			conet_debug("NetEventsetPower unknown power state %d, not supported",
 				*powerState);
 			Status = NDIS_STATUS_NOT_SUPPORTED;
 			break;
 		}
 		break;
 	case NetEventQueryPower:
-		co_debug("NetEventQueryPower, success");
+		conet_debug("NetEventQueryPower, success");
 		Status  = NDIS_STATUS_SUCCESS;
 		break;
 	case NetEventQueryRemoveDevice:
-		co_debug("NetEventQueryRemoveDevice, success");
+		conet_debug("NetEventQueryRemoveDevice, success");
 		Status  = NDIS_STATUS_SUCCESS;
 		break;
 	case NetEventCancelRemoveDevice:
-		co_debug("NetEventCancelRemoveDevice, success");
+		conet_debug("NetEventCancelRemoveDevice, success");
 		Status  = NDIS_STATUS_SUCCESS;
 		break;
 	case NetEventReconfigure:
-		co_debug("NetEventReconfigure, success");
+		conet_debug("NetEventReconfigure, success");
 		Status  = NDIS_STATUS_SUCCESS;
 		break;
 	case NetEventBindsComplete:
-		co_debug("NetEventBindsComplete, success");
+		conet_debug("NetEventBindsComplete, success");
 		Status  = NDIS_STATUS_SUCCESS;
 		break;
 
 	case NetEventPnPCapabilities:
-		co_debug("NetEventPnpCapabilities, not supported");
+		conet_debug("NetEventPnpCapabilities, not supported");
 		Status = NDIS_STATUS_NOT_SUPPORTED;
 		break;
 	case NetEventBindList:
-		co_debug("NetEventBindList, not supported");
+		conet_debug("NetEventBindList, not supported");
 		Status = NDIS_STATUS_NOT_SUPPORTED;
 		break;
 	default:
-		co_debug("unknown event %d, not supported", pNetPnPEvent->NetEvent);
+		conet_debug("unknown event %d, not supported", pNetPnPEvent->NetEvent);
 		Status = NDIS_STATUS_NOT_SUPPORTED;
 		break;
 	}
 
-	co_debug("leave: adapter = %p", adapter);
+	conet_debug("leave: adapter = %p", adapter);
 	return Status;
 }
 
@@ -871,10 +888,10 @@ co_rc_t co_conet_register_protocol(co_monitor_t *monitor)
 	NDIS_STATUS			Status;
 	NDIS_HANDLE			protoHandle;
 
-	co_debug("enter: monitor = %p, id = %ld", monitor, monitor->id);
+	conet_debug("enter: monitor = %p, id = %ld", monitor, monitor->id);
 
 	if ( osdep->conet_protocol ) {
-		co_debug("leave: protocol %s already registered",
+		conet_debug("leave: protocol %s already registered",
 			osdep->protocol_name);
 		return CO_RC_OK;
 	}
@@ -887,7 +904,7 @@ co_rc_t co_conet_register_protocol(co_monitor_t *monitor)
 	RtlInitAnsiString(&AnsiProtoName, osdep->protocol_name);
 	Status = RtlAnsiStringToUnicodeString(&protoName, &AnsiProtoName, TRUE);
 	if ( Status != STATUS_SUCCESS ) {
-		co_debug("leave: convert protocol name %s to unicode fail, Status = %x",
+		conet_err_debug("leave: convert protocol name %s to unicode fail, Status = %x",
 			osdep->protocol_name, Status);
 		return CO_RC(ERROR);
 	}
@@ -917,7 +934,7 @@ co_rc_t co_conet_register_protocol(co_monitor_t *monitor)
 	RtlFreeUnicodeString(&protoName);
 	
 	if ( !NT_SUCCESS(Status) || !protoHandle ) {
-		co_debug("leave: register %s protocol fail, Status = %x",
+		conet_err_debug("leave: register %s protocol fail, Status = %x",
 			osdep->protocol_name, Status);
 		return CO_RC(ERROR);
 	}
@@ -926,7 +943,7 @@ co_rc_t co_conet_register_protocol(co_monitor_t *monitor)
 	co_os_mutex_create(&osdep->conet_mutex);
 	co_list_init(&osdep->conet_adapters);
 	
-	co_debug("leave: register %s protocol success, protocol handle %p",
+	conet_debug("leave: register %s protocol success, protocol handle %p",
 		osdep->protocol_name, osdep->conet_protocol);
 
 	return CO_RC_OK;
@@ -939,10 +956,10 @@ co_rc_t co_conet_unregister_protocol(co_monitor_t *monitor)
 	NDIS_HANDLE		protoHandle;
 	NDIS_STATUS		Status;
 
-	co_debug("enter: monitor = %p, id = %ld", monitor, monitor->id);
+	conet_debug("enter: monitor = %p, id = %ld", monitor, monitor->id);
 
 	if ( osdep->conet_protocol ) {
-		co_debug("unbind adapters from protocol %s", osdep->protocol_name);
+		conet_debug("unbind adapters from protocol %s", osdep->protocol_name);
 		co_os_mutex_acquire(osdep->conet_mutex);
 		co_list_each_entry_safe(adapter, adapter_next, &osdep->conet_adapters, list_node) {
 			co_conet_proto_unbind_adapter(&Status, adapter, NULL);
@@ -951,7 +968,7 @@ co_rc_t co_conet_unregister_protocol(co_monitor_t *monitor)
 		}
 		co_os_mutex_release(osdep->conet_mutex);
 		
-		co_debug("unregister protocol %s, protocol handle %p",
+		conet_debug("unregister protocol %s, protocol handle %p",
 			osdep->protocol_name, osdep->conet_protocol);
 		protoHandle = osdep->conet_protocol;
 		osdep->conet_protocol = NULL;
@@ -960,9 +977,9 @@ co_rc_t co_conet_unregister_protocol(co_monitor_t *monitor)
 		co_debug("unregister protocol %s completed, Status = %x", 
 			osdep->protocol_name, Status); 
 	} else
-		co_debug("conet bridge protocol not registered");
+		conet_debug("conet bridge protocol not registered");
 
-	co_debug("leave");
+	conet_debug("leave");
 	return CO_RC_OK;
 }
 
@@ -975,13 +992,15 @@ co_rc_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcf
 	UNICODE_STRING		AdapterName;
 	conet_binding_context	context;
 	PNDIS_REQUEST		Request;
+#ifdef CONET_DEBUG
 	unsigned char		*mac = (unsigned char*)macaddr;
+#endif
 
-	co_debug("enter: monitor = %p, conet_unit = %d, netcfg_id = %s, macaddr = %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x",
+	conet_debug("enter: monitor = %p, conet_unit = %d, netcfg_id = %s, macaddr = %02x:%02x:%02x:%02x:%02x:%02x",
 		monitor, conet_unit, netcfg_id, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
 	if ( !osdep->conet_protocol ) {
-		co_debug("conet bridge protocol for monitor %ld not registered!", monitor->id);
+		conet_err_debug("conet bridge protocol for monitor %ld not registered!", monitor->id);
 		return CO_RC(ERROR);
 	}
 
@@ -989,7 +1008,7 @@ co_rc_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcf
 	co_list_each_entry(adapter, &osdep->conet_adapters, list_node) {
 		if ( adapter->conet_unit == conet_unit ) {
 			co_os_mutex_release(osdep->conet_mutex);
-			co_debug("leave: adapter already opened, adapter = %p", adapter);
+			conet_debug("leave: adapter already opened, adapter = %p", adapter);
 			return CO_RC_OK;
 		}
 	}
@@ -998,15 +1017,15 @@ co_rc_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcf
 	RtlInitAnsiString(&AnsiAdapterName, netcfg_id);
 	Status = RtlAnsiStringToUnicodeString(&AdapterName, &AnsiAdapterName, TRUE);
 	if ( Status != STATUS_SUCCESS ) {
-		co_debug("leave: convert netcfg_id %s to unicode failed", netcfg_id);
+		conet_err_debug("leave: convert netcfg_id %s to unicode failed", netcfg_id);
 		return CO_RC(ERROR);
 	}
 
-	co_debug("create conet_adapter instance ...");
+	conet_debug("create conet_adapter instance ...");
 	adapter = co_conet_create_adapter(monitor, conet_unit);
 	if ( !adapter )
 	{
-		co_debug("leave: create conet_adapter instance failed");
+		conet_err_debug("leave: create conet_adapter instance failed");
 		RtlFreeUnicodeString(&AdapterName);
 		return CO_RC(ERROR);
         }
@@ -1014,14 +1033,14 @@ co_rc_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcf
 	adapter->promisc = promisc;
 	RtlCopyMemory(adapter->macaddr, macaddr, 6);
 
-	co_debug("bind adapter %p to %s protocol ...", adapter, osdep->protocol_name);
+	conet_debug("bind adapter %p to %s protocol ...", adapter, osdep->protocol_name);
 	context.monitor = monitor;
 	context.adapter = adapter;
 	co_conet_proto_bind_adapter(&Status, &context, &AdapterName, NULL, NULL);
 	RtlFreeUnicodeString(&AdapterName);
 
         if ( Status != NDIS_STATUS_SUCCESS ) {
-		co_debug("leave: bind adapter %p to protocol %s fail, Status %x", 
+		conet_err_debug("leave: bind adapter %p to protocol %s fail, Status %x", 
 	    		adapter, osdep->protocol_name, Status);
 		co_conet_free_adapter(adapter);
 		return CO_RC(ERROR);
@@ -1044,21 +1063,21 @@ co_rc_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcf
 		Request->DATA.SET_INFORMATION.InformationBuffer = (PVOID)&adapter->packet_filter;
 		Request->DATA.SET_INFORMATION.InformationBufferLength = sizeof(adapter->packet_filter);
 
-		co_debug("send ndis request %p NdisRequestSetInformation, Oid OID_GEN_CURRENT_PACKET_FILTER",
+		conet_debug("send ndis request %p NdisRequestSetInformation, Oid OID_GEN_CURRENT_PACKET_FILTER",
 			Request);
 		NdisRequest(&Status, adapter->binding_handle, Request);
 		if ( Status != NDIS_STATUS_PENDING ) {
-			co_debug("ndis request %p completed", Request);
+			conet_debug("ndis request %p completed", Request);
 			co_os_free(Request);
 		}
 	}
 
-	co_debug("add adapter %p to conet_adapters list", adapter);
+	conet_debug("add adapter %p to conet_adapters list", adapter);
 	co_os_mutex_acquire(osdep->conet_mutex);
 	co_list_add_head(&adapter->list_node, &osdep->conet_adapters);
 	co_os_mutex_release(osdep->conet_mutex);
 
-	co_debug("bind adapter %p to protocol %s success", adapter, osdep->protocol_name);
+	conet_debug("bind adapter %p to protocol %s success", adapter, osdep->protocol_name);
 	return CO_RC_OK;
 }
 
@@ -1068,32 +1087,32 @@ co_rc_t co_conet_unbind_adapter(co_monitor_t *monitor, int conet_unit)
 	conet_adapter_t		*adapter;	
 	NDIS_STATUS		Status;
 
-	co_debug("enter: monitor = %p, conet_unit = %d", monitor, conet_unit);
+	conet_debug("enter: monitor = %p, conet_unit = %d", monitor, conet_unit);
 
 	if ( !osdep->conet_protocol ) {
-		co_debug("conet bridge protocol for monitor %ld not registered!", monitor->id);
+		conet_debug("conet bridge protocol for monitor %ld not registered!", monitor->id);
 		return CO_RC(ERROR);
 	}
 
 	co_os_mutex_acquire(osdep->conet_mutex);
 	co_list_each_entry(adapter, &osdep->conet_adapters, list_node) {
 		if ( adapter->conet_unit == conet_unit ) {
-			co_debug("found adapter %p, remove from conet adapter list", adapter);
+			conet_debug("found adapter %p, remove from conet adapter list", adapter);
 			co_list_del(&adapter->list_node);
 			co_os_mutex_release(osdep->conet_mutex);
 
-			co_debug("unbind adapter %p from protocol %s ...", 
+			conet_debug("unbind adapter %p from protocol %s ...", 
 				adapter, osdep->protocol_name);
 			co_conet_proto_unbind_adapter(&Status, adapter, NULL);	
 	
 			co_conet_free_adapter(adapter);
-			co_debug("leave: adapter unbind and freed");
+			conet_debug("leave: adapter unbind and freed");
 			return CO_RC_OK;
 		}
 	}
 	co_os_mutex_release(osdep->conet_mutex);
 
-	co_debug("leave: adapter not found");
+	conet_debug("leave: adapter not found");
 	return CO_RC(ERROR);
 }
 
@@ -1106,35 +1125,35 @@ co_rc_t co_conet_inject_packet_to_adapter(co_monitor_t *monitor, int conet_unit,
 	PNDIS_BUFFER		pPacketBuffer;
 	NDIS_STATUS		Status;
 
-	co_debug("enter: monitor = %p, conet_unit = %d, packet_data = %p, length = %d",
+	conet_debug("enter: monitor = %p, conet_unit = %d, packet_data = %p, length = %d",
 		monitor, conet_unit, packet_data, length);
 
 	if ( !osdep->conet_protocol ) {
-		co_debug("conet bridge protocol for monitor %ld not registered!", monitor->id);
+		conet_debug("conet bridge protocol for monitor %ld not registered!", monitor->id);
 		return CO_RC(ERROR);
 	}
 
 	co_list_each_entry(adapter, &osdep->conet_adapters, list_node) {
 		if ( adapter->conet_unit == conet_unit ) {
-			co_debug("found adapter %p", adapter);
+			conet_debug("found adapter %p", adapter);
 			binding_handle = adapter->binding_handle;
 			break;
 		}
 	}
 
 	if ( !binding_handle ) {
-		co_debug("leave: adapter not found, discard packet");
+		conet_debug("leave: adapter not found, discard packet");
 		return CO_RC(ERROR);
 	}
 
-	co_debug("allocate packet ...");
+	conet_debug("allocate packet ...");
 	NdisAllocatePacket(&Status, (PNDIS_PACKET*)(&packet), adapter->packet_pool);
 	if ( Status != NDIS_STATUS_SUCCESS) {
-		co_debug("leave: allocate packet fail, Status = %x", Status);
+		conet_err_debug("leave: allocate packet fail, Status = %x", Status);
 		return CO_RC(ERROR);
 	}
 
-	co_debug("allocate packet buffer...");
+	conet_debug("allocate packet buffer...");
 	NdisAllocateBuffer(&Status,
 			  &pPacketBuffer,
 			  adapter->buffer_pool,
@@ -1142,28 +1161,28 @@ co_rc_t co_conet_inject_packet_to_adapter(co_monitor_t *monitor, int conet_unit,
 			  length);
 
 	if ( Status != NDIS_STATUS_SUCCESS ) {
-		co_debug("leave: allocate packet buffer fail, size = %d", length);
+		conet_err_debug("leave: allocate packet buffer fail, size = %d", length);
 		NdisFreePacket((PNDIS_PACKET)packet);
 		return CO_RC(ERROR);
 	}
 
-	co_debug("copy packet data to packet buffer");
+	conet_debug("copy packet data to packet buffer");
 	NdisChainBufferAtFront((PNDIS_PACKET)packet, pPacketBuffer);
 	NdisMoveMemory(packet->packet_buffer, packet_data, length);
 
-	co_debug("add packet %p to pending send list", packet);
+	conet_debug("add packet %p to pending send list", packet);
 	NdisAcquireSpinLock(&adapter->pending_send_lock);
 	co_list_add_head(&packet->list_node, &adapter->pending_send_list);
 	NdisReleaseSpinLock(&adapter->pending_send_lock);
 
-	co_debug("NdisSend(binding_handle = %p, packet = %p)",
+	conet_debug("NdisSend(binding_handle = %p, packet = %p)",
 		binding_handle, packet);
 	NdisSend(&Status, binding_handle, (PNDIS_PACKET)packet);
 	if ( Status != NDIS_STATUS_PENDING ) {
-		co_debug("NdisSend Packet %p completed", packet);
+		conet_debug("NdisSend Packet %p completed", packet);
 		co_conet_proto_send_complete(binding_handle, (PNDIS_PACKET)packet, Status);
 	}
 
-	co_debug("leave: success");
+	conet_debug("leave: success");
 	return CO_RC_OK;
 }
