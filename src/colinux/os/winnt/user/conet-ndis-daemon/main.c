@@ -1,9 +1,6 @@
 /*
  * This source code is a part of coLinux source package.
  *
- * Dan Aloni <da-x@colinux.org>, 2003-2004 (c)
- * Alejandro R. Sedeno <asedeno@mit.edu>, 2004 (c)
- *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
@@ -77,7 +74,7 @@ static co_rc_t conet_init(void)
 		&control_net_key);
 
 	if (status != ERROR_SUCCESS) {
-		co_terminal_print("conet-ndis-daemon: Error opening registry key: %s", NETWORK_CONNECTIONS_KEY);
+		co_terminal_print("conet-ndis-daemon: Error opening registry key: %s\n", NETWORK_CONNECTIONS_KEY);
 		return CO_RC(ERROR);
 	}
 
@@ -105,7 +102,7 @@ static co_rc_t conet_init(void)
 		if (status == ERROR_NO_MORE_ITEMS)
 			break;
 		else if (status != ERROR_SUCCESS) {
-			co_terminal_print("conet-ndis-daemon: Error enumerating registry subkeys of key: %s",
+			co_terminal_print("conet-ndis-daemon: Error enumerating registry subkeys of key: %s\n",
 			       NETWORK_CONNECTIONS_KEY);
 			return CO_RC(ERROR);
 		}
@@ -133,12 +130,12 @@ static co_rc_t conet_init(void)
 				&len);
 
 			if (status != ERROR_SUCCESS || name_type != REG_SZ) {
-				co_terminal_print("conet-ndis-daemon: Error opening registry key: %s\\%s\\%s",
+				co_terminal_print("conet-ndis-daemon: Error opening registry key: %s\\%s\\%s\n",
 				       NETWORK_CONNECTIONS_KEY, connection_string, name_string);
 			        return CO_RC(ERROR);
 			}
 			else {
-				co_debug("Ndis bridge probe on \"%s\"\n", name_data);
+				co_debug("Ndis bridge probe on \"%s\"", name_data);
 
 				if (daemon_parameters->name_specified == PTRUE) {
 					/*
