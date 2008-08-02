@@ -80,7 +80,7 @@ targets['colinux-ndis-net-daemon.exe'] = Target(
        Input('../user/conet-ndis-daemon/build.o'),
     ] + user_dep,
     tool = Compiler(),
-    mono_options = generate_options('gcc', libs=['wpcap']),
+    mono_options = generate_options('gcc'),
 )
 
 targets['colinux-slirp-net-daemon.exe'] = Target(

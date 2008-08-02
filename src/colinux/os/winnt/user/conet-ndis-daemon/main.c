@@ -27,11 +27,6 @@
 COLINUX_DEFINE_MODULE("colinux-ndis-net-daemon");
 
 /*******************************************************************************
- * Defines
- */
-#define PCAP_NAME_HDR "\\Device\\NPF_"
-
-/*******************************************************************************
  * Type Declarations
  */
 
@@ -62,151 +57,137 @@ co_rc_t monitor_receive(co_reactor_user_t user, unsigned char *buffer, unsigned 
 }
 
 /*******************************************************************************
- * Get the Connection name for an PCAP Interface (using NetCfgInstanceId).
+ * Get the Connection name for an Bridge Interface (using NetCfgInstanceId).
  */
-co_rc_t get_device_name(char *name, int name_size, char *actual_name, int actual_name_size)
+#define CONET_NAME_BUF_LEN 256 /* allows to use strcpy */
+static co_rc_t conet_init(void)
 {
-	char connection_string[256];
-	HKEY connection_key;
-	char name_data[256];
-	DWORD name_type;
-	const char name_string[] = "Name";
 	LONG status;
+	HKEY control_net_key;
 	DWORD len;
+	int i;
+	char device_guid[CONET_NAME_BUF_LEN];
+	char name_buffer[CONET_NAME_BUF_LEN];
 
-	snprintf(connection_string,
-	         sizeof(connection_string),
-		 "%s\\%s\\Connection",
-		 NETWORK_CONNECTIONS_KEY, name);
+	status = RegOpenKeyEx(
+		HKEY_LOCAL_MACHINE,
+		NETWORK_CONNECTIONS_KEY,
+		0,
+		KEY_READ,
+		&control_net_key);
 
-        status = RegOpenKeyEx(
-	         HKEY_LOCAL_MACHINE,
-		 connection_string,
-		 0,
-		 KEY_READ,
-		 &connection_key);
+	if (status != ERROR_SUCCESS) {
+		co_terminal_print("conet-ndis-daemon: Error opening registry key: %s", NETWORK_CONNECTIONS_KEY);
+		return CO_RC(ERROR);
+	}
 
-        if (status == ERROR_SUCCESS) {
-		len = sizeof(name_data);
-		status = RegQueryValueEx(
-			connection_key,
-			name_string,
+	name_buffer[0] = 0;
+	for(i = 0; i < 1000; i++)
+	{
+		char enum_name[CONET_NAME_BUF_LEN];
+		char connection_string[CONET_NAME_BUF_LEN];
+		HKEY connection_key;
+		char name_data[CONET_NAME_BUF_LEN];
+		DWORD name_type;
+		const char name_string[] = "Name";
+
+		len = sizeof (enum_name);
+		status = RegEnumKeyEx(
+			control_net_key,
+			i,
+			enum_name,
+			&len,
 			NULL,
-			&name_type,
-			(PBYTE)name_data,
-			&len);
-		if (status != ERROR_SUCCESS || name_type != REG_SZ) {
-			co_terminal_print("conet-bridged-daemon: error opening registry key: %s\\%s\\%s",
-					  NETWORK_CONNECTIONS_KEY, connection_string, name_string);
+			NULL,
+			NULL,
+			NULL);
+
+		if (status == ERROR_NO_MORE_ITEMS)
+			break;
+		else if (status != ERROR_SUCCESS) {
+			co_terminal_print("conet-ndis-daemon: Error enumerating registry subkeys of key: %s",
+			       NETWORK_CONNECTIONS_KEY);
 			return CO_RC(ERROR);
 		}
-		else {
-			snprintf(actual_name, actual_name_size, "%s", name_data);
-		}
+
+		snprintf(connection_string, 
+			 sizeof(connection_string),
+			 "%s\\%s\\Connection",
+			 NETWORK_CONNECTIONS_KEY, enum_name);
+
+		status = RegOpenKeyEx(
+			HKEY_LOCAL_MACHINE,
+			connection_string,
+			0,
+			KEY_READ,
+			&connection_key);
 		
-		RegCloseKey(connection_key);
-		
-	}
+		if (status == ERROR_SUCCESS) {
+			len = sizeof (name_data);
+			status = RegQueryValueEx(
+				connection_key,
+				name_string,
+				NULL,
+				&name_type,
+				(LPBYTE)name_data,
+				&len);
 
-	return CO_RC(OK);
-}
+			if (status != ERROR_SUCCESS || name_type != REG_SZ) {
+				co_terminal_print("conet-ndis-daemon: Error opening registry key: %s\\%s\\%s",
+				       NETWORK_CONNECTIONS_KEY, connection_string, name_string);
+			        return CO_RC(ERROR);
+			}
+			else {
+				co_debug("Ndis bridge probe on \"%s\"\n", name_data);
 
-/*******************************************************************************
- * Initialize winPCap interface.
- */
-int pcap_init()
-{
-	pcap_if_t *alldevs = NULL;
-	pcap_if_t *device;
-	pcap_if_t *found_device = NULL;
-	int exit_code = 0;
-	char errbuf[PCAP_ERRBUF_SIZE];
-	char name_data[256];
-	char connection_name_data[256];
+				if (daemon_parameters->name_specified == PTRUE) {
+					/*
+					 If an exact match exists, over-ride any found device,
+					  setting exact match device to it.
+					 */
+					if (strcmp(name_data, daemon_parameters->interface_name) == 0) {
+						strcpy(name_buffer, name_data);
+						strcpy(device_guid, enum_name);
+						break;
+					}
 
-	/* Retrieve the device list */
-	if (pcap_findalldevs(&alldevs, errbuf) == -1) {
-		co_terminal_print("conet-ndis-daemon: error in pcap_findalldevs: %s\n", errbuf);
-		exit_code = -1;
-		goto pcap_out;
-	}
+					/*
+					  Do an partial search, if partial search is found,
+					   set this device as he found device, but continue
+					   looping through devices.
+					 */
 
-	if (daemon_parameters->name_specified == PTRUE)
-		co_terminal_print("conet-ndis-daemon: Looking for interface \"%s\"\n", daemon_parameters->interface_name);
-	else {
-		co_terminal_print("conet-ndis-daemon: bridged interface not specified\n");
-		exit(-1);
-	}
-	
-	device = alldevs;
-	while (device) {
-		memset(connection_name_data, 0, sizeof(connection_name_data));
-		snprintf(name_data, sizeof(name_data), "%s", device->name+(sizeof(PCAP_NAME_HDR) - 1));
-
-		get_device_name(name_data, sizeof(name_data),
-		                connection_name_data, sizeof(connection_name_data));
-
-		if (*connection_name_data != 0) {
-			co_terminal_print("conet-ndis-daemon: checking connection: %s\n", connection_name_data);
-
-			if (daemon_parameters->name_specified == PTRUE) {
-				/*
-				 If an exact match exists, over-ride any found device,
-				  setting exact match device to it.
-				 */
-				if (strcmp(connection_name_data, daemon_parameters->interface_name) == 0) {
-					found_device = device;
-					break;
-				}
-
-				/*
-				  Do an partial search, if partial search is found,
-				   set this device as he found device, but continue
-				   looping through devices.
-				 */
-				
-				if (found_device == NULL &&
-				    strstr(connection_name_data, daemon_parameters->interface_name) != NULL) {
-					found_device = device;
-				}
-			} else {
-				/* 
-				 If no name specified and network has an address,
-				  autoselect first device.
-				*/
-				if (device->addresses) {
-					found_device = device;
+					if (!*name_buffer &&
+					    strstr(name_data, daemon_parameters->interface_name) != NULL) {
+						strcpy(name_buffer, name_data);
+						strcpy(device_guid, enum_name);
+					}
+				} else {
+					/* 
+					 If no name specified and network has an address,
+					  autoselect first device.
+					*/
+					strcpy(name_buffer, name_data);
+					strcpy(device_guid, enum_name);
 					break;
 				}
 			}
-			
-		}
-		else {
-			co_terminal_print("conet-ndis-daemon: adapter %s doesn't have a connection\n", device->description);
-		}
 
-		device = device->next;
+			RegCloseKey (connection_key);
+		}
 	}
 
-	if (found_device == NULL) {
-		co_terminal_print("conet-ndis-daemon: no matching adapter\n");
-                exit_code = -1;
-                goto pcap_out_close;
-	}
+	RegCloseKey (control_net_key);
 
-	device = found_device;
-	snprintf(netcfg_id, sizeof(netcfg_id), "\\Device\\%s", device->name+(sizeof(PCAP_NAME_HDR) - 1));
-	co_terminal_print("conet-ndis-daemon: bridge on: %s...\n", device->description);
+	if (!*name_buffer)
+		return CO_RC(ERROR);
+
+	snprintf(netcfg_id, sizeof(netcfg_id), "\\Device\\%s", device_guid);
+	co_terminal_print("conet-ndis-daemon: Bridge on: %s\n", name_buffer);
 	if (daemon_parameters->promisc == 0)	// promiscuous mode?
 		co_terminal_print("conet-ndis-daemon: Promiscuous mode disabled\n");
-	
 
-pcap_out_close:
-	// At this point, we don't need any more the device list. Free it
-	pcap_freealldevs(alldevs);
-
-pcap_out:
-	return exit_code;
+	return CO_RC(OK); 
 }
 
 /********************************************************************************
@@ -378,10 +359,10 @@ conet_ndis_main(int argc, char *argv[])
 
 	daemon_parameters = &start_parameters;
 
-	exit_code = pcap_init();
-	if (exit_code) {
-		co_terminal_print("conet-ndis-daemon: error initializing winPCap\n");
-		goto out;
+	rc = conet_init();
+	if (!CO_OK(rc)) {
+		co_terminal_print("conet-ndis-daemon: Error initializing ndis-bridge (rc %x)\n", (int)rc);
+		return -1;
 	}
 
 	rc = co_reactor_create(&g_reactor);
