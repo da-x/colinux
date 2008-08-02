@@ -63,24 +63,6 @@ typedef struct _ETHER_HDR {
 	unsigned short	h_proto;		/* packet type ID field	*/
 } ETHER_HDR, *PETHER_HDR;
 
-// missed NDIS event API
-VOID NdisInitializeEvent(
-	IN PNDIS_EVENT		Event
-	);
-
-BOOLEAN NdisWaitEvent(
-	IN PNDIS_EVENT		Event,
-	IN UINT			MsToWait
-	); 
-
-VOID NdisSetEvent(
-	IN PNDIS_EVENT		Event
-	);
-
-VOID NdisResetEvent(
-	IN PNDIS_EVENT		Event
-	);
-
 conet_adapter_t *co_conet_create_adapter(
 	co_monitor_t		*monitor, 
 	int			conet_unit

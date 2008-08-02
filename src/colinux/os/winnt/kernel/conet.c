@@ -22,7 +22,7 @@
 #include <colinux/os/winnt/monitor.h>
 #include <colinux/os/winnt/kernel/conet.h>
 
-inline USHORT
+static inline USHORT
 co_conet_ntohs (
 	IN	USHORT		netshort
 	)
@@ -30,7 +30,7 @@ co_conet_ntohs (
 	return ((netshort & 0x00FF) << 8) | ((netshort & 0xFF00) >> 8) ;
 }
 
-inline USHORT
+static inline USHORT
 co_conet_htons (
 	IN	USHORT		hostshort
 	)
@@ -38,7 +38,7 @@ co_conet_htons (
 	return ((hostshort & 0x00FF) << 8) | ((hostshort & 0xFF00) >> 8) ;
 }
 
-inline ULONG
+static inline ULONG
 co_conet_ntohl (
 	IN	ULONG		netlong
 	)
@@ -47,7 +47,7 @@ co_conet_ntohl (
 		((netlong & 0x0000FF00) << 8 ) |((netlong & 0x000000FF) << 24) ;
 }
 
-inline ULONG
+static inline ULONG
 co_conet_htonl (
 	IN	ULONG		hostlong
 	)
@@ -56,14 +56,15 @@ co_conet_htonl (
 		((hostlong & 0x0000FF00) << 8 ) | ((hostlong & 0x000000FF) << 24) ;
 }
 
-inline VOID NdisInitializeEvent(
+// missed NDIS event API
+static inline VOID NdisInitializeEvent(
 	IN PNDIS_EVENT  	Event
 	)
 {
 	KeInitializeEvent(&Event->Event, NotificationEvent , FALSE);
 }
 
-inline BOOLEAN NdisWaitEvent(
+static inline BOOLEAN NdisWaitEvent(
 	IN PNDIS_EVENT  	Event,
 	IN UINT  		MsToWait
 	)
@@ -71,14 +72,14 @@ inline BOOLEAN NdisWaitEvent(
 	return KeWaitForSingleObject(&Event->Event, Executive, KernelMode, TRUE, NULL) == STATUS_SUCCESS ;
 }
 
-inline VOID NdisSetEvent(
+static inline VOID NdisSetEvent(
 	IN PNDIS_EVENT  	Event
 	)
 {
 	KeSetEvent(&Event->Event, 1, FALSE);
 }
 
-inline VOID NdisResetEvent(
+static inline VOID NdisResetEvent(
 	IN PNDIS_EVENT  	Event
 	)
 {
@@ -839,7 +840,7 @@ NDIS_STATUS DDKAPI co_conet_proto_pnp_handler(
 	return Status;
 }
 
-static void ntos(co_id_t id, char *buf)
+static inline void ntos(co_id_t id, char *buf)
 {
 	co_id_t i,n;
 	char *p;
