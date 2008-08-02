@@ -344,12 +344,11 @@ conet_ndis_main(int argc, char *argv[])
 	co_rc_t rc;
 	start_parameters_t start_parameters;
 	co_module_t modules[] = {CO_MODULE_CONET0, };
-	int exit_code = 0;
 	co_monitor_ioctl_conet_bind_adapter_t ioctl;
 	int a0,a1,a2,a3,a4,a5;
 
 	rc = handle_parameters(&start_parameters, argc, argv);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return -1;
 
 	if (start_parameters.show_help) {
@@ -366,20 +365,16 @@ conet_ndis_main(int argc, char *argv[])
 	}
 
 	rc = co_reactor_create(&g_reactor);
-	if (!CO_OK(rc)) {
-		exit_code = -1;
-		goto out;
-	}
+	if (!CO_OK(rc))
+		return -1;
 
 	modules[0] += start_parameters.index;
 	rc = co_user_monitor_open(g_reactor, monitor_receive,
 				  start_parameters.instance, modules, 
 				  sizeof(modules)/sizeof(co_module_t),
 				  &g_monitor_handle);
-	if (!CO_OK(rc)) {
-		exit_code = -1;
-		goto out;
-	}
+	if (!CO_OK(rc))
+		return -1;
 
 	/* send ioctl to monitor bind conet protocol to adapter */
 	ioctl.conet_proto = CO_CONET_BRIDGE;
@@ -406,9 +401,7 @@ conet_ndis_main(int argc, char *argv[])
 	co_user_monitor_close(g_monitor_handle);
 	co_reactor_destroy(g_reactor);
 
-out:
-	ExitProcess(exit_code);
-	return exit_code;
+	return 0;
 }
 
 /********************************************************************************
