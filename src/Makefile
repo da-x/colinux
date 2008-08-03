@@ -19,3 +19,5 @@ installer:
 clean:
 	python ../bin/make.py clean
 	rm -f colinux/arch/current colinux/os/current
+	rm -f src/colinux/os/darwin/kernel/build
+	rm -f src/colinux/os/darwin/linuxheaders

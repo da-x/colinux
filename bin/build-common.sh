@@ -37,14 +37,25 @@ else
 	. $BINDIR/sample.user-build.cfg
 fi
 
-# what flavor are we building?
-TARGET=i686-pc-mingw32
+case $OSTYPE in
+    darwin*)
+	TARGET=$MACHTYPE
+	BUILD=$TARGET
+
+	# Tweaks for Darwin bash.
+	set +o posix 2>/dev/null
+	;;
+    *)
+	# what flavor are we building?
+	TARGET=i686-pc-mingw32
+
+	# Current developing build system
+	BUILD=i686-pc-linux
+	;;
+esac
 
 # ARCH must overwrite for builds on 64 bit (target kernel)
 TARGET_ARCH=i386
-
-# Current developing build system
-BUILD=i686-pc-linux
 
 # Updated by Sam Lantinga <slouken@libsdl.org>
 # These are the files from the current MingW release

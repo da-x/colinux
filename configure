@@ -14,7 +14,7 @@
 . bin/build-common.sh --get-vars
 
 # Some default values
-target=i686-pc-mingw32
+target=$TARGET
 nonopt=NONE
 prefix=NONE
 distdir="\$USER_TOPDIR/dist"
@@ -112,7 +112,7 @@ Options:
   --kernel-untar          Untar can overwrite kernel tree, if exist.  Is good
                           for clean builds or automation builds.
   --disable-kernel-untar  Never overwrite kernel sources. (default)
-  --no-create             Test only this configure, no files create.
+  --dry-run               Test only configure steps, don't write config.
   --verbose               More messages in configure.
   --gcc-guest-build       Build C compiler from source of gnu cross compiler,
                           and use for kernel compiling. Should use, if gcc version
@@ -220,7 +220,7 @@ EOF
   --errfile=*)
     errfile="$optarg" ;;
 
-  --no-create)
+  --no-create|--dry-run)
     no_create=yes ;;
 
   --no-kernel-untar | \
@@ -262,14 +262,6 @@ fi
 # Check for target system
 #
 
-case "$target" in
-NONE)
-  case $nonopt in
-  NONE) target=$host ;;
-  *) target=$nonopt ;;
-  esac ;;
-esac
-
 target_cpu=`echo $target | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\1/'`
 target_vendor=`echo $target | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\2/'`
 target_os=`echo $target | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\3/'`
@@ -298,7 +290,8 @@ fi
 case $colinux_os in
 NONE)
   case $target_os in
-  linux | Linux) colinux_os="linux" ;;
+  linux|Linux) colinux_os="linux" ;;
+  darwin*|Darwin) colinux_os="darwin" ;;
   *) colinux_os="winnt" ;;
   esac ;;
 esac
@@ -309,8 +302,7 @@ case $prefix in
 NONE)
   case $target_os in
   NONE) prefix="$topdir/prefix-unknown" ;;
-  linux) prefix="$topdir/$target_os" ;;
-  *) prefix="$topdir/mingw32" ;;
+  *) prefix="$topdir/$target_os" ;;
   esac
   echo "Setting prefix=$prefix"
   ;;
@@ -421,7 +413,7 @@ add_failed()
 # $3 Minimum version need, or empty string
 # $4 Maximum version supported, or empty string
 # '--warn' optional as first param, add to warning list
-# sample: "wget-1.8" "wget --version" "1.8.x"
+# Example: "wget-1.8" "wget --version" "1.8.x"
 check_exec_tool()
 {
   local v1="" v2="" v3="" i1="" i2="" i3="" warn=""
@@ -636,6 +628,23 @@ case $colinux_os in
 	echo "  `fltk-config --libs`: label fl_x_global_event_hook not found"
 	echo "  Please set right path to a patched FLTK"
     fi
+  ;;
+  darwin) # for darwin as host
+    GCC_NEEDED=""
+    # maybe we should check here for the XCode version, too
+    # ToDo: fail on PPC arch!
+    check_exec_tool "gcc for kernel" "${gcc_guest_target_prefix}gcc -dumpversion" "$GCC_NEEDED"
+    check_exec_tool "gcc g++" "${gcc_guest_target_prefix}g++ --version" "$GCC_NEEDED"
+#    check_exec_tool "FLTK devel (patched)" "fltk-config --version" "$FLTK_VERSION" && \
+#    if nm `fltk-config --libs` | grep -q "fl_x_global_event_hook"
+#    then
+#	if [ "$verbose" = "yes" ]; then
+#	    echo "  `fltk-config --libs`: Label fl_x_global_event_hook found"
+#	fi
+#    else
+#	echo "  `fltk-config --libs`: label fl_x_global_event_hook not found"
+#	echo "  Please set right path to a patched FLTK"
+#    fi
   ;;
   *) # for Winnt as host
     # Check GCC for kernel

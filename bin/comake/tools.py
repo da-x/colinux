@@ -125,6 +125,8 @@ class Executer(Tool):
 
 class Compiler(Executer):
     def get_command_line(self, tool_run_inf):
+        from sys import platform
+        darwin = (platform == "darwin")
         actual_compile = False
         count_archives = 0
         compiler_def_type = tool_run_inf.options.get('compiler_def_type', [])
@@ -167,7 +169,7 @@ class Compiler(Executer):
             if compiler_strip:
                 parameters.append('-Wl,--strip-debug')
 
-        if count_archives > 1:
+        if count_archives > 1 and not darwin:
             parameters.append('-Wl,--start-group')
         parameters.extend(input_pathnames)
         compiler_lib_paths = tool_run_inf.options.get('compiler_lib_paths', [])
@@ -176,7 +178,7 @@ class Compiler(Executer):
         parameters += ["-l" + path for path in compiler_libs]
         if not actual_compile:
             parameters += tool_run_inf.options.get('linker_add', [])
-        if count_archives > 1:
+        if count_archives > 1 and not darwin:
             parameters.append('-Wl,--end-group')
 
         parameters.append('-o')
@@ -265,6 +267,8 @@ class Archiver(Executer):
                         os.chdir(cwd)
                         
                     for pathname in os.listdir(temp_dir_extract):
+                        if pathname == '__.SYMDEF SORTED':
+                            continue
                         fullname = os.path.join(temp_dir_extract, pathname)
                         destname = os.path.join(temp_dir, ("%d-" % (file_index, )) + pathname)
                         os.rename(fullname, destname)
@@ -276,6 +280,12 @@ class Archiver(Executer):
         if tool_run_inf.temp_dir:
             for pathname in tool_run_inf.temp_inputs:
                 os.unlink(pathname)
+            name = os.path.join(tool_run_inf.temp_dir, '__.SYMDEF SORTED')
+            if os.path.exists(name):
+                os.unlink(name)
+            name = os.path.join(tool_run_inf.temp_dir_extract, '__.SYMDEF SORTED')
+            if os.path.exists(name):
+                os.unlink(name)
             os.rmdir(tool_run_inf.temp_dir)
             os.rmdir(tool_run_inf.temp_dir_extract)
 

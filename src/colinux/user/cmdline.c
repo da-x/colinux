@@ -7,7 +7,9 @@
  * the root directory.
  */
 
+#if !defined(__APPLE__)
 #include <malloc.h>
+#endif
 #include <string.h>
 #include "cmdline.h"
 
