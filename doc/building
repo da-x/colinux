@@ -567,6 +567,8 @@ For building and runnning coLinux on Linux you need:
    Currently works only with host kernel 2.6.x,
    tested up to 2.6.8.1, 2.6.10 - 2.6.18, 2.6.22.
    Host kernel with CONFIG_REGPARM is usable since coLinux 0.7.2.
+   Kernel compiler of host must match the ABI.
+   Host with 64bit can't compile the module currently.
 2. patched fltk-1.1.6 (see patch directory) installed in the 
    system (./configure ; make ; su -c "make install")
    You can also install this version under your HOME (see below).
@@ -600,6 +602,11 @@ of the driver is more simple.
 
 You should run coLinux in a graphic environment, KDE, Gnome or after 'startx'.
 'xhost +' allows root (su) to use your user desktop (access control disabled).
+
+For Debugging on module loading before colinux-daemud-daemon have access,
+add a "debug_misc=..." as module parameter, for example
+
+    insmod colinux.ko debug_misc=31
 
 PATH=.:$PATH is needed, if the executables aren't installed in your e.g 
 /usr/local/bin or elsewhere in $PATH.
