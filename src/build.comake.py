@@ -67,11 +67,20 @@ if not settings.target_kernel_source:
     print "is patched with the patch file which is under the patch/ directory."
     raise BuildCancelError()
 
-# TODO: Set not include2, if target_kernel_build empty
 settings.target_kernel_build = getenv('COLINUX_TARGET_KERNEL_BUILD')
 
+# Handle headers from in source and out of tree builds
 if not settings.target_kernel_build:
     settings.target_kernel_build = settings.target_kernel_source
+
+if settings.target_kernel_build == settings.target_kernel_source:
+    settings.target_kernel_includes = [
+        pathjoin(settings.target_kernel_source, 'include') ]
+else:
+    settings.target_kernel_includes = [
+        pathjoin(settings.target_kernel_build, 'include'),
+        pathjoin(settings.target_kernel_build, 'include2'),
+        pathjoin(settings.target_kernel_source, 'include') ]
 
 if not hasattr(settings, 'final_build_target'):
     settings.final_build_target = 'executables'
@@ -86,17 +95,14 @@ targets['build'] = Target(
         appenders=dict(
             compiler_flags=[
                 '-Wno-trigraphs', '-fno-strict-aliasing', '-Wall', 
-		settings.cflags,
+                settings.cflags,
             ] + compiler_flags,
-	    linker_flags=[
-		settings.lflags,
-	    ],
+            linker_flags=[
+                settings.lflags,
+            ],
             compiler_includes=[
                 'src',
-                pathjoin(settings.target_kernel_build, 'include'),
-                pathjoin(settings.target_kernel_build, 'include2'),
-                pathjoin(settings.target_kernel_source, 'include'),
-            ],
+            ] + settings.target_kernel_includes,
             compiler_defines=compiler_defines,
         )
     ),
