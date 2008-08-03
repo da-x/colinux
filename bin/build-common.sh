@@ -25,7 +25,7 @@ TOPDIR=`dirname $BINDIR`
 # Remember: Please update also conf/kernel-*-config
 #
 # Read version from filename patch/series-*, using the newest we found.
-KERNEL_VERSION=`ls $TOPDIR/patch/series-* | sed -n -e 's/^.\+-\([0-9\.]\+\)$/\1/' -e '$p'`
+KERNEL_VERSION=`ls $TOPDIR/patch/series-* | sed -n -e 's/^[^-]*-\([0-9\.]*\)$/\1/' -e '$p'`
 
 # Use User config, if exist
 # you probably don't need to change anything from here down
@@ -106,7 +106,7 @@ fi
 
 # KERNEL_VERSION: full kernel version (e.g. 2.6.11)
 # KERNEL_DIR: sub-dir in www.kernel.org for the download (e.g. v2.6)
-KERNEL_DIR=`echo $KERNEL_VERSION | sed -e 's/^\([0-9]\+\)\.\([0-9]\+\)\..\+$/v\1.\2/'`
+KERNEL_DIR=`echo $KERNEL_VERSION | sed -e 's/^\([0-9]*\.[0-9]*\)\..*$/v\1/'`
 
 KERNEL=linux-$KERNEL_VERSION
 KERNEL_URL=http://www.kernel.org/pub/linux/kernel/$KERNEL_DIR
@@ -291,7 +291,7 @@ strip_kernel()
 	#     _____^^^^^^^^^^^^^^^^^^^^^__________________^************^___^^^^^^______________________
 
 	KEEP=`grep "co_daemon_load_symbol" $TOPDIR/$FROM_SOURCE | \
-	  sed -n -e 's/^.\+daemon.\+\"\(.\+\)\".\+import.\+$/ --keep-symbol=\1/p' | tr -d "\n"`
+	  sed -n -e 's/^.*daemon[^"]*"\([^"]*\)".*import.*$/ --keep-symbol=\1/p' | tr -d "\n"`
 	if [ -n "$KEEP" ]
 	then
 		# Kernel strip

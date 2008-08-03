@@ -22,7 +22,7 @@ test -z "$TARGET_FILE" && TARGET_FILE="src/colinux/os/winnt/user/install/colinux
 PRE_VERSION=`cat $VERSION_FILE`
 
 # coLinux standard version
-VERSION=`echo $PRE_VERSION | sed -e 's/\([^-]\+\).*/\1/'`
+VERSION=`echo $PRE_VERSION | sed -e 's/\([^-]*\).*/\1/'`
 
 cat > $TARGET_FILE << EOF
 !define VERSION "$VERSION"
