@@ -149,7 +149,7 @@ void co_conet_transfer_message(conet_adapter_t *adapter, co_message_t *message)
 			return;
 		}
 
-		conet_debug("queue work item to co_conet_transfer_message_routine delay wor queue");
+		conet_debug("queue work item to co_conet_transfer_message_routine delay work queue");
 		context->monitor = adapter->monitor;
 		context->message = message;
 		IoQueueWorkItem(context->work_item, co_conet_transfer_message_routine, DelayedWorkQueue, context);
@@ -220,7 +220,16 @@ void co_conet_free_adapter(conet_adapter_t *adapter)
 		conet_debug("free pending transfer packet ...");
 		NdisAcquireSpinLock(&adapter->pending_transfer_lock);
 		co_list_each_entry_safe(packet, next_packet, &adapter->pending_transfer_list, list_node) {
+			PNDIS_BUFFER TransferBuffer;
+
 			co_list_del(&packet->list_node);
+
+			NdisUnchainBufferAtFront((PNDIS_PACKET)packet, &TransferBuffer);
+			if (TransferBuffer) {
+				conet_debug("NdisFreeBuffer %p packet %p", TransferBuffer, packet);
+				NdisFreeBuffer(TransferBuffer);
+			}
+
 			NdisFreePacket((PNDIS_PACKET)packet);
 		}
 		NdisReleaseSpinLock(&adapter->pending_transfer_lock);
@@ -228,7 +237,16 @@ void co_conet_free_adapter(conet_adapter_t *adapter)
 		conet_debug("free pending send packet ...");
 		NdisAcquireSpinLock(&adapter->pending_send_lock);
 		co_list_each_entry_safe(packet, next_packet, &adapter->pending_send_list, list_node) {
+			PNDIS_BUFFER TransferBuffer;
+
 			co_list_del(&packet->list_node);
+
+			NdisUnchainBufferAtFront((PNDIS_PACKET)packet, &TransferBuffer);
+			if (TransferBuffer) {
+				conet_debug("NdisFreeBuffer %p packet %p", TransferBuffer, packet);
+				NdisFreeBuffer(TransferBuffer);
+			}
+
 			NdisFreePacket((PNDIS_PACKET)packet);
 		}
 		NdisReleaseSpinLock(&adapter->pending_send_lock);
@@ -553,11 +571,18 @@ void DDKAPI co_conet_proto_send_complete(
 {
 	conet_adapter_t		*adapter = (conet_adapter_t*)ProtocolBindingContext;
 	conet_packet_t		*packet = (conet_packet_t*)Packet;
+	PNDIS_BUFFER TransferBuffer;
 
 	conet_debug("adapter = %p, Packet = %p", adapter, Packet);
 	NdisAcquireSpinLock(&adapter->pending_send_lock);
 	co_list_del(&packet->list_node);
 	NdisReleaseSpinLock(&adapter->pending_send_lock);
+
+	NdisUnchainBufferAtFront(Packet, &TransferBuffer);
+	if (TransferBuffer) {
+		conet_debug("NdisFreeBuffer %p packet %p", TransferBuffer, Packet);
+		NdisFreeBuffer(TransferBuffer);
+	}
 
 	conet_debug("NdisFreePacket, Packet = %p", Packet);
 	NdisFreePacket(Packet);
