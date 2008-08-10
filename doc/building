@@ -603,7 +603,7 @@ of the driver is more simple.
 You should run coLinux in a graphic environment, KDE, Gnome or after 'startx'.
 'xhost +' allows root (su) to use your user desktop (access control disabled).
 
-For Debugging on module loading before colinux-daemud-daemon have access,
+For Debugging on module loading before colinux-debug-daemon have access,
 add a "debug_misc=..." as module parameter, for example
 
     insmod colinux.ko debug_misc=31
