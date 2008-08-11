@@ -95,6 +95,25 @@ static inline VOID NdisResetEvent(
 	KeResetEvent(&Event->Event);
 }
 
+static void co_FreeBuffersAndPacket(
+	IN PNDIS_PACKET		Packet
+	)
+{
+	PNDIS_BUFFER TransferBuffer;
+
+	while (1) {
+		NdisUnchainBufferAtFront(Packet, &TransferBuffer);
+		if (!TransferBuffer)
+			break;
+
+		conet_debug("NdisFreeBuffer %p packet %p", TransferBuffer, Packet);
+		NdisFreeBuffer(TransferBuffer);
+	}
+
+	conet_debug("NdisFreePacket(Packet = %p)", Packet);
+	NdisFreePacket(Packet);
+}
+
 static VOID DDKAPI co_conet_transfer_message_routine(PDEVICE_OBJECT DeviceObject, PVOID Context)
 {
 	conet_message_transfer_context_t *context;
@@ -220,34 +239,18 @@ void co_conet_free_adapter(conet_adapter_t *adapter)
 		conet_debug("free pending transfer packet ...");
 		NdisAcquireSpinLock(&adapter->pending_transfer_lock);
 		co_list_each_entry_safe(packet, next_packet, &adapter->pending_transfer_list, list_node) {
-			PNDIS_BUFFER TransferBuffer;
-
 			co_list_del(&packet->list_node);
-
-			NdisUnchainBufferAtFront((PNDIS_PACKET)packet, &TransferBuffer);
-			if (TransferBuffer) {
-				conet_debug("NdisFreeBuffer %p packet %p", TransferBuffer, packet);
-				NdisFreeBuffer(TransferBuffer);
-			}
-
-			NdisFreePacket((PNDIS_PACKET)packet);
+			conet_debug("Unchain and free Buffers (Packet = %p)", packet);
+			co_FreeBuffersAndPacket((PNDIS_PACKET)packet);
 		}
 		NdisReleaseSpinLock(&adapter->pending_transfer_lock);
 
 		conet_debug("free pending send packet ...");
 		NdisAcquireSpinLock(&adapter->pending_send_lock);
 		co_list_each_entry_safe(packet, next_packet, &adapter->pending_send_list, list_node) {
-			PNDIS_BUFFER TransferBuffer;
-
 			co_list_del(&packet->list_node);
-
-			NdisUnchainBufferAtFront((PNDIS_PACKET)packet, &TransferBuffer);
-			if (TransferBuffer) {
-				conet_debug("NdisFreeBuffer %p packet %p", TransferBuffer, packet);
-				NdisFreeBuffer(TransferBuffer);
-			}
-
-			NdisFreePacket((PNDIS_PACKET)packet);
+			conet_debug("Unchain and free Buffers (Packet = %p)", packet);
+			co_FreeBuffersAndPacket((PNDIS_PACKET)packet);
 		}
 		NdisReleaseSpinLock(&adapter->pending_send_lock);
 		
@@ -503,7 +506,8 @@ NDIS_STATUS DDKAPI co_conet_proto_receive(
 	if ( Status != NDIS_STATUS_SUCCESS ) {
 		conet_err_debug("leave: allocate packet buffer fails, size = %d", 
 			PacketSize - LookAheadBufferSize);
-		NdisFreePacket((PNDIS_PACKET)packet);
+		conet_debug("Unchain and free Buffers (Packet = %p)", packet);
+		co_FreeBuffersAndPacket((PNDIS_PACKET)packet);
 		return NDIS_STATUS_SUCCESS;
 	}
 
@@ -571,21 +575,14 @@ void DDKAPI co_conet_proto_send_complete(
 {
 	conet_adapter_t		*adapter = (conet_adapter_t*)ProtocolBindingContext;
 	conet_packet_t		*packet = (conet_packet_t*)Packet;
-	PNDIS_BUFFER TransferBuffer;
 
 	conet_debug("adapter = %p, Packet = %p", adapter, Packet);
 	NdisAcquireSpinLock(&adapter->pending_send_lock);
 	co_list_del(&packet->list_node);
 	NdisReleaseSpinLock(&adapter->pending_send_lock);
 
-	NdisUnchainBufferAtFront(Packet, &TransferBuffer);
-	if (TransferBuffer) {
-		conet_debug("NdisFreeBuffer %p packet %p", TransferBuffer, Packet);
-		NdisFreeBuffer(TransferBuffer);
-	}
-
-	conet_debug("NdisFreePacket, Packet = %p", Packet);
-	NdisFreePacket(Packet);
+	conet_debug("Unchain and free Buffers (Packet = %p)", Packet);
+	co_FreeBuffersAndPacket(Packet);
 }
 
 void DDKAPI co_conet_proto_reset_complete(
@@ -720,8 +717,8 @@ void DDKAPI co_conet_proto_transfer_complete(
 		}
 	}
 
-	conet_debug("NdisFreePacket(Packet = %p)", Packet);
-	NdisFreePacket(Packet);
+	conet_debug("Unchain and free Buffers (Packet = %p)", Packet);
+	co_FreeBuffersAndPacket(Packet);
 
 	conet_debug("leave");
 }
