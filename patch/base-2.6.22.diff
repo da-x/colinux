@@ -2784,9 +2784,11 @@ Index: linux-2.6.22-source/mm/page_alloc.c
  	if (unlikely(PageCompound(page)))
  		destroy_compound_page(page, order);
  
-@@ -1370,6 +1410,14 @@
+@@ -1369,7 +1409,16 @@
+ 		dump_stack();
  		show_mem();
  	}
++	return NULL;
  got_pg:
 +	if (cooperative_mode_enabled() &&
 +	    !TestSetPageCoHostMapped(page)) {
