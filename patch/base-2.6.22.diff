@@ -2180,7 +2180,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -0,0 +1,453 @@
+@@ -0,0 +1,462 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2378,8 +2378,14 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	new_jiffies = co_passage_page->params[1];
 +
 +	if (co_messages_active  &&  io_size > 0  &&  io_size <= CO_VPTR_IO_AREA_SIZE) {
-+		unsigned char *io_buffer = co_io_buffer->buffer;
-+		unsigned char *io_buffer_end = &co_io_buffer->buffer[io_size];
++		static unsigned char temp_storage[CO_VPTR_IO_AREA_SIZE];
++		unsigned char *io_buffer = temp_storage;
++		unsigned char *io_buffer_end = &temp_storage[io_size];
++
++		/* Copy into temp, because kmalloc calls host to mapping pages */
++		memcpy(temp_storage, co_io_buffer->buffer, io_size);
++		co_io_buffer->messages_waiting = 0;
++		co_passage_page_ref_down();
 +
 +		while (io_buffer < io_buffer_end) {
 +			co_message_t *message = (co_message_t *)io_buffer;
@@ -2393,9 +2399,12 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +			co_message_add_to_incoming(message, size);
 +			io_buffer += size;
 +		}
++
++		co_passage_page_ref_up();
++	} else {
++		co_io_buffer->messages_waiting = 0;
 +	}
 +
-+	co_io_buffer->messages_waiting = 0;
 +	co_passage_page_release(flags);
 +
 +	memset (&null_regs, 0, sizeof(null_regs));
