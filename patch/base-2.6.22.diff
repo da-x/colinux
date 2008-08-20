@@ -2268,22 +2268,22 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +
 +static void co_handle_jiffies(long count)
 +{
++	unsigned long flags;
++
 +	if (count > HZ) {
 +		long secs = count / HZ;
 +
 +		co_debug("co_handle_jiffies: clock warp (%ld,%ld)\n", count, secs);
 +		/* 'warp_clock' for long distances */
-+		write_seqlock_irq(&xtime_lock);
++		write_seqlock_irqsave(&xtime_lock, flags);
 +		xtime.tv_sec += secs;
 +		count -= (secs * HZ);
 +		time_interpolator_reset();
-+		write_sequnlock_irq(&xtime_lock);
++		write_sequnlock_irqrestore(&xtime_lock, flags);
 +		clock_was_set();
 +	}
 +
 +	while (count > 0) {
-+		unsigned long flags;
-+
 +		local_irq_save(flags);
 +		irq_enter();
 +		__do_IRQ(TIMER_IRQ);
