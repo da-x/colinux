@@ -193,7 +193,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- linux-2.6.22-source.orig/kernel/cooperative.c
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -130,6 +130,7 @@
+@@ -124,6 +124,7 @@
  #endif
  	case CO_DEVICE_SCSI: irq = SCSI_IRQ; break;
  	case CO_DEVICE_MOUSE: irq = MOUSE_IRQ; break;

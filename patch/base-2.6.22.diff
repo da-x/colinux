@@ -2078,7 +2078,7 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +extern void co_printk(const char *line, int size);
 +
 +extern void co_switch_wrapper(void);
-+extern void co_callback(unsigned long flags, struct pt_regs *regs);
++extern void co_callback(struct pt_regs *regs);
 +extern void co_idle_processor(void);
 +extern void co_terminate(co_termination_reason_t reason);
 +extern void co_terminate_bug(int code, int line, const char *file);
@@ -2180,7 +2180,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -0,0 +1,462 @@
+@@ -0,0 +1,449 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2268,28 +2268,22 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +
 +static void co_handle_jiffies(long count)
 +{
-+	unsigned long flags;
-+
 +	if (count > HZ) {
 +		long secs = count / HZ;
 +
-+		co_debug("co_handle_jiffies: clock warp (%ld,%ld)\n", count, secs);
 +		/* 'warp_clock' for long distances */
-+		write_seqlock_irqsave(&xtime_lock, flags);
++		write_seqlock(&xtime_lock);
 +		xtime.tv_sec += secs;
 +		count -= (secs * HZ);
 +		time_interpolator_reset();
-+		write_sequnlock_irqrestore(&xtime_lock, flags);
++		write_sequnlock(&xtime_lock);
 +		clock_was_set();
 +	}
 +
 +	while (count > 0) {
-+		local_irq_save(flags);
 +		irq_enter();
 +		__do_IRQ(TIMER_IRQ);
 +		irq_exit();
-+		local_irq_restore(flags);
-+
 +		count--;
 +	}
 +}
@@ -2336,8 +2330,6 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	if (!co_messages_active)
 +		return;
 +
-+	local_irq_save(flags);
-+
 +	/*
 +	 * Pop a message from the incoming queue.
 +	 */
@@ -2356,18 +2348,17 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +		 */
 +		co_handle_incoming_message(message);
 +	}
-+
-+	local_irq_restore(flags);
 +}
 +
-+void co_callback(unsigned long flags, struct pt_regs *regs)
++void co_callback(struct pt_regs *regs)
 +{
 +	long io_size;
 +	unsigned long new_jiffies;
 +	struct pt_regs null_regs;
 +
++	BUG_ON(!irqs_disabled());
 +	if (co_passage_page->operation != CO_OPERATION_MESSAGE_FROM_MONITOR) {
-+		co_passage_page_release(flags);
++		co_passage_page_ref_down();
 +		return;
 +	}
 +
@@ -2399,13 +2390,10 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +			co_message_add_to_incoming(message, size);
 +			io_buffer += size;
 +		}
-+
-+		co_passage_page_ref_up();
 +	} else {
 +		co_io_buffer->messages_waiting = 0;
++		co_passage_page_ref_down();
 +	}
-+
-+	co_passage_page_release(flags);
 +
 +	memset (&null_regs, 0, sizeof(null_regs));
 +
@@ -2420,14 +2408,13 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +
 +void co_idle_processor(void)
 +{
-+	unsigned long flags;
-+
 +	co_passage_page_assert_valid();
-+
-+	co_passage_page_acquire(&flags);
++	local_irq_disable();
++	co_passage_page_ref_up();
 +	co_passage_page->operation = CO_OPERATION_IDLE;
 +	co_switch_wrapper();
-+	co_callback(flags, NULL);
++	co_callback(NULL);
++	local_irq_enable();
 +}
 +
 +void co_printk(const char *line, int size)
@@ -3089,7 +3076,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/i8259_cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/i8259_cooperative.c
-@@ -0,0 +1,102 @@
+@@ -0,0 +1,100 @@
 +/*
 + *  linux/arch/i386/kernel/i8259_cooperative.c
 + */
@@ -3106,15 +3093,13 @@ Index: linux-2.6.22-source/arch/i386/kernel/i8259_cooperative.c
 +/* Function must have the same prototype as do_IRQ() */
 +fastcall void proxy_interrupt_handler(struct pt_regs *regs)
 +{
-+	unsigned long flags;
-+
 +	co_passage_page_assert_valid();
-+	co_passage_page_acquire(&flags);
++	co_passage_page_ref_up();
 +	co_passage_page->operation = CO_OPERATION_FORWARD_INTERRUPT;
 +	co_passage_page->params[0] = (~regs->orig_eax) + FIRST_EXTERNAL_VECTOR; /* IRQ number */
 +	co_passage_page->host_state.flags &= ~(1 << 9); /* Turn IF off */
 +	co_switch_wrapper();
-+	co_callback(flags, regs);
++	co_callback(regs);
 +}
 +
 +CO_TRACE_CONTINUE;
