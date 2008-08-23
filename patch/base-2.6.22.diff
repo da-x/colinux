@@ -3436,3 +3436,16 @@ Index: linux-2.6.22-source/include/linux/page-flags.h
  struct page;	/* forward declaration */
  
  extern void cancel_dirty_page(struct page *page, unsigned int account_size);
+Index: linux-2.6.22-source/kernel/irq/manage.c
+===================================================================
+--- linux-2.6.22-source.orig/kernel/irq/manage.c
++++ linux-2.6.22-source/kernel/irq/manage.c
+@@ -503,7 +503,7 @@
+ 	struct irqaction *action;
+ 	int retval;
+ 
+-#ifdef CONFIG_LOCKDEP
++#if defined(CONFIG_LOCKDEP) || defined(CONFIG_COOPERATIVE)
+ 	/*
+ 	 * Lockdep wants atomic interrupt handlers:
+ 	 */
