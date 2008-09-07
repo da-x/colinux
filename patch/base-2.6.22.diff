@@ -492,27 +492,6 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +};
 +
 +CO_TRACE_CONTINUE;
-Index: linux-2.6.22-source/arch/i386/kernel/cpu/common.c
-===================================================================
---- linux-2.6.22-source.orig/arch/i386/kernel/cpu/common.c
-+++ linux-2.6.22-source/arch/i386/kernel/cpu/common.c
-@@ -5,6 +5,7 @@
- #include <linux/module.h>
- #include <linux/percpu.h>
- #include <linux/bootmem.h>
-+#include <linux/cooperative_internal.h>
- #include <asm/semaphore.h>
- #include <asm/processor.h>
- #include <asm/i387.h>
-@@ -462,7 +463,7 @@
- 	}
- 
- 	/* SEP disabled? */
--	if (disable_x86_sep)
-+	if (cooperative_mode_enabled() || disable_x86_sep)
- 		clear_bit(X86_FEATURE_SEP, c->x86_capability);
- 
- 	if (disable_pse)
 Index: linux-2.6.22-source/arch/i386/kernel/entry.S
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/entry.S
@@ -1145,7 +1124,7 @@ Index: linux-2.6.22-source/include/asm-i386/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/asm-i386/cooperative.h
-@@ -0,0 +1,194 @@
+@@ -0,0 +1,205 @@
 +/*
 + *  linux/include/asm/cooperative.h
 + *
@@ -1257,8 +1236,19 @@ Index: linux-2.6.22-source/include/asm-i386/cooperative.h
 +	unsigned long va;
 +        #define CO_ARCH_STATE_STACK_VA "0x6C"
 +
++	unsigned long sysenter_cs;
++        #define CO_ARCH_STATE_SYSENTER_CS "0x70"
++
++	unsigned long sysenter_esp;
++        #define CO_ARCH_STATE_SYSENTER_ESP "0x74"
++
++	unsigned long sysenter_eip;
++        #define CO_ARCH_STATE_SYSENTER_EIP "0x78"
++
++	unsigned long unused_0x7c; /* fxstate must start on 0x10 boundary */
++
 +	unsigned char fxstate[0x200];
-+        #define CO_ARCH_STATE_STACK_FXSTATE "0x70"
++        #define CO_ARCH_STATE_STACK_FXSTATE "0x80"
 +} __attribute__((packed)) co_arch_state_stack_t;
 +
 +#define CO_MAX_PARAM_SIZE 0x400
@@ -1289,9 +1279,9 @@ Index: linux-2.6.22-source/include/asm-i386/cooperative.h
 +					unsigned long dr3;
 +					unsigned long dr6;
 +					unsigned long dr7;
-+					unsigned char code[0x230];
++					unsigned char code[0x260];
 +				} __attribute__((packed));
-+				unsigned char pad[0x250]; /* Be careful! see NOTE below */
++				unsigned char pad[0x280]; /* Be careful! see NOTE below */
 +			} __attribute__((packed));
 +
 +			/* Machine states */
@@ -1676,7 +1666,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +
 +#include <asm/cooperative.h>
 +
-+#define CO_LINUX_API_VERSION    11
++#define CO_LINUX_API_VERSION    12
 +
 +#pragma pack(0)
 +

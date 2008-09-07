@@ -12,6 +12,7 @@
   * Add PG_co_host_mapped, save many OS switching times: speed up coLinux.
   * unionfs-2.2.4 added as module. (Marwan Al-Sabbagh)
   * New: /proc/colinux/stats show counts of OS switches.
+  * Add sysenter / sysexit restoration support, for cpu with SEP feature.
 
   Debugging:
   * Enable host kernel debug via registry [HKLM\SOFTWARE\coLinux] "Debug"
