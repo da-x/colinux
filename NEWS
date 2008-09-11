@@ -4,6 +4,7 @@
   Console and daemons:
   * New network "ndis-bridge" works in kernel mode and is the faster
     alternative to pcap-bridge. (Ligong Liu)
+  * Bug #2013501: Stop with error message on empty parameters.
 
   Kernel:
   * scsi: New device for images with partition tables and works async.
