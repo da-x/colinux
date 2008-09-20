@@ -94,6 +94,7 @@ FLTK_VERSION="1.1.6"
 FLTK_URL=http://heanet.dl.sourceforge.net/sourceforge/fltk 
 FLTK=fltk-$FLTK_VERSION
 FLTK_ARCHIVE=$FLTK-source.tar.bz2
+FLTK_PATCH="patch/$FLTK-win32.diff"
 
 WINPCAP_SRC=WpdPack
 # Current release
