@@ -25,7 +25,7 @@ TOPDIR=`dirname $BINDIR`
 # Remember: Please update also conf/kernel-*-config
 #
 # Read version from filename patch/series-*, using the newest we found.
-KERNEL_VERSION=`ls $TOPDIR/patch/series-* | sed -n -e 's/^[^-]*-\([0-9\.]*\)$/\1/' -e '$p'`
+KERNEL_VERSION=`ls $TOPDIR/patch/series-* | sed -n -e 's/^.*series-\([0-9\.]*\)$/\1/' -e '$p'`
 
 # Use User config, if exist
 # you probably don't need to change anything from here down
