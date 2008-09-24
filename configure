@@ -34,6 +34,7 @@ verbose=no
 kernel_untar=no
 gcc_guest_target=i686-co-linux
 gcc_guest_build=no
+enable_wx=no
 
 # Try the directory containing this script, then its working dir.
 prog=$0
@@ -117,6 +118,7 @@ Options:
   --gcc-guest-build       Build C compiler from source of gnu cross compiler,
                           and use for kernel compiling. Should use, if gcc version
                           (major + minor) is different from your distribution.
+  --enable-wx             Build WxWidgets lib and console-wx (default disabled).
 -------------------------------------------------------------------------------
 Sample for WinNT as host (default):
   ./configure --target=i686-pc-mingw32 \\
@@ -233,6 +235,12 @@ EOF
 
   --gcc-guest*)
     gcc_guest_build=yes ;;
+
+  --enable-wx)
+    enable_wx=yes ;;
+
+  --disable-wx)
+    enable_wx=no ;;
 
   -v | -verbose | --verbose)
     verbose=yes ;;
@@ -790,6 +798,10 @@ COLINUX_DEPMOD=$depmod_cfg
 #
 ${gcc_guest_build_comment}COLINUX_GCC_GUEST_TARGET="$gcc_guest_target"
 ${gcc_guest_build_comment}COLINUX_GCC_GUEST_PATH="\$PREFIX/\$COLINUX_GCC_GUEST_TARGET/bin"
+
+# Library WxWidgets is disabled by default.
+# To build colinux-console-wx.exe with this lib, set COLINUX_ENABLE_WX="yes".
+COLINUX_ENABLE_WX="$enable_wx"
 EOF
 
     cat << EOF

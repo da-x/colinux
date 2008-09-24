@@ -1,3 +1,12 @@
+def optional_targets():
+    import os
+    from os import getenv
+    enable_wx = getenv('COLINUX_ENABLE_WX')
+    if enable_wx:
+        if enable_wx == "yes":
+	    return [Input('colinux-console-wx.exe')]
+    return []
+
 targets['executables'] = Target(
     inputs=[
     Input('colinux-daemon.exe'),
@@ -9,9 +18,8 @@ targets['executables'] = Target(
     Input('colinux-ndis-net-daemon.exe'),
     Input('colinux-slirp-net-daemon.exe'),
     Input('colinux-serial-daemon.exe'),
-    Input('colinux-console-wx.exe'),
     Input('linux.sys'),
-    ],
+    ] + optional_targets(),
     tool = Empty(),
 )
 

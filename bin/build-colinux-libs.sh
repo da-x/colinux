@@ -19,6 +19,7 @@ download_files()
 	download_file "$FLTK_ARCHIVE" "$FLTK_URL"
 	download_file "$W32API_SRC_ARCHIVE" "$MINGW_URL"
 	download_file "$WINPCAP_SRC_ARCHIVE" "$WINPCAP_URL"
+	test "$COLINUX_ENABLE_WX" = "yes" && \
 	download_file "$WX_ARCHIVE" "$WX_URL"
 }
 
@@ -30,6 +31,7 @@ create_md5sums()
 	echo "$FLTK_VERSION" >$VERSION_CACHE/.fltk.version
 	echo "$W32API_VERSION" >$VERSION_CACHE/.w32api.version
 	echo "$WINPCAP_VERSION" >$VERSION_CACHE/.winpcap.version
+	test "$COLINUX_ENABLE_WX" = "yes" && \
 	echo "$WX_VERSION" >$VERSION_CACHE/.wx.version
 
 	mkdir -p $MD5DIR
@@ -309,6 +311,7 @@ build_colinux_libs()
 	build_fltk "$1"
 	build_w32api_src "$1"
 	build_winpcap "$1"
+	test "$COLINUX_ENABLE_WX" = "yes" && \
 	build_wx "$1"
 
 	clean_up
