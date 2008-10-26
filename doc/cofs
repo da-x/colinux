@@ -15,6 +15,16 @@ host OS directories inside Linux.
   virtually the same for all files and directories. Creation of special 
   files like symlinks, device nodes, and pipes are not supported.
 
+  Unix mode Attributes are maped to FAT attributes.
+  File:                         Directory:
+  r Hidden is not set           r Hidden is not set
+  w Readonly is not set         w Readonly is not set
+  x System is set               x System is not set
+
+  Only owner rights have effect for change the attribues on host side.
+  The rights for group and others are mirrored from owner rights.
+  All attributes are AND masked with dmask and fmask on attribute read.
+
 * UNIX meta data mode (not supported)
 
   Future versions of cofs support will introduce the UNIX meta data
@@ -74,10 +84,10 @@ host OS directories inside Linux.
       Mount c:\ as /mnt/windows and give dax full access to all the
       files and directories.
 
-    mount -t cofs cofs0:Share -o uid=dax,gid=dax,dmask=0700,fmask=0700 /mnt/windows
+    mount -t cofs cofs0:Share -o uid=dax,gid=dax,dmask=0775,fmask=0664 /mnt/windows
 
-      Mount c:\Share as /mnt/windows and give dax exclusive full 
-      access to all the files and directories.
+      Mount c:\Share as /mnt/windows and give dax exclusive full access to
+      all the files and directories. Executable mode will unmask for all files.
 
     An example fstab entry:
 

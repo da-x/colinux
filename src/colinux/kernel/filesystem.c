@@ -679,9 +679,9 @@ static co_rc_t co_fs_get_attr(co_filesystem_t *fs, char *filename, struct fuse_a
 		return rc;
 	
 	if (attr->mode & FUSE_S_IFDIR)
-		attr->mode = fs->dir_mode;
+		attr->mode &= fs->dir_mode;
 	else
-		attr->mode = fs->file_mode;
+		attr->mode &= fs->file_mode;
 
 	attr->uid = fs->uid;
 	attr->gid = fs->gid;

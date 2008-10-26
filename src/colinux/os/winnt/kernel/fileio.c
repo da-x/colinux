@@ -389,6 +389,33 @@ co_rc_t co_os_file_read_write(co_monitor_t *linuxvm, char *filename,
 	return rc;
 }
 
+static void change_file_mode_func(void *data, VOID *buffer, ULONG len)
+{
+	struct fuse_attr *attr = (struct fuse_attr *)data;
+	FILE_BASIC_INFORMATION *fbi = (FILE_BASIC_INFORMATION *)buffer;
+
+	if (attr->mode & FUSE_S_IRUSR)
+		fbi->FileAttributes &= ~FILE_ATTRIBUTE_HIDDEN;
+	else
+		fbi->FileAttributes |= FILE_ATTRIBUTE_HIDDEN;
+
+	if (attr->mode & FUSE_S_IWUSR)
+		fbi->FileAttributes &= ~FILE_ATTRIBUTE_READONLY;
+	else
+		fbi->FileAttributes |= FILE_ATTRIBUTE_READONLY;
+
+	if (attr->mode & FUSE_S_IFDIR)
+		if (attr->mode & FUSE_S_IXUSR)
+			fbi->FileAttributes &= ~FILE_ATTRIBUTE_SYSTEM;
+		else
+			fbi->FileAttributes |= FILE_ATTRIBUTE_SYSTEM;
+	else
+		if (attr->mode & FUSE_S_IXUSR)
+			fbi->FileAttributes |= FILE_ATTRIBUTE_SYSTEM;
+		else
+			fbi->FileAttributes &= ~FILE_ATTRIBUTE_SYSTEM;
+}
+
 static void change_file_info_func(void *data, VOID *buffer, ULONG len)
 {
 	struct fuse_attr *attr = (struct fuse_attr *)data;
@@ -406,7 +433,12 @@ co_rc_t co_os_file_set_attr(char *filename, unsigned long valid, struct fuse_att
 
 	/* FIXME: make return codes not to overwrite each other */
 	if (valid & FATTR_MODE) {
-		rc = CO_RC(OK); /* TODO */
+		FILE_BASIC_INFORMATION fbi;
+
+		rc = co_os_change_file_information(filename, &io_status, &fbi,
+						   sizeof(fbi), FileBasicInformation,
+						   change_file_mode_func,
+						   attr);
 	}
 
 	if (valid & FATTR_UID) {
@@ -550,20 +582,28 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
         attr->atime = windows_time_to_unix_time(LastAccessTime);
         attr->mtime = windows_time_to_unix_time(LastWriteTime);
         attr->ctime = windows_time_to_unix_time(ChangeTime);
- 
-        attr->mode = FUSE_S_IRWXU | FUSE_S_IRGRP | FUSE_S_IROTH;
- 
+
+	#define FUSE_S_IR (FUSE_S_IRUSR | FUSE_S_IRGRP | FUSE_S_IROTH)
+	#define FUSE_S_IW (FUSE_S_IWUSR | FUSE_S_IWGRP | FUSE_S_IWOTH)
+	#define FUSE_S_IX (FUSE_S_IXUSR | FUSE_S_IXGRP | FUSE_S_IXOTH)
+
 	/* Hack: WinNT detects "C:\" not as directory! */
-        if ((FileAttributes & FILE_ATTRIBUTE_DIRECTORY) ||
+	if ((FileAttributes & FILE_ATTRIBUTE_DIRECTORY) ||
 	    (len1 >= 3 && len == len1 && fullname [len1-1] == '\\'))
-                attr->mode |= FUSE_S_IFDIR;
-        else
-                attr->mode |= FUSE_S_IFREG;
+		attr->mode = FUSE_S_IFDIR
+			   | ((FileAttributes & FILE_ATTRIBUTE_HIDDEN)   ? 0 : FUSE_S_IR)
+			   | ((FileAttributes & FILE_ATTRIBUTE_READONLY) ? 0 : FUSE_S_IW)
+			   | ((FileAttributes & FILE_ATTRIBUTE_SYSTEM)   ? 0 : FUSE_S_IX);
+	else
+		attr->mode = FUSE_S_IFREG
+			   | ((FileAttributes & FILE_ATTRIBUTE_HIDDEN)   ? 0 : FUSE_S_IR)
+			   | ((FileAttributes & FILE_ATTRIBUTE_READONLY) ? 0 : FUSE_S_IW)
+			   | ((FileAttributes & FILE_ATTRIBUTE_SYSTEM)   ? FUSE_S_IX : 0);
 
 	attr->nlink = 1;
         attr->size = EndOfFile.QuadPart;
         attr->blocks = (EndOfFile.QuadPart + ((1<<10)-1)) >> 10;
-	
+
         rc = CO_RC(OK);
 
 error_3:

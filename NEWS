@@ -1,5 +1,6 @@
 * Version 0.8.0
   * Use "setcobd=async" to enable asynchronous mode for cobd devices.
+  * New: cofs supports flat file modes "rwx" for owner.
 
   Console and daemons:
   * New network "ndis-bridge" works in kernel mode and is the faster
