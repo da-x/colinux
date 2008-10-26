@@ -670,6 +670,25 @@ void co_monitor_unregister_filesystems(co_monitor_t *cmon)
  *  Flat mode implementation.
  */
 
+static co_rc_t co_fs_get_attr(co_filesystem_t *fs, char *filename, struct fuse_attr *attr)
+{
+	co_rc_t rc;
+
+	rc = co_os_file_get_attr(filename, attr);
+	if (!CO_OK(rc))
+		return rc;
+	
+	if (attr->mode & FUSE_S_IFDIR)
+		attr->mode = fs->dir_mode;
+	else
+		attr->mode = fs->file_mode;
+
+	attr->uid = fs->uid;
+	attr->gid = fs->gid;
+
+	return rc;
+}
+
 static co_rc_t flat_mode_inode_rename(co_filesystem_t *filesystem, co_inode_t *old_inode, co_inode_t *new_inode, 
 			     char *oldname, char *newname)
 {
@@ -699,7 +718,7 @@ static co_rc_t flat_mode_getattr(co_filesystem_t *fs, co_inode_t *dir,
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_os_fs_get_attr(fs, filename, attr);
+	rc = co_fs_get_attr(fs, filename, attr);
 	co_os_free(filename);
 
 	return rc;
