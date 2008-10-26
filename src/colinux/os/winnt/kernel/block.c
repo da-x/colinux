@@ -231,6 +231,14 @@ static co_rc_t co_os_file_block_open(co_monitor_t *linuxvm, co_monitor_file_bloc
 	if (CO_OK(rc))
 		return CO_RC(OK);
 
+	if (CO_RC_GET_CODE(rc) == CO_RC_ACCESS_DENIED) {
+		co_rc_t rc2;
+		/* try readonly */
+		rc2 = co_os_file_open(fdev->pathname, FileHandle, FILE_READ_DATA);
+		if (CO_OK(rc2))
+			return CO_RC(OK);
+	}
+
 	return rc;
 }
 
@@ -243,6 +251,14 @@ static co_rc_t co_os_file_block_async_open(co_monitor_t *linuxvm, co_monitor_fil
 	rc = co_os_file_create(fdev->pathname, FileHandle, FILE_READ_DATA | FILE_WRITE_DATA, 0, FILE_OPEN, 0);
 	if (CO_OK(rc))
 		return CO_RC(OK);
+
+	if (CO_RC_GET_CODE(rc) == CO_RC_ACCESS_DENIED) {
+		co_rc_t rc2;
+		/* try readonly */
+		rc2 = co_os_file_create(fdev->pathname, FileHandle, FILE_READ_DATA | FILE_WRITE_DATA, 0, FILE_OPEN, 0);
+		if (CO_OK(rc2))
+			return CO_RC(OK);
+	}
 
 	return rc;
 }
