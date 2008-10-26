@@ -2170,7 +2170,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -0,0 +1,449 @@
+@@ -0,0 +1,447 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2315,8 +2315,6 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +
 +static void co_handle_incoming_messages(void)
 +{
-+	unsigned long flags;
-+
 +	if (!co_messages_active)
 +		return;
 +

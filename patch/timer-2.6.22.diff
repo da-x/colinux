@@ -142,7 +142,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cpu/common.c
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/cpu/common.c
 +++ linux-2.6.22-source/arch/i386/kernel/cpu/common.c
-@@ -452,9 +452,11 @@
+@@ -451,9 +451,11 @@
  	 * we do "generic changes."
  	 */
  
@@ -154,7 +154,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cpu/common.c
  
  	/* FXSR disabled? */
  	if (disable_x86_fxsr) {
-@@ -673,12 +675,14 @@
+@@ -672,12 +674,14 @@
  
  	if (cpu_has_vme || cpu_has_tsc || cpu_has_de)
  		clear_in_cr4(X86_CR4_VME|X86_CR4_PVI|X86_CR4_TSD|X86_CR4_DE);

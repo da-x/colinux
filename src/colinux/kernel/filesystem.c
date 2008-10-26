@@ -473,7 +473,6 @@ static int translate_code(co_rc_t value)
 	default:
 		return -EIO;
 	}
-	return 0;
 }
 
 static co_rc_t fs_mount(co_filesystem_t *filesystem, const char *pathname,
