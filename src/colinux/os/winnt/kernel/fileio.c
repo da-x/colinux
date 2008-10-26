@@ -421,8 +421,8 @@ static void change_file_info_func(void *data, VOID *buffer, ULONG len)
 	struct fuse_attr *attr = (struct fuse_attr *)data;
 	FILE_BASIC_INFORMATION *fbi = (FILE_BASIC_INFORMATION *)buffer;
 
-	fbi->LastAccessTime = unix_time_to_windows_time(attr->mtime);
-	fbi->LastWriteTime = unix_time_to_windows_time(attr->atime);
+	fbi->LastAccessTime = unix_time_to_windows_time(attr->atime);
+	fbi->LastWriteTime = unix_time_to_windows_time(attr->mtime);
 	KeQuerySystemTime(&fbi->ChangeTime);
 }
 

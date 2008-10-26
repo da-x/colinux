@@ -2,6 +2,7 @@
   * Use "setcobd=async" to enable asynchronous mode for cobd devices.
   * New: cofs supports flat file modes "rwx" for owner.  Mount option
     "noattrib" disables these attribute mapping for compatibility.
+  * Bugfix cofs: atime and mtime was swapped on time set.
 
   Console and daemons:
   * New network "ndis-bridge" works in kernel mode and is the faster
