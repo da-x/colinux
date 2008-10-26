@@ -203,7 +203,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/Makefile
 +++ linux-2.6.22-source/arch/i386/kernel/Makefile
-@@ -5,13 +5,14 @@
+@@ -5,9 +5,9 @@
  extra-y := head.o init_task.o vmlinux.lds
  
  obj-y	:= process.o signal.o entry.o traps.o irq.o \
@@ -216,12 +216,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
  
  obj-$(CONFIG_STACKTRACE)	+= stacktrace.o
  obj-y				+= cpu/
- obj-y				+= acpi/
-+obj-$(CONFIG_PCI)		+= e820.o
- obj-$(CONFIG_X86_BIOS_REBOOT)	+= reboot.o
- obj-$(CONFIG_MCA)		+= mca.o
- obj-$(CONFIG_X86_MSR)		+= msr.o
-@@ -38,11 +39,21 @@
+@@ -38,11 +38,22 @@
  obj-$(CONFIG_VM86)		+= vm86.o
  obj-$(CONFIG_EARLY_PRINTK)	+= early_printk.o
  obj-$(CONFIG_HPET_TIMER) 	+= hpet.o
@@ -237,6 +232,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
 +obj-y				+= i8259_cooperative.o
 +obj-y				+= ioport_cooperative.o
 +else
++obj-$(CONFIG_PCI)		+= e820.o
 +obj-y				+= time.o i8253.o i8259.o ioport.o
  obj-y				+= pcspeaker.o
 +endif

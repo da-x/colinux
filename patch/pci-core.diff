@@ -2,7 +2,7 @@ Index: linux-2.6.22-source/arch/i386/pci/copci.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/pci/copci.c
-@@ -0,0 +1,288 @@
+@@ -0,0 +1,293 @@
 +
 +#include <linux/kernel.h>
 +#include <linux/pci.h>
@@ -16,6 +16,11 @@ Index: linux-2.6.22-source/arch/i386/pci/copci.c
 +
 +#define COPCI_DEBUG 0
 +#define COPCI_DEBUG_IO 0
++
++/* For PCI or other memory-mapped resources */
++/* Symbol needed, dummy for coLinux. (copied from arch/i386/kernel/e820.c) */
++unsigned long pci_mem_start = 0x10000000;
++EXPORT_SYMBOL(pci_mem_start);
 +
 +struct device_list {
 +	int type;
