@@ -1643,7 +1643,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -0,0 +1,378 @@
+@@ -0,0 +1,379 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1766,6 +1766,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_DEVICE_SCSI,
 +	CO_DEVICE_DISPLAY,
 +	CO_DEVICE_AUDIO,
++	CO_DEVICE_PCI,
 +
 +	CO_DEVICES_TOTAL,
 +} co_device_t;

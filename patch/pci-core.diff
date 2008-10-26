@@ -397,15 +397,3 @@ Index: linux-2.6.22-source/include/linux/copci.h
 +};
 +
 +#endif
-Index: linux-2.6.22-source/include/linux/cooperative.h
-===================================================================
---- linux-2.6.22-source.orig/include/linux/cooperative.h
-+++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -120,6 +120,7 @@
- 	CO_DEVICE_SCSI,
- 	CO_DEVICE_DISPLAY,
- 	CO_DEVICE_AUDIO,
-+	CO_DEVICE_PCI,
- 
- 	CO_DEVICES_TOTAL,
- } co_device_t;
