@@ -223,30 +223,28 @@ static co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsi
 
 static co_rc_t co_os_file_block_open(co_monitor_t *linuxvm, co_monitor_file_block_dev_t *fdev)
 {
-	HANDLE FileHandle;
+	HANDLE *FileHandle = (HANDLE *)&fdev->sysdep;
 	co_rc_t rc;
 
 	/* Sync open */
-	rc = co_os_file_open(fdev->pathname, &FileHandle, FILE_READ_DATA | FILE_WRITE_DATA);
-	if (!CO_OK(rc))
-		return rc;
+	rc = co_os_file_open(fdev->pathname, FileHandle, FILE_READ_DATA | FILE_WRITE_DATA);
+	if (CO_OK(rc))
+		return CO_RC(OK);
 
-	fdev->sysdep = (struct co_os_file_block_sysdep *)(FileHandle);
-	return CO_RC(OK);
+	return rc;
 }
 
 static co_rc_t co_os_file_block_async_open(co_monitor_t *linuxvm, co_monitor_file_block_dev_t *fdev)
 {
-	HANDLE FileHandle;
+	HANDLE *FileHandle = (HANDLE *)&fdev->sysdep;
 	co_rc_t rc;
 
 	/* Async open */
-	rc = co_os_file_create(fdev->pathname, &FileHandle, FILE_READ_DATA | FILE_WRITE_DATA, 0, FILE_OPEN, 0);
-	if (!CO_OK(rc))
-		return rc;
+	rc = co_os_file_create(fdev->pathname, FileHandle, FILE_READ_DATA | FILE_WRITE_DATA, 0, FILE_OPEN, 0);
+	if (CO_OK(rc))
+		return CO_RC(OK);
 
-	fdev->sysdep = (struct co_os_file_block_sysdep *)(FileHandle);
-	return CO_RC(OK);
+	return rc;
 }
 
 static co_rc_t co_os_file_block_close(co_monitor_file_block_dev_t *fdev)
