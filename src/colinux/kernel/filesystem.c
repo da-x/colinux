@@ -477,8 +477,9 @@ static int translate_code(co_rc_t value)
 }
 
 static co_rc_t fs_mount(co_filesystem_t *filesystem, const char *pathname,
-			int uid, int gid, unsigned long dir_mode, 
-			unsigned long file_mode)
+			int uid, int gid,
+			unsigned long dir_mode, unsigned long file_mode,
+			int flags)
 {	
 	co_cofsdev_desc_t *desc;
 	co_rc_t rc;
@@ -489,6 +490,7 @@ static co_rc_t fs_mount(co_filesystem_t *filesystem, const char *pathname,
 	filesystem->gid = gid;
 	filesystem->dir_mode = dir_mode;
 	filesystem->file_mode = file_mode;
+	filesystem->flags = flags;
 
 	co_memcpy(&filesystem->base_path, &desc->pathname, sizeof(co_pathname_t));
 
@@ -522,7 +524,8 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned int unit,
 				  co_passage_page->params[5],
 				  co_passage_page->params[6],
 				  co_passage_page->params[7],
-				  co_passage_page->params[8]);
+				  co_passage_page->params[8],
+				  co_passage_page->params[9]);
 		result = translate_code(result);
 		goto out;
 	case FUSE_STATFS:
@@ -677,11 +680,17 @@ static co_rc_t co_fs_get_attr(co_filesystem_t *fs, char *filename, struct fuse_a
 	rc = co_os_file_get_attr(filename, attr);
 	if (!CO_OK(rc))
 		return rc;
-	
-	if (attr->mode & FUSE_S_IFDIR)
-		attr->mode &= fs->dir_mode;
+
+	if (fs->flags & COFS_MOUNT_NOATTRIB)
+		if (attr->mode & FUSE_S_IFDIR)
+			attr->mode = fs->dir_mode;
+		else
+			attr->mode = fs->file_mode;
 	else
-		attr->mode &= fs->file_mode;
+		if (attr->mode & FUSE_S_IFDIR)
+			attr->mode &= fs->dir_mode;
+		else
+			attr->mode &= fs->file_mode;
 
 	attr->uid = fs->uid;
 	attr->gid = fs->gid;
@@ -781,6 +790,9 @@ static co_rc_t flat_mode_inode_set_attr(co_filesystem_t *filesystem, co_inode_t 
 	rc = co_os_fs_inode_to_path(filesystem, inode, &filename, 0);
 	if (!CO_OK(rc))
 		return rc;
+
+	if (filesystem->flags & COFS_MOUNT_NOATTRIB)
+		valid &= ~FATTR_MODE;
 
 	rc = co_os_file_set_attr(filename, valid, attr);
 	co_os_free(filename);

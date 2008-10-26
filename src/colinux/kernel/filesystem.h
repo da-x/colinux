@@ -50,6 +50,7 @@ typedef struct co_filesystem {
 	int gid;
 	int dir_mode;
 	int file_mode;
+	int flags;
 	struct co_filesystem_ops *ops;
 
 	/* Inode hash table */

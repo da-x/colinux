@@ -1766,7 +1766,7 @@ Index: linux-2.6.22-source/fs/cofusefs/inode.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/fs/cofusefs/inode.c
-@@ -0,0 +1,440 @@
+@@ -0,0 +1,442 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001	Miklos Szeredi (miklos@szeredi.hu)
@@ -1927,6 +1927,7 @@ Index: linux-2.6.22-source/fs/cofusefs/inode.c
 +	co_passage_page->params[6] = d->gid;
 +	co_passage_page->params[7] = d->dir_mode;
 +	co_passage_page->params[8] = d->file_mode;
++	co_passage_page->params[9] = d->flags;
 +	memcpy(&co_passage_page->params[30], conn->opt_pathname, strlen(conn->opt_pathname) + 1);
 +	co_switch_wrapper();
 +	ret = co_passage_page->params[4];
@@ -2106,6 +2107,7 @@ Index: linux-2.6.22-source/fs/cofusefs/inode.c
 +	{ "fmask",	0, 'f' },
 +	{ "dmask",	0, 'd' },
 +	{ "nocache",	COFS_MOUNT_NOCACHE, 1 },
++	{ "noattrib",	COFS_MOUNT_NOATTRIB, 1 },
 +	{ NULL,		0, 0}
 +};
 +
@@ -2285,7 +2287,7 @@ Index: linux-2.6.22-source/include/linux/cooperative_fs.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative_fs.h
-@@ -0,0 +1,270 @@
+@@ -0,0 +1,273 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
@@ -2342,6 +2344,9 @@ Index: linux-2.6.22-source/include/linux/cooperative_fs.h
 +
 +/** If COFS_MOUNT_NOCACHE is given, dir entries will no cached */
 +#define COFS_MOUNT_NOCACHE       (1 << 4)
++
++/** If COFS_MOUNT_NOATTRIB is given, host file attribs will ignore */
++#define COFS_MOUNT_NOATTRIB      (1 << 5)
 +
 +struct fuse_attr {
 +	unsigned long long  size;
@@ -2507,7 +2512,7 @@ Index: linux-2.6.22-source/include/linux/cooperative_fs.h
 +	char name[256];
 +};
 +
-+#define FUSE_S_IFMT   00170000
++#define FUSE_S_IFMT   0170000
 +#define FUSE_S_IFSOCK 0140000
 +#define FUSE_S_IFLNK  0120000
 +#define FUSE_S_IFREG  0100000

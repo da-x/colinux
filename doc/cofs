@@ -24,6 +24,7 @@ host OS directories inside Linux.
   Only owner rights have effect for change the attribues on host side.
   The rights for group and others are mirrored from owner rights.
   All attributes are AND masked with dmask and fmask on attribute read.
+  Use mount option 'noattrib' to disable these attribute mapping.
 
 * UNIX meta data mode (not supported)
 
@@ -66,6 +67,7 @@ host OS directories inside Linux.
     dmask=      Set the default directory permission.
     fmask=      Set the default regular file permission.
     nocache     Disable directory caching.
+    noattrib    Disable host file attribute mapping.
 
 * Examples:
     
