@@ -30,6 +30,7 @@
 #include "config.h"
 #include "reactor.h"
 
+static
 co_rc_t co_load_config_file(co_daemon_t *daemon)
 {
 	co_rc_t rc;
@@ -60,7 +61,7 @@ void co_daemon_print_header(void)
 	printed_already = 1;
 }
 
-void co_daemon_syntax()
+void co_daemon_syntax(void)
 {
 	co_daemon_print_header();
 	co_terminal_print("syntax: \n");
@@ -497,6 +498,7 @@ out_close:
 	return rc;
 }
 
+static
 void co_daemon_monitor_destroy(co_daemon_t *daemon)
 {
 	co_user_monitor_close(daemon->monitor);
@@ -570,6 +572,7 @@ void co_daemon_send_shutdown(co_daemon_t *daemon)
 	co_user_monitor_message_send(daemon->message_monitor, &message.message);
 }
 
+static
 co_rc_t co_daemon_handle_printk(co_daemon_t *daemon, co_message_t *message)
 {
 	if (message->type == CO_MESSAGE_TYPE_STRING) {
@@ -628,6 +631,7 @@ static co_rc_t message_receive(co_reactor_user_t user, unsigned char *buffer, un
 	return CO_RC(OK);
 }
 
+static
 co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 {
 	int i;
@@ -646,8 +650,7 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 		if (*net_dev->desc != 0)
 			co_snprintf(interface_name, sizeof(interface_name), "-n \"%s\"", net_dev->desc);
 
-		switch (net_dev->type) 
-		{
+		switch (net_dev->type) {
 		case CO_NETDEV_TYPE_BRIDGED_PCAP: {
 			char mac_address[18];
 
@@ -681,7 +684,6 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 
 		default:
 			rc = CO_RC(ERROR);
-			break;
 		}
 
 		if (!CO_OK(rc))
