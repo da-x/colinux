@@ -985,11 +985,12 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	co_monitor_t *cmon;
 	co_rc_t rc = CO_RC_OK;
 
+	if (params->config.magic_size != sizeof(co_config_t))
+		return CO_RC(VERSION_MISMATCHED);
+
 	cmon = co_os_malloc(sizeof(*cmon));
-	if (!cmon) {
-		rc = CO_RC(OUT_OF_MEMORY);
-		goto out;
-	}
+	if (!cmon)
+		return CO_RC(OUT_OF_MEMORY);
 
 	co_memset(cmon, 0, sizeof(*cmon));
 
@@ -1156,7 +1157,6 @@ out_free_console:
 out_free_monitor:
 	co_os_free(cmon);
 
-out:
 	return rc;
 }
 

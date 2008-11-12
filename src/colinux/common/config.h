@@ -178,6 +178,13 @@ typedef struct co_execute_desc {
  * Per-machine coLinux configuration
  */
 typedef struct co_config {
+
+	/*
+	 * Size of this struct. Avoids crash on future changes.
+	 * This struct is shared between userland daemon and kernel driver.
+	 */
+	int magic_size;
+
 	/*
 	 * Absolute pathname of the configuration file (relative pathnames
 	 * will be looked upon according to this path).
@@ -196,7 +203,6 @@ typedef struct co_config {
 	 * Linux and the index of the block device to boot from.
 	 */
 	co_block_dev_desc_t block_devs[CO_MODULE_MAX_COBD];
-	long _UNUSED__block_root_device_index;
 
 	/*
 	 * PCI config (32 devs, 8 funcs/dev)

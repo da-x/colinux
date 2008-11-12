@@ -36,6 +36,7 @@ co_rc_t co_load_config_file(co_daemon_t *daemon)
 
 	if (daemon->start_parameters->cmdline_config) {
 		daemon->config = daemon->start_parameters->config;
+		daemon->config.magic_size = sizeof(co_config_t);
 		return CO_RC(OK);
 	}
 
