@@ -418,7 +418,7 @@ static co_rc_t parse_args_config_video(co_command_line_params_t cmdline, co_conf
 
 	do {
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "video",
-							     &index, CO_MODULE_MAX_COSCSI,
+							     &index, CO_MODULE_MAX_COVIDEO,
 							     &param, &exists);
 		if (!CO_OK(rc)) return rc;
 		if (!exists) break;
