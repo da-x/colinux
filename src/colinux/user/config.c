@@ -916,6 +916,39 @@ static co_rc_t parse_args_config_execute(co_command_line_params_t cmdline, co_co
 	return CO_RC(OK);
 }
 
+static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, co_config_t *conf)
+{
+	bool_t exists;
+	char buf[16], *p;
+	co_rc_t rc;
+
+	conf->console.size_x = CO_CONSOLE_WIDTH;
+	conf->console.size_y = CO_CONSOLE_HEIGHT;
+
+	rc = co_cmdline_get_next_equality(cmdline, "cocon", 0, NULL, 0, 
+					  buf, sizeof(buf), &exists);
+	if (!CO_OK(rc)) 
+		return rc;
+
+	if (exists) {
+		long x,y;
+
+		x = strtol(buf, &p, 0);
+		if (*p) p++;
+		y = strtol(p, &p, 0);
+
+		if (!(x >= 16 && y >= 2 && x*y < 16*1024)) {
+			co_terminal_print("Invalid args (%ld,%ld) for cocon\n", x, y);
+			return CO_RC(INVALID_PARAMETER);
+		}
+
+		conf->console.size_x = x;
+		conf->console.size_y = y;
+	}
+
+	return CO_RC(OK);
+}
+
 static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *conf)
 {
 	co_rc_t rc;
@@ -994,6 +1027,10 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 		return rc;
 
 	rc = parse_args_config_execute(cmdline, conf);
+	if (!CO_OK(rc))
+		return rc;
+
+	rc = parse_args_config_cocon(cmdline, conf);
 	if (!CO_OK(rc))
 		return rc;
 

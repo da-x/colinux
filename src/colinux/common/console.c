@@ -23,15 +23,19 @@ static void blank_char(co_console_cell_t *cell)
 
 co_rc_t co_console_create(long x, long y, long max_blacklog, co_console_t **console_out)
 {
-	unsigned long struct_size = 0;
+	unsigned long struct_size;
 	co_console_t *console;
 
 	/*
 	 * Use only one allocation for the entire console object so it would 
 	 * be more managable (and less code).
 	 */
+	struct_size = sizeof(co_console_cell_t)*(y + max_blacklog)*x;
+
+	if (struct_size <= 0 || struct_size > 32*1024)
+		return CO_RC(INVALID_PARAMETER);
+
 	struct_size += sizeof(co_console_t);
-	struct_size += sizeof(co_console_cell_t)*(y + max_blacklog)*x;
 
 	console = co_os_malloc(struct_size);
 	if (console == NULL)

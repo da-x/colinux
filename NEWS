@@ -1,7 +1,8 @@
 * Version 0.8.0
-  * Use "setcobd=async" to enable asynchronous mode for cobd devices.
+  * New: Added "cocon=COLSxROWS" to use console size, other than 80x25.
   * New: cofs supports flat file modes "rwx" for owner.  Mount option
-    "noattrib" disables these attribute mapping for compatibility.
+    "noattrib" disables these attribute mapping for older compatibility.
+  * Use "setcobd=async" to enable asynchronous mode for cobd devices.
   * Bug #2152550: cofs atime and mtime was swapped on time set.
   * Bug #2176188: File sync wrong on cofs, command after mv/rename fails.
 

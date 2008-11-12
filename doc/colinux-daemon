@@ -148,6 +148,14 @@ don't depend on each other.  The parameters are case sensitive.
 	this parameter out is 1/4 of your RAM if your RAM is >=
 	128, otherwise it's 16.  Default value is generally ok.
 
+    cocon=<COLS>,<ROWS>
+
+	This specifies the console size. Default is 80x25.
+	Minmum is 16x2,	maximum is near 200x80 (total 16384 cells).
+
+	Example:
+	cocon=120x40
+
     cobdX=<path to image file>
 
 	Use any number <X> of these to specify the block device image file.

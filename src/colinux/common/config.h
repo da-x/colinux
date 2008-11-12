@@ -260,6 +260,11 @@ typedef struct co_config {
 	 */
 	bool_t initrd_enabled;
 	co_pathname_t initrd_path;
+
+	/* Dimensions of the console */
+	struct {
+		int size_x, size_y;
+	} console;
 } co_config_t;
 
 #endif

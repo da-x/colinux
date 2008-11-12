@@ -997,7 +997,7 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	cmon->state = CO_MONITOR_STATE_EMPTY;
 	cmon->id = co_os_current_id();
 
-	rc = co_console_create(CO_CONSOLE_WIDTH, CO_CONSOLE_HEIGHT, CO_CONSOLE_HEIGHT_BUF, &cmon->console);
+	rc = co_console_create(params->config.console.size_x, params->config.console.size_y, CO_CONSOLE_HEIGHT_BUF, &cmon->console);
 	if (!CO_OK(rc))
 		goto out_free_monitor;
 	
