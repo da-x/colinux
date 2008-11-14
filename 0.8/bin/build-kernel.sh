@@ -178,7 +178,7 @@ compile_kernel()
 {
 	echo "Making Kernel $KERNEL_VERSION"
 	cd "$COLINUX_TARGET_KERNEL_BUILD" || exit 1
-	make ARCH=$TARGET_ARCH vmlinux >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR \
+	make -j 5 ARCH=$TARGET_ARCH vmlinux >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR \
 	|| error_exit 1 "Kernel $KERNEL_VERSION make failed"
 }
 
@@ -194,7 +194,7 @@ compile_modules()
 	#Fall back for older config
 	test -z "$COLINUX_DEPMOD" && COLINUX_DEPMOD=/sbin/depmod
 
-	make \
+	make -j 5 \
 	    ARCH=$TARGET_ARCH \
 	    INSTALL_MOD_PATH="$COLINUX_TARGET_MODULE_PATH" \
 	    DEPMOD=$COLINUX_DEPMOD \

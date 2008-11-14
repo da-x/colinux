@@ -13,6 +13,21 @@ targets['common.a'] = Target(
     ],
 )
 
+targets['common.o'] = Target(
+    inputs=[
+    Input('queue.o'),
+    Input('console.o'),
+    Input('debug.o'),
+    Input('errors.o'),
+    Input('messages.o'),
+    Input('libc.o'),
+    Input('libc_strtol.o'),
+    Input('snprintf.o'),
+    Input('file_ids.o'),
+    Input('unicode.o'),
+    ],
+)
+
 targets['file_ids.o'] = Target(
     tool = Compiler(),
     inputs = [Input('file_ids.c')],

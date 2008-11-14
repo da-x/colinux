@@ -25,7 +25,7 @@ TOPDIR=`dirname $BINDIR`
 # Remember: Please update also conf/kernel-*-config
 #
 # Read version from filename patch/series-*, using the newest we found.
-KERNEL_VERSION=`ls $TOPDIR/patch/series-* | sed -n -r -e 's/^.+-([0-9\.]+)$/\1/' -e '$p'`
+KERNEL_VERSION=`ls $TOPDIR/patch/series-* | sed -n -e 's/^.*series-\([0-9\.]*\)$/\1/' -e '$p'`
 
 # Use User config, if exist
 # you probably don't need to change anything from here down
@@ -37,14 +37,25 @@ else
 	. $BINDIR/sample.user-build.cfg
 fi
 
-# what flavor are we building?
-TARGET=i686-pc-mingw32
+case $OSTYPE in
+    darwin*)
+	TARGET=$MACHTYPE
+	BUILD=$TARGET
+
+	# Tweaks for Darwin bash.
+	set +o posix 2>/dev/null
+	;;
+    *)
+	# what flavor are we building?
+	TARGET=i686-pc-mingw32
+
+	# Current developing build system
+	BUILD=i686-pc-linux
+	;;
+esac
 
 # ARCH must overwrite for builds on 64 bit (target kernel)
 TARGET_ARCH=i386
-
-# Current developing build system
-BUILD=i686-pc-linux
 
 # Updated by Sam Lantinga <slouken@libsdl.org>
 # These are the files from the current MingW release
@@ -83,6 +94,7 @@ FLTK_VERSION="1.1.6"
 FLTK_URL=http://heanet.dl.sourceforge.net/sourceforge/fltk 
 FLTK=fltk-$FLTK_VERSION
 FLTK_ARCHIVE=$FLTK-source.tar.bz2
+FLTK_PATCH="patch/$FLTK-win32.diff"
 
 WINPCAP_SRC=WpdPack
 # Current release
@@ -94,19 +106,22 @@ WINPCAP_VERSION="4.0.1"
 WINPCAP_URL=http://www.winpcap.org/archive
 WINPCAP_SRC_ARCHIVE=${WINPCAP_VERSION}-${WINPCAP_SRC}.zip
 
-WX_VERSION="2.8.7"
-WX_URL=http://superb-east.dl.sourceforge.net/sourceforge/wxwindows
-WX=wxWidgets-$WX_VERSION
-WX_ARCHIVE=$WX.tar.gz
-if [ "$COLINUX_HOST_OS" = "winnt" ]; then
-	WX_TOOLKIT="msw"
-else
-	WX_TOOLKIT="gtk"
+if [ "$COLINUX_ENABLE_WX" = "yes" ]
+then
+	WX_VERSION="2.8.7"
+	WX_URL=http://superb-east.dl.sourceforge.net/sourceforge/wxwindows
+	WX=wxWidgets-$WX_VERSION
+	WX_ARCHIVE=$WX.tar.gz
+	if [ "$COLINUX_HOST_OS" = "winnt" ]; then
+		WX_TOOLKIT="msw"
+	else
+		WX_TOOLKIT="gtk"
+	fi
 fi
 
 # KERNEL_VERSION: full kernel version (e.g. 2.6.11)
 # KERNEL_DIR: sub-dir in www.kernel.org for the download (e.g. v2.6)
-KERNEL_DIR=`echo $KERNEL_VERSION | sed -r -e 's/^([0-9]+)\.([0-9]+)\..+$/v\1.\2/'`
+KERNEL_DIR=`echo $KERNEL_VERSION | sed -e 's/^\([0-9]*\.[0-9]*\)\..*$/v\1/'`
 
 KERNEL=linux-$KERNEL_VERSION
 KERNEL_URL=http://www.kernel.org/pub/linux/kernel/$KERNEL_DIR
@@ -226,6 +241,31 @@ download_file()
 	fi
 }
 
+# Arg1: gzip or bzip2 tar archive
+# Arg2: destination directory
+tar_unpack_to()
+{
+	local tool
+
+	case "$SOURCE_DIR/$1" in
+		*.tar.gz|*.tgz)
+			tool=gzip
+		;;
+		*.tar.bz2)
+			tool=bunzip2
+		;;
+		*)
+			echo "$FUNCNAME($LINENO): unknown extension for $1" >&2
+			exit 1
+		;;
+	esac
+
+	mkdir -p "$2"
+	cd "$2"
+	$tool -dc "$SOURCE_DIR/$1" | tar x \
+	|| { echo "unpack failed for $1" >&2; exit 1; }
+}
+
 #
 # Show errors from actual logfile, than exit build process
 # Arg1: Errorlevel
@@ -235,17 +275,17 @@ error_exit()
 {
 	# Show errors in log file with tail, if errorlevel < 10
 	if [ $1 -lt 10 ]; then
-		echo -e "\n  --- BUILD LOG $COLINUX_BUILD_LOG:"
-		tail -n 20 $COLINUX_BUILD_LOG
+		if [ -s $COLINUX_BUILD_LOG ]; then
+			echo -e "\n  --- BUILD LOG $COLINUX_BUILD_LOG:"
+			tail -n 20 $COLINUX_BUILD_LOG
+		fi
 		if [ -s $COLINUX_BUILD_ERR ]; then
 			echo -e "\n  --- ERROR LOG $COLINUX_BUILD_ERR:"
 			tail -n 20 $COLINUX_BUILD_ERR
 		fi
-		echo "$2"
-	else
-		echo "$2"
 	fi
 
+	echo "$2"
 	exit $1
 }
 
@@ -266,7 +306,7 @@ strip_kernel()
 	#     _____^^^^^^^^^^^^^^^^^^^^^__________________^************^___^^^^^^______________________
 
 	KEEP=`grep "co_daemon_load_symbol" $TOPDIR/$FROM_SOURCE | \
-	  sed -n -r -e 's/^.+daemon.+\"(.+)\".+import.+$/ --keep-symbol=\1/p' | tr -d "\n"`
+	  sed -n -e 's/^.*daemon[^"]*"\([^"]*\)".*import.*$/ --keep-symbol=\1/p' | tr -d "\n"`
 	if [ -n "$KEEP" ]
 	then
 		# Kernel strip

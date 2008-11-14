@@ -307,9 +307,6 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 		message = message_item->message;
 		size = message->size + sizeof(*message);
 
-		if (message->from == CO_MODULE_CONET0)
-			co_debug_lvl(network, 14, "message sent to linux: %p", message);
-		
 		if (io_buffer + size > io_buffer_end) {
 			break;
 		}
@@ -445,20 +442,16 @@ static co_rc_t co_alloc_pages(co_monitor_t *cmon, vm_ptr_t address, int num_page
 	int i;
 
 	scan_address = address;
-	for (i=0; i < num_pages; i++) {
+	for (i=0; i < num_pages; i++, scan_address += CO_ARCH_PAGE_SIZE) {
 		rc = co_monitor_alloc_and_map_page(cmon, scan_address);
 		if (!CO_OK(rc))
 			break;
-		
-		scan_address += CO_ARCH_PAGE_SIZE;
 	}
 
 	if (!CO_OK(rc)) {
-		num_pages = i;
 		scan_address = address;
-		for (i=0; i < num_pages; i++) {
+		for (; i; i--, scan_address += CO_ARCH_PAGE_SIZE) {
 			co_monitor_free_and_unmap_page(cmon, scan_address);
-			scan_address += CO_ARCH_PAGE_SIZE;
 		}
 	}
 
@@ -513,14 +506,25 @@ static void co_monitor_getpp(co_monitor_t *cmon, void *pp_buffer, void *host_buf
 	return;
 }
 
-void incoming_message(co_monitor_t *cmon, co_message_t *message)
+// support kernel mode conet module, filter out conet message, return CO_RC_OK if the message was handled.
+static co_rc_t co_monitor_filter_linux_message(co_monitor_t *monitor, co_message_t *message)
+{
+	if (message->from == CO_MODULE_LINUX &&
+	    message->to >= CO_MODULE_CONET0 &&
+	    message->to <= CO_MODULE_CONET_END) {
+		return co_conet_inject_packet_to_adapter(monitor,
+				message->to - CO_MODULE_CONET0,
+				(void *)(message+1), message->size);
+	} else {
+		return CO_RC(ERROR);
+	}
+}
+
+static void incoming_message(co_monitor_t *cmon, co_message_t *message)
 {
 	co_manager_open_desc_t opened;
 	co_rc_t rc;
 
-	if (message->to == CO_MODULE_CONET0)
-		co_debug_lvl(network, 14, "message received: %p %p", cmon, message);
-	
 	co_os_mutex_acquire(cmon->connected_modules_write_lock);
 	opened = cmon->connected_modules[message->to];
 	if (opened != NULL)
@@ -530,12 +534,11 @@ void incoming_message(co_monitor_t *cmon, co_message_t *message)
 	co_os_mutex_release(cmon->connected_modules_write_lock);
 	
 	if (CO_OK(rc)) {
-		co_manager_send(cmon->manager, opened, message);
+		// ligong liu, support kernel mode conet, filter for conet message
+		if ( co_monitor_filter_linux_message(cmon, message) != CO_RC_OK )
+			co_manager_send(cmon->manager, opened, message);
 		co_manager_close(cmon->manager, opened);
 	}
-
-	if (message->to == CO_MODULE_CONET0)
-		co_debug_lvl(network, 14, "message received end: %p %p", cmon, message);
 
 	switch (message->to) {
 	case CO_MODULE_CONSOLE:
@@ -634,29 +637,6 @@ static bool_t iteration(co_monitor_t *cmon)
 			incoming_message(cmon, message);
 
 		cmon->io_buffer->messages_waiting = 0;
-
-		return PTRUE;
-	}
-
-	case CO_OPERATION_PRINTK: {
-		unsigned long size = co_passage_page->params[0];
-		char *ptr = (char *)&co_passage_page->params[1];
-		co_message_t *co_message;
-
-		if (size > 200) 
-			size = 200; /* sanity, see co_terminal_printv */
-
-		co_message = co_os_malloc(1 + size + sizeof(*co_message));
-		if (co_message) {
-			co_message->from = CO_MODULE_LINUX;
-			co_message->to = CO_MODULE_PRINTK;
-			co_message->priority = CO_PRIORITY_DISCARDABLE;
-			co_message->type = CO_MESSAGE_TYPE_STRING;
-			co_message->size = size + 1; 
-			co_memcpy(co_message->data, ptr, size + 1);
-			incoming_message(cmon, co_message);
-			co_os_free(co_message);
-		}
 
 		return PTRUE;
 	}
@@ -1017,7 +997,7 @@ co_rc_t co_monitor_create(co_manager_t *manager, co_manager_ioctl_create_t *para
 	cmon->state = CO_MONITOR_STATE_EMPTY;
 	cmon->id = co_os_current_id();
 
-	rc = co_console_create(80, 25, 0, &cmon->console);
+	rc = co_console_create(CO_CONSOLE_WIDTH, CO_CONSOLE_HEIGHT, CO_CONSOLE_HEIGHT_BUF, &cmon->console);
 	if (!CO_OK(rc))
 		goto out_free_monitor;
 	
@@ -1323,7 +1303,6 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t *monitor, co_monitor_ioc
 	unsigned long size;
 	int y;
 
-	message = NULL;
 	size = (((char *)(&message->putcs + 1)) - ((char *)message)) + 
 		(monitor->console->x * sizeof(co_console_cell_t));
 
@@ -1393,6 +1372,23 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 		params = (typeof(params))(io_buffer);
 
 		return co_video_detach(cmon, params);
+	}
+	case CO_MONITOR_IOCTL_CONET_BIND_ADAPTER: {
+		co_monitor_ioctl_conet_bind_adapter_t *params;
+
+		params = (typeof(params))(io_buffer);
+		if ( params->conet_proto == CO_CONET_BRIDGE )
+			return co_conet_bind_adapter(cmon, params->conet_unit, params->netcfg_id, 
+							params->promisc_mode, params->mac_address);
+		else
+			return rc;
+	}
+	case CO_MONITOR_IOCTL_CONET_UNBIND_ADAPTER: {
+		co_monitor_ioctl_conet_unbind_adapter_t *params;
+
+		params = (typeof(params))(io_buffer);
+		
+		return co_conet_unbind_adapter(cmon, params->conet_unit);
 	}
 	default:
 		break;

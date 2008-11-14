@@ -90,8 +90,7 @@ static BOOL WINAPI co_winnt_daemon_ctrl_handler( DWORD dwCtrlType )
 
 co_rc_t co_winnt_daemon_main(co_start_parameters_t *start_parameters) 
 {
-	co_rc_t rc = CO_RC_OK;
-	int ret;
+	co_rc_t rc;
 
 	if (!start_parameters->config_specified  ||  start_parameters->show_help) {
 		co_daemon_syntax();
@@ -139,15 +138,11 @@ out:
 
 		co_terminal_print("daemon: exit code %08x\n", (int)rc);
 		co_terminal_print("daemon: %s\n", buf);
-
-		ret = CO_RC(ERROR);
-	} else {
-		ret = CO_RC(OK);
 	}
 
 	SetConsoleCtrlHandler( co_winnt_daemon_ctrl_handler, FALSE );
 
-	return ret; 
+	return rc;
 }
 
 static void co_winnt_help(void)
@@ -156,7 +151,7 @@ static void co_winnt_help(void)
 	co_terminal_print("NOTE: Run without arguments to receive help about command line syntax.\n");
 }
 
-co_rc_t co_winnt_main(LPSTR szCmdLine)
+static co_rc_t co_winnt_main(LPSTR szCmdLine)
 {
 	co_rc_t rc = CO_RC_OK;
 	co_winnt_parameters_t winnt_parameters;

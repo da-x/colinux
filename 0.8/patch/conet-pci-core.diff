@@ -2,7 +2,7 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/drivers/net/conet.c
-@@ -0,0 +1,434 @@
+@@ -0,0 +1,444 @@
 +/*
 + *  Copyright (C) 2003-2004 Dan Aloni <da-x@gmx.net>
 + *  Copyright (C) 2004 Pat Erley
@@ -161,6 +161,16 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +		}
 +
 +		if (!netif_running(dev)) {
++			co_free_message(node_message);
++			continue;
++		}
++
++		if (node_message->msg.type == CO_MESSAGE_TYPE_STRING) {
++			int connected= *(int*)(message+1);
++			if (connected)
++				netif_carrier_on(dev);
++			else
++				netif_carrier_off(dev);
 +			co_free_message(node_message);
 +			continue;
 +		}

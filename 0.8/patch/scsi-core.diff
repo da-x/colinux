@@ -2,7 +2,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/drivers/scsi/coscsi.c
-@@ -0,0 +1,1152 @@
+@@ -0,0 +1,1154 @@
 +
 +#include <linux/module.h>
 +#include <linux/interrupt.h>
@@ -77,10 +77,8 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	int type;
 +	coscsi_rom_t *rom;
 +	unsigned long flags;
-+	unsigned long block_size;
 +	unsigned long long max_lba;
 +	unsigned long long size;
-+	int bs_bits;
 +	void *os_handle;
 +	int prevent;
 +	int key;
@@ -291,32 +289,25 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	iop->sg = scp->request_buffer;
 +	iop->reqlen = total = num * scp->device->sector_size;
 +
-+#if 0
-+	total = 0;
-+	/* Copy the info to the passage page */
-+	for(x=0; x < count; x++, sg++) {
-+		iop->vec[x].buffer = page_address(sg->page) + sg->offset;
-+		iop->vec[x].size = sg->length;
-+		total += sg->length;
-+	}
-+#endif
-+
 +	/* Do it */
 +     	co_switch_wrapper();
 +
 +	rc = co_passage_page->params[0];
 +       	co_passage_page_release(flags);
++
 +	dma_unmap_sg(&scp->device->host->shost_gendev, sg, scp->use_sg, scp->sc_data_direction);
 +
 +#if COSCSI_DUMP_STATS
-+	if (count > max_segs) {
-+		max_segs = count;
-+		printk(KERN_INFO "COSCSI: max_segs: %d\n", max_segs);
-+	}
++	if (rc == GOOD) {
++		if (count > max_segs) {
++			max_segs = count;
++			printk(KERN_INFO "COSCSI: max_segs: %d\n", max_segs);
++		}
 +
-+	if (total > max_xfer) {
-+		max_xfer = total;
-+		printk(KERN_INFO "COSCSI: max_xfer: %dKB\n", max_xfer >> 10);
++		if (total > max_xfer) {
++			max_xfer = total;
++			printk(KERN_INFO "COSCSI: max_xfer: %dKB\n", max_xfer >> 10);
++		}
 +	}
 +#endif
 +
@@ -326,13 +317,28 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	return rc;
 +}
 +
++static int get_bs_bits(coscsi_device_t *dp, int sector_size) {
++	unsigned long mask = 0x80000000;
++	int bs_bits;
++
++	bs_bits = 31;
++	while(mask) {
++		if (sector_size & mask)
++			break;
++		mask >>= 1;
++		bs_bits--;
++	}
++
++	return bs_bits;
++}
++
 +/*
 + * File/Device size
 +*/
 +static int host_size(coscsi_device_t *dp, struct scsi_cmnd *scp) {
 +	unsigned long long s;
 +	unsigned long flags;
-+	int rc;
++	int rc, bits;
 +
 +#if COSCSI_DEBUG_HOST
 +	if (dp->debug) printk(KERN_INFO "host_size: getting size...\n");
@@ -355,11 +361,13 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	dp->size = *((unsigned long long *)&co_passage_page->params[1]);
 +       	co_passage_page_release(flags);
 +
-+	/* Set size to a multiple of the sector_size */
-+	s = dp->size & ~(scp->device->sector_size - 1);
++	bits = get_bs_bits(dp, scp->device->sector_size);
++
++	s = dp->size >> bits;
++	s *= scp->device->sector_size;
 +	if (s < dp->size) s += scp->device->sector_size;
 +
-+	dp->max_lba = (s >> dp->bs_bits) - 1;
++	dp->max_lba = (s >> bits) - 1;
 +
 +#if COSCSI_DEBUG_HOST
 +	if (dp->debug) printk(KERN_INFO "host_size: rc: %d, size: %lld, max_lba: %lld\n", rc, dp->size, dp->max_lba);
@@ -559,9 +567,9 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	coscsi_device_t *dp = wp->dp;
 +
 +	/* Get the size */
-+	if (host_size(dp, wp->scp)) return check_condition(wp->dp, HARDWARE_ERROR, 0x3e, 1);
++	if (host_size(dp, wp->scp)) return check_condition(dp, HARDWARE_ERROR, 0x3e, 1);
 +
-+	/* Ask host for size */
++	/* Convert to read_capacity format */
 +	if (dp->max_lba > 0xfffffffe || wp->scp->cmnd[8] & 1) {
 +		dp->msg[0] = 0xff;
 +		dp->msg[1] = 0xff;
@@ -573,10 +581,10 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +		dp->msg[2] = (wp->dp->max_lba >> 8) & 0xff;
 +		dp->msg[3] = wp->dp->max_lba & 0xff;
 +	}
-+	dp->msg[4] = (wp->dp->block_size >> 24);
-+	dp->msg[5] = (wp->dp->block_size >> 16) & 0xff;
-+	dp->msg[6] = (wp->dp->block_size >> 8) & 0xff;
-+	dp->msg[7] = wp->dp->block_size & 0xff;
++	dp->msg[4] = (wp->scp->device->sector_size >> 24);
++	dp->msg[5] = (wp->scp->device->sector_size >> 16) & 0xff;
++	dp->msg[6] = (wp->scp->device->sector_size >> 8) & 0xff;
++	dp->msg[7] = wp->scp->device->sector_size & 0xff;
 +
 +	return response(wp, &dp->msg, 8);
 +}
@@ -607,9 +615,9 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +		ap[2] = (dp->max_lba >> 8) & 0xff;
 +		ap[3] = dp->max_lba & 0xff;
 +	}
-+	ap[5] = (wp->dp->block_size >> 16) & 0xff;
-+	ap[6] = (dp->block_size >> 8) & 0xff;
-+	ap[7] = dp->block_size & 0xff;
++	ap[5] = (wp->scp->device->sector_size >> 16) & 0xff;
++	ap[6] = (wp->scp->device->sector_size >> 8) & 0xff;
++	ap[7] = wp->scp->device->sector_size & 0xff;
 +
 +	offset += bd_len;
 +	ap = data + offset;
@@ -997,14 +1005,10 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +			switch(dp->type) {
 +			case TYPE_DISK:
 +				dp->rom = &disk_rom;
-+				dp->block_size = 512;
-+				dp->bs_bits = 9;
 +				break;
 +			case TYPE_ROM:
 +			case TYPE_WORM:
 +				dp->rom = &cd_rom;
-+				dp->block_size = 2048;
-+				dp->bs_bits = 11;
 +				break;
 +			case TYPE_PASS:
 +				dp->rom = (void *) ~0L;
@@ -1014,8 +1018,6 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +				break;
 +			case TYPE_TAPE:
 +//				dp->rom = &tape_rom;
-+				dp->block_size = 1048576;
-+				dp->bs_bits = 12;
 +				break;
 +			default:
 +				dp->unit = -1;

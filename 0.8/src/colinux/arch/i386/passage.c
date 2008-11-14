@@ -146,16 +146,19 @@ asm(""							\
     "    subl %eax, (%esp)"                  "\n"			\
     "    subl %eax, %esp"                    "\n"			\
 									\
+    /* bit31:PG=0 Disable Paging */						\
     "    movl %cr0, %eax"                    "\n"			\
     "    andl $0x7fffffff, %eax"             "\n"			\
     "    movl %eax, %cr0"                    "\n"			\
 									\
+    /* bit5:PAE=1 Enable PAE */						\
     "    movl "CO_ARCH_STATE_STACK_CR4"(%ecx), %eax"  "\n"		\
     "    andl $0x00000020, %eax"  "\n"					\
     "    movl %eax, %cr4" "\n"						\
     "    movl "CO_ARCH_STATE_STACK_TEMP_CR3"(%ecx), %eax"  "\n"		\
     "    movl %eax, %cr3" "\n"						\
 									\
+    /* bit31:PG=1 Enable Paging */						\
     "    movl %cr0, %eax"                    "\n"			\
     "    orl $0x80000000, %eax"              "\n"			\
     "    movl %eax, %cr0"                    "\n"			\
@@ -220,6 +223,30 @@ asm(""							\
     "    jmp 3f"                             "\n"			\
     "3:  ljmp $0,$0"                         "\n"			\
     "2:  popfl"                              "\n"
+
+#define PASSAGE_PAGE_PRESERVATION_SYSENTER(_inner_)		\
+    "    movl %ecx, %ebx" /* save ecx (other page) */	"\n"	\
+    "    movl $"MSR_IA32_SYSENTER_CS", %ecx"		"\n"	\
+    "    rdmsr"						"\n"	\
+    "    movl %eax, "CO_ARCH_STATE_SYSENTER_CS"(%ebp)"	"\n"	\
+    "    incl %ecx" /* MSR_IA32_SYSENTER_ESP */		"\n"	\
+    "    rdmsr"						"\n"	\
+    "    movl %eax, "CO_ARCH_STATE_SYSENTER_ESP"(%ebp)"	"\n"	\
+    "    incl %ecx" /* MSR_IA32_SYSENTER_EIP */		"\n"	\
+    "    rdmsr"						"\n"	\
+    "    movl %eax, "CO_ARCH_STATE_SYSENTER_EIP"(%ebp)"	"\n"	\
+    "    movl %ebx, %ecx" /* restore ecx */		"\n"	\
+    _inner_							\
+    "    xor %edx, %edx"				"\n"	\
+    "    movl "CO_ARCH_STATE_SYSENTER_CS"(%ebp), %eax"	"\n"	\
+    "    movl $"MSR_IA32_SYSENTER_CS", %ecx"		"\n"	\
+    "    wrmsr"						"\n"	\
+    "    movl "CO_ARCH_STATE_SYSENTER_ESP"(%ebp), %eax"	"\n"	\
+    "    incl %ecx" /* MSR_IA32_SYSENTER_ESP */		"\n"	\
+    "    wrmsr"						"\n"	\
+    "    movl "CO_ARCH_STATE_SYSENTER_EIP"(%ebp), %eax"	"\n"	\
+    "    incl %ecx" /* MSR_IA32_SYSENTER_EIP */		"\n"	\
+    "    wrmsr"						"\n"	\
 
 #define PASSAGE_PAGE_PRESERVATION_FXSAVE(_inner_)		\
     "    fxsave "CO_ARCH_STATE_STACK_FXSTATE"(%ebp)"  "\n"	\
@@ -429,12 +456,42 @@ _inner_									\
     "1:"                                     "\n"                       \
 
 PASSAGE_CODE_WRAP_IBCS(
+	co_monitor_passage_func_fxsave_sysenter,
+	PASSAGE_CODE_WRAP_SWITCH(
+		PASSAGE_PAGE_PRESERVATION_SYSENTER(
+			PASSAGE_PAGE_PRESERVATION_FXSAVE(
+				PASSAGE_PAGE_PRESERVATION_DEBUG(
+					PASSAGE_PAGE_PRESERVATION_COMMON(
+						PASSAGE_CODE_NOWHERE_LAND()
+						)
+					)
+				)
+			)
+		)
+	)
+
+PASSAGE_CODE_WRAP_IBCS(
 	co_monitor_passage_func_fxsave, 
 	PASSAGE_CODE_WRAP_SWITCH(
-		PASSAGE_PAGE_PRESERVATION_FXSAVE(	
+		PASSAGE_PAGE_PRESERVATION_FXSAVE(
 			PASSAGE_PAGE_PRESERVATION_DEBUG(
 				PASSAGE_PAGE_PRESERVATION_COMMON(
 					PASSAGE_CODE_NOWHERE_LAND() 
+					)
+				)
+			)
+		)
+	)
+
+PASSAGE_CODE_WRAP_IBCS(
+	co_monitor_passage_func_fnsave_sysenter,
+	PASSAGE_CODE_WRAP_SWITCH(
+		PASSAGE_PAGE_PRESERVATION_SYSENTER(
+			PASSAGE_PAGE_PRESERVATION_FNSAVE(
+				PASSAGE_PAGE_PRESERVATION_DEBUG(
+					PASSAGE_PAGE_PRESERVATION_COMMON(
+						PASSAGE_CODE_NOWHERE_LAND()
+						)
 					)
 				)
 			)
@@ -455,12 +512,42 @@ PASSAGE_CODE_WRAP_IBCS(
 	)
 
 PASSAGE_CODE_WRAP_IBCS(
+	co_monitor_passage_func_short_fxsave_sysenter,
+	PASSAGE_CODE_WRAP_SWITCH(
+		PASSAGE_PAGE_PRESERVATION_SYSENTER(
+			PASSAGE_PAGE_PRESERVATION_FXSAVE(	
+				PASSAGE_PAGE_PRESERVATION_DEBUG(
+					PASSAGE_PAGE_PRESERVATION_COMMON(
+						PASSAGE_CODE_NOWHERE_LAND_SHORT() 
+						)
+					)
+				)
+			)
+		)
+	)
+
+PASSAGE_CODE_WRAP_IBCS(
 	co_monitor_passage_func_short_fxsave, 
 	PASSAGE_CODE_WRAP_SWITCH(
 		PASSAGE_PAGE_PRESERVATION_FXSAVE(	
 			PASSAGE_PAGE_PRESERVATION_DEBUG(
 				PASSAGE_PAGE_PRESERVATION_COMMON(
 					PASSAGE_CODE_NOWHERE_LAND_SHORT() 
+					)
+				)
+			)
+		)
+	)
+
+PASSAGE_CODE_WRAP_IBCS(
+	co_monitor_passage_func_short_fnsave_sysenter,
+	PASSAGE_CODE_WRAP_SWITCH(
+		PASSAGE_PAGE_PRESERVATION_SYSENTER(
+			PASSAGE_PAGE_PRESERVATION_FNSAVE(
+				PASSAGE_PAGE_PRESERVATION_DEBUG(
+					PASSAGE_PAGE_PRESERVATION_COMMON(
+						PASSAGE_CODE_NOWHERE_LAND_SHORT()
+						)
 					)
 				)
 			)
@@ -542,6 +629,9 @@ static inline void co_passage_page_dump_state(co_arch_state_stack_t *state)
 
 	co_debug("return_eip: %08lx   flags: %08lx   esp: %08lx",
 		 state->return_eip, state->flags, state->esp);
+
+	co_debug("sysenter cs: %08lx    eip: %08lx   esp: %08lx",
+		 state->sysenter_cs, state->sysenter_eip, state->sysenter_esp);
 }
 
 static inline void co_passage_page_dump(co_arch_passage_page_t *page)
@@ -666,6 +756,14 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 
 	caps = cmon->manager->archdep->caps[0];
 
+	if (co_monitor_passage_func_short_fxsave_sysenter_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
+	if (co_monitor_passage_func_fxsave_sysenter_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
+	if (co_monitor_passage_func_short_fnsave_sysenter_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
+	if (co_monitor_passage_func_fnsave_sysenter_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
 	if (co_monitor_passage_func_short_fxsave_size() > sizeof (pp->code))
 		return CO_RC(ERROR);
 	if (co_monitor_passage_func_fxsave_size() > sizeof (pp->code))
@@ -675,22 +773,37 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	if (co_monitor_passage_func_fnsave_size() > sizeof (pp->code))
 		return CO_RC(ERROR);
 
-	/*
-	 * TODO: Add sysenter / sysexit restoration support 
-	 */
 	if (caps & (1 << CO_ARCH_X86_FEATURE_FXSR)) {
 		co_debug("CPU supports fxsave/fxrstor");
-		if (!co_is_pae_enabled()) {
-			memcpy_co_monitor_passage_func_short_fxsave(pp->code);
+		if (caps & (1 << CO_ARCH_X86_FEATURE_SEP)) {
+			co_debug("CPU supports sysenter/sysexit");
+			if (!co_is_pae_enabled()) {
+				memcpy_co_monitor_passage_func_short_fxsave_sysenter(pp->code);
+			} else {
+				memcpy_co_monitor_passage_func_fxsave_sysenter(pp->code);
+			}
 		} else {
-			memcpy_co_monitor_passage_func_fxsave(pp->code);
+			if (!co_is_pae_enabled()) {
+				memcpy_co_monitor_passage_func_short_fxsave(pp->code);
+			} else {
+				memcpy_co_monitor_passage_func_fxsave(pp->code);
+			}
 		}
 	} else {
 		co_debug("CPU supports fnsave/frstor");
-		if (!co_is_pae_enabled()) {
-			memcpy_co_monitor_passage_func_short_fnsave(pp->code);
+		if (caps & (1 << CO_ARCH_X86_FEATURE_SEP)) {
+			co_debug("CPU supports sysenter/sysexit");
+			if (!co_is_pae_enabled()) {
+				memcpy_co_monitor_passage_func_short_fnsave_sysenter(pp->code);
+			} else {
+				memcpy_co_monitor_passage_func_fnsave_sysenter(pp->code);
+			}
 		} else {
-			memcpy_co_monitor_passage_func_fnsave(pp->code);
+			if (!co_is_pae_enabled()) {
+				memcpy_co_monitor_passage_func_short_fnsave(pp->code);
+			} else {
+				memcpy_co_monitor_passage_func_fnsave(pp->code);
+			}
 		}
 	}
 

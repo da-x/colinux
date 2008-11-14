@@ -14,7 +14,7 @@
 . bin/build-common.sh --get-vars
 
 # Some default values
-target=i686-pc-mingw32
+target=$TARGET
 nonopt=NONE
 prefix=NONE
 distdir="\$USER_TOPDIR/dist"
@@ -34,6 +34,7 @@ verbose=no
 kernel_untar=no
 gcc_guest_target=i686-co-linux
 gcc_guest_build=no
+enable_wx=no
 
 # Try the directory containing this script, then its working dir.
 prog=$0
@@ -112,11 +113,12 @@ Options:
   --kernel-untar          Untar can overwrite kernel tree, if exist.  Is good
                           for clean builds or automation builds.
   --disable-kernel-untar  Never overwrite kernel sources. (default)
-  --no-create             Test only this configure, no files create.
+  --dry-run               Test only configure steps, don't write config.
   --verbose               More messages in configure.
   --gcc-guest-build       Build C compiler from source of gnu cross compiler,
                           and use for kernel compiling. Should use, if gcc version
                           (major + minor) is different from your distribution.
+  --enable-wx             Build WxWidgets lib and console-wx (default disabled).
 -------------------------------------------------------------------------------
 Sample for WinNT as host (default):
   ./configure --target=i686-pc-mingw32 \\
@@ -220,7 +222,7 @@ EOF
   --errfile=*)
     errfile="$optarg" ;;
 
-  --no-create)
+  --no-create|--dry-run)
     no_create=yes ;;
 
   --no-kernel-untar | \
@@ -233,6 +235,12 @@ EOF
 
   --gcc-guest*)
     gcc_guest_build=yes ;;
+
+  --enable-wx)
+    enable_wx=yes ;;
+
+  --disable-wx)
+    enable_wx=no ;;
 
   -v | -verbose | --verbose)
     verbose=yes ;;
@@ -262,14 +270,6 @@ fi
 # Check for target system
 #
 
-case "$target" in
-NONE)
-  case $nonopt in
-  NONE) target=$host ;;
-  *) target=$nonopt ;;
-  esac ;;
-esac
-
 target_cpu=`echo $target | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\1/'`
 target_vendor=`echo $target | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\2/'`
 target_os=`echo $target | sed 's/^\([^-]*\)-\([^-]*\)-\(.*\)$/\3/'`
@@ -298,7 +298,8 @@ fi
 case $colinux_os in
 NONE)
   case $target_os in
-  linux | Linux) colinux_os="linux" ;;
+  linux|Linux) colinux_os="linux" ;;
+  darwin*|Darwin) colinux_os="darwin" ;;
   *) colinux_os="winnt" ;;
   esac ;;
 esac
@@ -309,8 +310,7 @@ case $prefix in
 NONE)
   case $target_os in
   NONE) prefix="$topdir/prefix-unknown" ;;
-  linux) prefix="$topdir/$target_os" ;;
-  *) prefix="$topdir/mingw32" ;;
+  *) prefix="$topdir/$target_os" ;;
   esac
   echo "Setting prefix=$prefix"
   ;;
@@ -421,7 +421,7 @@ add_failed()
 # $3 Minimum version need, or empty string
 # $4 Maximum version supported, or empty string
 # '--warn' optional as first param, add to warning list
-# sample: "wget-1.8" "wget --version" "1.8.x"
+# Example: "wget-1.8" "wget --version" "1.8.x"
 check_exec_tool()
 {
   local v1="" v2="" v3="" i1="" i2="" i3="" warn=""
@@ -435,17 +435,17 @@ check_exec_tool()
   if ($2) </dev/null >/dev/null 2>&1; then
     if [ -n "$3" ]; then
       # get needed version, transform the 'x' into 0
-      eval `echo $3 | sed -r -e \
-        's/([0-9]+)\.([0-9x]+)\.([0-9x]+)/v1=\1 v2=\2 v3=\3/' -e 'y/x/0/'`
+      eval `echo $3 | sed -e \
+        's/\([0-9]*\)\.\([0-9x]*\)\.\([0-9x]*\)/v1=\1 v2=\2 v3=\3/' -e 'y/x/0/'`
 
       # get installed version
-      eval `($2) 2>&1 | sed -n -r -e \
-        's/[^0-9]*([0-9]+)\.([0-9]+)\.([0-9]+).*/i1=\1 i2=\2 i3=\3/p'`
+      eval `($2) 2>&1 | sed -n -e \
+        's/^.*\([0-9]\{1,\}\)\.\([0-9]\{1,\}\)\.\([0-9]\{1,\}\).*/i1=\1 i2=\2 i3=\3/p'`
 
       if [ "$v3" = "0" -a -z "$i1" ]; then
         # get installed version with two numbers
-        eval `($2) 2>&1 | sed -n -r -e \
-          's/[^0-9]*([0-9]+)\.([0-9]+).*/i1=\1 i2=\2/p'`
+        eval `($2) 2>&1 | sed -n -e \
+          's/^.*\([0-9]\{1,\}\)\.\([0-9]\{1,\}\).*/i1=\1 i2=\2/p'`
 	i3="0"
       fi
 
@@ -468,8 +468,8 @@ check_exec_tool()
       if [ -n "$4" ]; then
 	local m1="" m2="" m3=""
 	# get needed version, transform the 'x' into 999
-	eval `echo $4 | sed -r -e \
-	    's/([0-9]+)\.([0-9x]+)\.([0-9x]+)/m1=\1 m2=\2 m3=\3/'`
+	eval `echo $4 | sed -e \
+	    's/\([0-9]*\)\.\([0-9x]*\)\.\([0-9x]*\)/m1=\1 m2=\2 m3=\3/'`
 	test "$m2" = "x" && m2="999"
 	test "$m3" = "x" && m3="999"
 	if [ $i1 -gt $m1 -o \
@@ -511,8 +511,8 @@ gcc_helper()
 
 	# ABI from local GCC
 	touch /tmp/colinux-$$.c
-	LOCAL_ABI=`gcc -E -dM /tmp/colinux-$$.c 2>/dev/null | sed -n -r -e \
-          's/^#define __GXX_ABI_VERSION ([0-9]+)$/\1/p'`
+	LOCAL_ABI=`gcc -E -dM /tmp/colinux-$$.c 2>/dev/null | sed -n -e \
+          's/^#define __GXX_ABI_VERSION \([0-9]*\)$/\1/p'`
 	rm /tmp/colinux-$$.c
 
 	# ABI from known mingw compilers
@@ -603,7 +603,7 @@ warning=""
 failed=""
 
 # Get version from script, replace the last digit
-GCC_NEEDED=`echo "$GCC_VERSION" | sed -e 's/\([0-9]\+\)\.\([0-9]\+\).*$/\1.\2/'`.x
+GCC_NEEDED=`echo "$GCC_VERSION" | sed -e 's/\([0-9]*\)\.\([0-9]*\).*$/\1.\2/'`.x
 
 # Build specific path
 if [ "$gcc_guest_build" = "no" ]; then
@@ -620,6 +620,7 @@ check_exec_tool "wget" "wget --version" ""
 check_exec_tool "Python interpreter" "python -V" "2.3.x" ""
 check_exec_tool "patch" "patch --version" ""
 check_exec_tool "make" "make --version" ""
+check_exec_tool "bunzip2" "bunzip2 --help" ""
 
 case $colinux_os in
   linux) # for Linux as host
@@ -635,6 +636,23 @@ case $colinux_os in
 	echo "  `fltk-config --libs`: label fl_x_global_event_hook not found"
 	echo "  Please set right path to a patched FLTK"
     fi
+  ;;
+  darwin) # for darwin as host
+    GCC_NEEDED=""
+    # maybe we should check here for the XCode version, too
+    # ToDo: fail on PPC arch!
+    check_exec_tool "gcc for kernel" "${gcc_guest_target_prefix}gcc -dumpversion" "$GCC_NEEDED"
+    check_exec_tool "gcc g++" "${gcc_guest_target_prefix}g++ --version" "$GCC_NEEDED"
+#    check_exec_tool "FLTK devel (patched)" "fltk-config --version" "$FLTK_VERSION" && \
+#    if nm `fltk-config --libs` | grep -q "fl_x_global_event_hook"
+#    then
+#	if [ "$verbose" = "yes" ]; then
+#	    echo "  `fltk-config --libs`: Label fl_x_global_event_hook found"
+#	fi
+#    else
+#	echo "  `fltk-config --libs`: label fl_x_global_event_hook not found"
+#	echo "  Please set right path to a patched FLTK"
+#    fi
   ;;
   *) # for Winnt as host
     # Check GCC for kernel
@@ -780,6 +798,10 @@ COLINUX_DEPMOD=$depmod_cfg
 #
 ${gcc_guest_build_comment}COLINUX_GCC_GUEST_TARGET="$gcc_guest_target"
 ${gcc_guest_build_comment}COLINUX_GCC_GUEST_PATH="\$PREFIX/\$COLINUX_GCC_GUEST_TARGET/bin"
+
+# Library WxWidgets is disabled by default.
+# To build colinux-console-wx.exe with this lib, set COLINUX_ENABLE_WX="yes".
+COLINUX_ENABLE_WX="$enable_wx"
 EOF
 
     cat << EOF

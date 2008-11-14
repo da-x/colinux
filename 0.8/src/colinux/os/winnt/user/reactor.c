@@ -62,29 +62,25 @@ static co_rc_t packet_read_async(co_winnt_reactor_packet_user_t handle)
 	BOOL result;
 	DWORD error;
 
-	while (TRUE) {
-		result = ReadFile(handle->rhandle,
-				  &handle->buffer,
-				  sizeof(handle->buffer),
-				  &handle->size,
-				  &handle->read_overlapped);
+	result = ReadFile(handle->rhandle,
+			  &handle->buffer,
+			  sizeof(handle->buffer),
+			  &handle->size,
+			  &handle->read_overlapped);
 
-		if (!result) { 
-			error = GetLastError();
-			switch (error)
-			{ 
-			case ERROR_IO_PENDING: 
-				return CO_RC(OK);
-			case ERROR_NOT_ENOUGH_MEMORY:
-				/* Hack for serial daemon */
-				co_debug_error("Warn: NOT_ENOUGH_MEMORY (handle=%d)", (int)handle->rhandle);
-				return CO_RC(OUT_OF_MEMORY);
-			default:
-				co_debug_error("Error: 0x%lx", error);
-				return CO_RC(ERROR);
-			}
-		} else {
-			handle->user.received(&handle->user, handle->buffer, handle->size);
+	if (!result) { 
+		error = GetLastError();
+		switch (error)
+		{ 
+		case ERROR_IO_PENDING: 
+			return CO_RC(OK);
+		case ERROR_NOT_ENOUGH_MEMORY:
+			/* Hack for serial daemon */
+			co_debug_error("Warn: NOT_ENOUGH_MEMORY (handle=%d)", (int)handle->rhandle);
+			return CO_RC(OUT_OF_MEMORY);
+		default:
+			co_debug_error("Error: 0x%lx", error);
+			return CO_RC(ERROR);
 		}
 	}
 

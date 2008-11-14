@@ -229,3 +229,19 @@ co_rc_t co_user_monitor_status(co_user_monitor_t *umon,
 					     &params->pc, sizeof(*params));
 }
 
+co_rc_t co_user_monitor_conet_bind_adapter(co_user_monitor_t *umon,
+				co_monitor_ioctl_conet_bind_adapter_t *params)
+{
+	return co_manager_io_monitor_unisize(umon->handle, 
+					     CO_MONITOR_IOCTL_CONET_BIND_ADAPTER, 
+					     &params->pc, sizeof(*params));
+}
+
+co_rc_t co_user_monitor_conet_unbind_adapter(co_user_monitor_t *umon,
+				co_monitor_ioctl_conet_unbind_adapter_t *params)
+{
+	return co_manager_io_monitor_unisize(umon->handle, 
+					     CO_MONITOR_IOCTL_CONET_UNBIND_ADAPTER, 
+					     &params->pc, sizeof(*params));
+}
+

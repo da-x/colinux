@@ -7,7 +7,9 @@
  * the root directory.
  */
 
+#if !defined(__APPLE__)
 #include <malloc.h>
+#endif
 #include <string.h>
 #include "cmdline.h"
 
@@ -299,8 +301,10 @@ static co_rc_t co_cmdline_get_next_equality_wrapper(co_command_line_params_t cmd
 		key_len = (key_found - arg) - prefix_len;
 		if (key_len > 0) {
 			if (key_size < key_len + 1) {
+				co_terminal_print("cmdline: Index not allowed for '%s'\n",
+					  expected_prefix);
 				co_os_free(arg);
-				return CO_RC(ERROR);
+				return CO_RC(INVALID_PARAMETER);
 			}
 			
 			co_memcpy(key, prefix_len + arg, key_len);
@@ -310,6 +314,14 @@ static co_rc_t co_cmdline_get_next_equality_wrapper(co_command_line_params_t cmd
 		/* string start and size */
 		key_found++;
 		length = co_strlen(key_found);
+
+		if (!length) {
+			co_terminal_print("cmdline: Missing arguments for '%s%s'\n",
+					  expected_prefix, key_len ? key : "");
+			co_os_free(arg);
+			return CO_RC(INVALID_PARAMETER);
+		}
+
 
 		if (!value_size) {
 			/* free old value */
@@ -371,13 +383,13 @@ co_rc_t co_cmdline_get_next_equality_int_prefix(co_command_line_params_t cmdline
 		if (number_parse == number) {
 			/* not a number */
 			co_terminal_print("cmdline: suffix not a number\n");
-			return CO_RC(ERROR);
+			return CO_RC(INVALID_PARAMETER);
 		}
 
 		if (value_int < 0 || value_int >= max_index) {
 			co_terminal_print("cmdline: invalid %s index: %d\n", 
 					  expected_prefix, value_int);
-			return CO_RC(ERROR);
+			return CO_RC(INVALID_PARAMETER);
 		}
 
 		*key_int = value_int;

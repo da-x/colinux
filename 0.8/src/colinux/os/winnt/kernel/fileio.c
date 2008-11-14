@@ -299,16 +299,15 @@ co_rc_t co_os_file_block_async_read_write(co_monitor_t *monitor,
 			co_debug_lvl(filesystem, 10, "cobd%d write status %X", unit, (int)status);
 		}
 
-		if (status != STATUS_SUCCESS && status != STATUS_PENDING) {
-			co_debug("block io failed: %p %lx (reason: %x)", context->start, size, (int)status);
-			rc = co_status_convert(status);
-			co_monitor_host_linuxvm_transfer_unmap(monitor, context->page, context->pfn);
-		}
+		if (status == STATUS_PENDING || status == STATUS_SUCCESS)
+			return CO_RC(OK);
+		
+		rc = co_status_convert(status);
+		co_debug("block io failed: %p %lx (reason: %x)", context->start, size, (int)status);
+		co_monitor_host_linuxvm_transfer_unmap(monitor, context->page, context->pfn);
 	}
 
-	if (!CO_OK(rc))
-		co_os_free(context);
-
+	co_os_free(context);
 	return rc;
 }
 

@@ -646,6 +646,49 @@ static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, 
 	return CO_RC(OK);
 }
 
+static co_rc_t parse_args_networking_device_ndis(co_config_t *conf, int index, const char *param)
+{
+	co_netdev_desc_t *net_dev = &conf->net_devs[index];
+	char mac_address[40];
+	char promisc_mode[10];
+	co_rc_t rc;
+
+	comma_buffer_t array [] = {
+		{ sizeof(net_dev->desc), net_dev->desc },
+		{ sizeof(mac_address), mac_address },
+		{ sizeof(promisc_mode), promisc_mode },
+		{ 0, NULL }
+	};
+
+	split_comma_separated(param, array);
+
+	net_dev->type = CO_NETDEV_TYPE_NDIS_BRIDGE;
+	net_dev->enabled = PTRUE;
+	net_dev->promisc_mode = 1;
+
+	co_debug_info("configured NDIS bridge at '%s' device as eth%d",
+			net_dev->desc, index);
+
+	rc = config_parse_mac_address(mac_address, net_dev);
+	if (!CO_OK(rc))
+		return rc;
+
+	if (*promisc_mode) {
+		if (strcmp(promisc_mode, "nopromisc") == 0) {
+			net_dev->promisc_mode = 0;
+			co_debug_info("Ndis mode: nopromisc");
+		} else if (strcmp(promisc_mode, "promisc") == 0) {
+			net_dev->promisc_mode = 1;
+			co_debug_info("Ndis mode: promisc");
+		} else {
+			co_terminal_print("error: Ndis bridge option only allowed 'promisc' or 'nopromisc'\n");
+			return CO_RC(INVALID_PARAMETER);
+		}
+	}
+
+	return CO_RC(OK);
+}
+
 static co_rc_t parse_args_networking_device(co_config_t *conf, int index, const char *param)
 {
 	const char *next = NULL;
@@ -656,6 +699,8 @@ static co_rc_t parse_args_networking_device(co_config_t *conf, int index, const 
 		return parse_args_networking_device_pcap(conf, index, next);
 	} else if (strmatch_identifier(param, "slirp", &next)) {
 		return parse_args_networking_device_slirp(conf, index, next);
+	} else if (strmatch_identifier(param, "ndis-bridge", &next)) {
+		return parse_args_networking_device_ndis(conf, index, next);
 	} else {
 		co_terminal_print("unsupported network transport type: %s\n", param);
 		co_terminal_print("supported types are: tuntap, pcap-bridge, slirp\n");

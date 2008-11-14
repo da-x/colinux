@@ -79,3 +79,19 @@ void co_os_timer_destroy(co_os_timer_t timer)
 	if (timer != NULL) 
 		co_os_free(timer);
 }
+
+void co_os_msleep(unsigned int msecs)
+{
+	KTIMER Timer;
+	LARGE_INTEGER DueTime;
+
+//	DueTime.QuadPart = msecs * 1000 * (-1);
+	KeQuerySystemTime(&DueTime);
+	DueTime.QuadPart += (msecs * 1000);
+	KeInitializeTimer(&Timer);
+	KeSetTimer(&Timer, DueTime, NULL);
+#if 0
+NTSTATUS   KeWaitForSingleObject(    IN PVOID  Object,    IN KWAIT_REASON  WaitReason,    IN KPROCESSOR_MODE  WaitMode,    IN BOOLEAN  Alertable,    IN PLARGE_INTEGER  Timeout  OPTIONAL    );
+#endif
+	KeWaitForSingleObject(&Timer, Executive, KernelMode, FALSE, 0);
+}

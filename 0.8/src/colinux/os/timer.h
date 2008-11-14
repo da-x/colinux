@@ -21,6 +21,7 @@ extern co_rc_t co_os_timer_create(co_os_func_t func, void *data,
 extern co_rc_t co_os_timer_activate(co_os_timer_t timer);
 extern void co_os_timer_deactivate(co_os_timer_t timer);
 extern void co_os_timer_destroy(co_os_timer_t timer);
+extern void co_os_msleep(unsigned int msecs);
 
 typedef struct {
 	union {

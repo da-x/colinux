@@ -8,8 +8,6 @@
  *
  */
 
-#include <asm/page.h>
-
 #include "../ddk.h"
 
 #include <colinux/os/alloc.h>
@@ -26,7 +24,7 @@ void *co_os_alloc_pages(unsigned long pages)
 	if (pages == 0)
 		KeBugCheck(0x11117777);
 
-	ret = MmAllocateNonCachedMemory(pages * PAGE_SIZE);
+	ret = MmAllocateNonCachedMemory(pages * CO_ARCH_PAGE_SIZE);
 
 #ifdef DEBUG_CO_OS_ALLOC		
 	if (ret) {
@@ -50,7 +48,7 @@ void co_os_free_pages(void *ptr, unsigned long pages)
 	co_debug("%d(%x,%d)", allocs, ptr, pages);
 	allocs--;
 #endif
-	MmFreeNonCachedMemory(ptr, pages * PAGE_SIZE);
+	MmFreeNonCachedMemory(ptr, pages * CO_ARCH_PAGE_SIZE);
 }
 
 #define CO_OS_POOL_TAG (('c' << 0) | ('o' << 8) |  ('l' << 16) | ('x' << 24))

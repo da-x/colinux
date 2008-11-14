@@ -1,17 +1,38 @@
 
-#include "wx/wxprec.h"
-#ifndef WX_PRECOMP
-	#include "wx/wx.h"
-#endif
-#include "wx/imaglist.h"
-#include "wx/artprov.h"
-#include "wx/cshelp.h"
-#include "wx/utils.h"
+extern "C" {
+#include <colinux/common/debug.h>
+#include <colinux/os/user/misc.h>
+}
+
+#include <colinux/user/console-base/main.h>
 #include "console.h"
 
-extern "C" {
-#include <colinux/common/ioctl.h>
-};
+COLINUX_DEFINE_MODULE("colinux-console-wx");
+
+#if 0
+int co_console_init(int argc, char **argv,class MyFrame *frame)
+{
+	int status;
+
+	global_window = new console_window_WX_t(frame);
+
+	if (!global_window) {
+		co_terminal_print("Unable to create console window");
+		return -1; 
+	}
+
+	try {
+		status = co_user_console_main(argc, argv);
+	} catch(...) {
+		co_debug("The console program encountered an exception.");
+		status = -1;
+	}
+
+	delete global_window;
+
+	return status;
+}
+#endif
 
 IMPLEMENT_APP(MyApp)
 
@@ -20,46 +41,40 @@ bool MyApp::OnInit()
 	if ( !wxApp::OnInit() ) return false;
 	MyFrame *frame = new MyFrame(_T("coLinux Console"));
 	frame->Show(true);
+
+//	co_console_init(argc,argv,frame);
 	return true;
 }
 
-MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title)
+#if 0
+int co_user_console_main(int argc, char **argv)
 {
-	SetIcon(wxICON(colinux));
+        co_rc_t rc;
+        console_window_t window;
+        int ret;
 
-	wxMenu *fileMenu = new wxMenu;
-	fileMenu->Append(wxID_EXIT, _T("E&xit\tAlt-X"), _T("Quit this program"));
+        global_window = &window;
 
-	wxMenu *helpMenu = new wxMenu;
-	helpMenu->Append(wxID_ABOUT, _T("&About...\tF1"), _T("Show about dialog"));
+        co_debug_start();
 
-	wxMenuBar *menuBar = new wxMenuBar();
-	menuBar->Append(fileMenu, _T("&File"));
-	menuBar->Append(helpMenu, _T("&Help"));
-	SetMenuBar(menuBar);
+        rc = window.parse_args(argc, argv);
+        if (!CO_OK(rc)) {
+                co_debug("Error %08x parsing parameters", (int)rc);
+                ret = -1;
+                goto out;
+        }
 
-	CreateStatusBar(2);
-	SetStatusText(_T("Not connected"),1);
+        rc = window.start();
+        if (!CO_OK(rc)) {
+                co_debug("Error %08x starting console", (int)rc);
+                ret = -1;
+                goto out;
+        }
+
+        ret = Fl::run();
+out:
+        co_debug_end();
+
+        return ret;
 }
-
-BEGIN_EVENT_TABLE(MyFrame, wxFrame)
-    EVT_MENU(wxID_EXIT,  MyFrame::OnQuit)
-    EVT_MENU(wxID_ABOUT, MyFrame::OnAbout)
-END_EVENT_TABLE()
-
-void MyFrame::OnQuit(wxCommandEvent& WXUNUSED(event))
-{
-	Close(true);
-}
-
-void MyFrame::OnAbout(wxCommandEvent& WXUNUSED(event))
-{
-	wxMessageBox(wxString::Format(
-                    _T("Copyright(C) 2008 Steve Shoecraft\n\n")
-                    _T("This program is licensed under the GPL. See the COPYING file\n")
-		    _T("that came with your distribution for more information.\n")
-                 ),
-                 _T("About coLinux Console"),
-                 wxOK | wxICON_INFORMATION,
-                 this);
-}
+#endif

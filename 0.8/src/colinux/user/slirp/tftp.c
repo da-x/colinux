@@ -22,8 +22,8 @@
  * THE SOFTWARE.
  */
 
-#ifdef EMULATE_TFTP_SERVER
 #include "slirp.h"
+#ifdef EMULATE_TFTP_SERVER
 
 struct tftp_session {
     int in_use;

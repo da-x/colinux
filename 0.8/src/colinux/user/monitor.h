@@ -52,4 +52,9 @@ extern co_id_t find_first_monitor(void);
 
 extern co_rc_t read_pid_from_file(co_pathname_t pathname, co_id_t *id);
 
+extern co_rc_t co_user_monitor_conet_bind_adapter(co_user_monitor_t *umon,
+				co_monitor_ioctl_conet_bind_adapter_t *params);
+
+extern co_rc_t co_user_monitor_conet_unbind_adapter(co_user_monitor_t *umon,
+				co_monitor_ioctl_conet_unbind_adapter_t *params);
 #endif

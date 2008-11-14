@@ -315,6 +315,7 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
 	case CO_OPERATION_CONSOLE_SET_ORIGIN:
 	case CO_OPERATION_CONSOLE_SAVE_SCREEN:
 	case CO_OPERATION_CONSOLE_INVERT_REGION:
+	case CO_OPERATION_CONSOLE_SIZES:
 		break;
 	}
 

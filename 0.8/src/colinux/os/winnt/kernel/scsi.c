@@ -31,6 +31,31 @@
 #define COSCSI_DEBUG_IO 0
 #define COSCSI_DEBUG_PASS 0
 
+typedef /*NTOSAPI*/ NTSTATUS DDKAPI (*xfer_func_t)( /*IN*/ HANDLE  FileHandle, /*IN*/ HANDLE  Event  /*OPTIONAL*/, /*IN*/ PIO_APC_ROUTINE  ApcRoutine  /*OPTIONAL*/, /*IN*/ PVOID  ApcContext  /*OPTIONAL*/, /*OUT*/ PIO_STATUS_BLOCK  IoStatusBlock, /*IN*/ PVOID  Buffer, /*IN*/ ULONG  Length, /*IN*/ PLARGE_INTEGER  ByteOffset  /*OPTIONAL*/, /*IN*/ PULONG  Key  /*OPTIONAL*/);
+
+extern PDEVICE_OBJECT coLinux_DeviceObject;
+
+#include <asm/scatterlist.h>
+
+struct _io_req {
+	volatile int in_use;
+	co_monitor_t *mp;
+	co_scsi_dev_t *dp;
+	co_scsi_io_t io;
+	IO_STATUS_BLOCK isb;
+	PIO_WORKITEM pIoWorkItem;
+	xfer_func_t func;
+#if !COSCSI_ASYNC
+	int result;
+#endif
+};
+
+#define IO_QUEUE_SIZE CO_ARCH_PAGE_SIZE/sizeof(struct _io_req)
+static struct _io_req io_queue[IO_QUEUE_SIZE];
+static int next_entry = 0;
+static co_os_mutex_t req_mutex;
+static int req_mutex_init = 0;
+
 #if COSCSI_DEBUG_OPEN || COSCSI_DEBUG_IO || COSCSI_DEBUG_PASS
 static char *iostatus_string(IO_STATUS_BLOCK IoStatusBlock) {
 
@@ -65,6 +90,13 @@ int scsi_file_open(co_monitor_t *cmon, co_scsi_dev_t *dp) {
 	ULONG FileAttributes, CreateDisposition, CreateOptions;
 	co_rc_t rc;
 
+	if (!req_mutex_init) {
+		co_os_mutex_create(&req_mutex);
+		req_mutex_init = 1;
+	}
+
+	co_debug("_io_req size: %d, IO_QUEUE_SIZE: %d", sizeof(struct _io_req), IO_QUEUE_SIZE);
+
 #if COSCSI_DEBUG_OPEN
 	co_debug("scsi_file_open: pathname: %s", dp->conf->pathname);
 #endif
@@ -87,8 +119,6 @@ again:
 #if COSCSI_DEBUG_OPEN
 	co_debug("ZwCreateFile: status: %x, iostatus: %s", (int)status, iostatus_string(IoStatusBlock));
 #endif
-
-	co_winnt_free_unicode(&unipath);
 
 	/* If a size is specified, extend/trunc the file */
 	if (status == STATUS_SUCCESS && dp->conf->size != 0 && dp->conf->is_dev == 0) {
@@ -113,6 +143,8 @@ again:
 	co_debug("scsi_file_open: os_handle: %p", dp->os_handle);
 #endif
 
+	co_winnt_free_unicode(&unipath);
+
 	return (status != STATUS_SUCCESS);
 }
 
@@ -132,13 +164,16 @@ int scsi_file_close(co_monitor_t *cmon, co_scsi_dev_t *dp)
 
 /* Async is defined in kernel header! */
 #if COSCSI_ASYNC
-static void send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc) {
+static void scsi_send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc, int delta) {
 	struct {
 		co_message_t mon;
 		co_linux_message_t linux;
 		co_scsi_intr_t info;
 	} msg;
 
+#if COSCSI_DEBUG_IO
+	co_debug("unit: %d, ctx: %p, rc: %d, delta: %d", unit, ctx, rc, delta);
+#endif
 	msg.mon.from = CO_MODULE_COSCSI0;
 	msg.mon.to = CO_MODULE_LINUX;
 	msg.mon.priority = CO_PRIORITY_DISCARDABLE;
@@ -148,40 +183,65 @@ static void send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc) {
 	msg.linux.unit = unit;
 	msg.info.ctx = ctx;
 	msg.info.result = rc;
-	msg.info.delta = 0;
+	msg.info.delta = delta;
 
 	co_monitor_message_from_user(cmon, 0, (co_message_t *)&msg);
 }
 #endif
 
-extern PDEVICE_OBJECT coLinux_DeviceObject;
+typedef struct {
+	HANDLE file_handle;
+	LARGE_INTEGER offset;
+	xfer_func_t func;
+} scsi_transfer_file_block_data_t;
 
-#include <asm/scatterlist.h>
+static co_rc_t scsi_transfer_file_block(co_monitor_t *cmon, 
+				  void *host_data, void *linuxvm, 
+				  unsigned long size, 
+				  co_monitor_transfer_dir_t dir)
+{
+	IO_STATUS_BLOCK isb;
+	NTSTATUS status;
+	scsi_transfer_file_block_data_t *data = host_data;
 
-struct _io_req {
-	co_monitor_t *mp;
-	co_scsi_dev_t *dp;
-	co_scsi_io_t io;
-	PIO_WORKITEM pIoWorkItem;
-	bool_t read;
-#if !COSCSI_ASYNC
-	int result;
-#endif
-};
+	status = data->func(data->file_handle,
+				NULL,
+				NULL,
+				NULL, 
+				&isb,
+				linuxvm,
+				size,
+				&data->offset,
+				NULL);
+
+	if (status != STATUS_SUCCESS) {
+		co_debug_error("scsi io failed: %p %lx (reason: %x)",
+				linuxvm, size, (int)status);
+		return co_status_convert(status);
+	}
+
+	data->offset.QuadPart += size;
+
+	return CO_RC_OK;
+}
 
 #if COSCSI_ASYNC
-static VOID DDKAPI _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
+static VOID DDKAPI _scsi_dio(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 #else
-static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
+static int _scsi_dio(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 #endif
 	struct _io_req *r = Context;
 	struct scatterlist *sg;
-	LARGE_INTEGER Offset;
 	co_pfn_t sg_pfn;
 	unsigned char *sg_page;
-	PIO_WORKITEM wip;
 	int x;
 	co_rc_t rc;
+	scsi_transfer_file_block_data_t data;
+	int bytes_req = 0;
+
+	data.file_handle = (HANDLE)r->dp->os_handle;
+	data.offset.QuadPart = r->io.offset;
+	data.func = r->func;
 
 	/* Map the SG */
 	rc = co_monitor_host_linuxvm_transfer_map(r->mp, r->io.sg,
@@ -193,16 +253,16 @@ static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 	}
 
 	/* For each vector */
-	Offset.QuadPart = r->io.offset;
 	for(x=0; x < r->io.count; x++, sg++) {
-		rc = co_os_file_block_read_write(r->mp,
-					(HANDLE)r->dp->os_handle,
-					Offset.QuadPart,
-					sg->dma_address + CO_ARCH_KERNEL_OFFSET,
-					sg->length,
-					r->read);
+		bytes_req += sg->length;
+		rc = co_monitor_host_linuxvm_transfer(
+				r->mp,
+				&data,
+				scsi_transfer_file_block,
+				sg->dma_address + CO_ARCH_KERNEL_OFFSET,
+				sg->length,
+				0);
 		if (!CO_OK(rc))	break;
-		Offset.QuadPart += sg->length;
 	}
 
 	co_monitor_host_linuxvm_transfer_unmap(r->mp, sg_page, sg_pfn);
@@ -210,17 +270,64 @@ static int _scsi_io(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 io_done:
 #if COSCSI_ASYNC
 	/* Send interrupt */
-	send_intr(r->mp, r->dp->unit, r->io.scp, (CO_OK(rc) == 0));
+	scsi_send_intr(r->mp, r->dp->unit, r->io.scp, (CO_OK(rc) == 0), bytes_req - (int)(data.offset.QuadPart - r->io.offset));
 #endif
 
 	/* Free WorkItem */
-	wip = r->pIoWorkItem;
-	co_os_free(r);
-        IoFreeWorkItem(wip);
+	IoFreeWorkItem(r->pIoWorkItem);
+
+	/* Clear in use flag */
+	co_os_mutex_acquire(req_mutex);
+	r->in_use = 0;
+	co_os_mutex_release(req_mutex);
 
 #if COSCSI_ASYNC == 0
 	return (CO_OK(rc) == 0);
 #endif
+}
+
+#define MAX_RETRIES 1000
+
+static struct _io_req *get_next_entry(co_scsi_dev_t *dp) {
+	struct _io_req *r;
+	register int retries;
+
+#if COSCSI_DEBUG_IO
+	co_debug("next_entry: %d", next_entry);
+#endif
+	co_os_mutex_acquire(req_mutex);
+	r = &io_queue[next_entry++];
+	if (next_entry >= IO_QUEUE_SIZE) next_entry = 0;
+	if (!r->in_use) {
+		r->in_use = 1;
+		co_os_mutex_release(req_mutex);
+		return r;
+	}
+	co_os_mutex_release(req_mutex);
+
+#if COSCSI_DEBUG_IO
+	co_debug("next entry in use!");
+#endif
+	for(retries=0; retries < MAX_RETRIES; retries++) {
+		/* Try to find a free slot */
+		for(r = io_queue; r < &io_queue[IO_QUEUE_SIZE]; r++) {
+			co_os_mutex_acquire(req_mutex);
+			if (r->in_use == 0) {
+				r->in_use = 1;
+				co_os_mutex_release(req_mutex);
+				return r;
+			}
+			co_os_mutex_release(req_mutex);
+		}
+
+		/* If we got here, we didn't find one */
+#if COSCSI_DEBUG_IO
+		co_debug("sleeping...");
+#endif
+		co_os_msleep(100);
+	}
+	co_os_msleep(500);
+	return 0;
 }
 
 /*
@@ -233,23 +340,23 @@ int scsi_file_io(co_monitor_t *mp, co_scsi_dev_t *dp, co_scsi_io_t *io) {
 #if COSCSI_DEBUG_IO
 	co_debug("setting up req...\n");
 #endif
-	r = (struct _io_req *) co_os_malloc(sizeof(*r));
+	r = get_next_entry(dp);
 	if (!r) return 1;
 	r->mp = mp;
 	r->dp = dp;
 	co_memcpy(&r->io, io, sizeof(*io));
 	r->pIoWorkItem = IoAllocateWorkItem(coLinux_DeviceObject);
-	r->read = !io->write;
+	r->func = (io->write ? ZwWriteFile : ZwReadFile);
 
 	/* Submit the req */
 #if COSCSI_DEBUG_IO
 	co_debug("submitting req...\n");
 #endif
 #if COSCSI_ASYNC
-	IoQueueWorkItem(r->pIoWorkItem, _scsi_io, CriticalWorkQueue, r);
+	IoQueueWorkItem(r->pIoWorkItem, _scsi_dio, CriticalWorkQueue, r);
 	return 0;
 #else
-	return _scsi_io(coLinux_DeviceObject, r);
+	return _scsi_dio(coLinux_DeviceObject, r);
 #endif
 }
 
@@ -283,8 +390,7 @@ int scsi_pass(co_monitor_t *cmon, co_scsi_dev_t *dp, co_scsi_pass_t *pass) {
 	}
 
 #if COSCSI_DEBUG_PASS
-	co_debug("scsi_pass: handle: %p, buffer: %p, buflen: %d\n",
-		dp->os_handle, buffer, pass->buflen);
+	co_debug("scsi_pass: handle: %p, buffer: %p, buflen: %ld\n", dp->os_handle, buffer, pass->buflen);
 	co_debug("scsi_pass: cdb_len: %d, write: %d\n", pass->cdb_len, pass->write);
 #endif
 
@@ -320,7 +426,7 @@ int scsi_pass(co_monitor_t *cmon, co_scsi_dev_t *dp, co_scsi_pass_t *pass) {
 		);
 
 #if COSCSI_DEBUG_PASS
-	co_debug("scsi_pass: ntstatus: %X, ScsiStatus: %d\n", status, (req.Spt.ScsiStatus >> 1));
+	co_debug("scsi_pass: ntstatus: %X, ScsiStatus: %d\n", (int)status, (req.Spt.ScsiStatus >> 1));
 #endif
 
 #if 0
@@ -365,13 +471,6 @@ err_out:
 int scsi_file_size(co_monitor_t *cmon, co_scsi_dev_t *dp, unsigned long long *size) {
 	co_rc_t rc;
 
-	if (!dp->conf->size) {
-		rc = co_os_file_get_size(dp->os_handle, size);
-
-		return (CO_OK(rc) == 0);
-	} else {
-		*size = dp->conf->size * 1048576;
-
-		return 0;
-	}
+	rc = co_os_file_get_size(dp->os_handle, size);
+	return (CO_OK(rc) == 0);
 }

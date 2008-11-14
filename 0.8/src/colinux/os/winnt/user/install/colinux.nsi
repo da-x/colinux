@@ -2,7 +2,7 @@
 ;Written by NEBOR Regis
 ;Modified by Dan Aloni (c) 2004
 ;Modified 8/20/2004,2/4/2004 by George P Boutwell
-;Modified 11/28/2007 by Henry Nestler
+;Modified 4/20/2008 by Henry Nestler
 
 ;-------------------------------------
 
@@ -18,8 +18,8 @@
   Name "Cooperative Linux ${VERSION}"
   OutFile "coLinux.exe"
 
-  ShowInstDetails show
-  ShowUninstDetails show
+  ;ShowInstDetails show
+  ;ShowUninstDetails show
 
   ;Folder selection page
   InstallDir "$PROGRAMFILES\coLinux"
@@ -116,7 +116,7 @@ SectionGroup "coLinux" SecGrpcoLinux
 
 Section
 
-  ;Check running 64 bit and block it
+  ;Check running 64 bit and block it (NSIS 2.21 and newer)
   ${If} ${RunningX64}
     MessageBox MB_OK "coLinux can't run on x64"
     DetailPrint "Abort on 64 bit"
@@ -252,6 +252,10 @@ SectionEnd
 
 Section "Bridged Ethernet (WinPcap)" SeccoLinuxBridgedNet
   File "premaid\coLinux-bridged-net-daemon.exe"
+SectionEnd
+
+Section "Kernel Bridged Ethernet (ndis)" SeccoLinuxNdisBridge
+  File "premaid\colinux-ndis-net-daemon.exe"
 SectionEnd
 
 Section "Virtual Serial Device (ttyS)" SeccoLinuxSerial
@@ -484,7 +488,8 @@ SectionEnd
   LangString DESC_SecFLTKConsole ${LANG_ENGLISH} "FLTK Cross-platform coLinux console to view Linux console and manage coLinux from a GUI program"
   LangString DESC_SeccoLinuxNet ${LANG_ENGLISH} "TAP Virtual Ethernet Driver as private network link between Linux and Windows"
   LangString DESC_SeccoLinuxNetSLiRP ${LANG_ENGLISH} "SLiRP Ethernet Driver as virtual Gateway for outgoings TCP and UDP connections - Simplest to use"
-  LangString DESC_SeccoLinuxBridgedNet ${LANG_ENGLISH} "Bridge Ethernet support allows to join the coLinux machine to an existing network"
+  LangString DESC_SeccoLinuxBridgedNet ${LANG_ENGLISH} "Bridge Ethernet support allows to join the coLinux machine to an existing network via libPcap"
+  LangString DESC_SeccoLinuxNdisBridge ${LANG_ENGLISH} "Kernel Bridge Ethernet connects coLinux to an existing network via a fast kernel ndis driver."
   LangString DESC_SeccoLinuxSerial ${LANG_ENGLISH} "Virtual Serial Driver allows to use serial Devices between Linux and Windows"
   LangString DESC_SeccoLinuxDebug ${LANG_ENGLISH} "Debugging allows to create extensive debug log for troubleshooting problems"
   LangString DESC_SecImage ${LANG_ENGLISH} "Download an image from sourceforge. Also provide useful links on how to use it"
@@ -496,6 +501,7 @@ SectionEnd
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxNet} $(DESC_SeccoLinuxNet)
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxNetSLiRP} $(DESC_SeccoLinuxNetSLiRP)
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxBridgedNet} $(DESC_SeccoLinuxBridgedNet)
+    !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxNdisBridge} $(DESC_SeccoLinuxNdisBridge)
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxSerial} $(DESC_SeccoLinuxSerial)
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxDebug} $(DESC_SeccoLinuxDebug)
     !insertmacro MUI_DESCRIPTION_TEXT ${SeccoLinuxImage} $(DESC_SecImage)  
@@ -526,6 +532,7 @@ Section "Uninstall"
   Delete "$INSTDIR\coLinux-daemon.exe"
   Delete "$INSTDIR\coLinux-net-daemon.exe"
   Delete "$INSTDIR\coLinux-bridged-net-daemon.exe"
+  Delete "$INSTDIR\colinux-ndis-net-daemon.exe"
   Delete "$INSTDIR\linux.sys"
   Delete "$INSTDIR\vmlinux"
   Delete "$INSTDIR\initrd.gz"

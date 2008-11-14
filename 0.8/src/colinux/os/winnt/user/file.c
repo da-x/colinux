@@ -39,9 +39,8 @@ co_rc_t co_os_file_load(co_pathname_t pathname, char **out_buf, unsigned long *o
 	}
 
 	size = GetFileSize(handle, &high);
-	if (!size && high) size = max_size;
 
-	if (max_size && size > max_size)
+	if (max_size && (size > max_size || high))
 		size = max_size;
 
 	buf = (char *)malloc(size);

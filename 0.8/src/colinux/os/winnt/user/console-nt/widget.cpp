@@ -111,8 +111,22 @@ console_widget_NT_t::set_window(console_window_t * W)
 	COORD fs;
 	HWND hwnd;
 	RECT r;
+	DWORD error = 0;
 
 	window = W;
+
+	if (screen) {
+    		co_debug("always screen %p", screen);
+		return CO_RC(OK);
+	}
+
+	if (!console) {
+    		co_debug("Bug: console = NULL");
+		return CO_RC(ERROR);
+	}
+
+	size.X = console->x;
+	size.Y = console->y;
 
 	input = GetStdHandle(STD_INPUT_HANDLE);
 	SetConsoleMode(input, 0);
@@ -122,30 +136,30 @@ console_widget_NT_t::set_window(console_window_t * W)
         fs = GetConsoleFontSize(output, cfi.nFont);
         r.top = 0;
         r.left = 0;
-        r.bottom = fs.Y * 25;
-        r.right = fs.X * 80;
+        r.bottom = fs.Y * size.Y;
+        r.right = fs.X * size.X;
         AdjustWindowRect(&r, WS_CAPTION|WS_SYSMENU|WS_THICKFRAME
                              |WS_MINIMIZEBOX|WS_MAXIMIZEBOX, 0);
 
 	hwnd = GetConsoleWindow();
 	SetWindowPos(hwnd, HWND_TOP, 0, 0,
                      r.right - r.left, r.bottom - r.top,
-                     SWP_NOMOVE|SWP_SHOWWINDOW);
+                     SWP_NOMOVE);
 
         GetConsoleCursorInfo(output, &cursor);
         cci = cursor;
         cci.bVisible = 0;
         SetConsoleCursorInfo(output, &cci);
 
-	size.X = 80 ;
-        size.Y = 25 ;
-	region.Top = 0;
-	region.Left = 0;
-        region.Right = 79;
-        region.Bottom = 24;
+        region.Top = 0;
+        region.Left = 0;
+        region.Right = size.X-1;
+        region.Bottom = size.Y-1;
 
-        if( ! SetConsoleWindowInfo( output , TRUE , &region ) )
-         co_debug("SetConsoleWindowInfo() error 0x%lx", GetLastError());
+	if( ! SetConsoleWindowInfo( output , TRUE , &region ) ) {
+		error = GetLastError();
+		co_debug("SetConsoleWindowInfo() error 0x%lx", error);
+	}
 
 	screen =
 	    (CHAR_INFO *) co_os_malloc(sizeof (CHAR_INFO) * size.X * size.Y);
@@ -164,6 +178,14 @@ console_widget_NT_t::set_window(console_window_t * W)
 	SetConsoleCursorInfo(buffer, &cci);
 
 	SetConsoleActiveScreenBuffer(buffer);
+
+	// Fixup, if resize failed from smaller start window
+	if (error == ERROR_INVALID_PARAMETER) {
+		SetWindowPos(hwnd, HWND_TOP, 0, 0,
+                	r.right - r.left + GetSystemMetrics(SM_CYVSCROLL),
+			r.bottom - r.top + GetSystemMetrics(SM_CYHSCROLL),
+                	SWP_NOMOVE);
+	}
 
 	return CO_RC(OK);
 }

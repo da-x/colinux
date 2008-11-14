@@ -24,6 +24,10 @@
  * (as it is needed by the Linux code).
  */
 
+#define CO_CONSOLE_WIDTH      80
+#define CO_CONSOLE_HEIGHT     25
+#define CO_CONSOLE_HEIGHT_BUF  0
+
 typedef struct co_console_cell { 
 	unsigned char ch;
 	unsigned char attr;

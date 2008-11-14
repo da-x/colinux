@@ -190,6 +190,12 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 	}
 
 	case CO_OPERATION_CONSOLE_STARTUP:
+		message->sizes.rows = console->y;
+		message->sizes.cols = console->x;
+		message->sizes.backbuf = 0;
+		message->type = CO_OPERATION_CONSOLE_SIZES;
+		break;
+
 	case CO_OPERATION_CONSOLE_INIT:
 	case CO_OPERATION_CONSOLE_DEINIT:
 	case CO_OPERATION_CONSOLE_SWITCH:
@@ -200,6 +206,7 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 	case CO_OPERATION_CONSOLE_SET_ORIGIN:
 	case CO_OPERATION_CONSOLE_SAVE_SCREEN:
 	case CO_OPERATION_CONSOLE_INVERT_REGION:
+	case CO_OPERATION_CONSOLE_SIZES:
 		break;
 	}
 

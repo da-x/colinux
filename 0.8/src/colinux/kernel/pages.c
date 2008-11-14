@@ -366,15 +366,14 @@ co_rc_t co_monitor_alloc_and_map_page(
 	}
 
 	physical_pfn = monitor->pp_pfns[pfn_group][pfn_index];
-	if (physical_pfn == 0) {
-		rc = co_manager_get_page(monitor->manager, &physical_pfn);
-		if (!CO_OK(rc))
-			return rc;
-
-		monitor->pp_pfns[pfn_group][pfn_index] = physical_pfn;
-	} else {
+	if (physical_pfn)
 		return CO_RC(OK);
-	}
+
+	rc = co_manager_get_page(monitor->manager, &physical_pfn);
+	if (!CO_OK(rc))
+		return rc;
+
+	monitor->pp_pfns[pfn_group][pfn_index] = physical_pfn;
 	
 	/* next, map the page */
 	virtual_pfn = ((address - CO_ARCH_KERNEL_OFFSET) >> CO_ARCH_PAGE_SHIFT);

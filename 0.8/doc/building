@@ -205,21 +205,21 @@ only change it, if there exists a MinGW version of this gcc. After changing
 it, you also need to rebuild the cross gcc and all daemons. We suggest you
 not change the gcc version to an older version. Read the coLinux changelog
 (inside Subversion) about the problems with older gcc versions and the
-fixes. If you are up to it then compile gcc-4.2.0 for MinGW and Linux.
+fixes. If you are up to it, then compile gcc-4.2.0 for MinGW and Linux.
 
 Since coLinux version 0.7.2 the gcc dosn't longer depends on one major gcc
 version. The ABI is runtime checked and inside the building now. This opens
-more gcc versiond for kernel builds (tested from 3.4.x up to gcc 4.3.0).
+more gcc versions for kernel builds (tested from 3.4.x up to gcc 4.3.0).
 Usebility of installed gcc can check with "./configure --no-create".
 
 
 4.2 Compiling the Cooperative Linux kernel (the vmlinux file)
 
-Unpack the source tarball of coLinux. Locate the file series-2.6.17
+Unpack the source tarball of coLinux. Locate the file series-2.6.22.18
 in the directory patch/. This file give you the supported kernel versions.
-(version 2.6.17 for instance, can be obtained from www.kernel.org)
+(version 2.6.22.18 for instance, can be obtained from www.kernel.org)
 Unpack the kernel tar in home directory. Make sure that the directory 
-of the Linux kernel is named 'linux-2.6.17'.
+of the Linux kernel is named 'linux-2.6.22.18'.
 
 Apply the patches found in the series file to the Linux kernel
 as exactly in this order.  If conflicts arrise, then it is
@@ -235,38 +235,41 @@ more examples for patching kernel and the quilt handling.
 
 For example:
     ~/# cd PathToColinux/patch
-    ~/PathToColinux/patch# cat `cat series-2.6.17` > /tmp/sumary.patch
+    ~/PathToColinux/patch# cat `cat series-2.6.22.18` > /tmp/sumary.patch
     ~/PathToColinux/patch# cd
-    ~/# wget http://www.kernel.org/pub/linux/kernel/2.6/linux-2.6.17.tar.bz2
-    ~/# bunzip2 -dc linux-2.6.17.tar.bz2 | tar x
-    ~/# cd linux-2.6.17
-    ~/linux-2.6.17# patch -p1 < /tmp/sumary.patch
-    ~/linux-2.6.17# rm /tmp/sumary.patch
+    ~/# wget http://www.kernel.org/pub/linux/kernel/v2.6/linux-2.6.22.18.tar.bz2
+    ~/# bunzip2 -dc linux-2.6.22.18.tar.bz2 | tar x
+    ~/# cd linux-2.6.22.18
+    ~/linux-2.6.22.18# patch -p1 < /tmp/sumary.patch
+    ~/linux-2.6.22.18# rm /tmp/sumary.patch
 
 The coLinux package is supplied with a premaid Linux kernel
 configuration file. Copy it to your kernel tree:
 
-    ~/linux-2.6.17# cp PathToColinux/conf/linux-2.6.17-config .config
+    ~/linux-2.6.22.18# cp PathToColinux/conf/linux-2.6.22.18-config .config
 
 Append coLinux version information to kernel version name:
-    ~/linux-2.6.17# echo "-co-0.8.0" > localversion-cooperative
+    ~/linux-2.6.22.18# echo "-co-private" > localversion-cooperative
 
 Update config and build vmlinux:
-    ~/linux-2.6.17# make oldconfig
-    ~/linux-2.6.17# make vmlinux
+    ~/linux-2.6.22.18# make oldconfig
+    ~/linux-2.6.22.18# make vmlinux
 
 Module build and install:
-    ~/linux-2.6.17# make modules
-    ~/linux-2.6.17# su -c "make modules_install"
+    ~/linux-2.6.22.18# make modules
+    ~/linux-2.6.22.18# sudo make modules_install
 
 
 4.3 Testing new kernel builds
 
-Then test to run this unchanged kernel with your daemons.
+Backup the current file "vmlinux" from coLinux install directory and copy
+the new file from kernel build tree to the coLinux install directory.
 
-Be sure to save all your work and the disk cache, before you run your
-new kernel. On windows, only a reboot save the disk cache. I suggest
-you reboot windows _before_ you start the new kernel!
+Than test to run this unchanged kernel with your daemons.
+
+Be sure to save all your work and the disk cache, before you run your new
+kernel first time. On windows, only a reboot save the disk cache. I suggest
+you, reboot windows _before_ you start the new kernel!
 
 After these steps you can modify kernel config or add some special patches
 and rebuild your special kernel.
@@ -306,7 +309,7 @@ options and get things set properly - so make (and use) both types :( .
 
 When I built gconf it seemed unable to alter _some_ features (that were
 NOT disabled) but did work to alter other features. Maybe something is
-not working with the linux-2.6.17 kernel's version of gconf. With gconf
+not working with the linux-2.6.22.18 kernel's version of gconf. With gconf
 when I changed the setting for "show all options" the screen did not
 update immediately, I needed to click a "screen-layout-button" and then
 go back to the prior layout to refresh the screen. This does NOT happen
@@ -322,7 +325,7 @@ system.
 Now run "make vmlinux modules" in the kernel source again and test it.
 
 Save the file ".config" as your new default config in coLinux source tree
-as conf/linux-2.6.17-config.
+as conf/linux-2.6.22.18-config.
 
 
 4.5 Add private kernel patches
@@ -343,7 +346,7 @@ end.  Better way is, to use "quilt import" for your patch files.
 
 Run the "make oldconfig", answer for the new devices with the right option.
 If you are unshure, use 'N'.  Save the file ".config" as your new default
-config in coLinux source conf/linux-2.6.17-config.
+config in coLinux source conf/linux-2.6.22.18-config.
 
 Run "make vmlinux modules" and check the new nernel.
 
@@ -383,8 +386,8 @@ This needs a Compiler, devel-libraries and a lot of tools:
 (Versions from my installation. Others works also, ./configure checks it.)
     bison-1.75		need by binutils (yacc 91.7.30 have error YYEMPTY)
     flex-2.5.4		need by binutils (arlex.l: Permission denied)
-    gnu/gcc 3.4.5	for building guest kernel
-    binutils 2.16.91	for building guest kernel
+    gnu/gcc 4.1.2	for building guest kernel
+    binutils 2.17.50	for building guest kernel
     make-3.80
     module-init-tools-0.9.14
     patch-2.5.9
@@ -397,18 +400,12 @@ This needs a Compiler, devel-libraries and a lot of tools:
     ncurses-devel
     ... and many more devel packets ...
 
-Create a new directory, extract coLinux source in this directory, set
-scripts executable and ran the download script in "bin" directory.
+Create a new directory, extract coLinux source in this directory.
 
     mkdir $HOME/colinux-devel
     cd $HOME/colinux-devel
-    tar xzf colinux-20061210.tar.gz
-    cd colinux-20061210/bin
-    chmod +x *.sh
-    ./build-all.sh --download-only
+    tar xzf colinux-20080302.tar.gz
     
-Files will be downloaded into directory $HOME/colinux-devel/download.
-
 
 5.2.2 Running the compiling script
 
@@ -435,7 +432,6 @@ The build process based on build-all works completly at top-level
 directory colinux-devel. The cross-compiler was also installed in users
 directory (not system wide). We never need root rights for installing
 headers, libs or programs.
-
 
 After Downloading a new version of coLinux source, should only extract source
 at same top level directory and run the last scripts build-kernel.sh and
@@ -474,34 +470,34 @@ files and installing or update the coLinux driver with these commands:
 
 Source tree before building, after download:
 /colinux-devel
-    +-- colinux-20061210/
+    +-- colinux-20080302/
     |	+-- bin/
     |	|   +-- build-all.sh			(Compile for Win32,
     |	|   ...					 download missing files)
     |	+-- src/
     |	... ...
     +-- download/
-        +-- binutils-2.16.91-20060119-1-src.tar.gz
-        +-- colinux-20061210.tar.gz
+        +-- binutils-2.17.50-20070129-1-src.tar.gz
+        +-- colinux-20080302.tar.gz
         +-- fltk-1.1.6-source.tar.bz2
-        +-- gcc-core-3.4.5-20060117-1-src.tar.gz
-        +-- gcc-g++-3.4.5-20060117-1-src.tar.gz
+        +-- gcc-core-4.1.2.tar.bz2
+        +-- gcc-g++-4.1.2.tar.bz2
         +-- linux-2.x.y.tar.bz2			(version of coLinux kernel)
-        +-- mingw-runtime-3.9.tar.gz
-        +-- w32api-3.5-src.tar.gz
-        +-- w32api-3.5.tar.gz
-        +-- wpdpack_3_1.zip
+        +-- mingw-runtime-3.11.tar.gz
+        +-- w32api-3.11-src.tar.gz
+        +-- w32api-3.11.tar.gz
+        +-- 4.0.1-WpdPack.zip
 
 
 Source tree after building cross compiler and coLinux binaries:
 /colinux-devel					$USER_TOPDIR
-    +-- colinux-20061210/
+    +-- colinux-20080302/
     |   ... Colinux sources
     +-- build/					$BUILD_DIR
-    |   +-- binutils-2.16.91-20060119-1/	(cross working dirs,
-    |   +-- fltk-1.1.4/				 deleted after build)
-    |   +-- gcc-3.4.5-20060117-1/
-    |   +-- w32api-3.5/
+    |   +-- binutils-2.17.50-20070129-1/	(cross working dirs,
+    |   +-- fltk-1.1.6/				 deleted after build)
+    |   +-- gcc-4.1.2/
+    |   +-- w32api-3.11/
     |   +-- wpdpack/
     |   +-- linux-2.x.y-source/			$COLINUX_TARGET_KERNEL_SOURCE
     |   |   ... kernel sources
@@ -510,21 +506,21 @@ Source tree after building cross compiler and coLinux binaries:
     |       +--_install/                        $COLINUX_TARGET_MODULE_PATH
     |          +-- lib
     |              +-- modules
-    |                  +-- 2.x.y-co-0.8.0/
+    |                  +-- 2.x.y-co-0.7.x/
     |                      +-- kernel/
     |                      |   +-- ... Some modules.ko ...
     |                      +-- modules.dep
     +-- dist/					$COLINUX_INSTALL_DIR
-    |   +-- daemons-0.8.0.zip			(Binaries for target)
+    |   +-- daemons-0.7.x.zip			(Binaries for target)
     |   |   +-- colinux-console-fltk.exe
     |   |   +-- colinux-console-nt.exe
     |   |   +-- colinux-daemon.exe
     |   |   +-- colinux-net-daemon.exe
     |   |   +-- colinux-*.exe			(Some more coLinux daemons)
     |   |   +-- linux.sys			(Windows coLinux driver)
-    |   +-- vmlinux-0.8.0.zip
+    |   +-- vmlinux-0.7.x.zip
     |   |   +-- vmlinux				(kernel)
-    |   +-- modules-2.x.y-co-0.8.0.tgz		(Modules for target kernel)
+    |   +-- modules-2.x.y-co-0.7.x.tgz		(Modules for target kernel)
     +-- download/				$SOURCE_DIR
     |   ... Source files ...			(source store here)
     +-- log/					$COLINUX_BUILD_LOG
@@ -569,10 +565,10 @@ For building and runnning coLinux on Linux you need:
 1. Tree or headers of the designated host kernel available, in order to build 
    the kernel module (colinux.ko).
    Currently works only with host kernel 2.6.x,
-   tested up to 2.6.8.1, 2.6.10 - 2.6.18.
-   2.6.19 as host kernel is not usable.
-   Host kernel should not set CONFIG_REGPARM, coLinux can't run there.
-   >=2.6.20: "-mregparm=3" in arch/i386/Makefile is badly idea for coLinux.
+   tested up to 2.6.8.1, 2.6.10 - 2.6.18, 2.6.22.
+   Host kernel with CONFIG_REGPARM is usable since coLinux 0.7.2.
+   Kernel compiler of host must match the ABI.
+   Host with 64bit can't compile the module currently.
 2. patched fltk-1.1.6 (see patch directory) installed in the 
    system (./configure ; make ; su -c "make install")
    You can also install this version under your HOME (see below).
@@ -606,6 +602,11 @@ of the driver is more simple.
 
 You should run coLinux in a graphic environment, KDE, Gnome or after 'startx'.
 'xhost +' allows root (su) to use your user desktop (access control disabled).
+
+For Debugging on module loading before colinux-debug-daemon have access,
+add a "debug_misc=..." as module parameter, for example
+
+    insmod colinux.ko debug_misc=31
 
 PATH=.:$PATH is needed, if the executables aren't installed in your e.g 
 /usr/local/bin or elsewhere in $PATH.
@@ -659,14 +660,16 @@ Tips for cleanup the image:
 
 Final clean and resize the image:
 - You should have an image file, named "image.old" here
-- Create an new empty file, use your favorite size as count.
-  This is the best to compress it very small.
+- Create an new empty file.  This is the best to compress it very small.
+  Use your favorite size as count. Blocksize is 1MB, the count=1024 in
+  the example creates a file with size of 1GB. Increase the count for
+  bigger images.
 
-	dd if=/dev/zero of=/tmp/image.new bs=1k count=1024k
+	dd if=/dev/zero of=/tmp/image.new bs=1M count=1024
 
-  For coLinux version >= 0.7.1 the image files image.new can live on a "cofs"
+  For coLinux version >= 0.7.1 the old and new image files can live on "cofs"
   mounted file system.  That means, you can create the new image directly in
-  your Windows (... of=/mmt/cofs-Windows/image.new ...).
+  your Windows filesystem (... of=/mmt/cofs-Windows/image.new ...).
 
 - Create a filesystem on the new file
 

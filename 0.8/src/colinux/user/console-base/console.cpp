@@ -143,19 +143,13 @@ co_rc_t console_window_t::send_ctrl_alt_del()
 
 co_rc_t console_window_t::start()
 {
-	co_rc_t rc;
-
 	widget = co_console_widget_create();
 	if (!widget)
 		return CO_RC(ERROR);
 
 	widget->title("Console - [ONLINE] - [To Exit, Press Window+Alt Keys]");
 
-	rc = widget->set_window(this);
-	if (!CO_OK(rc))
-		return rc;
-
-	log("Coopeartive Linux console started\n");
+	log("Cooperative Linux console started\n");
 
 	if (start_parameters.attach_id != CO_INVALID_ID)
 		instance_id = start_parameters.attach_id;
@@ -216,6 +210,10 @@ co_rc_t console_window_t::attach()
 		return rc;
 
 	widget->set_console(console);
+
+	rc = widget->set_window(this);
+	if (!CO_OK(rc))
+		return rc;
 
 	widget->redraw();
 	widget->title("Console - Cooperative Linux - [To Exit, Press Window+Alt Keys]");
