@@ -703,7 +703,7 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	if (!rename_info)
 		return CO_RC(OUT_OF_MEMORY);
 
-	rc = co_os_file_open(filename, &handle, FILE_READ_DATA | FILE_WRITE_DATA);
+	rc = co_os_file_open(filename, &handle, FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES);
 	if (!CO_OK(rc))
 		goto error;
 
