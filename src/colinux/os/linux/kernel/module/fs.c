@@ -58,7 +58,7 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	return CO_RC(ERROR);
 }
 
-co_rc_t co_os_file_mknod(char *filename)
+co_rc_t co_os_file_mknod(co_filesystem_t *filesystem, char *filename, unsigned long mode)
 {
 	/* TODO */
 	return CO_RC(ERROR);

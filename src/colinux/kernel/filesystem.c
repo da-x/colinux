@@ -210,7 +210,7 @@ static co_rc_t inode_mknod(co_filesystem_t *filesystem, co_inode_t *dir, unsigne
 	co_rc_t rc;
 
 	attr->size = 0;
-	attr->mode = filesystem->file_mode;
+	attr->mode = mode & filesystem->file_mode;
 	attr->nlink = 1;
 	attr->uid = filesystem->uid;
 	attr->gid = filesystem->gid;
@@ -774,7 +774,7 @@ static co_rc_t flat_mode_inode_mknod(co_filesystem_t *filesystem, co_inode_t *in
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_os_file_mknod(filename);
+	rc = co_os_file_mknod(filesystem, filename, mode);
 	co_os_free(filename);
 
 	return rc;

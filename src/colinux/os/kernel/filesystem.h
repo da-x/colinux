@@ -34,7 +34,7 @@ extern co_rc_t co_os_file_unlink(char *filename);
 extern co_rc_t co_os_file_rmdir(char *filename);
 extern co_rc_t co_os_file_mkdir(char *dirname);
 extern co_rc_t co_os_file_rename(char *filename, char *dest_filename);
-extern co_rc_t co_os_file_mknod(char *filename);
+extern co_rc_t co_os_file_mknod(co_filesystem_t *filesystem, char *filename, unsigned long mode);
 extern co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names);
 extern co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *statfs);
 

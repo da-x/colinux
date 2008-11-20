@@ -732,13 +732,23 @@ error:
 	return rc;
 }
 
-co_rc_t co_os_file_mknod(char *filename)
+co_rc_t co_os_file_mknod(co_filesystem_t *filesystem, char *filename, unsigned long mode)
 {
 	co_rc_t rc;
 	HANDLE handle;
+	ULONG FileAttributes = FILE_ATTRIBUTE_NORMAL;
+
+	if (!(filesystem->flags & COFS_MOUNT_NOATTRIB)) {
+		if (!(mode & FUSE_S_IRUSR))
+			FileAttributes |= FILE_ATTRIBUTE_HIDDEN;
+		if (!(mode & FUSE_S_IWUSR))
+			FileAttributes |= FILE_ATTRIBUTE_READONLY;
+		if (mode & FUSE_S_IXUSR)
+			FileAttributes |= FILE_ATTRIBUTE_SYSTEM;
+	}
 
 	rc = co_os_file_create(filename, &handle, FILE_READ_DATA | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE,
-			       FILE_ATTRIBUTE_NORMAL, FILE_CREATE, FILE_SYNCHRONOUS_IO_NONALERT);
+			       FileAttributes, FILE_CREATE, FILE_SYNCHRONOUS_IO_NONALERT);
 
 	if (CO_OK(rc)) {
 		co_os_file_close(handle);
