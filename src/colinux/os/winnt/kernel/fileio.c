@@ -326,12 +326,9 @@ co_rc_t co_os_change_file_information(char *filename,
 	HANDLE handle;
 	co_rc_t rc;
 
-	rc = co_os_file_open(filename, &handle, FILE_READ_DATA | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES);
-	if (!CO_OK(rc)) {
-		rc = co_os_file_open(filename, &handle, FILE_WRITE_ATTRIBUTES);
-		if (!CO_OK(rc))
-			return rc;
-	}
+	rc = co_os_file_open(filename, &handle, FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES);
+	if (!CO_OK(rc))
+		return rc;
 
 	status = ZwQueryInformationFile(handle, io_status, buffer, len, info_class);
 	if (status == STATUS_SUCCESS) {
