@@ -209,7 +209,7 @@ Common Problems
 	"cat /proc/net/dev" shows all current networks names in coLinux.
 
   Additional problems not know at time of release are typically
-documented on the Wiki (http://wiki.colinux.org/), look
+documented on the Wiki (http://colinux.wikia.com/), look
 there for known problems.  If your problem isn't listed, report on the
 colinux-devel@sourceforge.net mailing list or file an Bug report at
 http://www.sourceforge.net/projects/colinux
@@ -244,7 +244,7 @@ bugs, etc.
 	WIKI
 		The community has contributed wonderful and helpful
 		information on numerous topics, which is available at
-		http://wiki.colinux.org/
+		http://colinux.wikia.com/
 		(You can contribute here too!)
 
 	Mailing Lists
