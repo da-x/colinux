@@ -496,10 +496,32 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 	LARGE_INTEGER ChangeTime;
 	LARGE_INTEGER EndOfFile;
 	ULONG FileAttributes;
- 
+
+	attr->uid = 0;
+	attr->gid = 0;
+	attr->rdev = 0;
+	attr->_dummy = 0;
+	attr->nlink = 1;
+
 	len = co_strlen(fullname);
 	len1 = len;
-	
+
+	/* Hack: WinNT detects "C:\" not as directory! */
+	if (len >= 3 && fullname[len-1] == ':') {
+		co_debug_lvl(filesystem, 10, "Root dir: '%s'", fullname);
+
+		attr->atime = \
+		attr->mtime = \
+		attr->ctime = co_os_get_time();
+
+		attr->mode = FUSE_S_IFDIR | 0777;
+
+		attr->size = 0;
+		attr->blocks = 0;
+
+		return CO_RC(OK);
+	}
+
 	while (len > 0 && fullname[len-1] != '\\') {
 		if (fullname[len-1] == '?' || fullname[len-1] == '*') {
 			co_debug_lvl(filesystem, 5, "error: Wildcard in filename ('%s')", fullname);
@@ -576,11 +598,6 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 		FileAttributes = entry_buffer.entry.FileAttributes;
 	}
 
-        attr->uid = 0;
-        attr->gid = 0;
-        attr->rdev = 0;
-        attr->_dummy = 0;
- 
         attr->atime = windows_time_to_unix_time(LastAccessTime);
         attr->mtime = windows_time_to_unix_time(LastWriteTime);
         attr->ctime = windows_time_to_unix_time(ChangeTime);
@@ -589,9 +606,7 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 	#define FUSE_S_IW (FUSE_S_IWUSR | FUSE_S_IWGRP | FUSE_S_IWOTH)
 	#define FUSE_S_IX (FUSE_S_IXUSR | FUSE_S_IXGRP | FUSE_S_IXOTH)
 
-	/* Hack: WinNT detects "C:\" not as directory! */
-	if ((FileAttributes & FILE_ATTRIBUTE_DIRECTORY) ||
-	    (len1 >= 3 && len == len1 && fullname [len1-1] == '\\'))
+	if (FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 		attr->mode = FUSE_S_IFDIR
 			   | ((FileAttributes & FILE_ATTRIBUTE_HIDDEN)   ? 0 : FUSE_S_IR)
 			   | ((FileAttributes & FILE_ATTRIBUTE_READONLY) ? 0 : FUSE_S_IW)
@@ -602,7 +617,6 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 			   | ((FileAttributes & FILE_ATTRIBUTE_READONLY) ? 0 : FUSE_S_IW)
 			   | ((FileAttributes & FILE_ATTRIBUTE_SYSTEM)   ? FUSE_S_IX : 0);
 
-	attr->nlink = 1;
         attr->size = EndOfFile.QuadPart;
         attr->blocks = (EndOfFile.QuadPart + ((1<<10)-1)) >> 10;
 
