@@ -313,6 +313,7 @@ co_rc_t co_os_file_block_async_read_write(co_monitor_t *monitor,
 
 typedef void (*co_os_change_file_info_func_t)(void *data, VOID *buffer, ULONG len);
 
+static
 co_rc_t co_os_change_file_information(char *filename,
 				      IO_STATUS_BLOCK *io_status,
 				      VOID *buffer,
@@ -345,6 +346,7 @@ co_rc_t co_os_change_file_information(char *filename,
 	return co_status_convert(status);
 }
 
+static
 co_rc_t co_os_set_file_information(char *filename,
 				   IO_STATUS_BLOCK *io_status,
 				   VOID *buffer,
