@@ -269,8 +269,20 @@ static co_rc_t inode_rename(co_filesystem_t *filesystem, co_inode_t *dir,
 	rc = filesystem->ops->inode_rename(filesystem, dir, new_dir_inode, oldname, newname);
 	if (CO_OK(rc)) {
 		co_inode_t *old_inode = find_inode(filesystem, dir, oldname);
-		if (old_inode)
+		if (old_inode) {
+			int size;
+
+			// This moves the file from one dir to an other
 			reparent_inode(old_inode, new_dir_inode);
+
+			// This renames the file on the same inode number
+			co_os_free(old_inode->name);
+			size = co_strlen(newname);
+			old_inode->name = co_os_malloc(size);
+			if (!old_inode->name)
+				return CO_RC(OUT_OF_MEMORY);
+			co_memcpy(old_inode->name, newname, size);
+		}
 	}
 	return rc;
 }

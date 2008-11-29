@@ -242,7 +242,7 @@ Index: linux-2.6.22-source/fs/cofusefs/dir.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/fs/cofusefs/dir.c
-@@ -0,0 +1,819 @@
+@@ -0,0 +1,818 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
@@ -569,7 +569,6 @@ Index: linux-2.6.22-source/fs/cofusefs/dir.c
 +	request_send(fc, &in, &out);
 +
 +	if (!out.h.error) {
-+		d_move(oldent, newent);
 +		uncache_dir(olddir);
 +		if (olddir != newdir)
 +			uncache_dir(newdir);
