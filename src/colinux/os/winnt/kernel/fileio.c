@@ -332,9 +332,7 @@ co_rc_t co_os_change_file_information(char *filename,
 
 	status = ZwQueryInformationFile(handle, io_status, buffer, len, info_class);
 	if (status == STATUS_SUCCESS) {
-		if (func) {
-			func(data, buffer, len);
-		}
+		func(data, buffer, len);
 		status = ZwSetInformationFile(handle, io_status, buffer, len, info_class);
 	}
 
@@ -559,7 +557,12 @@ static void remove_read_only_func(void *data, VOID *buffer, ULONG len)
 {
 	FILE_BASIC_INFORMATION *fbi = (FILE_BASIC_INFORMATION *)buffer;
 
+	if (!(fbi->FileAttributes & FILE_ATTRIBUTE_READONLY))
+		return; /* not changed */
+
 	fbi->FileAttributes &= ~FILE_ATTRIBUTE_READONLY;
+
+	*((int*)data) = 1; /* Attrib changed */
 }
 
 co_rc_t co_os_file_unlink(char *filename)
@@ -567,7 +570,6 @@ co_rc_t co_os_file_unlink(char *filename)
 	OBJECT_ATTRIBUTES ObjectAttributes;
 	UNICODE_STRING unipath;
 	NTSTATUS status;
-	bool_t tried_read_only_removal = PFALSE;
 	co_rc_t rc;
 
 	rc = co_winnt_utf8_to_unicode(filename, &unipath);
@@ -580,28 +582,30 @@ co_rc_t co_os_file_unlink(char *filename)
 				   NULL,
 				   NULL);
 
-retry:
 	status = ZwDeleteFile(&ObjectAttributes);
-	if (status != STATUS_SUCCESS) {
-		if (!tried_read_only_removal) {
-			FILE_BASIC_INFORMATION fbi;
-			IO_STATUS_BLOCK io_status;
-			co_rc_t rc;
+
+	// Remove readonly attribute and try again
+	if (status != STATUS_SUCCESS && status != STATUS_OBJECT_NAME_NOT_FOUND) {
+		FILE_BASIC_INFORMATION fbi;
+		IO_STATUS_BLOCK io_status;
+		int changed = 0;
 			
-			rc = co_os_change_file_information(filename, &io_status, &fbi,
-							   sizeof(fbi), FileBasicInformation,
-							   remove_read_only_func,
-							   NULL);
+		rc = co_os_change_file_information(filename, &io_status,
+						   &fbi, sizeof(fbi),
+						   FileBasicInformation,
+						   remove_read_only_func,
+						   &changed);
 
-			tried_read_only_removal = PTRUE;
-			if (CO_RC(OK))
-				goto retry;
+		if (CO_OK(rc) && changed) {
+			co_debug_lvl(filesystem, 10, "status %x, ZwDeleteFile('%s') try again", (int)status, filename);
+			status = ZwDeleteFile(&ObjectAttributes);
 		}
-
-		co_debug_lvl(filesystem, 5, "error %x ZwDeleteFile('%s')", (int)status, filename);
 	}
 
 	co_winnt_free_unicode(&unipath);
+
+	if (status != STATUS_SUCCESS)
+		co_debug_lvl(filesystem, 5, "error %x ZwDeleteFile('%s')", (int)status, filename);
 
 	return co_status_convert(status);
 }
