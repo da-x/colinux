@@ -277,7 +277,7 @@ static co_rc_t inode_rename(co_filesystem_t *filesystem, co_inode_t *dir,
 
 			// This renames the file on the same inode number
 			co_os_free(old_inode->name);
-			size = co_strlen(newname);
+			size = co_strlen(newname) + 1;
 			old_inode->name = co_os_malloc(size);
 			if (!old_inode->name)
 				return CO_RC(OUT_OF_MEMORY);
