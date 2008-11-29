@@ -656,11 +656,32 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	rc = co_utf8_mbstowcs(rename_info->FileName, dest_filename, char_count + 1);
 	if (!CO_OK(rc))
 		goto error2;
-	
+
 	co_debug_lvl(filesystem, 10, "rename of '%s' to '%s'", filename, dest_filename);
 
 	status = ZwSetInformationFile(handle, &io_status, rename_info, block_size,
 				      FileRenameInformation);
+
+	if (status == STATUS_ACCESS_DENIED) {
+		FILE_BASIC_INFORMATION fbi;
+		co_rc_t rc;
+		int changed = 0;
+			
+		// Remove readonly attribute and try again
+		rc = co_os_change_file_information(dest_filename, &io_status,
+						   &fbi, sizeof(fbi),
+						   FileBasicInformation,
+						   remove_read_only_func,
+						   &changed);
+
+		if (CO_OK(rc) && changed) {
+			co_debug_lvl(filesystem, 5, "status %x, rename %s,%s try again", (int)status, filename, dest_filename);
+			status = ZwSetInformationFile(handle, &io_status,
+						rename_info, block_size,
+						FileRenameInformation);
+		}
+	}
+
 	rc = co_status_convert(status);
 
 	if (!CO_OK(rc))

@@ -1,5 +1,6 @@
 * Version 0.8.0
   * New: Added "cocon=COLSxROWS" to use console size, other than 80x25.
+  * New: cofs rename allows to overwrite files with ReadOnly attrib.
   * New: cofs supports flat file modes "rwx" for owner.  Mount option
     "noattrib" disables these attribute mapping for older compatibility.
   * Use "setcobd=async" to enable asynchronous mode for cobd devices.
