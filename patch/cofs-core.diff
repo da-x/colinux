@@ -242,7 +242,7 @@ Index: linux-2.6.22-source/fs/cofusefs/dir.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/fs/cofusefs/dir.c
-@@ -0,0 +1,818 @@
+@@ -0,0 +1,817 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
@@ -379,7 +379,7 @@ Index: linux-2.6.22-source/fs/cofusefs/dir.c
 +{
 +	struct dentry *entry = d_find_alias(dir);
 +	if (!entry)
-+		dir->i_nlink = 0;
++		clear_nlink(dir);
 +	else {
 +		entry->d_time = jiffies - FUSE_REVALIDATE_TIME - 1;
 +		dput(entry);
@@ -524,11 +524,10 @@ Index: linux-2.6.22-source/fs/cofusefs/dir.c
 +{
 +	int err = fuse_remove(dir, entry, FUSE_UNLINK);
 +	if(!err) {
-+		/* FIXME: the new i_nlink could be returned by the
-+                   unlink operation */
-+		err = fuse_do_getattr(entry->d_inode);
-+		if(err == -ENOENT)
-+			entry->d_inode->i_nlink = 0;
++		/* Set nlink to zero so the inode can be cleared, if
++                   the inode does have more links this will be
++                   discovered at the next lookup/getattr */
++		clear_nlink(entry->d_inode);
 +
 +		uncache_dir(dir);
 +		return 0;
@@ -540,7 +539,7 @@ Index: linux-2.6.22-source/fs/cofusefs/dir.c
 +{
 +	int err = fuse_remove(dir, entry, FUSE_RMDIR);
 +	if(!err) {
-+		entry->d_inode->i_nlink = 0;
++		clear_nlink(entry->d_inode);
 +		uncache_dir(dir);
 +	}
 +	return err;
