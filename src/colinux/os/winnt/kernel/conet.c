@@ -375,34 +375,23 @@ bool_t co_conet_proto_filter_packet(
 {
 	PETHER_HDR		pEthHdr = (PETHER_HDR)HeaderBuffer;
 
-	if ( co_conet_ntohs(pEthHdr->h_proto) == ETH_P_IP ) {
-		if ( RtlCompareMemory(pEthHdr->h_dest, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) == 6 ) {
-			conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x broadcast",
-				pEthHdr->h_dest[0], pEthHdr->h_dest[1], pEthHdr->h_dest[2],
-				pEthHdr->h_dest[3], pEthHdr->h_dest[4], pEthHdr->h_dest[5]);
-			return TRUE;
-		} else if ( RtlCompareMemory(pEthHdr->h_dest, adapter->macaddr, 6) == 6 ) {
-			conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x MAC match",
-				pEthHdr->h_dest[0], pEthHdr->h_dest[1], pEthHdr->h_dest[2],
-				pEthHdr->h_dest[3], pEthHdr->h_dest[4], pEthHdr->h_dest[5]);
-			return TRUE;
-		} else {
-			conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x not match",
-				pEthHdr->h_dest[0], pEthHdr->h_dest[1], pEthHdr->h_dest[2],
-				pEthHdr->h_dest[3], pEthHdr->h_dest[4], pEthHdr->h_dest[5]);
-			return FALSE;
-		}
-	}
-	else if ( co_conet_ntohs(pEthHdr->h_proto) == ETH_P_ARP ) {
-		conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x ARP packet",
+	if ( RtlCompareMemory(pEthHdr->h_dest, adapter->macaddr, 6) == 6 ) {
+		/* ether dst mac */
+		conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x MAC match",
+			pEthHdr->h_dest[0], pEthHdr->h_dest[1], pEthHdr->h_dest[2],
+			pEthHdr->h_dest[3], pEthHdr->h_dest[4], pEthHdr->h_dest[5]);
+		return TRUE;
+	} else
+	if ( RtlCompareMemory(pEthHdr->h_dest, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) == 6 ) {
+		/* ether broadcast */
+		conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x broadcast",
 			pEthHdr->h_dest[0], pEthHdr->h_dest[1], pEthHdr->h_dest[2],
 			pEthHdr->h_dest[3], pEthHdr->h_dest[4], pEthHdr->h_dest[5]);
 		return TRUE;
 	}
-	else {
-		conet_debug("not IP or ARP protocol");
-		return FALSE;
-	}
+
+	conet_debug("MAC not match and no broadcast");
+	return FALSE;
 }
 
 NDIS_STATUS DDKAPI co_conet_proto_receive(

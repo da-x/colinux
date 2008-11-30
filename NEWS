@@ -6,6 +6,9 @@
   * Use "setcobd=async" to enable asynchronous mode for cobd devices.
   * Bug #2152550: cofs atime and mtime was swapped on time set.
   * Bug #2176188: File sync wrong on cofs, command after mv/rename fails.
+  * Bug #2357494,#2365031: ndis-bridge was not working with PPPoE, AoE
+    and others types as IP and ARP packets. Type filter removed now.
+    New filter rule is: (ether dst mac) or (ether broadcast) 
 
   Console and daemons:
   * New network "ndis-bridge" works in kernel mode and is the faster
