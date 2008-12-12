@@ -410,7 +410,6 @@ static NDIS_STATUS DDKAPI co_conet_proto_receive(
 			return NDIS_STATUS_SUCCESS;
 		}
 
-		conet_debug("indicate packet to colinux");
 		message->message.from = CO_MODULE_CONET0 + adapter->conet_unit;
 		message->message.to = CO_MODULE_LINUX;
 		message->message.priority = CO_PRIORITY_DISCARDABLE;
@@ -424,7 +423,6 @@ static NDIS_STATUS DDKAPI co_conet_proto_receive(
 
 		conet_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
 			adapter->conet_unit);
-		conet_debug("type CO_MESSAGE_TYPE_OTHER, device CO_DEVICE_NETWORK");
 
 		co_conet_transfer_message(adapter, (co_message_t *)message);
 
@@ -610,11 +608,8 @@ static void DDKAPI co_conet_proto_status_complete(
 
 	conet_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
 		adapter->conet_unit);
-	conet_debug("type CO_MESSAGE_TYPE_STRING, device CO_DEVICE_NETWORK");
 
 	co_conet_transfer_message(adapter, (co_message_t *)message);
-
-	conet_debug("co_conet_transfer_message complete");
 
 	conet_debug("leave: adapter = %p, notify message to colinux", adapter);
 }
@@ -671,7 +666,6 @@ static void DDKAPI co_conet_proto_transfer_complete(
 
 			conet_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
 				adapter->conet_unit);
-			conet_debug("type CO_MESSAGE_TYPE_OTHER, device CO_DEVICE_NETWORK");
 
 			co_conet_transfer_message(adapter, (co_message_t *)message);
 
@@ -749,7 +743,6 @@ static int DDKAPI co_conet_proto_receive_packet(
 
 			conet_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
 				adapter->conet_unit);
-			conet_debug("type CO_MESSAGE_TYPE_OTHER, device CO_DEVICE_NETWORK");
 
 			co_conet_transfer_message(adapter, (co_message_t *)message);
 			conet_debug("co_conet_transfer_message complete");
