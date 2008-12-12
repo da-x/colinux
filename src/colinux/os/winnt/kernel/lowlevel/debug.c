@@ -41,7 +41,7 @@ void co_debug_system(const char *fmt, ...)
 
 	va_start(ap, fmt);
 	co_vsnprintf(buf, sizeof(buf), fmt, ap);
-	DbgPrint("%s", buf);
+	DbgPrint("%s\n", buf);
 	va_end(ap);
 }
 
@@ -49,6 +49,6 @@ void co_debug_level_system(const char *module, co_debug_facility_t facility, int
 		    const char *filename, int line, const char *func, const char *text)
 {
 	/* Debug output to Dbgview.exe (www.sysinternals.com) */
-        DbgPrint("[m:%s f:%d l:%d %s:%d:%s] %s", module, facility, level, filename, line, func, text);
+        DbgPrint("[m:%s f:%d l:%d %s:%d:%s] %s\n", module, facility, level, filename, line, func, text);
 }
 #endif
