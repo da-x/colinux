@@ -1,4 +1,4 @@
-import sre, os
+import re, os
 from sets import Set as set
 from target import RawInput
 from lib import normal_path
@@ -16,7 +16,7 @@ def calc_deps(pathname):
         set_union = set()
         set_union.add(pathname)
         for line in open(pathname):
-            m = sre.match("# *include <([^>]+)>", line.strip())
+            m = re.match("# *include <([^>]+)>", line.strip())
             result_set = None
             if m:
                 included_path = m.groups(0)[0]
@@ -25,7 +25,7 @@ def calc_deps(pathname):
                     result_set = _recurse(combined_path)
                     result_set.add(combined_path)
             else:
-                m = sre.match("# *include \"([^>]+)\"", line.strip())
+                m = re.match("# *include \"([^>]+)\"", line.strip())
                 if m:
                     included_path = m.groups(0)[0]
                     included_path = normal_path(os.path.join(os.path.dirname(pathname), included_path))

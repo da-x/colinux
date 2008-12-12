@@ -1,8 +1,8 @@
-import sre, os
+import re, os
 
 class DefaultTarget(object):
     def __init__(self, regex):
-        self._regex = sre.compile(regex)
+        self._regex = re.compile(regex)
 
     def match(self, pathname):
         m = self._regex.match(pathname)

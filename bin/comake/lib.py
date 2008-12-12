@@ -1,4 +1,4 @@
-import sre, os
+import os
 
 def normal_path(path):
     parts = path.split(os.path.sep)

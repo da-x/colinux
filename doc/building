@@ -372,7 +372,7 @@ The coLinux console depends on:
   * FLTK (major version 1)
 
 Python build system
-  * Python interpreter 2.3 or grater
+  * Python interpreter 2.4 or grater
 
 
 5.2 For Microsoft Windows as host
@@ -391,7 +391,7 @@ This needs a Compiler, devel-libraries and a lot of tools:
     make-3.80
     module-init-tools-0.9.14
     patch-2.5.9
-    python2.3		for coLinux build system, need version 2.3+
+    python-2.4.4	for coLinux build system, needs version 2.4+
     texinfo-4.5		need by binutils
     unzip-5.50.0	extracting winapi source
     wget-1.8.2		download source files
