@@ -56,31 +56,25 @@ then
     exit 1
 fi
 
-# Create list with all labels (reverse sorted)
-$NM -r -n -C $LINUXSYS | uniq > $NMFILE
+# Create list with all labels (reverse sorted), remove ".text" and ".bss"
+$NM -r -n -t d -C $LINUXSYS | grep -v -e ' \.' | uniq > $NMFILE
 if [ ! -s $NMFILE ]
 then
     rm $NMFILE
     exit 1
 fi
 
-# Convert address into decimal
-( echo "ibase=16"; cut -d ' ' -f 1 < $NMFILE | tr [[:lower:]] [[:upper:]] ) | bc > $NMFILE.numbers
-cut -d ' ' -f 3 < $NMFILE > $NMFILE.names
-paste $NMFILE.numbers $NMFILE.names > $NMFILE.dec
-rm $NMFILE $NMFILE.numbers $NMFILE.names
-
 # Search start address and label name for given offset
 search_label()
 {
-    while read address name
+    while read address type name
     do
 	if [ $address -le $1 ]
 	then
 	    echo "$address $name"
 	    return
 	fi
-    done < $NMFILE.dec
+    done < $NMFILE
 }
 
 # Serach and replace all "linux+0x..." with label names and offsets
@@ -88,7 +82,7 @@ start=false
 sed -e 's/\r//' |\
 while read s1 s2 s3 s4 s5 name
 do
-    if [ "$s1" = "STACK_TEXT:" ]
+    if [ "$s1" = "STACK_TEXT:" -o "$s1" = "ChildEBP" ]
     then
 	start=true
     elif [ -z "$s1" ]
@@ -113,4 +107,4 @@ do
 done
 
 # Remove temp file
-rm $NMFILE.dec
+rm $NMFILE
