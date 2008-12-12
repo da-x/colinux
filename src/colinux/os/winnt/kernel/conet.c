@@ -31,39 +31,6 @@
 #endif
 #define conet_err_debug(fmt, args...) co_debug_lvl(network, 3, fmt, ## args )
 
-static inline USHORT
-co_conet_ntohs (
-	IN	USHORT		netshort
-	)
-{
-	return ((netshort & 0x00FF) << 8) | ((netshort & 0xFF00) >> 8) ;
-}
-
-static inline USHORT
-co_conet_htons (
-	IN	USHORT		hostshort
-	)
-{
-	return ((hostshort & 0x00FF) << 8) | ((hostshort & 0xFF00) >> 8) ;
-}
-
-static inline ULONG
-co_conet_ntohl (
-	IN	ULONG		netlong
-	)
-{
-	return ((netlong & 0xFF000000) >> 24) | ((netlong & 0x00FF0000) >> 8 ) |
-		((netlong & 0x0000FF00) << 8 ) |((netlong & 0x000000FF) << 24) ;
-}
-
-static inline ULONG
-co_conet_htonl (
-	IN	ULONG		hostlong
-	)
-{
-	return ((hostlong & 0xFF000000) >> 24) | ((hostlong & 0x00FF0000) >> 8 ) |
-		((hostlong & 0x0000FF00) << 8 ) | ((hostlong & 0x000000FF) << 24) ;
-}
 
 // missed NDIS event API
 static inline VOID NdisInitializeEvent(
