@@ -889,20 +889,20 @@ co_rc_t co_conet_register_protocol(co_monitor_t *monitor)
 	protoChar.MajorNdisVersion	      = 0x05;
 	protoChar.MinorNdisVersion	      = 0x00;
 	protoChar.Name                        = protoName;
-	protoChar.OpenAdapterCompleteHandler  = co_conet_proto_open_adapter_complete;
-	protoChar.CloseAdapterCompleteHandler = co_conet_proto_close_adapter_complete;
-	protoChar.SendCompleteHandler         = co_conet_proto_send_complete;
-	protoChar.TransferDataCompleteHandler = co_conet_proto_transfer_complete;
-	protoChar.ResetCompleteHandler        = co_conet_proto_reset_complete;
-	protoChar.RequestCompleteHandler      = co_conet_proto_request_complete;
-	protoChar.ReceiveHandler              = co_conet_proto_receive;
-	protoChar.ReceiveCompleteHandler      = co_conet_proto_receive_complete;
-	protoChar.StatusHandler               = co_conet_proto_status;
-	protoChar.StatusCompleteHandler       = co_conet_proto_status_complete;
-	protoChar.BindAdapterHandler          = co_conet_proto_bind_adapter;
-	protoChar.UnbindAdapterHandler        = co_conet_proto_unbind_adapter;
+	protoChar.OpenAdapterCompleteHandler  = co_conet_proto_open_adapter_complete;	/* PASSIVE_LEVEL */
+	protoChar.CloseAdapterCompleteHandler = co_conet_proto_close_adapter_complete;	/* PASSIVE_LEVEL */
+	protoChar.SendCompleteHandler         = co_conet_proto_send_complete;		/* DISPATCH_LEVEL */
+	protoChar.TransferDataCompleteHandler = co_conet_proto_transfer_complete;	/* DISPATCH_LEVEL */
+	protoChar.ResetCompleteHandler        = co_conet_proto_reset_complete;		/* <= DISPATCH_LEVEL */
+	protoChar.RequestCompleteHandler      = co_conet_proto_request_complete;	/* DISPATCH_LEVEL */
+	protoChar.ReceiveHandler              = co_conet_proto_receive;			/* DISPATCH_LEVEL */
+	protoChar.ReceiveCompleteHandler      = co_conet_proto_receive_complete;	/* DISPATCH_LEVEL */
+	protoChar.StatusHandler               = co_conet_proto_status;			/* DISPATCH_LEVEL */
+	protoChar.StatusCompleteHandler       = co_conet_proto_status_complete;		/* DISPATCH_LEVEL */
+	protoChar.BindAdapterHandler          = co_conet_proto_bind_adapter;		/* PASSIVE_LEVEL */
+	protoChar.UnbindAdapterHandler        = co_conet_proto_unbind_adapter;		/* PASSIVE_LEVEL */
 	protoChar.UnloadHandler               = NULL;
-	protoChar.ReceivePacketHandler        = co_conet_proto_receive_packet;
+	protoChar.ReceivePacketHandler        = co_conet_proto_receive_packet;		/* DISPATCH_LEVEL */
 	protoChar.PnPEventHandler             = co_conet_proto_pnp_handler;
 
 	co_debug("NdisRegisterProtocol %s, NdisVersion %d.%d",
