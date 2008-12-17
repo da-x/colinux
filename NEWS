@@ -30,7 +30,6 @@
   Updated libraries and tools:
   * mingw 3.14
   * w32api 3.11
-  * Python 2.4+
 
 * Version 0.7.3
   Bugfixes:
