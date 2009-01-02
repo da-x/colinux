@@ -57,7 +57,6 @@ static co_rc_t intern_monitor_block_request(co_monitor_t *cmon,
 		return CO_RC(ERROR);
 
 	switch (request->type) { 
-	case CO_BLOCK_ASYNC_OPEN:
 	case CO_BLOCK_OPEN: {
 		co_debug("cobd%d: open (count=%d)", index, dev->use_count);
 		if (dev->use_count >= 1) { 
@@ -93,7 +92,6 @@ static co_rc_t intern_monitor_block_request(co_monitor_t *cmon,
 	rc = (dev->service)(cmon, dev, request);
 
 	switch (request->type) { 
-	case CO_BLOCK_ASYNC_OPEN:
 	case CO_BLOCK_OPEN: {
 		if (CO_OK(rc)) {
 			co_debug("cobd%d: open success (count=%d)", index, dev->use_count);

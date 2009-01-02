@@ -19,29 +19,38 @@
 
 #include "fileio.h"
 
+static co_rc_t co_os_file_block_async_read(co_monitor_t *linuxvm, co_block_dev_t *dev,
+			      co_monitor_file_block_dev_t *fdev, co_block_request_t *request)
+{
+	request->async = PTRUE;
+	return co_os_file_block_async_read_write(linuxvm, (HANDLE)(fdev->sysdep),
+						request->offset, request->address,
+						request->size, PTRUE, dev->unit,
+						request->irq_request);
+}
+
+static co_rc_t co_os_file_block_async_write(co_monitor_t *linuxvm, co_block_dev_t *dev,
+			       co_monitor_file_block_dev_t *fdev, co_block_request_t *request)
+{
+	request->async = PTRUE;
+	return co_os_file_block_async_read_write(linuxvm, (HANDLE)(fdev->sysdep),
+						request->offset, request->address,
+						request->size, PFALSE, dev->unit,
+						request->irq_request);
+}
+
 static co_rc_t co_os_file_block_read(co_monitor_t *linuxvm, co_block_dev_t *dev, 
 			      co_monitor_file_block_dev_t *fdev, co_block_request_t *request)
 {
-	if (request->irq_request)
-		return co_os_file_block_async_read_write(linuxvm, (HANDLE)(fdev->sysdep),
-					   request->offset, request->address,
-					   request->size, PTRUE, dev->unit, request->irq_request);
-	else
-		return co_os_file_block_read_write(linuxvm, (HANDLE)(fdev->sysdep),
+	return co_os_file_block_read_write(linuxvm, (HANDLE)(fdev->sysdep),
 					   request->offset, request->address,
 					   request->size, PTRUE);
 }
 
-
 static co_rc_t co_os_file_block_write(co_monitor_t *linuxvm, co_block_dev_t *dev, 
 			       co_monitor_file_block_dev_t *fdev, co_block_request_t *request)
 {
-	if (request->irq_request)
-		return co_os_file_block_async_read_write(linuxvm, (HANDLE)(fdev->sysdep),
-					   request->offset, request->address,
-					   request->size, PFALSE, dev->unit, request->irq_request);
-	else
-		return co_os_file_block_read_write(linuxvm, (HANDLE)(fdev->sysdep),
+	return co_os_file_block_read_write(linuxvm, (HANDLE)(fdev->sysdep),
 					   request->offset, request->address,
 					   request->size, PFALSE);
 }
@@ -276,11 +285,18 @@ static co_rc_t co_os_file_block_close(co_monitor_file_block_dev_t *fdev)
 	return CO_RC(OK);
 }
 
+co_monitor_file_block_operations_t co_os_file_block_async_operations = {
+	.open = co_os_file_block_async_open,
+	.close = co_os_file_block_close,
+	.read = co_os_file_block_async_read,
+	.write = co_os_file_block_async_write,
+	.get_size = co_os_file_block_get_size,
+};
+
 co_monitor_file_block_operations_t co_os_file_block_default_operations = {
 	.open = co_os_file_block_open,
 	.close = co_os_file_block_close,
 	.read = co_os_file_block_read,
 	.write = co_os_file_block_write,
 	.get_size = co_os_file_block_get_size,
-	.async_open = co_os_file_block_async_open,
 };

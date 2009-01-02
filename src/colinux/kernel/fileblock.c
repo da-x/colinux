@@ -82,21 +82,6 @@ static co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 			request->disk_size = fdev->dev.size;
 
 		break;
-	}    
-
-	case CO_BLOCK_ASYNC_OPEN: {
-		if (fdev->state != CO_MONITOR_FILE_BLOCK_CLOSED) {
-			co_debug("monitor: cobd not closed!\n");
-			break;
-		}
-
-		co_debug("monitor: cobd opened (%s)\n", fdev->pathname);
-			
-		rc = fdev->op->async_open(cmon, fdev);
-		if (CO_OK(rc))
-			fdev->state = CO_MONITOR_FILE_BLOCK_OPENED;
-
-		break;
 	}
 
 	default:
@@ -107,13 +92,17 @@ static co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 	return rc;
 }
 
-co_rc_t co_monitor_file_block_init(co_monitor_file_block_dev_t *dev, 
+co_rc_t co_monitor_file_block_init(struct co_monitor *cmon,
+				   co_monitor_file_block_dev_t *dev,
 				   co_pathname_t *pathname)
 {
 	memset(dev, 0, sizeof(*dev));
 	memcpy(dev->pathname, pathname, sizeof(*pathname));
 
-	dev->op = &co_os_file_block_default_operations;
+	if (cmon->config.cobd_async_enable)
+		dev->op = &co_os_file_block_async_operations;
+	else
+		dev->op = &co_os_file_block_default_operations;
 	dev->state = CO_MONITOR_FILE_BLOCK_CLOSED;
 	dev->dev.service = co_monitor_file_block_service;
 
@@ -127,4 +116,3 @@ void co_monitor_file_block_shutdown(co_monitor_file_block_dev_t *dev)
 		dev->state = CO_MONITOR_FILE_BLOCK_CLOSED;
 	}
 }
-

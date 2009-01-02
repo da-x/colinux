@@ -89,8 +89,25 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 {
 	bool_t exists;
 	char *param;
+	char buf[16];
 	co_rc_t rc;
 	unsigned int index;
+
+	rc = co_cmdline_get_next_equality(cmdline, "setcobd", 0, NULL, 0,
+					  buf, sizeof(buf), &exists);
+	if (!CO_OK(rc))
+		return rc;
+
+	if (exists) {
+		if (strcmp(buf, "async") == 0) {
+			conf->cobd_async_enable = PTRUE;
+		} else if (strcmp(buf, "sync") == 0) {
+			conf->cobd_async_enable = PFALSE;
+		} else {
+			co_terminal_print("error: setcobd option only allowed 'async' or 'sync'\n");
+			return CO_RC(INVALID_PARAMETER);
+		}
+	}
 
 	do {
 		co_block_dev_desc_t *cobd;

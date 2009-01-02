@@ -190,7 +190,7 @@ typedef struct co_config {
 	 * will be looked upon according to this path).
 	 */
 	co_pathname_t config_path;
-	
+
 	/*
 	 * The pathname of the vmlinux file. If this is empty then we 
 	 * would try by default to locate 'vmlinux' in the same directory
@@ -270,6 +270,11 @@ typedef struct co_config {
 	struct {
 		int size_x, size_y;
 	} console;
+
+	/*
+	 * Enable asynchronious block device operations.
+	 */
+	int cobd_async_enable;
 } co_config_t;
 
 #endif

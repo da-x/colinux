@@ -16,24 +16,16 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  
  #include <asm/uaccess.h>
  #include <asm/types.h>
-@@ -26,6 +27,7 @@
- static int const hardsect_size_shift = 9;
- static int const cobd_max = CO_MODULE_MAX_COBD;
- static spinlock_t cobd_lock = SPIN_LOCK_UNLOCKED;
-+static int cobd_async_mode;
- 
- struct cobd_device {
- 	int unit;
-@@ -101,7 +103,7 @@
- 	co_passage_page->params[0] = CO_DEVICE_BLOCK;
- 	co_passage_page->params[1] = cobd->unit;
- 	co_request = (co_block_request_t *)&co_passage_page->params[2];
--	co_request->type = CO_BLOCK_OPEN;
-+	co_request->type = (cobd_async_mode) ? CO_BLOCK_ASYNC_OPEN: CO_BLOCK_OPEN;
- 	co_switch_wrapper();
- 	if (co_request->rc)
- 		result = -EIO;
-@@ -163,10 +165,8 @@
+@@ -150,7 +151,7 @@
+ /*
+  * Handle an I/O request.
+  */
+-static int cobd_transfer(struct cobd_device *cobd, struct request *req)
++static int cobd_transfer(struct cobd_device *cobd, struct request *req, int *async)
+ {
+ 	co_block_request_t *co_request;
+ 	unsigned long flags;
+@@ -163,15 +164,15 @@
  	co_passage_page->params[0] = CO_DEVICE_BLOCK;
  	co_passage_page->params[1] = cobd->unit;
  	co_request = (co_block_request_t *)&co_passage_page->params[2];
@@ -42,20 +34,43 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 -	else
 -		co_request->type = CO_BLOCK_WRITE;
 +	co_request->type = (rq_data_dir(req) == READ) ? CO_BLOCK_READ : CO_BLOCK_WRITE;
-+	co_request->irq_request = (cobd_async_mode) ? req : NULL;
++	co_request->irq_request = req;
  	co_request->offset = ((unsigned long long)(req->sector)) << hardsect_size_shift;
  	co_request->size = req->current_nr_sectors << hardsect_size_shift;
  	co_request->address = req->buffer;
-@@ -199,6 +199,8 @@
+ 	co_request->rc = 0;
++	co_request->async = 0;
+ 	co_switch_wrapper();
++	*async = co_request->async;
+ 	ret = co_request->rc;
+ 
+ 	co_passage_page_release(flags);
+@@ -185,6 +186,7 @@
+ 
+         while ((req = elv_next_request(q)) != NULL) {
+ 		int ret;
++		int async;
+ 
+ 		if (!blk_fs_request(req)) {
+ 			end_request(req, 0);
+@@ -192,13 +194,15 @@
+ 		}
+ 		cobd = (struct cobd_device *)(req->rq_disk->private_data);
+ 
+-		ret = cobd_transfer(cobd, req);
++		ret = cobd_transfer(cobd, req, &async);
+ 
+ 		/*
+ 		 * OK:   ret ==  0 --> uptodate = 1
  		 * FAIL: ret == -1 --> uptodate = 0
  		 */
  		if (ret == CO_BLOCK_REQUEST_RETCODE_OK) {
-+			if (cobd_async_mode)
++			if (async)
 +				break; /* wait for interrupt */
  			end_request(req, 1);
  		} else {
  			end_request(req, 0);
-@@ -206,6 +208,38 @@
+@@ -206,6 +210,38 @@
          }
  }
  
@@ -94,15 +109,13 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  static struct block_device_operations cobd_fops = {
  	.owner   = THIS_MODULE,
  	.open    = cobd_open,
-@@ -217,9 +251,17 @@
+@@ -217,9 +253,15 @@
  {
  	int result, i;
  
-+	if (cobd_async_mode) {
-+		if (request_irq(BLOCKDEV_IRQ, &cobd_interrupt, 0, "cobd", NULL)) {
-+			printk("cobd: unable to get IRQ%d\n", BLOCKDEV_IRQ);
-+			return -EBUSY;
-+		}
++	if (request_irq(BLOCKDEV_IRQ, &cobd_interrupt, 0, "cobd", NULL)) {
++		printk("cobd: unable to get IRQ%d\n", BLOCKDEV_IRQ);
++		return -EBUSY;
 +	}
 +
  	if (register_blkdev(COLINUX_MAJOR, "cobd")) {
@@ -113,65 +126,33 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  	}
  
  	result = -ENOMEM; /* for the possible errors */
-@@ -275,6 +317,9 @@
+@@ -275,6 +317,8 @@
  	if (unregister_blkdev(COLINUX_MAJOR, "cobd"))
  		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
  
 +fail_irq:
-+	if (cobd_async_mode)
-+		free_irq(BLOCKDEV_IRQ, NULL);
++	free_irq(BLOCKDEV_IRQ, NULL);
  	return result;
  }
  
-@@ -473,6 +518,8 @@
+@@ -473,6 +517,7 @@
  	if (unregister_blkdev(COLINUX_MAJOR, "cobd"))
  		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
  
-+	if (cobd_async_mode)
-+		free_irq(BLOCKDEV_IRQ, NULL);
++	free_irq(BLOCKDEV_IRQ, NULL);
  	kfree(cobd_disks);
  }
- 
-@@ -523,6 +570,22 @@
- 	cobd_drives_exit();
- }
- 
-+#ifndef MODULE
-+
-+static int __init cobd_setup (char *str)
-+{
-+	if (strcmp(str, "async") == 0) {
-+		cobd_async_mode = 1;
-+		printk(KERN_INFO "cobd: Enable asyncron mode\n");
-+	}
-+
-+	return 1;
-+}
-+
-+__setup ("setcobd=", cobd_setup);
-+
-+#endif /* !MODULE */
-+
- module_init(cobd_init);
- module_exit(cobd_exit);
  
 Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- linux-2.6.22-source.orig/include/linux/cooperative.h
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -310,6 +310,7 @@
- 	CO_BLOCK_WRITE,
- 	CO_BLOCK_CLOSE,
- 	CO_BLOCK_GET_ALIAS,
-+	CO_BLOCK_ASYNC_OPEN,
- } co_block_request_type_t;
- 
- typedef enum {
-@@ -340,6 +341,7 @@
+@@ -340,6 +340,8 @@
  			unsigned long long size;
  			unsigned long long disk_size;
  			vm_ptr_t address;
 +			void * irq_request;
++			int async;
  		};
  		struct {
  			char alias[20];

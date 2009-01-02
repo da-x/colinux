@@ -716,7 +716,7 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 		if (!CO_OK(rc))
 			goto error_1;
 
-		rc = co_monitor_file_block_init(dev, &conf_dev->pathname);
+		rc = co_monitor_file_block_init(cmon, dev, &conf_dev->pathname);
 		if (CO_OK(rc)) {
 			dev->dev.conf = conf_dev;
 			co_debug("cobd%d: enabled (%p)", i, dev);
