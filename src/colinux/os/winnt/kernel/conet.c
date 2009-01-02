@@ -312,6 +312,7 @@ static void DDKAPI co_conet_proto_unbind_adapter(
 		conet_debug("NdisCloseAdapter completed, Status = %x", *Status);
 	}
 
+	adapter->binding_handle = NULL;
 	conet_debug("leave: Status = %x", *Status);
 }
 
