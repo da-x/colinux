@@ -56,6 +56,13 @@ then
     exit 1
 fi
 
+# Check installed bc
+if ! which bc >/dev/null
+then
+    echo "bc: Not installed or not found." >&2
+    exit 1
+fi
+
 # Create list with all labels (reverse sorted), remove ".text" and ".bss"
 $NM -r -n -t d -C $LINUXSYS | grep -v -e ' \.' | uniq > $NMFILE
 if [ ! -s $NMFILE ]
