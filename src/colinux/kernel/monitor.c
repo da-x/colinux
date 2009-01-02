@@ -939,7 +939,7 @@ static co_rc_t start(co_monitor_t *cmon)
 		co_debug_error("invalid state");
 		return CO_RC(ERROR);
 	}
-		
+
 	rc = guest_address_space_init(cmon);
 	if (!CO_OK(rc)) {
 		co_debug_error("error %08x initializing coLinux context", (int)rc);
@@ -1299,7 +1299,7 @@ static co_rc_t co_monitor_user_reset(co_monitor_t *monitor)
 	monitor->state = CO_MONITOR_STATE_INITIALIZED;
 	monitor->termination_reason = CO_TERMINATE_END;
 
-out:	
+out:
 	return rc;
 }
 

@@ -100,7 +100,7 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 							     &param, &exists);
 		if (!CO_OK(rc))
 			return rc;
-		
+
 		if (!exists)
 			break;
 
@@ -135,7 +135,7 @@ static co_rc_t allocate_by_alias(co_config_t *conf, const char *prefix, const ch
 
 	for (i=0; i < CO_MODULE_MAX_COBD; i++) {
 		cobd = &conf->block_devs[i];
-		
+
 		if (!cobd->enabled)
 			break;
 	}
@@ -174,13 +174,13 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 	for (i=0; i < sizeof(prefixes)/sizeof(char *); i++) {
 		prefix = prefixes[i];
 		char suffix[5];
-			
+
 		do {
 			rc = co_cmdline_get_next_equality_alloc(cmdline, prefix, sizeof(suffix)-1, suffix, sizeof(suffix), 
 							  &param, &exists);
 			if (!CO_OK(rc)) 
 				return rc;
-			
+
 			if (!exists)
 				break;
 
@@ -189,7 +189,7 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 				char *number_parse  = NULL;
 				unsigned int index;
 				co_block_dev_desc_t *cobd;
-				
+
 				index = strtoul(index_str, &number_parse, 10);
 				if (number_parse == index_str) {
 					co_terminal_print("invalid alias: %s%s=%s\n", prefix, suffix, param);
@@ -206,7 +206,7 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 					co_terminal_print("alias on unused cobd%d\n", index);
 					return CO_RC(INVALID_PARAMETER);
 				}
-				
+
 				if (cobd->alias_used) {
 					co_terminal_print("error, alias cannot be used twice for cobd%d\n", index);
 					return CO_RC(INVALID_PARAMETER);
@@ -216,7 +216,6 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 				co_snprintf(cobd->alias, sizeof(cobd->alias), "%s%s", prefix, suffix);
 
 				co_debug_info("mapping %s%s to %s", prefix, suffix, &param[1]);
-				
 			} else {
 				rc = allocate_by_alias(conf, prefix, suffix, param);
 				if (!CO_OK(rc))
@@ -256,7 +255,7 @@ static void split_comma_separated(const char *source, comma_buffer_t *array)
 {
 	int j;
 	bool_t quotation_marks;
-	
+
 	for (; array->buffer != NULL; array++) {
 		j = 0;
 		quotation_marks = PFALSE;
@@ -461,7 +460,6 @@ static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_confi
 	};
 	co_rc_t rc;
 	unsigned int index;
-
 
 	do {
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "scsi",
@@ -722,7 +720,7 @@ static co_rc_t parse_args_networking(co_command_line_params_t cmdline, co_config
 							     &param, &exists);
 		if (!CO_OK(rc))
 			return rc;
-		
+
 		if (!exists)
 			break;
 
@@ -769,7 +767,7 @@ static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_confi
 							     &param, &exists);
 		if (!CO_OK(rc))
 			return rc;
-		
+
 		if (!exists)
 			break;
 
@@ -876,7 +874,7 @@ static co_rc_t parse_args_execute(co_config_t *conf, int index, const char *para
 	execute->prog = strdup(prog);
 	if (!execute->prog)
 		return CO_RC(OUT_OF_MEMORY);
-	
+
 	if (*args) {
 		co_debug("args%d: %s", index, args);
 		execute->args = strdup(args);
