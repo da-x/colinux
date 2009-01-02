@@ -846,28 +846,6 @@ static NDIS_STATUS DDKAPI co_conet_proto_pnp_handler(
 	return Status;
 }
 
-static inline void ntos(co_id_t id, char *buf)
-{
-	co_id_t i,n;
-	char *p;
-
-	n = id; i = 0;
-	while(n>0) {
-		n /= 10;
-		i ++;
-	}
-
-	p = buf + i;
-	*p-- = 0;
-
-	n = id;
-	while(n>0) {
-		i = n % 10;
-		n /= 10;
-		*p-- = i + '0';
-	}
-}
-
 co_rc_t co_conet_register_protocol(co_monitor_t *monitor)
 {
 	co_monitor_osdep_t		*osdep = monitor->osdep;
@@ -888,8 +866,7 @@ co_rc_t co_conet_register_protocol(co_monitor_t *monitor)
 	NdisZeroMemory(&protoChar, sizeof(NDIS_PROTOCOL_CHARACTERISTICS));
 
 	// register per monitor instance conet protocol identified by monitor id
-	strcpy(osdep->protocol_name, "Conet-Bridge-");
-	ntos(monitor->id, osdep->protocol_name + 13);
+	co_snprintf(osdep->protocol_name, sizeof(osdep->protocol_name), "Conet-Bridge-%u", (unsigned)monitor->id);
 	RtlInitAnsiString(&AnsiProtoName, osdep->protocol_name);
 	Status = RtlAnsiStringToUnicodeString(&protoName, &AnsiProtoName, TRUE);
 	if ( Status != STATUS_SUCCESS ) {
