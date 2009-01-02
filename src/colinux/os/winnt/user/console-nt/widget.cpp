@@ -532,6 +532,10 @@ void console_widget_NT_t::process_key_event( KEY_EVENT_RECORD& ker )
 
 		// Check if LeftAlt+Win (detach from colinux)
 		if (!released && (flags & LEFT_ALT_PRESSED)) {
+
+			// Release LeftALT before exit
+			send_key(0x38|0x80);
+
 			window->detach();
 			return;
 		}
@@ -561,9 +565,13 @@ void console_widget_NT_t::process_key_event( KEY_EVENT_RECORD& ker )
 	case VK_APPS:	// Window Context Menu
 		return;		// Let windows process this keys
 
-	case VK_MENU:
+	case VK_MENU: // Left ALT pressed
 		// Check if Win+LeftAlt (detach from colinux)
 		if ((vkey_state[255] & 1) && !released) {
+
+			// Release WinKey before exit
+			send_key(0xE05B|0x80);
+
 			window->detach();
 			return;
 		}
