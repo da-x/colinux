@@ -52,3 +52,17 @@ co_rc_t co_message_dup_to_queue(co_message_t *message, co_queue_t *queue)
 	return rc;
 }
 
+co_rc_t co_message_mov_to_queue(co_message_t *message, co_queue_t *queue)
+{
+	co_message_queue_item_t *queue_item = NULL;
+	co_rc_t rc;
+
+	rc = co_queue_malloc(queue, sizeof(co_message_queue_item_t), (void **)&queue_item);
+	if (!CO_OK(rc))
+		return rc;
+
+	queue_item->message = message;
+	co_queue_add_head(queue, queue_item);
+
+	return CO_RC(OK);
+}

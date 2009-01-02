@@ -91,7 +91,6 @@ static void co_FreeBuffersAndPacket(
 static VOID DDKAPI co_conet_transfer_message_routine(PDEVICE_OBJECT DeviceObject, PVOID Context)
 {
 	conet_message_transfer_context_t *context;
-	co_message_queue_item_t *queue_item = NULL;
 	PIO_WORKITEM	work_item;
 	co_monitor_t	*monitor;
 	co_message_t	*message; 
@@ -105,19 +104,9 @@ static VOID DDKAPI co_conet_transfer_message_routine(PDEVICE_OBJECT DeviceObject
 	conet_debug("enter: context = %p, monitor = %p, message = %p, work item = %p",
 		context, monitor, message, work_item);
 
-	rc = co_queue_malloc(&monitor->linux_message_queue, sizeof(co_message_queue_item_t), (void **)&queue_item);
-	if ( CO_OK(rc) ) {
-		conet_debug("queue message %p to linux message queue", message);
-		queue_item->message = message;
-		co_os_mutex_acquire(monitor->linux_message_queue_mutex);
-		co_queue_add_head(&monitor->linux_message_queue, queue_item);
-		co_os_mutex_release(monitor->linux_message_queue_mutex);
-		conet_debug("wake up colinux");
-		co_os_wait_wakeup(monitor->idle_wait);
-	} else {
-		conet_err_debug("allocate queue item fail, ignore message %p", message);
-		co_os_free(message);
-	}
+	rc = co_monitor_message_from_user_free(monitor, message);
+	if ( !CO_OK(rc) )
+		conet_debug("allocate queue item fail, ignore message %p", message);
 
 	conet_debug("free context %p, free work item %p", context, work_item);
 	co_os_free(context);

@@ -551,7 +551,7 @@ static void incoming_message(co_monitor_t *cmon, co_message_t *message)
 
 co_rc_t co_monitor_message_from_user(co_monitor_t *monitor, co_message_t *message)
 {
-	co_rc_t rc = CO_RC(OK);
+	co_rc_t rc;
 
 	if (message->to == CO_MODULE_LINUX) {
 		co_os_mutex_acquire(monitor->linux_message_queue_mutex);
@@ -565,6 +565,24 @@ co_rc_t co_monitor_message_from_user(co_monitor_t *monitor, co_message_t *messag
 	return rc;
 }
 
+co_rc_t co_monitor_message_from_user_free(co_monitor_t *monitor, co_message_t *message)
+{
+	co_rc_t rc;
+
+	if (message->to == CO_MODULE_LINUX) {
+		co_os_mutex_acquire(monitor->linux_message_queue_mutex);
+		rc = co_message_mov_to_queue(message, &monitor->linux_message_queue);
+		co_os_mutex_release(monitor->linux_message_queue_mutex);
+		co_os_wait_wakeup(monitor->idle_wait);
+	} else {
+		rc = CO_RC(ERROR);
+	}
+
+	if (!CO_OK(rc))
+		co_os_free(message);
+
+	return rc;
+}
 
 /*
  * iteration - returning PTRUE means that the driver will return 

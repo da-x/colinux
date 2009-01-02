@@ -23,6 +23,7 @@ typedef struct co_message_queue_item {
 typedef char co_module_name_t[0x20];
 
 extern co_rc_t co_message_dup_to_queue(co_message_t *message, co_queue_t *queue);
+extern co_rc_t co_message_mov_to_queue(co_message_t *message, co_queue_t *queue);
 
 extern char *co_module_repr(co_module_t module, co_module_name_t *str);
 

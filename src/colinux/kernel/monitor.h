@@ -203,6 +203,7 @@ extern co_rc_t co_monitor_malloc(co_monitor_t *cmon, unsigned long bytes, void *
 extern co_rc_t co_monitor_free(co_monitor_t *cmon, void *ptr);
 
 extern co_rc_t co_monitor_message_from_user(co_monitor_t *monitor, co_message_t *message);
+extern co_rc_t co_monitor_message_from_user_free(co_monitor_t *monitor, co_message_t *message);
 
 /* support kernel mode conet module */
 extern co_rc_t co_conet_register_protocol(co_monitor_t *monitor);
