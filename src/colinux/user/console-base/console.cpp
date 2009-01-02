@@ -77,7 +77,7 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 	}
 
 	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-a",
-				NULL, (int *)&start_parameters.attach_id);
+				NULL, &start_parameters.attach_id);
 
 	if (!CO_OK(rc)) {
 		syntax();

@@ -156,7 +156,7 @@ static conet_adapter_t *co_conet_create_adapter(co_monitor_t *monitor, int conet
 	conet_adapter_t *adapter;
 	NDIS_STATUS	Status;
 
-	conet_debug("enter: monitor = %p, id = %ld, conet_unit = %d",
+	conet_debug("enter: monitor = %p, id = %u, conet_unit = %d",
 		monitor, monitor->id, conet_unit);
 
 	adapter = (conet_adapter_t*)co_os_malloc(sizeof(conet_adapter_t));
@@ -856,7 +856,7 @@ co_rc_t co_conet_register_protocol(co_monitor_t *monitor)
 	NDIS_STATUS			Status;
 	NDIS_HANDLE			protoHandle;
 
-	conet_debug("enter: monitor = %p, id = %ld", monitor, monitor->id);
+	conet_debug("enter: monitor = %p, id = %u", monitor, monitor->id);
 
 	if ( osdep->conet_protocol ) {
 		conet_debug("leave: protocol %s already registered",
@@ -923,7 +923,7 @@ co_rc_t co_conet_unregister_protocol(co_monitor_t *monitor)
 	NDIS_HANDLE		protoHandle;
 	NDIS_STATUS		Status;
 
-	conet_debug("enter: monitor = %p, id = %ld", monitor, monitor->id);
+	conet_debug("enter: monitor = %p, id = %u", monitor, monitor->id);
 
 	if ( osdep->conet_protocol ) {
 		conet_debug("unbind adapters from protocol %s", osdep->protocol_name);
@@ -967,7 +967,7 @@ co_rc_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcf
 		monitor, conet_unit, netcfg_id, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
 	if ( !osdep->conet_protocol ) {
-		conet_err_debug("conet bridge protocol for monitor %ld not registered!", monitor->id);
+		conet_err_debug("conet bridge protocol for monitor %u not registered!", monitor->id);
 		return CO_RC(ERROR);
 	}
 
@@ -1057,7 +1057,7 @@ co_rc_t co_conet_unbind_adapter(co_monitor_t *monitor, int conet_unit)
 	conet_debug("enter: monitor = %p, conet_unit = %d", monitor, conet_unit);
 
 	if ( !osdep->conet_protocol ) {
-		conet_debug("conet bridge protocol for monitor %ld not registered!", monitor->id);
+		conet_debug("conet bridge protocol for monitor %u not registered!", monitor->id);
 		return CO_RC(ERROR);
 	}
 
@@ -1096,7 +1096,7 @@ co_rc_t co_conet_inject_packet_to_adapter(co_monitor_t *monitor, int conet_unit,
 		monitor, conet_unit, packet_data, length);
 
 	if ( !osdep->conet_protocol ) {
-		conet_debug("conet bridge protocol for monitor %ld not registered!", monitor->id);
+		conet_debug("conet bridge protocol for monitor %u not registered!", monitor->id);
 		return CO_RC(ERROR);
 	}
 

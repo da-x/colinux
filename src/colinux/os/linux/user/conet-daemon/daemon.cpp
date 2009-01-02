@@ -43,7 +43,7 @@ co_module_t user_network_tap_daemon_t::get_base_module()
 	return CO_MODULE_CONET0;
 }
 
-long user_network_tap_daemon_t::get_unit_count()
+unsigned int user_network_tap_daemon_t::get_unit_count()
 {
 	return CO_MODULE_MAX_CONET;
 }

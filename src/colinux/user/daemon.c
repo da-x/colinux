@@ -104,7 +104,7 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 	co_rc_t rc;
 	bool_t dont_launch_console = PFALSE;
 	bool_t verbose_specified = PFALSE;
-	int verbose_level = 0;
+	unsigned int verbose_level = 0;
 
 	co_snprintf(start_parameters->console, sizeof(start_parameters->console), "fltk");
 

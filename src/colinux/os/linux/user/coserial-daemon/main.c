@@ -28,8 +28,8 @@ COLINUX_DEFINE_MODULE("colinux-serial-daemon");
 
 typedef struct start_parameters {
 	bool_t show_help;
-	int index;
-	int instance;
+	unsigned int index;
+	unsigned int instance;
 } start_parameters_t;
 
 /*******************************************************************************

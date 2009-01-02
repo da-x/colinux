@@ -90,9 +90,9 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 	bool_t exists;
 	char *param;
 	co_rc_t rc;
+	unsigned int index;
 
 	do {
-		int index;
 		co_block_dev_desc_t *cobd;
 
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cobd", 
@@ -187,16 +187,16 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
  			if (!co_strncmp(":cobd", param, 5)) {
 				char *index_str = &param[5];
 				char *number_parse  = NULL;
-				int index;
+				unsigned int index;
 				co_block_dev_desc_t *cobd;
 				
-				index = strtol(index_str, &number_parse, 10);
+				index = strtoul(index_str, &number_parse, 10);
 				if (number_parse == index_str) {
 					co_terminal_print("invalid alias: %s%s=%s\n", prefix, suffix, param);
 					return CO_RC(INVALID_PARAMETER);
 				}
 
-				if (index < 0 || index >= CO_MODULE_MAX_COBD) {
+				if (index >= CO_MODULE_MAX_COBD) {
 					co_terminal_print("invalid cobd index %d in alias %s%s\n", index, prefix, suffix);
 					return CO_RC(INVALID_PARAMETER);
 				}
@@ -299,7 +299,7 @@ static co_rc_t parse_args_config_pci(co_command_line_params_t cmdline, co_config
 		{ 0, NULL }
 	};
 	co_rc_t rc;
-	int index;
+	unsigned int index;
 
 	do {
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "pci", &index, 32, &param, &exists);
@@ -413,8 +413,7 @@ static co_rc_t parse_args_config_video(co_command_line_params_t cmdline, co_conf
 		{ 0, NULL }
 	};
 	co_rc_t rc;
-	int index;
-
+	unsigned int index;
 
 	do {
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "video",
@@ -461,7 +460,7 @@ static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_confi
 		{ 0, NULL }
 	};
 	co_rc_t rc;
-	int index;
+	unsigned int index;
 
 
 	do {
@@ -715,10 +714,9 @@ static co_rc_t parse_args_networking(co_command_line_params_t cmdline, co_config
 	bool_t exists;
 	char *param;
 	co_rc_t rc;
+	unsigned int index;
 
 	do {
-		int index;
-
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "eth", 
 							     &index, CO_MODULE_MAX_CONET, 
 							     &param, &exists);
@@ -760,10 +758,10 @@ static co_rc_t parse_args_cofs_device(co_config_t *conf, int index, const char *
 
 static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_config_t *conf)
 {
-	int index;
 	bool_t exists;
 	char *param;
 	co_rc_t rc;
+	unsigned int index;
 
 	do {
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cofs", 
@@ -828,10 +826,9 @@ static co_rc_t parse_args_config_serial(co_command_line_params_t cmdline, co_con
 	bool_t exists;
 	char *param;
 	co_rc_t rc;
+	unsigned int index;
 
 	do {
-		int index;
-
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "ttys", 
 							     &index, CO_MODULE_MAX_SERIAL, 
 							     &param, &exists);
@@ -895,10 +892,9 @@ static co_rc_t parse_args_config_execute(co_command_line_params_t cmdline, co_co
 	bool_t exists;
 	char *param;
 	co_rc_t rc;
+	unsigned int index;
 
 	do {
-		int index;
-
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "exec", 
 							     &index, CO_MODULE_MAX_EXECUTE, 
 							     &param, &exists);

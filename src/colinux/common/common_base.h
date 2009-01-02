@@ -127,7 +127,7 @@ typedef long co_rc_t;
 /*
  * Defines a LINUX instance. There are CO_MAX_COLINUXS of these 
  */
-typedef unsigned long co_id_t;
+typedef unsigned int co_id_t;
 
 #define CO_INVALID_ID ((co_id_t)-1)
 

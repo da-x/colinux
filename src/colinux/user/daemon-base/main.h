@@ -38,7 +38,7 @@ public:
 
 	virtual void run(int argc, char *argv[]);
 	virtual co_module_t get_base_module()=0;
-	virtual long get_unit_count()=0;
+	virtual unsigned int get_unit_count()=0;
 	virtual const char *get_daemon_name()=0;
 	virtual const char *get_daemon_title()=0;
 	virtual const char *get_extended_syntax();
@@ -55,7 +55,7 @@ public:
 protected:
 	co_reactor_t reactor;
 	co_user_monitor_t *monitor_handle;
-	int param_index;
+	unsigned int param_index;
 	co_id_t param_instance;
 
 };
