@@ -367,6 +367,14 @@ static bool_t co_conet_proto_filter_packet(
 		return TRUE;
 	}
 
+	if ( ETH_IS_MULTICAST(pEthHdr->h_dest) ) {
+		/* ether multicast */
+		conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x multicast",
+			pEthHdr->h_dest[0], pEthHdr->h_dest[1], pEthHdr->h_dest[2],
+			pEthHdr->h_dest[3], pEthHdr->h_dest[4], pEthHdr->h_dest[5]);
+		return TRUE;
+	}
+
 	conet_debug("MAC not match and no broadcast");
 	return FALSE;
 }
