@@ -752,9 +752,7 @@ static void pae_temp_address_space_init(co_arch_passage_page_pae_address_space_t
 co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 {
 	co_arch_passage_page_t *pp = cmon->passage_page;
-	unsigned long caps = 0;
-
-	caps = cmon->manager->archdep->caps[0];
+	unsigned long caps;
 
 	if (co_monitor_passage_func_short_fxsave_sysenter_size() > sizeof (pp->code))
 		return CO_RC(ERROR);
@@ -772,6 +770,8 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 		return CO_RC(ERROR);
 	if (co_monitor_passage_func_fnsave_size() > sizeof (pp->code))
 		return CO_RC(ERROR);
+
+	caps = cmon->manager->archdep->caps[0];
 
 	if (caps & (1 << CO_ARCH_X86_FEATURE_FXSR)) {
 		co_debug("CPU supports fxsave/fxrstor");
@@ -868,18 +868,16 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	pp->linuxvm_state.return_eip = cmon->import.kernel_colinux_start;
 
 	pp->linuxvm_state.cs = cmon->arch_info.kernel_cs;
-	pp->linuxvm_state.ds = cmon->arch_info.kernel_ds;
-	pp->linuxvm_state.es = cmon->arch_info.kernel_ds;
-	pp->linuxvm_state.fs = cmon->arch_info.kernel_ds;
-	pp->linuxvm_state.gs = cmon->arch_info.kernel_ds;
+	pp->linuxvm_state.ds = \
+	pp->linuxvm_state.es = \
+	pp->linuxvm_state.fs = \
+	pp->linuxvm_state.gs = \
 	pp->linuxvm_state.ss = cmon->arch_info.kernel_ds;
 
 	if (caps & (1 << CO_ARCH_X86_FEATURE_FXSR))
 		co_fxsave(pp->linuxvm_state.fxstate);
 	else
 		co_fnsave(pp->linuxvm_state.fxstate);
-
-	co_debug("Passage page dump: %lx", (long)co_monitor_arch_passage_page_init);
 
 	co_passage_page_dump(pp);
 
