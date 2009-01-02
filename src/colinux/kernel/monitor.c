@@ -218,7 +218,7 @@ static bool_t device_request(co_monitor_t *cmon, co_device_t device, unsigned lo
 		network = (co_network_request_t *)(params);
 		network->result = 0;
 
-		if (network->unit < 0  ||  network->unit >= CO_MODULE_MAX_CONET) {
+		if (network->unit >= CO_MODULE_MAX_CONET) {
 			co_debug_lvl(network, 12, "invalid network unit %d", network->unit);
 			break;
 		}

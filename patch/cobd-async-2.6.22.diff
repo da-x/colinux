@@ -71,7 +71,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 +		struct request *req;
 +
 +		message = (co_linux_message_t *)&input->msg.data;
-+		if (message->unit < 0  ||  message->unit >= CO_MODULE_MAX_COBD) {
++		if (message->unit >= CO_MODULE_MAX_COBD) {
 +			printk("cobd interrupt: buggy unit reception: %x\n", message->unit);
 +			goto goto_next_message;
 +		}
