@@ -16,8 +16,6 @@
 
 #include <colinux/kernel/scsi.h>
 #include <colinux/kernel/transfer.h>
-#include <colinux/os/alloc.h>
-#include <colinux/os/kernel/alloc.h>
 #include <colinux/common/libc.h>
 #include <scsi/coscsi.h>
 
