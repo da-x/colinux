@@ -197,19 +197,13 @@ static bool_t device_request(co_monitor_t *cmon, co_device_t device, unsigned lo
 	case CO_DEVICE_BLOCK: {
 		co_block_request_t *request;
 		unsigned int unit = params[0];
-		co_rc_t rc;
 
 		co_debug_lvl(blockdev, 13, "blockdev requested (unit %d)", unit);
 
 		request = (co_block_request_t *)(&params[1]);
 
-		rc = co_monitor_block_request(cmon, unit, request);
+		co_monitor_block_request(cmon, unit, request);
 
-		if (CO_OK(rc))
-			request->rc = 0;
-		else
-			request->rc = -1;
-		
 		return PTRUE;
 	}
 	case CO_DEVICE_NETWORK: {

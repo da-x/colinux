@@ -2,7 +2,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/drivers/block/cobd.c
-@@ -0,0 +1,520 @@
+@@ -0,0 +1,529 @@
 +/*
 + *  Copyright (C) 2003 Dan Aloni <da-x@colinux.org>
 + *
@@ -198,7 +198,16 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 +		cobd = (struct cobd_device *)(req->rq_disk->private_data);
 +
 +		ret = cobd_transfer(cobd, req);
-+		end_request(req, ret ? 0 : 1);
++
++		/*
++		 * OK:   ret ==  0 --> uptodate = 1
++		 * FAIL: ret == -1 --> uptodate = 0
++		 */
++		if (ret == CO_BLOCK_REQUEST_RETCODE_OK) {
++			end_request(req, 1);
++		} else {
++			end_request(req, 0);
++		}
 +        }
 +}
 +

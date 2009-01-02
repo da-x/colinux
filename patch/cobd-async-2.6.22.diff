@@ -46,18 +46,16 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  	co_request->offset = ((unsigned long long)(req->sector)) << hardsect_size_shift;
  	co_request->size = req->current_nr_sectors << hardsect_size_shift;
  	co_request->address = req->buffer;
-@@ -193,10 +193,49 @@
- 		cobd = (struct cobd_device *)(req->rq_disk->private_data);
- 
- 		ret = cobd_transfer(cobd, req);
-+		if (ret == 0 && cobd_async_mode)
-+			break; /* wait for interrupt */
-+
-+		/*
-+		 * OK:   ret == 0 --> uptodate = 1
-+		 * FAIL: ret == 1 --> uptodate = 0
-+		 */
- 		end_request(req, ret ? 0 : 1);
+@@ -199,6 +199,8 @@
+ 		 * FAIL: ret == -1 --> uptodate = 0
+ 		 */
+ 		if (ret == CO_BLOCK_REQUEST_RETCODE_OK) {
++			if (cobd_async_mode)
++				break; /* wait for interrupt */
+ 			end_request(req, 1);
+ 		} else {
+ 			end_request(req, 0);
+@@ -206,6 +208,38 @@
          }
  }
  
@@ -96,7 +94,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  static struct block_device_operations cobd_fops = {
  	.owner   = THIS_MODULE,
  	.open    = cobd_open,
-@@ -208,9 +247,17 @@
+@@ -217,9 +251,17 @@
  {
  	int result, i;
  
@@ -115,7 +113,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  	}
  
  	result = -ENOMEM; /* for the possible errors */
-@@ -266,6 +313,9 @@
+@@ -275,6 +317,9 @@
  	if (unregister_blkdev(COLINUX_MAJOR, "cobd"))
  		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
  
@@ -125,7 +123,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  	return result;
  }
  
-@@ -464,6 +514,8 @@
+@@ -473,6 +518,8 @@
  	if (unregister_blkdev(COLINUX_MAJOR, "cobd"))
  		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
  
@@ -134,7 +132,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
  	kfree(cobd_disks);
  }
  
-@@ -514,6 +566,22 @@
+@@ -523,6 +570,22 @@
  	cobd_drives_exit();
  }
  
@@ -169,7 +167,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
  } co_block_request_type_t;
  
  typedef enum {
-@@ -335,6 +336,7 @@
+@@ -340,6 +341,7 @@
  			unsigned long long size;
  			unsigned long long disk_size;
  			vm_ptr_t address;
@@ -177,7 +175,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
  		};
  		struct {
  			char alias[20];
-@@ -343,6 +345,11 @@
+@@ -348,6 +350,11 @@
  } __attribute__((packed)) co_block_request_t;
  
  typedef struct {

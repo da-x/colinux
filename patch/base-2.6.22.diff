@@ -1639,7 +1639,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -0,0 +1,379 @@
+@@ -0,0 +1,384 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1953,6 +1953,11 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_BLOCK_CLOSE,
 +	CO_BLOCK_GET_ALIAS,
 +} co_block_request_type_t;
++
++typedef enum {
++	CO_BLOCK_REQUEST_RETCODE_OK=0,
++	CO_BLOCK_REQUEST_RETCODE_ERROR=-1,
++} co_block_request_retcode_t;
 +
 +typedef enum {
 +	CO_NETWORK_GET_MAC=0,
