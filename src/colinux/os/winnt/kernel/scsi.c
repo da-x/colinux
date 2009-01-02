@@ -178,7 +178,7 @@ static void scsi_send_intr(co_monitor_t *cmon, int unit, void *ctx, int rc, int 
 	msg.info.result = rc;
 	msg.info.delta = delta;
 
-	co_monitor_message_from_user(cmon, 0, (co_message_t *)&msg);
+	co_monitor_message_from_user(cmon, (co_message_t *)&msg);
 }
 #endif
 

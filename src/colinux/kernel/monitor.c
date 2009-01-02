@@ -549,7 +549,7 @@ static void incoming_message(co_monitor_t *cmon, co_message_t *message)
 	}
 }
 
-co_rc_t co_monitor_message_from_user(co_monitor_t *monitor, co_manager_open_desc_t opened, co_message_t *message)
+co_rc_t co_monitor_message_from_user(co_monitor_t *monitor, co_message_t *message)
 {
 	co_rc_t rc = CO_RC(OK);
 

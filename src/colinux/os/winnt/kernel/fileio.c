@@ -230,7 +230,7 @@ static void CALLBACK transfer_file_block_callback(callback_context_t *context, P
 			    (int)IoStatusBlock->Status);
 
 	co_monitor_host_linuxvm_transfer_unmap(context->monitor, context->page, context->pfn);
-	co_monitor_message_from_user(context->monitor, 0, &context->msg.message);
+	co_monitor_message_from_user(context->monitor, &context->msg.message);
 	co_os_free(context);
 }
 
