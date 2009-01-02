@@ -184,7 +184,7 @@ don't depend on each other.  The parameters are case sensitive.
 	cobd1=C:\temp\swapfs.img
 	cobd2=\Device\Cdrom0
 
-    scsiX=<type>,<path to image file>
+    scsiX=<type>,<path to image file>,<image size>
 
 	Use any number <X> of these to specify the block device image file.
 	
@@ -199,6 +199,11 @@ don't depend on each other.  The parameters are case sensitive.
 	"\\.\PhysicalDriveX", where X starts with 0 for first harddisk.	Be
 	carefully with these configs, you risk datas on your drive C:.
 	Don't mount a partition that is in use on windows side!
+
+	<image size> can optional the size in megabytes. The host driver will
+	create the storage device file if it does not exist.
+	BE VERY CAREFULL  with this parameter, as it can increase/decrease the
+	size of a file as well!
 
 	For scsi0 the the device inside coLinux is /dev/sda, if type is cdrom
 	or the image file is a part of partition self (all current images).
