@@ -35,7 +35,7 @@ void *co_memmove(void *dest, const void *src, long n)
 
 void co_bzero(void *s, long n)
 {
-	co_memset(s, 0, n);
+	memset(s, 0, n);
 }
 
 const char *co_strstr(const char *haystack, const char *needle)
