@@ -29,7 +29,7 @@ void *co_os_alloc_pages(unsigned int pages)
 #ifdef DEBUG_CO_OS_ALLOC		
 	if (ret) {
 		allocs++;
-		co_debug("%d(%d)->%x", allocs, pages, ret);
+		co_debug("%d(%d)->%p", allocs, pages, ret);
 	}
 #endif
 
@@ -45,7 +45,7 @@ void co_os_free_pages(void *ptr, unsigned int pages)
 		KeBugCheck(0x11117777 + 2);
 
 #ifdef DEBUG_CO_OS_ALLOC		
-	co_debug("%d(%x,%d)", allocs, ptr, pages);
+	co_debug("%d(%p,%d)", allocs, ptr, pages);
 	allocs--;
 #endif
 	MmFreeNonCachedMemory(ptr, pages * CO_ARCH_PAGE_SIZE);
@@ -66,7 +66,7 @@ void *co_os_malloc(unsigned long bytes)
 #ifdef DEBUG_CO_OS_ALLOC		
 	if (ret) {
 		allocs++;
-		co_debug("%d(%d)->%x", allocs, bytes, ret);
+		co_debug("%d(%lu)->%p", allocs, bytes, ret);
 	}
 #endif
 
@@ -76,7 +76,7 @@ void *co_os_malloc(unsigned long bytes)
 void co_os_free(void *ptr)
 {
 #ifdef DEBUG_CO_OS_ALLOC		
-	co_debug("%d(%x)", allocs, ptr);
+	co_debug("%d(%p)", allocs, ptr);
 	allocs--;
 #endif
 	if (ptr == 0)
