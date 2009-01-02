@@ -28,15 +28,15 @@
 #define FILE_SHARE_DIRECTORY (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
 
 typedef struct {
-	co_monitor_t *monitor;
-	co_pfn_t pfn;
-	unsigned char *page;
-	unsigned char *start;
 	struct {
 		co_message_t message;
 		co_linux_message_t linux_message;
 		co_block_intr_t intr;
 	} msg;
+	co_monitor_t *monitor;
+	co_pfn_t pfn;
+	unsigned char *page;
+	unsigned char *start;
 	IO_STATUS_BLOCK isb;
 	LARGE_INTEGER offset;
 	unsigned long size;
@@ -230,8 +230,7 @@ static void CALLBACK transfer_file_block_callback(callback_context_t *context, P
 			    (int)IoStatusBlock->Status);
 
 	co_monitor_host_linuxvm_transfer_unmap(context->monitor, context->page, context->pfn);
-	co_monitor_message_from_user(context->monitor, &context->msg.message);
-	co_os_free(context);
+	co_monitor_message_from_user_free(context->monitor, &context->msg.message);
 }
 
 co_rc_t co_os_file_block_async_read_write(co_monitor_t *monitor,
