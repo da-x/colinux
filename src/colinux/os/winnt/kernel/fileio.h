@@ -35,15 +35,6 @@ extern co_rc_t co_os_file_block_read_write(co_monitor_t *monitor,
 					   unsigned long size,
 					   bool_t read);
 
-extern co_rc_t co_os_file_block_async_read_write(co_monitor_t *monitor,
-					   HANDLE file_handle,
-					   unsigned long long offset,
-					   vm_ptr_t address,
-					   unsigned long size,
-					   bool_t read,
-					   int unit,
-					   void *irq_request);
-
 extern co_rc_t co_os_file_close(PHANDLE FileHandle);
 
 #endif
