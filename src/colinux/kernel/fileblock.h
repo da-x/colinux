@@ -36,7 +36,6 @@ typedef struct {
 struct co_monitor_file_block_dev {
 	co_block_dev_t dev; /* Must stay as the first field */
 
-	struct co_monitor *monitor;
 	co_monitor_file_block_state_t state;
 	co_pathname_t pathname;
 	co_monitor_file_block_operations_t *op;
