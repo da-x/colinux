@@ -11,6 +11,7 @@
 #include <malloc.h>
 #endif
 #include <string.h>
+#include <stdlib.h>
 #include "cmdline.h"
 
 #include <colinux/os/alloc.h>
@@ -379,7 +380,7 @@ co_rc_t co_cmdline_get_next_equality_int_prefix(co_command_line_params_t cmdline
 		char *number_parse = NULL;
 		int value_int;
 		
-		value_int = co_strtol(number, &number_parse, 10);
+		value_int = strtol(number, &number_parse, 10);
 		if (number_parse == number) {
 			/* not a number */
 			co_terminal_print("cmdline: suffix not a number\n");
@@ -411,7 +412,7 @@ co_rc_t co_cmdline_get_next_equality_int_value(co_command_line_params_t cmdline,
 	if (*out_exists) {
 		char *value_parse = NULL;
 		
-		*value_int = co_strtol(value, &value_parse, 10);
+		*value_int = strtol(value, &value_parse, 10);
 		if (value_parse == value) {
 			/* not a number */
 			return CO_RC(ERROR);
@@ -497,7 +498,7 @@ co_rc_t co_cmdline_params_one_arugment_int_parameter(co_command_line_params_t cm
 		return rc;
 
 	if (out_exists && *out_exists) { 
-		*out_int = co_strtol(arg_buf, &end_ptr, 10);
+		*out_int = strtol(arg_buf, &end_ptr, 10);
 		if (end_ptr == arg_buf)
 			return CO_RC(ERROR);
 	}

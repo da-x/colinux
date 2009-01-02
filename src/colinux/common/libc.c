@@ -11,8 +11,6 @@
 
 #include "libc.h"
 
-#ifdef CO_LIBC__MISC
-
 void *co_memset(void *s, int c, long n)
 {
 	return memset(s, c, n);
@@ -84,21 +82,7 @@ static int internal_strncmp(const char * cs,const char * ct,size_t count)
 	return __res;
 }
 
-
 int co_strncmp(const char *s1, const char *s2, int n)
 {
 	return internal_strncmp(s1, s2, n);
 }
-
-#endif
-
-#ifdef CO_LIBC__STRTOL
-
-#include <stdlib.h>
-
-int co_strtol(const char *s1, char **s2, int n)
-{
-	return strtol(s1, s2, n);
-}
-
-#endif

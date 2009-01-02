@@ -19,6 +19,5 @@ extern const char *co_strstr(const char *haystack, const char *needle);
 extern int co_strlen(const char *s);
 extern int co_strcmp(const char *s1, const char *s2);
 extern int co_strncmp(const char *s1, const char *s2, int n);
-extern int co_strtol(const char *s1, char **s2, int n);
 
 #endif

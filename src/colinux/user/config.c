@@ -190,7 +190,7 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 				int index;
 				co_block_dev_desc_t *cobd;
 				
-				index = co_strtol(index_str, &number_parse, 10);
+				index = strtol(index_str, &number_parse, 10);
 				if (number_parse == index_str) {
 					co_terminal_print("invalid alias: %s%s=%s\n", prefix, suffix, param);
 					return CO_RC(INVALID_PARAMETER);
