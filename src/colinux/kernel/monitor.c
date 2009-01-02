@@ -213,9 +213,7 @@ static bool_t device_request(co_monitor_t *cmon, co_device_t device, unsigned lo
 		return PTRUE;
 	}
 	case CO_DEVICE_NETWORK: {
-		co_network_request_t *network = NULL;
-
-		co_debug_lvl(network, 13, "network requested");
+		co_network_request_t *network;
 
 		network = (co_network_request_t *)(params);
 		network->result = 0;
@@ -225,7 +223,7 @@ static bool_t device_request(co_monitor_t *cmon, co_device_t device, unsigned lo
 			break;
 		}
 
-		co_debug_lvl(network, 12, "network unit %d requested", network->unit);
+		co_debug_lvl(network, 13, "network unit %d requested", network->unit);
 
 		switch (network->type) {
 		case CO_NETWORK_GET_MAC: {
