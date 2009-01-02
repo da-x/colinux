@@ -17,7 +17,7 @@
 static int allocs;
 #endif
 
-void *co_os_alloc_pages(unsigned long pages)
+void *co_os_alloc_pages(unsigned int pages)
 {
 	void *ret;
 
@@ -36,7 +36,7 @@ void *co_os_alloc_pages(unsigned long pages)
 	return ret;
 }
 
-void co_os_free_pages(void *ptr, unsigned long pages)
+void co_os_free_pages(void *ptr, unsigned int pages)
 {
 	if (ptr == 0)
 		KeBugCheck(0x11117777 + 1);
@@ -85,10 +85,10 @@ void co_os_free(void *ptr)
 	ExFreePoolWithTag(ptr, CO_OS_POOL_TAG);
 }
 
-co_rc_t co_os_userspace_map(void *address, unsigned long pages, void **user_address_out, void **handle_out)
+co_rc_t co_os_userspace_map(void *address, unsigned int pages, void **user_address_out, void **handle_out)
 {
 	void *user_address;
-	unsigned long memory_size = pages << CO_ARCH_PAGE_SHIFT;
+	unsigned long memory_size = ((unsigned long)pages) << CO_ARCH_PAGE_SHIFT;
 	PMDL mdl;
 
 	mdl = IoAllocateMdl(address, memory_size, FALSE, FALSE, NULL);
@@ -108,7 +108,7 @@ co_rc_t co_os_userspace_map(void *address, unsigned long pages, void **user_addr
 	return CO_RC(OK);
 }
 
-void co_os_userspace_unmap(void *user_address, void *handle, unsigned long pages)
+void co_os_userspace_unmap(void *user_address, void *handle, unsigned int pages)
 {
 	PMDL mdl = (PMDL)handle;
 	

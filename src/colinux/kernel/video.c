@@ -148,7 +148,7 @@ void co_monitor_unregister_video_devices(co_monitor_t *cmon) {
 
 co_rc_t co_video_attach(co_monitor_t *cmon, co_monitor_ioctl_video_t *params) {
 	struct co_video_dev *dp;
-	int npages;
+	unsigned int npages;
 	co_rc_t rc;
 
 	dp = get_dp(cmon, params->unit);
@@ -173,7 +173,7 @@ co_rc_t co_video_attach(co_monitor_t *cmon, co_monitor_ioctl_video_t *params) {
 
 co_rc_t co_video_detach(co_monitor_t *cmon, co_monitor_ioctl_video_t *params) {
 	struct co_video_dev *dp;
-	int npages;
+	unsigned int npages;
 
 	dp = get_dp(cmon, params->unit);
 	if (!dp) return CO_RC(ERROR);

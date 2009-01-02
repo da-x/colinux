@@ -44,12 +44,12 @@ void co_os_put_page(struct co_manager *manager, co_pfn_t pfn)
 	__free_page(pfn_to_page(pfn));
 }
 
-void *co_os_alloc_pages(unsigned long pages)
+void *co_os_alloc_pages(unsigned int pages)
 {
 	return (void *)__get_free_pages(GFP_KERNEL, get_order(pages << PAGE_SHIFT));
 }
 
-void co_os_free_pages(void *ptr, unsigned long pages)
+void co_os_free_pages(void *ptr, unsigned int pages)
 {
 	free_pages((unsigned long)ptr, get_order(pages << PAGE_SHIFT));
 }
