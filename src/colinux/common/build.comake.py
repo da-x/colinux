@@ -5,6 +5,7 @@ targets['common.a'] = Target(
     Input('debug.o'),
     Input('errors.o'),
     Input('messages.o'),
+    Input('module_repr.o'),
     Input('libc.o'),
     Input('snprintf.o'),
     Input('file_ids.o'),
