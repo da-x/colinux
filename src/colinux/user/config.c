@@ -702,7 +702,7 @@ static co_rc_t parse_args_networking_device(co_config_t *conf, int index, const 
 		return parse_args_networking_device_ndis(conf, index, next);
 	} else {
 		co_terminal_print("unsupported network transport type: %s\n", param);
-		co_terminal_print("supported types are: tuntap, pcap-bridge, slirp\n");
+		co_terminal_print("supported types are: tuntap, pcap-bridge, ndis-bridge, slirp\n");
 		return CO_RC(INVALID_PARAMETER);
 	}
 
