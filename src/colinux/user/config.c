@@ -954,12 +954,12 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 	co_rc_t rc;
 	bool_t exists;
 
-	rc = co_cmdline_get_next_equality_int_value(cmdline, "mem", (int *)&conf->ram_size, &exists);
+	rc = co_cmdline_get_next_equality_int_value(cmdline, "mem", &conf->ram_size, &exists);
 	if (!CO_OK(rc)) 
 		return rc;
 
 	if (exists)
-		co_debug_info("configuring %ld MB of virtual RAM", conf->ram_size);
+		co_debug_info("configuring %u MB of virtual RAM", conf->ram_size);
 
 	rc = parse_args_config_video(cmdline, conf);
 	if (!CO_OK(rc))

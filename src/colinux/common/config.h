@@ -255,11 +255,10 @@ typedef struct co_config {
 	/*
 	 * Size of pseudo physical RAM for this machine (MB).
 	 * 
-	 * The default size is 32MB for systems with more than
-	 * 128MB of physical ram and 16MB for systems with less
-	 * ram.
+	 * The default size is 25% of total RAM for systems with more than
+	 * 128MB of physical ram and 16MB for systems with less ram.
 	 */ 
-	unsigned long ram_size;
+	unsigned int ram_size;
 
 	/*
 	 * The pathname of the initrd file.
