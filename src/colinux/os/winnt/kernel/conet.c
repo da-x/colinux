@@ -13,6 +13,7 @@
 #include "ddk.h"
 #include <ddk/ntdddisk.h>
 #include <ddk/ndis.h>
+#include <ddk/xfilter.h>
 
 #include <colinux/os/alloc.h>
 #include <colinux/common/libc.h>
@@ -347,15 +348,18 @@ static bool_t co_conet_proto_filter_packet(
 	)
 {
 	PETHER_HDR		pEthHdr = (PETHER_HDR)HeaderBuffer;
+	UINT			Result;
 
-	if ( RtlCompareMemory(pEthHdr->h_dest, adapter->macaddr, 6) == 6 ) {
+	ETH_COMPARE_NETWORK_ADDRESSES_EQ(pEthHdr->h_dest, adapter->macaddr, &Result);
+	if ( Result == 0 ) {
 		/* ether dst mac */
-		conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x MAC match",
+		conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x match",
 			pEthHdr->h_dest[0], pEthHdr->h_dest[1], pEthHdr->h_dest[2],
 			pEthHdr->h_dest[3], pEthHdr->h_dest[4], pEthHdr->h_dest[5]);
 		return TRUE;
-	} else
-	if ( RtlCompareMemory(pEthHdr->h_dest, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) == 6 ) {
+	}
+
+	if ( ETH_IS_BROADCAST(pEthHdr->h_dest) ) {
 		/* ether broadcast */
 		conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x broadcast",
 			pEthHdr->h_dest[0], pEthHdr->h_dest[1], pEthHdr->h_dest[2],
@@ -1008,7 +1012,7 @@ co_rc_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcf
         }
 
 	adapter->promisc = promisc;
-	RtlCopyMemory(adapter->macaddr, macaddr, 6);
+	ETH_COPY_NETWORK_ADDRESS(adapter->macaddr, macaddr);
 
 	conet_debug("bind adapter %p to %s protocol ...", adapter, osdep->protocol_name);
 	context.monitor = monitor;
@@ -1032,7 +1036,7 @@ co_rc_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcf
 					 NDIS_PACKET_TYPE_BROADCAST |
 					 NDIS_PACKET_TYPE_ALL_LOCAL ;
 	}
-	
+
 	Request = co_os_malloc(sizeof(NDIS_REQUEST));
 	if ( Request ) {
 		Request->RequestType = NdisRequestSetInformation;
