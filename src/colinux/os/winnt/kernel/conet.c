@@ -433,7 +433,7 @@ static NDIS_STATUS DDKAPI co_conet_proto_receive(
 		NdisMoveMemory(message->data, HeaderBuffer, HeaderBufferSize);
 		NdisMoveMemory(message->data + HeaderBufferSize, LookAheadBuffer, LookAheadBufferSize);
 
-		conet_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
+		conet_debug("from CO_MODULE_CONET%d, to CO_MODULE_LINUX",
 			adapter->conet_unit);
 
 		co_conet_transfer_message(adapter, (co_message_t *)message);
@@ -618,7 +618,7 @@ static void DDKAPI co_conet_proto_status_complete(
 	message->linux.size = sizeof(int);
 	message->connected = (adapter->general_status == NDIS_STATUS_MEDIA_CONNECT) ? TRUE : FALSE;
 
-	conet_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
+	conet_debug("from CO_MODULE_CONET%d, to CO_MODULE_LINUX",
 		adapter->conet_unit);
 
 	co_conet_transfer_message(adapter, (co_message_t *)message);
@@ -676,7 +676,7 @@ static void DDKAPI co_conet_proto_transfer_complete(
 			message->linux.size = TotalPacketLength;
 			NdisMoveMemory(message->data, packet->packet_buffer, TotalPacketLength);
 
-			conet_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
+			conet_debug("from CO_MODULE_CONET%d, to CO_MODULE_LINUX",
 				adapter->conet_unit);
 
 			co_conet_transfer_message(adapter, (co_message_t *)message);
@@ -753,7 +753,7 @@ static int DDKAPI co_conet_proto_receive_packet(
 			message->linux.unit = adapter->conet_unit;
 			message->linux.size = TotalPacketLength;
 
-			conet_debug("from CO_MODULE_CONET0 + unit %d, to CO_MODULE_LINUX", 
+			conet_debug("from CO_MODULE_CONET%d, to CO_MODULE_LINUX",
 				adapter->conet_unit);
 
 			co_conet_transfer_message(adapter, (co_message_t *)message);
@@ -770,39 +770,38 @@ static NDIS_STATUS DDKAPI co_conet_proto_pnp_handler(
 	IN PNET_PNP_EVENT	pNetPnPEvent
 	)
 {
+	NDIS_STATUS		Status  = NDIS_STATUS_SUCCESS;
 #ifdef CONET_DEBUG
 	conet_adapter_t		*adapter = (conet_adapter_t*)ProtocolBindingContext;
-#endif
-	NDIS_STATUS		Status  = NDIS_STATUS_SUCCESS;
-	PNET_DEVICE_POWER_STATE	powerState;
+	NET_DEVICE_POWER_STATE	powerState;
  
 	conet_debug("enter: adapter = %p, PnPEvent = %p", adapter, pNetPnPEvent);
 
 	switch(pNetPnPEvent->NetEvent)
 	{
 	case  NetEventSetPower :
-		powerState = (PNET_DEVICE_POWER_STATE)pNetPnPEvent->Buffer;
-		switch (*powerState) 
+		powerState = *(PNET_DEVICE_POWER_STATE)pNetPnPEvent->Buffer;
+		switch (powerState)
 		{
 		case NetDeviceStateD0:
-			conet_debug("NetEventsetPower NetDeviceStataD0, success");
+			conet_debug("NetEventSetPower NetDeviceStataD0, success");
 			Status = NDIS_STATUS_SUCCESS;
 			break;
 		case NetDeviceStateD1:
-			conet_debug("NetEventsetPower NetDeviceStataD1, success");
+			conet_debug("NetEventSetPower NetDeviceStataD1, success");
 			Status = NDIS_STATUS_SUCCESS;
 			break;
 		case NetDeviceStateD2:
-			conet_debug("NetEventsetPower NetDeviceStataD2, success");
+			conet_debug("NetEventSetPower NetDeviceStataD2, success");
 			Status = NDIS_STATUS_SUCCESS;
 			break;
 		case NetDeviceStateD3:
-			conet_debug("NetEventsetPower NetDeviceStataD3, success");
+			conet_debug("NetEventSetPower NetDeviceStataD3, success");
 			Status = NDIS_STATUS_SUCCESS;
 			break;
 		default:
-			conet_debug("NetEventsetPower unknown power state %d, not supported",
-				*powerState);
+			conet_debug("NetEventSetPower unknown power state %d, not supported",
+				powerState);
 			Status = NDIS_STATUS_NOT_SUPPORTED;
 			break;
 		}
@@ -843,6 +842,7 @@ static NDIS_STATUS DDKAPI co_conet_proto_pnp_handler(
 	}
 
 	conet_debug("leave: adapter = %p", adapter);
+#endif /* CONET_DEBUG */
 	return Status;
 }
 
