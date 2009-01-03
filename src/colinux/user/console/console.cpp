@@ -278,8 +278,7 @@ co_rc_t console_window_t::start()
 	
 	if (start_parameters.attach_id != CO_INVALID_ID)
 		attached_id = start_parameters.attach_id;
-
-	if (attached_id == CO_INVALID_ID)
+	else
 		attached_id = find_first_monitor();
 
 	if (attached_id != CO_INVALID_ID)

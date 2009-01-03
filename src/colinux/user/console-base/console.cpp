@@ -153,8 +153,7 @@ co_rc_t console_window_t::start()
 
 	if (start_parameters.attach_id != CO_INVALID_ID)
 		instance_id = start_parameters.attach_id;
-
-	if (instance_id == CO_INVALID_ID)
+	else
 		instance_id = find_first_monitor();
 
 	return attach();
