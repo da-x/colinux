@@ -62,7 +62,7 @@ co_reactor_t g_reactor = NULL;
 co_user_monitor_t *g_monitor_handle = NULL;
 start_parameters_t *daemon_parameters;
 
-co_rc_t monitor_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
+static co_rc_t monitor_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
 {
 	co_message_t *message;
 	unsigned long message_size;
@@ -89,7 +89,7 @@ co_rc_t monitor_receive(co_reactor_user_t user, unsigned char *buffer, unsigned 
  * Take packet received from pcap and retransmit to coLinux.
  */
 
-co_rc_t
+static co_rc_t
 co_win32_pcap_read_received(co_win32_pcap_t * pcap_pkt)
 {
 	struct {
@@ -119,7 +119,7 @@ co_win32_pcap_read_received(co_win32_pcap_t * pcap_pkt)
  * The pcap2Daemon function is spawned as a thread.
  * It takes packets from winPCap and relays them to the coLinux Daemon.
  */
-DWORD WINAPI
+static DWORD WINAPI
 pcap2Daemon(LPVOID lpParam)
 {
 	int pcap_status;
@@ -142,7 +142,8 @@ pcap2Daemon(LPVOID lpParam)
 
 		default:
 			/* Error or EOF(offline capture only) */
-			co_debug_lvl(network, 5, "unexpected error %d reading from winPCap.", pcap_status);
+			co_debug_lvl(network, 5, "error %d reading from winPCap: %s",
+				     pcap_status, pcap_geterr(pcap_packet.adhandle));
 			ExitProcess(0);
 			return 0;
 		}
@@ -155,6 +156,7 @@ pcap2Daemon(LPVOID lpParam)
 /*******************************************************************************
  * Get the Connection name for an PCAP Interface (using NetCfgInstanceId).
  */
+static
 co_rc_t get_device_name(char *name,
                         int name_size,
 			char *actual_name,
@@ -208,7 +210,7 @@ co_rc_t get_device_name(char *name,
 /*******************************************************************************
  * Initialize winPCap interface.
  */
-int
+static int
 pcap_init()
 {
 	pcap_if_t *alldevs = NULL;
@@ -364,7 +366,7 @@ pcap_init()
  * parameters
  */
 
-void co_net_syntax()
+static void co_net_syntax(void)
 {
 	co_terminal_print("Cooperative Linux Bridged Network Daemon\n");
 	co_terminal_print("Alejandro R. Sedeno, 2004 (c)\n");
