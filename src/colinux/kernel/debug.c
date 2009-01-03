@@ -118,6 +118,16 @@ static void memcpy_vector(char *dest, co_debug_write_vector_t *vec, int vec_size
 	}
 }
 
+static inline long co_debug_write_vector_size(co_debug_write_vector_t *vec, int vec_size)
+{
+	long size = 0;
+	while (vec_size--) {
+		size += vec->size;
+		vec++;
+	}
+	return size;
+}
+
 static co_rc_t append_to_buffer(co_manager_debug_t *debug, co_debug_section_t *section, 
 				co_debug_write_vector_t *vec, int vec_size)
 {
@@ -167,7 +177,7 @@ static bool_t put_section(co_manager_debug_t *debug,
 	return PTRUE;
 }
 
-co_rc_t co_debug_writev(co_manager_debug_t *debug, 
+static co_rc_t co_debug_writev(co_manager_debug_t *debug,
 			struct co_debug_section **section_ptr,
 			co_debug_write_vector_t *vec, int vec_size)
 {
