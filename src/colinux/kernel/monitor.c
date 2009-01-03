@@ -1203,7 +1203,7 @@ static co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
 	co_os_mutex_destroy(cmon->connected_modules_write_lock);
 	co_os_mutex_destroy(cmon->linux_message_queue_mutex);
 	co_console_destroy(cmon->console);
-	cmon->console = NULL;
+	co_monitor_arch_passage_page_free(cmon);
 
 	co_debug("after free: %ld blocks", cmon->blocks_allocated);
 	co_os_free(cmon);

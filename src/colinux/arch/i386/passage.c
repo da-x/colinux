@@ -572,43 +572,43 @@ PASSAGE_CODE_WRAP_IBCS(
 co_rc_t co_monitor_arch_passage_page_alloc(co_monitor_t *cmon)
 {
 	co_rc_t rc;
-	co_archdep_monitor_t archdep;
 
-	archdep = co_os_malloc(sizeof(*archdep));
-	if (archdep == NULL)
+	cmon->archdep = co_os_malloc(sizeof(*cmon->archdep));
+	if (cmon->archdep == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 
-	co_memset(archdep, 0, sizeof(*archdep));
-	cmon->archdep = archdep;
+	co_memset(cmon->archdep, 0, sizeof(*cmon->archdep));
 
 	cmon->passage_page = co_os_alloc_pages(sizeof(co_arch_passage_page_t)/CO_ARCH_PAGE_SIZE);
 	if (cmon->passage_page == NULL){
 		rc = CO_RC(OUT_OF_MEMORY);
 		goto error;
 	}
-		
+
 	co_memset(cmon->passage_page, 0, sizeof(co_arch_passage_page_t));
 
 	rc = co_arch_anti_nx_init(cmon);
 	if (!CO_OK(rc)) 
-		goto error_free_passage;
+		goto error;
 
 	return rc;
 
-/* error path */
-error_free_passage:
-	co_os_free_pages(cmon->passage_page, sizeof(co_arch_passage_page_t)/CO_ARCH_PAGE_SIZE);
-
 error:
-	co_os_free(archdep);
+	co_monitor_arch_passage_page_free(cmon);
 	return rc;
 }
 
 void co_monitor_arch_passage_page_free(co_monitor_t *cmon)
 {
-	co_arch_anti_nx_free(cmon);
-	co_os_free(cmon->archdep);
-	co_os_free_pages(cmon->passage_page, sizeof(co_arch_passage_page_t)/CO_ARCH_PAGE_SIZE);
+	if (cmon->archdep) {
+		co_arch_anti_nx_free(cmon);
+		co_os_free(cmon->archdep);
+		cmon->archdep = NULL;
+	}
+	if (cmon->passage_page) {
+		co_os_free_pages(cmon->passage_page, sizeof(co_arch_passage_page_t)/CO_ARCH_PAGE_SIZE);
+		cmon->passage_page = NULL;
+	}
 }
 
 static inline void co_passage_page_dump_state(co_arch_state_stack_t *state)
