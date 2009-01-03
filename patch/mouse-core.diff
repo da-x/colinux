@@ -53,18 +53,18 @@ Index: linux-2.6.22-source/drivers/input/mouse/comouse.c
 +		if ( sizeof(*data) != len ) {
 +			printk( KERN_ERR "comouse: Invalid data packet!\n" );
 +		} else {
-+			/* Buttons */
-+			input_report_key( comouse_dev, BTN_TOUCH, data->btns & 1 );
-+			input_report_key( comouse_dev, BTN_LEFT, data->btns & 1 );
-+			input_report_key( comouse_dev, BTN_RIGHT, data->btns & 2 );
-+			input_report_key( comouse_dev, BTN_MIDDLE, data->btns & 4 );
-+
 +			/* Movement */
 +			input_report_abs( comouse_dev, ABS_X, data->abs_x );
 +			input_report_abs( comouse_dev, ABS_Y, data->abs_y );
 +
 +			/* Wheel */
 +			if ( data->rel_z ) input_report_rel( comouse_dev, REL_WHEEL, data->rel_z );
++
++			/* Buttons */
++			input_report_key( comouse_dev, BTN_TOUCH, data->btns & 1 );
++			input_report_key( comouse_dev, BTN_LEFT, data->btns & 1 );
++			input_report_key( comouse_dev, BTN_RIGHT, data->btns & 2 );
++			input_report_key( comouse_dev, BTN_MIDDLE, data->btns & 4 );
 +
 +			input_sync( comouse_dev );
 +#ifdef COMOUSE_DEBUG
