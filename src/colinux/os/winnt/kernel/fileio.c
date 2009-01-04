@@ -282,20 +282,37 @@ co_rc_t co_os_file_set_attr(char *filename, unsigned long valid, struct fuse_att
 
 co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 {
+	char * dirname;
+	char * filename;
+	UNICODE_STRING dirname_unicode;
+	UNICODE_STRING filename_unicode;
+	OBJECT_ATTRIBUTES attributes;
 	NTSTATUS status;
 	HANDLE handle;
+	struct {
+		union {
+			FILE_FULL_DIRECTORY_INFORMATION entry;
+			FILE_BOTH_DIRECTORY_INFORMATION entry2;
+		};
+		WCHAR name_filler[sizeof(co_pathname_t)];
+	} entry_buffer;
 	IO_STATUS_BLOCK io_status;
-	FILE_STANDARD_INFORMATION fsi;
-	FILE_BASIC_INFORMATION fbi;
 	co_rc_t rc;
-	int len;
+	int len, len1;
+	LARGE_INTEGER LastAccessTime;
+	LARGE_INTEGER LastWriteTime;
+	LARGE_INTEGER ChangeTime;
+	LARGE_INTEGER EndOfFile;
+	ULONG FileAttributes;
 
 	attr->uid = 0;
 	attr->gid = 0;
 	attr->rdev = 0;
 	attr->_dummy = 0;
+	attr->nlink = 1;
 
 	len = co_strlen(fullname);
+	len1 = len;
 
 	/* Hack: WinNT detects "C:\" not as directory! */
 	if (len >= 3 && fullname[len-1] == ':') {
@@ -309,60 +326,118 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 
 		attr->size = 0;
 		attr->blocks = 0;
-		attr->nlink = 1;
 
 		return CO_RC(OK);
 	}
 
-	rc = co_os_file_open(fullname, &handle, FILE_READ_ATTRIBUTES);
+	while (len > 0 && fullname[len-1] != '\\') {
+		if (fullname[len-1] == '?' || fullname[len-1] == '*') {
+			co_debug_lvl(filesystem, 5, "error: Wildcard in filename ('%s')", fullname);
+			return CO_RC(NOT_FOUND);
+		}
+		len--;
+	}
+
+	dirname = co_os_malloc(len+1);
+	if (!dirname) {
+		co_debug_lvl(filesystem, 5, "no memory");
+		return CO_RC(OUT_OF_MEMORY);
+	}
+
+	memcpy(dirname, fullname, len);
+	dirname[len] = 0;
+
+	filename = &fullname[len];
+
+	rc = co_winnt_utf8_to_unicode(dirname, &dirname_unicode);
 	if (!CO_OK(rc))
-		return rc;
+		goto error_0;
 
-	status = ZwQueryInformationFile(handle, &io_status,
-					&fsi, sizeof(fsi),
-					FileStandardInformation);
+	rc = co_winnt_utf8_to_unicode(filename, &filename_unicode);
+	if (!CO_OK(rc))
+		goto error_1;
+
+	InitializeObjectAttributes(&attributes, &dirname_unicode,
+				   OBJ_CASE_INSENSITIVE, NULL, NULL);
+
+	status = ZwCreateFile(&handle, FILE_LIST_DIRECTORY,
+			      &attributes, &io_status, NULL, 0, FILE_SHARE_DIRECTORY,
+			      FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT | FILE_DIRECTORY_FILE,
+			      NULL, 0);
 
 	if (!NT_SUCCESS(status)) {
-		co_debug_lvl(filesystem, 5, "error %x FileStandardInformation('%s')", (int)status, fullname);
+		co_debug_lvl(filesystem, 5, "error %x ZwCreateFile('%s')", (int)status, dirname);
 		rc = co_status_convert(status);
-		goto error_1;
+		goto error_2;
 	}
 
-	attr->nlink = fsi.NumberOfLinks;
-	attr->size = fsi.EndOfFile.QuadPart;
-	attr->blocks = (fsi.EndOfFile.QuadPart + ((1<<10)-1)) >> 10;
-
-	status = ZwQueryInformationFile(handle,	&io_status,
-					&fbi, sizeof(fbi),
-					FileBasicInformation);
-
+	status = ZwQueryDirectoryFile(handle, NULL, NULL, 0, &io_status,
+				      &entry_buffer, sizeof(entry_buffer),
+				      FileFullDirectoryInformation, PTRUE, &filename_unicode,
+				      PTRUE);
 	if (!NT_SUCCESS(status)) {
-		co_debug_lvl(filesystem, 5, "error %x FileBasicInformation('%s')", (int)status, fullname);
-		rc = co_status_convert(status);
-		goto error_1;
+		if (status == STATUS_UNMAPPABLE_CHARACTER) {
+			status = ZwQueryDirectoryFile(handle, NULL, NULL, 0, &io_status,
+						      &entry_buffer, sizeof(entry_buffer),
+						      FileBothDirectoryInformation, PTRUE, &filename_unicode,
+						      PTRUE);
+			
+			if (!NT_SUCCESS(status)) {
+				co_debug_lvl(filesystem, 5, "error %x ZwQueryDirectoryFile('%s')", (int)status, filename);
+				rc = co_status_convert(status);
+				goto error_3;
+			} else {
+				LastAccessTime = entry_buffer.entry2.LastAccessTime;
+				LastWriteTime = entry_buffer.entry2.LastWriteTime;
+				ChangeTime = entry_buffer.entry2.ChangeTime;
+				EndOfFile = entry_buffer.entry2.EndOfFile;
+				FileAttributes = entry_buffer.entry2.FileAttributes;
+			}
+		} else {
+			co_debug_lvl(filesystem, 5, "error %x ZwQueryDirectoryFile('%s')", (int)status, filename);
+			rc = co_status_convert(status);
+			goto error_3;
+		}
+	} else {
+		LastAccessTime = entry_buffer.entry.LastAccessTime;
+		LastWriteTime = entry_buffer.entry.LastWriteTime;
+		ChangeTime = entry_buffer.entry.ChangeTime;
+		EndOfFile = entry_buffer.entry.EndOfFile;
+		FileAttributes = entry_buffer.entry.FileAttributes;
 	}
 
-	attr->atime = windows_time_to_unix_time(fbi.LastAccessTime);
-	attr->mtime = windows_time_to_unix_time(fbi.LastWriteTime);
-	attr->ctime = windows_time_to_unix_time(fbi.ChangeTime);
+	attr->atime = windows_time_to_unix_time(LastAccessTime);
+	attr->mtime = windows_time_to_unix_time(LastWriteTime);
+	attr->ctime = windows_time_to_unix_time(ChangeTime);
 
 	#define FUSE_S_IR (FUSE_S_IRUSR | FUSE_S_IRGRP | FUSE_S_IROTH)
 	#define FUSE_S_IW (FUSE_S_IWUSR | FUSE_S_IWGRP | FUSE_S_IWOTH)
 	#define FUSE_S_IX (FUSE_S_IXUSR | FUSE_S_IXGRP | FUSE_S_IXOTH)
 
-	if (fbi.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+	if (FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 		attr->mode = FUSE_S_IFDIR
-			   | ((fbi.FileAttributes & FILE_ATTRIBUTE_HIDDEN)   ? 0 : FUSE_S_IR)
-			   | ((fbi.FileAttributes & FILE_ATTRIBUTE_READONLY) ? 0 : FUSE_S_IW)
-			   | ((fbi.FileAttributes & FILE_ATTRIBUTE_SYSTEM)   ? 0 : FUSE_S_IX);
+			   | ((FileAttributes & FILE_ATTRIBUTE_HIDDEN)   ? 0 : FUSE_S_IR)
+			   | ((FileAttributes & FILE_ATTRIBUTE_READONLY) ? 0 : FUSE_S_IW)
+			   | ((FileAttributes & FILE_ATTRIBUTE_SYSTEM)   ? 0 : FUSE_S_IX);
 	else
 		attr->mode = FUSE_S_IFREG
-			   | ((fbi.FileAttributes & FILE_ATTRIBUTE_HIDDEN)   ? 0 : FUSE_S_IR)
-			   | ((fbi.FileAttributes & FILE_ATTRIBUTE_READONLY) ? 0 : FUSE_S_IW)
-			   | ((fbi.FileAttributes & FILE_ATTRIBUTE_SYSTEM)   ? FUSE_S_IX : 0);
+			   | ((FileAttributes & FILE_ATTRIBUTE_HIDDEN)   ? 0 : FUSE_S_IR)
+			   | ((FileAttributes & FILE_ATTRIBUTE_READONLY) ? 0 : FUSE_S_IW)
+			   | ((FileAttributes & FILE_ATTRIBUTE_SYSTEM)   ? FUSE_S_IX : 0);
 
-error_1:
+	attr->size = EndOfFile.QuadPart;
+	attr->blocks = (EndOfFile.QuadPart + ((1<<10)-1)) >> 10;
+
+	rc = CO_RC(OK);
+
+error_3:
 	ZwClose(handle);
+error_2:
+	co_winnt_free_unicode(&filename_unicode);
+error_1:
+	co_winnt_free_unicode(&dirname_unicode);
+error_0:
+	co_os_free(dirname);
 	return rc;
 }
 
