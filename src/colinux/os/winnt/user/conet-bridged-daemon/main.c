@@ -22,6 +22,7 @@
 #include <colinux/user/macaddress.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/current/user/reactor.h>
+#include <colinux/os/current/user/misc.h>
 #include "pcap-registry.h"
 
 COLINUX_DEFINE_MODULE("colinux-bridged-net-daemon");
@@ -39,6 +40,11 @@ typedef struct co_win32_pcap {
 	pcap_t *adhandle;
 	struct pcap_pkthdr *pkt_header;
 	u_char *buffer;
+	char * dev_name;
+	u_int netmask;
+	volatile bool_t suspended;
+	HANDLE pcap_thread;
+	char packet_filter[0x100];
 } co_win32_pcap_t;
 
 /* Runtime parameters */
@@ -142,10 +148,15 @@ pcap2Daemon(LPVOID lpParam)
 
 		default:
 			/* Error or EOF(offline capture only) */
+			/* Typically: Network adapter disabled or in power off mode (Vista suspend) */
 			co_debug_lvl(network, 5, "error %d reading from winPCap: %s",
 				     pcap_status, pcap_geterr(pcap_packet.adhandle));
-			ExitProcess(0);
-			return 0;
+
+			co_debug_lvl(network, 3, "Thread stopped.");
+			pcap_packet.suspended = TRUE;
+			SuspendThread(pcap_packet.pcap_thread);
+			pcap_packet.suspended = FALSE;
+			co_debug_lvl(network, 3, "Thread continued.");
 		}
 	}
 
@@ -207,31 +218,17 @@ co_rc_t get_device_name(char *name,
 	return CO_RC(OK);
 }
 
-/*******************************************************************************
- * Initialize winPCap interface.
- */
-static int
-pcap_init()
+static co_rc_t co_pcap_search(void)
 {
 	pcap_if_t *alldevs = NULL;
 	pcap_if_t *device;
 	pcap_if_t *found_device = NULL;
-	int exit_code = 0;
-	pcap_t *adhandle = NULL;
 	char errbuf[PCAP_ERRBUF_SIZE];
-	u_int netmask;
-	char packet_filter[0x100];
-	struct bpf_program fcode;
-
-	co_snprintf(packet_filter, sizeof(packet_filter), 
-		    "(ether dst %s) or (ether broadcast or multicast) or (ip broadcast or multicast)",
-		    daemon_parameters->mac_address);
 
 	/* Retrieve the device list */
 	if (pcap_findalldevs(&alldevs, errbuf) == -1) {
 		co_terminal_print("conet-bridged-daemon: error in pcap_findalldevs: %s\n", errbuf);
-		exit_code = -1;
-		goto pcap_out;
+		return CO_RC(ERROR);
 	}
 
 	if (daemon_parameters->name_specified == PTRUE)
@@ -252,7 +249,7 @@ pcap_init()
 		                connection_name_data, sizeof(connection_name_data));
 
 		if (*connection_name_data != 0) {
-			co_terminal_print("conet-bridged-daemon: checking connection: %s\n", connection_name_data);
+			co_terminal_print("conet-bridged-daemon: checking connection '%s'\n", connection_name_data);
 
 			if (daemon_parameters->name_specified == PTRUE) {
 				/*
@@ -295,71 +292,99 @@ pcap_init()
 
 	if (found_device == NULL) {
 		co_terminal_print("conet-bridged-daemon: no matching adapter\n");
-                exit_code = -1;
-                goto pcap_out_close;
+		pcap_freealldevs(alldevs);
+		return CO_RC(ERROR);
 	}
 
 	device = found_device;
+	pcap_packet.dev_name = strdup(device->name);
 
-	/* Open the first adapter. */
-	if ((adhandle = pcap_open_live(device->name,	// name of the device
+	if (device->addresses != NULL) {
+		/* Retrieve the mask of the first address of the interface */
+		pcap_packet.netmask = ((struct sockaddr_in *) \
+			(device->addresses->netmask))->sin_addr.S_un.S_addr;
+	} else {
+		/* If the interface is without addresses we suppose to be in a C
+		 * class network
+		 */
+		pcap_packet.netmask = 0xffffff;
+	}
+
+	co_snprintf(pcap_packet.packet_filter, sizeof(pcap_packet.packet_filter),
+		    "(ether dst %s) or (ether broadcast or multicast) or (ip broadcast or multicast)",
+		    daemon_parameters->mac_address);
+
+	co_terminal_print("conet-bridged-daemon: listening on: %s...\n", device->description);
+	co_terminal_print("conet-bridged-daemon: listening for: %s\n", pcap_packet.packet_filter);
+	if (daemon_parameters->promisc == 0)	// promiscuous mode?
+		co_terminal_print("conet-bridged-daemon: Promiscuous mode disabled\n");
+
+	// At this point, we don't need any more the device list. Free it
+	pcap_freealldevs(alldevs);
+
+	return CO_RC(OK);
+}
+
+static co_rc_t co_pcap_open(void)
+{
+	char errbuf[PCAP_ERRBUF_SIZE];
+	struct bpf_program fcode;
+
+	/* Open the adapter. */
+	if ((pcap_packet.adhandle = pcap_open_live(pcap_packet.dev_name,	// name of the device
 				       65536,	// captures entire packet.
 				       daemon_parameters->promisc,	// promiscuous mode
 				       1,	// read timeout
 				       errbuf	// error buffer
 	     )) == NULL) {
-		co_terminal_print("conet-bridged-daemon: unable to open the adapter.\n");
-		exit_code = -1;
-		goto pcap_out_close;
+		co_debug("conet-bridged-daemon: unable to open the adapter.");
+		return CO_RC(ERROR);
 	}
 
 	/* Check the link layer. We support only Ethernet because coLinux
 	 * only talks 802.3 so far.
 	 */
-	if (pcap_datalink(adhandle) != DLT_EN10MB) {
+	if (pcap_datalink(pcap_packet.adhandle) != DLT_EN10MB) {
 		co_terminal_print("conet-bridged-daemon: this program works only on 802.3 Ethernet networks.\n");
-		exit_code = -1;
-		goto pcap_out_close;
-	}
-
-	if (device->addresses != NULL) {
-		/* Retrieve the mask of the first address of the interface */
-		netmask =
-		    ((struct sockaddr_in *) (device->addresses->netmask))->sin_addr.
-		    S_un.S_addr;
-	} else {
-		/* If the interface is without addresses we suppose to be in a C
-		 * class network
-		 */
-		netmask = 0xffffff;
+		return CO_RC(ERROR);
 	}
 
 	//compile the filter
-	if (pcap_compile(adhandle, &fcode, packet_filter, 1, netmask) < 0) {
+	if (pcap_compile(pcap_packet.adhandle, &fcode, pcap_packet.packet_filter, 1, pcap_packet.netmask) < 0) {
 		co_terminal_print("conet-bridged-daemon: unable to compile the packet filter. Check the syntax.\n");
-		exit_code = -1;
-		goto pcap_out_close;
+		return CO_RC(ERROR);
 	}
+
 	//set the filter
-	if (pcap_setfilter(adhandle, &fcode) < 0) {
+	if (pcap_setfilter(pcap_packet.adhandle, &fcode) < 0) {
 		co_terminal_print("conet-bridged-daemon: error setting the filter.\n");
-		exit_code = -1;
-		goto pcap_out_close;
+		return CO_RC(ERROR);
 	}
 
-	co_terminal_print("conet-bridged-daemon: listening on: %s...\n", device->description);
-	co_terminal_print("conet-bridged-daemon: listening for: %s\n", packet_filter);
-	if (daemon_parameters->promisc == 0)	// promiscuous mode?
-		co_terminal_print("conet-bridged-daemon: Promiscuous mode disabled\n");
+	return CO_RC(OK);
+}
 
-	pcap_packet.adhandle = adhandle;
+static void co_pcap_close(void)
+{
+	if (pcap_packet.adhandle) {
+		pcap_close(pcap_packet.adhandle);
+		pcap_packet.adhandle = NULL;
+	}
+}
 
-      pcap_out_close:
-	// At this point, we don't need any more the device list. Free it
-	pcap_freealldevs(alldevs);
 
-      pcap_out:
-	return exit_code;
+/*******************************************************************************
+ * Initialize winPCap interface.
+ */
+static co_rc_t co_pcap_init(void)
+{
+	co_rc_t rc;
+
+	rc = co_pcap_search();
+	if (!CO_OK(rc))
+		return rc;
+
+	return co_pcap_open();
 }
 
 /********************************************************************************
@@ -511,63 +536,103 @@ handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 	return CO_RC(OK);	
 }
 
-int
-conet_bridged_main(int argc, char *argv[])
+static co_rc_t conet_bridged_main(int argc, char *argv[])
 {
-	HANDLE pcap_thread;
 	co_rc_t rc;
 	start_parameters_t start_parameters;
 	co_module_t modules[] = {CO_MODULE_CONET0, };
-	int exit_code = 0;
 
 	rc = handle_parameters(&start_parameters, argc, argv);
 	if (!CO_OK(rc)) 
-		return -1;
+		return rc;
 
 	if (start_parameters.show_help) {
 		co_net_syntax();
-		return 0;
+		return CO_RC(OK);
 	}
 
 	daemon_parameters = &start_parameters;
 
-	exit_code = pcap_init();
-	if (exit_code) {
+	rc = co_pcap_init();
+	if (!CO_OK(rc)) {
 		co_terminal_print("conet-bridged-daemon: error initializing winPCap\n");
 		goto out;
 	}
 
 	rc = co_reactor_create(&g_reactor);
-	if (!CO_OK(rc)) {
-		exit_code = -1;
+	if (!CO_OK(rc))
 		goto out;
-	}
 
 	modules[0] += start_parameters.index;
 	rc = co_user_monitor_open(g_reactor, monitor_receive,
 				  start_parameters.instance, modules, 
 				  sizeof(modules)/sizeof(co_module_t),
 				  &g_monitor_handle);
-	if (!CO_OK(rc)) {
-		exit_code = -1;
+	if (!CO_OK(rc))
 		goto out;
-	}
 
-	pcap_thread = CreateThread(NULL, 0, pcap2Daemon, NULL, 0, NULL);
-	if (pcap_thread == NULL) {
+	pcap_packet.pcap_thread = CreateThread(NULL, 0, pcap2Daemon, NULL, 0, NULL);
+	if (!pcap_packet.pcap_thread) {
 		co_terminal_print("conet-bridged-daemon: failed to spawn pcap_thread\n");
+		rc = CO_RC(ERROR);
 		goto out;
 	}
 
 	while (1) {
 		rc = co_reactor_select(g_reactor, -1);
 		if (!CO_OK(rc))
-			break;
+			goto out;
+
+		if (pcap_packet.suspended) {
+			DWORD retcode;
+			int loop;
+
+			co_terminal_print("conet-bridged-daemon: offline\n");
+			co_pcap_close();
+
+			// Try to open adapter again after loosing connection.
+			// Pause 0 ... 19 seconds between every try (total 190 sec).
+			for (loop = 0; loop < 20; loop++) {
+
+				// Check, that thread exist and is waiting
+				if (!GetExitCodeThread(pcap_packet.pcap_thread, &retcode)) {
+					co_terminal_print_last_error("conet-bridged-daemon: thread dead");
+					return CO_RC(ERROR);
+				}
+
+				if (retcode != STILL_ACTIVE) {
+					co_terminal_print("conet-bridged-daemon: thread dead (%ld)\n", retcode);
+					return CO_RC(ERROR);
+				}
+
+				Sleep(1000 * loop);
+
+				co_debug("reinitializing winPCap (%d)\n", loop);
+				rc = co_pcap_open();
+				if (CO_OK(rc))
+					break;
+			}
+
+			if (!CO_OK(rc)) {
+				co_terminal_print("conet-bridged-daemon: error reinitializing winPCap\n");
+				goto out;
+			}
+
+			// Continue receiver thread
+			if (ResumeThread(pcap_packet.pcap_thread) == -1) {
+				co_terminal_print_last_error("conet-bridged-daemon: failed to resume thread");
+				rc = CO_RC(ERROR);
+				goto out;
+			}
+
+			co_terminal_print("conet-bridged-daemon: online\n");
+		}
 	}
 
 out:
-	ExitProcess(exit_code);
-	return exit_code;
+	co_pcap_close();
+
+	return rc;
 }
 
 /********************************************************************************
@@ -577,14 +642,15 @@ out:
 int
 main(int argc, char *argv[])
 {
-	int ret;
+	co_rc_t rc;
 
 	co_debug_start();
 	co_process_high_priority_set();
-        
-	ret = conet_bridged_main(argc, argv);
 
+	rc = conet_bridged_main(argc, argv);
+
+	co_debug("exit (rc %x)", (int)rc);
 	co_debug_end();
     
-	return ret;
+	return (CO_OK(rc)) ? 0 : -1;
 }
