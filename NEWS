@@ -11,6 +11,7 @@
     New filter rule is: (ether dst mac) or (ether broadcast) 
 
   Console and daemons:
+  * pcap-bridge: Fix suspend problems. Reconnect after loosing adapter.
   * New network "ndis-bridge" works in kernel mode and is the faster
     alternative to pcap-bridge. (Ligong Liu)
   * Bug #2013501: Stop with error message on empty parameters.
@@ -20,8 +21,8 @@
     Usage "scsi0=disk,file.img" or "scsi1=cdrom,file.iso" (Steve Shoecraft)
   * Added virtual pci device handling. "lspci" is working (Steve Shoecraft)
   * Add PG_co_host_mapped, save many OS switching times: speed up coLinux.
-  * unionfs-2.2.4 added as module. (Marwan Al-Sabbagh)
   * New: /proc/colinux/stats show counts of OS switches.
+  * unionfs-2.2.4 added as module. (Marwan Al-Sabbagh)
   * Add sysenter / sysexit restoration support, for cpu with SEP feature.
 
   Debugging:
