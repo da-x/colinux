@@ -3439,38 +3439,3 @@ Index: linux-2.6.22-source/kernel/irq/manage.c
  	/*
  	 * Lockdep wants atomic interrupt handlers:
  	 */
-Index: linux-2.6.22-source/include/asm-i386/xor.h
-===================================================================
---- linux-2.6.22-source.orig/include/asm-i386/xor.h
-+++ linux-2.6.22-source/include/asm-i386/xor.h
-@@ -26,6 +26,7 @@
- #define XO4(x,y)	"       pxor   8*("#x")(%5), %%mm"#y"   ;\n"
- 
- #include <asm/i387.h>
-+#include <linux/cooperative_internal.h>
- 
- static void
- xor_pII_mmx_2(unsigned long bytes, unsigned long *p1, unsigned long *p2)
-@@ -868,16 +869,20 @@
- 		xor_speed(&xor_block_8regs_p);		\
- 		xor_speed(&xor_block_32regs);		\
- 		xor_speed(&xor_block_32regs_p);		\
--	        if (cpu_has_xmm)			\
-+		if (!cooperative_mode_enabled()) {	\
-+	    	    if (cpu_has_xmm)			\
- 			xor_speed(&xor_block_pIII_sse);	\
--	        if (cpu_has_mmx) {			\
-+	    	    if (cpu_has_mmx) {			\
- 	                xor_speed(&xor_block_pII_mmx);	\
- 	                xor_speed(&xor_block_p5_mmx);	\
-+		    }					\
- 	        }					\
- 	} while (0)
- 
- /* We force the use of the SSE xor block because it can write around L2.
-    We may also be able to load into the L1 only depending on how the cpu
-    deals with a load to a line that is being prefetched.  */
-+#ifndef CONFIG_COOPERATIVE
- #define XOR_SELECT_TEMPLATE(FASTEST) \
- 	(cpu_has_xmm ? &xor_block_pIII_sse : FASTEST)
-+#endif
