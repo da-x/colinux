@@ -1,6 +1,10 @@
  * Kernel:
    * Merge coLinux kernel patch with official kernels paravirt_ops.
      "lguest" in kernel code is a good start point.
+   * SSE/MMX support is disabled by bits X86_FEATURE_XMM/MMX in cpu caps.
+     Problem is, that inside a use of sse/mmx registers we can not allow
+     an OS switch, for example for page allocations. This ends with an
+     endless FPU fault, see bug#2524658.
 
  * Consoles:
    * Make the consoles scrollable/resizable.
