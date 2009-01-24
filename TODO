@@ -2,9 +2,9 @@
    * Merge coLinux kernel patch with official kernels paravirt_ops.
      "lguest" in kernel code is a good start point.
    * SSE/MMX support is disabled by bits X86_FEATURE_XMM/MMX in cpu caps.
-     Problem is, that inside a use of sse/mmx registers we can not allow
-     an OS switch, for example for page allocations. This ends with an
-     endless FPU fault, see bug#2524658.
+     Problem is, that inside usage of sse/mmx registers we can not allow
+     an OS switch, example for page allocations. This ends with an endless
+     FPU fault, see bug#2524658.
 
  * Consoles:
    * Make the consoles scrollable/resizable.
@@ -23,8 +23,6 @@
      I'm not exactly sure of what needs to be done here, but I think we can
      solve it by using the modifier flags in the key input record.
    * Fix: The cursor disapears sometimes (fltk console). 
-   * Fix: The cursor is not positioned well on nt console re-attach. I think
-     this was solved in the fltk console. 
    * Either support multiple consoles or stop the second from attaching
      (probably the latter first). Any console can attach now, broking the
      first one (and all others, off course).

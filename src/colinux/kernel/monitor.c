@@ -1336,6 +1336,15 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t *monitor, co_monitor_ioc
 		incoming_message(monitor, co_message);
 	}
 
+	co_message->from = CO_MODULE_LINUX;
+	co_message->to = CO_MODULE_CONSOLE;
+	co_message->priority = CO_PRIORITY_DISCARDABLE;
+	co_message->type = CO_MESSAGE_TYPE_STRING;
+	co_message->size = ((char*)(&message->cursor+1))-((char* )message);
+	message->type = CO_OPERATION_CONSOLE_CURSOR_MOVE;
+	message->cursor = monitor->console->cursor;
+	incoming_message(monitor, co_message);
+
 	co_os_free(co_message);
 
 	return CO_RC(OK);
