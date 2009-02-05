@@ -3439,22 +3439,3 @@ Index: linux-2.6.22-source/kernel/irq/manage.c
  	/*
  	 * Lockdep wants atomic interrupt handlers:
  	 */
-Index: linux-2.6.22-source/arch/i386/kernel/cpu/common.c
-===================================================================
---- linux-2.6.22-source.orig/arch/i386/kernel/cpu/common.c
-+++ linux-2.6.22-source/arch/i386/kernel/cpu/common.c
-@@ -461,6 +461,14 @@
- 		clear_bit(X86_FEATURE_XMM, c->x86_capability);
- 	}
- 
-+	/* coLinux: Disable unsave functions xor_sse */
-+#ifdef CONFIG_COOPERATIVE
-+	if (boot_cpu_has(X86_FEATURE_MMX) || boot_cpu_has(X86_FEATURE_XMM))
-+		printk(KERN_DEBUG "coLinux: MMX/XMM not supported\n");
-+	clear_bit(X86_FEATURE_MMX, c->x86_capability);
-+	clear_bit(X86_FEATURE_XMM, c->x86_capability);
-+#endif
-+
- 	/* SEP disabled? */
- 	if (disable_x86_sep)
- 		clear_bit(X86_FEATURE_SEP, c->x86_capability);
