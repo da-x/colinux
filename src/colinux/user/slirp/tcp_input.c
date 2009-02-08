@@ -1457,7 +1457,7 @@ dodata:
  *	       ((so->so_iptos & IPTOS_LOWDELAY) &&
  *	       ((struct tcpiphdr_2 *)ti)->first_char == (char)27)) {
  */
-	if (ti->ti_len && (unsigned)ti->ti_len <= 5 &&
+	if ((tiflags & TH_FIN) && ti->ti_len && (unsigned)ti->ti_len <= 5 &&
 	    ((struct tcpiphdr_2 *)ti)->first_char == (char)27) {
 		tp->t_flags |= TF_ACKNOW;
 	}
