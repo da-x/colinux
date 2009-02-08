@@ -47,7 +47,7 @@
 
 struct socket tcb;
 
-int	tcprexmtthresh = 3;
+#define	TCPREXMTTHRESH 3
 struct	socket *tcp_last_so = &tcb;
 
 tcp_seq tcp_iss;                /* tcp initial send seq # */
@@ -1119,7 +1119,7 @@ trimthenstep6:
 				if (tp->t_timer[TCPT_REXMT] == 0 ||
 				    ti->ti_ack != tp->snd_una)
 					tp->t_dupacks = 0;
-				else if (++tp->t_dupacks == tcprexmtthresh) {
+				else if (++tp->t_dupacks == TCPREXMTTHRESH) {
 					tcp_seq onxt = tp->snd_nxt;
 					u_int win =
 					    min(tp->snd_wnd, tp->snd_cwnd) / 2 /
@@ -1138,7 +1138,7 @@ trimthenstep6:
 					if (SEQ_GT(onxt, tp->snd_nxt))
 						tp->snd_nxt = onxt;
 					goto drop;
-				} else if (tp->t_dupacks > tcprexmtthresh) {
+				} else if (tp->t_dupacks > TCPREXMTTHRESH) {
 					tp->snd_cwnd += tp->t_maxseg;
 					(void) tcp_output(tp);
 					goto drop;
@@ -1152,7 +1152,7 @@ trimthenstep6:
 		 * If the congestion window was inflated to account
 		 * for the other side's cached packets, retract it.
 		 */
-		if (tp->t_dupacks > tcprexmtthresh &&
+		if (tp->t_dupacks > TCPREXMTTHRESH &&
 		    tp->snd_cwnd > tp->snd_ssthresh)
 			tp->snd_cwnd = tp->snd_ssthresh;
 		tp->t_dupacks = 0;
