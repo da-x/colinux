@@ -4,6 +4,7 @@
   * New: cofs supports flat file modes "rwx" for owner.  Mount option
     "noattrib" disables these attribute mapping for older compatibility.
   * Use "setcobd=async" to enable asynchronous mode for cobd devices.
+  * Bug #2013435: cobd supports read-only files now.
   * Bug #2152550: cofs atime and mtime was swapped on time set.
   * Bug #2176188: File sync wrong on cofs, command after mv/rename fails.
   * Bug #2357494,#2365031: ndis-bridge was not working with PPPoE, AoE
@@ -15,6 +16,7 @@
   * New network "ndis-bridge" works in kernel mode and is the faster
     alternative to pcap-bridge. (Ligong Liu)
   * Bug #2013501: Stop with error message on empty parameters.
+  * Bug #2055697: Crashing SLiRP under heavy usage ktorrent. (Shai Vaingast)
 
   Kernel:
   * scsi: New device for images with partition tables and works async.
@@ -24,6 +26,7 @@
   * New: /proc/colinux/stats show counts of OS switches.
   * unionfs-2.2.4 added as module. (Marwan Al-Sabbagh)
   * Add sysenter / sysexit restoration support, for cpu with SEP feature.
+  * Bug #2524658: GPF on raid5/6 md array by accessing MMX/XMM-registers.
 
   Debugging:
   * Enable host kernel debug via registry [HKLM\SOFTWARE\coLinux] "Debug"
