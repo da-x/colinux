@@ -15,6 +15,7 @@
   * pcap-bridge: Fix suspend problems. Reconnect after loosing adapter.
   * New network "ndis-bridge" works in kernel mode and is the faster
     alternative to pcap-bridge. (Ligong Liu)
+  * Bug #1117788: Fix sticky ALT after system menu from ALT-Space.
   * Bug #2013501: Stop with error message on empty parameters.
   * Bug #2055697: Crashing SLiRP under heavy usage ktorrent. (Shai Vaingast)
 

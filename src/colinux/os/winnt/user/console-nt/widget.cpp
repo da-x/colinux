@@ -576,6 +576,20 @@ void console_widget_NT_t::process_key_event( KEY_EVENT_RECORD& ker )
 			return;
 		}
 		break;
+	default:
+		// Handle sticky mode keys after Alt+Space combination
+		if (!released && !(flags & (RIGHT_ALT_PRESSED | SHIFT_PRESSED))) {
+			// Release hanging ALT
+			if (vkey_state[0x12]) {
+				send_key(vkey_state[0x12]);
+				vkey_state[0x12] = 0;
+			}
+			// Release hanging SHIFT
+			if (vkey_state[0x10]) {
+				send_key(vkey_state[0x10]);
+				vkey_state[0x10] = 0;
+			}
+		}
 	}
 
 	/* Normal key processing */
