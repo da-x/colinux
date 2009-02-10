@@ -349,20 +349,21 @@ static bool_t co_conet_proto_filter_packet(
 		return TRUE;
 	}
 
-	ETH_COMPARE_NETWORK_ADDRESSES_EQ(pEthHdr->h_source, adapter->macaddr, &Result);
-	if ( Result == 0 ) {
-		/* ether src mac */
-		conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x echo",
-			pEthHdr->h_source[0], pEthHdr->h_source[1], pEthHdr->h_source[2],
-			pEthHdr->h_source[3], pEthHdr->h_source[4], pEthHdr->h_source[5]);
-		return FALSE;
-	}
-
 	if ( ETH_IS_MULTICAST(pEthHdr->h_dest) ) {
 		/* ether multicast (implicates broadcast) */
 		conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x multicast",
 			pEthHdr->h_dest[0], pEthHdr->h_dest[1], pEthHdr->h_dest[2],
 			pEthHdr->h_dest[3], pEthHdr->h_dest[4], pEthHdr->h_dest[5]);
+
+		ETH_COMPARE_NETWORK_ADDRESSES_EQ(pEthHdr->h_source, adapter->macaddr, &Result);
+		if ( Result == 0 ) {
+			/* ether src mac */
+			conet_debug("MAC %2.2x:%2.2x:%2.2x:%2.2x:%2.2x:%2.2x echo",
+				pEthHdr->h_source[0], pEthHdr->h_source[1], pEthHdr->h_source[2],
+				pEthHdr->h_source[3], pEthHdr->h_source[4], pEthHdr->h_source[5]);
+			return FALSE;
+		}
+
 		return TRUE;
 	}
 
