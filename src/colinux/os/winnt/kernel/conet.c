@@ -1145,7 +1145,7 @@ co_rc_t co_conet_inject_packet_to_adapter(co_monitor_t *monitor, int conet_unit,
 	NdisSend(&Status, binding_handle, (PNDIS_PACKET)packet);
 	if ( Status != NDIS_STATUS_PENDING ) {
 		conet_debug("NdisSend Packet %p completed", packet);
-		co_conet_proto_send_complete(binding_handle, (PNDIS_PACKET)packet, Status);
+		co_conet_proto_send_complete(adapter, (PNDIS_PACKET)packet, Status);
 	}
 
 	conet_debug("leave: success");
