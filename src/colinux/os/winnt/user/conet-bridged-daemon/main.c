@@ -311,11 +311,11 @@ static co_rc_t co_pcap_search(void)
 	}
 
 	co_snprintf(pcap_packet.packet_filter, sizeof(pcap_packet.packet_filter),
-		    "(ether dst %s) or (ether broadcast or multicast) or (ip broadcast or multicast)",
-		    daemon_parameters->mac_address);
+		    "(ether dst %s) or (multicast and not ether src %s)",
+		    daemon_parameters->mac_address, daemon_parameters->mac_address);
 
 	co_terminal_print("conet-bridged-daemon: listening on: %s...\n", device->description);
-	co_terminal_print("conet-bridged-daemon: listening for: %s\n", pcap_packet.packet_filter);
+	co_terminal_print("conet-bridged-daemon: Filter ule: %s\n", pcap_packet.packet_filter);
 	if (daemon_parameters->promisc == 0)	// promiscuous mode?
 		co_terminal_print("conet-bridged-daemon: Promiscuous mode disabled\n");
 
