@@ -176,7 +176,7 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 			while (t <= b) {
 				memmove(&console->screen[y*console->x+x],
 					&console->screen[t*console->x+l],
-					r-l+1);
+					(r-l+1)*sizeof(co_console_cell_t));
 				t++;
 				y++;
 			}
@@ -185,7 +185,7 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 			while (t <= b) {
 				memmove(&console->screen[y*console->x+x],
 					&console->screen[b*console->x+l],
-					r-l+1);
+					(r-l+1)*sizeof(co_console_cell_t));
 				b--;
 				y--;
 			}
