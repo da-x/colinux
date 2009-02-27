@@ -864,9 +864,7 @@ static co_rc_t alloc_shared_page(co_monitor_t *cmon)
 
 static void free_shared_page(co_monitor_t *cmon)
 {
-	if (cmon->shared_user_address) {
-		co_os_userspace_unmap(cmon->shared_user_address, cmon->shared_handle, 1);
-	}
+	co_os_userspace_unmap(cmon->shared_user_address, cmon->shared_handle, 1);
 	co_os_free_pages(cmon->shared, 1);
 }
 
@@ -1186,6 +1184,7 @@ static co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
                 co_os_timer_deactivate(cmon->timer);
 	}
 
+	/* Can't unmap from kernel context, see Bug #2587396 */
 	if (!user_context)
 		cmon->shared_user_address = NULL;
 
