@@ -864,7 +864,9 @@ static co_rc_t alloc_shared_page(co_monitor_t *cmon)
 
 static void free_shared_page(co_monitor_t *cmon)
 {
-	co_os_userspace_unmap(cmon->shared_user_address, cmon->shared_handle, 1);
+	if (cmon->shared_user_address) {
+		co_os_userspace_unmap(cmon->shared_user_address, cmon->shared_handle, 1);
+	}
 	co_os_free_pages(cmon->shared, 1);
 }
 
@@ -1169,7 +1171,7 @@ out_free_monitor:
 }
 
 
-static co_rc_t co_monitor_destroy(co_monitor_t *cmon)
+static co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
 {
 	co_manager_t *manager;
 
@@ -1183,6 +1185,9 @@ static co_rc_t co_monitor_destroy(co_monitor_t *cmon)
 	{
                 co_os_timer_deactivate(cmon->timer);
 	}
+
+	if (!user_context)
+		cmon->shared_user_address = NULL;
 
 	co_monitor_unregister_and_free_scsi_devices(cmon);
 	co_monitor_unregister_and_free_block_devices(cmon);
@@ -1245,7 +1250,7 @@ co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monit
 		send_monitor_end_messages(cmon);
 
 	if (--cmon->refcount == 0)
-		return co_monitor_destroy(cmon);
+		return co_monitor_destroy(cmon, monitor_owner);
 
 	return CO_RC(OK);
 }
