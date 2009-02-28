@@ -35,6 +35,9 @@
   * Add sysenter / sysexit restoration support, for cpu with SEP feature.
   * Bug #2524658: GPF on raid5/6 md array by accessing MMX/XMM-registers.
 
+  Installer:
+  * Update image Fedora 9
+
   Debugging:
   * Enable host kernel debug via registry [HKLM\SOFTWARE\coLinux] "Debug"
 

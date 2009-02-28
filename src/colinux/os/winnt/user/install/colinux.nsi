@@ -296,7 +296,7 @@ Section "Root Filesystem image Download" SeccoLinuxImage
     StrCmp $R1 "1" tryDownload
 
     !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_FEDORA}" "State"
-    StrCpy $R0 "Fedora-7-20070906.exe"
+    StrCpy $R0 "Fedora-9-20080827.exe"
     StrCmp $R1 "1" tryDownload
 
     !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_GENTOO}" "State"
