@@ -304,7 +304,7 @@ Section "Root Filesystem image Download" SeccoLinuxImage
     StrCmp $R1 "1" tryDownload
 
     !insertmacro MUI_INSTALLOPTIONS_READ $R1 "iDl.ini" "Field ${IDL_UBUNTU}" "State"
-    StrCpy $R0 "Ubuntu-6.06.1.ext3.1gb.bz2"
+    StrCpy $R0 "Ubuntu-7.10.ext3.2GB.7z"
     StrCmp $R1 "1" tryDownload
     GoTo End
 
