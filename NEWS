@@ -24,6 +24,7 @@
   * Bug #1117788: Fix sticky ALT after system menu from ALT-Space.
   * Bug #2013501: Stop with error message on empty parameters.
   * Bug #2593186: FLTK console command prompt display problems. (Shai Vaingast)
+  * Bugfix: Enclose spaces in current directory for install-service.
 
   Kernel:
   * scsi: New device for images with partition tables and works async.
