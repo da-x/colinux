@@ -525,10 +525,13 @@ static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_confi
 			if (!scsi->size) {
 				rc = check_cobd_file(scsi->pathname, "scsi", index);
 				if (!CO_OK(rc)) return rc;
+			} else if (scsi->size < 0 || scsi->size > 0x100000) {
+				co_terminal_print("scsi%d: Size '%s' out of range. (max. 1048576 MB)\n", index, size);
+				return CO_RC(INVALID_PARAMETER);
 			}
 
 			co_canonize_cobd_path(&scsi->pathname);
-			co_debug_info("scsi%d: %s -> %s (size: %d)", index, type, scsi->pathname, scsi->size);
+			co_debug_info("scsi%d: %s -> %s (size: %d MB)", index, type, scsi->pathname, scsi->size);
 			break;
 		}
 	} while (1);
