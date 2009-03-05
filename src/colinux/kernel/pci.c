@@ -74,6 +74,7 @@ co_rc_t co_pci_setconfig(co_monitor_t *cmon) {
 	co_debug("*********** user settings:");
 	dump_space(cmon);
 
+#ifdef CONFIG_COOPERATIVE_VIDEO
 	/* Video adapters */
 	for(x=0; x < CO_MODULE_MAX_COVIDEO; x++) {
 		if (cmon->video_devs[x]) {
@@ -81,14 +82,17 @@ co_rc_t co_pci_setconfig(co_monitor_t *cmon) {
 			pci_space_add(cmon, 0, CO_DEVICE_VIDEO, x);
 		}
 	}
+#endif
 
+#ifdef CONFIG_COOPERATIVE_AUDIO
 	/* Audio adapters */
 	for(x=0; x < CO_MODULE_MAX_COAUDIO; x++) {
 		if (cmon->audio_devs[x]) {
 			co_debug("adding audio%d", x);
-			pci_space_add(cmon, 0, CO_DEVICE_VIDEO, x);
+			pci_space_add(cmon, 0, CO_DEVICE_AUDIO, x);
 		}
 	}
+#endif
 
 	/* SCSI interfaces */
 	for(x=0; x < CO_MODULE_MAX_COSCSI; x++) {

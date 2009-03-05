@@ -15,6 +15,7 @@
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/kernel/video.h>
 
+#ifdef CONFIG_COOPERATIVE_VIDEO
 #include <linux/covideo.h>
 
 #define COVIDEO_DEBUG 1
@@ -186,3 +187,4 @@ co_rc_t co_video_detach(co_monitor_t *cmon, co_monitor_ioctl_video_t *params) {
 
 	return CO_RC(OK);
 }
+#endif /* CONFIG_COOPERATIVE_VIDEO */

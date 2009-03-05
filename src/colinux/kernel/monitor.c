@@ -252,9 +252,11 @@ static bool_t device_request(co_monitor_t *cmon, co_device_t device, unsigned lo
 		co_scsi_request(cmon, params[0], params[1]);
 		return PTRUE;
 
+#ifdef CONFIG_COOPERATIVE_VIDEO
 	case CO_DEVICE_VIDEO:
 		co_video_request(cmon, params[0], params[1]);
 		return PTRUE;
+#endif
 
 	default:
 		break;
@@ -740,6 +742,7 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 
 	}
 
+#ifdef CONFIG_COOPERATIVE_VIDEO
 	for(i=0; i < CO_MODULE_MAX_COVIDEO; i++) {
 		co_video_dev_desc_t *cp = &cmon->config.video_devs[i];
 		co_video_dev_t *dev;
@@ -754,13 +757,16 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 		if (!CO_OK(rc)) goto error_3;
 
         }
+#endif
 
 	rc = co_pci_setconfig(cmon);
 
 	return rc;
 
 error_3:
+#ifdef CONFIG_COOPERATIVE_VIDEO
 	co_monitor_unregister_video_devices(cmon);
+#endif
 error_2:
 	co_monitor_unregister_filesystems(cmon);
 error_1:
@@ -1191,7 +1197,9 @@ static co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
 	co_monitor_unregister_and_free_scsi_devices(cmon);
 	co_monitor_unregister_and_free_block_devices(cmon);
 	co_monitor_unregister_filesystems(cmon);
+#ifdef CONFIG_COOPERATIVE_VIDEO
 	co_monitor_unregister_video_devices(cmon);
+#endif
 	free_pseudo_physical_memory(cmon);
 	manager->hostmem_used -= cmon->memory_size;
 	co_os_free(cmon->io_buffer);
@@ -1272,7 +1280,9 @@ static co_rc_t co_monitor_user_reset(co_monitor_t *monitor)
 	co_monitor_unregister_and_free_scsi_devices(monitor);
 	co_monitor_unregister_and_free_block_devices(monitor);
 	co_monitor_unregister_filesystems(monitor);
+#ifdef CONFIG_COOPERATIVE_VIDEO
 	co_monitor_unregister_video_devices(monitor);
+#endif
 
 	rc = load_configuration(monitor);
 	if (!CO_OK(rc)) {
@@ -1375,6 +1385,7 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 
 		return co_monitor_user_get_console(cmon, params);
 	}
+#ifdef CONFIG_COOPERATIVE_VIDEO
 	case CO_MONITOR_IOCTL_VIDEO_ATTACH: {
 		co_monitor_ioctl_video_t *params;
 
@@ -1391,6 +1402,7 @@ co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buff
 
 		return co_video_detach(cmon, params);
 	}
+#endif
 	case CO_MONITOR_IOCTL_CONET_BIND_ADAPTER: {
 		co_monitor_ioctl_conet_bind_adapter_t *params;
 

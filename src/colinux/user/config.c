@@ -335,6 +335,7 @@ static co_rc_t parse_args_config_pci(co_command_line_params_t cmdline, co_config
 			return CO_RC(INVALID_PARAMETER);
 		}
 		u = atoi(unit);
+#ifdef CONFIG_COOPERATIVE_VIDEO
 		if (strcmp(type,"video") == 0) {
 			t = CO_DEVICE_VIDEO;
 			if (u < 0 || u >= CO_MODULE_MAX_COVIDEO) {
@@ -346,8 +347,10 @@ static co_rc_t parse_args_config_pci(co_command_line_params_t cmdline, co_config
 				co_terminal_print("pci%d: video unit %d is not enabled.\n", index, u);
 				return CO_RC(INVALID_PARAMETER);
 			}
-		}
-		else if (strcmp(type,"audio") == 0) {
+		} else
+#endif
+#ifdef CONFIG_COOPERATIVE_AUDIO
+		if (strcmp(type,"audio") == 0) {
 			t = CO_DEVICE_AUDIO;
 			if (u < 0 || u >= CO_MODULE_MAX_COAUDIO) {
 				co_terminal_print("pci%d: unit: %s out of range for a audio device (0-%d)\n", index, unit,
@@ -358,9 +361,10 @@ static co_rc_t parse_args_config_pci(co_command_line_params_t cmdline, co_config
 				co_terminal_print("pci%d: audio unit %d is not enabled.\n", index, u);
 				return CO_RC(INVALID_PARAMETER);
 			}
-		}
+		} else
+#endif
 #ifdef CO_DEVICE_IDE
-		else if (strcmp(type,"ide") == 0) {
+		if (strcmp(type,"ide") == 0) {
 			int x,found;
 
 			t = CO_DEVICE_IDE;
@@ -375,9 +379,9 @@ static co_rc_t parse_args_config_pci(co_command_line_params_t cmdline, co_config
 				co_terminal_print("pci%d: no ide devices are enabled.\n", index);
 				return CO_RC(INVALID_PARAMETER);
 			}
-		}
+		} else
 #endif
-		else if (strcmp(type,"scsi") == 0) {
+		if (strcmp(type,"scsi") == 0) {
 			int x,found;
 
 			t = CO_DEVICE_SCSI;
@@ -418,6 +422,7 @@ static co_rc_t parse_args_config_pci(co_command_line_params_t cmdline, co_config
 	return CO_RC(OK);
 }
 
+#ifdef CONFIG_COOPERATIVE_VIDEO
 static co_rc_t parse_args_config_video(co_command_line_params_t cmdline, co_config_t *conf)
 {
 	char size[16];
@@ -461,6 +466,7 @@ static co_rc_t parse_args_config_video(co_command_line_params_t cmdline, co_conf
 
 	return CO_RC(OK);
 }
+#endif
 
 static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_config_t *conf)
 {
@@ -975,9 +981,11 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 	if (exists)
 		co_debug_info("configuring %u MB of virtual RAM", conf->ram_size);
 
+#ifdef CONFIG_COOPERATIVE_VIDEO
 	rc = parse_args_config_video(cmdline, conf);
 	if (!CO_OK(rc))
 		return rc;
+#endif
 
 	rc = parse_args_config_scsi(cmdline, conf);
 	if (!CO_OK(rc))

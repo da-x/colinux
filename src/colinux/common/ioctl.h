@@ -62,8 +62,8 @@ typedef enum {
 	CO_MONITOR_IOCTL_GET_CONSOLE,
 	CO_MONITOR_IOCTL_GET_STATE,
 	CO_MONITOR_IOCTL_RESET,
-	CO_MONITOR_IOCTL_VIDEO_ATTACH,
-	CO_MONITOR_IOCTL_VIDEO_DETACH,
+	CO_MONITOR_IOCTL_VIDEO_ATTACH, /* incomplete */
+	CO_MONITOR_IOCTL_VIDEO_DETACH, /* incomplete */
 	CO_MONITOR_IOCTL_CONET_BIND_ADAPTER,
 	CO_MONITOR_IOCTL_CONET_UNBIND_ADAPTER
 } co_monitor_ioctl_op_t;
@@ -190,6 +190,7 @@ typedef struct co_monitor_ioctl_status {
 	co_manager_ioctl_monitor_t pc;
 } co_monitor_ioctl_status_t;
 
+#ifdef CONFIG_COOPERATIVE_VIDEO
 /* interface for CO_MONITOR_IOCTL_VIDEO_ATTACH/DETACH: */
 typedef struct {
 	co_manager_ioctl_monitor_t pc;
@@ -197,6 +198,7 @@ typedef struct {
 	void *address;
 	void *handle;
 } co_monitor_ioctl_video_t;
+#endif
 
 /***************** support kernel mode conet ***********************/
 typedef enum {

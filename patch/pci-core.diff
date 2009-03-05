@@ -2,7 +2,7 @@ Index: linux-2.6.22-source/arch/i386/pci/copci.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/pci/copci.c
-@@ -0,0 +1,293 @@
+@@ -0,0 +1,297 @@
 +
 +#include <linux/kernel.h>
 +#include <linux/pci.h>
@@ -233,16 +233,20 @@ Index: linux-2.6.22-source/arch/i386/pci/copci.c
 +	cp = guest_cp;
 +	for(x=0; x < count; x++, cp++) {
 +		switch(cp->type) {
++#ifdef CONFIG_COOPERATIVE_VIDEO
 +		case CO_DEVICE_VIDEO:
 +			id = PCI_DEVICE_ID_COVIDEO;
 +			class = PCI_CLASS_DISPLAY_OTHER;
 +			irq = 0;
 +			break;
++#endif
++#ifdef CONFIG_COOPERATIVE_AUDIO
 +		case CO_DEVICE_AUDIO:
 +			id = PCI_DEVICE_ID_COAUDIO;
 +			class = PCI_CLASS_MULTIMEDIA_AUDIO;
 +			irq = SOUND_IRQ;
 +			break;
++#endif
 +		case CO_DEVICE_SCSI:
 +			id = PCI_DEVICE_ID_COSCSI;
 +			class = PCI_CLASS_STORAGE_SCSI;
