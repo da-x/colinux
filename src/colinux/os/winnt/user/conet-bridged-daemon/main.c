@@ -315,7 +315,7 @@ static co_rc_t co_pcap_search(void)
 		    daemon_parameters->mac_address, daemon_parameters->mac_address);
 
 	co_terminal_print("conet-bridged-daemon: listening on: %s...\n", device->description);
-	co_terminal_print("conet-bridged-daemon: Filter ule: %s\n", pcap_packet.packet_filter);
+	co_terminal_print("conet-bridged-daemon: Filter rule: %s\n", pcap_packet.packet_filter);
 	if (daemon_parameters->promisc == 0)	// promiscuous mode?
 		co_terminal_print("conet-bridged-daemon: Promiscuous mode disabled\n");
 
