@@ -566,28 +566,36 @@ void console_widget_NT_t::process_key_event( KEY_EVENT_RECORD& ker )
 		return;		// Let windows process this keys
 
 	case VK_MENU: // Left ALT pressed
-		// Check if Win+LeftAlt (detach from colinux)
-		if ((vkey_state[255] & 1) && !released) {
-
-			// Release WinKey before exit
-			send_key(0xE05B|0x80);
-
-			window->detach();
-			return;
+		if (!released) {
+			/* Check if AltGr (received as LeftControl+RightAlt) */
+			if (extended && (vkey_state[VK_CONTROL] == 0x9D)) {
+		    		/* Release Control key */
+				send_key(0x9D);
+				vkey_state[VK_CONTROL] = 0;
+			}
+			// Check if Win+LeftAlt (detach from colinux)
+			if (vkey_state[255] & 1) {
+				// Release WinKey before exit
+				send_key(0xE05B|0x80);
+				window->detach();
+				return;
+			}
 		}
 		break;
+
 	default:
 		// Handle sticky mode keys after Alt+Space combination
-		if (!released && !(flags & (RIGHT_ALT_PRESSED | SHIFT_PRESSED))) {
+		if (!released) {
 			// Release hanging ALT
-			if (vkey_state[0x12]) {
-				send_key(vkey_state[0x12]);
-				vkey_state[0x12] = 0;
+			if (!(flags & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED)) &&
+			    vkey_state[VK_MENU]) {
+				send_key(vkey_state[VK_MENU]);
+				vkey_state[VK_MENU] = 0;
 			}
 			// Release hanging SHIFT
-			if (vkey_state[0x10]) {
-				send_key(vkey_state[0x10]);
-				vkey_state[0x10] = 0;
+			if (!(flags & SHIFT_PRESSED) && vkey_state[VK_SHIFT]) {
+				send_key(vkey_state[VK_SHIFT]);
+				vkey_state[VK_SHIFT] = 0;
 			}
 		}
 	}
