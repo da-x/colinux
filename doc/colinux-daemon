@@ -490,12 +490,10 @@ don't depend on each other.  The parameters are case sensitive.
 Environment settings
 --------------------
 
-    COLINUX_NO_SMP_WORKAROUND=Y
+    COLINUX=<Install path>
 
-	Currently there's a bug on SMP that prevents coLinux from running
-	stable unless it is pinned to the first processor.
-
-	With 'COLINUX_NO_SMP_WORKAROUND=Y' coLinux runs on all processors.
+	Installer sets the path to your coLinux installation in environment
+	for all users.
 
     COLINUX_CONSOLE_EXIT_ON_DETACH=1
 
@@ -514,10 +512,29 @@ Environment settings
 	Change font size only.  Default font "Terminal" is still active:
 	set COLINUX_CONSOLE_FONT=:12
 
-    COLINUX=<Install path>
+    COLINUX_NO_CPU0_WORKAROUND=Y
 
-	Installer sets the path to your coLinux installation in environment
-	for all users.
+	Currently exist a problem on some CPUs with a very huge traffic	of
+	interrupts (200,000 or more interrupt per second). In such case we
+	have not enough time for switching between Linux and Windows, because
+	we only have to handle all these interrupts. Typically coLinux have no
+	text in FLTK-Console and boot steps ends after these lines:
+
+	    Setting proxy interrupt vectors
+	    PID hash table entries: 2048 (order: 11, 8192 bytes)
+
+	With 'COLINUX_NO_CPU0_WORKAROUND=Y' coLinux never use first processor.
+
+	This lets the Host handle most of interrupts without switching between
+	coLinux and Host. The result is, that the system runs more smoothly,
+	and the problem above goes continue to run.
+
+    COLINUX_NO_SMP_WORKAROUND=Y
+
+	Currently there's a bug on SMP that prevents coLinux from running
+	stable unless it is pinned to the first processor.
+
+	With 'COLINUX_NO_SMP_WORKAROUND=Y' coLinux runs on all processors.
 
 
 Used keys in Windows Registry
