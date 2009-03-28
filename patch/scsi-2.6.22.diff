@@ -47,7 +47,19 @@ Index: linux-2.6.22-source/drivers/scsi/sr.c
 ===================================================================
 --- linux-2.6.22-source.orig/drivers/scsi/sr.c
 +++ linux-2.6.22-source/drivers/scsi/sr.c
-@@ -726,7 +726,11 @@
+@@ -626,7 +626,11 @@
+ 	int sector_size;
+ 	request_queue_t *queue;
+ 
++#ifdef CONFIG_COOPERATIVE
++	buffer = kmalloc(512, GFP_KERNEL);
++#else
+ 	buffer = kmalloc(512, GFP_KERNEL | GFP_DMA);
++#endif
+ 	if (!buffer)
+ 		goto Enomem;
+ 
+@@ -726,7 +730,11 @@
  
  
  	/* allocate transfer buffer */
