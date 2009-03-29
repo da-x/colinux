@@ -39,7 +39,15 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/Kconfig
 +++ linux-2.6.22-source/arch/i386/Kconfig
-@@ -95,6 +95,7 @@
+@@ -54,6 +54,7 @@
+ config ZONE_DMA
+ 	bool
+ 	default y
++	depends on !COOPERATIVE
+ 
+ config QUICKLIST
+ 	bool
+@@ -95,6 +96,7 @@
  
  config SMP
  	bool "Symmetric multi-processing support"
@@ -47,7 +55,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	---help---
  	  This enables support for systems with more than one CPU. If you have
  	  a system with only one CPU, like most personal computers, say N. If
-@@ -261,6 +262,7 @@
+@@ -261,6 +263,7 @@
  
  config HPET_TIMER
  	bool "HPET Timer Support"
@@ -55,7 +63,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	help
  	  This enables the use of the HPET for the kernel's internal timer.
  	  HPET is the next generation timer replacing legacy 8254s.
-@@ -311,7 +313,7 @@
+@@ -311,7 +314,7 @@
  
  config X86_UP_APIC
  	bool "Local APIC support on uniprocessors"
@@ -64,7 +72,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	help
  	  A local APIC (Advanced Programmable Interrupt Controller) is an
  	  integrated interrupt controller in the CPU. If you have a single-CPU
-@@ -334,6 +336,10 @@
+@@ -334,6 +337,10 @@
  	  to use it. If you say Y here even though your machine doesn't have
  	  an IO-APIC, then the kernel will still run with no slowdown at all.
  
@@ -75,7 +83,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  config X86_LOCAL_APIC
  	bool
  	depends on X86_UP_APIC || ((X86_VISWS || SMP) && !X86_VOYAGER) || X86_GENERICARCH
-@@ -397,6 +403,7 @@
+@@ -397,6 +404,7 @@
  
  config TOSHIBA
  	tristate "Toshiba Laptop support"
@@ -83,7 +91,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	---help---
  	  This adds a driver to safely access the System Management Mode of
  	  the CPU on Toshiba portables with a genuine Toshiba BIOS. It does
-@@ -412,6 +419,7 @@
+@@ -412,6 +420,7 @@
  
  config I8K
  	tristate "Dell laptop support"
@@ -91,7 +99,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	---help---
  	  This adds a driver to safely access the System Management Mode
  	  of the CPU on the Dell Inspiron 8000. The System Management Mode
-@@ -432,7 +440,7 @@
+@@ -432,7 +441,7 @@
  
  config X86_REBOOTFIXUPS
  	bool "Enable X86 board specific fixups for reboot"
@@ -100,7 +108,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	default n
  	---help---
  	  This enables chipset and/or board specific fixups to be done
-@@ -534,14 +542,14 @@
+@@ -534,14 +543,14 @@
  
  config HIGHMEM4G
  	bool "4GB"
@@ -117,7 +125,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	help
  	  Select this if you have a 32-bit processor and more than 4
  	  gigabytes of physical RAM.
-@@ -651,7 +659,7 @@
+@@ -651,7 +660,7 @@
  
  config ARCH_SPARSEMEM_ENABLE
  	def_bool y
@@ -126,7 +134,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	select SPARSEMEM_STATIC
  
  config ARCH_SELECT_MEMORY_MODEL
-@@ -699,6 +707,7 @@
+@@ -699,6 +708,7 @@
  
  config MTRR
  	bool "MTRR (Memory Type Range Register) support"
@@ -134,7 +142,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	---help---
  	  On Intel P6 family processors (Pentium Pro, Pentium II and later)
  	  the Memory Type Range Registers (MTRRs) may be used to control
-@@ -785,6 +794,7 @@
+@@ -785,6 +795,7 @@
  
  config KEXEC
  	bool "kexec system call"
@@ -142,7 +150,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	help
  	  kexec is a system call that implements the ability to shutdown your
  	  current kernel, and to start another kernel.  It is like a reboot
-@@ -898,6 +908,17 @@
+@@ -898,6 +909,17 @@
  	  enable suspend on SMP systems. CPUs can be controlled through
  	  /sys/devices/system/cpu.
  
@@ -160,7 +168,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  config COMPAT_VDSO
  	bool "Compat VDSO support"
  	default y
-@@ -917,7 +938,7 @@
+@@ -917,7 +939,7 @@
  	depends on HIGHMEM
  
  menu "Power management options (ACPI, APM)"
@@ -169,7 +177,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  
  source kernel/power/Kconfig
  
-@@ -1056,6 +1077,7 @@
+@@ -1056,6 +1078,7 @@
  endmenu
  
  menu "Bus options (PCI, PCMCIA, EISA, MCA, ISA)"
@@ -177,7 +185,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  
  config PCI
  	bool "PCI support" if !X86_VISWS
-@@ -1264,7 +1286,7 @@
+@@ -1264,7 +1287,7 @@
  
  config X86_BIOS_REBOOT
  	bool
