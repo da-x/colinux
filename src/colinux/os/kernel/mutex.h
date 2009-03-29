@@ -17,7 +17,9 @@ typedef struct co_os_mutex *co_os_mutex_t;
 
 extern co_rc_t co_os_mutex_create(co_os_mutex_t *mutex_out);
 extern void co_os_mutex_acquire(co_os_mutex_t mutex);
+extern void co_os_mutex_acquire_critical(co_os_mutex_t mutex);
 extern void co_os_mutex_release(co_os_mutex_t mutex);
+extern void co_os_mutex_release_critical(co_os_mutex_t mutex);
 extern void co_os_mutex_destroy(co_os_mutex_t mutex);
 
 #endif

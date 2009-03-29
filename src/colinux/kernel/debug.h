@@ -58,24 +58,6 @@ typedef struct co_debug_write_vector {
 	};
 } co_debug_write_vector_t;
 
-static inline long co_debug_write_vector_size(co_debug_write_vector_t *vec, int vec_size)
-{
-	long size = 0;
-	while (vec_size--) {
-		size += vec->size;
-		vec++;
-	}
-	return size;
-}
-
-extern co_rc_t co_debug_writev(co_manager_debug_t *manager, 
-			       struct co_debug_section **section_ptr,
-			       co_debug_write_vector_t *vec, int vec_size);
-
-extern co_rc_t co_debug_write(co_manager_debug_t *manager, 
-			      struct co_debug_section **section_ptr,
-			      const char *buf, long size);
-
 extern co_rc_t co_debug_write_log(co_manager_debug_t *debug, 
 				  struct co_debug_section **section_ptr,
 				  co_debug_write_vector_t *vec, int vec_size);

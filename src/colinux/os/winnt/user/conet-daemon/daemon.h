@@ -13,7 +13,7 @@ public:
 	user_network_tap_daemon_t();
 	virtual ~user_network_tap_daemon_t();
 	virtual co_module_t get_base_module();
-	virtual long get_unit_count();
+	virtual unsigned int get_unit_count();
 	virtual const char *get_daemon_name();
 	virtual const char *get_daemon_title();
 	virtual const char *get_extended_syntax();

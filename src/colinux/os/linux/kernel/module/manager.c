@@ -209,8 +209,6 @@ ssize_t co_os_manager_write(struct file *file, const char __user *buffer, size_t
 		if (ret) {
 			ret = -EFAULT;
 			break;
-		} else {
-			ret = 0;
 		}
 
 		message_size += sizeof(*message);
@@ -219,9 +217,10 @@ ssize_t co_os_manager_write(struct file *file, const char __user *buffer, size_t
 			char *kblock = kmalloc(message_size, GFP_KERNEL);
 			if (kblock) {
 				if (!copy_from_user(kblock, message, message_size)) {
-					co_monitor_message_from_user(opened->monitor, opened, (co_message_t *)kblock);
+					co_monitor_message_from_user_free(opened->monitor, (co_message_t *)kblock);
+				} else {
+					kfree(kblock);
 				}
-				kfree(kblock);
 			}
 		}
 

@@ -26,11 +26,18 @@ co_rc_t co_monitor_os_init(co_monitor_t *cmon)
 	}
 
 	co_os_mutex_create(&cmon->osdep->mutex);
+
+	/* ligong liu, 2008/04/08, kernel mod conet support */
+	cmon->osdep->conet_protocol = NULL;
+	co_conet_register_protocol(cmon);
+	
 	return rc;
 }
 
 void co_monitor_os_exit(co_monitor_t *cmon)
 {
 	co_os_mutex_destroy(cmon->osdep->mutex);
+	co_conet_unregister_protocol(cmon);
+	co_os_mutex_destroy(cmon->osdep->conet_mutex);
 	co_os_free(cmon->osdep);
 }

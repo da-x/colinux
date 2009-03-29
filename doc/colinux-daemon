@@ -148,6 +148,14 @@ don't depend on each other.  The parameters are case sensitive.
 	this parameter out is 1/4 of your RAM if your RAM is >=
 	128, otherwise it's 16.  Default value is generally ok.
 
+    cocon=<COLS>,<ROWS>
+
+	This specifies the console size. Default is 80x25.
+	Minmum is 16x2,	maximum is near 200x80 (total 16384 cells).
+
+	Example:
+	cocon=120x40
+
     cobdX=<path to image file>
 
 	Use any number <X> of these to specify the block device image file.
@@ -175,6 +183,36 @@ don't depend on each other.  The parameters are case sensitive.
 	cobd0=rootfs.img
 	cobd1=C:\temp\swapfs.img
 	cobd2=\Device\Cdrom0
+
+    scsiX=<type>,<path to image file>,<image size>
+
+	Use any number <X> of these to specify the block device image file.
+	
+	<type> is 'disk' or 'cdrom'.
+
+	<path to image file> is typicaly a filname of your image file,
+	for example the base root fs, you have extracted.  This can be an
+	image of disk (/dev/hda), instead the partition self (dev/hda1).
+	Linux kernel scans for partition tables, fdisk is usable.
+	
+	<path to image file> can be a raw disk drive, with format
+	"\\.\PhysicalDriveX", where X starts with 0 for first harddisk.	Be
+	carefully with these configs, you risk datas on your drive C:.
+	Don't mount a partition that is in use on windows side!
+
+	<image size> can optional the size in megabytes. The host driver will
+	create the storage device file if it does not exist.
+	BE VERY CAREFULL  with this parameter, as it can increase/decrease the
+	size of a file as well!
+
+	For scsi0 the the device inside coLinux is /dev/sda, if type is cdrom
+	or the image file is a part of partition self (all current images).
+	If file has partition tables, the devices /dev/sda1, /dev/sda2, ...
+	are usable.
+
+	Examples:
+	scsi0=disk,file.img
+	scsi1=cdrom,file.iso
 
     alias=<path to image file> | :cobdX
 
@@ -220,7 +258,7 @@ don't depend on each other.  The parameters are case sensitive.
 	More about using cofs and mount options you will find in file cofs.txt
 	in your installation.
 
-    ethX=slirp | tuntap | pcap-bridge,<options>
+    ethX=slirp | tuntap | pcap-bridge | ndis-bridge ,<options>
 
 	Use any number <X> of these to specify network interfaces.
 	The first argument select the interface type on host side,
@@ -358,6 +396,46 @@ don't depend on each other.  The parameters are case sensitive.
 						# Define a MAC address and
 						# disable the Promiscuous mode.
 
+    ethX=ndis-bridge,<network connection name>,<MAC>,<promisc>
+
+	Ndis-Bridge use kernel ndis library to send and receice various
+	ethernet frames over your real network adapter card.  It's agents as
+	an additional network card on the one real exist card.  This allows
+	you, to connect coLinux virtual machine to the world.  In seeing from
+	outside your Windows host has an additional network card with a second
+	MAC, differ from your real card.  From coLinux machine you can do all
+	what you wand with an ethernet card (Ping, DHCP from router, TCP/IP,
+	IPX and many more protocols).  You must know: This type adds a virtual
+	network card in your network, and this not works in some IT security
+	policy.  Some wireless cards don't work with pcap-bridge, while the
+	MAC is differ on the same one connection channel.
+	Ndis-bridge does not work without a real netwoking connection.  This
+	means, you can not use this network type, if your real network adapter
+	is not connected (unplugged).
+
+	Use any number <X> of these to specify network interfaces.
+	<network connection name> must be a name of your real ethernet or
+	wireless card.  Use Quotation marks for spaces in name.  It is typical
+	"Local Connection".
+
+	<MAC> and <promisc> are optional.
+
+	Set a <MAC>, if you wish a constant hardware identification number.
+
+	Default is 'promisc', Promiscuous mode allow to receive packets
+	that not directly adressed to that adapter (sniffing mode).  This
+	works for cable Ethernet adapters.  Some cases (Wireless cards) works
+	only with 'nopromisc'.
+
+	The difference between pcap-bridge is, that ndis-bridge works in a
+	kernel mode, no needs to install pcap library and is faster.
+
+	Examples:
+	eth0=ndis-bridge,"Local Area Network"	# Uses NDIS bridging.
+	eth0=ndis-bridge,"Local Area Network",02:00:00:00:00:04,nopromisc
+						# Define a MAC address and
+						# disable the Promiscuous mode.
+
     ttysX=<serial device name>,<mode parameters>
 
 	Use any number <X> of these to specify serial interface (ttys0),
@@ -412,12 +490,10 @@ don't depend on each other.  The parameters are case sensitive.
 Environment settings
 --------------------
 
-    COLINUX_NO_SMP_WORKAROUND=Y
+    COLINUX=<Install path>
 
-	Currently there's a bug on SMP that prevents coLinux from running
-	stable unless it is pinned to the first processor.
-
-	With 'COLINUX_NO_SMP_WORKAROUND=Y' coLinux runs on all processors.
+	Installer sets the path to your coLinux installation in environment
+	for all users.
 
     COLINUX_CONSOLE_EXIT_ON_DETACH=1
 
@@ -436,10 +512,29 @@ Environment settings
 	Change font size only.  Default font "Terminal" is still active:
 	set COLINUX_CONSOLE_FONT=:12
 
-    COLINUX=<Install path>
+    COLINUX_NO_CPU0_WORKAROUND=Y
 
-	Installer sets the path to your coLinux installation in environment
-	for all users.
+	Currently exist a problem on some CPUs with a very huge traffic	of
+	interrupts (200,000 or more interrupt per second). In such case we
+	have not enough time for switching between Linux and Windows, because
+	we only have to handle all these interrupts. Typically coLinux have no
+	text in FLTK-Console and boot steps ends after these lines:
+
+	    Setting proxy interrupt vectors
+	    PID hash table entries: 2048 (order: 11, 8192 bytes)
+
+	With 'COLINUX_NO_CPU0_WORKAROUND=Y' coLinux never use first processor.
+
+	This lets the Host handle most of interrupts without switching between
+	coLinux and Host. The result is, that the system runs more smoothly,
+	and the problem above goes continue to run.
+
+    COLINUX_NO_SMP_WORKAROUND=Y
+
+	Currently there's a bug on SMP that prevents coLinux from running
+	stable unless it is pinned to the first processor.
+
+	With 'COLINUX_NO_SMP_WORKAROUND=Y' coLinux runs on all processors.
 
 
 Used keys in Windows Registry

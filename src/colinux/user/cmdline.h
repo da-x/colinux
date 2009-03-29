@@ -27,7 +27,8 @@ extern co_rc_t co_cmdline_params_one_arugment_parameter(co_command_line_params_t
 
 extern co_rc_t co_cmdline_params_one_arugment_int_parameter(co_command_line_params_t cmdline, 
 							    const char *name, 
-							    bool_t *out_exists, int *out_int);
+							    bool_t *out_exists, 
+							    unsigned int *out_int);
 
 extern co_rc_t co_cmdline_params_one_optional_arugment_parameter(co_command_line_params_t cmdline, 
 								 const char *name, 
@@ -43,10 +44,11 @@ extern co_rc_t co_cmdline_get_next_equality_alloc(co_command_line_params_t cmdli
 					    bool_t *out_exists);
 
 extern co_rc_t co_cmdline_get_next_equality_int_prefix(co_command_line_params_t cmdline, const char *expected_prefix, 
-						       int *key_int, int max_index, char **value, bool_t *out_exists);
+						       unsigned int *key_int, unsigned int max_index,
+						       char **value, bool_t *out_exists);
 
 extern co_rc_t co_cmdline_get_next_equality_int_value(co_command_line_params_t cmdline, const char *expected_prefix, 
-						      int *value_int, bool_t *out_exists);
+						      unsigned int *value_int, bool_t *out_exists);
 
 extern void co_cmdline_params_free(co_command_line_params_t cmdline);
 

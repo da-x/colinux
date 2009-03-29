@@ -15,11 +15,11 @@ TARGET_FILE=$2
 CO_VERSION_STRING=`cat $VERSION_FILE`-`date +%Y%m%d`
 
 # Get 4 digit words from full version
-VERSION=`sed -n -e 's/\([0-9\.]\+\)-[^0-9]*\([0-9]\+\).*/\1,\2/p' < $VERSION_FILE`
+VERSION=`sed -n -e 's/\([0-9\.]*\)-[^0-9]*\([0-9]*\).*/\1,\2/p' < $VERSION_FILE`
 
 # Fallback 3 digit words without -preXX
 test -z "$VERSION" && \
-VERSION=`sed -e 's/\([0-9\.]\+\).*/\1/' < $VERSION_FILE`.0
+VERSION=`sed -e 's/\([0-9\.]*\).*/\1/' < $VERSION_FILE`.0
 
 # Transform into comma format
 CO_VERSION_DWORD=`echo $VERSION | sed -e 's/\./,/g'`

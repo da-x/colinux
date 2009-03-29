@@ -126,20 +126,31 @@ static void patch_command_line_for_service(char *destbuf, const char *srcbuf)
 	{
 		if (0 == strncmp(srcbuf, "--install-service", 17))
 		{
+			char path [destmax-(destbuf+16)];
+			bool_t spaces;
+
 			/* replace any instance of --install-service with --run-service */
 			srcbuf += 17;
-			strcpy(destbuf, "--run-service:");
-			destbuf = destbuf + strlen(destbuf);
 
 			/* Add current working directory for service run later */
-			GetCurrentDirectory(destmax-destbuf, destbuf);
+			GetCurrentDirectory(sizeof(path)-1, path);
 
-			if (0 == strcasecmp(destbuf, co_winnt_get_path_from_exe())) {
+			if (0 == strcasecmp(path, co_winnt_get_path_from_exe())) {
 				/* CWD is the path of exe. No need extra path. */
-				destbuf--;
+				strcpy(destbuf, "--run-service");
 			} else {
-				destbuf = destbuf + strlen(destbuf);
+				/* Spaces in path must be enclosed */
+				spaces = (strchr(path, ' ') != NULL);
+				if (spaces)
+					*destbuf++ = '\"';
+
+				strcpy(destbuf, "--run-service:");
+				strcat(destbuf, path);
+
+				if (spaces)
+					strcat(destbuf, "\"");
 			}
+			destbuf += strlen(destbuf);
 
 			continue;
 		}

@@ -30,12 +30,14 @@
 #include "config.h"
 #include "reactor.h"
 
+static
 co_rc_t co_load_config_file(co_daemon_t *daemon)
 {
 	co_rc_t rc;
 
 	if (daemon->start_parameters->cmdline_config) {
 		daemon->config = daemon->start_parameters->config;
+		daemon->config.magic_size = sizeof(co_config_t);
 		return CO_RC(OK);
 	}
 
@@ -59,7 +61,7 @@ void co_daemon_print_header(void)
 	printed_already = 1;
 }
 
-void co_daemon_syntax()
+void co_daemon_syntax(void)
 {
 	co_daemon_print_header();
 	co_terminal_print("syntax: \n");
@@ -102,7 +104,7 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 	co_rc_t rc;
 	bool_t dont_launch_console = PFALSE;
 	bool_t verbose_specified = PFALSE;
-	int verbose_level = 0;
+	unsigned int verbose_level = 0;
 
 	co_snprintf(start_parameters->console, sizeof(start_parameters->console), "fltk");
 
@@ -424,12 +426,7 @@ co_rc_t co_daemon_monitor_create(co_daemon_t *daemon)
 	if (!CO_OK(rc)) 
 		goto out;
 
-	if (co_get_symbol_by_name(daemon->elf_data, "per_cpu__gdt_page"))
-		// >= 2.6.22
-		rc = co_daemon_load_symbol(daemon, "per_cpu__gdt_page", &import->kernel_gdt_table);
-	else
-		// <= 2.6.17
-		rc = co_daemon_load_symbol(daemon, "cpu_gdt_table", &import->kernel_gdt_table);
+	rc = co_daemon_load_symbol(daemon, "per_cpu__gdt_page", &import->kernel_gdt_table);
 	if (!CO_OK(rc))
 		goto out;
 
@@ -501,6 +498,7 @@ out_close:
 	return rc;
 }
 
+static
 void co_daemon_monitor_destroy(co_daemon_t *daemon)
 {
 	co_user_monitor_close(daemon->monitor);
@@ -520,7 +518,7 @@ co_rc_t co_daemon_start_monitor(co_daemon_t *daemon)
 
 	rc = co_elf_image_read(&daemon->elf_data, daemon->buf, size);
 	if (!CO_OK(rc)) {
-		co_terminal_print("error reading image (%ld bytes)\n", size);
+		co_terminal_print("%s: error reading image (%ld bytes)\n", daemon->config.vmlinux_path, size);
 		goto out_free_vmlinux; 
 	}
 
@@ -574,6 +572,7 @@ void co_daemon_send_shutdown(co_daemon_t *daemon)
 	co_user_monitor_message_send(daemon->message_monitor, &message.message);
 }
 
+static
 co_rc_t co_daemon_handle_printk(co_daemon_t *daemon, co_message_t *message)
 {
 	if (message->type == CO_MESSAGE_TYPE_STRING) {
@@ -632,6 +631,7 @@ static co_rc_t message_receive(co_reactor_user_t user, unsigned char *buffer, un
 	return CO_RC(OK);
 }
 
+static
 co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 {
 	int i;
@@ -650,8 +650,7 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 		if (*net_dev->desc != 0)
 			co_snprintf(interface_name, sizeof(interface_name), "-n \"%s\"", net_dev->desc);
 
-		switch (net_dev->type) 
-		{
+		switch (net_dev->type) {
 		case CO_NETDEV_TYPE_BRIDGED_PCAP: {
 			char mac_address[18];
 
@@ -673,9 +672,18 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t *daemon)
 			break;
 		}
 
+		case CO_NETDEV_TYPE_NDIS_BRIDGE: {
+			char mac_address[18];
+
+			co_build_mac_address(mac_address, sizeof(mac_address), net_dev->mac_address);
+
+			rc = co_launch_process(NULL, "colinux-ndis-net-daemon -i %d -u %d %s -mac %s -p %d",
+					daemon->id, i, interface_name, mac_address, net_dev->promisc_mode);
+			break;
+		}
+
 		default:
 			rc = CO_RC(ERROR);
-			break;
 		}
 
 		if (!CO_OK(rc))

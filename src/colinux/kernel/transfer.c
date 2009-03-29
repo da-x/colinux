@@ -18,6 +18,43 @@
 #include <colinux/kernel/pages.h>
 #include <colinux/arch/mmu.h>
 
+co_rc_t co_monitor_host_linuxvm_transfer_map(
+	co_monitor_t *cmon,
+	vm_ptr_t vaddr,
+	unsigned long size,
+	unsigned char **start,
+	unsigned char **page,
+	co_pfn_t *ppfn
+) {
+	unsigned long one_copy;
+	co_rc_t rc;
+
+	if ((vaddr < CO_ARCH_KERNEL_OFFSET) || (vaddr >= cmon->end_physical)) {
+		co_debug_error("monitor: transfer: off bounds: %p", (void*)vaddr);
+		return CO_RC(TRANSFER_OFF_BOUNDS);
+	}
+
+	if ((vaddr + size < CO_ARCH_KERNEL_OFFSET) || (vaddr + size > cmon->end_physical)) {
+		co_debug_error("monitor: transfer: end off bounds: %p", (void*)(vaddr + size));
+		return CO_RC(TRANSFER_OFF_BOUNDS);
+	}
+
+	one_copy = ((vaddr + CO_ARCH_PAGE_SIZE) & CO_ARCH_PAGE_MASK) - vaddr;
+	if (size <= 0 || size > one_copy) {
+		co_debug_error("monitor: transfer: bad size: %ld (%ld)", size, one_copy);
+		return CO_RC(TRANSFER_OFF_BOUNDS);
+	}
+
+	rc = co_monitor_get_pfn(cmon, vaddr, ppfn);
+	if (!CO_OK(rc))
+		return rc;
+
+	*page = co_os_map(cmon->manager, *ppfn);
+	*start = *page + (vaddr & ~CO_ARCH_PAGE_MASK);
+
+	return CO_RC(OK);
+}
+
 /*
  * This code allows direct copying from and to the Linux kernel address space.
  *

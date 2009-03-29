@@ -67,15 +67,16 @@ co_rc_t co_os_fs_dir_inode_to_path(co_filesystem_t *fs, co_inode_t *dir,
 	co_rc_t rc;
 	int len;
 
-	len = 1;
-	if (name)
-		len += co_strlen(name);
+	if (name && *name)
+		len = 1+co_strlen(name);
+	else
+		len = 0;
 
 	rc = co_os_fs_inode_to_path(fs, dir, out_name, len);
 	if (!CO_OK(rc))
 		return rc;
 
-	if (name)
+	if (len)
 		co_memcpy(&(*out_name)[co_strlen(*out_name)], name, len);
 
 	return CO_RC(OK);
@@ -105,23 +106,4 @@ co_rc_t co_os_fs_dir_join_unix_path(co_pathname_t *dirname, const char *addition
 	}
 	
 	return CO_RC(OK);
-}
-
-co_rc_t co_os_fs_get_attr(co_filesystem_t *fs, char *filename, struct fuse_attr *attr)
-{
-	co_rc_t rc;
-
-	rc = co_os_file_get_attr(filename, attr);
-	if (!CO_OK(rc))
-		return rc;
-	
-	if (attr->mode & FUSE_S_IFDIR)
-		attr->mode = fs->dir_mode;
-	else
-		attr->mode = fs->file_mode;
-
-	attr->uid = fs->uid;
-	attr->gid = fs->gid;
-
-	return rc;
 }

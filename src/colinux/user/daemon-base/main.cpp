@@ -32,7 +32,8 @@ void user_daemon_t::handle_parameters(int argc, char *argv[])
 	try {
 	
 		rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-i", 
-								  &instance_specified, (int *)&param_instance);
+								  &instance_specified, 
+								  &param_instance);
 	
 		if (!CO_OK(rc)) {
 			syntax();
@@ -63,7 +64,7 @@ void user_daemon_t::handle_parameters(int argc, char *argv[])
 	
 		verify_parameters();
 
-		if ((param_index < 0) || (param_index >= get_unit_count()))
+		if (param_index >= get_unit_count())
 		{
 			syntax();
 			log("invalid unit index: %d\n", param_index);

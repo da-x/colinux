@@ -37,10 +37,30 @@ typedef struct co_block_dev_desc {
 	char alias[20];
 } co_block_dev_desc_t;
 
+typedef struct co_video_dev_desc {
+	bool_t enabled;
+	int size;
+} co_video_dev_desc_t;
+
+typedef struct co_audio_dev_desc {
+	bool_t enabled;
+} co_audio_dev_desc_t;
+
+typedef struct co_scsi_dev_desc {
+	bool_t enabled;
+	int type;				/* SCSI type */
+	co_pathname_t pathname;			/* Path */
+	int is_dev;				/* 0 = file, 1 = device */
+	int size;				/* Size, for files */
+} co_scsi_dev_desc_t;
+
 typedef enum {
 	CO_NETDEV_TYPE_BRIDGED_PCAP,
 	CO_NETDEV_TYPE_TAP,
 	CO_NETDEV_TYPE_SLIRP,
+	CO_NETDEV_TYPE_NDIS_BRIDGE,		/* kernel mode conet bridge */
+	CO_NETDEV_TYPE_NDIS_NAT,		/* kernel mode conet NAT */
+	CO_NETDEV_TYPE_NDIS_HOST		/* kernel mode conet HOST only network */
 } co_netdev_type_t;
 
 #define CO_NETDEV_DESC_STR_SIZE 0x40
@@ -158,12 +178,19 @@ typedef struct co_execute_desc {
  * Per-machine coLinux configuration
  */
 typedef struct co_config {
+
+	/*
+	 * Size of this struct. Avoids crash on future changes.
+	 * This struct is shared between userland daemon and kernel driver.
+	 */
+	int magic_size;
+
 	/*
 	 * Absolute pathname of the configuration file (relative pathnames
 	 * will be looked upon according to this path).
 	 */
 	co_pathname_t config_path;
-	
+
 	/*
 	 * The pathname of the vmlinux file. If this is empty then we 
 	 * would try by default to locate 'vmlinux' in the same directory
@@ -176,7 +203,24 @@ typedef struct co_config {
 	 * Linux and the index of the block device to boot from.
 	 */
 	co_block_dev_desc_t block_devs[CO_MODULE_MAX_COBD];
-	long _UNUSED__block_root_device_index;
+
+	/*
+	 * PCI config (32 devs, 8 funcs/dev)
+	 */
+	struct {
+		unsigned char type;
+		unsigned char unit;
+	} pci[32][8];
+
+	/*
+	 * Video devices
+	 */
+	co_video_dev_desc_t video_devs[CO_MODULE_MAX_COVIDEO];
+
+	/*
+	 * SCSI devices
+	 */
+	co_scsi_dev_desc_t scsi_devs[CO_MODULE_MAX_COSCSI];
 
 	/*
 	 * Network devices
@@ -194,6 +238,11 @@ typedef struct co_config {
 	co_serialdev_desc_t serial_devs[CO_MODULE_MAX_SERIAL];
 
 	/*
+	 * Audio devices
+	 */
+	co_audio_dev_desc_t audio_devs[CO_MODULE_MAX_COAUDIO];
+
+	/*
 	 * Executable programs
 	 */
 	co_execute_desc_t executes[CO_MODULE_MAX_EXECUTE];
@@ -206,17 +255,26 @@ typedef struct co_config {
 	/*
 	 * Size of pseudo physical RAM for this machine (MB).
 	 * 
-	 * The default size is 32MB for systems with more than
-	 * 128MB of physical ram and 16MB for systems with less
-	 * ram.
+	 * The default size is 25% of total RAM for systems with more than
+	 * 128MB of physical ram and 16MB for systems with less ram.
 	 */ 
-	unsigned long ram_size;
+	unsigned int ram_size;
 
 	/*
 	 * The pathname of the initrd file.
 	 */
 	bool_t initrd_enabled;
 	co_pathname_t initrd_path;
+
+	/* Dimensions of the console */
+	struct {
+		int size_x, size_y;
+	} console;
+
+	/*
+	 * Enable asynchronious block device operations.
+	 */
+	int cobd_async_enable;
 } co_config_t;
 
 #endif

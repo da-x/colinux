@@ -39,7 +39,15 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/Kconfig
 +++ linux-2.6.22-source/arch/i386/Kconfig
-@@ -95,6 +95,7 @@
+@@ -54,6 +54,7 @@
+ config ZONE_DMA
+ 	bool
+ 	default y
++	depends on !COOPERATIVE
+ 
+ config QUICKLIST
+ 	bool
+@@ -95,6 +96,7 @@
  
  config SMP
  	bool "Symmetric multi-processing support"
@@ -47,7 +55,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	---help---
  	  This enables support for systems with more than one CPU. If you have
  	  a system with only one CPU, like most personal computers, say N. If
-@@ -261,6 +262,7 @@
+@@ -261,6 +263,7 @@
  
  config HPET_TIMER
  	bool "HPET Timer Support"
@@ -55,7 +63,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	help
  	  This enables the use of the HPET for the kernel's internal timer.
  	  HPET is the next generation timer replacing legacy 8254s.
-@@ -311,7 +313,7 @@
+@@ -311,7 +314,7 @@
  
  config X86_UP_APIC
  	bool "Local APIC support on uniprocessors"
@@ -64,7 +72,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	help
  	  A local APIC (Advanced Programmable Interrupt Controller) is an
  	  integrated interrupt controller in the CPU. If you have a single-CPU
-@@ -334,6 +336,10 @@
+@@ -334,6 +337,10 @@
  	  to use it. If you say Y here even though your machine doesn't have
  	  an IO-APIC, then the kernel will still run with no slowdown at all.
  
@@ -75,7 +83,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  config X86_LOCAL_APIC
  	bool
  	depends on X86_UP_APIC || ((X86_VISWS || SMP) && !X86_VOYAGER) || X86_GENERICARCH
-@@ -397,6 +403,7 @@
+@@ -397,6 +404,7 @@
  
  config TOSHIBA
  	tristate "Toshiba Laptop support"
@@ -83,7 +91,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	---help---
  	  This adds a driver to safely access the System Management Mode of
  	  the CPU on Toshiba portables with a genuine Toshiba BIOS. It does
-@@ -412,6 +419,7 @@
+@@ -412,6 +420,7 @@
  
  config I8K
  	tristate "Dell laptop support"
@@ -91,7 +99,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	---help---
  	  This adds a driver to safely access the System Management Mode
  	  of the CPU on the Dell Inspiron 8000. The System Management Mode
-@@ -432,7 +440,7 @@
+@@ -432,7 +441,7 @@
  
  config X86_REBOOTFIXUPS
  	bool "Enable X86 board specific fixups for reboot"
@@ -100,7 +108,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	default n
  	---help---
  	  This enables chipset and/or board specific fixups to be done
-@@ -534,14 +542,14 @@
+@@ -534,14 +543,14 @@
  
  config HIGHMEM4G
  	bool "4GB"
@@ -117,7 +125,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	help
  	  Select this if you have a 32-bit processor and more than 4
  	  gigabytes of physical RAM.
-@@ -651,7 +659,7 @@
+@@ -651,7 +660,7 @@
  
  config ARCH_SPARSEMEM_ENABLE
  	def_bool y
@@ -126,7 +134,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	select SPARSEMEM_STATIC
  
  config ARCH_SELECT_MEMORY_MODEL
-@@ -699,6 +707,7 @@
+@@ -699,6 +708,7 @@
  
  config MTRR
  	bool "MTRR (Memory Type Range Register) support"
@@ -134,7 +142,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	---help---
  	  On Intel P6 family processors (Pentium Pro, Pentium II and later)
  	  the Memory Type Range Registers (MTRRs) may be used to control
-@@ -785,6 +794,7 @@
+@@ -785,6 +795,7 @@
  
  config KEXEC
  	bool "kexec system call"
@@ -142,7 +150,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  	help
  	  kexec is a system call that implements the ability to shutdown your
  	  current kernel, and to start another kernel.  It is like a reboot
-@@ -898,6 +908,10 @@
+@@ -898,6 +909,17 @@
  	  enable suspend on SMP systems. CPUs can be controlled through
  	  /sys/devices/system/cpu.
  
@@ -150,10 +158,17 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
 +	bool 'Cooperative Mode'
 +	default y
 +
++config COLINUX_STATS
++	bool 'Cooperative Linux stats'
++	depends on COOPERATIVE
++	default y
++	help
++	  OS switch counters readable in /proc/colinux/stats.
++
  config COMPAT_VDSO
  	bool "Compat VDSO support"
  	default y
-@@ -917,7 +931,7 @@
+@@ -917,7 +939,7 @@
  	depends on HIGHMEM
  
  menu "Power management options (ACPI, APM)"
@@ -162,7 +177,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  
  source kernel/power/Kconfig
  
-@@ -1056,6 +1070,7 @@
+@@ -1056,6 +1078,7 @@
  endmenu
  
  menu "Bus options (PCI, PCMCIA, EISA, MCA, ISA)"
@@ -170,7 +185,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  
  config PCI
  	bool "PCI support" if !X86_VISWS
-@@ -1264,7 +1279,7 @@
+@@ -1264,7 +1287,7 @@
  
  config X86_BIOS_REBOOT
  	bool
@@ -196,7 +211,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/Makefile
 +++ linux-2.6.22-source/arch/i386/kernel/Makefile
-@@ -5,13 +5,14 @@
+@@ -5,9 +5,9 @@
  extra-y := head.o init_task.o vmlinux.lds
  
  obj-y	:= process.o signal.o entry.o traps.o irq.o \
@@ -209,12 +224,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
  
  obj-$(CONFIG_STACKTRACE)	+= stacktrace.o
  obj-y				+= cpu/
- obj-y				+= acpi/
-+obj-$(CONFIG_PCI)		+= e820.o
- obj-$(CONFIG_X86_BIOS_REBOOT)	+= reboot.o
- obj-$(CONFIG_MCA)		+= mca.o
- obj-$(CONFIG_X86_MSR)		+= msr.o
-@@ -38,11 +39,21 @@
+@@ -38,11 +38,22 @@
  obj-$(CONFIG_VM86)		+= vm86.o
  obj-$(CONFIG_EARLY_PRINTK)	+= early_printk.o
  obj-$(CONFIG_HPET_TIMER) 	+= hpet.o
@@ -230,6 +240,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/Makefile
 +obj-y				+= i8259_cooperative.o
 +obj-y				+= ioport_cooperative.o
 +else
++obj-$(CONFIG_PCI)		+= e820.o
 +obj-y				+= time.o i8253.o i8259.o ioport.o
  obj-y				+= pcspeaker.o
 +endif
@@ -240,7 +251,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,331 @@
+@@ -0,0 +1,211 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -273,7 +284,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +	".previous\n"
 +	"");
 +
-+static int co_passage_page_holding_count = 0;
++int co_passage_page_holding_count = 0;
 +
 +static void co_early_cpu_init(void)
 +{
@@ -345,104 +356,6 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +	co_start_kernel();
 +}
 +
-+/* called with disabled interrupts */
-+void co_handle_incoming_message(co_message_node_t *node_message)
-+{
-+	co_linux_message_t *message;
-+
-+	message = (co_linux_message_t *)&node_message->msg.data;
-+
-+	switch (message->device) {
-+	case CO_DEVICE_POWER: {
-+		co_linux_message_power_t *type = (co_linux_message_power_t *)message->data;
-+		switch (type->type) {
-+		case CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL:
-+			ctrl_alt_del();
-+			break;
-+		case CO_LINUX_MESSAGE_POWER_SHUTDOWN:
-+			co_shedule_shutdown();
-+			break;
-+		case CO_LINUX_MESSAGE_POWER_OFF:
-+			machine_power_off();
-+			break;
-+		}
-+		co_free_message(node_message);
-+		break;
-+	}
-+
-+	case CO_DEVICE_KEYBOARD: {
-+		co_queue_incoming_message(node_message);
-+
-+		irq_enter();
-+		__do_IRQ(KEYBOARD_IRQ);
-+		irq_exit();
-+		break;
-+	}
-+
-+#ifdef CONFIG_COOPERATIVE_CONET
-+	case CO_DEVICE_NETWORK: {
-+		co_queue_incoming_message(node_message);
-+
-+		irq_enter();
-+		__do_IRQ(NETWORK_IRQ);
-+		irq_exit();
-+		break;
-+	}
-+#endif
-+
-+#ifdef CONFIG_COSERIAL
-+	case CO_DEVICE_SERIAL: {
-+		co_queue_incoming_message(node_message);
-+
-+		irq_enter();
-+		cocd_interrupt();
-+		irq_exit();
-+		break;
-+	}
-+#endif
-+
-+	default:
-+		BUG_ON((unsigned long)message->device >= (unsigned long)CO_DEVICES_TOTAL);
-+		co_free_message(node_message);
-+		break;
-+	}
-+}
-+
-+static void co_switch_wrapper_protected(void)
-+{
-+	unsigned long fs;
-+	unsigned long gs;
-+
-+	kernel_fpu_begin();
-+
-+	/*
-+	 * We don't trust the passage page code to safely restore %gs and %fs.
-+	 *
-+	 * This wrapper ensures that if %fs or %gs are invalid, the processes
-+	 * exits with a segmentation fault rather than bringing down the
-+	 * machine.
-+	 **/
-+	savesegment(fs, fs);
-+	savesegment(gs, gs);
-+
-+	/*
-+	 * Nullify the registers so the passage page code restores to
-+	 * null segment values on return.
-+	 */
-+	asm volatile("movl %0, %%fs;  movl %0, %%gs" : : "r" (0));
-+
-+	/* And switch... */
-+	co_switch();
-+
-+	/*
-+	 * Safely restore the registers.
-+	 */
-+	loadsegment(fs, fs);
-+	loadsegment(gs, gs);
-+
-+	kernel_fpu_end();
-+}
-+
 +void co_switch_wrapper(void)
 +{
 +	/* taken from irq.c: debugging check for stack overflow */
@@ -454,34 +367,12 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +		co_terminate(CO_TERMINATE_STACK_OVERFLOW);
 +	}
 +
-+	co_switch_wrapper_protected();
-+}
++#ifdef CONFIG_COLINUX_STATS
++	co_proc_counts.switches[co_passage_page->operation]++;
++#endif
 +
-+void co_passage_page_acquire(unsigned long *flags)
-+{
-+	local_irq_save(*flags);
-+	co_passage_page_holding_count++;
-+}
-+
-+void co_passage_page_ref_down(void)
-+{
-+	co_passage_page_holding_count--;
-+}
-+
-+void co_passage_page_ref_up(void)
-+{
-+	co_passage_page_holding_count++;
-+}
-+
-+int co_passage_page_held(void)
-+{
-+	return co_passage_page_holding_count;
-+}
-+
-+void co_passage_page_release(unsigned long flags)
-+{
-+	co_passage_page_holding_count--;
-+	local_irq_restore(flags);
++	/* And switch... */
++	co_switch();
 +}
 +
 +void co_debug(const char *fmt, ...)
@@ -572,27 +463,6 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +};
 +
 +CO_TRACE_CONTINUE;
-Index: linux-2.6.22-source/arch/i386/kernel/cpu/common.c
-===================================================================
---- linux-2.6.22-source.orig/arch/i386/kernel/cpu/common.c
-+++ linux-2.6.22-source/arch/i386/kernel/cpu/common.c
-@@ -5,6 +5,7 @@
- #include <linux/module.h>
- #include <linux/percpu.h>
- #include <linux/bootmem.h>
-+#include <linux/cooperative_internal.h>
- #include <asm/semaphore.h>
- #include <asm/processor.h>
- #include <asm/i387.h>
-@@ -462,7 +463,7 @@
- 	}
- 
- 	/* SEP disabled? */
--	if (disable_x86_sep)
-+	if (cooperative_mode_enabled() || disable_x86_sep)
- 		clear_bit(X86_FEATURE_SEP, c->x86_capability);
- 
- 	if (disable_pse)
 Index: linux-2.6.22-source/arch/i386/kernel/entry.S
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/entry.S
@@ -1225,7 +1095,7 @@ Index: linux-2.6.22-source/include/asm-i386/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/asm-i386/cooperative.h
-@@ -0,0 +1,194 @@
+@@ -0,0 +1,205 @@
 +/*
 + *  linux/include/asm/cooperative.h
 + *
@@ -1337,8 +1207,19 @@ Index: linux-2.6.22-source/include/asm-i386/cooperative.h
 +	unsigned long va;
 +        #define CO_ARCH_STATE_STACK_VA "0x6C"
 +
++	unsigned long sysenter_cs;
++        #define CO_ARCH_STATE_SYSENTER_CS "0x70"
++
++	unsigned long sysenter_esp;
++        #define CO_ARCH_STATE_SYSENTER_ESP "0x74"
++
++	unsigned long sysenter_eip;
++        #define CO_ARCH_STATE_SYSENTER_EIP "0x78"
++
++	unsigned long unused_0x7c; /* fxstate must start on 0x10 boundary */
++
 +	unsigned char fxstate[0x200];
-+        #define CO_ARCH_STATE_STACK_FXSTATE "0x70"
++        #define CO_ARCH_STATE_STACK_FXSTATE "0x80"
 +} __attribute__((packed)) co_arch_state_stack_t;
 +
 +#define CO_MAX_PARAM_SIZE 0x400
@@ -1369,9 +1250,9 @@ Index: linux-2.6.22-source/include/asm-i386/cooperative.h
 +					unsigned long dr3;
 +					unsigned long dr6;
 +					unsigned long dr7;
-+					unsigned char code[0x230];
++					unsigned char code[0x260];
 +				} __attribute__((packed));
-+				unsigned char pad[0x250]; /* Be careful! see NOTE below */
++				unsigned char pad[0x280]; /* Be careful! see NOTE below */
 +			} __attribute__((packed));
 +
 +			/* Machine states */
@@ -1519,13 +1400,19 @@ Index: linux-2.6.22-source/include/asm-i386/mach-default/irq_vectors.h
 ===================================================================
 --- linux-2.6.22-source.orig/include/asm-i386/mach-default/irq_vectors.h
 +++ linux-2.6.22-source/include/asm-i386/mach-default/irq_vectors.h
-@@ -67,6 +67,11 @@
+@@ -67,6 +67,17 @@
  
  #define TIMER_IRQ 0
  
 +#ifdef CONFIG_COOPERATIVE
 +#define KEYBOARD_IRQ 1
-+#define NETWORK_IRQ 2
++#define SERIAL_IRQ 3
++#define SOUND_IRQ 5
++#define POWER_IRQ 9
++#define NETWORK_IRQ 10
++#define SCSI_IRQ 11
++#define MOUSE_IRQ 12
++#define BLOCKDEV_IRQ 15
 +#endif
 +
  /*
@@ -1727,7 +1614,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -0,0 +1,346 @@
+@@ -0,0 +1,384 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1750,7 +1637,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +
 +#include <asm/cooperative.h>
 +
-+#define CO_LINUX_API_VERSION    10
++#define CO_LINUX_API_VERSION    12
 +
 +#pragma pack(0)
 +
@@ -1771,13 +1658,18 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_OPERATION_TRACE_POINT,
 +	CO_OPERATION_FREE_PAGES,
 +	CO_OPERATION_ALLOC_PAGES,
-+	CO_OPERATION_PRINTK,
++	CO_OPERATION_PRINTK_unused,
++	CO_OPERATION_GETPP,
++	CO_OPERATION_MAX	/* Must be last entry all times */
 +} co_operation_t;
 +
 +#define CO_MODULE_MAX_CONET    16
 +#define CO_MODULE_MAX_COBD     32
 +#define CO_MODULE_MAX_COFS     32
-+#define CO_MODULE_MAX_SERIAL   64
++#define CO_MODULE_MAX_SERIAL   32
++#define CO_MODULE_MAX_COSCSI   32
++#define CO_MODULE_MAX_COVIDEO	2
++#define CO_MODULE_MAX_COAUDIO	2
 +
 +typedef enum {
 +	CO_MODULE_LINUX,
@@ -1801,6 +1693,14 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_MODULE_SERIAL0,
 +	CO_MODULE_SERIAL_END=CO_MODULE_SERIAL0+CO_MODULE_MAX_SERIAL-1,
 +
++	CO_MODULE_COSCSI0,
++	CO_MODULE_COSCSI_END=CO_MODULE_COSCSI0+CO_MODULE_MAX_COSCSI-1,
++
++	CO_MODULE_COVIDEO0,
++	CO_MODULE_COVIDEO_END=CO_MODULE_COVIDEO0+CO_MODULE_MAX_COVIDEO-1,
++
++	CO_MODULE_COAUDIO0,
++	CO_MODULE_COAUDIO_END=CO_MODULE_COAUDIO0+CO_MODULE_MAX_COAUDIO-1,
 +	CO_MODULES_MAX,
 +} co_module_t;
 +
@@ -1833,6 +1733,12 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_DEVICE_SERIAL,
 +	CO_DEVICE_FILESYSTEM,
 +
++	CO_DEVICE_MOUSE,
++	CO_DEVICE_SCSI,
++	CO_DEVICE_DISPLAY,
++	CO_DEVICE_AUDIO,
++	CO_DEVICE_PCI,
++
 +	CO_DEVICES_TOTAL,
 +} co_device_t;
 +
@@ -1840,6 +1746,16 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	unsigned char code;
 +	int down;
 +} co_scan_code_t;
++
++#define CO_MOUSE_MAX_X 2048
++#define CO_MOUSE_MAX_Y 2048
++
++typedef struct {
++	unsigned	btns;
++	unsigned	abs_x;
++	unsigned	abs_y;
++	int		rel_z;
++} __attribute__((packed)) co_mouse_data_t;
 +
 +typedef enum {
 +	CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL=0,
@@ -1930,6 +1846,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_OPERATION_CONSOLE_SET_ORIGIN,
 +	CO_OPERATION_CONSOLE_SAVE_SCREEN,
 +	CO_OPERATION_CONSOLE_INVERT_REGION,
++	CO_OPERATION_CONSOLE_SIZES,
 +} co_operation_console_t;
 +
 +
@@ -1982,6 +1899,11 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +			co_console_unit bottom;
 +			co_console_unit right;
 +		} bmove;
++		struct {
++			co_console_unit rows;
++			co_console_unit cols;
++			co_console_unit backbuf;
++		} sizes;
 +		co_cursor_pos_t cursor;
 +	};
 +} __attribute__((packed)) co_console_message_t;
@@ -2006,6 +1928,11 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_BLOCK_CLOSE,
 +	CO_BLOCK_GET_ALIAS,
 +} co_block_request_type_t;
++
++typedef enum {
++	CO_BLOCK_REQUEST_RETCODE_OK=0,
++	CO_BLOCK_REQUEST_RETCODE_ERROR=-1,
++} co_block_request_retcode_t;
 +
 +typedef enum {
 +	CO_NETWORK_GET_MAC=0,
@@ -2071,14 +1998,12 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +
 +#pragma pack()
 +
-+#include "cooperative_fs.h"
-+
 +#endif
 Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative_internal.h
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,127 @@
 +/*
 + *  linux/include/linux/cooperative_internal.h
 + *
@@ -2101,17 +2026,31 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +	co_message_t msg;
 +} co_message_node_t;
 +
++extern co_boot_params_t co_boot_params;
++extern int co_passage_page_holding_count;
++
++#ifdef CONFIG_COLINUX_STATS
++typedef struct co_proc_counts {
++	unsigned long switches[CO_OPERATION_MAX];
++} co_proc_counts_t;
++
++extern co_proc_counts_t co_proc_counts;
++#endif
++
++#define co_io_buffer ((co_io_buffer_t *)CO_VPTR_IO_AREA_START)
++#define cooperative_mode_enabled()     1
++
 +extern void co_debug(const char *fmt, ...)
 +	__attribute__ ((format (printf, 1, 2)));
-+extern void co_printk(const char *line);
++extern void co_printk(const char *line, int size);
 +
 +extern void co_switch_wrapper(void);
-+extern void co_callback(unsigned long flags, struct pt_regs *regs);
++extern void co_callback(struct pt_regs *regs);
 +extern void co_idle_processor(void);
 +extern void co_terminate(co_termination_reason_t reason);
 +extern void co_terminate_bug(int code, int line, const char *file);
-+extern void co_free_pages(unsigned long vaddr, int order);
-+extern int co_alloc_pages(unsigned long vaddr, int order);
++extern void co_free_pages(unsigned long vaddr, int pages);
++extern int co_alloc_pages(unsigned long vaddr, int pages);
 +extern void co_start_kernel(void);
 +extern void co_arch_start_kernel(void);
 +
@@ -2122,37 +2061,70 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +			    unsigned long size,
 +			    const char *data);
 +extern unsigned long co_get_host_time(void);
-+extern co_message_t *co_send_message_save(unsigned long *flags);
-+extern co_message_t *co_get_message_save(unsigned long *flags);
-+extern void co_send_message_restore(unsigned long flags);
 +
-+extern void cocd_interrupt(void);
-+extern void co_shedule_shutdown(void);
-+
-+extern void co_handle_incoming_message(co_message_node_t *message);
-+extern void co_queue_incoming_message(co_message_node_t *message);
 +extern int co_get_message(co_message_node_t **message, co_device_t device);
-+extern void co_free_message(co_message_node_t *message);
++static inline void co_free_message(co_message_node_t *message)
++{
++	kfree(message);
++}
 +
-+extern int co_passage_page_held(void);
-+extern void co_passage_page_acquire(unsigned long *flags);
-+extern void co_passage_page_release(unsigned long flags);
-+extern void co_passage_page_ref_down(void);
-+extern void co_passage_page_ref_up(void);
++extern void *co_map_buffer(void *, int);
++
++static inline void co_passage_page_acquire(unsigned long *flags)
++{
++	local_irq_save(*flags);
++	co_passage_page_holding_count++;
++}
++
++static inline void co_passage_page_ref_down(void)
++{
++	co_passage_page_holding_count--;
++}
++
++static inline void co_passage_page_ref_up(void)
++{
++	co_passage_page_holding_count++;
++}
++
++static inline int co_passage_page_held(void)
++{
++	return co_passage_page_holding_count;
++}
++
++static inline void co_passage_page_release(unsigned long flags)
++{
++	co_passage_page_holding_count--;
++	local_irq_restore(flags);
++}
 +
 +#define co_passage_page_assert_valid() do {	\
-+	if (co_passage_page_held())		\
-+            BUG();				\
-+} while (0);
++	BUG_ON(co_passage_page_held());		\
++} while (0)
 +
-+extern co_boot_params_t co_boot_params;
++static inline co_message_t *co_send_message_save(unsigned long *flags)
++{
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(flags);
 +
-+#define co_io_buffer ((co_io_buffer_t *)CO_VPTR_IO_AREA_START)
-+#define cooperative_mode_enabled()     1
++	if (co_io_buffer->messages_waiting) {
++		co_passage_page_release(*flags);
++		return NULL;
++	}
++
++	co_passage_page->operation = CO_OPERATION_MESSAGE_TO_MONITOR;
++	co_io_buffer->messages_waiting = 1;
++	return ((co_message_t *)co_io_buffer->buffer);
++}
++
++static inline void co_send_message_restore(unsigned long flags)
++{
++	co_switch_wrapper();
++	co_passage_page_release(flags);
++}
 +
 +#else
 +
-+#define co_printk(line)                do {} while (0)
++#define co_printk(line, size)          do {} while (0)
 +#define co_terminate(reason)           do {} while (0)
 +#define cooperative_mode_enabled()     0
 +
@@ -2175,7 +2147,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -0,0 +1,427 @@
+@@ -0,0 +1,447 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2191,6 +2163,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +#include <linux/interrupt.h>
 +#include <linux/mm.h>
 +#include <linux/slab.h>
++#include <linux/proc_fs.h>
 +#include <linux/cooperative_internal.h>
 +
 +CO_TRACE_STOP;
@@ -2207,6 +2180,10 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +co_message_queue_t co_incoming_messages;
 +co_message_queue_t *co_incoming_queued_messages;
 +
++#ifdef CONFIG_COLINUX_STATS
++co_proc_counts_t co_proc_counts;
++#endif
++
 +void co_start_kernel(void)
 +{
 +        memcpy(&co_boot_params, co_passage_page->params, sizeof(co_boot_params));
@@ -2217,54 +2194,6 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	co_terminate(CO_TERMINATE_END);
 +}
 +
-+co_message_t *co_send_message_save(unsigned long *flags)
-+{
-+	co_passage_page_assert_valid();
-+	co_passage_page_acquire(flags);
-+
-+	if (co_io_buffer->messages_waiting) {
-+		co_passage_page_release(*flags);
-+		return NULL;
-+	}
-+
-+	co_passage_page->operation = CO_OPERATION_MESSAGE_TO_MONITOR;
-+	co_io_buffer->messages_waiting = 1;
-+	return ((co_message_t *)co_io_buffer->buffer);
-+}
-+
-+void co_send_message_restore(unsigned long flags)
-+{
-+	co_switch_wrapper();
-+	co_passage_page_release(flags);
-+}
-+
-+void co_send_message_s(co_message_t *message, const char *data)
-+{
-+	unsigned long flags;
-+	co_message_t *buffer;
-+
-+	if ((sizeof(co_message_t) + message->size) > CO_VPTR_IO_AREA_SIZE - sizeof(co_io_buffer_t))
-+		return;
-+
-+	if (co_passage_page_held())
-+		return;
-+
-+	buffer = (co_message_t *)co_io_buffer->buffer;
-+
-+	co_passage_page_acquire(&flags);
-+	if (co_io_buffer->messages_waiting) {
-+		co_passage_page_release(flags);
-+		return;
-+	}
-+
-+	co_passage_page->operation = CO_OPERATION_MESSAGE_TO_MONITOR;
-+	co_io_buffer->messages_waiting = 1;
-+	*buffer = *message;
-+	memcpy(buffer->data, data, message->size);
-+	co_switch_wrapper();
-+	co_passage_page_release(flags);
-+}
-+
 +void co_send_message(co_module_t from,
 +		     co_module_t to,
 +		     co_priority_t priority,
@@ -2272,15 +2201,23 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +		     unsigned long size,
 +		     const char *data)
 +{
-+	co_message_t params;
++	unsigned long flags;
++	co_message_t *buffer;
 +
-+	params.from = from;
-+	params.to = to;
-+	params.priority = priority;
-+	params.type = type;
-+	params.size = size;
++	BUG_ON((sizeof(co_message_t) + size) > CO_VPTR_IO_AREA_SIZE - sizeof(co_io_buffer_t));
 +
-+	co_send_message_s(&params, data);
++	buffer = co_send_message_save(&flags);
++	if (!buffer)
++		return;
++
++	buffer->from = from;
++	buffer->to = to;
++	buffer->priority = priority;
++	buffer->type = type;
++	buffer->size = size;
++	memcpy(buffer->data, data, size);
++
++	co_send_message_restore(flags);
 +}
 +
 +static void co_message_add_to_incoming(co_message_t *message, unsigned long size)
@@ -2301,37 +2238,62 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	if (count > HZ) {
 +		long secs = count / HZ;
 +
-+		co_debug("co_handle_jiffies: clock warp (%ld,%ld)\n", count, secs);
 +		/* 'warp_clock' for long distances */
-+		write_seqlock_irq(&xtime_lock);
++		write_seqlock(&xtime_lock);
 +		xtime.tv_sec += secs;
 +		count -= (secs * HZ);
 +		time_interpolator_reset();
-+		write_sequnlock_irq(&xtime_lock);
++		write_sequnlock(&xtime_lock);
 +		clock_was_set();
 +	}
 +
 +	while (count > 0) {
-+		unsigned long flags;
-+
-+		local_irq_save(flags);
 +		irq_enter();
 +		__do_IRQ(TIMER_IRQ);
 +		irq_exit();
-+		local_irq_restore(flags);
-+
 +		count--;
 +	}
 +}
 +
++/* called with disabled interrupts */
++static void co_handle_incoming_message(co_message_node_t *node_message)
++{
++	co_linux_message_t *message;
++	co_message_queue_t *queue;
++	int irq;
++
++	message = (co_linux_message_t *)&node_message->msg.data;
++	switch (message->device) {
++	case CO_DEVICE_POWER: irq = POWER_IRQ; break;
++	case CO_DEVICE_KEYBOARD: irq = KEYBOARD_IRQ; break;
++#ifdef CONFIG_CONET_COOPERATIVE
++	case CO_DEVICE_NETWORK: irq = NETWORK_IRQ; break;
++#endif
++#ifdef CONFIG_SERIAL_COOPERATIVE
++	case CO_DEVICE_SERIAL: irq = SERIAL_IRQ; break;
++#endif
++	case CO_DEVICE_SCSI: irq = SCSI_IRQ; break;
++	case CO_DEVICE_MOUSE: irq = MOUSE_IRQ; break;
++	default:
++		BUG_ON((unsigned long)message->device >= (unsigned long)CO_DEVICES_TOTAL);
++		co_free_message(node_message);
++		return;
++	}
++
++	/* Add to the queue */
++	queue = &co_incoming_queued_messages[message->device];
++	list_add(&node_message->node, &queue->list);
++	queue->num_messages++;
++
++	irq_enter();
++	__do_IRQ(irq);
++	irq_exit();
++}
++
 +static void co_handle_incoming_messages(void)
 +{
-+	unsigned long flags;
-+
 +	if (!co_messages_active)
 +		return;
-+
-+	local_irq_save(flags);
 +
 +	/*
 +	 * Pop a message from the incoming queue.
@@ -2351,27 +2313,35 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +		 */
 +		co_handle_incoming_message(message);
 +	}
-+
-+	local_irq_restore(flags);
 +}
 +
-+void co_callback(unsigned long flags, struct pt_regs *regs)
++void co_callback(struct pt_regs *regs)
 +{
 +	long io_size;
 +	unsigned long new_jiffies;
 +	struct pt_regs null_regs;
 +
++	BUG_ON(!irqs_disabled());
 +	if (co_passage_page->operation != CO_OPERATION_MESSAGE_FROM_MONITOR) {
-+		co_passage_page_release(flags);
++		co_passage_page_ref_down();
 +		return;
 +	}
 +
++#ifdef CONFIG_COLINUX_STATS
++	co_proc_counts.switches[CO_OPERATION_MESSAGE_FROM_MONITOR]++;
++#endif
 +	io_size = co_passage_page->params[0];
 +	new_jiffies = co_passage_page->params[1];
 +
 +	if (co_messages_active  &&  io_size > 0  &&  io_size <= CO_VPTR_IO_AREA_SIZE) {
-+		unsigned char *io_buffer = co_io_buffer->buffer;
-+		unsigned char *io_buffer_end = &co_io_buffer->buffer[io_size];
++		static unsigned char temp_storage[CO_VPTR_IO_AREA_SIZE];
++		unsigned char *io_buffer = temp_storage;
++		unsigned char *io_buffer_end = &temp_storage[io_size];
++
++		/* Copy into temp, because kmalloc calls host to mapping pages */
++		memcpy(temp_storage, co_io_buffer->buffer, io_size);
++		co_io_buffer->messages_waiting = 0;
++		co_passage_page_ref_down();
 +
 +		while (io_buffer < io_buffer_end) {
 +			co_message_t *message = (co_message_t *)io_buffer;
@@ -2385,10 +2355,10 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +			co_message_add_to_incoming(message, size);
 +			io_buffer += size;
 +		}
++	} else {
++		co_io_buffer->messages_waiting = 0;
++		co_passage_page_ref_down();
 +	}
-+
-+	co_io_buffer->messages_waiting = 0;
-+	co_passage_page_release(flags);
 +
 +	memset (&null_regs, 0, sizeof(null_regs));
 +
@@ -2403,40 +2373,33 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +
 +void co_idle_processor(void)
 +{
-+	unsigned long flags;
-+
 +	co_passage_page_assert_valid();
-+
-+	co_passage_page_acquire(&flags);
++	local_irq_disable();
++	co_passage_page_ref_up();
 +	co_passage_page->operation = CO_OPERATION_IDLE;
 +	co_switch_wrapper();
-+	co_callback(flags, NULL);
++	co_callback(NULL);
++	local_irq_enable();
 +}
 +
-+void co_printk(const char *line)
++void co_printk(const char *line, int size)
 +{
 +	unsigned long flags;
-+	int size;
-+	char *dest;
++	co_message_t *co_message;
 +
-+	co_passage_page_assert_valid();
-+
-+	co_passage_page_acquire(&flags);
-+	size = strlen(line);
-+	co_passage_page->operation = CO_OPERATION_PRINTK;
-+	co_passage_page->params[0] = size;
-+	if (size > 200)
-+		size = 200;
-+	dest = (char *)(&co_passage_page->params[1]);
-+	memcpy(dest, line, size);
-+	dest[size] = '\0';
-+
-+	co_switch_wrapper();
-+	co_passage_page_release(flags);
-+}
-+
-+void co_debug_line(char *line)
-+{
++	co_message = co_send_message_save(&flags);
++	if (co_message) {
++		co_message->from = CO_MODULE_LINUX;
++		co_message->to = CO_MODULE_PRINTK;
++		co_message->priority = CO_PRIORITY_DISCARDABLE;
++		co_message->type = CO_MESSAGE_TYPE_STRING;
++		if (size > 200)
++			size = 200;
++		co_message->size = size + 1;
++		memcpy(co_message->data, line, size);
++		co_message->data[size] = '\0';
++		co_send_message_restore(flags);
++	}
 +}
 +
 +void co_terminate_bug(int code, int line, const char *file)
@@ -2483,28 +2446,6 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	return time;
 +}
 +
-+void co_queue_incoming_message(co_message_node_t *node_message)
-+{
-+	co_linux_message_t *message;
-+	co_message_queue_t *queue;
-+	unsigned long flags;
-+
-+	if (!co_messages_active)
-+		return;
-+
-+	message = (co_linux_message_t *)&node_message->msg.data;
-+	if (message->device < 0 || (message->device >= CO_DEVICES_TOTAL))
-+		return;
-+
-+	queue = &co_incoming_queued_messages[message->device];
-+
-+	/* Add to the queue */
-+	local_irq_save(flags);
-+	list_add(&node_message->node, &queue->list);
-+	queue->num_messages++;
-+	local_irq_restore(flags);
-+}
-+
 +int co_get_message(co_message_node_t **message, co_device_t device)
 +{
 +	co_message_queue_t *queue;
@@ -2528,11 +2469,6 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +
 +	*message = node;
 +	return 1;
-+}
-+
-+void co_free_message(co_message_node_t *message)
-+{
-+	kfree(message);
 +}
 +
 +co_info_t co_info = {
@@ -2566,19 +2502,19 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +}
 +
 +
-+void co_free_pages(unsigned long vaddr, int order)
++void co_free_pages(unsigned long vaddr, int pages)
 +{
 +	unsigned long flags;
 +
 +	co_passage_page_acquire(&flags);
 +	co_passage_page->operation = CO_OPERATION_FREE_PAGES;
 +	co_passage_page->params[0] = vaddr;
-+	co_passage_page->params[1] = order;
++	co_passage_page->params[1] = pages;
 +	co_switch_wrapper();
 +	co_passage_page_release(flags);
 +}
 +
-+int co_alloc_pages(unsigned long vaddr, int order)
++int co_alloc_pages(unsigned long vaddr, int size)
 +{
 +	unsigned long flags;
 +	long result;
@@ -2586,7 +2522,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	co_passage_page_acquire(&flags);
 +	co_passage_page->operation = CO_OPERATION_ALLOC_PAGES;
 +	co_passage_page->params[0] = vaddr;
-+	co_passage_page->params[1] = order;
++	co_passage_page->params[1] = size;
 +	co_switch_wrapper();
 +	result = (long)co_passage_page->params[4];
 +	co_passage_page_release(flags);
@@ -2598,6 +2534,62 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +}
 +
 +__initcall(initcall_message_queues);
++
++#ifdef CONFIG_COLINUX_STATS
++static int co_guest_read_status(char *page, char **start, off_t off, int count, int *eof, void *clear)
++{
++	co_proc_counts_t hold;
++	int len;
++
++	local_irq_disable();
++	hold = co_proc_counts;
++	if (clear)
++		memset(&co_proc_counts, 0, sizeof(co_proc_counts));
++	local_irq_enable();
++
++	len = sprintf(page,	"idle:\t%lu\n"
++				"msgto:\t%lu\n"
++				"mfrom:\t%lu\n"
++				"intr:\t%lu\n"
++				"dev:\t%lu\n"
++				"time:\t%lu\n"
++				"hpt:\t%lu\n"
++				"free:\t%lu\n"
++				"alloc:\t%lu\n"
++				"getpp:\t%lu\n",
++			hold.switches[CO_OPERATION_IDLE],
++			hold.switches[CO_OPERATION_MESSAGE_TO_MONITOR],
++			hold.switches[CO_OPERATION_MESSAGE_FROM_MONITOR],
++			hold.switches[CO_OPERATION_FORWARD_INTERRUPT],
++			hold.switches[CO_OPERATION_DEVICE],
++			hold.switches[CO_OPERATION_GET_TIME],
++			hold.switches[CO_OPERATION_GET_HIGH_PREC_TIME],
++			hold.switches[CO_OPERATION_FREE_PAGES],
++			hold.switches[CO_OPERATION_ALLOC_PAGES],
++			hold.switches[CO_OPERATION_GETPP]);
++
++	return len;
++}
++
++static __init int co_create_proc_stats(void)
++{
++	struct proc_dir_entry *co_guest_dir;
++
++	co_guest_dir = proc_mkdir("colinux", NULL);
++	if(co_guest_dir) {
++		create_proc_read_entry("stats",
++					0444, co_guest_dir,
++					co_guest_read_status, NULL);
++		create_proc_read_entry("stats_clear",
++					0444, co_guest_dir,
++					co_guest_read_status, (void*)1);
++	}
++
++	return 0;
++}
++
++__initcall(co_create_proc_stats);
++#endif /* CONFIG_COLINUX_STATS */
 +
 +EXPORT_SYMBOL(co_terminate);
 +EXPORT_SYMBOL(co_terminate_bug);
@@ -2643,7 +2635,7 @@ Index: linux-2.6.22-source/kernel/printk.c
  	/* Emit the output into the temporary buffer */
  	printed_len = vscnprintf(printk_buf, sizeof(printk_buf), fmt, args);
  
-+	co_printk(printk_buf);
++	co_printk(printk_buf, printed_len);
 +
  	/*
  	 * Copy the output into log_buf.  If the caller didn't provide
@@ -2696,18 +2688,16 @@ Index: linux-2.6.22-source/mm/page_alloc.c
  
  #include <asm/tlbflush.h>
  #include <asm/div64.h>
-@@ -270,10 +271,45 @@
+@@ -270,10 +271,44 @@
  	}
  }
  
-+static int co_persistent_alloc_pages(unsigned long address, int order)
++static int co_persistent_alloc_pages(unsigned long address, int pages)
 +{
 +	int result, retries_left;
 +
-+	retries_left = 10;
-+
-+	while (retries_left > 0) {
-+		result = co_alloc_pages(address, order);
++	for (retries_left = 10; retries_left > 0; retries_left--) {
++		result = co_alloc_pages(address, pages);
 +		if (result) {
 +			unsigned long cache_size;
 +			/*
@@ -2717,12 +2707,12 @@ Index: linux-2.6.22-source/mm/page_alloc.c
 +			 */
 +			cache_size = global_page_state(NR_FILE_PAGES)-total_swapcache_pages;
 +			cache_size /= 2;
-+			if (cache_size < ((1 << order)*2))
-+				cache_size = (1 << order)*2;
++			if (cache_size < pages*2)
++				cache_size = pages*2;
 +			shrink_all_memory(cache_size);
-+		} else
++		} else {
 +			return 0;
-+		retries_left--;
++		}
 +	}
 +
 +	return result;
@@ -2733,7 +2723,8 @@ Index: linux-2.6.22-source/mm/page_alloc.c
  {
  	int i;
  
-+	if (cooperative_mode_enabled()) {
++	if (cooperative_mode_enabled() &&
++	    !TestSetPageCoHostMapped(page)) {
 +		int result;
 +		result = co_persistent_alloc_pages((unsigned long)page_address(page), 1 << order);
 +		BUG_ON(result != 0);
@@ -2742,21 +2733,26 @@ Index: linux-2.6.22-source/mm/page_alloc.c
  	VM_BUG_ON((gfp_flags & (__GFP_WAIT | __GFP_HIGHMEM)) == __GFP_HIGHMEM);
  	/*
  	 * clear_highpage() will use KM_USER0, so it's a bug to use __GFP_ZERO
-@@ -396,6 +432,9 @@
+@@ -396,6 +431,11 @@
  	unsigned long page_idx;
  	int order_size = 1 << order;
  
-+	if (cooperative_mode_enabled())
++	if (cooperative_mode_enabled()) {
 +		co_free_pages((unsigned long)page_address(page), order_size);
++		ClearPageCoHostMapped(page);
++	}
 +
  	if (unlikely(PageCompound(page)))
  		destroy_compound_page(page, order);
  
-@@ -1370,6 +1409,13 @@
+@@ -1369,7 +1409,16 @@
+ 		dump_stack();
  		show_mem();
  	}
++	return NULL;
  got_pg:
-+	if (cooperative_mode_enabled()) {
++	if (cooperative_mode_enabled() &&
++	    !TestSetPageCoHostMapped(page)) {
 +		int result = co_persistent_alloc_pages((unsigned long)page_address(page), 1 << order);
 +		if (result) {
 +			__free_pages(page, order);
@@ -2890,7 +2886,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/reboot_cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/reboot_cooperative.c
-@@ -0,0 +1,88 @@
+@@ -0,0 +1,133 @@
 +/*
 + *  linux/arch/i386/kernel/reboot_cooperative.c
 + */
@@ -2899,6 +2895,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/reboot_cooperative.c
 +#include <linux/reboot.h>
 +#include <linux/kthread.h>
 +#include <linux/syscalls.h>
++#include <linux/interrupt.h>
 +#include <linux/cooperative_internal.h>
 +
 +/* sys_reboot needs this dummy. */
@@ -2906,7 +2903,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/reboot_cooperative.c
 +
 +/*
 + * This is a hack to make ctrl_alt_del work as a poweroff, so the OS can be
-+ * notified and unmount and sync everything.
++ * notified, unmount and sync everything.
 + */
 +static int co_powering_off;
 +
@@ -2939,7 +2936,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/reboot_cooperative.c
 +/*
 + * This function will call from interrupt context.
 + */
-+void co_shedule_shutdown(void)
++static void co_shedule_shutdown(void)
 +{
 +	static DECLARE_WORK(shutdown_work, deferred_shutdown);
 +
@@ -2964,7 +2961,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/reboot_cooperative.c
 +
 +void machine_emergency_restart(void)
 +{
-+        co_machine_restart();
++	co_machine_restart();
 +}
 +
 +void machine_restart(char *cmd)
@@ -2972,13 +2969,57 @@ Index: linux-2.6.22-source/arch/i386/kernel/reboot_cooperative.c
 +	if (co_powering_off)
 +		machine_power_off();
 +	else
-+    		co_machine_restart();
++		co_machine_restart();
 +}
 +
 +void machine_halt(void)
 +{
 +	co_terminate(CO_TERMINATE_HALT);
 +}
++
++static irqreturn_t power_interrupt(int irq, void *dev_id)
++{
++	co_message_node_t *node_message;
++
++	if (co_get_message(&node_message, CO_DEVICE_POWER)) {
++		co_linux_message_t *message;
++		co_linux_message_power_t *type;
++
++		message = (co_linux_message_t *)&node_message->msg.data;
++		type = (co_linux_message_power_t *)message->data;
++		switch (type->type) {
++		case CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL:
++			ctrl_alt_del();
++			break;
++		case CO_LINUX_MESSAGE_POWER_SHUTDOWN:
++			co_shedule_shutdown();
++			break;
++		case CO_LINUX_MESSAGE_POWER_OFF:
++			machine_power_off();
++			break;
++		default:
++			printk(KERN_ERR "power interrupt: buggy type %d\n", type->type);
++		}
++		co_free_message(node_message);
++	}
++
++	return IRQ_HANDLED;
++}
++
++static int __init co_power_init(void)
++{
++	int rc;
++
++	rc = request_irq(POWER_IRQ, &power_interrupt, IRQF_SAMPLE_RANDOM, "power", NULL);
++	if (rc) {
++		printk(KERN_ERR "POWER: unable to get irq %d", POWER_IRQ);
++		return rc;
++	}
++
++	return 0;
++}
++
++__initcall(co_power_init);
 Index: linux-2.6.22-source/arch/i386/mach-default/setup.c
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/mach-default/setup.c
@@ -3000,7 +3041,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/i8259_cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/i8259_cooperative.c
-@@ -0,0 +1,101 @@
+@@ -0,0 +1,100 @@
 +/*
 + *  linux/arch/i386/kernel/i8259_cooperative.c
 + */
@@ -3017,14 +3058,13 @@ Index: linux-2.6.22-source/arch/i386/kernel/i8259_cooperative.c
 +/* Function must have the same prototype as do_IRQ() */
 +fastcall void proxy_interrupt_handler(struct pt_regs *regs)
 +{
-+	unsigned long flags;
-+
-+	co_passage_page_acquire(&flags);
++	co_passage_page_assert_valid();
++	co_passage_page_ref_up();
 +	co_passage_page->operation = CO_OPERATION_FORWARD_INTERRUPT;
-+	co_passage_page->params[0] = (~regs->orig_eax) + 0x20; /* IRQ number */
++	co_passage_page->params[0] = (~regs->orig_eax) + FIRST_EXTERNAL_VECTOR; /* IRQ number */
 +	co_passage_page->host_state.flags &= ~(1 << 9); /* Turn IF off */
 +	co_switch_wrapper();
-+	co_callback(flags, regs);
++	co_callback(regs);
 +}
 +
 +CO_TRACE_CONTINUE;
@@ -3122,3 +3162,255 @@ Index: linux-2.6.22-source/arch/i386/kernel/ioport_cooperative.c
 +{
 +	return -EPERM;
 +}
+Index: linux-2.6.22-source/lib/iomap.c
+===================================================================
+--- linux-2.6.22-source.orig/lib/iomap.c
++++ linux-2.6.22-source/lib/iomap.c
+@@ -59,6 +59,7 @@
+ 		bad_io_access(port, #is_pio );			\
+ } while (0)
+ 
++#ifndef CONFIG_COOPERATIVE
+ #ifndef pio_read16be
+ #define pio_read16be(port) swab16(inw(port))
+ #define pio_read32be(port) swab32(inl(port))
+@@ -224,6 +225,7 @@
+ EXPORT_SYMBOL(iowrite8_rep);
+ EXPORT_SYMBOL(iowrite16_rep);
+ EXPORT_SYMBOL(iowrite32_rep);
++#endif
+ 
+ /* Create a virtual mapping cookie for an IO port range */
+ void __iomem *ioport_map(unsigned long port, unsigned int nr)
+Index: linux-2.6.22-source/drivers/char/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/drivers/char/Kconfig
++++ linux-2.6.22-source/drivers/char/Kconfig
+@@ -1078,6 +1078,7 @@
+ config DEVPORT
+ 	bool
+ 	depends on !M68K
++	depends on !COOPERATIVE
+ 	depends on ISA || PCI
+ 	default y
+ 
+Index: linux-2.6.22-source/drivers/crypto/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/drivers/crypto/Kconfig
++++ linux-2.6.22-source/drivers/crypto/Kconfig
+@@ -46,6 +46,7 @@
+ config CRYPTO_DEV_GEODE
+ 	tristate "Support for the Geode LX AES engine"
+ 	depends on X86_32 && PCI
++	depends on !COOPERATIVE
+ 	select CRYPTO_ALGAPI
+ 	select CRYPTO_BLKCIPHER
+ 	default m
+Index: linux-2.6.22-source/drivers/usb/Kconfig
+===================================================================
+--- linux-2.6.22-source.orig/drivers/usb/Kconfig
++++ linux-2.6.22-source/drivers/usb/Kconfig
+@@ -10,6 +10,7 @@
+ # NOTE:  SL-811 option should be board-specific ...
+ config USB_ARCH_HAS_HCD
+ 	boolean
++	depends on !COOPERATIVE
+ 	default y if USB_ARCH_HAS_OHCI
+ 	default y if USB_ARCH_HAS_EHCI
+ 	default y if ARM				# SL-811
+@@ -18,6 +19,7 @@
+ # many non-PCI SOC chips embed OHCI
+ config USB_ARCH_HAS_OHCI
+ 	boolean
++	depends on !COOPERATIVE
+ 	# ARM:
+ 	default y if SA1111
+ 	default y if ARCH_OMAP
+@@ -38,6 +40,7 @@
+ # some non-PCI hcds implement EHCI
+ config USB_ARCH_HAS_EHCI
+ 	boolean
++	depends on !COOPERATIVE
+ 	default y if PPC_83xx
+ 	default y if SOC_AU1200
+ 	default PCI
+Index: linux-2.6.22-source/arch/i386/mm/Makefile
+===================================================================
+--- linux-2.6.22-source.orig/arch/i386/mm/Makefile
++++ linux-2.6.22-source/arch/i386/mm/Makefile
+@@ -8,3 +8,4 @@
+ obj-$(CONFIG_HUGETLB_PAGE) += hugetlbpage.o
+ obj-$(CONFIG_HIGHMEM) += highmem.o
+ obj-$(CONFIG_BOOT_IOREMAP) += boot_ioremap.o
++obj-$(CONFIG_COOPERATIVE) += comap.o
+Index: linux-2.6.22-source/arch/i386/mm/comap.c
+===================================================================
+--- /dev/null
++++ linux-2.6.22-source/arch/i386/mm/comap.c
+@@ -0,0 +1,130 @@
++
++/*
++ * This source code is a part of coLinux source package.
++ *
++ * Copyright (C) 2008 Steve Shoecraft <sshoecraft@earthlink.net>
++ *
++ * The code is licensed under the GPL.  See the COPYING file in
++ * the root directory.
++ *
++ */
++
++#include <linux/kernel.h>
++#include <linux/mm.h>
++#include <linux/vmalloc.h>
++#include <linux/sched.h>
++
++#include <linux/cooperative.h>
++#include <linux/cooperative_internal.h>
++
++static unsigned long *get_pp(void *host_buffer, int size) {
++	unsigned long *pp, flags;
++	int npages,pp_size,rc;
++
++	/* Get # of pages */
++	npages = size >> PAGE_SHIFT;
++	if ((npages * PAGE_SIZE) < size) npages++;
++
++	/* Alloc mem for phys pages */
++	pp_size = npages * sizeof(unsigned long);
++	pp = kmalloc(pp_size, GFP_KERNEL);
++	if (!pp) {
++		printk(KERN_ERR "co_map_buffer: error allocating memory for physical pages!\n");
++		return 0;
++	}
++
++	/* Request physical pages from the host */
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_GETPP;
++	co_passage_page->params[0] = (unsigned long) pp;
++	co_passage_page->params[1] = (unsigned long) host_buffer;
++	co_passage_page->params[2] = size;
++	co_switch_wrapper();
++	rc = co_passage_page->params[0];
++	co_passage_page_release(flags);
++	if (rc) {
++		printk(KERN_ERR "co_map_buffer: error getting physical pages from host!\n");
++		return 0;
++	}
++
++	return pp;
++}
++
++#define VM_OPTS VM_READ | VM_WRITE | VM_MAYREAD | VM_MAYWRITE | VM_PFNMAP | VM_RAND_READ
++
++void *co_map_buffer(void *host_buffer, int size) {
++	unsigned long addr, *pp, *pd, *pt, pa;
++	struct vm_struct *area;
++	void *buffer;
++	int i,npages,pd_index,pt_index;
++
++	/* Get the physical pages for the host buffer */
++	pp = get_pp(host_buffer, size);
++	if (!pp) return 0;
++
++	/* Get an area of virtual memory */
++	area = get_vm_area(size, VM_OPTS);
++	buffer = area->addr;
++
++        npages = size >> PAGE_SHIFT;
++
++	addr = (unsigned long) buffer;
++	pd = (unsigned long *) init_mm.pgd;
++	while(npages) {
++		/* Get pt */
++		pd_index = pgd_index(addr);
++		if (pd[pd_index] != 0) {
++			pa = pd[pd_index] & PAGE_MASK;
++			pt = __va(CO_P_TO_PP(pa));
++		} else {
++			pt = (unsigned long *) kmalloc(PAGE_SIZE, GFP_KERNEL);
++			if (!pt) {
++				printk(KERN_ERR "co_map_buffer: unable to alloc new pt entry!\n");
++				return 0;
++			}
++			memset(pt, 0, PAGE_SIZE);
++			pa = CO_PP_TO_P(__pa(pt)) | _PAGE_TABLE;
++			pd[pd_index] = pa;
++		}
++
++		/* Fill pt */
++		pt_index = pte_index(addr);
++		for(i=pt_index; i < 1024; i++) {
++			if (!npages) break;
++			BUG_ON(pt[i] != 0);
++			pt[i] = *pp | _PAGE_PRESENT | _PAGE_RW | _PAGE_USER | _PAGE_DIRTY | _PAGE_ACCESSED;
++			pp++;
++			addr += PAGE_SIZE;
++			npages--;
++		}
++	}
++
++	return buffer;
++}
++
++#if 0
++void dump_pt(void *buf, int size) {
++	unsigned long addr, *pd, *pt;
++	int x, pd_index, pt_index, npages;
++
++	npages = size >> PAGE_SHIFT;
++
++	addr = (unsigned long) buf;
++	pd = (unsigned long *)  __va(CO_P_TO_PP(read_cr3()));
++	printk(KERN_INFO "pd: %p\n", pd);
++	while(npages) {
++		pd_index = pgd_index(addr);
++		printk(KERN_INFO "pd[%04d]: %lx\n", pd_index, pd[pd_index]);
++		BUG_ON(pd[pd_index] == 0);
++		pt = __va(CO_P_TO_PP(pd[pd_index] & PAGE_MASK));
++		pt_index = pte_index(addr);
++		for(x=pt_index; x < 1024; x++) {
++			if (!npages) break;
++			printk(KERN_INFO "%04d: pt[%04d]: %08lx\n", npages, x, pt[x]);
++			addr += PAGE_SIZE;
++			npages--;
++		}
++	}
++}
++#endif
+Index: linux-2.6.22-source/include/linux/page-flags.h
+===================================================================
+--- linux-2.6.22-source.orig/include/linux/page-flags.h
++++ linux-2.6.22-source/include/linux/page-flags.h
+@@ -90,6 +90,8 @@
+ #define PG_reclaim		17	/* To be reclaimed asap */
+ #define PG_buddy		19	/* Page is free, on buddy lists */
+ 
++#define PG_co_host_mapped	20	/* Page is mapped on colinux host */
++
+ /* PG_owner_priv_1 users should have descriptive aliases */
+ #define PG_checked		PG_owner_priv_1 /* Used by some filesystems */
+ 
+@@ -270,6 +272,9 @@
+ #define SetPageUncached(page)	set_bit(PG_uncached, &(page)->flags)
+ #define ClearPageUncached(page)	clear_bit(PG_uncached, &(page)->flags)
+ 
++#define ClearPageCoHostMapped(page)	clear_bit(PG_co_host_mapped, &(page)->flags)
++#define TestSetPageCoHostMapped(page)	test_and_set_bit(PG_co_host_mapped, &(page)->flags)
++
+ struct page;	/* forward declaration */
+ 
+ extern void cancel_dirty_page(struct page *page, unsigned int account_size);
+Index: linux-2.6.22-source/kernel/irq/manage.c
+===================================================================
+--- linux-2.6.22-source.orig/kernel/irq/manage.c
++++ linux-2.6.22-source/kernel/irq/manage.c
+@@ -503,7 +503,7 @@
+ 	struct irqaction *action;
+ 	int retval;
+ 
+-#ifdef CONFIG_LOCKDEP
++#if defined(CONFIG_LOCKDEP) || defined(CONFIG_COOPERATIVE)
+ 	/*
+ 	 * Lockdep wants atomic interrupt handlers:
+ 	 */

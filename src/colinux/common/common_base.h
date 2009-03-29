@@ -18,7 +18,7 @@ typedef int bool_t;
 #define PACKED_STRUCT __attribute__((packed))
 
 #define CO_MAX_MONITORS                   64
-#define CO_LINUX_PERIPHERY_API_VERSION    20
+#define CO_LINUX_PERIPHERY_API_VERSION    22
 
 #define CO_ERRORS_X_MACRO			\
 	X(ERROR)				\
@@ -127,7 +127,7 @@ typedef long co_rc_t;
 /*
  * Defines a LINUX instance. There are CO_MAX_COLINUXS of these 
  */
-typedef unsigned long co_id_t;
+typedef unsigned int co_id_t;
 
 #define CO_INVALID_ID ((co_id_t)-1)
 

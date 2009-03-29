@@ -43,9 +43,21 @@ void co_os_mutex_acquire(co_os_mutex_t mutex)
 
 }
 
+void co_os_mutex_acquire_critical(co_os_mutex_t mutex)
+{
+	if (KeGetCurrentIrql() < DISPATCH_LEVEL)
+		co_os_mutex_acquire(mutex);
+}
+
 void co_os_mutex_release(co_os_mutex_t mutex)
 {
 	KeReleaseMutex(&mutex->mutex, FALSE);
+}
+
+void co_os_mutex_release_critical(co_os_mutex_t mutex)
+{
+	if (KeGetCurrentIrql() < DISPATCH_LEVEL)
+		co_os_mutex_release(mutex);
 }
 
 void co_os_mutex_destroy(co_os_mutex_t mutex)

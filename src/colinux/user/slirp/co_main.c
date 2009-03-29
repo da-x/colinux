@@ -32,7 +32,7 @@
 
 typedef struct start_parameters {
 	bool_t show_help;
-	int index;
+	unsigned int index;
 	co_id_t instance;
 } start_parameters_t;
 
@@ -207,7 +207,7 @@ co_slirp_parse_args(co_command_line_params_t cmdline, start_parameters_t *parame
 
 	/* Parse command line */
 	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-i",
-							  &instance_specified, (int *)&parameters->instance);
+							  &instance_specified, &parameters->instance);
 	if (!CO_OK(rc))
 		return rc;
 

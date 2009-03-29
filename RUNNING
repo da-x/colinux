@@ -16,6 +16,13 @@ http://www.sourceforge.net/projects/colinux
 
 NOTES ON UPGRADING:
 
+ Upgrading from coLinux 0.7.2 and before
+ -- Some dev distries increase eth1, eth2, eth3, ... on every boot.
+    Typicaly have no network, but can see it with "cat /proc/net/dev".
+    As workarrount set an unique MAC address for all network interfaces
+    in config file. Or disable udev.
+    Debian: Remove all entries from /etc/udev/rules.d/z25_persistent-net.rules
+
  Upgrading from coLinux 0.6.4 and before
  -- XML config files have been removed.  Use the command-line
     syntax in a name=value per line plain text file instead:
@@ -190,6 +197,16 @@ Common Problems
 	Under Vista an user within administrator group must run the file
 	C:\Windows\system32\cmd.exe from explorer context menu "run as ..." and
 	admin account to installing the driver or service from command line.
+
+    "no network after update" or "network interface increments on every boot"
+
+	Since PCI is enabled, some distris create a new network interface
+	eth1, eth2, eth3, ... on every boot, because coLinux creates a new
+	randomly MAC on every boot. As workarrount set an unique MAC for all
+	network	interfaces in config file. See examples in colinux-daemon.txt
+	Debian: To go back with eth0 must remove all ethX entries from
+	/etc/udev/rules.d/z25_persistent-net.rules
+	"cat /proc/net/dev" shows all current networks names in coLinux.
 
   Additional problems not know at time of release are typically
 documented on the Wiki (http://colinux.wikia.com/), look

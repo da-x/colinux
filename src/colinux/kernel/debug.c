@@ -118,6 +118,16 @@ static void memcpy_vector(char *dest, co_debug_write_vector_t *vec, int vec_size
 	}
 }
 
+static inline long co_debug_write_vector_size(co_debug_write_vector_t *vec, int vec_size)
+{
+	long size = 0;
+	while (vec_size--) {
+		size += vec->size;
+		vec++;
+	}
+	return size;
+}
+
 static co_rc_t append_to_buffer(co_manager_debug_t *debug, co_debug_section_t *section, 
 				co_debug_write_vector_t *vec, int vec_size)
 {
@@ -144,7 +154,7 @@ static void get_section(struct co_debug_section *section)
 {
 	section->refcount++;
 
-	co_os_mutex_acquire(section->mutex);
+	co_os_mutex_acquire_critical(section->mutex);
 }
 
 static bool_t put_section(co_manager_debug_t *debug, 
@@ -154,7 +164,7 @@ static bool_t put_section(co_manager_debug_t *debug,
 	if (section->refcount == 0) {
 		debug->sections_count--;
 		debug->sections_total_size -= section->buffer_size;
-		co_os_mutex_release(section->mutex);
+		co_os_mutex_release_critical(section->mutex);
 		co_os_mutex_destroy(section->mutex);
 		co_os_free(section->buffer);
 		co_os_free(section);
@@ -162,12 +172,12 @@ static bool_t put_section(co_manager_debug_t *debug,
 		return PFALSE;
 	}
 
-	co_os_mutex_release(section->mutex);
+	co_os_mutex_release_critical(section->mutex);
 
 	return PTRUE;
 }
 
-co_rc_t co_debug_writev(co_manager_debug_t *debug, 
+static co_rc_t co_debug_writev(co_manager_debug_t *debug,
 			struct co_debug_section **section_ptr,
 			co_debug_write_vector_t *vec, int vec_size)
 {
@@ -189,9 +199,9 @@ co_rc_t co_debug_writev(co_manager_debug_t *debug,
 		debug->sections_count++;
 		debug->sections_total_size += section->buffer_size;
 
-		co_os_mutex_acquire(debug->mutex);
+		co_os_mutex_acquire_critical(debug->mutex);
 		co_list_add_tail(&section->node, &debug->sections);
-		co_os_mutex_release(debug->mutex);
+		co_os_mutex_release_critical(debug->mutex);
 
 		report_status("section created", debug);
 		get_section(section);

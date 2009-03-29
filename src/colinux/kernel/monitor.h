@@ -115,6 +115,7 @@ typedef struct co_monitor {
 					Linux (to be put in CR3 eventually */
 	co_pfn_t **pgd_pfns;
 
+
 	/*
 	 * Devices
 	 */
@@ -130,6 +131,16 @@ typedef struct co_monitor {
 	unsigned long long timestamp_reminder;
 	co_os_wait_t idle_wait;
 
+	/*
+	 * Video devices
+	*/
+	struct co_video_dev *video_devs[CO_MODULE_MAX_COVIDEO];
+
+	/*
+	 * SCSI devices
+	 */
+	struct co_scsi_dev *scsi_devs[CO_MODULE_MAX_COSCSI];
+
 	/* 
 	 * Block devices
 	 */
@@ -139,6 +150,11 @@ typedef struct co_monitor {
 	 * File Systems
 	 */
 	struct co_filesystem *filesystems[CO_MODULE_MAX_COFS];
+
+	/*
+	 * Audio devices
+	*/
+	struct co_audio_dev *audio_devs[CO_MODULE_MAX_COAUDIO];
 
 	/*
 	 * Message passing stuff
@@ -186,7 +202,15 @@ extern co_rc_t co_monitor_free_pages(co_monitor_t *cmon, unsigned long pages, vo
 extern co_rc_t co_monitor_malloc(co_monitor_t *cmon, unsigned long bytes, void **ptr);
 extern co_rc_t co_monitor_free(co_monitor_t *cmon, void *ptr);
 
-extern co_rc_t co_monitor_message_from_user(co_monitor_t *monitor, struct co_manager_open_desc *opened, co_message_t *message);
+extern co_rc_t co_monitor_message_from_user(co_monitor_t *monitor, co_message_t *message);
+extern co_rc_t co_monitor_message_from_user_free(co_monitor_t *monitor, co_message_t *message);
+
+/* support kernel mode conet module */
+extern co_rc_t co_conet_register_protocol(co_monitor_t *monitor);
+extern co_rc_t co_conet_unregister_protocol(co_monitor_t *monitor);
+extern co_rc_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcfg_id, int promise, char mac[6]);
+extern co_rc_t co_conet_unbind_adapter(co_monitor_t *monitor, int conet_unit);
+extern co_rc_t co_conet_inject_packet_to_adapter(co_monitor_t *monitor, int conet_unit, void *packet_data, int length);
 
 /*
  * An accessors to values of our core's kernel symbols.

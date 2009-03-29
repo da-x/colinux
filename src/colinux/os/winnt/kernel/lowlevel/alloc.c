@@ -8,8 +8,6 @@
  *
  */
 
-#include <asm/page.h>
-
 #include "../ddk.h"
 
 #include <colinux/os/alloc.h>
@@ -17,28 +15,37 @@
 
 #ifdef DEBUG_CO_OS_ALLOC
 static int allocs;
+static int alloc_reenter;
+
+#define co_debug_allocations(fmt, ...) do { \
+        if (!alloc_reenter) { \
+		alloc_reenter++; \
+		co_debug_lvl(allocations, 11, fmt, ## __VA_ARGS__); \
+		alloc_reenter--; \
+	} \
+} while (0)
 #endif
 
-void *co_os_alloc_pages(unsigned long pages)
+void *co_os_alloc_pages(unsigned int pages)
 {
 	void *ret;
 
 	if (pages == 0)
 		KeBugCheck(0x11117777);
 
-	ret = MmAllocateNonCachedMemory(pages * PAGE_SIZE);
+	ret = MmAllocateNonCachedMemory(pages * CO_ARCH_PAGE_SIZE);
 
 #ifdef DEBUG_CO_OS_ALLOC		
 	if (ret) {
 		allocs++;
-		co_debug("%d(%d)->%x", allocs, pages, ret);
+		co_debug_allocations("PAGE ALLOC %d(%u) - %p", allocs, pages, ret);
 	}
 #endif
 
 	return ret;
 }
 
-void co_os_free_pages(void *ptr, unsigned long pages)
+void co_os_free_pages(void *ptr, unsigned int pages)
 {
 	if (ptr == 0)
 		KeBugCheck(0x11117777 + 1);
@@ -46,11 +53,11 @@ void co_os_free_pages(void *ptr, unsigned long pages)
 	if (pages == 0)
 		KeBugCheck(0x11117777 + 2);
 
-#ifdef DEBUG_CO_OS_ALLOC		
-	co_debug("%d(%x,%d)", allocs, ptr, pages);
+#ifdef DEBUG_CO_OS_ALLOC
+	co_debug_allocations("PAGE FREE %d(%u) - %p", allocs, pages, ptr);
 	allocs--;
 #endif
-	MmFreeNonCachedMemory(ptr, pages * PAGE_SIZE);
+	MmFreeNonCachedMemory(ptr, pages * CO_ARCH_PAGE_SIZE);
 }
 
 #define CO_OS_POOL_TAG (('c' << 0) | ('o' << 8) |  ('l' << 16) | ('x' << 24))
@@ -68,7 +75,7 @@ void *co_os_malloc(unsigned long bytes)
 #ifdef DEBUG_CO_OS_ALLOC		
 	if (ret) {
 		allocs++;
-		co_debug("%d(%d)->%x", allocs, bytes, ret);
+		co_debug_allocations("MEM ALLOC %d(%lu) - %p", allocs, bytes, ret);
 	}
 #endif
 
@@ -78,7 +85,7 @@ void *co_os_malloc(unsigned long bytes)
 void co_os_free(void *ptr)
 {
 #ifdef DEBUG_CO_OS_ALLOC		
-	co_debug("%d(%x)", allocs, ptr);
+	co_debug_allocations("MEM FREE %d - %p", allocs, ptr);
 	allocs--;
 #endif
 	if (ptr == 0)
@@ -87,10 +94,10 @@ void co_os_free(void *ptr)
 	ExFreePoolWithTag(ptr, CO_OS_POOL_TAG);
 }
 
-co_rc_t co_os_userspace_map(void *address, unsigned long pages, void **user_address_out, void **handle_out)
+co_rc_t co_os_userspace_map(void *address, unsigned int pages, void **user_address_out, void **handle_out)
 {
 	void *user_address;
-	unsigned long memory_size = pages << CO_ARCH_PAGE_SHIFT;
+	unsigned long memory_size = ((unsigned long)pages) << CO_ARCH_PAGE_SHIFT;
 	PMDL mdl;
 
 	mdl = IoAllocateMdl(address, memory_size, FALSE, FALSE, NULL);
@@ -110,7 +117,7 @@ co_rc_t co_os_userspace_map(void *address, unsigned long pages, void **user_addr
 	return CO_RC(OK);
 }
 
-void co_os_userspace_unmap(void *user_address, void *handle, unsigned long pages)
+void co_os_userspace_unmap(void *user_address, void *handle, unsigned int pages)
 {
 	PMDL mdl = (PMDL)handle;
 	

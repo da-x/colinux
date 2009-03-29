@@ -17,7 +17,8 @@
  */
 
 #define CO_ARCH_X86_FEATURE_APIC      (9)
-#define CO_ARCH_X86_FEATURE_FXSR      (24) 
+#define CO_ARCH_X86_FEATURE_SEP       (11)
+#define CO_ARCH_X86_FEATURE_FXSR      (24)
 
 /* AMD cpuid feature bits */
 #define CO_ARCH_AMD_FEATURE_NX        (20)
@@ -37,5 +38,12 @@
 #define CO_ARCH_X86_CR4_PCE		0x0100	/* enable performance counters at ipl 3 */
 #define CO_ARCH_X86_CR4_OSFXSR		0x0200	/* enable fast FPU save and restore */
 #define CO_ARCH_X86_CR4_OSXMMEXCPT	0x0400	/* enable unmasked SSE exceptions */
+
+/*
+ * Offsets for rdmsr/wrmsr
+ */
+#define MSR_IA32_SYSENTER_CS		"0x00000174"
+#define MSR_IA32_SYSENTER_ESP		"0x00000175"
+#define MSR_IA32_SYSENTER_EIP		"0x00000176"
 
 #endif

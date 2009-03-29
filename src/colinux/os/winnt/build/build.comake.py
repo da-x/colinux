@@ -1,3 +1,12 @@
+def optional_targets():
+    import os
+    from os import getenv
+    enable_wx = getenv('COLINUX_ENABLE_WX')
+    if enable_wx:
+        if enable_wx == "yes":
+	    return [Input('colinux-console-wx.exe')]
+    return []
+
 targets['executables'] = Target(
     inputs=[
     Input('colinux-daemon.exe'),
@@ -6,10 +15,11 @@ targets['executables'] = Target(
     Input('colinux-debug-daemon.exe'),
     Input('colinux-console-nt.exe'),
     Input('colinux-bridged-net-daemon.exe'),
+    Input('colinux-ndis-net-daemon.exe'),
     Input('colinux-slirp-net-daemon.exe'),
     Input('colinux-serial-daemon.exe'),
     Input('linux.sys'),
-    ],
+    ] + optional_targets(),
     tool = Empty(),
 )
 
@@ -30,6 +40,18 @@ def generate_options(compiler_def_type, libs=None, lflags=None):
             'user32', 'gdi32', 'ws2_32', 'ntdll', 'kernel32', 'ole32', 'uuid', 'gdi32',
             'msvcrt', 'crtdll', 'shlwapi', 
         ]),
+    )
+
+def generate_wx_options():
+    return Options(
+        overriders = dict(
+            compiler_def_type = 'g++',
+            compiler_strip = True,
+        ),
+        appenders = dict(
+		compiler_flags = [ '`wx-config --cxxflags`' ],
+		linker_add = [ '`wx-config --libs`' ],
+	)
     )
 
 user_dep = [Input('../user/user-all.a')]
@@ -59,6 +81,14 @@ targets['colinux-bridged-net-daemon.exe'] = Target(
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('gcc', libs=['wpcap']),
+)
+
+targets['colinux-ndis-net-daemon.exe'] = Target(
+    inputs = user_res + [
+       Input('../user/conet-ndis-daemon/build.o'),
+    ] + user_dep,
+    tool = Compiler(),
+    mono_options = generate_options('gcc'),
 )
 
 targets['colinux-slirp-net-daemon.exe'] = Target(
@@ -96,6 +126,14 @@ targets['colinux-console-nt.exe'] = Target(
     mono_options = generate_options('g++'),
 )
 
+targets['colinux-console-wx.exe'] = Target(
+	inputs = user_res + [
+		Input('../../../user/console-wx/build.o'),
+	],
+	tool = Compiler(),
+	mono_options = generate_wx_options(),
+)
+
 targets['colinux-debug-daemon.exe'] = Target(
     inputs = user_res + [
        Input('../user/debug/build.o'),
@@ -127,7 +165,7 @@ def script_cmdline(scripter, tool_run_inf):
         "-Wl,--entry,_DriverEntry@8 "
         "-Wl,%s "
         "-mdll -nostartfiles -nostdlib "
-        "-o %s %s -lntoskrnl -lhal -lgcc ") %
+        "-o %s %s -lndis -lntoskrnl -lhal -lgcc ") %
     (scripter.get_cross_build_tool('gcc', tool_run_inf),
      inputs[1].pathname,
      tool_run_inf.target.pathname,
@@ -178,7 +216,7 @@ def script_cmdline(scripter, tool_run_inf):
         "-Wl,--base-file,%s " 
 	"-Wl,--entry,_DriverEntry@8 "
 	"-nostartfiles -nostdlib "
-        "-o junk.tmp %s -lntoskrnl -lhal -lgcc ; "
+        "-o junk.tmp %s -lndis -lntoskrnl -lhal -lgcc ; "
 	"rm -f junk.tmp") %
     (scripter.get_cross_build_tool('gcc', tool_run_inf),
      tool_run_inf.target.pathname,

@@ -23,15 +23,19 @@ static void blank_char(co_console_cell_t *cell)
 
 co_rc_t co_console_create(long x, long y, long max_blacklog, co_console_t **console_out)
 {
-	unsigned long struct_size = 0;
+	unsigned long struct_size;
 	co_console_t *console;
 
 	/*
 	 * Use only one allocation for the entire console object so it would 
 	 * be more managable (and less code).
 	 */
+	struct_size = sizeof(co_console_cell_t)*(y + max_blacklog)*x;
+
+	if (struct_size <= 0 || struct_size > 32*1024)
+		return CO_RC(INVALID_PARAMETER);
+
 	struct_size += sizeof(co_console_t);
-	struct_size += sizeof(co_console_cell_t)*(y + max_blacklog)*x;
 
 	console = co_os_malloc(struct_size);
 	if (console == NULL)
@@ -172,7 +176,7 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 			while (t <= b) {
 				memmove(&console->screen[y*console->x+x],
 					&console->screen[t*console->x+l],
-					r-l+1);
+					(r-l+1)*sizeof(co_console_cell_t));
 				t++;
 				y++;
 			}
@@ -181,7 +185,7 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 			while (t <= b) {
 				memmove(&console->screen[y*console->x+x],
 					&console->screen[b*console->x+l],
-					r-l+1);
+					(r-l+1)*sizeof(co_console_cell_t));
 				b--;
 				y--;
 			}
@@ -190,6 +194,12 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 	}
 
 	case CO_OPERATION_CONSOLE_STARTUP:
+		message->sizes.rows = console->y;
+		message->sizes.cols = console->x;
+		message->sizes.backbuf = 0;
+		message->type = CO_OPERATION_CONSOLE_SIZES;
+		break;
+
 	case CO_OPERATION_CONSOLE_INIT:
 	case CO_OPERATION_CONSOLE_DEINIT:
 	case CO_OPERATION_CONSOLE_SWITCH:
@@ -200,6 +210,7 @@ co_rc_t co_console_op(co_console_t *console, co_console_message_t *message)
 	case CO_OPERATION_CONSOLE_SET_ORIGIN:
 	case CO_OPERATION_CONSOLE_SAVE_SCREEN:
 	case CO_OPERATION_CONSOLE_INVERT_REGION:
+	case CO_OPERATION_CONSOLE_SIZES:
 		break;
 	}
 

@@ -77,7 +77,7 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 	}
 
 	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-a",
-				NULL, (int *)&start_parameters.attach_id);
+				NULL, &start_parameters.attach_id);
 
 	if (!CO_OK(rc)) {
 		syntax();
@@ -143,24 +143,17 @@ co_rc_t console_window_t::send_ctrl_alt_del()
 
 co_rc_t console_window_t::start()
 {
-	co_rc_t rc;
-
 	widget = co_console_widget_create();
 	if (!widget)
 		return CO_RC(ERROR);
 
 	widget->title("Console - [ONLINE] - [To Exit, Press Window+Alt Keys]");
 
-	rc = widget->set_window(this);
-	if (!CO_OK(rc))
-		return rc;
-
-	log("Coopeartive Linux console started\n");
+	log("Cooperative Linux console started\n");
 
 	if (start_parameters.attach_id != CO_INVALID_ID)
 		instance_id = start_parameters.attach_id;
-
-	if (instance_id == CO_INVALID_ID)
+	else
 		instance_id = find_first_monitor();
 
 	return attach();
@@ -216,6 +209,10 @@ co_rc_t console_window_t::attach()
 		return rc;
 
 	widget->set_console(console);
+
+	rc = widget->set_window(this);
+	if (!CO_OK(rc))
+		return rc;
 
 	widget->redraw();
 	widget->title("Console - Cooperative Linux - [To Exit, Press Window+Alt Keys]");

@@ -5,8 +5,8 @@ targets['common.a'] = Target(
     Input('debug.o'),
     Input('errors.o'),
     Input('messages.o'),
+    Input('module_repr.o'),
     Input('libc.o'),
-    Input('libc_strtol.o'),
     Input('snprintf.o'),
     Input('file_ids.o'),
     Input('unicode.o'),
@@ -60,25 +60,7 @@ targets['version.h'] = Target(
     ]
 )
 
-target = 'libc.o'
-targets[target] = target = deftarget(target)
-target.mono_options = Options(
-    appenders = dict(
-    compiler_defines = dict(CO_LIBC__MISC=None),
-    )
-)
-
-targets['libc_strtol.o'] = target = deftarget('libc.o')
-target.mono_options = Options(
-    appenders = dict(
-    compiler_defines = dict(CO_LIBC__STRTOL=None),
-    )
-)
-
 targets['Makefile.lib-m'] = Target(
     inputs = input_list(".c", ".c"),
     tool = MakefileKbuild(),
-    mono_options = Options(
-	appenders = dict(compiler_defines = dict(CO_LIBC__MISC=None),)
-    )
 )

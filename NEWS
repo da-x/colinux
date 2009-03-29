@@ -1,3 +1,52 @@
+* Version 0.7.4
+  Filesystem:
+  * New: cofs rename allows to overwrite files with ReadOnly attrib.
+  * New: cofs supports flat file modes "rwx" for owner.  Mount option
+    "noattrib" disables these attribute mapping for older compatibility.
+  * Use "setcobd=async" to enable asynchronous mode for cobd devices.
+  * Bug #2013435: cobd supports read-only files now.
+  * Bug #2152550: cofs atime and mtime was swapped on time set.
+  * Bug #2176188: File sync wrong on cofs, command after mv/rename fails.
+
+  Network:
+  * pcap-bridge: Fix suspend problems. Reconnect after loosing adapter.
+  * New network "ndis-bridge" works in kernel mode and is the faster
+    alternative to pcap-bridge. (Ligong Liu)
+  * Bug #1396539: Fixing the "eth0: duplicate address detected!".
+    New filter rule for ndis-bridge and pcap-bridge is:
+    "(ether dst MAC) or (multicast and not ether src MAC)"
+  * Bug #2055697: Crashing SLiRP under heavy usage ktorrent. (Shai Vaingast)
+  * Bug #2357494,#2365031: ndis-bridge was not working with PPPoE, AoE
+    and others types as IP and ARP packets. Type filter removed now.
+
+  Console and daemons:
+  * New: Added "cocon=COLSxROWS" to use console size, other than 80x25.
+  * Bug #1117788: Fix sticky ALT after system menu from ALT-Space.
+  * Bug #2013501: Stop with error message on empty parameters.
+  * Bug #2593186: FLTK console command prompt display problems. (Shai Vaingast)
+  * Bugfix: Enclose spaces in current directory for install-service.
+
+  Kernel:
+  * scsi: New device for images with partition tables and works async.
+    Usage "scsi0=disk,file.img" or "scsi1=cdrom,file.iso" (Steve Shoecraft)
+  * Added virtual pci device handling. "lspci" is working (Steve Shoecraft)
+  * Add PG_co_host_mapped, save many OS switching times: speed up coLinux.
+  * New: /proc/colinux/stats show counts of OS switches.
+  * unionfs-2.2.4 added as module. (Marwan Al-Sabbagh)
+  * Add sysenter / sysexit restoration support, for cpu with SEP feature.
+  * Bug #2524658: GPF on raid5/6 md array by accessing MMX/XMM-registers.
+  * Feature req #2114493: Add iscsi kernel support (CONFIG_ISCSI_TCP).
+
+  Installer:
+  * New images: Fedora 10, Ubuntu 7.10
+
+  Debugging:
+  * Enable host kernel debug via registry [HKLM\SOFTWARE\coLinux] "Debug"
+
+  Updated libraries and tools:
+  * mingw 3.14
+  * w32api 3.11
+
 * Version 0.7.3
   Bugfixes:
   * Check ELF header before accessing kernel vmlinux (fix exception).

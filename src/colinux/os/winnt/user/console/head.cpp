@@ -128,8 +128,9 @@ static LRESULT CALLBACK keyboard_hook(
 		// let Windows process it, for now
 	case VK_APPS:
 		return CallNextHookEx(current_hook, nCode, wParam, lParam);
-	case VK_MENU:	/* Check if AltGr (received as Control+RightAlt) */
-		if ( (flags & KF_EXTENDED) && !released )
+	case VK_MENU:	/* Check if AltGr (received as LeftControl+RightAlt) */
+		if ( (flags & KF_EXTENDED) && !released &&
+		     (vkey_state[VK_CONTROL] == 0x009D) )
 		{	/* Release Control key */
 			handle_scancode( 0x009D );
 			vkey_state[VK_CONTROL] = 0;

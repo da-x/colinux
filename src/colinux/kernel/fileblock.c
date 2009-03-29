@@ -82,21 +82,27 @@ static co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 			request->disk_size = fdev->dev.size;
 
 		break;
-	}    
+	}
+
 	default:
+		co_debug("monitor: file_block_service type unknown!\n");
 		break;
 	}
 
 	return rc;
 }
 
-co_rc_t co_monitor_file_block_init(co_monitor_file_block_dev_t *dev, 
+co_rc_t co_monitor_file_block_init(struct co_monitor *cmon,
+				   co_monitor_file_block_dev_t *dev,
 				   co_pathname_t *pathname)
 {
 	memset(dev, 0, sizeof(*dev));
 	memcpy(dev->pathname, pathname, sizeof(*pathname));
 
-	dev->op = &co_os_file_block_default_operations;
+	if (cmon->config.cobd_async_enable)
+		dev->op = &co_os_file_block_async_operations;
+	else
+		dev->op = &co_os_file_block_default_operations;
 	dev->state = CO_MONITOR_FILE_BLOCK_CLOSED;
 	dev->dev.service = co_monitor_file_block_service;
 
@@ -110,4 +116,3 @@ void co_monitor_file_block_shutdown(co_monitor_file_block_dev_t *dev)
 		dev->state = CO_MONITOR_FILE_BLOCK_CLOSED;
 	}
 }
-

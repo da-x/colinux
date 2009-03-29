@@ -192,6 +192,14 @@ co_rc_t co_os_file_block_close(co_monitor_file_block_dev_t *fdev)
 	return CO_RC(OK);
 }
 
+co_monitor_file_block_operations_t co_os_file_block_async_operations = {
+	.open = co_os_file_block_open,
+	.close = co_os_file_block_close,
+	.read = co_os_file_block_read,
+	.write = co_os_file_block_write,
+	.get_size = co_os_file_block_get_size,
+};
+
 co_monitor_file_block_operations_t co_os_file_block_default_operations = {
 	.open = co_os_file_block_open,
 	.close = co_os_file_block_close,

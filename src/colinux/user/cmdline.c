@@ -7,8 +7,11 @@
  * the root directory.
  */
 
+#if !defined(__APPLE__)
 #include <malloc.h>
+#endif
 #include <string.h>
+#include <stdlib.h>
 #include "cmdline.h"
 
 #include <colinux/os/alloc.h>
@@ -299,8 +302,10 @@ static co_rc_t co_cmdline_get_next_equality_wrapper(co_command_line_params_t cmd
 		key_len = (key_found - arg) - prefix_len;
 		if (key_len > 0) {
 			if (key_size < key_len + 1) {
+				co_terminal_print("cmdline: Index not allowed for '%s'\n",
+					  expected_prefix);
 				co_os_free(arg);
-				return CO_RC(ERROR);
+				return CO_RC(INVALID_PARAMETER);
 			}
 			
 			co_memcpy(key, prefix_len + arg, key_len);
@@ -310,6 +315,14 @@ static co_rc_t co_cmdline_get_next_equality_wrapper(co_command_line_params_t cmd
 		/* string start and size */
 		key_found++;
 		length = co_strlen(key_found);
+
+		if (!length) {
+			co_terminal_print("cmdline: Missing arguments for '%s%s'\n",
+					  expected_prefix, key_len ? key : "");
+			co_os_free(arg);
+			return CO_RC(INVALID_PARAMETER);
+		}
+
 
 		if (!value_size) {
 			/* free old value */
@@ -353,7 +366,8 @@ co_rc_t co_cmdline_get_next_equality_alloc(co_command_line_params_t cmdline, con
 }
 
 co_rc_t co_cmdline_get_next_equality_int_prefix(co_command_line_params_t cmdline, const char *expected_prefix, 
-						int *key_int, int max_index, char **pp_value, bool_t *out_exists)
+						unsigned int *key_int, unsigned int max_index,
+						char **pp_value, bool_t *out_exists)
 {
 	char number[11];
 	co_rc_t rc;
@@ -365,19 +379,19 @@ co_rc_t co_cmdline_get_next_equality_int_prefix(co_command_line_params_t cmdline
 	
 	if (*out_exists) {
 		char *number_parse = NULL;
-		int value_int;
+		unsigned int value_int;
 		
-		value_int = co_strtol(number, &number_parse, 10);
+		value_int = strtoul(number, &number_parse, 10);
 		if (number_parse == number) {
 			/* not a number */
 			co_terminal_print("cmdline: suffix not a number\n");
-			return CO_RC(ERROR);
+			return CO_RC(INVALID_PARAMETER);
 		}
 
-		if (value_int < 0 || value_int >= max_index) {
+		if (value_int >= max_index) {
 			co_terminal_print("cmdline: invalid %s index: %d\n", 
 					  expected_prefix, value_int);
-			return CO_RC(ERROR);
+			return CO_RC(INVALID_PARAMETER);
 		}
 
 		*key_int = value_int;
@@ -387,7 +401,7 @@ co_rc_t co_cmdline_get_next_equality_int_prefix(co_command_line_params_t cmdline
 }
 
 co_rc_t co_cmdline_get_next_equality_int_value(co_command_line_params_t cmdline, const char *expected_prefix, 
-					       int *value_int, bool_t *out_exists)
+					       unsigned int *value_int, bool_t *out_exists)
 {
 	char value[20];
 	co_rc_t rc;
@@ -399,7 +413,7 @@ co_rc_t co_cmdline_get_next_equality_int_value(co_command_line_params_t cmdline,
 	if (*out_exists) {
 		char *value_parse = NULL;
 		
-		*value_int = co_strtol(value, &value_parse, 10);
+		*value_int = strtoul(value, &value_parse, 10);
 		if (value_parse == value) {
 			/* not a number */
 			return CO_RC(ERROR);
@@ -474,7 +488,7 @@ co_rc_t co_cmdline_params_one_arugment_parameter(co_command_line_params_t cmdlin
 
 co_rc_t co_cmdline_params_one_arugment_int_parameter(co_command_line_params_t cmdline, 
 						     const char *name, 
-						     bool_t *out_exists, int *out_int)
+						     bool_t *out_exists, unsigned int *out_int)
 {
 	char arg_buf[0x20];
 	co_rc_t rc;
@@ -485,7 +499,7 @@ co_rc_t co_cmdline_params_one_arugment_int_parameter(co_command_line_params_t cm
 		return rc;
 
 	if (out_exists && *out_exists) { 
-		*out_int = co_strtol(arg_buf, &end_ptr, 10);
+		*out_int = strtoul(arg_buf, &end_ptr, 10);
 		if (end_ptr == arg_buf)
 			return CO_RC(ERROR);
 	}

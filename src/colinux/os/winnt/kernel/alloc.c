@@ -8,8 +8,6 @@
  *
  */
 
-#include <asm/page.h>
-
 #include "ddk.h"
 
 #include <colinux/os/kernel/alloc.h>
@@ -24,7 +22,7 @@ static inline PMDL co_winnt_MmAllocatePagesForMdl(co_osdep_manager_t osdep)
 	PHYSICAL_ADDRESS SkipBytes   = { .QuadPart = 0 };
 
 	return MmAllocatePagesForMdl(LowAddress, HighAddress, SkipBytes,
-				     PAGE_SIZE * PFN_ALLOCATION_COUNT);
+				     CO_ARCH_PAGE_SIZE * PFN_ALLOCATION_COUNT);
 }
 
 static co_rc_t co_winnt_new_mdl_bucket(co_osdep_manager_t osdep)
@@ -95,7 +93,7 @@ static co_rc_t co_winnt_new_mapped_allocated_page(co_osdep_manager_t osdep, co_p
 	if (!pfn_ptr)
 		return CO_RC(OUT_OF_MEMORY);
 
-	page = MmAllocateNonCachedMemory(PAGE_SIZE);
+	page = MmAllocateNonCachedMemory(CO_ARCH_PAGE_SIZE);
 	if (!page) {
 		co_os_free(pfn_ptr);
 		return CO_RC(OUT_OF_MEMORY);
@@ -115,7 +113,7 @@ static void co_winnt_free_mapped_allocated_page(co_osdep_manager_t osdep, co_os_
 {
 	co_list_del(&pfn_ptr->mapped_allocated_node);
 	co_list_del(&pfn_ptr->node);
-	MmFreeNonCachedMemory(pfn_ptr->page, PAGE_SIZE);
+	MmFreeNonCachedMemory(pfn_ptr->page, CO_ARCH_PAGE_SIZE);
 	co_os_free(pfn_ptr);
 }
 
@@ -235,7 +233,7 @@ void *co_os_map(struct co_manager *manager, co_pfn_t pfn)
 	PHYSICAL_ADDRESS PhysicalAddress;
 
 	PhysicalAddress.QuadPart = pfn << CO_ARCH_PAGE_SHIFT;
-	ret = MmMapIoSpace(PhysicalAddress, PAGE_SIZE, MmCached);
+	ret = MmMapIoSpace(PhysicalAddress, CO_ARCH_PAGE_SIZE, MmCached);
 
 	manager->osdep->pages_mapped++;
 	return ret;
@@ -243,6 +241,6 @@ void *co_os_map(struct co_manager *manager, co_pfn_t pfn)
 
 void co_os_unmap(struct co_manager *manager, void *ptr, co_pfn_t pfn)
 {
-	MmUnmapIoSpace(ptr, PAGE_SIZE);
+	MmUnmapIoSpace(ptr, CO_ARCH_PAGE_SIZE);
 	manager->osdep->pages_mapped--;
 }

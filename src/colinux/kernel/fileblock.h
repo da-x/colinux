@@ -35,7 +35,6 @@ typedef struct {
 struct co_monitor_file_block_dev {
 	co_block_dev_t dev; /* Must stay as the first field */
 
-	struct co_monitor *monitor;
 	co_monitor_file_block_state_t state;
 	co_pathname_t pathname;
 	co_monitor_file_block_operations_t *op;
@@ -43,9 +42,10 @@ struct co_monitor_file_block_dev {
 	struct co_os_file_block_sysdep *sysdep;
 };
 
-co_rc_t co_monitor_file_block_init(co_monitor_file_block_dev_t *dev, co_pathname_t *pathname);
+co_rc_t co_monitor_file_block_init(struct co_monitor *cmon, co_monitor_file_block_dev_t *dev, co_pathname_t *pathname);
 void co_monitor_file_block_shutdown(co_monitor_file_block_dev_t *dev);
 
+extern co_monitor_file_block_operations_t co_os_file_block_async_operations;
 extern co_monitor_file_block_operations_t co_os_file_block_default_operations;
 
 #endif

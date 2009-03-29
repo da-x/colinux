@@ -210,7 +210,7 @@ static co_rc_t inode_mknod(co_filesystem_t *filesystem, co_inode_t *dir, unsigne
 	co_rc_t rc;
 
 	attr->size = 0;
-	attr->mode = filesystem->file_mode;
+	attr->mode = mode & filesystem->file_mode;
 	attr->nlink = 1;
 	attr->uid = filesystem->uid;
 	attr->gid = filesystem->gid;
@@ -269,8 +269,20 @@ static co_rc_t inode_rename(co_filesystem_t *filesystem, co_inode_t *dir,
 	rc = filesystem->ops->inode_rename(filesystem, dir, new_dir_inode, oldname, newname);
 	if (CO_OK(rc)) {
 		co_inode_t *old_inode = find_inode(filesystem, dir, oldname);
-		if (old_inode)
+		if (old_inode) {
+			int size;
+
+			// This moves the file from one dir to an other
 			reparent_inode(old_inode, new_dir_inode);
+
+			// This renames the file on the same inode number
+			co_os_free(old_inode->name);
+			size = co_strlen(newname) + 1;
+			old_inode->name = co_os_malloc(size);
+			if (!old_inode->name)
+				return CO_RC(OUT_OF_MEMORY);
+			co_memcpy(old_inode->name, newname, size);
+		}
 	}
 	return rc;
 }
@@ -473,12 +485,12 @@ static int translate_code(co_rc_t value)
 	default:
 		return -EIO;
 	}
-	return 0;
 }
 
 static co_rc_t fs_mount(co_filesystem_t *filesystem, const char *pathname,
-			int uid, int gid, unsigned long dir_mode, 
-			unsigned long file_mode)
+			int uid, int gid,
+			unsigned long dir_mode, unsigned long file_mode,
+			int flags)
 {	
 	co_cofsdev_desc_t *desc;
 	co_rc_t rc;
@@ -489,6 +501,7 @@ static co_rc_t fs_mount(co_filesystem_t *filesystem, const char *pathname,
 	filesystem->gid = gid;
 	filesystem->dir_mode = dir_mode;
 	filesystem->file_mode = file_mode;
+	filesystem->flags = flags;
 
 	co_memcpy(&filesystem->base_path, &desc->pathname, sizeof(co_pathname_t));
 
@@ -522,7 +535,8 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned int unit,
 				  co_passage_page->params[5],
 				  co_passage_page->params[6],
 				  co_passage_page->params[7],
-				  co_passage_page->params[8]);
+				  co_passage_page->params[8],
+				  co_passage_page->params[9]);
 		result = translate_code(result);
 		goto out;
 	case FUSE_STATFS:
@@ -670,11 +684,43 @@ void co_monitor_unregister_filesystems(co_monitor_t *cmon)
  *  Flat mode implementation.
  */
 
+static co_rc_t co_fs_get_attr(co_filesystem_t *fs, char *filename, struct fuse_attr *attr)
+{
+	co_rc_t rc;
+
+	rc = co_os_file_get_attr(filename, attr);
+	if (!CO_OK(rc))
+		return rc;
+
+	if (fs->flags & COFS_MOUNT_NOATTRIB)
+		if (attr->mode & FUSE_S_IFDIR)
+			attr->mode = fs->dir_mode;
+		else
+			attr->mode = fs->file_mode;
+	else
+		if (attr->mode & FUSE_S_IFDIR)
+			attr->mode &= fs->dir_mode;
+		else
+			attr->mode &= fs->file_mode;
+
+	attr->uid = fs->uid;
+	attr->gid = fs->gid;
+
+	return rc;
+}
+
 static co_rc_t flat_mode_inode_rename(co_filesystem_t *filesystem, co_inode_t *old_inode, co_inode_t *new_inode, 
 			     char *oldname, char *newname)
 {
 	char *old_dirname = NULL, *new_dirname = NULL;
 	co_rc_t rc;
+
+	if (new_inode->parent == old_inode) {
+		// Workarround, prevents memory corruption from upper-lower side effect
+		// Example: mv /cofs/testdir /cofs/TESTDIR/somedir
+		co_debug("Parent can not rename itself (%s,%s)", old_inode->name, new_inode->name);
+		return CO_RC(INVALID_PARAMETER);
+	}
 
 	rc = co_os_fs_dir_inode_to_path(filesystem, old_inode, &old_dirname, oldname);
 	if (CO_OK(rc)) {
@@ -699,7 +745,7 @@ static co_rc_t flat_mode_getattr(co_filesystem_t *fs, co_inode_t *dir,
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_os_fs_get_attr(fs, filename, attr);
+	rc = co_fs_get_attr(fs, filename, attr);
 	co_os_free(filename);
 
 	return rc;
@@ -747,7 +793,7 @@ static co_rc_t flat_mode_inode_mknod(co_filesystem_t *filesystem, co_inode_t *in
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_os_file_mknod(filename);
+	rc = co_os_file_mknod(filesystem, filename, mode);
 	co_os_free(filename);
 
 	return rc;
@@ -762,6 +808,9 @@ static co_rc_t flat_mode_inode_set_attr(co_filesystem_t *filesystem, co_inode_t 
 	rc = co_os_fs_inode_to_path(filesystem, inode, &filename, 0);
 	if (!CO_OK(rc))
 		return rc;
+
+	if (filesystem->flags & COFS_MOUNT_NOATTRIB)
+		valid &= ~FATTR_MODE;
 
 	rc = co_os_file_set_attr(filename, valid, attr);
 	co_os_free(filename);

@@ -55,21 +55,18 @@ void co_winnt_free_unicode(UNICODE_STRING *unicode_str)
 	unicode_str->Buffer = NULL;
 }
 
-static co_rc_t status_convert(NTSTATUS status)
+co_rc_t co_status_convert(NTSTATUS status)
 {
 	switch (status) {
+	case STATUS_PENDING:
+	case STATUS_SUCCESS: return CO_RC(OK);
 	case STATUS_NO_SUCH_FILE: 
 	case STATUS_OBJECT_NAME_NOT_FOUND: return CO_RC(NOT_FOUND);
 	case STATUS_CANNOT_DELETE:
 	case STATUS_ACCESS_DENIED: return CO_RC(ACCESS_DENIED);
 	case STATUS_INVALID_PARAMETER: return CO_RC(INVALID_PARAMETER);
+	default: return CO_RC(ERROR);
 	}
-
-	if (status != STATUS_SUCCESS) {
-		return CO_RC(ERROR);
-	}
-
-	return CO_RC(OK);
 }
 
 co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned long open_flags,
@@ -93,15 +90,15 @@ co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned long open
 				   NULL);
 
 	status = ZwCreateFile(FileHandle, 
-			      open_flags | SYNCHRONIZE,
+			      open_flags,
 			      &ObjectAttributes,
 			      &IoStatusBlock,
 			      NULL,
 			      file_attribute,
-			      (open_flags == FILE_LIST_DIRECTORY) ?
+			      (open_flags == (FILE_LIST_DIRECTORY | SYNCHRONIZE)) ?
 				 FILE_SHARE_DIRECTORY : 0,
 			      create_disposition,
-			      options | FILE_SYNCHRONOUS_IO_NONALERT,
+			      options,
 			      NULL,
 			      0);
 
@@ -110,12 +107,12 @@ co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned long open
 
 	co_winnt_free_unicode(&unipath);
 
-	return status_convert(status);
+	return co_status_convert(status);
 }
 
 co_rc_t co_os_file_open(char *pathname, PHANDLE FileHandle, unsigned long open_flags)
 {   
-	return co_os_file_create(pathname, FileHandle, open_flags, 0, FILE_OPEN, 0);
+	return co_os_file_create(pathname, FileHandle, open_flags | SYNCHRONIZE, 0, FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT);
 }
 
 co_rc_t co_os_file_close(PHANDLE FileHandle)
@@ -124,89 +121,12 @@ co_rc_t co_os_file_close(PHANDLE FileHandle)
 
 	status = ZwClose(FileHandle);
 
-	return status_convert(status);
-}
-
-typedef struct {
-	LARGE_INTEGER offset;
-	HANDLE file_handle;
-} co_os_transfer_file_block_data_t;
-
-static co_rc_t transfer_file_block(co_monitor_t *cmon, 
-				  void *host_data, void *linuxvm, 
-				  unsigned long size, 
-				  co_monitor_transfer_dir_t dir)
-{
-	IO_STATUS_BLOCK isb;
-	NTSTATUS status;
-	co_os_transfer_file_block_data_t *data;
-	co_rc_t rc = CO_RC_OK;
-	HANDLE FileHandle;
-
-	data = (co_os_transfer_file_block_data_t *)host_data;
-
-	FileHandle = data->file_handle;
-
-	if (CO_MONITOR_TRANSFER_FROM_HOST == dir) {
-		status = ZwReadFile(FileHandle,
-				    NULL,
-				    NULL,
-				    NULL, 
-				    &isb,
-				    linuxvm,
-				    size,
-				    &data->offset,
-				    NULL);
-	}
-	else {
-		status = ZwWriteFile(FileHandle,
-				     NULL,
-				     NULL,
-				     NULL, 
-				     &isb,
-				     linuxvm,
-				     size,
-				     &data->offset,
-				     NULL);
-	}
-
-	if (status != STATUS_SUCCESS) {
-		co_debug_error("block io failed: %p %lx (reason: %x)",
-				linuxvm, size, (int)status);
-		rc = status_convert(status);
-	}
-
-	data->offset.QuadPart += size;
-
-	return rc;
-}
-
-co_rc_t co_os_file_block_read_write(co_monitor_t *linuxvm,
-				    HANDLE file_handle,
-				    unsigned long long offset,
-				    vm_ptr_t address,
-				    unsigned long size,
-				    bool_t read)
-{
-	co_rc_t rc;
-	co_os_transfer_file_block_data_t data;
-	
-	data.offset.QuadPart = offset;
-	data.file_handle = file_handle;
-
-	rc = co_monitor_host_linuxvm_transfer(linuxvm, 
-					      &data, 
-					      transfer_file_block,
-					      address,
-					      size,
-					      (read ? CO_MONITOR_TRANSFER_FROM_HOST : 
-					       CO_MONITOR_TRANSFER_FROM_LINUX));
-
-	return rc;
+	return co_status_convert(status);
 }
 
 typedef void (*co_os_change_file_info_func_t)(void *data, VOID *buffer, ULONG len);
 
+static
 co_rc_t co_os_change_file_information(char *filename,
 				      IO_STATUS_BLOCK *io_status,
 				      VOID *buffer,
@@ -219,26 +139,22 @@ co_rc_t co_os_change_file_information(char *filename,
 	HANDLE handle;
 	co_rc_t rc;
 
-	rc = co_os_file_open(filename, &handle, FILE_READ_DATA | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES);
-	if (!CO_OK(rc)) {
-		rc = co_os_file_open(filename, &handle, FILE_WRITE_ATTRIBUTES);
-		if (!CO_OK(rc))
-			return rc;
-	}
+	rc = co_os_file_open(filename, &handle, FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES);
+	if (!CO_OK(rc))
+		return rc;
 
 	status = ZwQueryInformationFile(handle, io_status, buffer, len, info_class);
 	if (status == STATUS_SUCCESS) {
-		if (func) {
-			func(data, buffer, len);
-		}
+		func(data, buffer, len);
 		status = ZwSetInformationFile(handle, io_status, buffer, len, info_class);
 	}
 
 	co_os_file_close(handle);
 
-	return status_convert(status);
+	return co_status_convert(status);
 }
 
+static
 co_rc_t co_os_set_file_information(char *filename,
 				   IO_STATUS_BLOCK *io_status,
 				   VOID *buffer,
@@ -257,7 +173,7 @@ co_rc_t co_os_set_file_information(char *filename,
 
 	co_os_file_close(handle);
 
-	return status_convert(status);
+	return co_status_convert(status);
 }
 
 co_rc_t co_os_file_read_write(co_monitor_t *linuxvm, char *filename, 
@@ -283,13 +199,40 @@ co_rc_t co_os_file_read_write(co_monitor_t *linuxvm, char *filename,
 	return rc;
 }
 
+static void change_file_mode_func(void *data, VOID *buffer, ULONG len)
+{
+	struct fuse_attr *attr = (struct fuse_attr *)data;
+	FILE_BASIC_INFORMATION *fbi = (FILE_BASIC_INFORMATION *)buffer;
+
+	if (attr->mode & FUSE_S_IRUSR)
+		fbi->FileAttributes &= ~FILE_ATTRIBUTE_HIDDEN;
+	else
+		fbi->FileAttributes |= FILE_ATTRIBUTE_HIDDEN;
+
+	if (attr->mode & FUSE_S_IWUSR)
+		fbi->FileAttributes &= ~FILE_ATTRIBUTE_READONLY;
+	else
+		fbi->FileAttributes |= FILE_ATTRIBUTE_READONLY;
+
+	if (attr->mode & FUSE_S_IFDIR)
+		if (attr->mode & FUSE_S_IXUSR)
+			fbi->FileAttributes &= ~FILE_ATTRIBUTE_SYSTEM;
+		else
+			fbi->FileAttributes |= FILE_ATTRIBUTE_SYSTEM;
+	else
+		if (attr->mode & FUSE_S_IXUSR)
+			fbi->FileAttributes |= FILE_ATTRIBUTE_SYSTEM;
+		else
+			fbi->FileAttributes &= ~FILE_ATTRIBUTE_SYSTEM;
+}
+
 static void change_file_info_func(void *data, VOID *buffer, ULONG len)
 {
 	struct fuse_attr *attr = (struct fuse_attr *)data;
 	FILE_BASIC_INFORMATION *fbi = (FILE_BASIC_INFORMATION *)buffer;
 
-	fbi->LastAccessTime = unix_time_to_windows_time(attr->mtime);
-	fbi->LastWriteTime = unix_time_to_windows_time(attr->atime);
+	fbi->LastAccessTime = unix_time_to_windows_time(attr->atime);
+	fbi->LastWriteTime = unix_time_to_windows_time(attr->mtime);
 	KeQuerySystemTime(&fbi->ChangeTime);
 }
 
@@ -300,7 +243,12 @@ co_rc_t co_os_file_set_attr(char *filename, unsigned long valid, struct fuse_att
 
 	/* FIXME: make return codes not to overwrite each other */
 	if (valid & FATTR_MODE) {
-		rc = CO_RC(OK); /* TODO */
+		FILE_BASIC_INFORMATION fbi;
+
+		rc = co_os_change_file_information(filename, &io_status, &fbi,
+						   sizeof(fbi), FileBasicInformation,
+						   change_file_mode_func,
+						   attr);
 	}
 
 	if (valid & FATTR_UID) {
@@ -356,10 +304,32 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 	LARGE_INTEGER ChangeTime;
 	LARGE_INTEGER EndOfFile;
 	ULONG FileAttributes;
- 
+
+	attr->uid = 0;
+	attr->gid = 0;
+	attr->rdev = 0;
+	attr->_dummy = 0;
+	attr->nlink = 1;
+
 	len = co_strlen(fullname);
 	len1 = len;
-	
+
+	/* Hack: WinNT detects "C:\" not as directory! */
+	if (len >= 3 && fullname[len-1] == ':') {
+		co_debug_lvl(filesystem, 10, "Root dir: '%s'", fullname);
+
+		attr->atime = \
+		attr->mtime = \
+		attr->ctime = co_os_get_time();
+
+		attr->mode = FUSE_S_IFDIR | 0777;
+
+		attr->size = 0;
+		attr->blocks = 0;
+
+		return CO_RC(OK);
+	}
+
 	while (len > 0 && fullname[len-1] != '\\') {
 		if (fullname[len-1] == '?' || fullname[len-1] == '*') {
 			co_debug_lvl(filesystem, 5, "error: Wildcard in filename ('%s')", fullname);
@@ -387,34 +357,34 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 	if (!CO_OK(rc))
 		goto error_1;
 
-        InitializeObjectAttributes(&attributes, &dirname_unicode,
-                                   OBJ_CASE_INSENSITIVE, NULL, NULL);
- 
-        status = ZwCreateFile(&handle, FILE_LIST_DIRECTORY,
-			      &attributes, &io_status, NULL, 0, FILE_SHARE_DIRECTORY, 
-			      FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT | FILE_DIRECTORY_FILE, 
+	InitializeObjectAttributes(&attributes, &dirname_unicode,
+				   OBJ_CASE_INSENSITIVE, NULL, NULL);
+
+	status = ZwCreateFile(&handle, FILE_LIST_DIRECTORY,
+			      &attributes, &io_status, NULL, 0, FILE_SHARE_DIRECTORY,
+			      FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT | FILE_DIRECTORY_FILE,
 			      NULL, 0);
 
 	if (!NT_SUCCESS(status)) {
 		co_debug_lvl(filesystem, 5, "error %x ZwCreateFile('%s')", (int)status, dirname);
-                rc = status_convert(status);
-                goto error_2;
-        }
- 
-        status = ZwQueryDirectoryFile(handle, NULL, NULL, 0, &io_status, 
-                                      &entry_buffer, sizeof(entry_buffer), 
-                                      FileFullDirectoryInformation, PTRUE, &filename_unicode, 
-                                      PTRUE);
-        if (!NT_SUCCESS(status)) {
+		rc = co_status_convert(status);
+		goto error_2;
+	}
+
+	status = ZwQueryDirectoryFile(handle, NULL, NULL, 0, &io_status,
+				      &entry_buffer, sizeof(entry_buffer),
+				      FileFullDirectoryInformation, PTRUE, &filename_unicode,
+				      PTRUE);
+	if (!NT_SUCCESS(status)) {
 		if (status == STATUS_UNMAPPABLE_CHARACTER) {
-			status = ZwQueryDirectoryFile(handle, NULL, NULL, 0, &io_status, 
-						      &entry_buffer, sizeof(entry_buffer), 
-						      FileBothDirectoryInformation, PTRUE, &filename_unicode, 
+			status = ZwQueryDirectoryFile(handle, NULL, NULL, 0, &io_status,
+						      &entry_buffer, sizeof(entry_buffer),
+						      FileBothDirectoryInformation, PTRUE, &filename_unicode,
 						      PTRUE);
 			
 			if (!NT_SUCCESS(status)) {
 				co_debug_lvl(filesystem, 5, "error %x ZwQueryDirectoryFile('%s')", (int)status, filename);
-				rc = status_convert(status);
+				rc = co_status_convert(status);
 				goto error_3;
 			} else {
 				LastAccessTime = entry_buffer.entry2.LastAccessTime;
@@ -425,10 +395,10 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 			}
 		} else {
 			co_debug_lvl(filesystem, 5, "error %x ZwQueryDirectoryFile('%s')", (int)status, filename);
-			rc = status_convert(status);
+			rc = co_status_convert(status);
 			goto error_3;
 		}
-        } else {
+	} else {
 		LastAccessTime = entry_buffer.entry.LastAccessTime;
 		LastWriteTime = entry_buffer.entry.LastWriteTime;
 		ChangeTime = entry_buffer.entry.ChangeTime;
@@ -436,46 +406,51 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 		FileAttributes = entry_buffer.entry.FileAttributes;
 	}
 
-        attr->uid = 0;
-        attr->gid = 0;
-        attr->rdev = 0;
-        attr->_dummy = 0;
- 
-        attr->atime = windows_time_to_unix_time(LastAccessTime);
-        attr->mtime = windows_time_to_unix_time(LastWriteTime);
-        attr->ctime = windows_time_to_unix_time(ChangeTime);
- 
-        attr->mode = FUSE_S_IRWXU | FUSE_S_IRGRP | FUSE_S_IROTH;
- 
-	/* Hack: WinNT detects "C:\" not as directory! */
-        if ((FileAttributes & FILE_ATTRIBUTE_DIRECTORY) ||
-	    (len1 >= 3 && len == len1 && fullname [len1-1] == '\\'))
-                attr->mode |= FUSE_S_IFDIR;
-        else
-                attr->mode |= FUSE_S_IFREG;
+	attr->atime = windows_time_to_unix_time(LastAccessTime);
+	attr->mtime = windows_time_to_unix_time(LastWriteTime);
+	attr->ctime = windows_time_to_unix_time(ChangeTime);
 
-	attr->nlink = 1;
-        attr->size = EndOfFile.QuadPart;
-        attr->blocks = (EndOfFile.QuadPart + ((1<<10)-1)) >> 10;
-	
-        rc = CO_RC(OK);
+	#define FUSE_S_IR (FUSE_S_IRUSR | FUSE_S_IRGRP | FUSE_S_IROTH)
+	#define FUSE_S_IW (FUSE_S_IWUSR | FUSE_S_IWGRP | FUSE_S_IWOTH)
+	#define FUSE_S_IX (FUSE_S_IXUSR | FUSE_S_IXGRP | FUSE_S_IXOTH)
+
+	if (FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+		attr->mode = FUSE_S_IFDIR
+			   | ((FileAttributes & FILE_ATTRIBUTE_HIDDEN)   ? 0 : FUSE_S_IR)
+			   | ((FileAttributes & FILE_ATTRIBUTE_READONLY) ? 0 : FUSE_S_IW)
+			   | ((FileAttributes & FILE_ATTRIBUTE_SYSTEM)   ? 0 : FUSE_S_IX);
+	else
+		attr->mode = FUSE_S_IFREG
+			   | ((FileAttributes & FILE_ATTRIBUTE_HIDDEN)   ? 0 : FUSE_S_IR)
+			   | ((FileAttributes & FILE_ATTRIBUTE_READONLY) ? 0 : FUSE_S_IW)
+			   | ((FileAttributes & FILE_ATTRIBUTE_SYSTEM)   ? FUSE_S_IX : 0);
+
+	attr->size = EndOfFile.QuadPart;
+	attr->blocks = (EndOfFile.QuadPart + ((1<<10)-1)) >> 10;
+
+	rc = CO_RC(OK);
 
 error_3:
-        ZwClose(handle);
+	ZwClose(handle);
 error_2:
 	co_winnt_free_unicode(&filename_unicode);
 error_1:
 	co_winnt_free_unicode(&dirname_unicode);
 error_0:
 	co_os_free(dirname);
-        return rc;
+	return rc;
 }
 
 static void remove_read_only_func(void *data, VOID *buffer, ULONG len)
 {
 	FILE_BASIC_INFORMATION *fbi = (FILE_BASIC_INFORMATION *)buffer;
 
+	if (!(fbi->FileAttributes & FILE_ATTRIBUTE_READONLY))
+		return; /* not changed */
+
 	fbi->FileAttributes &= ~FILE_ATTRIBUTE_READONLY;
+
+	*((int*)data) = 1; /* Attrib changed */
 }
 
 co_rc_t co_os_file_unlink(char *filename)
@@ -483,7 +458,6 @@ co_rc_t co_os_file_unlink(char *filename)
 	OBJECT_ATTRIBUTES ObjectAttributes;
 	UNICODE_STRING unipath;
 	NTSTATUS status;
-	bool_t tried_read_only_removal = PFALSE;
 	co_rc_t rc;
 
 	rc = co_winnt_utf8_to_unicode(filename, &unipath);
@@ -496,30 +470,32 @@ co_rc_t co_os_file_unlink(char *filename)
 				   NULL,
 				   NULL);
 
-retry:
 	status = ZwDeleteFile(&ObjectAttributes);
-	if (status != STATUS_SUCCESS) {
-		if (!tried_read_only_removal) {
-			FILE_BASIC_INFORMATION fbi;
-			IO_STATUS_BLOCK io_status;
-			co_rc_t rc;
+
+	// Remove readonly attribute and try again
+	if (status != STATUS_SUCCESS && status != STATUS_OBJECT_NAME_NOT_FOUND) {
+		FILE_BASIC_INFORMATION fbi;
+		IO_STATUS_BLOCK io_status;
+		int changed = 0;
 			
-			rc = co_os_change_file_information(filename, &io_status, &fbi,
-							   sizeof(fbi), FileBasicInformation,
-							   remove_read_only_func,
-							   NULL);
+		rc = co_os_change_file_information(filename, &io_status,
+						   &fbi, sizeof(fbi),
+						   FileBasicInformation,
+						   remove_read_only_func,
+						   &changed);
 
-			tried_read_only_removal = PTRUE;
-			if (CO_RC(OK))
-				goto retry;
+		if (CO_OK(rc) && changed) {
+			co_debug_lvl(filesystem, 10, "status %x, ZwDeleteFile('%s') try again", (int)status, filename);
+			status = ZwDeleteFile(&ObjectAttributes);
 		}
-
-		co_debug_lvl(filesystem, 5, "error %x ZwDeleteFile('%s')", (int)status, filename);
 	}
 
 	co_winnt_free_unicode(&unipath);
 
-	return status_convert(status);
+	if (status != STATUS_SUCCESS)
+		co_debug_lvl(filesystem, 5, "error %x ZwDeleteFile('%s')", (int)status, filename);
+
+	return co_status_convert(status);
 }
 
 co_rc_t co_os_file_rmdir(char *filename)
@@ -532,8 +508,8 @@ co_rc_t co_os_file_mkdir(char *dirname)
 	HANDLE handle;
 	co_rc_t rc;
 
-	rc = co_os_file_create(dirname, &handle, FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES,
-		FILE_ATTRIBUTE_DIRECTORY, FILE_CREATE, FILE_DIRECTORY_FILE);
+	rc = co_os_file_create(dirname, &handle, FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE,
+		FILE_ATTRIBUTE_DIRECTORY, FILE_CREATE, FILE_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT);
 	if (CO_OK(rc)) {
 		co_os_file_close(handle);
 	}
@@ -557,7 +533,7 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	if (!rename_info)
 		return CO_RC(OUT_OF_MEMORY);
 
-	rc = co_os_file_open(filename, &handle, FILE_READ_DATA | FILE_WRITE_DATA);
+	rc = co_os_file_open(filename, &handle, FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES);
 	if (!CO_OK(rc))
 		goto error;
 
@@ -568,12 +544,33 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	rc = co_utf8_mbstowcs(rename_info->FileName, dest_filename, char_count + 1);
 	if (!CO_OK(rc))
 		goto error2;
-	
+
 	co_debug_lvl(filesystem, 10, "rename of '%s' to '%s'", filename, dest_filename);
 
 	status = ZwSetInformationFile(handle, &io_status, rename_info, block_size,
 				      FileRenameInformation);
-	rc = status_convert(status);
+
+	if (status == STATUS_ACCESS_DENIED) {
+		FILE_BASIC_INFORMATION fbi;
+		co_rc_t rc;
+		int changed = 0;
+			
+		// Remove readonly attribute and try again
+		rc = co_os_change_file_information(dest_filename, &io_status,
+						   &fbi, sizeof(fbi),
+						   FileBasicInformation,
+						   remove_read_only_func,
+						   &changed);
+
+		if (CO_OK(rc) && changed) {
+			co_debug_lvl(filesystem, 5, "status %x, rename %s,%s try again", (int)status, filename, dest_filename);
+			status = ZwSetInformationFile(handle, &io_status,
+						rename_info, block_size,
+						FileRenameInformation);
+		}
+	}
+
+	rc = co_status_convert(status);
 
 	if (!CO_OK(rc))
 		co_debug_lvl(filesystem, 5, "error %x ZwSetInformationFile rename %s,%s", (int)status, filename, dest_filename);
@@ -586,17 +583,26 @@ error:
 	return rc;
 }
 
-co_rc_t co_os_file_mknod(char *filename)
+co_rc_t co_os_file_mknod(co_filesystem_t *filesystem, char *filename, unsigned long mode)
 {
 	co_rc_t rc;
 	HANDLE handle;
+	ULONG FileAttributes = FILE_ATTRIBUTE_NORMAL;
 
-	rc = co_os_file_create(filename, &handle, FILE_READ_DATA | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES,
-			       FILE_ATTRIBUTE_NORMAL, FILE_CREATE, 0);
-
-	if (CO_OK(rc)) {
-		co_os_file_close(handle);
+	if (!(filesystem->flags & COFS_MOUNT_NOATTRIB)) {
+		if (!(mode & FUSE_S_IRUSR))
+			FileAttributes |= FILE_ATTRIBUTE_HIDDEN;
+		if (!(mode & FUSE_S_IWUSR))
+			FileAttributes |= FILE_ATTRIBUTE_READONLY;
+		if (mode & FUSE_S_IXUSR)
+			FileAttributes |= FILE_ATTRIBUTE_SYSTEM;
 	}
+
+	rc = co_os_file_create(filename, &handle, FILE_READ_DATA | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE,
+			       FileAttributes, FILE_CREATE, FILE_SYNCHRONOUS_IO_NONALERT);
+
+	if (CO_OK(rc))
+		co_os_file_close(handle);
 
 	return rc;
 }
@@ -632,7 +638,7 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 	
 	if (!NT_SUCCESS(status)) {
 		co_debug_lvl(filesystem, 5, "error %x ZwCreateFile('%s')", (int)status, dirname);
-		rc = status_convert(status);
+		rc = co_status_convert(status);
 		goto error;
 	}
 
@@ -715,9 +721,12 @@ co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *
 
 	len = strlen(pathname);
 	do {
-		rc = co_os_file_create(pathname, &handle, 
-				       FILE_LIST_DIRECTORY, 0,
-				       FILE_OPEN, FILE_DIRECTORY_FILE | FILE_OPEN_FOR_FREE_SPACE_QUERY);
+		rc = co_os_file_create(pathname,
+				&handle, 
+				FILE_LIST_DIRECTORY | SYNCHRONIZE,
+				0,
+				FILE_OPEN,
+				FILE_DIRECTORY_FILE | FILE_OPEN_FOR_FREE_SPACE_QUERY | FILE_SYNCHRONOUS_IO_NONALERT);
 		
 		if (CO_OK(rc)) 
 			break;
@@ -743,7 +752,7 @@ co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *
 		statfs->st.namelen = sizeof(co_pathname_t);
 	}
 
-	rc = status_convert(status);
+	rc = co_status_convert(status);
 
 	co_os_file_close(handle);
 	return rc;

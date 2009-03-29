@@ -2,7 +2,7 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/drivers/video/console/cocon.c
-@@ -0,0 +1,494 @@
+@@ -0,0 +1,501 @@
 +/*
 + *  linux/drivers/video/cocon.c -- Cooperative Linux console VGA driver
 + *
@@ -15,7 +15,6 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 + *  Dan Aloni <da-x@gmx.net>, 2003-2004 (c)
 + */
 +
-+#include <linux/config.h>
 +#include <linux/module.h>
 +#include <linux/types.h>
 +#include <linux/sched.h>
@@ -36,6 +35,9 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 + *  Interface used by the world
 + */
 +
++static int cocon_cols = 80;
++static int cocon_rows = 25;
++
 +static const char __init *cocon_startup(void)
 +{
 +	unsigned long flags;
@@ -51,7 +53,12 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 +		co_message->type = CO_MESSAGE_TYPE_STRING;
 +		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
 +		message->type = CO_OPERATION_CONSOLE_STARTUP;
-+		co_send_message_restore(flags);
++		co_switch_wrapper();
++		if (message->type == CO_OPERATION_CONSOLE_SIZES) {
++			cocon_cols = message->sizes.cols;
++			cocon_rows = message->sizes.rows;
++		}
++		co_passage_page_release(flags);
 +	}
 +
 +	return "CoCON";
@@ -65,8 +72,8 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 +
 +	/* We cannot be loaded as a module, therefore init is always 1 */
 +	c->vc_can_do_color = 1;
-+	c->vc_cols = 80;
-+	c->vc_rows = 25;
++	c->vc_cols = cocon_cols;
++	c->vc_rows = cocon_rows;
 +	c->vc_complement_mask = 0x7700;
 +	c->vc_visible_origin = 0;
 +	c->vc_origin = 0;
@@ -184,7 +191,7 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 +	co_send_message_restore(flags);
 +}
 +
-+static u8 cocon_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink, u8 underline, u8 reverse)
++static u8 cocon_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink, u8 underline, u8 reverse, u8 italic)
 +{
 +	u8 attr = color;
 +

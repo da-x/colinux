@@ -11,8 +11,6 @@
 
 #include "libc.h"
 
-#ifdef CO_LIBC__MISC
-
 void *co_memset(void *s, int c, long n)
 {
 	return memset(s, c, n);
@@ -23,6 +21,11 @@ void *co_memcpy(void *dest, const void *src, long n)
 	return memcpy(dest, src, n);
 }
 
+int co_memcmp(void *s1, void *s2, int n)
+{
+	return memcmp(s1, s2, n);
+}
+
 void *co_memmove(void *dest, const void *src, long n)
 {
 	return memmove(dest, src, n);
@@ -30,7 +33,7 @@ void *co_memmove(void *dest, const void *src, long n)
 
 void co_bzero(void *s, long n)
 {
-	co_memset(s, 0, n);
+	memset(s, 0, n);
 }
 
 const char *co_strstr(const char *haystack, const char *needle)
@@ -79,21 +82,7 @@ static int internal_strncmp(const char * cs,const char * ct,size_t count)
 	return __res;
 }
 
-
 int co_strncmp(const char *s1, const char *s2, int n)
 {
 	return internal_strncmp(s1, s2, n);
 }
-
-#endif
-
-#ifdef CO_LIBC__STRTOL
-
-#include <stdlib.h>
-
-int co_strtol(const char *s1, char **s2, int n)
-{
-	return strtol(s1, s2, n);
-}
-
-#endif

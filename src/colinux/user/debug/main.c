@@ -474,7 +474,6 @@ co_rc_t co_debug_main(int argc, char *argv[])
 		char buf[0x100];
 		unsigned long exitcode;
 
-		// Don't use co_strtol, don't work here!
 		exitcode = strtoul(parameters.rc_str, NULL, 16);
 		co_rc_format_error((co_rc_t)exitcode, buf, sizeof(buf));
 

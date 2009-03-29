@@ -224,6 +224,30 @@ asm(""							\
     "3:  ljmp $0,$0"                         "\n"			\
     "2:  popfl"                              "\n"
 
+#define PASSAGE_PAGE_PRESERVATION_SYSENTER(_inner_)		\
+    "    movl %ecx, %ebx" /* save ecx (other page) */	"\n"	\
+    "    movl $"MSR_IA32_SYSENTER_CS", %ecx"		"\n"	\
+    "    rdmsr"						"\n"	\
+    "    movl %eax, "CO_ARCH_STATE_SYSENTER_CS"(%ebp)"	"\n"	\
+    "    incl %ecx" /* MSR_IA32_SYSENTER_ESP */		"\n"	\
+    "    rdmsr"						"\n"	\
+    "    movl %eax, "CO_ARCH_STATE_SYSENTER_ESP"(%ebp)"	"\n"	\
+    "    incl %ecx" /* MSR_IA32_SYSENTER_EIP */		"\n"	\
+    "    rdmsr"						"\n"	\
+    "    movl %eax, "CO_ARCH_STATE_SYSENTER_EIP"(%ebp)"	"\n"	\
+    "    movl %ebx, %ecx" /* restore ecx */		"\n"	\
+    _inner_							\
+    "    xor %edx, %edx"				"\n"	\
+    "    movl "CO_ARCH_STATE_SYSENTER_CS"(%ebp), %eax"	"\n"	\
+    "    movl $"MSR_IA32_SYSENTER_CS", %ecx"		"\n"	\
+    "    wrmsr"						"\n"	\
+    "    movl "CO_ARCH_STATE_SYSENTER_ESP"(%ebp), %eax"	"\n"	\
+    "    incl %ecx" /* MSR_IA32_SYSENTER_ESP */		"\n"	\
+    "    wrmsr"						"\n"	\
+    "    movl "CO_ARCH_STATE_SYSENTER_EIP"(%ebp), %eax"	"\n"	\
+    "    incl %ecx" /* MSR_IA32_SYSENTER_EIP */		"\n"	\
+    "    wrmsr"						"\n"	\
+
 #define PASSAGE_PAGE_PRESERVATION_FXSAVE(_inner_)		\
     "    fxsave "CO_ARCH_STATE_STACK_FXSTATE"(%ebp)"  "\n"	\
     "    fnclex"                             "\n"		\
@@ -432,12 +456,42 @@ _inner_									\
     "1:"                                     "\n"                       \
 
 PASSAGE_CODE_WRAP_IBCS(
+	co_monitor_passage_func_fxsave_sysenter,
+	PASSAGE_CODE_WRAP_SWITCH(
+		PASSAGE_PAGE_PRESERVATION_SYSENTER(
+			PASSAGE_PAGE_PRESERVATION_FXSAVE(
+				PASSAGE_PAGE_PRESERVATION_DEBUG(
+					PASSAGE_PAGE_PRESERVATION_COMMON(
+						PASSAGE_CODE_NOWHERE_LAND()
+						)
+					)
+				)
+			)
+		)
+	)
+
+PASSAGE_CODE_WRAP_IBCS(
 	co_monitor_passage_func_fxsave, 
 	PASSAGE_CODE_WRAP_SWITCH(
-		PASSAGE_PAGE_PRESERVATION_FXSAVE(	
+		PASSAGE_PAGE_PRESERVATION_FXSAVE(
 			PASSAGE_PAGE_PRESERVATION_DEBUG(
 				PASSAGE_PAGE_PRESERVATION_COMMON(
 					PASSAGE_CODE_NOWHERE_LAND() 
+					)
+				)
+			)
+		)
+	)
+
+PASSAGE_CODE_WRAP_IBCS(
+	co_monitor_passage_func_fnsave_sysenter,
+	PASSAGE_CODE_WRAP_SWITCH(
+		PASSAGE_PAGE_PRESERVATION_SYSENTER(
+			PASSAGE_PAGE_PRESERVATION_FNSAVE(
+				PASSAGE_PAGE_PRESERVATION_DEBUG(
+					PASSAGE_PAGE_PRESERVATION_COMMON(
+						PASSAGE_CODE_NOWHERE_LAND()
+						)
 					)
 				)
 			)
@@ -458,12 +512,42 @@ PASSAGE_CODE_WRAP_IBCS(
 	)
 
 PASSAGE_CODE_WRAP_IBCS(
+	co_monitor_passage_func_short_fxsave_sysenter,
+	PASSAGE_CODE_WRAP_SWITCH(
+		PASSAGE_PAGE_PRESERVATION_SYSENTER(
+			PASSAGE_PAGE_PRESERVATION_FXSAVE(	
+				PASSAGE_PAGE_PRESERVATION_DEBUG(
+					PASSAGE_PAGE_PRESERVATION_COMMON(
+						PASSAGE_CODE_NOWHERE_LAND_SHORT() 
+						)
+					)
+				)
+			)
+		)
+	)
+
+PASSAGE_CODE_WRAP_IBCS(
 	co_monitor_passage_func_short_fxsave, 
 	PASSAGE_CODE_WRAP_SWITCH(
 		PASSAGE_PAGE_PRESERVATION_FXSAVE(	
 			PASSAGE_PAGE_PRESERVATION_DEBUG(
 				PASSAGE_PAGE_PRESERVATION_COMMON(
 					PASSAGE_CODE_NOWHERE_LAND_SHORT() 
+					)
+				)
+			)
+		)
+	)
+
+PASSAGE_CODE_WRAP_IBCS(
+	co_monitor_passage_func_short_fnsave_sysenter,
+	PASSAGE_CODE_WRAP_SWITCH(
+		PASSAGE_PAGE_PRESERVATION_SYSENTER(
+			PASSAGE_PAGE_PRESERVATION_FNSAVE(
+				PASSAGE_PAGE_PRESERVATION_DEBUG(
+					PASSAGE_PAGE_PRESERVATION_COMMON(
+						PASSAGE_CODE_NOWHERE_LAND_SHORT()
+						)
 					)
 				)
 			)
@@ -488,43 +572,43 @@ PASSAGE_CODE_WRAP_IBCS(
 co_rc_t co_monitor_arch_passage_page_alloc(co_monitor_t *cmon)
 {
 	co_rc_t rc;
-	co_archdep_monitor_t archdep;
 
-	archdep = co_os_malloc(sizeof(*archdep));
-	if (archdep == NULL)
+	cmon->archdep = co_os_malloc(sizeof(*cmon->archdep));
+	if (cmon->archdep == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 
-	co_memset(archdep, 0, sizeof(*archdep));
-	cmon->archdep = archdep;
+	co_memset(cmon->archdep, 0, sizeof(*cmon->archdep));
 
 	cmon->passage_page = co_os_alloc_pages(sizeof(co_arch_passage_page_t)/CO_ARCH_PAGE_SIZE);
 	if (cmon->passage_page == NULL){
 		rc = CO_RC(OUT_OF_MEMORY);
 		goto error;
 	}
-		
+
 	co_memset(cmon->passage_page, 0, sizeof(co_arch_passage_page_t));
 
 	rc = co_arch_anti_nx_init(cmon);
 	if (!CO_OK(rc)) 
-		goto error_free_passage;
+		goto error;
 
 	return rc;
 
-/* error path */
-error_free_passage:
-	co_os_free_pages(cmon->passage_page, sizeof(co_arch_passage_page_t)/CO_ARCH_PAGE_SIZE);
-
 error:
-	co_os_free(archdep);
+	co_monitor_arch_passage_page_free(cmon);
 	return rc;
 }
 
 void co_monitor_arch_passage_page_free(co_monitor_t *cmon)
 {
-	co_arch_anti_nx_free(cmon);
-	co_os_free(cmon->archdep);
-	co_os_free_pages(cmon->passage_page, sizeof(co_arch_passage_page_t)/CO_ARCH_PAGE_SIZE);
+	if (cmon->archdep) {
+		co_arch_anti_nx_free(cmon);
+		co_os_free(cmon->archdep);
+		cmon->archdep = NULL;
+	}
+	if (cmon->passage_page) {
+		co_os_free_pages(cmon->passage_page, sizeof(co_arch_passage_page_t)/CO_ARCH_PAGE_SIZE);
+		cmon->passage_page = NULL;
+	}
 }
 
 static inline void co_passage_page_dump_state(co_arch_state_stack_t *state)
@@ -545,6 +629,9 @@ static inline void co_passage_page_dump_state(co_arch_state_stack_t *state)
 
 	co_debug("return_eip: %08lx   flags: %08lx   esp: %08lx",
 		 state->return_eip, state->flags, state->esp);
+
+	co_debug("sysenter cs: %08lx    eip: %08lx   esp: %08lx",
+		 state->sysenter_cs, state->sysenter_eip, state->sysenter_esp);
 }
 
 static inline void co_passage_page_dump(co_arch_passage_page_t *page)
@@ -665,10 +752,16 @@ static void pae_temp_address_space_init(co_arch_passage_page_pae_address_space_t
 co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 {
 	co_arch_passage_page_t *pp = cmon->passage_page;
-	unsigned long caps = 0;
+	unsigned long caps;
 
-	caps = cmon->manager->archdep->caps[0];
-
+	if (co_monitor_passage_func_short_fxsave_sysenter_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
+	if (co_monitor_passage_func_fxsave_sysenter_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
+	if (co_monitor_passage_func_short_fnsave_sysenter_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
+	if (co_monitor_passage_func_fnsave_sysenter_size() > sizeof (pp->code))
+		return CO_RC(ERROR);
 	if (co_monitor_passage_func_short_fxsave_size() > sizeof (pp->code))
 		return CO_RC(ERROR);
 	if (co_monitor_passage_func_fxsave_size() > sizeof (pp->code))
@@ -678,22 +771,39 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	if (co_monitor_passage_func_fnsave_size() > sizeof (pp->code))
 		return CO_RC(ERROR);
 
-	/*
-	 * TODO: Add sysenter / sysexit restoration support 
-	 */
+	caps = cmon->manager->archdep->caps[0];
+
 	if (caps & (1 << CO_ARCH_X86_FEATURE_FXSR)) {
 		co_debug("CPU supports fxsave/fxrstor");
-		if (!co_is_pae_enabled()) {
-			memcpy_co_monitor_passage_func_short_fxsave(pp->code);
+		if (caps & (1 << CO_ARCH_X86_FEATURE_SEP)) {
+			co_debug("CPU supports sysenter/sysexit");
+			if (!co_is_pae_enabled()) {
+				memcpy_co_monitor_passage_func_short_fxsave_sysenter(pp->code);
+			} else {
+				memcpy_co_monitor_passage_func_fxsave_sysenter(pp->code);
+			}
 		} else {
-			memcpy_co_monitor_passage_func_fxsave(pp->code);
+			if (!co_is_pae_enabled()) {
+				memcpy_co_monitor_passage_func_short_fxsave(pp->code);
+			} else {
+				memcpy_co_monitor_passage_func_fxsave(pp->code);
+			}
 		}
 	} else {
 		co_debug("CPU supports fnsave/frstor");
-		if (!co_is_pae_enabled()) {
-			memcpy_co_monitor_passage_func_short_fnsave(pp->code);
+		if (caps & (1 << CO_ARCH_X86_FEATURE_SEP)) {
+			co_debug("CPU supports sysenter/sysexit");
+			if (!co_is_pae_enabled()) {
+				memcpy_co_monitor_passage_func_short_fnsave_sysenter(pp->code);
+			} else {
+				memcpy_co_monitor_passage_func_fnsave_sysenter(pp->code);
+			}
 		} else {
-			memcpy_co_monitor_passage_func_fnsave(pp->code);
+			if (!co_is_pae_enabled()) {
+				memcpy_co_monitor_passage_func_short_fnsave(pp->code);
+			} else {
+				memcpy_co_monitor_passage_func_fnsave(pp->code);
+			}
 		}
 	}
 
@@ -758,18 +868,16 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	pp->linuxvm_state.return_eip = cmon->import.kernel_colinux_start;
 
 	pp->linuxvm_state.cs = cmon->arch_info.kernel_cs;
-	pp->linuxvm_state.ds = cmon->arch_info.kernel_ds;
-	pp->linuxvm_state.es = cmon->arch_info.kernel_ds;
-	pp->linuxvm_state.fs = cmon->arch_info.kernel_ds;
-	pp->linuxvm_state.gs = cmon->arch_info.kernel_ds;
+	pp->linuxvm_state.ds = \
+	pp->linuxvm_state.es = \
+	pp->linuxvm_state.fs = \
+	pp->linuxvm_state.gs = \
 	pp->linuxvm_state.ss = cmon->arch_info.kernel_ds;
 
 	if (caps & (1 << CO_ARCH_X86_FEATURE_FXSR))
 		co_fxsave(pp->linuxvm_state.fxstate);
 	else
 		co_fnsave(pp->linuxvm_state.fxstate);
-
-	co_debug("Passage page dump: %lx", (long)co_monitor_arch_passage_page_init);
 
 	co_passage_page_dump(pp);
 

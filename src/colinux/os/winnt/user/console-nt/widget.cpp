@@ -115,6 +115,19 @@ console_widget_NT_t::set_window(console_window_t * W)
 
 	window = W;
 
+	if (screen) {
+    		co_debug("always screen %p", screen);
+		return CO_RC(OK);
+	}
+
+	if (!console) {
+    		co_debug("Bug: console = NULL");
+		return CO_RC(ERROR);
+	}
+
+	size.X = console->x;
+	size.Y = console->y;
+
 	input = GetStdHandle(STD_INPUT_HANDLE);
 	SetConsoleMode(input, 0);
 
@@ -123,8 +136,8 @@ console_widget_NT_t::set_window(console_window_t * W)
         fs = GetConsoleFontSize(output, cfi.nFont);
         r.top = 0;
         r.left = 0;
-        r.bottom = fs.Y * 25;
-        r.right = fs.X * 80;
+        r.bottom = fs.Y * size.Y;
+        r.right = fs.X * size.X;
         AdjustWindowRect(&r, WS_CAPTION|WS_SYSMENU|WS_THICKFRAME
                              |WS_MINIMIZEBOX|WS_MAXIMIZEBOX, 0);
 
@@ -138,12 +151,10 @@ console_widget_NT_t::set_window(console_window_t * W)
         cci.bVisible = 0;
         SetConsoleCursorInfo(output, &cci);
 
-	size.X = 80 ;
-        size.Y = 25 ;
-	region.Top = 0;
-	region.Left = 0;
-        region.Right = 79;
-        region.Bottom = 24;
+        region.Top = 0;
+        region.Left = 0;
+        region.Right = size.X-1;
+        region.Bottom = size.Y-1;
 
 	if( ! SetConsoleWindowInfo( output , TRUE , &region ) ) {
 		error = GetLastError();
@@ -521,6 +532,10 @@ void console_widget_NT_t::process_key_event( KEY_EVENT_RECORD& ker )
 
 		// Check if LeftAlt+Win (detach from colinux)
 		if (!released && (flags & LEFT_ALT_PRESSED)) {
+
+			// Release LeftALT before exit
+			send_key(0x38|0x80);
+
 			window->detach();
 			return;
 		}
@@ -550,13 +565,39 @@ void console_widget_NT_t::process_key_event( KEY_EVENT_RECORD& ker )
 	case VK_APPS:	// Window Context Menu
 		return;		// Let windows process this keys
 
-	case VK_MENU:
-		// Check if Win+LeftAlt (detach from colinux)
-		if ((vkey_state[255] & 1) && !released) {
-			window->detach();
-			return;
+	case VK_MENU: // Left ALT pressed
+		if (!released) {
+			/* Check if AltGr (received as LeftControl+RightAlt) */
+			if (extended && (vkey_state[VK_CONTROL] == 0x9D)) {
+		    		/* Release Control key */
+				send_key(0x9D);
+				vkey_state[VK_CONTROL] = 0;
+			}
+			// Check if Win+LeftAlt (detach from colinux)
+			if (vkey_state[255] & 1) {
+				// Release WinKey before exit
+				send_key(0xE05B|0x80);
+				window->detach();
+				return;
+			}
 		}
 		break;
+
+	default:
+		// Handle sticky mode keys after Alt+Space combination
+		if (!released) {
+			// Release hanging ALT
+			if (!(flags & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED)) &&
+			    vkey_state[VK_MENU]) {
+				send_key(vkey_state[VK_MENU]);
+				vkey_state[VK_MENU] = 0;
+			}
+			// Release hanging SHIFT
+			if (!(flags & SHIFT_PRESSED) && vkey_state[VK_SHIFT]) {
+				send_key(vkey_state[VK_SHIFT]);
+				vkey_state[VK_SHIFT] = 0;
+			}
+		}
 	}
 
 	/* Normal key processing */

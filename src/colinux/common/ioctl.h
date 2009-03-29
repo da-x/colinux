@@ -62,6 +62,10 @@ typedef enum {
 	CO_MONITOR_IOCTL_GET_CONSOLE,
 	CO_MONITOR_IOCTL_GET_STATE,
 	CO_MONITOR_IOCTL_RESET,
+	CO_MONITOR_IOCTL_VIDEO_ATTACH, /* incomplete */
+	CO_MONITOR_IOCTL_VIDEO_DETACH, /* incomplete */
+	CO_MONITOR_IOCTL_CONET_BIND_ADAPTER,
+	CO_MONITOR_IOCTL_CONET_UNBIND_ADAPTER
 } co_monitor_ioctl_op_t;
 
 /* interface for CO_MANAGER_IOCTL_MONITOR: */
@@ -185,5 +189,38 @@ typedef struct {
 typedef struct co_monitor_ioctl_status {
 	co_manager_ioctl_monitor_t pc;
 } co_monitor_ioctl_status_t;
+
+#ifdef CONFIG_COOPERATIVE_VIDEO
+/* interface for CO_MONITOR_IOCTL_VIDEO_ATTACH/DETACH: */
+typedef struct {
+	co_manager_ioctl_monitor_t pc;
+	int unit;
+	void *address;
+	void *handle;
+} co_monitor_ioctl_video_t;
+#endif
+
+/***************** support kernel mode conet ***********************/
+typedef enum {
+	CO_CONET_BRIDGE,	/* bridge conet adapter to external */
+	CO_CONET_NAT,		/* NAT conet traffic to external */
+	CO_CONET_HOST		/* communicate with local host only */
+} co_conet_protocol_t;
+
+/* CO_MONITOR_IOCTL_CONET_BIND_ADAPTER */
+typedef struct { /* for co_manager_ioctl_monitor_t extra_data */
+	co_manager_ioctl_monitor_t pc;
+	co_conet_protocol_t conet_proto;
+	int conet_unit;
+	int promisc_mode;
+	char mac_address[6];
+	char netcfg_id[128]; /* null terminated */
+} co_monitor_ioctl_conet_bind_adapter_t;
+
+/* CO_MONITOR_IOCTL_CONET_UNBIND_ADAPTER */
+typedef struct { /* for co_manager_ioctl_monitor_t extra_data */
+	co_manager_ioctl_monitor_t pc;
+	int conet_unit;
+} co_monitor_ioctl_conet_unbind_adapter_t;
 
 #endif
