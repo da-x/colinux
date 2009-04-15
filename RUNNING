@@ -163,7 +163,7 @@ Quick running
 
 If you wand only quick check, what coLinux is, and how it works, you can
 run a very limited linux shell from the ramdisk file.  For this you not
-need to download a image file, and no need any networking.
+needs to download an image file, and no need any networking.
 For such test use this command line:
 
 	colinux-daemon kernel=vmlinux initrd=initrd.gz root=/dev/ram0
