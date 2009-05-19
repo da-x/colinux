@@ -21,7 +21,5 @@ extern unsigned long co_get_dr2(void);
 extern unsigned long co_get_dr3(void);
 extern unsigned long co_get_dr6(void);
 extern unsigned long co_get_dr7(void);
-extern void co_fxsave(unsigned char *buffer);
-extern void co_fnsave(unsigned char *buffer);
 
 #endif
