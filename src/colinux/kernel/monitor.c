@@ -763,8 +763,8 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 
 	return rc;
 
-error_3:
 #ifdef CONFIG_COOPERATIVE_VIDEO
+error_3:
 	co_monitor_unregister_video_devices(cmon);
 #endif
 error_2:
