@@ -777,5 +777,18 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 
 void co_host_switch_wrapper(co_monitor_t *cmon)
 {
+	if (co_get_cr4() & CO_ARCH_X86_CR4_VMXE) {
+
+		/*
+		 * An other virtualizion is running in VMX mode.
+		 * coLinux does not cooperate with it.
+		 * Abort the guest, but don't crash the host for now.
+		 */
+
+		co_passage_page->operation = CO_OPERATION_TERMINATE;
+		co_passage_page->params[0] = CO_TERMINATE_VMXE;
+		return;
+	}
+
 	co_switch();
 }

@@ -1645,7 +1645,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -0,0 +1,384 @@
+@@ -0,0 +1,385 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1820,6 +1820,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_TERMINATE_INVALID_OPERATION,
 +	CO_TERMINATE_STACK_OVERFLOW,
 +	CO_TERMINATE_BUG,
++	CO_TERMINATE_VMXE,
 +} co_termination_reason_t;
 +
 +#ifdef CO_KERNEL

@@ -911,6 +911,10 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 				co_terminal_print("colinux: BUG at %s:%ld\n", params.bug_info.file, params.bug_info.line);
 				break;
 
+			case CO_TERMINATE_VMXE:
+				co_terminal_print("colinux: An other virtualization runs in VMX mode.\n");
+				break;
+
 			default:
 				co_terminal_print("colinux: terminated with code %d - abnormal exit, aborting\n", reason);
 				break;
