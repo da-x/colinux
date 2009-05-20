@@ -780,7 +780,7 @@ void co_host_switch_wrapper(co_monitor_t *cmon)
 	if (co_get_cr4() & CO_ARCH_X86_CR4_VMXE) {
 
 		/*
-		 * An other virtualizion is running in VMX mode.
+		 * An other virtualization is running in VMX mode.
 		 * coLinux does not cooperate with it.
 		 * Abort the guest, but don't crash the host for now.
 		 */
