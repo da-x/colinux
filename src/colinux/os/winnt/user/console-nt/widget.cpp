@@ -505,7 +505,7 @@ console_widget_NT_t::idle()
 void send_key( DWORD code )
 {
 	co_scan_code_t sc;
-	sc.down = 1;	/* to work with old kernels that don't ignore this field */
+	sc.mode = CO_KBD_SCANCODE_RAW;
 	/* send e0 if extended key */
 	if ( code & 0xE000 )
 	{

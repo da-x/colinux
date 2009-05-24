@@ -144,19 +144,22 @@ static int global_event_hook(const XEvent& thisevent)
 			}
 		}	
 
-		sc.down = (xevent.type == KeyPress);
+		if (xevent.type != KeyPress) {
+			if (scan_code_state[scan] == 0)
+				return 0;	/* ignore release of not pressed keys */
+			scan_code_state[scan] = 0;
+			scan |= 0x80;
+		} else {
+			scan_code_state[scan] = 1;
+		}
 
-		if (sc.down == 0 && scan_code_state[scan] == 0)
-			return 0;	/* ignore release of not pressed keys */
-
-		scan_code_state[scan] = sc.down;
-
+		sc.mode = CO_KBD_SCANCODE_RAW;
 		/* send e0 if extended key */
 		if (scan & 0xFF00) {
 			sc.code = 0xE0;
 			co_user_console_handle_scancode(sc);
 		}
-		sc.code = scan;
+		sc.code = scan & 0xFF;
 		co_user_console_handle_scancode(sc);
 
 		break;

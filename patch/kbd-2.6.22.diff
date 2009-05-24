@@ -76,3 +76,22 @@ Index: linux-2.6.22-source/drivers/input/serio/Makefile
  obj-$(CONFIG_SERIO_LIBPS2)	+= libps2.o
  obj-$(CONFIG_SERIO_RAW)		+= serio_raw.o
 +obj-$(CONFIG_SERIO_COKBD)	+= cokbd.o
+Index: linux-2.6.22-source/drivers/char/keyboard.c
+===================================================================
+--- linux-2.6.22-source.orig/drivers/char/keyboard.c
++++ linux-2.6.22-source/drivers/char/keyboard.c
+@@ -328,6 +328,14 @@
+ 	}
+ }
+ 
++#ifdef CONFIG_COOPERATIVE
++void keyboard_inject_utf8(ushort c)
++{
++	to_utf8(vc_cons[fg_console].d, c);
++}
++EXPORT_SYMBOL_GPL(keyboard_inject_utf8);
++#endif
++
+ /*
+  * Called after returning from RAW mode or when changing consoles - recompute
+  * shift_down[] and shift_state from key_down[] maybe called when keymap is

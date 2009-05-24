@@ -1645,7 +1645,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -0,0 +1,385 @@
+@@ -0,0 +1,390 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1773,10 +1773,15 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_DEVICES_TOTAL,
 +} co_device_t;
 +
++typedef enum {
++	CO_KBD_SCANCODE_RAW=0,
++	CO_KBD_SCANCODE_ASCII
++} mode_data_from_keyboard_t;
++
 +typedef struct {
 +	unsigned char code;
-+	int down;
-+} co_scan_code_t;
++	mode_data_from_keyboard_t mode;
++} __attribute__((packed)) co_scan_code_t;
 +
 +#define CO_MOUSE_MAX_X 2048
 +#define CO_MOUSE_MAX_Y 2048
