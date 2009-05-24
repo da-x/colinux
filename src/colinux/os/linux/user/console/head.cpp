@@ -138,7 +138,7 @@ static int global_event_hook(const XEvent& thisevent)
 	switch (xevent.type) {
 	case KeyPress:
 	case KeyRelease: {
-		co_scan_code_t sc, sc_down;
+		co_scan_code_t sc;
 		int len;
 		char buffer[0x40];
 		KeySym keysym;
@@ -159,19 +159,19 @@ static int global_event_hook(const XEvent& thisevent)
 			}
 		}	
 
-		sc.code = scan;
 		sc.down = (xevent.type == KeyPress);
 
-		if ((sc.down == 0) && (scan_code_state[sc.code] == 0)) {
-			sc_down = sc;
-			sc_down.down = 1;
+		if (sc.down == 0 && scan_code_state[scan] == 0)
+			return 0;	/* ignore release of not pressed keys */
 
-			co_user_console_handle_scancode(sc_down);
+		scan_code_state[scan] = sc.down;
+
+		/* send e0 if extended key */
+		if (scan & 0xFF00) {
+			sc.code = 0xE0;
+			co_user_console_handle_scancode(sc);
 		}
-		else {
-			scan_code_state[sc.code] = sc.down;
-		}
-			   
+		sc.code = scan;
 		co_user_console_handle_scancode(sc);
 
 		break;
