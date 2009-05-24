@@ -129,7 +129,7 @@ static const short int nonchar_key_scan2[256] =
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,              /*      */
 };
 
-static int scan_code_state[0x100];
+static int scan_code_state[0x200];
 
 static int global_event_hook(const XEvent& thisevent)
 {
