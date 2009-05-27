@@ -516,6 +516,47 @@ void send_key( DWORD code )
 	co_user_console_handle_scancode( sc );
 }
 
+/*
+ * First attempt to make the console copy/paste text.
+ * This needs more work to get right, but at least it's a start ;)
+ */
+static int PasteClipboardIntoColinux( )
+{
+	// Lock clipboard for inspection -- TODO: try again on failure
+	if ( ! ::OpenClipboard(NULL) )
+	{
+		co_debug( "OpenClipboard() error 0x%lx !", ::GetLastError() );
+		return -1;
+	}
+	HANDLE h = ::GetClipboardData( CF_TEXT );
+	if ( h == NULL )
+	{
+		::CloseClipboard( );
+		return 0;	// Empty (for text)
+	}
+	unsigned char* s = (unsigned char *) ::GlobalLock( h );
+	if ( s == NULL )
+	{
+		::CloseClipboard( );
+		return 0;
+	}
+	/* Fake keyboard input */
+	for ( ; *s != '\0'; ++s )
+	{
+		co_scan_code_t sc;
+
+		if ( *s == '\n' )
+			continue;	// ignore '\n'
+
+		sc.mode = CO_KBD_SCANCODE_ASCII;
+		sc.code = *s;
+		co_user_console_handle_scancode( sc );
+	}
+	::GlobalUnlock( h );
+	::CloseClipboard( );
+	return 0;
+}
+
 void console_widget_NT_t::process_key_event( KEY_EVENT_RECORD& ker )
 {
 	const BYTE vkey     = static_cast<BYTE>( ker.wVirtualKeyCode );
@@ -580,6 +621,14 @@ void console_widget_NT_t::process_key_event( KEY_EVENT_RECORD& ker )
 				window->detach();
 				return;
 			}
+		}
+		break;
+
+	case 'V':
+		if ( !released && (vkey_state[255] & 1) )
+		{
+			PasteClipboardIntoColinux( );
+			return;
 		}
 		break;
 
