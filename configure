@@ -440,7 +440,7 @@ check_exec_tool()
 
       # get installed version
       eval `($2) 2>&1 | sed -n -e \
-        's/^.*\([0-9]\{1,\}\)\.\([0-9]\{1,\}\)\.\([0-9]\{1,\}\).*/i1=\1 i2=\2 i3=\3/p'`
+        's/^[^0-9]*\([0-9]\{1,\}\)\.\([0-9]\{1,\}\)\.\([0-9]\{1,\}\).*/i1=\1 i2=\2 i3=\3/p'`
 
       if [ "$v3" = "0" -a -z "$i1" ]; then
         # get installed version with two numbers

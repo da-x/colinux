@@ -1,9 +1,12 @@
 * Version 0.8.0
   * Bug #1959846, #2760666: Don't crash the host, if an other virtualization
-  runs in VMX mode.
+    runs in VMX mode.
 
   Console and daemons:
   * New: NT console WinKey+V paste keys from clipboard. (Vladislav Grishenko)
+
+  Buildsystem:
+  * Bug #2847393: Configure detected wrong program versions. (Steven Chen)
 
   Updated libraries and tools:
   * w32api 3.13
