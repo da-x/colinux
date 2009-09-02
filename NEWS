@@ -4,6 +4,7 @@
 
   Console and daemons:
   * New: NT console WinKey+V paste keys from clipboard. (Vladislav Grishenko)
+  * Bug #2849262: SLiRP: Active FTP failed with "500 Illegal PORT command".
 
   Buildsystem:
   * Bug #2847393: Configure detected wrong program versions. (Steven Chen)

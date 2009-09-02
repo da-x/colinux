@@ -1008,7 +1008,8 @@ do_prompt:
 			n5 = (n6 >> 8) & 0xff;
 			n6 &= 0xff;
 			
-			laddr = ntohl(so->so_faddr.s_addr);
+			getouraddr();
+			laddr = ntohl(our_addr.s_addr);
 			
 			n1 = ((laddr >> 24) & 0xff);
 			n2 = ((laddr >> 16) & 0xff);

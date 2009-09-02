@@ -1,9 +1,7 @@
 #include "slirp.h"
 
-#if 0
 /* host address */
 struct in_addr our_addr;
-#endif
 /* host dns address */
 static struct in_addr dns_addr;
 /* host loopback address */
