@@ -512,6 +512,15 @@ Environment settings
 	Change font size only.  Default font "Terminal" is still active:
 	set COLINUX_CONSOLE_FONT=:12
 
+    COLINUX_HOST_IPADDR=<Windows IP address>
+
+	Set the host ip address for SLiRP emulations.
+	Currently this is used for the PORT command in "active FTP" sessions.
+	This only needs, if you have more as one network adapter and SLiRP
+	detects the host address wrong. For example, if any TUN/TAP device
+	is in first place of "ipconfig.exe" and the first adapter is not
+	your connection you want to use.
+
     COLINUX_NO_CPU0_WORKAROUND=Y
 
 	Currently exist a problem on some CPUs with a very huge traffic	of

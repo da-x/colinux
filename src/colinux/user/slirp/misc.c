@@ -90,7 +90,15 @@ getouraddr()
 {
 	char buff[256];
 	struct hostent *he;
-	
+	char *env;
+
+	env = getenv("COLINUX_HOST_IPADDR");
+	if (env) {
+		our_addr.s_addr = inet_addr(env);
+		if (our_addr.s_addr != 0xffffffff)
+			return;
+	}
+
 	if (gethostname(buff,256) < 0)
 	   return;
 	
