@@ -614,29 +614,3 @@ Index: linux-2.6.22-source/include/linux/covideo.h
 +typedef struct covideo_config covideo_config_t;
 +
 +#endif
-Index: linux-2.6.22-source/include/linux/cooperative.h
-===================================================================
---- linux-2.6.22-source.orig/include/linux/cooperative.h
-+++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -118,7 +118,7 @@
- 
- 	CO_DEVICE_MOUSE,
- 	CO_DEVICE_SCSI,
--	CO_DEVICE_DISPLAY,
-+	CO_DEVICE_VIDEO,
- 	CO_DEVICE_AUDIO,
- 	CO_DEVICE_PCI,
- 
-Index: linux-2.6.22-source/include/linux/cooperative_pci.h
-===================================================================
---- linux-2.6.22-source.orig/include/linux/cooperative_pci.h
-+++ linux-2.6.22-source/include/linux/cooperative_pci.h
-@@ -4,7 +4,7 @@
- 
- /* PCI ids */
- #define PCI_VENDOR_ID_CO        0x1a55
--#define PCI_DEVICE_ID_COFB      0x0001
-+#define PCI_DEVICE_ID_COVIDEO   0x0001
- #define PCI_DEVICE_ID_COIDE     0x0002
- #define PCI_DEVICE_ID_COSCSI    0x0003
- #define PCI_DEVICE_ID_COAUDIO   0x0004
