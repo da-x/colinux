@@ -589,17 +589,6 @@ co_rc_t co_daemon_handle_printk(co_daemon_t *daemon, co_message_t *message)
 			co_terminal_print_color(CO_TERM_COLOR_WHITE, 
 						"%s", string_start);
 		}
-
-		if (co_strstr(string_start, "VFS: Unable to mount root fs on")) {
-			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
-						"colinux: kernel panic suggests that either you forget to supply a\n");
-			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
-						"root= kernel boot paramter or the file / device mapped to the root\n");
-			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
-						"file system is not found or inaccessible.\n");
-			co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
-						"Please Check your coLinux configuration and use option \"-v 3\".\n");
-		}
 	}
 
 	return CO_RC(OK);
@@ -903,12 +892,27 @@ co_rc_t co_daemon_run(co_daemon_t *daemon)
 				co_terminal_print("colinux: powered off, exiting.\n");
 				break;
 
+			case CO_TERMINATE_PANIC:
+				co_terminal_print("colinux: Kernel panic: %s\n", params.bug_info.text);
+
+				if (co_strstr(params.bug_info.text, "VFS: Unable to mount root fs on")) {
+					co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
+						"colinux: kernel panic suggests that either you forget to supply a\n");
+					co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
+						"root= kernel boot paramter or the file / device mapped to the root\n");
+					co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
+						"file system is not found or inaccessible.\n");
+					co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
+						"Please Check your coLinux configuration and use option \"-v 3\".\n");
+				}
+				break;
+
 			case CO_TERMINATE_HALT:
 				co_terminal_print("colinux: halted, exiting.\n");
 				break;
 
 			case CO_TERMINATE_BUG:
-				co_terminal_print("colinux: BUG at %s:%ld\n", params.bug_info.file, params.bug_info.line);
+				co_terminal_print("colinux: BUG at %s:%ld\n", params.bug_info.text, params.bug_info.line);
 				break;
 
 			case CO_TERMINATE_VMXE:
