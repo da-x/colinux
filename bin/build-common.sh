@@ -374,7 +374,7 @@ build_package()
 		fi
 	fi
 
-	# Link to modules file
+	# Copy modules file
 	echo "Installing Modules $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
-        ln -f $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz $MODULES_TGZ
+        cp -p $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz $MODULES_TGZ
 }
