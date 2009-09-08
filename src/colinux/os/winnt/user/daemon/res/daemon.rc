@@ -19,9 +19,10 @@ FILEOS VOS__WINDOWS32
       VALUE "LegalCopyright","Copyright (c) coLinux project"
       VALUE "OriginalFilename","colinux-daemon.exe"
       VALUE "ProductName", "coLinux"
-      VALUE "ProductVersion", CO_VERSION_STRING
+      VALUE "ProductVersion", CO_PRODUCT_STRING
       VALUE "LinuxKernelVersion", CO_KERNEL_STRING
       VALUE "GccVersion", CO_GCC_STRING
+      VALUE "BinutilsVersion", CO_AS_STRING
     }
   }
 }
