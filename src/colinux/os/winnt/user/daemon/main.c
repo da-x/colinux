@@ -222,7 +222,7 @@ static co_rc_t co_winnt_main(LPSTR szCmdLine)
 			co_terminal_print("daemon: config not specified\n");
 			return CO_RC(ERROR);
 		}
-		return co_winnt_daemon_install_as_service(winnt_parameters.service_name, szCmdLine);
+		return co_winnt_daemon_install_as_service(winnt_parameters.service_name, szCmdLine, start_parameters.network_types);
 	}
 
 	if (winnt_parameters.remove_service) {

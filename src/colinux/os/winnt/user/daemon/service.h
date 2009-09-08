@@ -14,7 +14,7 @@
 #include "cmdline.h"
 
 extern void co_winnt_change_directory_for_service(int argc, char **argv);
-extern co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char *original_commandline);
+extern co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char *original_commandline, int network_types);
 extern co_rc_t co_winnt_daemon_remove_service(const char *service_name);
 extern bool_t co_winnt_daemon_initialize_service(co_start_parameters_t *start_parameters);
 
