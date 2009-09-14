@@ -1,0 +1,136 @@
+Index: linux-2.6.25-source/arch/x86/Kconfig
+===================================================================
+--- linux-2.6.25-source.orig/arch/x86/Kconfig
++++ linux-2.6.25-source/arch/x86/Kconfig
+@@ -1402,7 +1402,6 @@
+ 
+ 
+ menu "Bus options (PCI etc.)"
+-	depends on !COOPERATIVE
+ 
+ config PCI
+ 	bool "PCI support" if !X86_VISWS && !X86_VSMP
+@@ -1434,6 +1433,9 @@
+ 	  direct access method and falls back to the BIOS if that doesn't
+ 	  work. If unsure, go with the default, which is "Any".
+ 
++config PCI_GOCO
++	bool "Cooperative"
++
+ config PCI_GOBIOS
+ 	bool "BIOS"
+ 
+@@ -1448,6 +1450,11 @@
+ 
+ endchoice
+ 
++config PCI_COOPERATIVE
++	bool
++ 	depends on PCI && PCI_GOCO && COOPERATIVE
++	default y
++
+ config PCI_BIOS
+ 	def_bool y
+ 	depends on X86_32 && !X86_VISWS && PCI && (PCI_GOBIOS || PCI_GOANY)
+@@ -1505,6 +1512,7 @@
+ 
+ # x86_64 have no ISA slots, but do have ISA-style DMA.
+ config ISA_DMA_API
++	depends on !COOPERATIVE
+ 	def_bool y
+ 
+ if X86_32
+Index: linux-2.6.25-source/arch/x86/kernel/cpu/cyrix.c
+===================================================================
+--- linux-2.6.25-source.orig/arch/x86/kernel/cpu/cyrix.c
++++ linux-2.6.25-source/arch/x86/kernel/cpu/cyrix.c
+@@ -248,6 +248,7 @@
+ 
+ 	case 4: /* MediaGX/GXm or Geode GXM/GXLV/GX1 */
+ #ifdef CONFIG_PCI
++#ifndef CONFIG_COOPERATIVE
+ 	{
+ 		u32 vendor, device;
+ 		/* It isn't really a PCI quirk directly, but the cure is the
+@@ -279,6 +280,7 @@
+ 			mark_tsc_unstable("cyrix 5510/5520 detected");
+ 	}
+ #endif
++#endif
+ 		c->x86_cache_size=16;	/* Yep 16K integrated cache thats it */
+ 
+ 		/* GXm supports extended cpuid levels 'ala' AMD */
+Index: linux-2.6.25-source/arch/x86/pci/init.c
+===================================================================
+--- linux-2.6.25-source.orig/arch/x86/pci/init.c
++++ linux-2.6.25-source/arch/x86/pci/init.c
+@@ -8,6 +8,9 @@
+ {
+ 	int type __maybe_unused = 0;
+ 
++#ifdef CONFIG_PCI_COOPERATIVE
++	pci_cooperative_init();
++#endif
+ #ifdef CONFIG_PCI_DIRECT
+ 	type = pci_direct_probe();
+ #endif
+Index: linux-2.6.25-source/arch/x86/pci/pci.h
+===================================================================
+--- linux-2.6.25-source.orig/arch/x86/pci/pci.h
++++ linux-2.6.25-source/arch/x86/pci/pci.h
+@@ -104,6 +104,7 @@
+ extern void pci_pcbios_init(void);
+ extern void pci_mmcfg_init(int type);
+ extern void pcibios_sort(void);
++extern void pci_cooperative_init(void);
+ 
+ /* pci-mmconfig.c */
+ 
+Index: linux-2.6.25-source/arch/x86/pci/Makefile_32
+===================================================================
+--- linux-2.6.25-source.orig/arch/x86/pci/Makefile_32
++++ linux-2.6.25-source/arch/x86/pci/Makefile_32
+@@ -1,5 +1,6 @@
+ obj-y				:= i386.o init.o
+ 
++obj-$(CONFIG_PCI_COOPERATIVE)	+= copci.o
+ obj-$(CONFIG_PCI_BIOS)		+= pcbios.o
+ obj-$(CONFIG_PCI_MMCONFIG)	+= mmconfig_32.o direct.o mmconfig-shared.o
+ obj-$(CONFIG_PCI_DIRECT)	+= direct.o
+@@ -11,4 +12,8 @@
+ pci-$(CONFIG_X86_VISWS)		:= visws.o fixup.o
+ pci-$(CONFIG_X86_NUMAQ)		:= numa.o irq.o
+ 
+-obj-y				+= $(pci-y) common.o early.o
++pci-$(CONFIG_COOPERATIVE)	:= legacy.o irq_cooperative.o
++obj-y				+= $(pci-y) common.o
++ifndef CONFIG_COOPERATIVE
++obj-y				+= early.o
++endif
+Index: linux-2.6.25-source/drivers/pci/pci.c
+===================================================================
+--- linux-2.6.25-source.orig/drivers/pci/pci.c
++++ linux-2.6.25-source/drivers/pci/pci.c
+@@ -1690,7 +1690,9 @@
+ EXPORT_SYMBOL_GPL(pci_intx);
+ EXPORT_SYMBOL(pci_set_dma_mask);
+ EXPORT_SYMBOL(pci_set_consistent_dma_mask);
++#ifndef CONFIG_COOPERATIVE
+ EXPORT_SYMBOL(pci_assign_resource);
++#endif
+ EXPORT_SYMBOL(pci_find_parent_resource);
+ EXPORT_SYMBOL(pci_select_bars);
+ 
+Index: linux-2.6.25-source/include/asm-x86/pci.h
+===================================================================
+--- linux-2.6.25-source.orig/include/asm-x86/pci.h
++++ linux-2.6.25-source/include/asm-x86/pci.h
+@@ -65,7 +65,7 @@
+ 			       enum pci_mmap_state mmap_state, int write_combine);
+ 
+ 
+-#ifdef CONFIG_PCI
++#if defined(CONFIG_PCI) && !defined(CONFIG_COOPERATIVE)
+ extern void early_quirks(void);
+ static inline void pci_dma_burst_advice(struct pci_dev *pdev,
+ 					enum pci_dma_burst_strategy *strat,

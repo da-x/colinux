@@ -381,7 +381,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +*/
 +static int host_pass(coscsi_device_t *dp, struct scsi_cmnd *scp) {
 +	unsigned long flags;
-+	unsigned char *buffer;
++	void *buffer;
 +	unsigned long buflen;
 +	co_scsi_pass_t *pass;
 +	int rc;
@@ -458,7 +458,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +
 +static int response(coscsi_worker_t *wp, void *data, int len) {
 +	struct scsi_cmnd *scp = wp->scp;
-+	unsigned char *buffer;
++	void *buffer;
 +	unsigned long buflen;
 +	int act_len;
 +

@@ -123,6 +123,9 @@ patch_kernel_source()
 	test -f "series"  || ln -s "$TOPDIR/patch/series-$KERNEL_VERSION" "series"
 	test -f "patches" || ln -s "$TOPDIR/patch" "patches"
 
+	# Hotfix for 2.6.25 and 2.6.22 "core" patches
+	test -d arch/i386 || ln -s x86 arch/i386
+
 	if quilt --version >/dev/null 2>&1
 	then
 		# use quilt for patching, don't trust users settings
