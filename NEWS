@@ -2,11 +2,26 @@
   * Bug #1959846, #2760666: Don't crash the host, if an other virtualization
     runs in VMX mode.
 
-  Console and daemons:
-  * New: NT console WinKey+V paste keys from clipboard. (Vladislav Grishenko)
+  Network:
   * Bug #2849262: SLiRP: Active FTP failed with "500 Illegal PORT command".
     Environment COLINUX_HOST_IPADDR overwrites auto detected host ip address.
+
+  Console and daemons:
+  * Insert keys from fltk console without keyboard mapping. (Paolo Minazzi)
+  * New: NT console WinKey+V paste keys from clipboard. (Vladislav Grishenko)
+  * Linux as host: Handle extended keys, for example ALT+CurRight.
   * Automatically add network dependency to coLinux as service.
+  * Version informations about binutils and SVN revision added to daemon file.
+
+  Kernel:
+  * Remove floating point handling from passage page code. FPU save/restore
+    only on demand and only inside Linux guest kernel, if Linux kernel or Linux
+    userland needs the FPU. In cases where FPU was not used on Linux guest side,
+    the registers of FPU are not touched. That saves some time between operating
+    system switches. It's 1 percent (or less) faster now.
+  * Increase CO_LINUX_API_VERSION to 13, avoids crashes with older builds.
+  * cloop updated to version 2.625
+  * Forward plain text panic message instead "terminated with code 3".
 
   Buildsystem:
   * Bug #2847393: Configure detected wrong program versions. (Steven Chen)
