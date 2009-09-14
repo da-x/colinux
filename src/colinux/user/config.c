@@ -30,6 +30,9 @@ typedef struct {
     char * buffer;
     } comma_buffer_t;	/* only for split_comma_separated here */
 
+/* A bit mask of all used network types */
+static int used_network_types;
+
 /* 
  * "New" command line configuration gathering scheme. It existed a long time in 
  * User Mode Linux and should be less hussle than handling XML files for the
@@ -594,6 +597,7 @@ static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, co
 	if (*host_ip)
 		co_debug_info("Host IP address: %s (currently ignored)", host_ip);
 
+	used_network_types |= 1<<CO_NETDEV_TYPE_TAP;
 	return CO_RC(OK);
 }
 
@@ -637,6 +641,7 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 		}
 	}
 
+	used_network_types |= 1<<CO_NETDEV_TYPE_BRIDGED_PCAP;
 	return CO_RC(OK);
 }
 
@@ -666,6 +671,7 @@ static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, 
 	if (*net_dev->redir)
 		co_debug_info("redirections %s", net_dev->redir);
 
+	used_network_types |= 1<<CO_NETDEV_TYPE_SLIRP;
 	return CO_RC(OK);
 }
 
@@ -709,6 +715,7 @@ static co_rc_t parse_args_networking_device_ndis(co_config_t *conf, int index, c
 		}
 	}
 
+	used_network_types |= 1<<CO_NETDEV_TYPE_NDIS_BRIDGE;
 	return CO_RC(OK);
 }
 
@@ -1089,6 +1096,8 @@ co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_paramete
 		co_debug_info("kernel boot parameters: '%s'", conf->boot_parameters_line);
 		start_parameters->config_specified = PTRUE;
 	}
+
+	start_parameters->network_types |= used_network_types;
 
 	return rc;
 }

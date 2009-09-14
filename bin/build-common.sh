@@ -82,11 +82,11 @@ GCC_ARCHIVE2=gcc-g++-$GCC_RELEASE.tar.bz2
 GCC_URL=ftp://ftp.gnu.org/pub/gnu/gcc/gcc-$GCC_VERSION/
 #GCC_PATCH="patch/$GCC.diff"
 
-W32API_VERSION=3.11
-W32API=w32api-$W32API_VERSION
+W32API_VERSION=3.13
+W32API=w32api-$W32API_VERSION-mingw32
 W32API_SRC=$W32API
 W32API_SRC_ARCHIVE=$W32API-src.tar.gz
-W32API_ARCHIVE=$W32API.tar.gz
+W32API_ARCHIVE=$W32API-dev.tar.gz
 #W32API_PATCH="patch/$W32API_SRC.diff"
 
 
@@ -374,7 +374,7 @@ build_package()
 		fi
 	fi
 
-	# Link to modules file
+	# Copy modules file
 	echo "Installing Modules $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
-        ln -f $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz $MODULES_TGZ
+        cp -p $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz $MODULES_TGZ
 }

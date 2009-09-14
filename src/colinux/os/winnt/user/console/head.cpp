@@ -36,7 +36,7 @@ static HHOOK current_hook;
 static void handle_scancode( WORD code )
 {
 	co_scan_code_t sc;
-	sc.down = 1;	/* to work with old kernels that don't ignore this field */
+	sc.mode = CO_KBD_SCANCODE_RAW;
 	/* send e0 if extended key */
 	if ( code & 0xE000 )
 	{
@@ -53,12 +53,6 @@ static void handle_scancode( WORD code )
  */
 static int PasteClipboardIntoColinux( )
 {
-	static char kpad_code[10]
-		= {	0x52,			// 0
-			0x4F, 0x50, 0x51,	// 1, 2, 3
-			0x4B, 0x4C, 0x4D,	// 4, 5, 6
-			0x47, 0x48, 0x49	// 7, 8, 9
-		};
 	// Lock clipboard for inspection -- TODO: try again on failure
 	if ( ! ::OpenClipboard(NULL) )
 	{
@@ -80,21 +74,14 @@ static int PasteClipboardIntoColinux( )
 	/* Fake keyboard input */
 	for ( ; *s != '\0'; ++s )
 	{
+		co_scan_code_t sc;
+
 		if ( *s == '\n' )
 			continue;	// ignore '\n'
-		// Convert to decimal digits
-		int d1 = *s / 100;
-		int d2 = (*s % 100) / 10;
-		int d3 = (*s % 100) % 10;
-		// Send Alt + NumPad digits
-		handle_scancode( 0x0038 );			// press ALT
-		handle_scancode( kpad_code[d1] );		// press digit 1
-		handle_scancode( kpad_code[d1] | 0x80 );	// release digit 1
-		handle_scancode( kpad_code[d2] );		// press digit 2
-		handle_scancode( kpad_code[d2] | 0x80 );	// release digit 2
-		handle_scancode( kpad_code[d3] );		// press digit 3
-		handle_scancode( kpad_code[d3] | 0x80 );	// release digit 3
-		handle_scancode( 0x00B8 );			// release ALT
+
+		sc.mode = CO_KBD_SCANCODE_ASCII;
+		sc.code = *s;
+		co_user_console_handle_scancode( sc );
 	}
 	::GlobalUnlock( h );
 	::CloseClipboard( );

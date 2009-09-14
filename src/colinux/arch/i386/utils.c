@@ -72,13 +72,3 @@ unsigned long co_get_dr7(void)
 	asm("mov %%dr7, %0" : "=r"(reg));
 	return reg;
 }
-
-void co_fxsave(unsigned char *buffer)
-{
-	asm("fxsave (%0) ; fnclex" : : "r"(buffer));
-}
-
-void co_fnsave(unsigned char *buffer)
-{
-	asm("fnsave (%0) ; fwait" : : "r"(buffer));
-}

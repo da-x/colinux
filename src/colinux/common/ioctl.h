@@ -154,7 +154,7 @@ typedef struct {
 typedef struct {
 	unsigned long line;
 	unsigned long code;
-	char file[60];
+	char text[128];
 } co_monitor_linux_bug_invocation_t;
 
 /* interface for CO_MONITOR_IOCTL_GET_STATE: */

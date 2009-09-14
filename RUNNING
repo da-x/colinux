@@ -16,7 +16,7 @@ http://www.sourceforge.net/projects/colinux
 
 NOTES ON UPGRADING:
 
- Upgrading from coLinux 0.7.2 and before
+ Upgrading from coLinux 0.7.3 and before
  -- Some dev distries increase eth1, eth2, eth3, ... on every boot.
     Typicaly have no network, but can see it with "cat /proc/net/dev".
     As workarrount set an unique MAC address for all network interfaces

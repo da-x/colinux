@@ -80,7 +80,7 @@ void co_os_userspace_unmap(void *user_address, void *handle, unsigned int pages)
 	struct file *filp = (struct file *)handle;
 
 	if (user_address)
-		do_munmap(current->mm, (unsigned long)user_address, (((unsigned long))pages) << PAGE_SHIFT);
+		do_munmap(current->mm, (unsigned long)user_address, ((unsigned long)pages) << PAGE_SHIFT);
 
 	filp_close(filp, NULL);
 }

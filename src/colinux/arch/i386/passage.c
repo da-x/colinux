@@ -248,18 +248,6 @@ asm(""							\
     "    incl %ecx" /* MSR_IA32_SYSENTER_EIP */		"\n"	\
     "    wrmsr"						"\n"	\
 
-#define PASSAGE_PAGE_PRESERVATION_FXSAVE(_inner_)		\
-    "    fxsave "CO_ARCH_STATE_STACK_FXSTATE"(%ebp)"  "\n"	\
-    "    fnclex"                             "\n"		\
-    _inner_							\
-    "    fxrstor "CO_ARCH_STATE_STACK_FXSTATE"(%ebp)"   "\n"
-
-#define PASSAGE_PAGE_PRESERVATION_FNSAVE(_inner_)		\
-    "    fnsave "CO_ARCH_STATE_STACK_FXSTATE"(%ebp)" "\n"	\
-    "    fwait"                              "\n"		\
-    _inner_							\
-    "    frstor "CO_ARCH_STATE_STACK_FXSTATE"(%ebp)" "\n"
-
 #define PASSAGE_PAGE_PRESERVATION_DEBUG(_inner_)			\
 /* Put the virtual address of the passage page in EBX */		\
     "    movl %ebp, %ebx"                    "\n"			\
@@ -456,52 +444,9 @@ _inner_									\
     "1:"                                     "\n"                       \
 
 PASSAGE_CODE_WRAP_IBCS(
-	co_monitor_passage_func_fxsave_sysenter,
+	co_monitor_passage_func_sysenter,
 	PASSAGE_CODE_WRAP_SWITCH(
 		PASSAGE_PAGE_PRESERVATION_SYSENTER(
-			PASSAGE_PAGE_PRESERVATION_FXSAVE(
-				PASSAGE_PAGE_PRESERVATION_DEBUG(
-					PASSAGE_PAGE_PRESERVATION_COMMON(
-						PASSAGE_CODE_NOWHERE_LAND()
-						)
-					)
-				)
-			)
-		)
-	)
-
-PASSAGE_CODE_WRAP_IBCS(
-	co_monitor_passage_func_fxsave, 
-	PASSAGE_CODE_WRAP_SWITCH(
-		PASSAGE_PAGE_PRESERVATION_FXSAVE(
-			PASSAGE_PAGE_PRESERVATION_DEBUG(
-				PASSAGE_PAGE_PRESERVATION_COMMON(
-					PASSAGE_CODE_NOWHERE_LAND() 
-					)
-				)
-			)
-		)
-	)
-
-PASSAGE_CODE_WRAP_IBCS(
-	co_monitor_passage_func_fnsave_sysenter,
-	PASSAGE_CODE_WRAP_SWITCH(
-		PASSAGE_PAGE_PRESERVATION_SYSENTER(
-			PASSAGE_PAGE_PRESERVATION_FNSAVE(
-				PASSAGE_PAGE_PRESERVATION_DEBUG(
-					PASSAGE_PAGE_PRESERVATION_COMMON(
-						PASSAGE_CODE_NOWHERE_LAND()
-						)
-					)
-				)
-			)
-		)
-	)
-
-PASSAGE_CODE_WRAP_IBCS(
-	co_monitor_passage_func_fnsave,
-	PASSAGE_CODE_WRAP_SWITCH(
-		PASSAGE_PAGE_PRESERVATION_FNSAVE(
 			PASSAGE_PAGE_PRESERVATION_DEBUG(
 				PASSAGE_PAGE_PRESERVATION_COMMON(
 					PASSAGE_CODE_NOWHERE_LAND()
@@ -512,24 +457,20 @@ PASSAGE_CODE_WRAP_IBCS(
 	)
 
 PASSAGE_CODE_WRAP_IBCS(
-	co_monitor_passage_func_short_fxsave_sysenter,
+	co_monitor_passage_func,
 	PASSAGE_CODE_WRAP_SWITCH(
-		PASSAGE_PAGE_PRESERVATION_SYSENTER(
-			PASSAGE_PAGE_PRESERVATION_FXSAVE(	
-				PASSAGE_PAGE_PRESERVATION_DEBUG(
-					PASSAGE_PAGE_PRESERVATION_COMMON(
-						PASSAGE_CODE_NOWHERE_LAND_SHORT() 
-						)
-					)
+		PASSAGE_PAGE_PRESERVATION_DEBUG(
+			PASSAGE_PAGE_PRESERVATION_COMMON(
+				PASSAGE_CODE_NOWHERE_LAND()
 				)
 			)
 		)
 	)
 
 PASSAGE_CODE_WRAP_IBCS(
-	co_monitor_passage_func_short_fxsave, 
+	co_monitor_passage_func_short_sysenter,
 	PASSAGE_CODE_WRAP_SWITCH(
-		PASSAGE_PAGE_PRESERVATION_FXSAVE(	
+		PASSAGE_PAGE_PRESERVATION_SYSENTER(
 			PASSAGE_PAGE_PRESERVATION_DEBUG(
 				PASSAGE_PAGE_PRESERVATION_COMMON(
 					PASSAGE_CODE_NOWHERE_LAND_SHORT() 
@@ -540,33 +481,15 @@ PASSAGE_CODE_WRAP_IBCS(
 	)
 
 PASSAGE_CODE_WRAP_IBCS(
-	co_monitor_passage_func_short_fnsave_sysenter,
+	co_monitor_passage_func_short,
 	PASSAGE_CODE_WRAP_SWITCH(
-		PASSAGE_PAGE_PRESERVATION_SYSENTER(
-			PASSAGE_PAGE_PRESERVATION_FNSAVE(
-				PASSAGE_PAGE_PRESERVATION_DEBUG(
-					PASSAGE_PAGE_PRESERVATION_COMMON(
-						PASSAGE_CODE_NOWHERE_LAND_SHORT()
-						)
-					)
+		PASSAGE_PAGE_PRESERVATION_DEBUG(
+			PASSAGE_PAGE_PRESERVATION_COMMON(
+				PASSAGE_CODE_NOWHERE_LAND_SHORT() 
 				)
 			)
 		)
 	)
-
-PASSAGE_CODE_WRAP_IBCS(
-	co_monitor_passage_func_short_fnsave,
-	PASSAGE_CODE_WRAP_SWITCH(
-		PASSAGE_PAGE_PRESERVATION_FNSAVE(
-			PASSAGE_PAGE_PRESERVATION_DEBUG(
-				PASSAGE_PAGE_PRESERVATION_COMMON(
-					PASSAGE_CODE_NOWHERE_LAND_SHORT()
-					)
-				)
-			)
-		)
-	)
-
 
 
 co_rc_t co_monitor_arch_passage_page_alloc(co_monitor_t *cmon)
@@ -754,56 +677,29 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	co_arch_passage_page_t *pp = cmon->passage_page;
 	unsigned long caps;
 
-	if (co_monitor_passage_func_short_fxsave_sysenter_size() > sizeof (pp->code))
+	if (co_monitor_passage_func_short_sysenter_size() > sizeof (pp->code))
 		return CO_RC(ERROR);
-	if (co_monitor_passage_func_fxsave_sysenter_size() > sizeof (pp->code))
+	if (co_monitor_passage_func_sysenter_size() > sizeof (pp->code))
 		return CO_RC(ERROR);
-	if (co_monitor_passage_func_short_fnsave_sysenter_size() > sizeof (pp->code))
+	if (co_monitor_passage_func_short_size() > sizeof (pp->code))
 		return CO_RC(ERROR);
-	if (co_monitor_passage_func_fnsave_sysenter_size() > sizeof (pp->code))
-		return CO_RC(ERROR);
-	if (co_monitor_passage_func_short_fxsave_size() > sizeof (pp->code))
-		return CO_RC(ERROR);
-	if (co_monitor_passage_func_fxsave_size() > sizeof (pp->code))
-		return CO_RC(ERROR);
-	if (co_monitor_passage_func_short_fnsave_size() > sizeof (pp->code))
-		return CO_RC(ERROR);
-	if (co_monitor_passage_func_fnsave_size() > sizeof (pp->code))
+	if (co_monitor_passage_func_size() > sizeof (pp->code))
 		return CO_RC(ERROR);
 
 	caps = cmon->manager->archdep->caps[0];
 
-	if (caps & (1 << CO_ARCH_X86_FEATURE_FXSR)) {
-		co_debug("CPU supports fxsave/fxrstor");
-		if (caps & (1 << CO_ARCH_X86_FEATURE_SEP)) {
-			co_debug("CPU supports sysenter/sysexit");
-			if (!co_is_pae_enabled()) {
-				memcpy_co_monitor_passage_func_short_fxsave_sysenter(pp->code);
-			} else {
-				memcpy_co_monitor_passage_func_fxsave_sysenter(pp->code);
-			}
+	if (caps & (1 << CO_ARCH_X86_FEATURE_SEP)) {
+		co_debug("CPU supports sysenter/sysexit");
+		if (!co_is_pae_enabled()) {
+			memcpy_co_monitor_passage_func_short_sysenter(pp->code);
 		} else {
-			if (!co_is_pae_enabled()) {
-				memcpy_co_monitor_passage_func_short_fxsave(pp->code);
-			} else {
-				memcpy_co_monitor_passage_func_fxsave(pp->code);
-			}
+			memcpy_co_monitor_passage_func_sysenter(pp->code);
 		}
 	} else {
-		co_debug("CPU supports fnsave/frstor");
-		if (caps & (1 << CO_ARCH_X86_FEATURE_SEP)) {
-			co_debug("CPU supports sysenter/sysexit");
-			if (!co_is_pae_enabled()) {
-				memcpy_co_monitor_passage_func_short_fnsave_sysenter(pp->code);
-			} else {
-				memcpy_co_monitor_passage_func_fnsave_sysenter(pp->code);
-			}
+		if (!co_is_pae_enabled()) {
+			memcpy_co_monitor_passage_func_short(pp->code);
 		} else {
-			if (!co_is_pae_enabled()) {
-				memcpy_co_monitor_passage_func_short_fnsave(pp->code);
-			} else {
-				memcpy_co_monitor_passage_func_fnsave(pp->code);
-			}
+			memcpy_co_monitor_passage_func(pp->code);
 		}
 	}
 
@@ -874,11 +770,6 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 	pp->linuxvm_state.gs = \
 	pp->linuxvm_state.ss = cmon->arch_info.kernel_ds;
 
-	if (caps & (1 << CO_ARCH_X86_FEATURE_FXSR))
-		co_fxsave(pp->linuxvm_state.fxstate);
-	else
-		co_fnsave(pp->linuxvm_state.fxstate);
-
 	co_passage_page_dump(pp);
 
 	return CO_RC_OK;
@@ -886,5 +777,18 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 
 void co_host_switch_wrapper(co_monitor_t *cmon)
 {
+	if (co_get_cr4() & CO_ARCH_X86_CR4_VMXE) {
+
+		/*
+		 * An other virtualization is running in VMX mode.
+		 * coLinux does not cooperate with it.
+		 * Abort the guest, but don't crash the host for now.
+		 */
+
+		co_passage_page->operation = CO_OPERATION_TERMINATE;
+		co_passage_page->params[0] = CO_TERMINATE_VMXE;
+		return;
+	}
+
 	co_switch();
 }

@@ -376,26 +376,37 @@ static void callback_return(co_monitor_t *cmon)
 
 static bool_t co_terminate(co_monitor_t *cmon)
 {
+	unsigned int len = co_passage_page->params[3];
+	char *str = (char *)&co_passage_page->params[4];
+
 	co_os_timer_deactivate(cmon->timer);
 
 	cmon->termination_reason = co_passage_page->params[0];
 
+	if (cmon->termination_reason == CO_TERMINATE_PANIC) {
+		if (len >= sizeof(cmon->bug_info.text)-1)
+			len = sizeof(cmon->bug_info.text)-1;
+
+		co_memcpy(cmon->bug_info.text, str, len);
+		cmon->bug_info.text[len] = 0;
+
+		co_debug_system("PANIC: %s", cmon->bug_info.text);
+	} else
 	if (cmon->termination_reason == CO_TERMINATE_BUG) {
-		int len;
-		char *str = (char *)&co_passage_page->params[4];
 		cmon->bug_info.code = co_passage_page->params[1];
 		cmon->bug_info.line = co_passage_page->params[2];
 
-		len = co_strlen(str);
-		if (len < sizeof(cmon->bug_info.file)-1)
-			co_snprintf(cmon->bug_info.file, sizeof(cmon->bug_info.file), "%s", str);
-		else
+		if (len < sizeof(cmon->bug_info.text)-1) {
+			co_memcpy(cmon->bug_info.text, str, len);
+			cmon->bug_info.text[len] = 0;
+		} else {
 			/* show the end of filename */
-			co_snprintf(cmon->bug_info.file, sizeof(cmon->bug_info.file),
-				    "...%s", str + len - sizeof(cmon->bug_info.file) + 4);
+			co_snprintf(cmon->bug_info.text, sizeof(cmon->bug_info.text),
+				    "...%s", str + len - sizeof(cmon->bug_info.text) + 4);
+		}
 
 		co_debug_system("BUG%ld at %s:%ld", cmon->bug_info.code,
-				cmon->bug_info.file, cmon->bug_info.line);
+				cmon->bug_info.text, cmon->bug_info.line);
 	}
 
 	cmon->state = CO_MONITOR_STATE_TERMINATED;
@@ -763,8 +774,8 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 
 	return rc;
 
-error_3:
 #ifdef CONFIG_COOPERATIVE_VIDEO
+error_3:
 	co_monitor_unregister_video_devices(cmon);
 #endif
 error_2:

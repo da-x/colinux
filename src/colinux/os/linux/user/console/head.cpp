@@ -33,21 +33,6 @@ COLINUX_DEFINE_MODULE("colinux-fltk-console");
  * - DA
  */
 
-#define MAIN_LEN 49
-static const short int main_key_scan_qwerty[MAIN_LEN] =
-{
-        /* this is my (102-key) keyboard layout, sorry if it doesn't quite match yours */
-	/* `    1    2    3    4    5    6    7    8    9    0    -    = */
-	0x29,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0A,0x0B,0x0C,0x0D,
-	/* q    w    e    r    t    y    u    i    o    p    [    ] */
-	0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,0x1A,0x1B,
-	/* a    s    d    f    g    h    j    k    l    ;    '    \ */
-	0x1E,0x1F,0x20,0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x2B,
-	/* z    x    c    v    b    n    m    ,    .    / */
-	0x2C,0x2D,0x2E,0x2F,0x30,0x31,0x32,0x33,0x34,0x35,
-	0x56 /* the 102nd key (actually to the right of l-shift) */
-};
-
 static const short int nonchar_key_scan[256] =
 {
 	/* unused */
@@ -129,7 +114,7 @@ static const short int nonchar_key_scan2[256] =
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,              /*      */
 };
 
-static int scan_code_state[0x100];
+static int scan_code_state[0x200];
 
 static int global_event_hook(const XEvent& thisevent)
 {
@@ -138,7 +123,7 @@ static int global_event_hook(const XEvent& thisevent)
 	switch (xevent.type) {
 	case KeyPress:
 	case KeyRelease: {
-		co_scan_code_t sc, sc_down;
+		co_scan_code_t sc;
 		int len;
 		char buffer[0x40];
 		KeySym keysym;
@@ -159,19 +144,22 @@ static int global_event_hook(const XEvent& thisevent)
 			}
 		}	
 
-		sc.code = scan;
-		sc.down = (xevent.type == KeyPress);
-
-		if ((sc.down == 0) && (scan_code_state[sc.code] == 0)) {
-			sc_down = sc;
-			sc_down.down = 1;
-
-			co_user_console_handle_scancode(sc_down);
+		if (xevent.type != KeyPress) {
+			if (scan_code_state[scan] == 0)
+				return 0;	/* ignore release of not pressed keys */
+			scan_code_state[scan] = 0;
+			scan |= 0x80;
+		} else {
+			scan_code_state[scan] = 1;
 		}
-		else {
-			scan_code_state[sc.code] = sc.down;
+
+		sc.mode = CO_KBD_SCANCODE_RAW;
+		/* send e0 if extended key */
+		if (scan & 0xFF00) {
+			sc.code = 0xE0;
+			co_user_console_handle_scancode(sc);
 		}
-			   
+		sc.code = scan & 0xFF;
 		co_user_console_handle_scancode(sc);
 
 		break;

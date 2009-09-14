@@ -28,13 +28,6 @@
 #include "service.h"
 #include "res/service-message.h"
 
-/* 
- * The coLinux driver that the colinux service depends on - needs 
- * to be double-null terminated
- */
-
-#define CO_DRIVER_DEPENDENCY_NAME CO_DRIVER_NAME "\0\0"
-
 #define MAX_CMD_LINE_PATCHED 1024
 
 /*
@@ -160,13 +153,21 @@ static void patch_command_line_for_service(char *destbuf, const char *srcbuf)
 	*destbuf = 0;
 }
 
-co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char *original_commandline) 
+co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char *original_commandline, int network_types)
 {
 	SC_HANDLE schService;
 	SC_HANDLE schSCManager;
 	char exe_name[512];
 	char command[1024];
 	char patched_commandline[MAX_CMD_LINE_PATCHED];
+
+	/* 
+	 * The coLinux driver that the colinux service depends on - needs 
+	 * to be double-null terminated
+	 */
+
+	char dependency_names[80] = CO_DRIVER_NAME "\0";
+	int len = strlen (CO_DRIVER_NAME)+1;
 
 	co_terminal_print("daemon: installing service '%s'\n", service_name);
 	if (!GetModuleFileName(0, exe_name, sizeof(exe_name))) {
@@ -185,9 +186,18 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char 
 	co_snprintf(command, sizeof(command), "\"%s\" %s", exe_name, patched_commandline);
 	co_terminal_print("daemon: service command line: %s\n", command);
 
+	if (network_types & (1<<CO_NETDEV_TYPE_TAP)) {
+		memcpy(dependency_names + len, "tap0801co\0", 10);
+		len += 10;
+	}
+
+	if (network_types & (1<<CO_NETDEV_TYPE_BRIDGED_PCAP)) {
+		memcpy(dependency_names + len, "NPF\0", 4);
+	}
+
 	schService = CreateService(schSCManager, service_name, service_name, 
 				   SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START, 
-				   SERVICE_ERROR_NORMAL, command, NULL, NULL, CO_DRIVER_DEPENDENCY_NAME, 
+				   SERVICE_ERROR_NORMAL, command, NULL, NULL, dependency_names, 
 				   NULL, NULL);
 
 	if (schService != 0) {	

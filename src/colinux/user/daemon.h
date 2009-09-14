@@ -32,6 +32,7 @@ typedef struct co_daemon_start_parameters {
 	co_config_t config;
 	bool_t pidfile_specified;
 	co_pathname_t pidfile;
+	int network_types;
 } co_start_parameters_t;
 
 typedef struct co_daemon {

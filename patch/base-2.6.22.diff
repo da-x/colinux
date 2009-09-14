@@ -251,7 +251,7 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/kernel/cooperative.c
-@@ -0,0 +1,244 @@
+@@ -0,0 +1,226 @@
 +#include <linux/kernel.h>
 +#include <linux/string.h>
 +#include <linux/interrupt.h>
@@ -285,6 +285,8 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +	"");
 +
 +int co_passage_page_holding_count = 0;
++bool co_host_fpu_saved = 0;
++char co_host_fpu[0x200] __attribute__ ((__aligned__(16)));
 +
 +static void co_early_cpu_init(void)
 +{
@@ -358,35 +360,15 @@ Index: linux-2.6.22-source/arch/i386/kernel/cooperative.c
 +
 +static void co_switch_wrapper_protected(void)
 +{
-+	unsigned long fs;
-+	unsigned long gs;
-+
 +	kernel_fpu_begin();
 +
-+	/*
-+	 * We don't trust the passage page code to safely restore %gs and %fs.
-+	 *
-+	 * This wrapper ensures that if %fs or %gs are invalid, the processes
-+	 * exits with a segmentation fault rather than bringing down the
-+	 * machine.
-+	 **/
-+	savesegment(fs, fs);
-+	savesegment(gs, gs);
-+
-+	/*
-+	 * Nullify the registers so the passage page code restores to
-+	 * null segment values on return.
-+	 */
-+	asm volatile("movl %0, %%fs;  movl %0, %%gs" : : "r" (0));
++	if (co_host_fpu_saved) {
++		CO_FPU_RESTORE(co_host_fpu);
++		co_host_fpu_saved = 0;
++	}
 +
 +	/* And switch... */
 +	co_switch();
-+
-+	/*
-+	 * Safely restore the registers.
-+	 */
-+	loadsegment(fs, fs);
-+	loadsegment(gs, gs);
 +
 +	kernel_fpu_end();
 +}
@@ -544,29 +526,6 @@ Index: linux-2.6.22-source/arch/i386/kernel/head.S
  	.long __BOOT_DS
  
  ready:	.byte 0
-Index: linux-2.6.22-source/arch/i386/kernel/i387.c
-===================================================================
---- linux-2.6.22-source.orig/arch/i386/kernel/i387.c
-+++ linux-2.6.22-source/arch/i386/kernel/i387.c
-@@ -10,6 +10,7 @@
- 
- #include <linux/sched.h>
- #include <linux/module.h>
-+#include <linux/cooperative_internal.h>
- #include <asm/processor.h>
- #include <asm/i387.h>
- #include <asm/math_emu.h>
-@@ -37,6 +38,10 @@
- 		if (mask == 0) mask = 0x0000ffbf;
- 	} 
- 	mxcsr_feature_mask &= mask;
-+
-+	if (cooperative_mode_enabled())
-+		return;
-+
- 	stts();
- }
- 
 Index: linux-2.6.22-source/arch/i386/kernel/process.c
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/process.c
@@ -847,6 +806,27 @@ Index: linux-2.6.22-source/arch/i386/kernel/traps.c
  	if (notify_die(DIE_DEBUG, "debug", regs, condition, error_code,
  					SIGTRAP) == NOTIFY_STOP)
  		return;
+@@ -1047,6 +1061,20 @@
+ 	struct task_struct *tsk = thread->task;
+ 
+ 	clts();		/* Allow maths ops (or we recurse) */
++#ifdef CONFIG_COOPERATIVE
++	if (!co_host_fpu_saved) {
++#ifndef CONFIG_PREEMPT
++		unsigned long flags;
++
++		local_irq_save(flags);
++#endif
++		CO_FPU_SAVE(co_host_fpu);
++		co_host_fpu_saved = 1;
++#ifndef CONFIG_PREEMPT
++		local_irq_restore(flags);
++#endif
++	}
++#endif /* CONFIG_COOPERATIVE */
+ 	if (!tsk_used_math(tsk))
+ 		init_fpu(tsk);
+ 	restore_fpu(tsk);
 Index: linux-2.6.22-source/arch/i386/kernel/vmlinux.lds.S
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/vmlinux.lds.S
@@ -1128,7 +1108,7 @@ Index: linux-2.6.22-source/include/asm-i386/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/asm-i386/cooperative.h
-@@ -0,0 +1,205 @@
+@@ -0,0 +1,200 @@
 +/*
 + *  linux/include/asm/cooperative.h
 + *
@@ -1248,11 +1228,6 @@ Index: linux-2.6.22-source/include/asm-i386/cooperative.h
 +
 +	unsigned long sysenter_eip;
 +        #define CO_ARCH_STATE_SYSENTER_EIP "0x78"
-+
-+	unsigned long unused_0x7c; /* fxstate must start on 0x10 boundary */
-+
-+	unsigned char fxstate[0x200];
-+        #define CO_ARCH_STATE_STACK_FXSTATE "0x80"
 +} __attribute__((packed)) co_arch_state_stack_t;
 +
 +#define CO_MAX_PARAM_SIZE 0x400
@@ -1338,7 +1313,7 @@ Index: linux-2.6.22-source/include/asm-i386/cooperative_internal.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/asm-i386/cooperative_internal.h
-@@ -0,0 +1,32 @@
+@@ -0,0 +1,55 @@
 +/*
 + *  linux/include/asm/cooperative_internal.h
 + *
@@ -1352,10 +1327,33 @@ Index: linux-2.6.22-source/include/asm-i386/cooperative_internal.h
 +
 +#ifdef CONFIG_COOPERATIVE
 +
++extern bool co_host_fpu_saved;
++extern char co_host_fpu[0x200];
++
 +extern void co_kernel_breakpoint(struct pt_regs * regs);
 +extern int co_kernel_debug(struct pt_regs * regs, long error_code, unsigned int condition);
 +
 +fastcall unsigned int do_IRQ(struct pt_regs *regs);
++
++#define CO_FPU_SAVE(x) \
++do \
++{ \
++	if (cpu_has_fxsr) \
++		asm("fxsave " #x " ; fnclex"); \
++	else \
++		asm("fnsave " #x " ; fwait"); \
++} \
++while (0)
++
++#define CO_FPU_RESTORE(x) \
++do \
++{ \
++	if (cpu_has_fxsr) \
++		asm("fxrstor " #x); \
++	else \
++		asm("frstor " #x); \
++} \
++while (0)
 +
 +#else
 +
@@ -1647,7 +1645,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -0,0 +1,384 @@
+@@ -0,0 +1,390 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1670,7 +1668,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +
 +#include <asm/cooperative.h>
 +
-+#define CO_LINUX_API_VERSION    12
++#define CO_LINUX_API_VERSION    13
 +
 +#pragma pack(0)
 +
@@ -1768,17 +1766,22 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +
 +	CO_DEVICE_MOUSE,
 +	CO_DEVICE_SCSI,
-+	CO_DEVICE_DISPLAY,
++	CO_DEVICE_VIDEO,
 +	CO_DEVICE_AUDIO,
 +	CO_DEVICE_PCI,
 +
 +	CO_DEVICES_TOTAL,
 +} co_device_t;
 +
++typedef enum {
++	CO_KBD_SCANCODE_RAW=0,
++	CO_KBD_SCANCODE_ASCII
++} mode_data_from_keyboard_t;
++
 +typedef struct {
 +	unsigned char code;
-+	int down;
-+} co_scan_code_t;
++	mode_data_from_keyboard_t mode;
++} __attribute__((packed)) co_scan_code_t;
 +
 +#define CO_MOUSE_MAX_X 2048
 +#define CO_MOUSE_MAX_Y 2048
@@ -1822,6 +1825,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_TERMINATE_INVALID_OPERATION,
 +	CO_TERMINATE_STACK_OVERFLOW,
 +	CO_TERMINATE_BUG,
++	CO_TERMINATE_VMXE,
 +} co_termination_reason_t;
 +
 +#ifdef CO_KERNEL
@@ -2036,7 +2040,7 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative_internal.h
-@@ -0,0 +1,127 @@
+@@ -0,0 +1,128 @@
 +/*
 + *  linux/include/linux/cooperative_internal.h
 + *
@@ -2081,6 +2085,7 @@ Index: linux-2.6.22-source/include/linux/cooperative_internal.h
 +extern void co_callback(struct pt_regs *regs);
 +extern void co_idle_processor(void);
 +extern void co_terminate(co_termination_reason_t reason);
++extern void co_terminate_panic(const char *text, int len);
 +extern void co_terminate_bug(int code, int line, const char *file);
 +extern void co_free_pages(unsigned long vaddr, int pages);
 +extern int co_alloc_pages(unsigned long vaddr, int pages);
@@ -2180,7 +2185,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -0,0 +1,447 @@
+@@ -0,0 +1,461 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2435,7 +2440,22 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	}
 +}
 +
-+void co_terminate_bug(int code, int line, const char *file)
++NORET_TYPE void co_terminate_panic(const char *text, int len)
++{
++	unsigned long flags;
++
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_TERMINATE;
++	co_passage_page->params[0] = CO_TERMINATE_PANIC;
++	co_passage_page->params[1] = 0;
++	co_passage_page->params[2] = 0;
++	co_passage_page->params[3] = len;
++	memcpy((char *)&co_passage_page->params[4], text, len+1);
++	co_switch_wrapper();
++	/* This doesn't never return. */
++}
++
++NORET_TYPE void co_terminate_bug(int code, int line, const char *file)
 +{
 +	unsigned long flags;
 +
@@ -2447,20 +2467,19 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +	co_passage_page->params[3] = strlen(file);
 +	strcpy((char *)&co_passage_page->params[4], file);
 +	co_switch_wrapper();
-+	/* This doesn't really return. This code shouldn't be running. */
-+	co_passage_page_release(flags);
++	/* This doesn't never return. */
 +}
 +
-+void co_terminate(co_termination_reason_t reason)
++NORET_TYPE void co_terminate(co_termination_reason_t reason)
 +{
 +	unsigned long flags;
 +
 +	co_passage_page_acquire(&flags);
 +	co_passage_page->operation = CO_OPERATION_TERMINATE;
 +	co_passage_page->params[0] = reason;
++	co_passage_page->params[3] = 0; /* len */
 +	co_switch_wrapper();
-+	/* This doesn't really return. This code shouldn't be running. */
-+	co_passage_page_release(flags);
++	/* This doesn't never return. */
 +}
 +
 +unsigned long co_get_host_time(void)
@@ -2640,12 +2659,18 @@ Index: linux-2.6.22-source/kernel/panic.c
  #include <linux/kexec.h>
  #include <linux/debug_locks.h>
  
-@@ -80,6 +81,10 @@
+@@ -75,11 +76,15 @@
+ 
+ 	bust_spinlocks(1);
+ 	va_start(args, fmt);
+-	vsnprintf(buf, sizeof(buf), fmt, args);
++	i = vsnprintf(buf, sizeof(buf), fmt, args);
+ 	va_end(args);
  	printk(KERN_EMERG "Kernel panic - not syncing: %s\n",buf);
  	bust_spinlocks(0);
  
 +	if (cooperative_mode_enabled()) {
-+		co_terminate(CO_TERMINATE_PANIC);
++		co_terminate_panic(buf, i);
 +	}
 +
  	/*

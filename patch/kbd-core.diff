@@ -2,7 +2,7 @@ Index: linux-2.6.22-source/drivers/input/serio/cokbd.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/drivers/input/serio/cokbd.c
-@@ -0,0 +1,147 @@
+@@ -0,0 +1,153 @@
 +/*
 + *  Cooperative Linux virtual keyboard controller driver
 + *
@@ -23,6 +23,7 @@ Index: linux-2.6.22-source/drivers/input/serio/cokbd.c
 +#include <linux/init.h>
 +#include <linux/serio.h>
 +#include <linux/sched.h>
++#include <linux/kbd_kern.h>
 +#include <linux/cooperative_internal.h>
 +
 +#include <asm/io.h>
@@ -123,11 +124,16 @@ Index: linux-2.6.22-source/drivers/input/serio/cokbd.c
 +		co_scan_code_t *sc = (co_scan_code_t *)message->data;
 +		unsigned long scancode = sc->code;
 +
-+		if (!sc->down)
-+			scancode |= 0x80;
++		switch (sc->mode)
++		{
++		    case CO_KBD_SCANCODE_RAW:
++			serio_interrupt(&cokbd_port, scancode, 0);
++			break;
 +
-+		serio_interrupt(&cokbd_port, scancode, 0);
-+
++		    case CO_KBD_SCANCODE_ASCII:
++			keyboard_inject_utf8(scancode);
++			break;
++		}
 +		co_free_message(node_message);
 +	}
 +

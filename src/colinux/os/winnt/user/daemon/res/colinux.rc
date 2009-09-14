@@ -16,7 +16,7 @@ FILEOS VOS__WINDOWS32
       VALUE "LegalCopyright","Copyright (c) coLinux project"
       VALUE "OriginalFilename",""
       VALUE "ProductName", "coLinux"
-      VALUE "ProductVersion", CO_VERSION_STRING
+      VALUE "ProductVersion", CO_PRODUCT_STRING
     }
   }
 }
