@@ -29,15 +29,12 @@ kernel:
 download:
 	@cd bin && ./build-all.sh --download-only
 
-# Run only ones the premaid.sh for installer or package
-src/colinux/os/winnt/user/install/premaid/linux.sys: \
-		src/colinux/os/winnt/build/linux.sys
-	@cd src/colinux/os/winnt/user/install && . ./premaid.sh
-
 # Create a pre-distributabel package as ZIP
-package: src/colinux/os/winnt/user/install/premaid/linux.sys
+package: src/colinux/os/winnt/build/linux.sys
+	@cd bin && ./premaid.sh --update
 	@. bin/build-common.sh ; build_package
 
 # Create installer (need wine and running X11)
-installer: src/colinux/os/winnt/user/install/premaid/linux.sys
+installer: src/colinux/os/winnt/build/linux.sys
+	@cd bin && ./premaid.sh --update
 	@cd src && make installer
