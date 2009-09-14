@@ -1,4 +1,4 @@
-* Version 0.8.0
+* Version 0.7.5
   * Bug #1959846, #2760666: Don't crash the host, if an other virtualization
     runs in VMX mode.
 
