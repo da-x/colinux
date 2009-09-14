@@ -1,5 +1,5 @@
 base-2.6.25.diff
-# gcc412fix.diff
+gcc412fix.diff
 timer-2.6.25.diff
 coconsole-core.diff
 coconsole-2.6.25.diff
