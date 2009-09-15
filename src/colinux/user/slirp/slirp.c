@@ -702,10 +702,3 @@ int slirp_redir(int is_udp, int host_port,
     }
     return 0;
 }
-
-int slirp_add_exec(int do_pty, const char *args, int addr_low_byte, 
-                  int guest_port)
-{
-    return add_exec(&exec_list, do_pty, (char *)args, 
-                    addr_low_byte, htons(guest_port));
-}
