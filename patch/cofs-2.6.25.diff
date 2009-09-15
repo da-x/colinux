@@ -117,11 +117,12 @@ Index: linux-2.6.25-source/fs/cofusefs/file.c
  			if(err == -EWOULDBLOCK) {
  				__set_page_dirty_nobuffers(page);
  				err = 0;
-@@ -417,7 +417,6 @@
+@@ -417,7 +417,7 @@
  	.open		= fuse_open,
  	.release	= fuse_release,
  	.fsync		= fuse_fsync,
 -	.sendfile	= generic_file_sendfile,
++	.splice_read	= generic_file_splice_read,
  };
  
  static struct address_space_operations fuse_file_aops  = {
