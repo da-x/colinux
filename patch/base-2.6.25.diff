@@ -539,29 +539,6 @@ Index: linux-2.6.25-source/arch/x86/kernel/head_32.S
  	.long __BOOT_DS
  
  ready:	.byte 0
-Index: linux-2.6.25-source/arch/x86/kernel/i387.c
-===================================================================
---- linux-2.6.25-source.orig/arch/x86/kernel/i387.c
-+++ linux-2.6.25-source/arch/x86/kernel/i387.c
-@@ -9,6 +9,7 @@
- #include <linux/sched.h>
- #include <linux/module.h>
- #include <linux/regset.h>
-+#include <linux/cooperative_internal.h>
- #include <asm/processor.h>
- #include <asm/i387.h>
- #include <asm/math_emu.h>
-@@ -54,6 +55,10 @@
- 			mask = 0x0000ffbf;
- 	}
- 	mxcsr_feature_mask &= mask;
-+
-+	if (cooperative_mode_enabled())
-+		return;
-+
- 	stts();
- }
- 
 Index: linux-2.6.25-source/arch/x86/kernel/process_32.c
 ===================================================================
 --- linux-2.6.25-source.orig/arch/x86/kernel/process_32.c
@@ -872,6 +849,33 @@ Index: linux-2.6.25-source/arch/x86/kernel/traps_32.c
  	if (notify_die(DIE_DEBUG, "debug", regs, condition, error_code,
  					SIGTRAP) == NOTIFY_STOP)
  		return;
+@@ -1114,13 +1126,26 @@
+ {
+ 	struct thread_info *thread = current_thread_info();
+ 	struct task_struct *tsk = thread->task;
++#if !defined(CONFIG_PREEMPT) && defined(CONFIG_COOPERATIVE)
++	unsigned long flags;
+ 
++	local_irq_save(flags);
++#endif
+ 	clts();		/* Allow maths ops (or we recurse) */
++#ifdef CONFIG_COOPERATIVE
++	if (!co_host_fpu_saved) {
++		CO_FPU_SAVE(co_host_fpu);
++		co_host_fpu_saved = 1;
++	}
++#endif /* CONFIG_COOPERATIVE */
+ 	if (!tsk_used_math(tsk))
+ 		init_fpu(tsk);
+ 	restore_fpu(tsk);
+ 	thread->status |= TS_USEDFPU;	/* So we fnsave on switch_to() */
+ 	tsk->fpu_counter++;
++#if !defined(CONFIG_PREEMPT) && defined(CONFIG_COOPERATIVE)
++	local_irq_restore(flags);
++#endif
+ }
+ EXPORT_SYMBOL_GPL(math_state_restore);
+ 
 Index: linux-2.6.25-source/arch/x86/mm/fault.c
 ===================================================================
 --- linux-2.6.25-source.orig/arch/x86/mm/fault.c
