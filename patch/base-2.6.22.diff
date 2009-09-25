@@ -806,27 +806,33 @@ Index: linux-2.6.22-source/arch/i386/kernel/traps.c
  	if (notify_die(DIE_DEBUG, "debug", regs, condition, error_code,
  					SIGTRAP) == NOTIFY_STOP)
  		return;
-@@ -1047,6 +1061,20 @@
+@@ -1045,13 +1059,26 @@
+ {
+ 	struct thread_info *thread = current_thread_info();
  	struct task_struct *tsk = thread->task;
++#if !defined(CONFIG_PREEMPT) && defined(CONFIG_COOPERATIVE)
++	unsigned long flags;
  
++	local_irq_save(flags);
++#endif
  	clts();		/* Allow maths ops (or we recurse) */
 +#ifdef CONFIG_COOPERATIVE
 +	if (!co_host_fpu_saved) {
-+#ifndef CONFIG_PREEMPT
-+		unsigned long flags;
-+
-+		local_irq_save(flags);
-+#endif
 +		CO_FPU_SAVE(co_host_fpu);
 +		co_host_fpu_saved = 1;
-+#ifndef CONFIG_PREEMPT
-+		local_irq_restore(flags);
-+#endif
 +	}
 +#endif /* CONFIG_COOPERATIVE */
  	if (!tsk_used_math(tsk))
  		init_fpu(tsk);
  	restore_fpu(tsk);
+ 	thread->status |= TS_USEDFPU;	/* So we fnsave on switch_to() */
+ 	tsk->fpu_counter++;
++#if !defined(CONFIG_PREEMPT) && defined(CONFIG_COOPERATIVE)
++	local_irq_restore(flags);
++#endif
+ }
+ 
+ #ifndef CONFIG_MATH_EMULATION
 Index: linux-2.6.22-source/arch/i386/kernel/vmlinux.lds.S
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/vmlinux.lds.S
