@@ -494,6 +494,16 @@ Index: linux-2.6.22-source/arch/i386/kernel/entry.S
  	jmp ret_from_intr
  ENDPROC(common_interrupt)
  	CFI_ENDPROC
+@@ -724,6 +728,9 @@
+ 	testl $0x4, %eax		# EM (math emulation bit)
+ 	jne device_not_available_emulate
+ 	preempt_stop(CLBR_ANY)
++#if defined(CONFIG_COOPERATIVE) && !defined(CONFIG_PREEMPT)
++	DISABLE_INTERRUPTS(CLBR_ANY)
++#endif
+ 	call math_state_restore
+ 	jmp ret_from_exception
+ device_not_available_emulate:
 Index: linux-2.6.22-source/arch/i386/kernel/head.S
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/head.S
@@ -806,15 +816,9 @@ Index: linux-2.6.22-source/arch/i386/kernel/traps.c
  	if (notify_die(DIE_DEBUG, "debug", regs, condition, error_code,
  					SIGTRAP) == NOTIFY_STOP)
  		return;
-@@ -1045,13 +1059,26 @@
- {
- 	struct thread_info *thread = current_thread_info();
+@@ -1047,6 +1061,12 @@
  	struct task_struct *tsk = thread->task;
-+#if !defined(CONFIG_PREEMPT) && defined(CONFIG_COOPERATIVE)
-+	unsigned long flags;
  
-+	local_irq_save(flags);
-+#endif
  	clts();		/* Allow maths ops (or we recurse) */
 +#ifdef CONFIG_COOPERATIVE
 +	if (!co_host_fpu_saved) {
@@ -825,14 +829,6 @@ Index: linux-2.6.22-source/arch/i386/kernel/traps.c
  	if (!tsk_used_math(tsk))
  		init_fpu(tsk);
  	restore_fpu(tsk);
- 	thread->status |= TS_USEDFPU;	/* So we fnsave on switch_to() */
- 	tsk->fpu_counter++;
-+#if !defined(CONFIG_PREEMPT) && defined(CONFIG_COOPERATIVE)
-+	local_irq_restore(flags);
-+#endif
- }
- 
- #ifndef CONFIG_MATH_EMULATION
 Index: linux-2.6.22-source/arch/i386/kernel/vmlinux.lds.S
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/vmlinux.lds.S
