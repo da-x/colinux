@@ -123,38 +123,65 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
  	}
  
  	co_passage_page_assert_valid();
-@@ -455,23 +455,23 @@
+@@ -453,33 +453,42 @@
+ 	void *buffer;
+ 	unsigned long buflen;
  	int act_len;
++	int i;
  
  	/* Scatter/Gather */
 -	if (scp->use_sg) {
 +	if (scsi_sg_count(scp)) {
  		struct scatterlist *sg;
  
- 		/* Should never be more than 1 for non r/w transfers */
+-		/* Should never be more than 1 for non r/w transfers */
 -		if (scp->use_sg > 1) panic("COSCSI: response: use_sg (%d) > 1!\n", scp->use_sg);
-+		if (scsi_sg_count(scp) > 1) panic("COSCSI: response: use_sg (%d) > 1!\n", scsi_sg_count(scp));
++		/* scatter-gather list too long? */
++		BUG_ON(scsi_sg_count(scp) > COSCSI_SGSIZE);
  
 -		sg = (struct scatterlist *)scp->request_buffer;
-+		sg = scsi_sglist(scp);
++		scsi_for_each_sg(scp, sg, scsi_sg_count(scp), i) {
  #if COSCSI_DEBUG
- 		if (wp->dp->debug) printk(KERN_INFO "response: sg: page: %p, offset: %d, length: %d\n",
+-		if (wp->dp->debug) printk(KERN_INFO "response: sg: page: %p, offset: %d, length: %d\n",
 -			sg->page, sg->offset, sg->length);
-+			sg_page(sg), sg->offset, sg->length);
++			if (wp->dp->debug) printk(KERN_INFO "response: sg: page: %p, offset: %d, length: %d\n",
++				sg_page(sg), sg->offset, sg->length);
  #endif
 -		buffer = page_address(sg->page) + sg->offset;
-+		buffer = sg_virt(sg);
- 		buflen = sg->length;
+-		buflen = sg->length;
++			buffer = sg_virt(sg);
++			buflen = sg->length;
++			act_len = min(buflen, len);
++#if COSCSI_DEBUG_COMM
++			if (wp->dp->debug) dump_data(wp->dp->unit, "response", data, act_len);
++#endif
++			memcpy(buffer, data, act_len);
++			data += act_len;
++			len -= act_len;
++ 		}
  	/* Direct */
          } else {
 -		buffer = scp->request_buffer;
 -		buflen = scp->request_bufflen;
+-	}
+-	if (!buflen) return GOOD;
 +		buffer = scsi_sglist(scp);
 +		buflen = scsi_bufflen(scp);
- 	}
- 	if (!buflen) return GOOD;
++		if (!buflen) return GOOD;
  
-@@ -509,7 +509,7 @@
+-	act_len = min(buflen, len);
++		act_len = min(buflen, len);
+ #if COSCSI_DEBUG_COMM
+-	if (wp->dp->debug) dump_data(wp->dp->unit, "response", data, act_len);
++		if (wp->dp->debug) dump_data(wp->dp->unit, "response", data, act_len);
+ #endif
+-	memcpy(buffer, data, act_len);
++		memcpy(buffer, data, act_len);
++	}
+ 
+ 	return GOOD;
+ }
+@@ -509,7 +518,7 @@
  
  	alloc_len = (wp->scp->cmnd[3] << 8) + wp->scp->cmnd[4];
  #if COSCSI_DEBUG_INQ
@@ -163,7 +190,7 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
  #endif
  
  	/* EVPD? */
-@@ -1096,8 +1096,8 @@
+@@ -1096,8 +1105,8 @@
  static struct pci_driver coscsi_pci_driver = {
  	.name		= "coscsi",
  	.id_table	= coscsi_pci_ids,
