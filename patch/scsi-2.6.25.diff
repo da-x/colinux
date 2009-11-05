@@ -47,16 +47,16 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
 ===================================================================
 --- linux-2.6.25-source.orig/drivers/scsi/coscsi.c
 +++ linux-2.6.25-source/drivers/scsi/coscsi.c
-@@ -154,7 +154,7 @@
- 		printk(KERN_INFO "coscsi_isr: scp: %p\n", scp);
- #endif
+@@ -151,7 +151,7 @@
+ 		info = (co_scsi_intr_t *) &message->data;
+ 		scp = info->ctx;
  		scp->result = info->result;
 -		scp->resid = info->delta;
 +		scsi_set_resid(scp, info->delta);
  #if COSCSI_DEBUG_ISR
- 		printk(KERN_INFO "coscsi_isr: result: %d, delta: %d\n", result, delta);
+ 		printk(KERN_INFO "coscsi_isr: scp: %p result: %d, delta: %d\n", scp, info->result, info->delta);
  #endif
-@@ -247,7 +247,7 @@
+@@ -244,7 +244,7 @@
  
  static int host_rw(coscsi_worker_t *wp, unsigned long long lba, unsigned long num, int write)
  {
@@ -65,7 +65,7 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
  	struct scsi_cmnd *scp = wp->scp;
  	unsigned long flags;
  	co_scsi_io_t *iop;
-@@ -265,7 +265,7 @@
+@@ -262,7 +262,7 @@
  
  
  	/* XXX needed when clustering is enabled */
@@ -74,7 +74,7 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
  
  	/* Get passage page */
  	co_passage_page_assert_valid();
-@@ -281,7 +281,7 @@
+@@ -278,7 +278,7 @@
  	iop->offset = lba * scp->device->sector_size;
  	iop->count = count;
  	iop->write = write;
@@ -83,7 +83,7 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
  	iop->reqlen = total = num * scp->device->sector_size;
  
  	/* Do it */
-@@ -290,7 +290,7 @@
+@@ -287,7 +287,7 @@
  	rc = co_passage_page->params[0];
         	co_passage_page_release(flags);
  
@@ -92,7 +92,7 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
  
  #if COSCSI_DUMP_STATS
  	if (rc == GOOD) {
-@@ -387,23 +387,23 @@
+@@ -384,23 +384,23 @@
  	}
  
  	/* Scatter/Gather */
@@ -107,7 +107,7 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
 -		sg = (struct scatterlist *)scp->request_buffer;
 +		sg = scsi_sglist(scp);
  #if COSCSI_DEBUG_HOST
- 		if (dp->debug) printk(KERN_INFO "response: sg: page: %p, offset: %d, length: %d\n",
+ 		if (dp->debug) printk(KERN_INFO "host_pass: sg: page: %p, offset: %d, length: %d\n",
 -			sg->page, sg->offset, sg->length);
 +			sg_page(sg), sg->offset, sg->length);
  #endif
@@ -123,7 +123,7 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
  	}
  
  	co_passage_page_assert_valid();
-@@ -458,23 +458,23 @@
+@@ -455,23 +455,23 @@
  	int act_len;
  
  	/* Scatter/Gather */
@@ -154,7 +154,7 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
  	}
  	if (!buflen) return GOOD;
  
-@@ -512,7 +512,7 @@
+@@ -509,7 +509,7 @@
  
  	alloc_len = (wp->scp->cmnd[3] << 8) + wp->scp->cmnd[4];
  #if COSCSI_DEBUG_INQ
@@ -163,7 +163,7 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
  #endif
  
  	/* EVPD? */
-@@ -1099,8 +1099,8 @@
+@@ -1096,8 +1096,8 @@
  static struct pci_driver coscsi_pci_driver = {
  	.name		= "coscsi",
  	.id_table	= coscsi_pci_ids,
