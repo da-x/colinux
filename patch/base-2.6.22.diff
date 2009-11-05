@@ -1647,7 +1647,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -0,0 +1,390 @@
+@@ -0,0 +1,397 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1996,12 +1996,19 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +			unsigned long long size;
 +			unsigned long long disk_size;
 +			vm_ptr_t address;
++			void * irq_request;
++			int async;
 +		};
 +		struct {
 +			char alias[20];
 +		};
 +	};
 +} __attribute__((packed)) co_block_request_t;
++
++typedef struct {
++	void * irq_request;
++	int uptodate;
++} __attribute__((packed)) co_block_intr_t;
 +
 +typedef struct {
 +	co_network_request_type_t type;
@@ -2187,7 +2194,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -0,0 +1,461 @@
+@@ -0,0 +1,462 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2314,6 +2321,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +#endif
 +	case CO_DEVICE_SCSI: irq = SCSI_IRQ; break;
 +	case CO_DEVICE_MOUSE: irq = MOUSE_IRQ; break;
++	case CO_DEVICE_BLOCK: irq = BLOCKDEV_IRQ; break;
 +	default:
 +		BUG_ON((unsigned long)message->device >= (unsigned long)CO_DEVICES_TOTAL);
 +		co_free_message(node_message);

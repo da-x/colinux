@@ -9,7 +9,6 @@ conet-pci-core.diff
 conet-2.6.25.diff
 cobd-core.diff
 cobd-2.6.25.diff
-cobd-async-2.6.25.diff
 kbd-core.diff
 kbd-2.6.25.diff
 mouse-core.diff

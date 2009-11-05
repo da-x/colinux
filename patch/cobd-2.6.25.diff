@@ -46,7 +46,7 @@ Index: linux-2.6.25-source/drivers/block/cobd.c
 ===================================================================
 --- linux-2.6.25-source.orig/drivers/block/cobd.c
 +++ linux-2.6.25-source/drivers/block/cobd.c
-@@ -178,7 +178,7 @@
+@@ -179,7 +179,7 @@
  	return ret;
  }
  
@@ -55,7 +55,7 @@ Index: linux-2.6.25-source/drivers/block/cobd.c
  {
          struct request *req;
  	struct cobd_device *cobd;
-@@ -272,8 +272,7 @@
+@@ -314,8 +314,7 @@
  	kfree(cobd_disks);
  
  fail_malloc:
@@ -63,9 +63,9 @@ Index: linux-2.6.25-source/drivers/block/cobd.c
 -		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
 +	unregister_blkdev(COLINUX_MAJOR, "cobd");
  
- 	return result;
- }
-@@ -470,8 +469,7 @@
+ fail_irq:
+ 	free_irq(BLOCKDEV_IRQ, NULL);
+@@ -514,8 +513,7 @@
  		put_disk(cobd_disks[i]);
  	}
  
@@ -73,5 +73,5 @@ Index: linux-2.6.25-source/drivers/block/cobd.c
 -		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
 +	unregister_blkdev(COLINUX_MAJOR, "cobd");
  
+ 	free_irq(BLOCKDEV_IRQ, NULL);
  	kfree(cobd_disks);
- }
