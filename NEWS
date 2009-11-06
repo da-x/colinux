@@ -1,6 +1,8 @@
 * Version 0.8.0
   * Kernel:
     - has been updated to 2.6.25.20
+    - Bug 2890857#: Fixed panic "COSCSI: response: use_sg (2) > 1".
+      Walking thought scsi scatterlist with more as 1 segment now.
 
 * Version 0.7.5
   * Bug #1959846, #2760666: Don't crash the host, if an other virtualization
