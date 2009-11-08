@@ -1024,7 +1024,39 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  static struct kcore_list kcore_mem, kcore_vmalloc;
  
-@@ -662,8 +684,10 @@
+@@ -625,6 +647,9 @@
+ #ifdef CONFIG_HIGHMEM
+ 		"    pkmap   : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+ #endif
++#ifdef CONFIG_COOPERATIVE
++		"    colinux : 0x%08lx - 0x%08lx   (%4ld MB)\n"
++#endif
+ 		"    vmalloc : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+ 		"    lowmem  : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+ 		"      .init : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+@@ -638,6 +663,11 @@
+ 		(LAST_PKMAP*PAGE_SIZE) >> 10,
+ #endif
+ 
++#ifdef CONFIG_COOPERATIVE
++		CO_VPTR_BASE_START, CO_VPTR_BASE_END,
++		(CO_VPTR_BASE_END - CO_VPTR_BASE_START) >> 20,
++#endif
++
+ 		VMALLOC_START, VMALLOC_END,
+ 		(VMALLOC_END - VMALLOC_START) >> 20,
+ 
+@@ -658,12 +688,20 @@
+ 	BUG_ON(PKMAP_BASE + LAST_PKMAP*PAGE_SIZE	> FIXADDR_START);
+ 	BUG_ON(VMALLOC_END				> PKMAP_BASE);
+ #endif
++#ifdef CONFIG_COOPERATIVE
++	BUG_ON(CO_VPTR_BASE_END				> FIXADDR_START);
++	BUG_ON(VMALLOC_END				> CO_VPTR_BASE_START);
++	if (VMALLOC_START > VMALLOC_END)
++		panic("LOWMEM overlaps vmalloc. Decrease total memory with 'mem=...'!");
++#endif
+ 	BUG_ON(VMALLOC_START				> VMALLOC_END);
  	BUG_ON((unsigned long)high_memory		> VMALLOC_START);
  #endif /* double-sanity-check paranoia */
  
@@ -1035,7 +1067,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  	cpa_init();
  
-@@ -694,6 +718,7 @@
+@@ -694,6 +732,7 @@
   * This function cannot be __init, since exceptions don't work in that
   * section.  Put this after the callers, so that it cannot be inlined.
   */
@@ -1043,7 +1075,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  static noinline int do_test_wp_bit(void)
  {
  	char tmp_reg;
-@@ -713,6 +738,7 @@
+@@ -713,6 +752,7 @@
  
  	return flag;
  }
@@ -1051,7 +1083,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  #ifdef CONFIG_DEBUG_RODATA
  const int rodata_test_data = 0xC3;
-@@ -770,7 +796,7 @@
+@@ -770,7 +810,7 @@
  	 */
  	printk(KERN_INFO "debug: unmapping init memory %08lx..%08lx\n",
  		begin, PAGE_ALIGN(end));
@@ -1060,7 +1092,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  #else
  	unsigned long addr;
  
-@@ -779,7 +805,8 @@
+@@ -779,7 +819,8 @@
  	 * we are going to free part of that, we need to make that
  	 * writeable first.
  	 */
@@ -1148,7 +1180,7 @@ Index: linux-2.6.25-source/include/asm-x86/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.25-source/include/asm-x86/cooperative.h
-@@ -0,0 +1,200 @@
+@@ -0,0 +1,221 @@
 +/*
 + *  linux/include/asm/cooperative.h
 + *
@@ -1342,6 +1374,27 @@ Index: linux-2.6.25-source/include/asm-x86/cooperative.h
 +#define CO_VPTR_IO_AREA_SIZE                 (0x10000)
 +#define CO_VPTR_IO_AREA_START                (CO_VPTR_BASE - 0x1200000)
 +#define CO_VPTR_SELF_MAP                     (CO_VPTR_BASE - 0x1400000)
++
++#define CO_VPTR_BASE_START			CO_VPTR_SELF_MAP
++#define CO_VPTR_BASE_END			CO_VPTR_BASE
++
++/*
++ *	Calculation of maximal Linux memory
++ *
++ *	0xffffc000 FIXADDR_START
++ *					 20 MB coLinux shared host
++ *	0xfe800000 CO_VPTR_BASE_START
++ *		   2*PAGE_SIZE		  8 KB free slot
++ *	0xfe7fe000 VMALLOC_END
++ *					  7 MB vmalloc
++ *	0xfe000000 VMALLOC_START
++ *		   VMALLOC_OFFSET	  8 MB free slot
++ *	0xfd800000 high_memory
++ *					984 MB lowmem
++ *	0xc0000000 PAGE_OFFSET
++ */
++
++#define CO_LOWMEMORY_MAX_MB 984
 +
 +typedef struct {
 +	unsigned long kernel_cs;
@@ -3514,7 +3567,16 @@ Index: linux-2.6.25-source/include/asm-x86/pgtable_32.h
  
  #include <linux/bitops.h>
  #include <linux/slab.h>
-@@ -173,10 +174,10 @@
+@@ -71,6 +72,8 @@
+ 
+ #ifdef CONFIG_HIGHMEM
+ # define VMALLOC_END	(PKMAP_BASE-2*PAGE_SIZE)
++#elif defined(CONFIG_COOPERATIVE)
++# define VMALLOC_END	(CO_VPTR_BASE_START-2*PAGE_SIZE)
+ #else
+ # define VMALLOC_END	(FIXADDR_START-2*PAGE_SIZE)
+ #endif
+@@ -173,10 +176,10 @@
  #define pte_offset_kernel(dir, address) \
  	((pte_t *) pmd_page_vaddr(*(dir)) +  pte_index(address))
  

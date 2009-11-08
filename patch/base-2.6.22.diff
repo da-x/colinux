@@ -979,7 +979,7 @@ Index: linux-2.6.22-source/arch/i386/mm/init.c
  
  	set_highmem_pages_init(bad_ppro);
  
-@@ -664,35 +677,33 @@
+@@ -664,35 +677,39 @@
  
  #if 1 /* double-sanity-check paranoia */
  	printk("virtual kernel memory layout:\n"
@@ -1004,6 +1004,12 @@ Index: linux-2.6.22-source/arch/i386/mm/init.c
 +	       (LAST_PKMAP*PAGE_SIZE) >> 10);
  #endif
  
++#ifdef CONFIG_COOPERATIVE
++	printk("    colinux : 0x%08lx - 0x%08lx   (%4ld MB)\n",
++		(unsigned long)CO_VPTR_SELF_MAP, (unsigned long)CO_VPTR_BASE,
++		(unsigned long)(CO_VPTR_BASE - CO_VPTR_SELF_MAP) >> 20);
++#endif
++
 +	printk("    vmalloc : 0x%08lx - 0x%08lx   (%4ld MB)\n",
  	       VMALLOC_START, VMALLOC_END,
 -	       (VMALLOC_END - VMALLOC_START) >> 20,
@@ -1028,7 +1034,20 @@ Index: linux-2.6.22-source/arch/i386/mm/init.c
  	       (unsigned long)&_text, (unsigned long)&_etext,
  	       ((unsigned long)&_etext - (unsigned long)&_text) >> 10);
  
-@@ -708,8 +719,10 @@
+@@ -700,6 +717,12 @@
+ 	BUG_ON(PKMAP_BASE+LAST_PKMAP*PAGE_SIZE > FIXADDR_START);
+ 	BUG_ON(VMALLOC_END                     > PKMAP_BASE);
+ #endif
++#ifdef CONFIG_COOPERATIVE
++	BUG_ON(CO_VPTR_BASE                    > FIXADDR_START);
++	BUG_ON(VMALLOC_END                     > CO_VPTR_SELF_MAP);
++	if (VMALLOC_START > VMALLOC_END)
++		panic("LOWMEM overlaps vmalloc. Decrease total memory with 'mem=...'!");
++#endif
+ 	BUG_ON(VMALLOC_START                   > VMALLOC_END);
+ 	BUG_ON((unsigned long)high_memory      > VMALLOC_START);
+ #endif /* double-sanity-check paranoia */
+@@ -708,8 +731,10 @@
  	if (!cpu_has_pae)
  		panic("cannot execute a PAE-enabled kernel on a PAE-less CPU!");
  #endif
@@ -1039,7 +1058,7 @@ Index: linux-2.6.22-source/arch/i386/mm/init.c
  
  	/*
  	 * Subtle. SMP is doing it's boot stuff late (because it has to
-@@ -769,6 +782,7 @@
+@@ -769,6 +794,7 @@
   * This function cannot be __init, since exceptions don't work in that
   * section.  Put this after the callers, so that it cannot be inlined.
   */
@@ -1047,7 +1066,7 @@ Index: linux-2.6.22-source/arch/i386/mm/init.c
  static int noinline do_test_wp_bit(void)
  {
  	char tmp_reg;
-@@ -791,6 +805,7 @@
+@@ -791,6 +817,7 @@
  	
  	return flag;
  }
@@ -1110,7 +1129,7 @@ Index: linux-2.6.22-source/include/asm-i386/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/asm-i386/cooperative.h
-@@ -0,0 +1,200 @@
+@@ -0,0 +1,202 @@
 +/*
 + *  linux/include/asm/cooperative.h
 + *
@@ -1304,6 +1323,8 @@ Index: linux-2.6.22-source/include/asm-i386/cooperative.h
 +#define CO_VPTR_IO_AREA_SIZE                 (0x10000)
 +#define CO_VPTR_IO_AREA_START                (CO_VPTR_BASE - 0x1200000)
 +#define CO_VPTR_SELF_MAP                     (CO_VPTR_BASE - 0x1400000)
++
++#define CO_LOWMEMORY_MAX_MB 984
 +
 +typedef struct {
 +	unsigned long kernel_cs;
@@ -1601,7 +1622,16 @@ Index: linux-2.6.22-source/include/asm-i386/pgtable.h
  struct mm_struct;
  struct vm_area_struct;
  
-@@ -468,10 +470,10 @@
+@@ -83,6 +85,8 @@
+ 			2*VMALLOC_OFFSET-1) & ~(VMALLOC_OFFSET-1))
+ #ifdef CONFIG_HIGHMEM
+ # define VMALLOC_END	(PKMAP_BASE-2*PAGE_SIZE)
++#elif defined(CONFIG_COOPERATIVE)
++# define VMALLOC_END	(CO_VPTR_SELF_MAP-2*PAGE_SIZE)
+ #else
+ # define VMALLOC_END	(FIXADDR_START-2*PAGE_SIZE)
+ #endif
+@@ -468,10 +472,10 @@
  #define pte_offset_kernel(dir, address) \
  	((pte_t *) pmd_page_vaddr(*(dir)) +  pte_index(address))
  
