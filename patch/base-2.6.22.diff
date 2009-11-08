@@ -177,14 +177,6 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  
  source kernel/power/Kconfig
  
-@@ -1056,6 +1078,7 @@
- endmenu
- 
- menu "Bus options (PCI, PCMCIA, EISA, MCA, ISA)"
-+	depends on !COOPERATIVE
- 
- config PCI
- 	bool "PCI support" if !X86_VISWS
 @@ -1264,7 +1287,7 @@
  
  config X86_BIOS_REBOOT

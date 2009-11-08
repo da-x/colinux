@@ -188,14 +188,6 @@ Index: linux-2.6.25-source/arch/x86/Kconfig
  
  config ARCH_HIBERNATION_HEADER
  	def_bool y
-@@ -1380,6 +1402,7 @@
- 
- 
- menu "Bus options (PCI etc.)"
-+	depends on !COOPERATIVE
- 
- config PCI
- 	bool "PCI support" if !X86_VISWS && !X86_VSMP
 Index: linux-2.6.25-source/arch/x86/Kconfig.cpu
 ===================================================================
 --- linux-2.6.25-source.orig/arch/x86/Kconfig.cpu

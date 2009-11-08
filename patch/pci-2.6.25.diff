@@ -2,15 +2,7 @@ Index: linux-2.6.25-source/arch/x86/Kconfig
 ===================================================================
 --- linux-2.6.25-source.orig/arch/x86/Kconfig
 +++ linux-2.6.25-source/arch/x86/Kconfig
-@@ -1402,7 +1402,6 @@
- 
- 
- menu "Bus options (PCI etc.)"
--	depends on !COOPERATIVE
- 
- config PCI
- 	bool "PCI support" if !X86_VISWS && !X86_VSMP
-@@ -1434,6 +1433,9 @@
+@@ -1433,6 +1433,9 @@
  	  direct access method and falls back to the BIOS if that doesn't
  	  work. If unsure, go with the default, which is "Any".
  
@@ -20,7 +12,7 @@ Index: linux-2.6.25-source/arch/x86/Kconfig
  config PCI_GOBIOS
  	bool "BIOS"
  
-@@ -1448,6 +1450,11 @@
+@@ -1447,6 +1450,11 @@
  
  endchoice
  
@@ -32,7 +24,7 @@ Index: linux-2.6.25-source/arch/x86/Kconfig
  config PCI_BIOS
  	def_bool y
  	depends on X86_32 && !X86_VISWS && PCI && (PCI_GOBIOS || PCI_GOANY)
-@@ -1505,6 +1512,7 @@
+@@ -1504,6 +1512,7 @@
  
  # x86_64 have no ISA slots, but do have ISA-style DMA.
  config ISA_DMA_API
