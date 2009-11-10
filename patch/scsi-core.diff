@@ -2,7 +2,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/drivers/scsi/coscsi.c
-@@ -0,0 +1,1154 @@
+@@ -0,0 +1,1160 @@
 +
 +#include <linux/module.h>
 +#include <linux/interrupt.h>
@@ -155,13 +155,10 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +
 +		info = (co_scsi_intr_t *) &message->data;
 +		scp = info->ctx;
-+#if COSCSI_DEBUG_ISR
-+		printk(KERN_INFO "coscsi_isr: scp: %p\n", scp);
-+#endif
 +		scp->result = info->result;
 +		scp->resid = info->delta;
 +#if COSCSI_DEBUG_ISR
-+		printk(KERN_INFO "coscsi_isr: result: %d, delta: %d\n", result, delta);
++		printk(KERN_INFO "coscsi_isr: scp: %p result: %d, delta: %d\n", scp, info->result, info->delta);
 +#endif
 +		scp->scsi_done(scp);
 +		co_free_message(node_message);
@@ -381,7 +378,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +*/
 +static int host_pass(coscsi_device_t *dp, struct scsi_cmnd *scp) {
 +	unsigned long flags;
-+	unsigned char *buffer;
++	void *buffer;
 +	unsigned long buflen;
 +	co_scsi_pass_t *pass;
 +	int rc;
@@ -400,7 +397,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +
 +		sg = (struct scatterlist *)scp->request_buffer;
 +#if COSCSI_DEBUG_HOST
-+		if (dp->debug) printk(KERN_INFO "response: sg: page: %p, offset: %d, length: %d\n",
++		if (dp->debug) printk(KERN_INFO "host_pass: sg: page: %p, offset: %d, length: %d\n",
 +			sg->page, sg->offset, sg->length);
 +#endif
 +		buffer = page_address(sg->page) + sg->offset;
@@ -431,7 +428,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +       	co_passage_page_release(flags);
 +
 +#if COSCSI_DEBUG_PASS
-+	if (rc == GOOD && dp->debug) dump_data(dp->unit, "response", buffer, buflen);
++	if (rc == GOOD && dp->debug) dump_data(dp->unit, "host_pass", buffer, buflen);
 +#endif
 +
 +#if COSCSI_DEBUG_HOST
@@ -458,36 +455,45 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +
 +static int response(coscsi_worker_t *wp, void *data, int len) {
 +	struct scsi_cmnd *scp = wp->scp;
-+	unsigned char *buffer;
++	void *buffer;
 +	unsigned long buflen;
 +	int act_len;
 +
 +	/* Scatter/Gather */
 +	if (scp->use_sg) {
 +		struct scatterlist *sg;
++		int i;
 +
 +		/* Should never be more than 1 for non r/w transfers */
-+		if (scp->use_sg > 1) panic("COSCSI: response: use_sg (%d) > 1!\n", scp->use_sg);
++		if (scp->use_sg > COSCSI_SGSIZE) panic("COSCSI: response: use_sg (%d) > %d!\n", scp->use_sg, COSCSI_SGSIZE);
 +
 +		sg = (struct scatterlist *)scp->request_buffer;
++		for (i = scp->use_sg; i; i--, sg++) {
 +#if COSCSI_DEBUG
-+		if (wp->dp->debug) printk(KERN_INFO "response: sg: page: %p, offset: %d, length: %d\n",
-+			sg->page, sg->offset, sg->length);
++			if (wp->dp->debug) printk(KERN_INFO "response: sg: page: %p, offset: %d, length: %d\n",
++				sg->page, sg->offset, sg->length);
 +#endif
-+		buffer = page_address(sg->page) + sg->offset;
-+		buflen = sg->length;
++			buffer = page_address(sg->page) + sg->offset;
++			buflen = sg->length;
++			act_len = min(buflen, len);
++#if COSCSI_DEBUG_COMM
++			if (wp->dp->debug) dump_data(wp->dp->unit, "response", data, act_len);
++#endif
++			memcpy(buffer, data, act_len);
++			data += act_len;
++			len -= act_len;
++		}
 +	/* Direct */
 +        } else {
 +		buffer = scp->request_buffer;
 +		buflen = scp->request_bufflen;
-+	}
-+	if (!buflen) return GOOD;
-+
-+	act_len = min(buflen, len);
++		if (!buflen) return GOOD;
++		act_len = min(buflen, len);
 +#if COSCSI_DEBUG_COMM
-+	if (wp->dp->debug) dump_data(wp->dp->unit, "response", data, act_len);
++		if (wp->dp->debug) dump_data(wp->dp->unit, "response", data, act_len);
 +#endif
-+	memcpy(buffer, data, act_len);
++		memcpy(buffer, data, act_len);
++	}
 +
 +	return GOOD;
 +}
