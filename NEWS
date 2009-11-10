@@ -1,3 +1,8 @@
+* Version 0.7.6
+  * Kernel:
+    - Bug #2893343: VMALLOC_END was overlapping coLinux shared host memory.
+      Maximal guest memory limit is 984 MB, host driver will adjust it.
+
 * Version 0.7.5
   * Bug #1959846, #2760666: Don't crash the host, if an other virtualization
     runs in VMX mode.
