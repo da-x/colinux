@@ -6,6 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  */
+ /* OS independent console support functions */
 
 #include <colinux/os/current/memory.h>
 #include <colinux/os/alloc.h>
@@ -21,6 +22,7 @@ static void blank_char(co_console_cell_t *cell)
 	cell->attr = 0x07;  /* white on black */
 }
 
+/* Create the console object */
 co_rc_t co_console_create(long x, long y, long max_blacklog, co_console_t **console_out)
 {
 	unsigned long struct_size;
@@ -31,10 +33,11 @@ co_rc_t co_console_create(long x, long y, long max_blacklog, co_console_t **cons
 	 * be more managable (and less code).
 	 */
 	struct_size = sizeof(co_console_cell_t)*(y + max_blacklog)*x;
-
-	if (struct_size <= 0 || struct_size > 32*1024)
+	
+        if (struct_size <= 0 || 
+            struct_size > sizeof(co_console_cell_t) * CO_CONSOLE_MAX_CHARS)
 		return CO_RC(INVALID_PARAMETER);
-
+		
 	struct_size += sizeof(co_console_t);
 
 	console = co_os_malloc(struct_size);
@@ -55,6 +58,7 @@ co_rc_t co_console_create(long x, long y, long max_blacklog, co_console_t **cons
 	return CO_RC(OK);
 }
 
+/* Free memory of the console object */
 void co_console_destroy(co_console_t *console)
 {
 	co_os_free(console);

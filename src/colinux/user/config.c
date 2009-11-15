@@ -7,10 +7,13 @@
  * the root directory.
  *
  */ 
+ /* OS independent command line and configuration file parser */
+ 
 #include <string.h>
 
 #include <colinux/common/libc.h>
 #include <colinux/common/config.h>
+#include <colinux/common/console.h>
 #include <colinux/user/cmdline.h>
 #include <colinux/os/user/file.h>
 #include <colinux/os/user/misc.h>
@@ -964,11 +967,10 @@ static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, co_conf
 		if (*p) p++;
 		y = strtol(p, &p, 0);
 
-		if (!(x >= 16 && y >= 2 && x*y < 16*1024)) {
+		if (!(x >= 16 && y >= 2 && x * y < CO_CONSOLE_MAX_CHARS)) {
 			co_terminal_print("Invalid args (%ld,%ld) for cocon\n", x, y);
 			return CO_RC(INVALID_PARAMETER);
 		}
-
 		conf->console.size_x = x;
 		conf->console.size_y = y;
 	}

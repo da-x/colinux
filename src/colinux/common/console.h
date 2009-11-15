@@ -26,12 +26,16 @@
 
 #define CO_CONSOLE_WIDTH      80
 #define CO_CONSOLE_HEIGHT     25
+
 #define CO_CONSOLE_HEIGHT_BUF  0
 
 typedef struct co_console_cell { 
 	unsigned char ch;
 	unsigned char attr;
 } co_console_cell_t;
+
+/* Set memory limit for console buffer up to 32 KB */
+#define CO_CONSOLE_MAX_CHARS  ((32 * 1024) / sizeof (co_console_cell_t))
 
 typedef struct co_console {
 	/* size of this struct */
