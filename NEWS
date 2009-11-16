@@ -1,10 +1,13 @@
 * Version 0.8.0
   * Kernel:
-    - has been updated to 2.6.25.20
+    - Bug #2895531: "mkfs.ext3 freezes on scsi disks" fixed by limiting number
+      of entries in scsi queue from 73 to 32, and changed type from Critical-
+      into DelayedWorkQueue.
     - Bug #2890857: Fixed panic "COSCSI: response: use_sg (2) > 1".
       Walking thought scsi scatterlist with more as 1 segment now.
     - Bug #2893343: VMALLOC_END was overlapping coLinux shared host memory.
       Maximal guest memory limit is 984 MB, host driver will adjust it.
+    - has been updated to 2.6.25.20
 
 * Version 0.7.5
   * Bug #1959846, #2760666: Don't crash the host, if an other virtualization
