@@ -43,47 +43,40 @@ static co_rc_t co_winnt_new_mdl_bucket(co_osdep_manager_t osdep)
 	pfn_ptrs = co_os_malloc(sizeof(co_os_pfn_ptr_t) * PFN_ALLOCATION_COUNT);
 	if (!pfn_ptrs) {
 		rc = CO_RC(OUT_OF_MEMORY);
-		goto error_free_mdl_ptr;
-	}
+	} else {
+		mdl_ptr->use_count = 0;
+		mdl_ptr->pfn_ptrs  = pfn_ptrs; 
+		mdl_ptr->mdl	   = co_winnt_MmAllocatePagesForMdl(osdep);
 
-	mdl_ptr->use_count = 0;
-	mdl_ptr->pfn_ptrs = pfn_ptrs; 
-	mdl_ptr->mdl = co_winnt_MmAllocatePagesForMdl(osdep);
-
-	if (mdl_ptr->mdl == NULL) {
-		rc = CO_RC(OUT_OF_MEMORY);
-		goto error_free_ptrs;
-	}
-
-	int pages_allocated = mdl_ptr->mdl->ByteCount >> CO_ARCH_PAGE_SHIFT;
-	if (pages_allocated != PFN_ALLOCATION_COUNT) {
-		rc = CO_RC(OUT_OF_MEMORY);
-		goto error_free_mdl;
-	}
-
-	osdep->mdls_allocated++;
-	co_list_add_head(&mdl_ptr->node, &osdep->mdl_list);
+		if (mdl_ptr->mdl == NULL) {
+			rc = CO_RC(OUT_OF_MEMORY);
+		} else {
+			int pages_allocated = mdl_ptr->mdl->ByteCount >> CO_ARCH_PAGE_SHIFT;
+		
+			if (pages_allocated != PFN_ALLOCATION_COUNT) {
+				rc = CO_RC(OUT_OF_MEMORY);
+			} else {
+				osdep->mdls_allocated++;
+				co_list_add_head(&mdl_ptr->node, &osdep->mdl_list);
 	
-	for (i=0; i < PFN_ALLOCATION_COUNT; i++) {
-		co_pfn_t pfn = ((co_pfn_t *)(mdl_ptr->mdl+1))[i];
+				for (i = 0; i < PFN_ALLOCATION_COUNT; i++) {
+					co_pfn_t pfn = ((co_pfn_t *)(mdl_ptr->mdl + 1))[i];
 
-		pfn_ptrs[i].type = CO_OS_PFN_PTR_TYPE_MDL;
-		pfn_ptrs[i].pfn = pfn;
-		pfn_ptrs[i].mdl = mdl_ptr;
-		co_list_add_head(&pfn_ptrs[i].unused, &osdep->pages_unused);
-		co_list_add_head(&pfn_ptrs[i].node, &osdep->pages_hash[PFN_HASH(pfn)]);
+					pfn_ptrs[i].type = CO_OS_PFN_PTR_TYPE_MDL;
+					pfn_ptrs[i].pfn  = pfn;
+					pfn_ptrs[i].mdl  = mdl_ptr;
+					co_list_add_head(&pfn_ptrs[i].unused, &osdep->pages_unused);
+					co_list_add_head(&pfn_ptrs[i].node, &osdep->pages_hash[PFN_HASH(pfn)]);
+				}
+
+				return CO_RC(OK);
+
+			}
+			MmFreePagesFromMdl(mdl_ptr->mdl);
+			IoFreeMdl(mdl_ptr->mdl);
+		}
+		co_os_free(pfn_ptrs);
 	}
-
-	return CO_RC(OK);
-
-error_free_mdl:
-	MmFreePagesFromMdl(mdl_ptr->mdl);
-	IoFreeMdl(mdl_ptr->mdl);
-
-error_free_ptrs:
-	co_os_free(pfn_ptrs);
-
-error_free_mdl_ptr:
 	co_os_free(mdl_ptr);
 	return rc;
 }
@@ -195,17 +188,16 @@ co_rc_t co_os_get_page(struct co_manager* manager, co_pfn_t* pfn)
 
 	if (!co_list_empty(&osdep->pages_unused)) {
 		co_os_get_unused_mdl_page(osdep, pfn);
-		goto out;
-	}
-	
-	rc = co_winnt_new_mdl_bucket(osdep);
-	if (CO_OK(rc)) {
-		co_os_get_unused_mdl_page(osdep, pfn);
 	} else {
-		rc = co_winnt_new_mapped_allocated_page(osdep, pfn);
+	
+		rc = co_winnt_new_mdl_bucket(osdep);
+		if (CO_OK(rc)) {
+			co_os_get_unused_mdl_page(osdep, pfn);
+		} else {
+			rc = co_winnt_new_mapped_allocated_page(osdep, pfn);
+		}
 	}
 
-out:
 	co_os_mutex_release(osdep->mutex);
 	return rc;
 }
