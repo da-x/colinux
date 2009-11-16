@@ -7,6 +7,10 @@
  * the root directory.
  *
  */
+ 
+/* WinNT host: allocate pages in WinNT kernel space for 
+ * CPL0 driver 'linux.sys'. 
+ */
 
 #include "../ddk.h"
 
