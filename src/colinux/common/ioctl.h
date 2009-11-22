@@ -39,14 +39,14 @@ typedef struct {
 
 /* interface for CO_MANAGER_IOCTL_CREATE: */
 typedef struct {
-	co_rc_t rc;
+	co_rc_t		    rc;
 	co_symbols_import_t import;
-	co_config_t config;
-	co_info_t info;
-	co_arch_info_t arch_info;
-	unsigned long actual_memsize_used;
-	void *shared_user_address;
-	co_id_t id;
+	co_config_t	    config;
+	co_info_t	    info;
+	co_arch_info_t	    arch_info;
+	unsigned long	    actual_memsize_used;
+	void*		    shared_user_address;
+	co_id_t		    id;
 } co_manager_ioctl_create_t;
 
 /* 
@@ -59,7 +59,7 @@ typedef enum {
 	CO_MONITOR_IOCTL_RUN,
 	CO_MONITOR_IOCTL_STATUS,
 	CO_MONITOR_IOCTL_LOAD_INITRD, 
-	CO_MONITOR_IOCTL_GET_CONSOLE,
+	CO_MONITOR_IOCTL_GET_CONSOLE,  /* Get console dimentions and max buffer size */
 	CO_MONITOR_IOCTL_GET_STATE,
 	CO_MONITOR_IOCTL_RESET,
 	CO_MONITOR_IOCTL_VIDEO_ATTACH, /* incomplete */
@@ -70,19 +70,19 @@ typedef enum {
 
 /* interface for CO_MANAGER_IOCTL_MONITOR: */
 typedef struct {
-	co_rc_t rc;
-	co_monitor_ioctl_op_t op;
-	char extra_data[];
+	co_rc_t			rc;
+	co_monitor_ioctl_op_t	op;
+	char			extra_data[];
 } co_manager_ioctl_monitor_t;
 
 /* interface for CO_MANAGER_IOCTL_STATUS: */
 typedef struct {
-	unsigned long state; /* co_manager_state_t */
-	unsigned long reserved;
-	int monitors_count;
-	int periphery_api_version;
-	int linux_api_version;
-	char compile_time[28];
+	unsigned long	state; /* co_manager_state_t */
+	unsigned long	reserved;
+	int		monitors_count;
+	int		periphery_api_version;
+	int		linux_api_version;
+	char		compile_time[28];
 } co_manager_ioctl_status_t;
 
 /* interface for CO_MANAGER_IOCTL_INFO: */
@@ -95,16 +95,16 @@ typedef struct {
 
 /* interface for CO_MANAGER_IOCTL_ATTACH: */
 typedef struct {
-	co_rc_t rc;
-	co_id_t id;
-	int num_modules;
-	co_module_t modules[CO_MANAGER_ATTACH_MAX_MODULES];
+	co_rc_t		rc;
+	co_id_t		id;
+	int		num_modules;
+	co_module_t	modules[CO_MANAGER_ATTACH_MAX_MODULES];
 } co_manager_ioctl_attach_t;
 
 /* interface for CO_MANAGER_IOCTL_DEBUG_READER: */
 typedef struct {
-	co_rc_t rc;
-	void *user_buffer;
+	co_rc_t       rc;
+	void*         user_buffer;
 	unsigned long user_buffer_size;
 	unsigned long filled;
 } co_manager_ioctl_debug_reader_t;
@@ -113,7 +113,7 @@ typedef struct {
 /* interface for CO_MANAGER_IOCTL_DEBUG_LEVELS: */
 typedef struct {
 	co_debug_levels_t levels;
-	bool_t modify;
+	bool_t            modify;
 } co_manager_ioctl_debug_levels_t;
 #endif
 
@@ -131,37 +131,40 @@ typedef struct {
 /* interface for CO_MONITOR_IOCTL_LOAD_SECTION: */
 typedef struct {
 	co_manager_ioctl_monitor_t pc;
-	char *user_ptr;
-	unsigned long address;
-	unsigned long size;
-	unsigned long index;
-	unsigned char buf[0];
+	char*			   user_ptr;
+	unsigned long		   address;
+	unsigned long		   size;
+	unsigned long		   index;
+	unsigned char		   buf[0];
 } co_monitor_ioctl_load_section_t;
 
 /* interface for CO_MONITOR_IOCTL_LOAD_INITRD: */
 typedef struct {
 	co_manager_ioctl_monitor_t pc;
-	unsigned long size;
-	unsigned char buf[0];
+	unsigned long		   size;
+	unsigned char		   buf[0];
 } co_monitor_ioctl_load_initrd_t;
 
 /* interface for CO_MONITOR_IOCTL_GET_CONSOLE: */
 typedef struct {
 	co_manager_ioctl_monitor_t pc;
-	unsigned long x, y;
+	unsigned long 		   x;
+	unsigned long		   y;
+	unsigned long		   max_y;
+	unsigned long		   curs_size;
 } co_monitor_ioctl_get_console_t;
 
 typedef struct {
-	unsigned long line;
-	unsigned long code;
-	char text[128];
+	unsigned long	line;
+	unsigned long	code;
+	char		text[128];
 } co_monitor_linux_bug_invocation_t;
 
 /* interface for CO_MONITOR_IOCTL_GET_STATE: */
 typedef struct {
-	co_manager_ioctl_monitor_t pc;
-	unsigned long monitor_state;
-	co_termination_reason_t termination_reason;
+	co_manager_ioctl_monitor_t 	  pc;
+	unsigned long			  monitor_state;
+	co_termination_reason_t		  termination_reason;
 	co_monitor_linux_bug_invocation_t bug_info;
 } co_monitor_ioctl_get_state_t;
 
@@ -194,9 +197,9 @@ typedef struct co_monitor_ioctl_status {
 /* interface for CO_MONITOR_IOCTL_VIDEO_ATTACH/DETACH: */
 typedef struct {
 	co_manager_ioctl_monitor_t pc;
-	int unit;
-	void *address;
-	void *handle;
+	int			   unit;
+	void*			   address;
+	void*			   handle;
 } co_monitor_ioctl_video_t;
 #endif
 
@@ -210,17 +213,17 @@ typedef enum {
 /* CO_MONITOR_IOCTL_CONET_BIND_ADAPTER */
 typedef struct { /* for co_manager_ioctl_monitor_t extra_data */
 	co_manager_ioctl_monitor_t pc;
-	co_conet_protocol_t conet_proto;
-	int conet_unit;
-	int promisc_mode;
-	char mac_address[6];
-	char netcfg_id[128]; /* null terminated */
+	co_conet_protocol_t	   conet_proto;
+	int		    	   conet_unit;
+	int			   promisc_mode;
+	char			   mac_address[6];
+	char 			   netcfg_id[128]; /* null terminated */
 } co_monitor_ioctl_conet_bind_adapter_t;
 
 /* CO_MONITOR_IOCTL_CONET_UNBIND_ADAPTER */
 typedef struct { /* for co_manager_ioctl_monitor_t extra_data */
 	co_manager_ioctl_monitor_t pc;
-	int conet_unit;
+	int			   conet_unit;
 } co_monitor_ioctl_conet_unbind_adapter_t;
 
 #endif

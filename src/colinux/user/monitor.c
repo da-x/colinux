@@ -24,7 +24,9 @@ co_rc_t co_manager_io_monitor_simple(co_manager_handle_t handle, co_monitor_ioct
 	return co_manager_io_monitor_unisize(handle, op, &ioctl, sizeof(ioctl));
 }
 
-co_rc_t co_user_monitor_create(co_user_monitor_t **out_mon, co_manager_ioctl_create_t *params, co_manager_handle_t handle)
+co_rc_t co_user_monitor_create(co_user_monitor_t**        out_mon, 
+			       co_manager_ioctl_create_t* params, 
+			       co_manager_handle_t 	  handle)
 {
 	co_user_monitor_t *mon;
 	co_rc_t rc;
@@ -35,8 +37,13 @@ co_rc_t co_user_monitor_create(co_user_monitor_t **out_mon, co_manager_ioctl_cre
 
 	memset(mon, 0, sizeof(*mon));
 
-	rc = co_os_manager_ioctl(handle, CO_MANAGER_IOCTL_CREATE,
-				 params, sizeof(*params), params, sizeof(*params), NULL);
+	rc = co_os_manager_ioctl(handle,
+				 CO_MANAGER_IOCTL_CREATE,
+				 params,
+				 sizeof(*params),
+				 params,
+				 sizeof(*params),
+				 NULL);
 
 	if (!CO_OK(rc)) {
 		co_os_free(mon);
@@ -54,15 +61,18 @@ co_rc_t co_user_monitor_create(co_user_monitor_t **out_mon, co_manager_ioctl_cre
 	return CO_RC(OK);
 }
 
-co_rc_t co_user_monitor_open(co_reactor_t reactor, co_reactor_user_receive_func_t receive,
-			     co_id_t id, co_module_t *modules, int num_modules, 
-			     co_user_monitor_t **out_mon)
+co_rc_t co_user_monitor_open(co_reactor_t 		    reactor,
+			     co_reactor_user_receive_func_t receive,
+			     co_id_t			    id,
+			     co_module_t*		    modules,
+			     int			    num_modules, 
+			     co_user_monitor_t**	    out_mon)
 {
-	co_user_monitor_t *mon;
-	co_manager_handle_t handle;
+	co_user_monitor_t*	  mon;
+	co_manager_handle_t	  handle;
 	co_manager_ioctl_attach_t params;
-	co_rc_t rc;
-	int modules_copied = 0;
+	co_rc_t 		  rc;
+	int			  modules_copied = 0;
 
 	mon = co_os_malloc(sizeof(*mon));
 	if (!mon)
@@ -77,8 +87,8 @@ co_rc_t co_user_monitor_open(co_reactor_t reactor, co_reactor_user_receive_func_
 	}
 
 	params.id = id;
-	for (modules_copied=0; 
-	     modules_copied < num_modules  &&  modules_copied < CO_MANAGER_ATTACH_MAX_MODULES; 
+	for (modules_copied = 0; 
+	     modules_copied < num_modules && modules_copied < CO_MANAGER_ATTACH_MAX_MODULES; 
 	     modules_copied++) 
 	{
 		params.modules[modules_copied] = modules[modules_copied];
@@ -104,7 +114,7 @@ co_rc_t co_user_monitor_open(co_reactor_t reactor, co_reactor_user_receive_func_
 	}
 
 	mon->monitor_id = id;
-	mon->handle = handle;
+	mon->handle     = handle;
 
 	*out_mon = mon;
 
@@ -122,8 +132,8 @@ void co_user_monitor_close(co_user_monitor_t *monitor)
 	co_os_free(monitor);
 }
 
-co_rc_t co_user_monitor_load_section(co_user_monitor_t *umon, 
-				     co_monitor_ioctl_load_section_t *params)
+co_rc_t co_user_monitor_load_section(co_user_monitor_t*		      umon, 
+				     co_monitor_ioctl_load_section_t* params)
 {
 	co_monitor_ioctl_load_section_t *params_copy = NULL;
 	unsigned long alloc_size = 0;
@@ -194,31 +204,36 @@ co_rc_t co_user_monitor_any(co_user_monitor_t *umon, co_monitor_ioctl_op_t op)
 	return co_manager_io_monitor_simple(umon->handle, op); 
 }
 
-co_rc_t co_user_monitor_get_console(co_user_monitor_t *umon, 
-				    co_monitor_ioctl_get_console_t*params)
+/* Get console dimensions and max buffer size */
+co_rc_t co_user_monitor_get_console(co_user_monitor_t*              umon, 
+				    co_monitor_ioctl_get_console_t* params)
 {
 	return co_manager_io_monitor_unisize(umon->handle, 
 					     CO_MONITOR_IOCTL_GET_CONSOLE, 
-					     &params->pc, sizeof(*params));
+					     &params->pc, 
+					     sizeof(*params));
 }
 
-co_rc_t co_user_monitor_get_state(co_user_monitor_t *umon, 
-				  co_monitor_ioctl_get_state_t *params)
+co_rc_t co_user_monitor_get_state(co_user_monitor_t*            umon, 
+				  co_monitor_ioctl_get_state_t* params)
 {
 	return co_manager_io_monitor_unisize(umon->handle, 
 					     CO_MONITOR_IOCTL_GET_STATE, 
-					     &params->pc, sizeof(*params));
+					     &params->pc, 
+					     sizeof(*params));
 }
 
-co_rc_t co_user_monitor_reset(co_user_monitor_t *umon)
+co_rc_t co_user_monitor_reset(co_user_monitor_t* umon)
 {
 	return co_manager_io_monitor_simple(umon->handle, CO_MONITOR_IOCTL_RESET);
 }
 
 
-co_rc_t co_user_monitor_message_send(co_user_monitor_t *umon,  co_message_t *message)
+co_rc_t co_user_monitor_message_send(co_user_monitor_t* umon,  co_message_t* message)
 {
-	return umon->reactor_user->send(umon->reactor_user, (unsigned char *)message, message->size  + sizeof(*message));
+	return umon->reactor_user->send(umon->reactor_user, 
+					(unsigned char*)message, 
+					message->size  + sizeof(*message));
 }
 
 co_rc_t co_user_monitor_status(co_user_monitor_t *umon, 

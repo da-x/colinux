@@ -28,9 +28,13 @@
 
 #include <stdlib.h>
 
+#define COLINUX_DEBUG_COCON	0
+#define COLINUX_DEBUG_COBUF	0
+#define COLINUX_DEBUG_CURSOR	0
+
 typedef struct {
-    int size;
-    char * buffer;
+    int   size;
+    char* buffer;
     } comma_buffer_t;	/* only for split_comma_separated here */
 
 /* A bit mask of all used network types */
@@ -42,7 +46,8 @@ static int used_network_types;
  * novice users.
  */
 
-static int is_device(char *pathname) {
+static int is_device(char* pathname)
+{
         if (co_strncmp(pathname, "\\Device\\", 8) == 0  ||
             co_strncmp(pathname, "\\DosDevices\\", 12) == 0 ||
             co_strncmp(pathname, "\\Volume{", 8) == 0 ||
@@ -52,12 +57,13 @@ static int is_device(char *pathname) {
 		return 0;
 }
 
-static co_rc_t check_cobd_file (co_pathname_t pathname, char *name, int index)
+static co_rc_t check_cobd_file(co_pathname_t pathname, char* name, int index)
 {
 #ifdef COLINUX_DEBUG
-	co_rc_t rc;
-	char *buf;
+	co_rc_t       rc;
+	char*         buf;
 	unsigned long size;
+	
 	static const char magic_bz2 [3] = "BZh";		/* bzip2 compressed data */
 	static const char magic_7z  [6] = "7z\274\257\047\034";	/* 7z archive data */
 
@@ -91,12 +97,12 @@ static co_rc_t check_cobd_file (co_pathname_t pathname, char *name, int index)
 #endif
 }
 
-static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_config_t *conf)
+static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_config_t* conf)
 {
-	bool_t exists;
-	char *param;
-	char buf[16];
-	co_rc_t rc;
+	bool_t	     exists;
+	char*	     param;
+	char	     buf[16];
+	co_rc_t	     rc;
 	unsigned int index;
 
 	rc = co_cmdline_get_next_equality(cmdline, "setcobd", 0, NULL, 0,
@@ -110,7 +116,8 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 		} else if (strcmp(buf, "sync") == 0) {
 			conf->cobd_async_enable = PFALSE;
 		} else {
-			co_terminal_print("error: setcobd option only allowed 'async' or 'sync'\n");
+			co_terminal_print("error: setcobd option only allowed"
+			                  " 'async' or 'sync'\n");
 			return CO_RC(INVALID_PARAMETER);
 		}
 	}
@@ -118,9 +125,12 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 	do {
 		co_block_dev_desc_t *cobd;
 
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cobd", 
-							     &index, CO_MODULE_MAX_COBD, 
-							     &param, &exists);
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, 
+							     "cobd", 
+							     &index,
+							     CO_MODULE_MAX_COBD, 
+							     &param,
+							     &exists);
 		if (!CO_OK(rc))
 			return rc;
 
@@ -149,14 +159,16 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 	return CO_RC(OK);
 }
 
-static co_rc_t allocate_by_alias(co_config_t *conf, const char *prefix, const char *suffix, 
-				 const char *param)
+static co_rc_t allocate_by_alias(co_config_t* conf,
+                                 const char*  prefix, 
+                                 const char*  suffix, 
+				 const char*  param)
 {
-	co_block_dev_desc_t *cobd;
-	int i;
-	co_rc_t rc;
+	co_block_dev_desc_t* cobd;
+	int		     i;
+	co_rc_t		     rc;
 
-	for (i=0; i < CO_MODULE_MAX_COBD; i++) {
+	for (i = 0; i < CO_MODULE_MAX_COBD; i++) {
 		cobd = &conf->block_devs[i];
 
 		if (!cobd->enabled)
@@ -185,22 +197,27 @@ static co_rc_t allocate_by_alias(co_config_t *conf, const char *prefix, const ch
 	return CO_RC(OK);
 }
 
-static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_config_t *conf)
+static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_config_t* conf)
 {
-	const char *prefixes[] = {"sd", "hd"};
-	const char *prefix;
-	bool_t exists;
-	char *param;
-	co_rc_t rc;
-	int i;
+	const char* prefixes[] = {"sd", "hd"};
+	const char* prefix;
+	bool_t      exists;
+	char*	    param;
+	co_rc_t     rc;
+	int 	    i;
 
-	for (i=0; i < sizeof(prefixes)/sizeof(char *); i++) {
+	for (i = 0; i < sizeof(prefixes) / sizeof(char *); i++) {
 		prefix = prefixes[i];
 		char suffix[5];
 
 		do {
-			rc = co_cmdline_get_next_equality_alloc(cmdline, prefix, sizeof(suffix)-1, suffix, sizeof(suffix), 
-							  &param, &exists);
+			rc = co_cmdline_get_next_equality_alloc(cmdline, 
+								prefix,
+								sizeof(suffix) - 1,
+								suffix,
+								sizeof(suffix), 
+							  	&param, 
+							  	&exists);
 			if (!CO_OK(rc)) 
 				return rc;
 
@@ -208,10 +225,10 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 				break;
 
  			if (!co_strncmp(":cobd", param, 5)) {
-				char *index_str = &param[5];
-				char *number_parse  = NULL;
-				unsigned int index;
-				co_block_dev_desc_t *cobd;
+				char*                index_str    = &param[5];
+				char* 	             number_parse = NULL;
+				unsigned int 	     index;
+				co_block_dev_desc_t* cobd;
 
 				index = strtoul(index_str, &number_parse, 10);
 				if (number_parse == index_str) {
@@ -250,7 +267,7 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 	return CO_RC(OK);
 }
 
-static bool_t strmatch_identifier(const char *str, const char *identifier, const char **end)
+static bool_t strmatch_identifier(const char* str, const char* identifier, const char** end)
 {
 	while (*str == *identifier  &&  *str != '\0') {
 		str++;
@@ -274,7 +291,7 @@ static bool_t strmatch_identifier(const char *str, const char *identifier, const
 	return PFALSE;
 }
 
-static void split_comma_separated(const char *source, comma_buffer_t *array)
+static void split_comma_separated(const char* source, comma_buffer_t* array)
 {
 	int j;
 	bool_t quotation_marks;
@@ -308,23 +325,31 @@ static void split_comma_separated(const char *source, comma_buffer_t *array)
 	}
 }
 
-static co_rc_t parse_args_config_pci(co_command_line_params_t cmdline, co_config_t *conf)
+static co_rc_t parse_args_config_pci(co_command_line_params_t cmdline, co_config_t* conf)
 {
-	char func[8],type[16],unit[8];
-	int d,f,t,u;
-	bool_t exists;
-	char *param;
+	char 	func[8];
+	char 	type[16];
+	char 	unit[8];
+	int	d,f,t,u;
+	bool_t 	exists;
+	char*	param;
+	
 	comma_buffer_t array [] = {
 		{ sizeof(func), func },
 		{ sizeof(type), type },
 		{ sizeof(unit), unit },
 		{ 0, NULL }
 	};
-	co_rc_t rc;
+	co_rc_t      rc;
 	unsigned int index;
 
 	do {
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "pci", &index, 32, &param, &exists);
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline,
+							     "pci", 
+							     &index, 
+							     32, 
+							     &param, 
+							     &exists);
 		if (!CO_OK(rc)) return rc;
 		if (!exists) break;
 
@@ -474,7 +499,7 @@ static co_rc_t parse_args_config_video(co_command_line_params_t cmdline, co_conf
 }
 #endif
 
-static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_config_t *conf)
+static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_config_t* conf)
 {
 	char type[10], path[256], size[16];
 	co_scsi_dev_desc_t *scsi;
@@ -491,9 +516,12 @@ static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_confi
 	unsigned int index;
 
 	do {
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "scsi",
-							     &index, CO_MODULE_MAX_COSCSI,
-							     &param, &exists);
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline,
+							     "scsi",
+							     &index,
+							     CO_MODULE_MAX_COSCSI,
+							     &param,
+							     &exists);
 		if (!CO_OK(rc)) return rc;
 		if (!exists) break;
 
@@ -551,7 +579,7 @@ static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_confi
 	return CO_RC(OK);
 }
 
-static co_rc_t config_parse_mac_address(const char *text, co_netdev_desc_t *net_dev)
+static co_rc_t config_parse_mac_address(const char* text, co_netdev_desc_t* net_dev)
 {
 	co_rc_t rc;
 
@@ -571,12 +599,12 @@ static co_rc_t config_parse_mac_address(const char *text, co_netdev_desc_t *net_
 	return CO_RC(OK);
 }
 
-static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, const char *param)
+static co_rc_t parse_args_networking_device_tap(co_config_t* conf, int index, const char* param)
 {
-	co_netdev_desc_t *net_dev = &conf->net_devs[index];
-	char mac_address[40];
-	char host_ip[40];
-	co_rc_t rc;
+	co_netdev_desc_t* net_dev = &conf->net_devs[index];
+	char 		  mac_address[40];
+	char 		  host_ip[40];
+	co_rc_t 	  rc;
 
 	comma_buffer_t array [] = {
 		{ sizeof(net_dev->desc), net_dev->desc },
@@ -604,12 +632,12 @@ static co_rc_t parse_args_networking_device_tap(co_config_t *conf, int index, co
 	return CO_RC(OK);
 }
 
-static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, const char *param)
+static co_rc_t parse_args_networking_device_pcap(co_config_t* conf, int index, const char* param)
 {
-	co_netdev_desc_t *net_dev = &conf->net_devs[index];
-	char mac_address[40];
-	char promisc_mode[10];
-	co_rc_t rc;
+	co_netdev_desc_t* net_dev = &conf->net_devs[index];
+	char		  mac_address[40];
+	char		  promisc_mode[10];
+	co_rc_t		  rc;
 
 	comma_buffer_t array [] = {
 		{ sizeof(net_dev->desc), net_dev->desc },
@@ -650,9 +678,9 @@ static co_rc_t parse_args_networking_device_pcap(co_config_t *conf, int index, c
 
 static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, const char *param)
 {
-	co_netdev_desc_t *net_dev = &conf->net_devs[index];
-	char mac_address[40];
-	co_rc_t rc;
+	co_netdev_desc_t* net_dev = &conf->net_devs[index];
+	char		  mac_address[40];
+	co_rc_t		  rc;
 
 	comma_buffer_t array [] = {
 		{ sizeof(mac_address), mac_address },
@@ -662,7 +690,7 @@ static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, 
 
 	split_comma_separated(param, array);
 
-	net_dev->type = CO_NETDEV_TYPE_SLIRP;
+	net_dev->type    = CO_NETDEV_TYPE_SLIRP;
 	net_dev->enabled = PTRUE;
 
 	co_debug_info("configured Slirp as eth%d", index);
@@ -674,7 +702,7 @@ static co_rc_t parse_args_networking_device_slirp(co_config_t *conf, int index, 
 	if (*net_dev->redir)
 		co_debug_info("redirections %s", net_dev->redir);
 
-	used_network_types |= 1<<CO_NETDEV_TYPE_SLIRP;
+	used_network_types |= 1 << CO_NETDEV_TYPE_SLIRP;
 	return CO_RC(OK);
 }
 
@@ -724,7 +752,7 @@ static co_rc_t parse_args_networking_device_ndis(co_config_t *conf, int index, c
 
 static co_rc_t parse_args_networking_device(co_config_t *conf, int index, const char *param)
 {
-	const char *next = NULL;
+	const char* next = NULL;
 
 	if (strmatch_identifier(param, "tuntap", &next)) {
 		return parse_args_networking_device_tap(conf, index, next);
@@ -745,9 +773,9 @@ static co_rc_t parse_args_networking_device(co_config_t *conf, int index, const 
 
 static co_rc_t parse_args_networking(co_command_line_params_t cmdline, co_config_t *conf)
 {
-	bool_t exists;
-	char *param;
-	co_rc_t rc;
+	bool_t	     exists;
+	char*	     param;
+	co_rc_t	     rc;
 	unsigned int index;
 
 	do {
@@ -773,7 +801,7 @@ static co_rc_t parse_args_networking(co_command_line_params_t cmdline, co_config
 	return CO_RC(OK);
 }
 
-static co_rc_t parse_args_cofs_device(co_config_t *conf, int index, const char *param)
+static co_rc_t parse_args_cofs_device(co_config_t* conf, int index, const char* param)
 {
 	co_cofsdev_desc_t *cofs = &conf->cofs_devs[index];
 
@@ -790,17 +818,20 @@ static co_rc_t parse_args_cofs_device(co_config_t *conf, int index, const char *
 	return CO_RC(OK);
 }
 
-static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_config_t *conf)
+static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_config_t* conf)
 {
-	bool_t exists;
-	char *param;
-	co_rc_t rc;
+	bool_t       exists;
+	char*	     param;
+	co_rc_t      rc;
 	unsigned int index;
 
 	do {
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cofs", 
-							     &index, CO_MODULE_MAX_COFS, 
-							     &param, &exists);
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline,
+							     "cofs", 
+							     &index,
+							     CO_MODULE_MAX_COFS, 
+							     &param,
+							     &exists);
 		if (!CO_OK(rc))
 			return rc;
 
@@ -815,11 +846,11 @@ static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_confi
 	return CO_RC(OK);
 }
 
-static co_rc_t parse_args_serial_device(co_config_t *conf, int index, const char *param)
+static co_rc_t parse_args_serial_device(co_config_t* conf, int index, const char* param)
 {
-	co_serialdev_desc_t *serial = &conf->serial_devs[index];
-	char name [CO_SERIAL_DESC_STR_SIZE];
-	char mode [CO_SERIAL_MODE_STR_SIZE];
+	co_serialdev_desc_t* serial = &conf->serial_devs[index];
+	char 		     name [CO_SERIAL_DESC_STR_SIZE];
+	char 		     mode [CO_SERIAL_MODE_STR_SIZE];
 
 	comma_buffer_t array [] = {
 		{ sizeof(name), name },
@@ -855,17 +886,20 @@ static co_rc_t parse_args_serial_device(co_config_t *conf, int index, const char
 	return CO_RC(OK);
 }
 
-static co_rc_t parse_args_config_serial(co_command_line_params_t cmdline, co_config_t *conf)
+static co_rc_t parse_args_config_serial(co_command_line_params_t cmdline, co_config_t* conf)
 {
-	bool_t exists;
-	char *param;
-	co_rc_t rc;
-	unsigned int index;
+	bool_t 		exists;
+	char*		param;
+	co_rc_t 	rc;
+	unsigned int 	index;
 
 	do {
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "ttys", 
-							     &index, CO_MODULE_MAX_SERIAL, 
-							     &param, &exists);
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline,
+							    "ttys", 
+							     &index,
+							     CO_MODULE_MAX_SERIAL, 
+							     &param,
+							     &exists);
 		if (!CO_OK(rc)) 
 			return rc;
 
@@ -880,11 +914,11 @@ static co_rc_t parse_args_config_serial(co_command_line_params_t cmdline, co_con
 	return CO_RC(OK);
 }
 
-static co_rc_t parse_args_execute(co_config_t *conf, int index, const char *param)
+static co_rc_t parse_args_execute(co_config_t* conf, int index, const char* param)
 {
-	co_execute_desc_t *execute = &conf->executes[index];
-	char prog [CO_EXECUTE_PROG_STR_SIZE];
-	char args [CO_EXECUTE_ARGS_STR_SIZE];
+	co_execute_desc_t* execute = &conf->executes[index];
+	char		   prog [CO_EXECUTE_PROG_STR_SIZE];
+	char		   args [CO_EXECUTE_ARGS_STR_SIZE];
 
 	comma_buffer_t array [] = {
 		{ sizeof(prog), prog },
@@ -921,17 +955,20 @@ static co_rc_t parse_args_execute(co_config_t *conf, int index, const char *para
 	return CO_RC(OK);
 }
 
-static co_rc_t parse_args_config_execute(co_command_line_params_t cmdline, co_config_t *conf)
+static co_rc_t parse_args_config_execute(co_command_line_params_t cmdline, co_config_t* conf)
 {
-	bool_t exists;
-	char *param;
-	co_rc_t rc;
+	bool_t	     exists;
+	char*	     param;
+	co_rc_t      rc;
 	unsigned int index;
 
 	do {
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "exec", 
-							     &index, CO_MODULE_MAX_EXECUTE, 
-							     &param, &exists);
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline,
+							     "exec", 
+							     &index,
+							     CO_MODULE_MAX_EXECUTE, 
+							     &param,
+							     &exists);
 		if (!CO_OK(rc)) 
 			return rc;
 
@@ -946,17 +983,194 @@ static co_rc_t parse_args_config_execute(co_command_line_params_t cmdline, co_co
 	return CO_RC(OK);
 }
 
-static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, co_config_t *conf)
+#if CO_ENABLE_COCON_MAX_LINES || \
+    CO_ENABLE_COBUF_SYNTAX    || \
+    CO_ENABLE_CURSOR_SIZE
+
+#undef	NORM
+#undef	ERR
+#undef	LOOP
+
+#define NORM 	0
+#define ERR	-1
+#define LOOP	for(;;)
+
+/* Skip white spaces. Parsing is not time critical, so without 'inline' */
+static char* co_skip_white_spaces(char* str_p)
 {
-	bool_t exists;
-	char buf[16], *p;
+	while(*str_p <= ' ' && *str_p != '\0') {
+		str_p++;
+	}
+	return str_p;
+}
+
+/* Get positive number from string.
+ * Arguments:
+ *   str_pp - address of the pointer to the string chars
+ *   val_p  - address of the variable with number value
+ * Result:
+ *   == NORM:
+ *        *val_p  - contains new number value
+ *        *str_pp - the pointer to the first char after
+ *                  number
+ *   != NORM: 
+ *        *val_p  - unchanged
+ *        *str_pp - the pointer to the first non space 
+ *                  char.    
+ */
+static int co_str_to_uint(char** str_pp, unsigned int* val_p)
+{
+	int   res;
+	char* str_p;
+	
+	str_p = co_skip_white_spaces(*str_pp); 
+	res   = ERR;
+
+	if(*str_p >= '0' && *str_p <= '9') {
+		int val;
+		
+		res = NORM;
+		val = 0;
+		
+		LOOP {
+			int ch;
+		
+			ch = *str_p;
+			if(ch < '0' || ch > '9') {
+				break;
+			}
+			val = val * 10 + ch - '0';
+			str_p++;
+			
+			
+		}
+		*val_p = val;
+	}
+	*str_pp = str_p; 
+	return res;
+}
+                                                                                            
+#endif /* We need 'co_skip_white_space' && 'co_str_to_uint' */   
+
+#if CO_ENABLE_COCON_MAX_LINES
+/* Parse 'cocon with possible buffer max lines
+ * Syntax: 
+ *   cocon=x*y	// '*' any char (excl comma and digits)
+ *   cocon=,y	// x   by default, y processed, Y not processed
+ *   cocon=,y,Y	// x   by default, y, Y processed
+ *   cocon=,,Y	// x*y by default, Y processed
+ *   ...
+ */
+static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, 
+				       co_config_t*             conf)
+{
+	bool_t 	exists;
+	char 	buf[16];
 	co_rc_t rc;
 
 	conf->console.size_x = CO_CONSOLE_WIDTH;
 	conf->console.size_y = CO_CONSOLE_HEIGHT;
 
-	rc = co_cmdline_get_next_equality(cmdline, "cocon", 0, NULL, 0, 
-					  buf, sizeof(buf), &exists);
+	if(conf->con_buf.max_y == 0) {
+		/* max_y was not processed - set default */
+		conf->con_buf.max_y = CO_CONSOLE_HEIGHT;
+	}
+	rc = co_cmdline_get_next_equality(cmdline,
+					  "cocon",
+					  0,
+					  NULL,
+					  0, 
+					  buf,
+					  sizeof(buf),
+					  &exists);
+	if (!CO_OK(rc)) 
+		return rc;
+
+	if (exists) {
+		unsigned int x;
+		unsigned int y;
+		unsigned int max_y;
+		int	     res;
+		char*	     arg_p;
+
+		/* Any of values may be skipped */
+		x     = CO_CONSOLE_WIDTH;
+		y     = CO_CONSOLE_HEIGHT;
+		max_y = conf->con_buf.max_y;
+		if(max_y == 0) {
+			/* Previous or default value */
+			max_y = CO_CONSOLE_HEIGHT;
+		}
+	
+		/* First number - screen x */
+		arg_p = buf;
+		res   = co_str_to_uint(&arg_p, &x);
+
+		/* Second number - screen y */ 
+		if(*arg_p == ',') {
+			/* Skip possible comma. */
+			arg_p++;
+		}
+		res = co_str_to_uint(&arg_p, &y);
+		if(res != NORM) {
+			/* x*y delimeter instead of number */
+			if(*arg_p == ',') {
+				/* Second number is skipped. Skip comma. */
+				arg_p++;
+			} else if(*arg_p != '\0' && 
+			          (*arg_p < '0' || *arg_p > '9')) {
+				/* Not digit. May be x*y delimeter. Skip it. */
+				arg_p++;
+				co_str_to_uint(&arg_p, &y);
+			}
+		}	
+
+		/* Third number - buffer max y */ 
+		if(*arg_p == ',') {
+			/* Skip comma before number */
+			arg_p++;
+		}
+		(void)co_str_to_uint(&arg_p, &max_y);
+
+		/* Check limits */
+		if (x < 16 			      || 
+		    y < 2			      || 
+		    x * y     >= CO_CONSOLE_MAX_CHARS || 
+		    x * max_y >= CO_CONSOLE_MAX_CHARS) {
+			co_terminal_print("Invalid args (%ux%u,%u) for cocon\n", x, y, max_y);
+			return CO_RC(INVALID_PARAMETER);
+		}
+#if COLINUX_DEBUG_COCON
+		co_terminal_print("User  cocon=%ux%u,%u\n", x, y, max_y);
+#endif
+		conf->console.size_x = x;
+		conf->console.size_y = y;
+		conf->con_buf.max_y  = max_y;
+	}
+
+	return CO_RC(OK);
+}
+
+#else /* !CO_ENABLE_COCON_MAX_LINES */
+
+static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, co_config_t* conf)
+{
+	bool_t 	exists;
+	char 	buf[16];
+	char*	p;
+	co_rc_t rc;
+
+	conf->console.size_x = CO_CONSOLE_WIDTH;
+	conf->console.size_y = CO_CONSOLE_HEIGHT;
+
+	rc = co_cmdline_get_next_equality(cmdline,
+					  "cocon",
+					  0,
+					  NULL,
+					  0, 
+					  buf,
+					  sizeof(buf),
+					  &exists);
 	if (!CO_OK(rc)) 
 		return rc;
 
@@ -977,13 +1191,132 @@ static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, co_conf
 
 	return CO_RC(OK);
 }
+#endif /* !CO_ENABLE_COCON_MAX_LINES */
 
-static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *conf)
+#if CO_ENABLE_COBUF_SYNTAX
+/* Set console buffer dimentions */
+static co_rc_t parse_args_config_cobuf(co_command_line_params_t cmdline,
+				       co_config_t*             conf)
+{
+	bool_t  exists;
+	char    buf[16];
+	char*   p;
+	co_rc_t rc;
+
+	/* By default scroll buffer size is equal to screen size */
+	conf->con_buf.max_x = CO_CONSOLE_WIDTH;
+	
+	if(conf->con_buf.max_y == 0) {
+		/* max_y was not processed before - set default */
+		conf->con_buf.max_y = CO_CONSOLE_HEIGHT;
+	}
+	
+	rc = co_cmdline_get_next_equality(cmdline,
+					  "cobuf", 
+					  0, 
+					  NULL, 
+					  0, 
+					  buf, 
+					  sizeof(buf), 
+					  &exists);
+	if (!CO_OK(rc)) 
+		return rc;
+
+	if (exists) {
+		int max_x;
+		int max_y;
+
+		max_x = (int)strtol(buf, &p, 0);
+
+		/* Skip white spaces after first number (it may be single) */
+		p = co_skip_white_spaces(p);
+		
+		if (*p == '\0') {
+			/* if we have only one number, this is number of lines */
+			max_y = max_x;
+			max_x =	CO_CONSOLE_WIDTH;
+		} else {
+			/* Skip delimeter and get the number of lines */
+			p++;
+			max_y = (int)strtol(p, &p, 0);
+		}
+
+		if(max_x < 16 || 
+		   max_y < 2  || 
+		   max_x * max_y >= CO_CONSOLE_MAX_CHARS) {
+			co_terminal_print("Invalid args (%d,%d) for cobuf\n",
+			                  max_x, max_y);
+			return CO_RC(INVALID_PARAMETER);
+		}
+		conf->con_buf.max_x = max_x;
+		conf->con_buf.max_y = max_y;
+#if COLINUX_DEBUG_COBUF
+		co_terminal_print("cobuf=%dx%d\n", max_x, max_y);
+#endif
+	}
+	return CO_RC(OK);
+}
+#endif /* CO_ENABLE_SCROLL_BUF */
+
+#if CO_ENABLE_CURSOR_SIZE
+/* Set console cursor size */
+static co_rc_t parse_args_config_cursor(co_command_line_params_t cmdline,
+                                        co_config_t*             conf)
+{
+	bool_t  exists;
+	char    buf[16];
+	char*   p;
+	co_rc_t rc;
+
+	conf->cursor_size.size_prc = CO_CONSOLE_NORM_CURSOR;
+
+	rc = co_cmdline_get_next_equality(cmdline,
+					  "cursor", 
+					  0, 
+					  NULL, 
+					  0, 
+					  buf, 
+					  sizeof(buf), 
+					  &exists);
+	if (!CO_OK(rc)) 
+		return rc;
+
+	if (exists) {
+		int size_prc;
+
+		size_prc = (int)strtol(buf, &p, 0);
+
+		if(size_prc < 0 || size_prc > 100) { 
+			co_terminal_print("Invalid arg (%d) for cursor\n", size_prc);
+			return CO_RC(INVALID_PARAMETER);
+		}
+		
+		/* User can set size of cursor == 100, but actual value
+		 * of it can not exceed 99 
+		 */
+		if(size_prc > CO_CONSOLE_FAT_CURSOR) {
+			size_prc = CO_CONSOLE_FAT_CURSOR;
+		}
+		
+		conf->cursor_size.size_prc = size_prc;
+#if COLINUX_DEBUG_CURSOR
+		co_terminal_print("cursor=%d\n", size_prc);
+#endif
+	}
+	return CO_RC(OK);
+}
+#endif /* CO_ENABLE_CURSOR_SIZE */
+
+/* Parse config file specific parameters */
+static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t* conf)
 {
 	co_rc_t rc;
-	bool_t exists;
+	bool_t  exists;
 
-	rc = co_cmdline_get_next_equality_int_value(cmdline, "mem", &conf->ram_size, &exists);
+	rc = co_cmdline_get_next_equality_int_value(cmdline,
+						    "mem",
+						    &conf->ram_size, 
+						    &exists);
 	if (!CO_OK(rc)) 
 		return rc;
 
@@ -1021,8 +1354,13 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_cmdline_get_next_equality(cmdline, "initrd", 0, NULL, 0, 
-					  conf->initrd_path, sizeof(conf->initrd_path),
+	rc = co_cmdline_get_next_equality(cmdline, 
+					  "initrd", 
+					  0, 
+					  NULL, 
+					  0, 
+					  conf->initrd_path, 
+					  sizeof(conf->initrd_path),
 					  &conf->initrd_enabled);
 	if (!CO_OK(rc)) 
 		return rc;
@@ -1065,18 +1403,48 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t *
 	if (!CO_OK(rc))
 		return rc;
 
+#if CO_ENABLE_COBUF_SYNTAX
+	rc = parse_args_config_cobuf(cmdline, conf);
+	if (!CO_OK(rc))
+		return rc;
+#endif
+#if CO_ENABLE_CURSOR_SIZE
+	rc = parse_args_config_cursor(cmdline, conf);
+	if (!CO_OK(rc))
+		return rc;
+#endif
 	return rc;
 }
 
-co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_parameters_t *start_parameters)
+/* Resolve possible ambiguites in parsed arguments. All user errors should be
+ * processed before call of this function. 
+ */
+static void co_merge_parsed_args(co_config_t* conf)
+{	
+	if(conf->con_buf.max_x < conf->console.size_x) {
+		conf->con_buf.max_x = conf->console.size_x;
+	}
+	if(conf->con_buf.max_y < conf->console.size_y) {
+		conf->con_buf.max_y = conf->console.size_y;
+	}
+}
+
+co_rc_t co_parse_config_args(co_command_line_params_t cmdline,
+       			     co_start_parameters_t*   start_parameters)
 {
-	co_rc_t rc, rc_;
-	co_config_t *conf = &start_parameters->config;
+	co_rc_t      rc;
+	co_rc_t      rc_;
+	co_config_t* conf = &start_parameters->config;
 
 	start_parameters->cmdline_config = PFALSE;
 
-	rc = co_cmdline_get_next_equality(cmdline, "kernel", 0, NULL, 0, 
-					  conf->vmlinux_path, sizeof(conf->vmlinux_path),
+	rc = co_cmdline_get_next_equality(cmdline,
+				          "kernel",
+				          0,
+				          NULL,
+				          0, 
+					  conf->vmlinux_path,
+					  sizeof(conf->vmlinux_path),
 					  &start_parameters->cmdline_config);
 	if (!CO_OK(rc))
 		return rc;
@@ -1088,11 +1456,24 @@ co_rc_t co_parse_config_args(co_command_line_params_t cmdline, co_start_paramete
 	co_debug_info("using '%s' as kernel image", conf->vmlinux_path);
 
 	rc = parse_config_args(cmdline, conf);
+
+	if (CO_OK(rc)) {
+		/* Resolve possible ambiguites in parsed arguments */
+		co_merge_parsed_args(conf);
+	}	
 	
-	rc_ = co_cmdline_params_format_remaining_parameters(cmdline, conf->boot_parameters_line,
+	rc_ = co_cmdline_params_format_remaining_parameters(cmdline,
+							    conf->boot_parameters_line,
 							    sizeof(conf->boot_parameters_line));
 	if (!CO_OK(rc_))
 		return rc_;
+
+#if CO_ENABLE_COCON_MAX_LINES && COLINUX_DEBUG_COCON
+	co_terminal_print("Final cocon=%dx%d,%d\n", 
+			  conf->console.size_x, 
+			  conf->console.size_y, 
+			  conf->con_buf.max_y);
+#endif
 	
 	if (CO_OK(rc)) {
 		co_debug_info("kernel boot parameters: '%s'", conf->boot_parameters_line);

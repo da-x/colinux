@@ -99,15 +99,17 @@ void co_daemon_syntax(void)
 	co_terminal_print("\n");
 }
 
-co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_parameters_t *start_parameters)
+co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_parameters_t* start_parameters)
 {
-	co_rc_t rc;
-	bool_t dont_launch_console = PFALSE;
-	bool_t verbose_specified = PFALSE;
-	unsigned int verbose_level = 0;
+	co_rc_t      rc;
+	bool_t 	     dont_launch_console = PFALSE;
+	bool_t       verbose_specified   = PFALSE;
+	unsigned int verbose_level       = 0;
 
 	co_snprintf(start_parameters->console, sizeof(start_parameters->console), "fltk");
 
+	/* Parse arguments specific for command line only */
+	
 	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-c", 
 						      &start_parameters->config_specified,
 						      start_parameters->config_path,
@@ -155,7 +157,8 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 		return rc;
 
 	start_parameters->launch_console = !dont_launch_console;
-
+	
+	/* Parse parameters, common for command line and config file */
 	rc = co_parse_config_args(cmdline, start_parameters);
 
 	if (!CO_OK(rc)) {

@@ -7,6 +7,11 @@
  * the root directory.
  *
  */
+ 
+ /* 
+  * OS independent main program for the text mode console.
+  * Used for building colinux-console-nt.exe 
+  */
 
 #include "console.h"
 #include "main.h"
@@ -15,17 +20,17 @@ extern "C" {
 #include <colinux/user/debug.h>
 }
 
-console_window_t *global_window = 0;
+console_window_t* global_window = NULL;
 
 void co_user_console_handle_scancode(co_scan_code_t sc)
 {
-	if (!global_window)
+	if (global_window == NULL)
 		return;
 
 	global_window->handle_scancode(sc);
 }
 
-int co_user_console_main(int argc, char **argv)
+int co_user_console_main(int argc, char** argv)
 {
 	co_rc_t rc;
 

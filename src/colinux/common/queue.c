@@ -7,6 +7,8 @@
  * the root directory.
  */
 
+/* OS independent generic queues */
+
 #include <colinux/os/current/memory.h>
 #include <colinux/os/alloc.h>
 

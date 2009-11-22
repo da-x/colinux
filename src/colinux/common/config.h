@@ -12,6 +12,11 @@
 
 #include "common.h"
 
+#define CO_ENABLE_CURSOR_SIZE		1 /* 1=Enable cursor resizing,      0=disable */
+#define CO_ENABLE_COCON_MAX_LINES	1 /* 1=Enable max lines in 'cocon', 0=disable */
+#define CO_ENABLE_COBUF_SYNTAX		0 /* 1=Enable 'cobuf' syntax,       0=disable */
+#define CO_ENABLE_CON_SCROLL		0 /* 1=Enable console scrolling,    0=disable */
+
 /*
  * Per block device configuration
  */
@@ -34,24 +39,24 @@ typedef struct co_block_dev_desc {
 	 * the Linux side, for example: hda4, sda2, hdb2.
 	 */
 	bool_t alias_used;
-	char alias[20];
+	char   alias[20];
 } co_block_dev_desc_t;
 
 typedef struct co_video_dev_desc {
-	bool_t enabled;
-	int size;
+	bool_t 	enabled;
+	int	size;
 } co_video_dev_desc_t;
 
 typedef struct co_audio_dev_desc {
-	bool_t enabled;
+	bool_t	enabled;
 } co_audio_dev_desc_t;
 
 typedef struct co_scsi_dev_desc {
-	bool_t enabled;
-	int type;				/* SCSI type */
+	bool_t	enabled;
+	int	type;				/* SCSI type */
 	co_pathname_t pathname;			/* Path */
-	int is_dev;				/* 0 = file, 1 = device */
-	int size;				/* Size, for files */
+	int	is_dev;				/* 0 = file, 1 = device */
+	int	size;				/* Size, for files */
 } co_scsi_dev_desc_t;
 
 typedef enum {
@@ -91,7 +96,7 @@ typedef struct co_netdev_desc {
 	/*
 	 * MAC address for the Linux side. 
 	 */
-	bool_t manual_mac_address;
+	bool_t 	      manual_mac_address;
 	unsigned char mac_address[6];
 
 	/* Slirp Parameters */
@@ -144,12 +149,12 @@ typedef struct co_serialdev_desc {
 	bool_t enabled;
 
 	/* Device name on host side */
-	char *desc;
+	char* desc;
 
 	/*
 	 * Individual mode setting
 	 */
-	char *mode;
+	char* mode;
 
 } co_serialdev_desc_t;
 
@@ -164,10 +169,10 @@ typedef struct co_execute_desc {
 	bool_t enabled;
 
 	/* Executable program name */
-	char *prog;
+	char* prog;
 
 	/* Optional args */
-	char *args;
+	char* args;
 
 	/* PID, if program running */
 	int pid;
@@ -263,14 +268,26 @@ typedef struct co_config {
 	/*
 	 * The pathname of the initrd file.
 	 */
-	bool_t initrd_enabled;
-	co_pathname_t initrd_path;
+	bool_t		initrd_enabled;
+	co_pathname_t	initrd_path;
 
-	/* Dimensions of the console */
+	/* Dimensions of the console screen */
 	struct {
-		int size_x, size_y;
+		int size_x;
+		int size_y;
 	} console;
 
+	/* Dimensions of the console buffer */
+	struct {
+		int max_x;
+		int max_y;
+	} con_buf;
+
+	/* Cursor size in percent */ 
+	struct {
+		int size_prc;
+	} cursor_size;
+	
 	/*
 	 * Enable asynchronious block device operations.
 	 */

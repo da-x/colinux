@@ -27,13 +27,17 @@ typedef unsigned long linux_pgd_t;
 
 #include <linux/cooperative.h>
 
-#ifndef NULL
-#define NULL (void *)0
+/* For C++ NULL should be defined as 0, not as (void*)0 */
+#undef NULL
+#if defined __cplusplus
+# define NULL 	0
+#else
+# define NULL 	(void*)0
 #endif
 
 /* 
  * Following is taken from Linux's ./arch/i386/kernel/smpboot.c 
-*/
+ */
 static inline unsigned long long co_div64(unsigned long long a, unsigned long b0)
 {
         unsigned int a1, a2;

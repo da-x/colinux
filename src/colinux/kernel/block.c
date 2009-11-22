@@ -27,8 +27,8 @@ void co_monitor_unregister_and_free_block_devices(co_monitor_t *cmon)
 {
 	long i;
 
-	for (i=0; i < CO_MODULE_MAX_COBD; i++) {
-		co_block_dev_t *dev = cmon->block_devs[i];
+	for (i = 0; i < CO_MODULE_MAX_COBD; i++) {
+		co_block_dev_t* dev = cmon->block_devs[i];
 		if (!dev)
 			continue;
 
@@ -37,7 +37,7 @@ void co_monitor_unregister_and_free_block_devices(co_monitor_t *cmon)
 	}
 }
 
-static co_block_dev_t *co_monitor_block_dev_from_index(co_monitor_t *cmon, unsigned int index)
+static co_block_dev_t* co_monitor_block_dev_from_index(co_monitor_t *cmon, unsigned int index)
 {
 	if (index >= CO_MODULE_MAX_COBD)
 		return NULL;
@@ -45,9 +45,9 @@ static co_block_dev_t *co_monitor_block_dev_from_index(co_monitor_t *cmon, unsig
 	return cmon->block_devs[index];
 }
 
-static co_rc_t intern_monitor_block_request(co_monitor_t *cmon,
-					    unsigned int index,
-					    co_block_request_t *request)
+static co_rc_t intern_monitor_block_request(co_monitor_t*	cmon,
+					    unsigned int	index,
+					    co_block_request_t*	request)
 {
 	co_block_dev_t *dev;
 	co_rc_t rc;
@@ -118,8 +118,9 @@ static co_rc_t intern_monitor_block_request(co_monitor_t *cmon,
 	return rc;
 }
 
-void co_monitor_block_request(co_monitor_t *cmon, unsigned int index,
-				 co_block_request_t *request)
+void co_monitor_block_request(co_monitor_t*       cmon,
+			      unsigned int 	  index,
+			      co_block_request_t* request)
 {
 	static co_rc_t rc;
 

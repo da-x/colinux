@@ -22,26 +22,28 @@ extern "C" {
 
 class console_widget_t : public Fl_Widget {
 public:
-	console_widget_t(int x, int y, int w, int h, const char* label=0); 
-	void set_font_size(int size);
-	void set_console(co_console_t *_console);
-	co_console_t *get_console();
-	void damage_console(int x, int y, int w, int h);
-	co_rc_t handle_console_event(co_console_message_t *message);
 
 	int fit_x;
 	int fit_y;
+public:
+	console_widget_t(int x, int y, int w, int h, const char* label = 0); 
+	void set_font_size(int size);
+	void set_console(co_console_t* _console);
+	co_console_t* get_console();
+	void damage_console(int x, int y, int w, int h);
+	co_rc_t handle_console_event(co_console_message_t* message);
 
 protected:
-	int font_size;
-	co_console_t *console;
-	int letter_x;
-	int letter_y;
-	double cursor_blink_interval;
-	int cursor_blink_state;
+	int           font_size;
+	co_console_t* console;
+	int 	      letter_x;
+	int 	      letter_y;
+	double	      cursor_blink_interval;
+	int 	      cursor_blink_state;
 
+protected:
 	virtual void draw();
-	static void static_blink_handler(class console_widget_t *widget);
+	static void static_blink_handler(class console_widget_t* widget);
 	void blink_handler();
 };
 

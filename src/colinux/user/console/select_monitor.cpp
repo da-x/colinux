@@ -14,15 +14,16 @@
 #include "select_monitor.h"
 #include "console.h"
 
-static void console_select_monitor(Fl_Widget *widget, select_monitor_widget_t *window)
+static void console_select_monitor(Fl_Widget* widget, select_monitor_widget_t* window)
 {
 	window->on_button(widget);
 }
 
-void select_monitor_widget_t::on_button(Fl_Widget *widget)
+void select_monitor_widget_t::on_button(Fl_Widget* widget)
 {
 	if (widget == select_button) {
 		int selection = browser->value();
+		
 		if (selection != 0) {
 			co_id_t id = id_map[selection-1];
 			console->attach_anyhow(id);
@@ -33,14 +34,14 @@ void select_monitor_widget_t::on_button(Fl_Widget *widget)
 	}
 }
 
-void select_monitor_widget_t::populate(console_window_t *console_window)
+void select_monitor_widget_t::populate(console_window_t* console_window)
 {
 	label("Select a running coLinux");
 
 	console = console_window;
 
 	browser = new Fl_Hold_Browser(0, 0, 400, 200);
-	Fl_Button *button;
+	Fl_Button* button;
 
 	button = new Fl_Button(0, 200, 200, 20);
 	button->label("Select");
@@ -64,9 +65,9 @@ void select_monitor_widget_t::populate(console_window_t *console_window)
 
 void select_monitor_widget_t::load_monitors_list()
 {
-	co_manager_handle_t handle;
+	co_manager_handle_t		handle;
 	co_manager_ioctl_monitor_list_t	list;
-	co_rc_t	rc;
+	co_rc_t				rc;
 
 	memset(id_map, 0, sizeof(id_map));
 	id_map_count = 0;
@@ -83,8 +84,9 @@ void select_monitor_widget_t::load_monitors_list()
 
 	for (unsigned i = 0; i < list.count; ++i) {
 		char buf[32];
+		
 		id_map[i] = list.ids[i];
-		snprintf( buf, sizeof(buf), "Monitor%d (pid=%d)\t", i, (int)id_map[i]);
+		snprintf(buf, sizeof(buf), "Monitor%d (pid=%d)\t", i, (int)id_map[i]);
 		browser->add(buf);
 	}
 	

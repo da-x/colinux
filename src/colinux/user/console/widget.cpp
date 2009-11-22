@@ -25,22 +25,28 @@ static int default_blu[] = {0x00,0x00,0x00,0x00,0xaa,0xaa,0xaa,0xaa,
 				 default_grn[i], \
 				 default_red[i])
 
-console_widget_t::console_widget_t(int x, int y, int w, int h, const char* label)
-	: Fl_Widget(x, y, w, h, label)
+console_widget_t::console_widget_t(int		x,
+			           int		y,
+			           int		w,
+			           int 		h,
+			           const char* 	label)
+: Fl_Widget(x, y, w, h, label)
 {
-	font_size = 18;
-	letter_x = font_size;
-	letter_y = font_size;
+	font_size 	      = 18;
+	letter_x	      = font_size;
+	letter_y	      = font_size;
 	cursor_blink_interval = 0.1;
-	cursor_blink_state = 1;
-	console = 0;
-	fit_x = 0;
-	fit_y = 0;
+	cursor_blink_state    = 1;
+	console               = NULL;
+	fit_x                 = 0;
+	fit_y		      = 0;
 
-	Fl::add_timeout(cursor_blink_interval, (Fl_Timeout_Handler)(console_widget_t::static_blink_handler), this);
+	Fl::add_timeout(cursor_blink_interval,
+		        (Fl_Timeout_Handler)(console_widget_t::static_blink_handler),
+		        this);
 }
 
-void console_widget_t::static_blink_handler(console_widget_t *widget)
+void console_widget_t::static_blink_handler(console_widget_t* widget)
 {
 	widget->blink_handler();
 }
@@ -60,7 +66,9 @@ void console_widget_t::blink_handler()
 		*/
 	}
 
-	Fl::add_timeout(cursor_blink_interval, (Fl_Timeout_Handler)(console_widget_t::static_blink_handler), this);
+	Fl::add_timeout(cursor_blink_interval,
+		        (Fl_Timeout_Handler)(console_widget_t::static_blink_handler), 
+		        this);
 }
 
 void console_widget_t::set_font_size(int size)
@@ -70,19 +78,20 @@ void console_widget_t::set_font_size(int size)
 
 void console_widget_t::damage_console(int x_, int y_, int w_, int h_)
 {
-	int cx, cy;
+	int cx;
+	int cy;
 
 	cx = x();
 	cy = y();
 
-	cx -= ((letter_x * console->x) - w())/2;
-	cy -= ((letter_y * console->y) - h())/2;
+	cx -= ((letter_x * console->x) - w()) / 2;
+	cy -= ((letter_y * console->y) - h()) / 2;
 
 	damage(1, 
-	       cx + x_*letter_x, 
-	       cy + y_*letter_y, 
-	       w_*letter_x, 
-	       h_*letter_y);
+	       cx + x_ * letter_x, 
+	       cy + y_ * letter_y, 
+	       w_ * letter_x, 
+	       h_ * letter_y);
 }
 
 void console_widget_t::draw()
@@ -100,17 +109,17 @@ void console_widget_t::draw()
 	letter_x = (int)fl_width('A');
 	letter_y = (int)fl_height();
 	
-	fit_x = letter_x*console->x;
-	fit_y = letter_y*console->y;
+	fit_x = letter_x * console->x;
+	fit_y = letter_y * console->y;
 	
 	int x_, y_, w_, h_, cx, cy;	
-	fl_clip_box(x(),y(),w(),h(), x_, y_, w_, h_);
+	fl_clip_box(x(), y(), w(), h(), x_, y_, w_, h_);
 
 	cx = x();
 	cy = y();
 
-	cx -= ((letter_x * console->x) - w())/2;
-	cy -= ((letter_y * console->y) - h())/2;
+	cx -= ((letter_x * console->x) - w()) / 2;
+	cy -= ((letter_y * console->y) - h()) / 2;
 	
 	x_ -= cx;
 	y_ -= cy;
@@ -132,39 +141,41 @@ void console_widget_t::draw()
 
 	if (y_ < 0) {
 		fl_color(FL_BLACK);
-		fl_rectf(cx, y(), console->x*letter_x, -y_);
+		fl_rectf(cx, y(), console->x * letter_x, -y_);
 	}
 
 	if (x_ + w_ > console->x*letter_x) {
 		fl_color(FL_BLACK);
-		fl_rectf(cx+console->x*letter_x, y(), x_ + w_ - console->x*letter_x, h_);
+		fl_rectf(cx+console->x * letter_x, y(), x_ + w_ - console->x * letter_x, h_);
 
 		x2 = console->x;
 	}
 
 	if (y_ + h_ > console->y*letter_y) {
 		fl_color(FL_BLACK);
-		fl_rectf(cx, cy + console->y*letter_y, 
-			 console->x*letter_x, y_ + h_ - console->y*letter_y);
+		fl_rectf(cx, cy + console->y * letter_y, 
+			 console->x*letter_x, y_ + h_ - console->y * letter_y);
 	}
 
-	fl_push_clip(x(),y(),w(),h());
+	fl_push_clip(x(), y(), w(), h());
 
-	for (yi=y1; yi < y2; yi++) {
+	for (yi = y1; yi < y2; yi++) {
 		if (yi < 0)
 			continue;
 
 		if (yi >= console->y)
 			break;
 
-		co_console_cell_t *row_start = &console->screen[yi*console->x];
-		co_console_cell_t *cell, *start, *end;
-		co_console_cell_t *limit = &console->screen[console->y*console->x];
-		char text_buff[0x100];
+		co_console_cell_t* row_start = &console->screen[yi * console->x];
+		co_console_cell_t* cell;
+		co_console_cell_t* start;
+		co_console_cell_t* end;
+		co_console_cell_t* limit = &console->screen[console->y*console->x];
+		char               text_buff[0x100];
 
 		start = row_start + x1;
-		end = row_start + x2;
-		cell = start;
+		end   = row_start + x2;
+		cell  = start;
 
 		if (end > limit) {
 			// co_debug("BUG: end=%p limit=%p row=%p start=%p x1=%d x2=%d y1=%d y2=%d",
@@ -196,11 +207,12 @@ void console_widget_t::draw()
 			continue;
 
 		if (console->cursor.y == yi) {
-			if (console->cursor.x >= x1 && 	console->cursor.x <= x2) {
+			if (console->cursor.x >= x1 && console->cursor.x <= x2) {
 				fl_color(0xff, 0xff, 0xff);
 				fl_rectf(cx + letter_x * console->cursor.x, 
 					 cy + letter_y * console->cursor.y + 
-					 (letter_y * (CO_CURSOR_POS_SIZE - console->cursor.height)) / CO_CURSOR_POS_SIZE,
+					 (letter_y * (CO_CURSOR_POS_SIZE - 
+					              console->cursor.height)) / CO_CURSOR_POS_SIZE,
 					 letter_x, 
 					 (letter_y * console->cursor.height) / CO_CURSOR_POS_SIZE);
 			}
@@ -210,23 +222,50 @@ void console_widget_t::draw()
 	fl_pop_clip();
 }
 
-void console_widget_t::set_console(co_console_t *_console)
+void console_widget_t::set_console(co_console_t* _console)
 {
 	console = _console;
 }
 
-co_console_t *console_widget_t::get_console()
+co_console_t* console_widget_t::get_console()
 {
-	co_console_t *_console = console;
-	console = 0;
+	co_console_t* _console = console;
+	console = NULL;
 
 	return _console;
 }
 
-co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
+/* Process console messages:
+	CO_OPERATION_CONSOLE_PUTC		- Put single char
+	CO_OPERATION_CONSOLE_PUTCS		- Put char array
+	
+	CO_OPERATION_CONSOLE_CURSOR_MOVE	- Move cursor
+	CO_OPERATION_CONSOLE_CURSOR_DRAW	- Move cursor
+	CO_OPERATION_CONSOLE_CURSOR_ERASE	- Move cursor
+	
+	CO_OPERATION_CONSOLE_SCROLL_UP		- Scroll lines up
+	CO_OPERATION_CONSOLE_SCROLL_DOWN	- Scroll lines down
+	CO_OPERATION_CONSOLE_BMOVE		- Move region up/down
+	
+	CO_OPERATION_CONSOLE_CLEAR		- Clear region
+	
+	CO_OPERATION_CONSOLE_STARTUP		- Ignored
+	CO_OPERATION_CONSOLE_INIT		- Ignored
+	CO_OPERATION_CONSOLE_DEINIT		- Ignored
+	CO_OPERATION_CONSOLE_SWITCH		- Ignored
+	CO_OPERATION_CONSOLE_BLANK		- Ignored
+	CO_OPERATION_CONSOLE_FONT_OP		- Ignored
+	CO_OPERATION_CONSOLE_SET_PALETTE	- Ignored
+	CO_OPERATION_CONSOLE_SCROLLDELTA	- Ignored
+	CO_OPERATION_CONSOLE_SET_ORIGIN		- Ignored
+	CO_OPERATION_CONSOLE_SAVE_SCREEN	- Ignored
+	CO_OPERATION_CONSOLE_INVERT_REGION	- Ignored
+	CO_OPERATION_CONSOLE_SIZES		- Ignored
+*/
+co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 {
-	co_rc_t rc;
-	co_cursor_pos_t saved_cursor_pos = {0, };
+	co_rc_t		rc;
+	co_cursor_pos_t saved_cursor = {0, };
 	
 	if (!console) {
 		return CO_RC(ERROR);
@@ -237,7 +276,8 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
 	case CO_OPERATION_CONSOLE_CURSOR_DRAW:
 	case CO_OPERATION_CONSOLE_CURSOR_ERASE:
 	case CO_OPERATION_CONSOLE_CURSOR_MOVE: {
-		saved_cursor_pos = console->cursor;
+		// Only for using below
+		saved_cursor = console->cursor;
 		break;
 	}
 	default:
@@ -252,15 +292,18 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
 	{
 	case CO_OPERATION_CONSOLE_SCROLL_UP:
 	case CO_OPERATION_CONSOLE_SCROLL_DOWN: {
-		unsigned long t = message->scroll.top;     /* Start of scroll region (row) */
-		unsigned long b = message->scroll.bottom+1;    /* End of scroll region (row) */
+		unsigned long t = message->scroll.top;		/* Start of scroll region (row) */
+		unsigned long b = message->scroll.bottom + 1;  	/* End of scroll region (row)	*/
 
 		damage_console(0, t, console->x, b - t + 1);
 		break;
 	}
 	case CO_OPERATION_CONSOLE_PUTCS: {
-		int x = message->putcs.x, y = message->putcs.y;
-		int count = message->putcs.count, sx = x, scount = 0;
+		int x       = message->putcs.x;
+		int y	    = message->putcs.y;
+		int count   = message->putcs.count;
+		int  sx	    = x;
+		int  scount = 0;
 
 		while (x < console->x  &&  count > 0) {
 			x++;
@@ -272,7 +315,8 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
 		break;
 	}
 	case CO_OPERATION_CONSOLE_PUTC: {
-		int x = message->putc.x, y = message->putc.y;
+		int x = message->putc.x;
+		int y = message->putc.y;
 		
 		damage_console(x, y, 1, 1);
 		break;
@@ -280,7 +324,7 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
 	case CO_OPERATION_CONSOLE_CURSOR_MOVE:
 	case CO_OPERATION_CONSOLE_CURSOR_DRAW:
 	case CO_OPERATION_CONSOLE_CURSOR_ERASE: {
-		damage_console(saved_cursor_pos.x, saved_cursor_pos.y, 1, 1);
+		damage_console(saved_cursor.x, saved_cursor.y, 1, 1);
 		damage_console(console->cursor.x, console->cursor.y, 1, 1);
 		break;
 	}
@@ -290,7 +334,7 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
 		unsigned l = message->clear.left;
 		unsigned b = message->clear.bottom;
 		unsigned r = message->clear.right;
-		damage_console(l, t, r-l+1, b-t+1);
+		damage_console(l, t, r - l + 1, b - t + 1);
 	}
 
 	case CO_OPERATION_CONSOLE_BMOVE:{
@@ -300,7 +344,7 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t *message)
 		unsigned l = message->bmove.left;
 		unsigned b = message->bmove.bottom;
 		unsigned r = message->bmove.right;
-		damage_console(x, y, r-l+1, b-t+1);
+		damage_console(x, y, r - l + 1, b - t + 1);
 
 	}
 

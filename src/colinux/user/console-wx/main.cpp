@@ -27,13 +27,13 @@ MyFrame::MyFrame(const wxString& title) : wxFrame(NULL, wxID_ANY, title)
 {
 	SetIcon(wxICON(colinux));
 
-	wxMenu *fileMenu = new wxMenu;
+	wxMenu* fileMenu = new wxMenu;
 	fileMenu->Append(wxID_EXIT, _T("E&xit\tAlt-X"), _T("Quit this program"));
 
 	wxMenu *helpMenu = new wxMenu;
 	helpMenu->Append(wxID_ABOUT, _T("&About...\tF1"), _T("Show about dialog"));
 
-	wxMenuBar *menuBar = new wxMenuBar();
+	wxMenuBar* menuBar = new wxMenuBar();
 	menuBar->Append(fileMenu, _T("&File"));
 	menuBar->Append(helpMenu, _T("&Help"));
 	SetMenuBar(menuBar);

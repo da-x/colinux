@@ -33,7 +33,7 @@ static WORD vkey_state[256];
 static HHOOK current_hook;
 
 
-static void handle_scancode( WORD code )
+static void handle_scancode(WORD code)
 {
 	co_scan_code_t sc;
 	sc.mode = CO_KBD_SCANCODE_RAW;
@@ -41,17 +41,17 @@ static void handle_scancode( WORD code )
 	if ( code & 0xE000 )
 	{
 		sc.code = 0xE0;
-		co_user_console_handle_scancode( sc );
+		co_user_console_handle_scancode(sc);
 	}
 	sc.code = code & 0xFF;
-	co_user_console_handle_scancode( sc );
+	co_user_console_handle_scancode(sc);
 }
 
 /*
  * First attempt to make the console copy/paste text.
  * This needs more work to get right, but at least it's a start ;)
  */
-static int PasteClipboardIntoColinux( )
+static int PasteClipboardIntoColinux()
 {
 	// Lock clipboard for inspection -- TODO: try again on failure
 	if ( ! ::OpenClipboard(NULL) )
@@ -59,13 +59,17 @@ static int PasteClipboardIntoColinux( )
 		co_debug( "OpenClipboard() error 0x%lx !", ::GetLastError() );
 		return -1;
 	}
-	HANDLE h = ::GetClipboardData( CF_TEXT );
-	if ( h == NULL )
+	
+	HANDLE h = ::GetClipboardData(CF_TEXT);
+	
+	if (h == NULL )
 	{
-		::CloseClipboard( );
+		::CloseClipboard();
 		return 0;	// Empty (for text)
 	}
-	unsigned char* s = (unsigned char *) ::GlobalLock( h );
+	
+	unsigned char* s = (unsigned char*) ::GlobalLock(h);
+	
 	if ( s == NULL )
 	{
 		::CloseClipboard( );
@@ -83,14 +87,16 @@ static int PasteClipboardIntoColinux( )
 		sc.code = *s;
 		co_user_console_handle_scancode( sc );
 	}
-	::GlobalUnlock( h );
-	::CloseClipboard( );
+	
+	::GlobalUnlock(h);
+	::CloseClipboard();
+	
 	return 0;
 }
 
 
 static LRESULT CALLBACK keyboard_hook(
-    int nCode,
+    int    nCode,
     WPARAM wParam,
     LPARAM lParam
 )
@@ -171,10 +177,10 @@ void co_user_console_keyboard_focus_change( unsigned long keyboard_focus )
 	}
 }
 
-int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR cmdLine, int )
+int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR cmdLine, int)
 {
 	// Initialize keyboard hook
-	memset( vkey_state, 0, sizeof(vkey_state) );
+	memset(vkey_state, 0, sizeof(vkey_state) );
 	current_hook = SetWindowsHookEx(WH_KEYBOARD,
 					keyboard_hook,
 					NULL,
@@ -183,9 +189,10 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR cmdLine, int )
 	// "Normalize" arguments
 	// NOTE: I choosed to ignore parsing errors here as they should
 	//       be caught later
-	int argc = 0;
-	char **argv = NULL;
-	co_os_parse_args( cmdLine, &argc, &argv );
+	int    argc = 0;
+	char** argv = NULL;
+	
+	co_os_parse_args(cmdLine, &argc, &argv);
 
 	// Run main console procedure
 	return co_user_console_main(argc, argv);

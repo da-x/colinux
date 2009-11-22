@@ -19,12 +19,12 @@
 #include <colinux/arch/mmu.h>
 
 co_rc_t co_monitor_host_linuxvm_transfer_map(
-	co_monitor_t *cmon,
-	vm_ptr_t vaddr,
-	unsigned long size,
-	unsigned char **start,
-	unsigned char **page,
-	co_pfn_t *ppfn
+	co_monitor_t*	cmon,
+	vm_ptr_t	vaddr,
+	unsigned long 	size,
+	unsigned char** start,
+	unsigned char** page,
+	co_pfn_t*	ppfn
 ) {
 	unsigned long one_copy;
 	co_rc_t rc;
