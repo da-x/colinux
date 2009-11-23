@@ -17,7 +17,7 @@
 #include <windows.h>
 
 #include "widget.h"
-#include "../os_console.h"
+#include "os_console.h"
 
 #include <colinux/user/console-base/main.h>
 
