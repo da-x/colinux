@@ -1016,17 +1016,30 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  static struct kcore_list kcore_mem, kcore_vmalloc;
  
-@@ -625,6 +647,9 @@
+@@ -621,15 +643,15 @@
+ 
+ #if 1 /* double-sanity-check paranoia */
+ 	printk(KERN_INFO "virtual kernel memory layout:\n"
+-		"    fixmap  : 0x%08lx - 0x%08lx   (%4ld kB)\n"
++		"    fixmap  : 0x%08lx - 0x%08lx  (%4ld kB)\n"
  #ifdef CONFIG_HIGHMEM
- 		"    pkmap   : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+-		"    pkmap   : 0x%08lx - 0x%08lx   (%4ld kB)\n"
++		"    pkmap   : 0x%08lx - 0x%08lx  (%4ld kB)\n"
  #endif
+-		"    vmalloc : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+-		"    lowmem  : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+-		"      .init : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+-		"      .data : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+-		"      .text : 0x%08lx - 0x%08lx   (%4ld kB)\n",
 +#ifdef CONFIG_COOPERATIVE
-+		"    colinux : 0x%08lx - 0x%08lx   (%4ld MB)\n"
++		"    colinux : 0x%08lx - 0x%08lx  (%4ld MB)\n"
 +#endif
- 		"    vmalloc : 0x%08lx - 0x%08lx   (%4ld MB)\n"
- 		"    lowmem  : 0x%08lx - 0x%08lx   (%4ld MB)\n"
- 		"      .init : 0x%08lx - 0x%08lx   (%4ld kB)\n"
-@@ -638,6 +663,11 @@
++		"    vmalloc : 0x%08lx - 0x%08lx  (%4ld MB)\n",
++
+ 		FIXADDR_START, FIXADDR_TOP,
+ 		(FIXADDR_TOP - FIXADDR_START) >> 10,
+ 
+@@ -638,8 +660,19 @@
  		(LAST_PKMAP*PAGE_SIZE) >> 10,
  #endif
  
@@ -1036,9 +1049,18 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
 +#endif
 +
  		VMALLOC_START, VMALLOC_END,
- 		(VMALLOC_END - VMALLOC_START) >> 20,
+-		(VMALLOC_END - VMALLOC_START) >> 20,
++		(VMALLOC_END - VMALLOC_START) >> 20);
++
++	printk(KERN_INFO
++		"    lowmem  : 0x%08lx - 0x%08lx  (%4ld MB)\n"
++		"      .init : 0x%08lx - 0x%08lx  (%4ld kB)\n"
++		"      .data : 0x%08lx - 0x%08lx  (%4ld kB)\n"
++		"      .text : 0x%08lx - 0x%08lx  (%4ld kB)\n",
  
-@@ -658,12 +688,20 @@
+ 		(unsigned long)__va(0), (unsigned long)high_memory,
+ 		((unsigned long)high_memory - (unsigned long)__va(0)) >> 20,
+@@ -658,12 +691,20 @@
  	BUG_ON(PKMAP_BASE + LAST_PKMAP*PAGE_SIZE	> FIXADDR_START);
  	BUG_ON(VMALLOC_END				> PKMAP_BASE);
  #endif
@@ -1059,7 +1081,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  	cpa_init();
  
-@@ -694,6 +732,7 @@
+@@ -694,6 +735,7 @@
   * This function cannot be __init, since exceptions don't work in that
   * section.  Put this after the callers, so that it cannot be inlined.
   */
@@ -1067,7 +1089,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  static noinline int do_test_wp_bit(void)
  {
  	char tmp_reg;
-@@ -713,6 +752,7 @@
+@@ -713,6 +755,7 @@
  
  	return flag;
  }
@@ -1075,7 +1097,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  #ifdef CONFIG_DEBUG_RODATA
  const int rodata_test_data = 0xC3;
-@@ -770,7 +810,7 @@
+@@ -770,7 +813,7 @@
  	 */
  	printk(KERN_INFO "debug: unmapping init memory %08lx..%08lx\n",
  		begin, PAGE_ALIGN(end));
@@ -1084,7 +1106,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  #else
  	unsigned long addr;
  
-@@ -779,7 +819,8 @@
+@@ -779,7 +822,8 @@
  	 * we are going to free part of that, we need to make that
  	 * writeable first.
  	 */
