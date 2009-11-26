@@ -12,9 +12,6 @@
 
 #include "common.h"
 
-#define CO_ENABLE_CURSOR_SIZE		1 /* 1=Enable cursor resizing,      0=disable */
-#define CO_ENABLE_COCON_MAX_LINES	1 /* 1=Enable max lines in 'cocon', 0=disable */
-#define CO_ENABLE_COBUF_SYNTAX		0 /* 1=Enable 'cobuf' syntax,       0=disable */
 #define CO_ENABLE_CON_SCROLL		0 /* 1=Enable console scrolling,    0=disable */
 
 /*
@@ -179,6 +176,22 @@ typedef struct co_execute_desc {
 
 } co_execute_desc_t;
 
+typedef struct co_config_console {
+	/* Dimensions of the console screen */
+	int x;
+	int y;
+
+	/* Dimensions of the console buffer */
+	/* int max_x; */
+	int max_y;
+
+	/* Cursor size in percent */ 
+	int curs_size_prc;
+
+	/* Colors for clear screen */ 
+	int attr;
+} co_console_config_t;
+
 /*
  * Per-machine coLinux configuration
  */
@@ -271,27 +284,13 @@ typedef struct co_config {
 	bool_t		initrd_enabled;
 	co_pathname_t	initrd_path;
 
-	/* Dimensions of the console screen */
-	struct {
-		int size_x;
-		int size_y;
-	} console;
-
-	/* Dimensions of the console buffer */
-	struct {
-		int max_x;
-		int max_y;
-	} con_buf;
-
-	/* Cursor size in percent */ 
-	struct {
-		int size_prc;
-	} cursor_size;
-	
 	/*
 	 * Enable asynchronious block device operations.
 	 */
 	int cobd_async_enable;
+
+	/* Dimensions of the console and other fix parts  */
+	co_console_config_t console;
 } co_config_t;
 
 #endif

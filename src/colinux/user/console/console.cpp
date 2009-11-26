@@ -347,11 +347,7 @@ co_rc_t console_window_t::attach()
 		return rc;
 	}
 
-	rc = co_console_create(get_console.x, 
-	                       get_console.y, 
-	                       get_console.max_y, 
-	                       get_console.curs_size, 
-	                       &console);
+	rc = co_console_create(&get_console.config, &console);
 	if (!CO_OK(rc))
 		return rc;
 

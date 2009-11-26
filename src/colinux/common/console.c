@@ -16,35 +16,24 @@
 /*
  * Console initialization.
  */
-static void blank_char(co_console_cell_t *cell)
+static void blank_char(co_console_cell_t *cell, int attr)
 {
 	cell->ch   = 0x20;  /* space 		*/
-	cell->attr = 0x07;  /* white on black 	*/
+	cell->attr = attr;  /* Default is white on black */
 }
 
 /* Create the console object */
-co_rc_t co_console_create(long		 x,
-			  long	         y,
-			  long           max_y,
-			  int		 curs_size_prc,
+co_rc_t co_console_create(co_console_config_t* config_par,
 			  co_console_t** console_out)
 {
 	unsigned long struct_size;
 	co_console_t* console;
 
-	if(max_y < y) {
-		max_y = y;
-	}
-	
-        if(curs_size_prc < 0 || curs_size_prc > 100) {
-		return CO_RC(INVALID_PARAMETER);
-	}
-
 	/*
 	 * Use only one allocation for the entire console object so it would 
 	 * be more managable (and less code).
 	 */
-	struct_size = sizeof(co_console_cell_t) * max_y * x;
+	struct_size = sizeof(co_console_cell_t) * config_par->x * (config_par->y + config_par->max_y);
 	
         if (struct_size <= 0 || 
             struct_size > sizeof(co_console_cell_t) * CO_CONSOLE_MAX_CHARS) {
@@ -58,17 +47,11 @@ co_rc_t co_console_create(long		 x,
 
 	memset(console, 0, struct_size);
 
-	console->size       = struct_size;
-	console->x          = x;
-	console->y          = y;
-	console->max_y      = max_y;
-	console->screen     = ((co_console_cell_t*)((char*)console + sizeof(co_console_t)));
-	console->backlog    = console->screen + y * x;
-	
-	/* Set initial cursor size. 'curs_size_prc' and
-	 * 'height' in 'cocon.c' have exactly the same meaning.
-	 */
-	console->cursor.height = curs_size_prc;
+	console->size		= struct_size;
+	console->config		= *config_par;
+	console->screen		= ((co_console_cell_t*)((char*)console + sizeof(co_console_t)));
+	console->backlog	= console->screen + config_par->y * config_par->x;
+
 	*console_out 	       = console;
 
 	return CO_RC(OK);
@@ -124,29 +107,29 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 		else
 			dir = 2;
 
-		if (b > console->y)
+		if (b > console->config.y)
 			return CO_RC(ERROR);
 
-		if (t + lines >= console->y)
+		if (t + lines >= console->config.y)
 			return CO_RC(ERROR);
 
 		if (dir == 1) {
-			memmove(&console->screen[console->x * t],
-				&console->screen[console->x * (t + lines)],
-				console->x*(b - t - lines) * sizeof(co_console_cell_t));
+			memmove(&console->screen[console->config.x * t],
+				&console->screen[console->config.x * (t + lines)],
+				console->config.x*(b - t - lines) * sizeof(co_console_cell_t));
 
 			for (y = b - lines; y < b; y++)
-				for (x = 0; x < console->x; x++)
-					blank_char(&console->screen[y * console->x + x]);
+				for (x = 0; x < console->config.x; x++)
+					blank_char(&console->screen[y * console->config.x + x], console->config.attr);
 		}
 		else {
-			memmove(&console->screen[console->x * (t + lines)],
-				&console->screen[console->x * (t)],
-				console->x*(b - t - lines) * sizeof(co_console_cell_t));
+			memmove(&console->screen[console->config.x * (t + lines)],
+				&console->screen[console->config.x * (t)],
+				console->config.x*(b - t - lines) * sizeof(co_console_cell_t));
 
 			for (y = t; y < t + lines; y++)
-				for (x = 0; x < console->x; x++)
-					blank_char(&console->screen[y*console->x + x]);
+				for (x = 0; x < console->config.x; x++)
+					blank_char(&console->screen[y*console->config.x + x], console->config.attr);
 		}
 
 		break;
@@ -157,11 +140,11 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 		int                count = message->putcs.count;
 		co_console_cell_t* cells = (co_console_cell_t *)&message->putcs.data;
 
-		if (y >= console->y  ||  x >= console->x)
+		if (y >= console->config.y  ||  x >= console->config.x)
 			return CO_RC(ERROR);
 
-		while (x < console->x && count > 0) {
-			console->screen[y * console->x + x] = *cells;
+		while (x < console->config.x && count > 0) {
+			console->screen[y * console->config.x + x] = *cells;
 
 			cells++;
 			x++;
@@ -174,10 +157,10 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 		int x = message->putc.x;
 		int y = message->putc.y;
 
-		if (y >= console->y  ||  x >= console->x)
+		if (y >= console->config.y  ||  x >= console->config.x)
 			return CO_RC(ERROR);
 		
-		console->screen[y * console->x + x] = 
+		console->screen[y * console->config.x + x] = 
 			*(co_console_cell_t*)(&message->putc.charattr);
 
 		break;
@@ -198,7 +181,7 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 
 		while (t <= b) {
 			l    = message->clear.left;
-			cell = &console->screen[t * console->x + l];
+			cell = &console->screen[t * console->config.x + l];
 			while (l++ <= r) {
 				cell->attr = message->clear.charattr >> 8;
 				cell->ch   = message->clear.charattr & 0xff;
@@ -219,8 +202,8 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 
 		if (y < t) {
 			while (t <= b) {
-				memmove(&console->screen[y * console->x + x],
-					&console->screen[t * console->x + l],
+				memmove(&console->screen[y * console->config.x + x],
+					&console->screen[t * console->config.x + l],
 					(r - l + 1) * sizeof(co_console_cell_t));
 				t++;
 				y++;
@@ -228,8 +211,8 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 		} else	{
 			y += b-t;
 			while (t <= b) {
-				memmove(&console->screen[y * console->x + x],
-					&console->screen[b * console->x + l],
+				memmove(&console->screen[y * console->config.x + x],
+					&console->screen[b * console->config.x + l],
 					(r - l + 1) * sizeof(co_console_cell_t));
 				b--;
 				y--;
@@ -240,11 +223,11 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 
 	case CO_OPERATION_CONSOLE_STARTUP:
 		message->type       = CO_OPERATION_CONSOLE_SIZES;
-		message->sizes.cols = console->x;
-		message->sizes.rows = console->y;
+		message->sizes.cols = console->config.x;
+		message->sizes.rows = console->config.y;
 		
 		/* 'backbuf' not used in the guest linux kernel, or in the host, so far */
-		message->sizes.backbuf = console->max_y - console->x * console->y;
+		message->sizes.backbuf = console->config.max_y - console->config.x * console->config.y;
 		
 		break;
 

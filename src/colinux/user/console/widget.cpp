@@ -84,8 +84,8 @@ void console_widget_t::damage_console(int x_, int y_, int w_, int h_)
 	cx = x();
 	cy = y();
 
-	cx -= ((letter_x * console->x) - w()) / 2;
-	cy -= ((letter_y * console->y) - h()) / 2;
+	cx -= ((letter_x * console->config.x) - w()) / 2;
+	cy -= ((letter_y * console->config.y) - h()) / 2;
 
 	damage(1, 
 	       cx + x_ * letter_x, 
@@ -109,8 +109,8 @@ void console_widget_t::draw()
 	letter_x = (int)fl_width('A');
 	letter_y = (int)fl_height();
 	
-	fit_x = letter_x * console->x;
-	fit_y = letter_y * console->y;
+	fit_x = letter_x * console->config.x;
+	fit_y = letter_y * console->config.y;
 	
 	int x_, y_, w_, h_, cx, cy;	
 	fl_clip_box(x(), y(), w(), h(), x_, y_, w_, h_);
@@ -118,8 +118,8 @@ void console_widget_t::draw()
 	cx = x();
 	cy = y();
 
-	cx -= ((letter_x * console->x) - w()) / 2;
-	cy -= ((letter_y * console->y) - h()) / 2;
+	cx -= ((letter_x * console->config.x) - w()) / 2;
+	cy -= ((letter_y * console->config.y) - h()) / 2;
 	
 	x_ -= cx;
 	y_ -= cy;
@@ -141,20 +141,20 @@ void console_widget_t::draw()
 
 	if (y_ < 0) {
 		fl_color(FL_BLACK);
-		fl_rectf(cx, y(), console->x * letter_x, -y_);
+		fl_rectf(cx, y(), console->config.x * letter_x, -y_);
 	}
 
-	if (x_ + w_ > console->x*letter_x) {
+	if (x_ + w_ > console->config.x*letter_x) {
 		fl_color(FL_BLACK);
-		fl_rectf(cx+console->x * letter_x, y(), x_ + w_ - console->x * letter_x, h_);
+		fl_rectf(cx+console->config.x * letter_x, y(), x_ + w_ - console->config.x * letter_x, h_);
 
-		x2 = console->x;
+		x2 = console->config.x;
 	}
 
-	if (y_ + h_ > console->y*letter_y) {
+	if (y_ + h_ > console->config.y*letter_y) {
 		fl_color(FL_BLACK);
-		fl_rectf(cx, cy + console->y * letter_y, 
-			 console->x*letter_x, y_ + h_ - console->y * letter_y);
+		fl_rectf(cx, cy + console->config.y * letter_y, 
+			 console->config.x*letter_x, y_ + h_ - console->config.y * letter_y);
 	}
 
 	fl_push_clip(x(), y(), w(), h());
@@ -163,14 +163,14 @@ void console_widget_t::draw()
 		if (yi < 0)
 			continue;
 
-		if (yi >= console->y)
+		if (yi >= console->config.y)
 			break;
 
-		co_console_cell_t* row_start = &console->screen[yi * console->x];
+		co_console_cell_t* row_start = &console->screen[yi * console->config.x];
 		co_console_cell_t* cell;
 		co_console_cell_t* start;
 		co_console_cell_t* end;
-		co_console_cell_t* limit = &console->screen[console->y*console->x];
+		co_console_cell_t* limit = &console->screen[console->config.y*console->config.x];
 		char               text_buff[0x100];
 
 		start = row_start + x1;
@@ -295,7 +295,7 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 		unsigned long t = message->scroll.top;		/* Start of scroll region (row) */
 		unsigned long b = message->scroll.bottom + 1;  	/* End of scroll region (row)	*/
 
-		damage_console(0, t, console->x, b - t + 1);
+		damage_console(0, t, console->config.x, b - t + 1);
 		break;
 	}
 	case CO_OPERATION_CONSOLE_PUTCS: {
@@ -305,7 +305,7 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 		int  sx	    = x;
 		int  scount = 0;
 
-		while (x < console->x  &&  count > 0) {
+		while (x < console->config.x  &&  count > 0) {
 			x++;
 			count--;
 			scount++;

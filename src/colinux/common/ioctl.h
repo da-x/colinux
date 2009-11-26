@@ -148,10 +148,7 @@ typedef struct {
 /* interface for CO_MONITOR_IOCTL_GET_CONSOLE: */
 typedef struct {
 	co_manager_ioctl_monitor_t pc;
-	unsigned long 		   x;
-	unsigned long		   y;
-	unsigned long		   max_y;
-	unsigned long		   curs_size;
+	co_console_config_t        config;
 } co_monitor_ioctl_get_console_t;
 
 typedef struct {

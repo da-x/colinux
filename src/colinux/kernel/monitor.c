@@ -1050,11 +1050,7 @@ co_rc_t co_monitor_create(co_manager_t*		     manager,
 	cmon->state   = CO_MONITOR_STATE_EMPTY;
 	cmon->id      = co_os_current_id();
 
-	rc = co_console_create(params->config.console.size_x,
-	                       params->config.console.size_y,
-	                       params->config.con_buf.max_y,
-	                       params->config.cursor_size.size_prc,
-	                       &cmon->console);
+	rc = co_console_create(&params->config.console, &cmon->console);
 	if (!CO_OK(rc))
 		goto out_free_monitor;
 	
@@ -1367,13 +1363,10 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 	int 			y;
 
 	size = (((char*)(&message->putcs + 1)) - ((char*)message)) + 
-		(monitor->console->x * sizeof(co_console_cell_t));
+		(monitor->console->config.x * sizeof(co_console_cell_t));
 
-	params->x	  = monitor->console->x;
-	params->y	  = monitor->console->y;
-	params->max_y	  = monitor->console->max_y;
-	params->curs_size = monitor->console->cursor.height;
-							  
+	params->config = monitor->console->config;
+
 	co_message = co_os_malloc(size + sizeof(*co_message));
 	if (!co_message)
 		return CO_RC(OUT_OF_MEMORY);
@@ -1388,12 +1381,12 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 	
 	message->type	     = CO_OPERATION_CONSOLE_PUTCS;
 	message->putcs.x     = 0;
-	message->putcs.count = monitor->console->x;
+	message->putcs.count = monitor->console->config.x;
 
-	for (y = 0; y < monitor->console->y; y++) {
+	for (y = 0; y < monitor->console->config.y; y++) {
 		co_memcpy(&message->putcs.data, 
-			  &monitor->console->screen[y * monitor->console->x], 
-			  monitor->console->x * sizeof(unsigned short));
+			  &monitor->console->screen[y * monitor->console->config.x], 
+			  monitor->console->config.x * sizeof(unsigned short));
 		message->putcs.y = y;
 
 		/* Redirect each string operation to user level */

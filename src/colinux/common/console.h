@@ -46,7 +46,7 @@ typedef struct co_console_cell {
 	unsigned char attr;
 } co_console_cell_t;
 
-#if CO_ENABLE_COCON_MAX_LINES || CO_ENABLE_SCROLL_BUF
+#if CO_ENABLE_SCROLL_BUF
 /* Set memory limit for console buffer up to 16 * 32 KB with scrolling */
 # define CO_CONSOLE_MAX_CHARS	((16 * 32 * 1024) / sizeof(co_console_cell_t))
 #else
@@ -58,10 +58,8 @@ typedef struct co_console {
 	/* size of this struct */
 	unsigned long	size;
 
-	/* dimentions of the console */
-	long		x;
-	long		y;
-	long		max_y;
+	/* Fix values from config */
+	co_console_config_t config;
 
 	/* On-screen data */
 	co_console_cell_t* screen;
@@ -73,16 +71,13 @@ typedef struct co_console {
 	long		   last_blacklog;
 	/* </not yet implemented> */
 
-	/* Cursor position and height in percent
+	/* Current cursor position and height in percent
 	 * Defined in 'linux/cooperative.h' as x, y, height.
 	 */
 	co_cursor_pos_t cursor;
 } co_console_t;
 
-extern co_rc_t co_console_create(long		x,
-			  	 long	        y,
-			  	 long		max_y,
-			  	 int		curs_size_prc,
+extern co_rc_t co_console_create(co_console_config_t* config_par,
 			  	 co_console_t** console_out);
   /* Create the console object.
      Parameters:

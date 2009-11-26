@@ -137,8 +137,8 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 		return CO_RC(ERROR);
 	}
 
-	win_size.X = console->x;
-	win_size.Y = console->y;
+	win_size.X = console->config.x;
+	win_size.Y = console->config.y;
 	
 	input = GetStdHandle(STD_INPUT_HANDLE);
 	SetConsoleMode(input, 0);
@@ -188,8 +188,8 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 	buf_size = win_size;
 
 #if CO_ENABLE_CON_SCROLL
-	if(console->max_y > buf_size.Y) 
-		buf_size.Y = console->max_y;
+	if(console->config.max_y > buf_size.Y) 
+		buf_size.Y = console->config.max_y;
 #endif
 
 	screen = (CHAR_INFO*)co_os_malloc(sizeof(CHAR_INFO) * buf_size.X * buf_size.Y);
@@ -205,6 +205,9 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 
 	SetConsoleMode(own_out_h, 0);
 
+	console->cursor.height = console->config.curs_size_prc;
+	set_cursor_size(console->cursor.height);
+
 	// Show the standard screen cursor
 	if(old_curs_is_vis) {
 		cci.bVisible = true;
@@ -213,8 +216,6 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 	}
 	
 	SetConsoleActiveScreenBuffer(own_out_h);
-	
-	set_cursor_size(console->cursor.height);
 
 	// Fixup, if resize failed from smaller start window
 	if (error == ERROR_INVALID_PARAMETER) {
@@ -407,8 +408,8 @@ console_widget_NT_t::op_putcs(
 	r.Top	 = 
 	r.Bottom = Y;
 
-	if (--count + r.Left > console->x)
-		count = console->x - r.Left;
+	if (--count + r.Left > console->config.x)
+		count = console->config.x - r.Left;
 	r.Right = r.Left + count;
 
 	co_console_cell_t* cells = (co_console_cell_t*)D;
