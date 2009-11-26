@@ -249,9 +249,9 @@ co_rc_t co_winnt_daemon_remove_service(const char *service_name)
 	return rc;
 }
 
-static co_start_parameters_t *daemon_start_parameters;
-static SERVICE_STATUS ssStatus;
-static SERVICE_STATUS_HANDLE   sshStatusHandle;
+static co_start_parameters_t*	daemon_start_parameters;
+static SERVICE_STATUS		ssStatus;
+static SERVICE_STATUS_HANDLE   	sshStatusHandle;
 
 void co_winnt_sc_report_status(DWORD dwCurrentState, DWORD dwWin32ExitCode, DWORD dwWaitHint)
 {
@@ -296,7 +296,7 @@ void WINAPI co_winnt_service_control_callback(DWORD dwCtrlCode)
 	co_winnt_sc_report_status(ssStatus.dwCurrentState, NO_ERROR, 0);
 }
 
-static void WINAPI service_main(int _argc, char **_argv) 
+static void WINAPI service_main(int _argc, char** _argv) 
 {
 	sshStatusHandle = RegisterServiceCtrlHandler("", co_winnt_service_control_callback);
 
@@ -312,7 +312,7 @@ static void WINAPI service_main(int _argc, char **_argv)
 	}
 }
 
-bool_t co_winnt_daemon_initialize_service(co_start_parameters_t *start_parameters) 
+bool_t co_winnt_daemon_initialize_service(co_start_parameters_t* start_parameters) 
 {
 	SERVICE_TABLE_ENTRY dispatch_table[] = {
 		{ "", (LPSERVICE_MAIN_FUNCTION)service_main },
@@ -329,10 +329,10 @@ bool_t co_winnt_daemon_initialize_service(co_start_parameters_t *start_parameter
 	}
 }
 
-void co_ntevent_print(const char *format, ...)
+void co_ntevent_print(const char* format, ...)
 {
-	HANDLE hEventLog;
-	char buf[0x100];
+	HANDLE	hEventLog;
+	char	buf[0x100];
 	va_list ap;
 
 	va_start(ap, format);
@@ -353,7 +353,8 @@ void co_ntevent_print(const char *format, ...)
 
 	const char* szMsgs[] = { buf };
 
-	if (ReportEvent(hEventLog,		// Event Log Handle
+	if (ReportEvent(
+		hEventLog,			// Event Log Handle
 		EVENTLOG_INFORMATION_TYPE,	// Event type
 		0,				// Event category
 		MSG_SERVICE_INFO,		// Event ID

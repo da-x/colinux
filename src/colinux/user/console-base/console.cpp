@@ -32,10 +32,10 @@ extern "C" {
 console_window_t::console_window_t()
 {
 	start_parameters.attach_id = CO_INVALID_ID;
-	instance_id = CO_INVALID_ID;
-	widget = NULL;
-	message_monitor = NULL;
-	attached = PFALSE;
+	instance_id		   = CO_INVALID_ID;
+	widget			   = NULL;
+	message_monitor		   = NULL;
+	attached		   = PFALSE;
 	co_reactor_create(&reactor);
 }
 
@@ -66,7 +66,7 @@ void console_window_t::syntax()
 	co_terminal_print("\n");
 }
 
-co_rc_t console_window_t::parse_args(int argc, char **argv)
+co_rc_t console_window_t::parse_args(int argc, char** argv)
 {
 	bool_t 		pidfile_specified;
 	co_pathname_t	pidfile;
