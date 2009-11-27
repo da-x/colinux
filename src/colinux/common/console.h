@@ -10,12 +10,33 @@
 #ifndef __COLINUX_COMMON_CONSOLE__
 #define __COLINUX_COMMON_CONSOLE__
 
-#include "common.h"
-
 #ifndef __COLINUX_LINUX_CONFIG_H__ /* Exclude circullar "include" */
 # include "config.h" 
 #endif
 
+#if defined __cplusplus
+extern "C" {
+#endif
+
+/* Set lines limit for console buffer in 2 ... 500 */
+#define CO_CONSOLE_MIN_ROWS		2
+#define CO_CONSOLE_MAX_ROWS		500
+
+#define CO_CONSOLE_MIN_COLS		16
+
+/* Default console screen dimentions */
+#define CO_CONSOLE_WIDTH		80
+#define CO_CONSOLE_HEIGHT		25
+
+/* Cursor size */
+#define CO_CONSOLE_HIDDEN_CURSOR	0
+  /* Invisible cursor */
+
+#define CO_CONSOLE_NORM_CURSOR		10
+  /* Normal cursor (two scanlines) */
+
+#define CO_CONSOLE_FAT_CURSOR		99
+  /* "Fat" cursor (max possible size) */
 
 /*
  * This is a generic console implementation. It receives 'messages'
@@ -29,62 +50,30 @@
  * (as it is needed by the Linux code).
  */
 
-#define CO_CONSOLE_WIDTH	80
-#define CO_CONSOLE_HEIGHT	25
-
-#define CO_CONSOLE_HEIGHT_BUF	0
-
-/* Cursor size */
-#define CO_CONSOLE_NORM_CURSOR	10
-  /* Normal cursor (one scanline) */
-
-#define CO_CONSOLE_FAT_CURSOR	99
-  /* "Fat" cursor (max possible size) */
-
 typedef struct co_console_cell { 
 	unsigned char ch;
 	unsigned char attr;
 } co_console_cell_t;
 
-#if CO_ENABLE_SCROLL_BUF
-/* Set memory limit for console buffer up to 16 * 32 KB with scrolling */
-# define CO_CONSOLE_MAX_CHARS	((16 * 32 * 1024) / sizeof(co_console_cell_t))
-#else
-/* Set memory limit for console buffer up to 32 KB without scrolling */
-# define CO_CONSOLE_MAX_CHARS	((1  * 32 * 1024) / sizeof(co_console_cell_t))
-#endif
-
 typedef struct co_console {
 	/* size of this struct */
 	unsigned long	size;
 
-	/* Fix values from config */
+        /* User defined configuration */ 
 	co_console_config_t config;
 
 	/* On-screen data */
 	co_console_cell_t* screen;
 
-	/* <not yet implemented> */
-	/* Off-screen (scrolled data) */
-	co_console_cell_t* backlog;
-	long		   used_blacklog;
-	long		   last_blacklog;
-	/* </not yet implemented> */
-
-	/* Current cursor position and height in percent
+	/* Cursor position and height in percent
 	 * Defined in 'linux/cooperative.h' as x, y, height.
 	 */
 	co_cursor_pos_t cursor;
 } co_console_t;
 
-extern co_rc_t co_console_create(co_console_config_t* config_par,
-			  	 co_console_t** console_out);
+extern co_rc_t co_console_create(co_console_config_t* config_p,
+			  	 co_console_t**       console_out);
   /* Create the console object.
-     Parameters:
-       x 	     - maximum height of the visible part of the console 
-       y 	     - maximum width of the visible part of the console 
-       max_y         - maximum number of rows in the screen buffer
-       curs_size_prc - initial size of the cursor in percent
   */
 		                 
 extern co_rc_t co_console_op(co_console_t* console, co_console_message_t* message);
@@ -95,4 +84,8 @@ extern void co_console_pickle(co_console_t* console);
 extern void co_console_unpickle(co_console_t* console);
 #endif
 
+#if defined __cplusplus
+}
 #endif
+
+#endif /* __COLINUX_COMMON_CONSOLE__ */

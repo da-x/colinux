@@ -29,6 +29,7 @@
 #include <stdlib.h>
 
 #define COLINUX_DEBUG_COCON	0
+#define COLINUX_DEBUG_COLOR	0
 #define COLINUX_DEBUG_CURSOR	0
 
 typedef struct {
@@ -989,8 +990,9 @@ static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, co_conf
 	char*	p;
 	co_rc_t rc;
 
-	conf->console.x = CO_CONSOLE_WIDTH;
-	conf->console.y = CO_CONSOLE_HEIGHT;
+	conf->console.x     = CO_CONSOLE_WIDTH;
+	conf->console.y     = CO_CONSOLE_HEIGHT;
+	conf->console.max_y = CO_CONSOLE_HEIGHT;
 
 	rc = co_cmdline_get_next_equality(cmdline,
 					  "cocon",
@@ -1004,37 +1006,36 @@ static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, co_conf
 		return rc;
 
 	if (exists) {
-		long x, y, max_y;
+		int x;
+		int y;
+		int max_y;
 
 		x = strtol(buf, &p, 0);
-		if (*p) p++;
+		if (*p != '\0') p++;
 		y = strtol(p, &p, 0);
-		if (*p) p++;
+		if (*p != '\0') p++;
 		max_y = strtol(p, &p, 0);
 
-#if CO_ENABLE_CON_SCROLL
-		/* Adjusts users misconfiguration, or empty value */
-		if(max_y < y)
-			max_y = y;
-		else
-		if (x * max_y > CO_CONSOLE_MAX_CHARS) {
-			co_terminal_print("Invalid args (%ld,%ld,%ld) for cocon scrollbuf\n", x, y, max_y);
+		if(max_y < y) max_y = y;
+
+		/* Check screen limits */
+		if(x     < CO_CONSOLE_MIN_COLS	|| 
+		   y     < CO_CONSOLE_MIN_ROWS  || 
+		   max_y > CO_CONSOLE_MAX_ROWS) {
+			co_terminal_print("Invalid args (%ux%u,%u) for cocon\n",
+					  x, y, max_y);
 			return CO_RC(INVALID_PARAMETER);
 		}
-#else /* CO_ENABLE_CON_SCROLL */
-		max_y = CO_CONSOLE_HEIGHT_BUF;
-#endif /* CO_ENABLE_CON_SCROLL */
-
-		if (x < 16 || y < 2 || x * y > CO_CONSOLE_MAX_CHARS) {
-			co_terminal_print("Invalid args (%ld,%ld) for cocon\n", x, y);
-			return CO_RC(INVALID_PARAMETER);
-		}
-
-		conf->console.x = x;
-		conf->console.y = y;
-		conf->console.max_y  = max_y;
+		conf->console.x     = x;
+		conf->console.y     = y;
+		conf->console.max_y = max_y;
 	}
-
+#if COLINUX_DEBUG_COCON
+	co_terminal_print("cocon=%dx%d,%d\n", 
+			  (int)conf->console.x, 
+			  (int)conf->console.y, 
+			  (int)conf->console.max_y);
+#endif
 	return CO_RC(OK);
 }
 
@@ -1065,37 +1066,137 @@ static co_rc_t parse_args_config_cursor(co_command_line_params_t cmdline,
 
 		size_prc = (int)strtol(buf, &p, 0);
 
-		if(size_prc < 0 || size_prc > 100) { 
+		if(size_prc < CO_CONSOLE_HIDDEN_CURSOR || size_prc > 100) { 
 			co_terminal_print("Invalid arg (%d) for cursor\n", size_prc);
 			return CO_RC(INVALID_PARAMETER);
 		}
 		
-		/* User can set size of cursor == 100, but actual value
-		 * of it can not exceed 99 
+		/* User can set size of cursor == 100, but actual value of
+		 * it can not exceed 99 (in NT console curs_size == 100 
+		 * becomes invisible)
 		 */
 		if(size_prc > CO_CONSOLE_FAT_CURSOR)
 			size_prc = CO_CONSOLE_FAT_CURSOR;
 		
 		conf->console.curs_size_prc = size_prc;
-#if COLINUX_DEBUG_CURSOR
-		co_terminal_print("cursor=%d\n", size_prc);
-#endif
-
 	}
+#if COLINUX_DEBUG_CURSOR
+	co_terminal_print("cursor=%d\n", conf->console.curs_size_prc);
+#endif
 	return CO_RC(OK);
 }
 
-/* Set console default color */
-static co_rc_t parse_args_config_color(co_command_line_params_t cmdline,
-                                        co_config_t*             conf)
+#if CO_ENABLE_CON_COLOR
+
+typedef struct co_color_tbl_t
+{ char*	name_p;
+  int	len;
+  int	attr;
+}co_color_tbl_t;
+
+static co_color_tbl_t const co_color_tbl[] =
+{ /* Dark colors */
+  {"black"        , 5, CO_COLOR_BLACK              	},
+  {"red"          , 3, CO_COLOR_RED                	},
+  {"green"        , 5, CO_COLOR_GREEN              	},
+  {"brown"        , 5, CO_COLOR_YELLOW             	},
+  {"blue"         , 4, CO_COLOR_BLUE			},
+  {"magenta"      , 7, CO_COLOR_MAGENTA			},
+  {"cyan"         , 4, CO_COLOR_CYAN			},
+  {"gray"     	  , 4, CO_COLOR_WHITE			},
+  {"lightgray"    , 9, CO_COLOR_WHITE			},
+  /* bright colors */
+  {"darkgray"     , 8, CO_COLOR_BLACK   | CO_ATTR_BRIGHT},
+  {"brightred"    , 9, CO_COLOR_RED     | CO_ATTR_BRIGHT},
+  {"brightgreen"  ,11, CO_COLOR_GREEN   | CO_ATTR_BRIGHT},
+  {"yellow"       , 6, CO_COLOR_YELLOW  | CO_ATTR_BRIGHT},
+  {"brightblue"   ,10, CO_COLOR_BLUE    | CO_ATTR_BRIGHT},
+  {"brightmagenta",13, CO_COLOR_MAGENTA | CO_ATTR_BRIGHT},
+  {"brightcyan"   ,10, CO_COLOR_CYAN    | CO_ATTR_BRIGHT},
+  {"white"        , 5, CO_COLOR_WHITE   | CO_ATTR_BRIGHT},
+  {NULL		  , 0, 0x00				}
+
+};
+
+static int co_find_color_attr(char** str_pp)
 {
+	char*	beg_p;
+	char*	end_p;
+	int	len;
 
-	// Set default color
-	conf->console.attr = 0x07;
 
-	// TODO:
-	// Needs to map colors (text) into integers
+	beg_p = *str_pp;
+	end_p = beg_p;
+	
+	/* Find word end */
+	while(*end_p != ',' && *end_p != '\0') {
+		end_p++;
+	}
+	
+	len = (int)(end_p - beg_p);
+	if(len > 0) {
+		co_color_tbl_t* tbl_p;
+		
+		tbl_p = (co_color_tbl_t*)co_color_tbl;
+		while(tbl_p->name_p != NULL) {
+			if(len == tbl_p->len &&
+		   	strncmp(tbl_p->name_p, beg_p, len) == 0) {
+		   		*str_pp = end_p;
+		   		return tbl_p->attr;
+			}
+			tbl_p++;
+		}
+	}
+	return -1;
+}
 
+#endif /* CO_ENABLE_CON_COLOR */
+
+/* Set console screen color */
+static co_rc_t parse_args_config_color(co_command_line_params_t cmdline,
+                                       co_config_t*             conf)
+{
+#if CO_ENABLE_CON_COLOR	
+	bool_t  exists;
+	char    buf[32];
+	co_rc_t rc;
+#endif
+	
+	conf->console.attr = (CO_COLOR_BLACK << 4) | CO_COLOR_WHITE;
+
+#if CO_ENABLE_CON_COLOR	
+	rc = co_cmdline_get_next_equality(cmdline,
+					  "color",
+					  0,
+					  NULL,
+					  0, 
+					  buf,
+					  sizeof(buf),
+					  &exists);
+	if (exists) {
+		char* str_p;
+		int   fg_attr;
+		int   bg_attr;
+		
+		str_p = buf;
+
+		fg_attr = co_find_color_attr(&str_p);
+		if(*str_p != '\0') str_p++;
+		bg_attr = co_find_color_attr(&str_p);
+		
+		if(fg_attr < 0 || bg_attr < 0) {
+			co_terminal_print("Invalid arg (%s) for color\n", buf);
+			return CO_RC(INVALID_PARAMETER);
+		}
+		conf->console.attr = (bg_attr << 4) | fg_attr;
+	}
+#endif /* CO_ENABLE_CON_COLOR */
+	
+#if COLINUX_DEBUG_COLOR
+	co_terminal_print("color=%02x,%02x\n", 
+			  conf->console.attr & 0x0F, 
+			  conf->console.attr >> 4);
+#endif
 	return CO_RC(OK);
 }
 
@@ -1174,7 +1275,7 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t* 
 			co_dirname(param);
 
 			if (*param)
-				rc = parse_args_cofs_device(conf, CO_MODULE_MAX_COFS-1, param);
+				rc = parse_args_cofs_device(conf, CO_MODULE_MAX_COFS - 1, param);
 
 			co_os_free (param);
 
@@ -1191,25 +1292,17 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t* 
 	if (!CO_OK(rc))
 		return rc;
 
+	rc = parse_args_config_color(cmdline, conf);
+	if (!CO_OK(rc))
+		return rc;
+		
 	rc = parse_args_config_cocon(cmdline, conf);
 	if (!CO_OK(rc))
 		return rc;
 
-#if COLINUX_DEBUG_COCON
-	co_terminal_print("Final cocon=%dx%d,%d\n", 
-			  conf->console.x, 
-			  conf->console.y, 
-			  conf->console.max_y);
-#endif
-
 	rc = parse_args_config_cursor(cmdline, conf);
 	if (!CO_OK(rc))
 		return rc;
-
-	rc = parse_args_config_color(cmdline, conf);
-	if (!CO_OK(rc))
-		return rc;
-
 	return rc;
 }
 

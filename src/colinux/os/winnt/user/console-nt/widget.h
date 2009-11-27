@@ -43,7 +43,6 @@ protected:
 	COORD 		    buf_size;
 	CHAR_INFO*	    screen;
 	CONSOLE_CURSOR_INFO cursor_info;
-	int                 cursor_size;
 
 	HWND		    saved_hwnd;
         DWORD		    saved_mode;

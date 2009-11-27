@@ -1365,8 +1365,8 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 	size = (((char*)(&message->putcs + 1)) - ((char*)message)) + 
 		(monitor->console->config.x * sizeof(co_console_cell_t));
 
-	params->config = monitor->console->config;
-
+	params->config	  = monitor->console->config;
+							  
 	co_message = co_os_malloc(size + sizeof(*co_message));
 	if (!co_message)
 		return CO_RC(OUT_OF_MEMORY);

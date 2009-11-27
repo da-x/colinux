@@ -16,29 +16,24 @@
 /*
  * Console initialization.
  */
-static void blank_char(co_console_cell_t *cell, int attr)
+static void blank_char(co_console_cell_t* cell, int attr)
 {
-	cell->ch   = 0x20;  /* space 		*/
-	cell->attr = attr;  /* Default is white on black */
+	cell->ch   = ' ';  	/* Space			*/
+	cell->attr = attr;	/* Default is white on black 	*/
 }
 
 /* Create the console object */
 co_rc_t co_console_create(co_console_config_t* config_par,
-			  co_console_t** console_out)
+			  co_console_t**       console_out)
 {
 	unsigned long struct_size;
 	co_console_t* console;
 
 	/*
 	 * Use only one allocation for the entire console object so it would 
-	 * be more managable (and less code).
+	 * be more managable (and less code). All limits are checked above
 	 */
-	struct_size = sizeof(co_console_cell_t) * config_par->x * (config_par->y + config_par->max_y);
-	
-        if (struct_size <= 0 || 
-            struct_size > sizeof(co_console_cell_t) * CO_CONSOLE_MAX_CHARS) {
-		return CO_RC(INVALID_PARAMETER);
-	}
+	struct_size  = sizeof(co_console_cell_t) * config_par->x * config_par->max_y;
 	struct_size += sizeof(co_console_t);
 
 	console = co_os_malloc(struct_size);
@@ -50,9 +45,7 @@ co_rc_t co_console_create(co_console_config_t* config_par,
 	console->size		= struct_size;
 	console->config		= *config_par;
 	console->screen		= ((co_console_cell_t*)((char*)console + sizeof(co_console_t)));
-	console->backlog	= console->screen + config_par->y * config_par->x;
-
-	*console_out 	       = console;
+	*console_out 	        = console;
 
 	return CO_RC(OK);
 }
@@ -225,10 +218,13 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 		message->type       = CO_OPERATION_CONSOLE_SIZES;
 		message->sizes.cols = console->config.x;
 		message->sizes.rows = console->config.y;
-		
-		/* 'backbuf' not used in the guest linux kernel, or in the host, so far */
-		message->sizes.backbuf = console->config.max_y - console->config.x * console->config.y;
-		
+#if defined UNUSED
+		/* 'backbuf' - offset of the first byte outside screen. It is not used in the guest
+		 *             linux kernel, nor in the host. 
+		 * TODO - remove 'backbuf' from 'sizes' struct in 'include/linux/cooperative.h'
+		 */
+		message->sizes.backbuf = console->config.x * console->config.y;
+#endif		
 		break;
 
 	case CO_OPERATION_CONSOLE_INIT:

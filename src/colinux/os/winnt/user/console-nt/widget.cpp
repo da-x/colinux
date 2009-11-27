@@ -75,8 +75,6 @@ console_widget_NT_t::console_widget_NT_t()
 
 	memset(vkey_state, 0, sizeof(vkey_state));
 	
-	cursor_size      = CO_CONSOLE_NORM_CURSOR;
-	
 	blank.Attributes = FOREGROUND_GREEN | 
 	                   FOREGROUND_BLUE  | 
 	                   FOREGROUND_RED;
@@ -122,6 +120,7 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 	HWND                hwnd;
 	RECT                r;
 	DWORD               error;
+	DWORD               old_curs_size;
 	BOOL		    old_curs_is_vis;
 	
 	error  = 0;
@@ -170,6 +169,7 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 	// Hide the standard screen cursor
         GetConsoleCursorInfo(std_out_h, &cursor_info);
 	old_curs_is_vis = cci.bVisible;
+	old_curs_size   = cci.dwSize;
         cci             = cursor_info;
         cci.bVisible    = FALSE;
         SetConsoleCursorInfo(std_out_h, &cci);
@@ -205,17 +205,18 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 
 	SetConsoleMode(own_out_h, 0);
 
-	console->cursor.height = console->config.curs_size_prc;
-	set_cursor_size(console->cursor.height);
-
 	// Show the standard screen cursor
 	if(old_curs_is_vis) {
 		cci.bVisible = true;
-		cci.dwSize   = cursor_size;
+		cci.dwSize   = old_curs_size;
 		SetConsoleCursorInfo(own_out_h, &cci);
 	}
 	
 	SetConsoleActiveScreenBuffer(own_out_h);
+	
+	/* Set cursor size for own screen buffer */
+	console->cursor.height = console->config.curs_size_prc;
+	set_cursor_size(console->cursor.height);
 
 	// Fixup, if resize failed from smaller start window
 	if (error == ERROR_INVALID_PARAMETER) {
@@ -305,7 +306,6 @@ void console_widget_NT_t::update()
 co_rc_t console_widget_NT_t::set_cursor_size(const int curs_size)
 {       
 	co_console_set_cursor_size((void*)own_out_h, (int)curs_size);
-	cursor_size = curs_size;
 	return CO_RC(OK);
 }
 

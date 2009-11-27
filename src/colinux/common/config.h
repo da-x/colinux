@@ -10,9 +10,28 @@
 #ifndef __COLINUX_LINUX_CONFIG_H__
 #define __COLINUX_LINUX_CONFIG_H__
 
+#if defined __cplusplus
+extern "C" {
+#endif
+
 #include "common.h"
 
 #define CO_ENABLE_CON_SCROLL		0 /* 1=Enable console scrolling,    0=disable */
+#define CO_ENABLE_CON_COLOR		0 /* 1=Enable console screen color, 0=disable */
+
+/* Color attributes */
+typedef enum co_color_t
+{ CO_COLOR_BLACK,	     /* 0x00 */
+  CO_COLOR_RED,		     /* 0x01 */
+  CO_COLOR_GREEN,	     /* 0x02 */
+  CO_COLOR_YELLOW,	     /* 0x03 */
+  CO_COLOR_BLUE,	     /* 0x04 */
+  CO_COLOR_MAGENTA,	     /* 0x05 */
+  CO_COLOR_CYAN, 	     /* 0x06 */
+  CO_COLOR_WHITE	     /* 0x07 */
+}co_color_t;
+
+#define CO_ATTR_BRIGHT		0x08
 
 /*
  * Per block device configuration
@@ -176,6 +195,7 @@ typedef struct co_execute_desc {
 
 } co_execute_desc_t;
 
+/* User defined console configuration */ 
 typedef struct co_config_console {
 	/* Dimensions of the console screen */
 	int x;
@@ -188,7 +208,7 @@ typedef struct co_config_console {
 	/* Cursor size in percent */ 
 	int curs_size_prc;
 
-	/* Colors for clear screen */ 
+	/* Colors for clear screen: (bg << 4) | fg */ 
 	int attr;
 } co_console_config_t;
 
@@ -289,8 +309,12 @@ typedef struct co_config {
 	 */
 	int cobd_async_enable;
 
-	/* Dimensions of the console and other fix parts  */
+	/* User console configuration */
 	co_console_config_t console;
 } co_config_t;
 
+#if defined __cplusplus
+}
 #endif
+
+#endif /* __COLINUX_LINUX_CONFIG_H__ */
