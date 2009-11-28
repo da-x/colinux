@@ -29,8 +29,8 @@
 #include <stdlib.h>
 
 #define COLINUX_DEBUG_COCON	0
-#define COLINUX_DEBUG_COLOR	0
 #define COLINUX_DEBUG_CURSOR	0
+#define COLINUX_DEBUG_COLOR	0
 
 typedef struct {
     int   size;
@@ -1099,23 +1099,21 @@ static co_color_tbl_t const co_color_tbl[] =
   {"black"        , 5, CO_COLOR_BLACK              	},
   {"red"          , 3, CO_COLOR_RED                	},
   {"green"        , 5, CO_COLOR_GREEN              	},
-  {"brown"        , 5, CO_COLOR_YELLOW             	},
+  {"brown"        , 5, CO_COLOR_BROWN             	},
   {"blue"         , 4, CO_COLOR_BLUE			},
   {"magenta"      , 7, CO_COLOR_MAGENTA			},
   {"cyan"         , 4, CO_COLOR_CYAN			},
-  {"gray"     	  , 4, CO_COLOR_WHITE			},
-  {"lightgray"    , 9, CO_COLOR_WHITE			},
-  /* bright colors */
-  {"darkgray"     , 8, CO_COLOR_BLACK   | CO_ATTR_BRIGHT},
+  {"gray"     	  , 4, CO_COLOR_GRAY			},
+  /* Bright colors */
+  {"darkgray"     , 8, CO_COLOR_BLACK   | CO_ATTR_BRIGHT}, /* Or "brightblack" :) */
   {"brightred"    , 9, CO_COLOR_RED     | CO_ATTR_BRIGHT},
   {"brightgreen"  ,11, CO_COLOR_GREEN   | CO_ATTR_BRIGHT},
-  {"yellow"       , 6, CO_COLOR_YELLOW  | CO_ATTR_BRIGHT},
+  {"yellow"       , 6, CO_COLOR_BROWN   | CO_ATTR_BRIGHT},
   {"brightblue"   ,10, CO_COLOR_BLUE    | CO_ATTR_BRIGHT},
   {"brightmagenta",13, CO_COLOR_MAGENTA | CO_ATTR_BRIGHT},
   {"brightcyan"   ,10, CO_COLOR_CYAN    | CO_ATTR_BRIGHT},
-  {"white"        , 5, CO_COLOR_WHITE   | CO_ATTR_BRIGHT},
+  {"white"        , 5, CO_COLOR_GRAY    | CO_ATTR_BRIGHT},
   {NULL		  , 0, 0x00				}
-
 };
 
 static int co_find_color_attr(char** str_pp)
@@ -1162,7 +1160,7 @@ static co_rc_t parse_args_config_color(co_command_line_params_t cmdline,
 	co_rc_t rc;
 #endif
 	
-	conf->console.attr = (CO_COLOR_BLACK << 4) | CO_COLOR_WHITE;
+	conf->console.attr = CO_ATTR_DEFAULT;
 
 #if CO_ENABLE_CON_COLOR	
 	rc = co_cmdline_get_next_equality(cmdline,
@@ -1186,6 +1184,10 @@ static co_rc_t parse_args_config_color(co_command_line_params_t cmdline,
 		
 		if(fg_attr < 0 || bg_attr < 0) {
 			co_terminal_print("Invalid arg (%s) for color\n", buf);
+			return CO_RC(INVALID_PARAMETER);
+		} else if(fg_attr == bg_attr) {
+			co_terminal_print("Warning, "
+					  "foreground == background: %s\n", buf);
 			return CO_RC(INVALID_PARAMETER);
 		}
 		conf->console.attr = (bg_attr << 4) | fg_attr;

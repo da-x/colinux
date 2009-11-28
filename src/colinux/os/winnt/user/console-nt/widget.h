@@ -53,6 +53,7 @@ protected:
 
 	void save_standard_console();
 	void restore_console();
+	WORD co_remap_default_attr(WORD attr);
 
 	void process_key_event(KEY_EVENT_RECORD& ker);
 	void process_focus_event(FOCUS_EVENT_RECORD& fer);

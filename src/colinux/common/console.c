@@ -26,12 +26,14 @@ static void blank_char(co_console_cell_t* cell, int attr)
 co_rc_t co_console_create(co_console_config_t* config_par,
 			  co_console_t**       console_out)
 {
-	unsigned long struct_size;
-	co_console_t* console;
+	unsigned long      struct_size;
+	co_console_t*      console;
+	co_console_cell_t* cell_p; /* _p postfix denotes pointer 	     */
+	int	           row_n;  /* _n postfix denotes number of (counter) */
 
 	/*
 	 * Use only one allocation for the entire console object so it would 
-	 * be more managable (and less code). All limits are checked above
+	 * be more managable (and less code). All limits are checked in 'config.c'
 	 */
 	struct_size  = sizeof(co_console_cell_t) * config_par->x * config_par->max_y;
 	struct_size += sizeof(co_console_t);
@@ -40,12 +42,25 @@ co_rc_t co_console_create(co_console_config_t* config_par,
 	if (console == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 
-	memset(console, 0, struct_size);
+	memset(console, 0, sizeof(co_console_t));
 
-	console->size		= struct_size;
-	console->config		= *config_par;
-	console->screen		= ((co_console_cell_t*)((char*)console + sizeof(co_console_t)));
-	*console_out 	        = console;
+	console->size	= struct_size;
+	console->config	= *config_par;
+	console->screen	= ((co_console_cell_t*)((char*)console + sizeof(co_console_t)));
+	
+	/* Clear screen with space and user attr */
+	cell_p = console->screen;
+	for(row_n = 0; row_n < config_par->y; row_n++) {
+		int col_n;
+	
+	  	for(col_n = 0; col_n < config_par->x; col_n++) {
+	  		cell_p->ch   = ' ';
+	    		cell_p->attr = config_par->attr;
+	    		cell_p++;
+	  	}
+	}
+	
+	*console_out = console;
 
 	return CO_RC(OK);
 }

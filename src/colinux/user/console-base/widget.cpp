@@ -143,11 +143,23 @@ co_rc_t console_widget_t::event(co_console_message_t* message)
 
 
 	// Supported only CO_OPERATION_CONSOLE_CURSOR_MOVE
-	case CO_OPERATION_CONSOLE_CURSOR_DRAW:	// TODO
-	case CO_OPERATION_CONSOLE_CURSOR_ERASE: // TODO
+	case CO_OPERATION_CONSOLE_CURSOR_DRAW:
+#if DEBUG_CONSOLE
+		co_debug("CO_OPERATION_CONSOLE_CURSOR_DRAW");
+#endif
+		set_cursor_size(console->config.curs_size_prc);
+		return op_cursor_pos(message->cursor);
+
+	case CO_OPERATION_CONSOLE_CURSOR_ERASE:
+#if DEBUG_CONSOLE
+		co_debug("CO_OPERATION_CONSOLE_CURSOR_ERASE");
+#endif
+		set_cursor_size(0);
+		return op_cursor_pos(message->cursor);
+
 	case CO_OPERATION_CONSOLE_CURSOR_MOVE:
 #if DEBUG_CONSOLE
-		co_debug("CO_OPERATION_CONSOLE_CURSOR_");
+		co_debug("CO_OPERATION_CONSOLE_CURSOR_MOVE");
 #endif
 		return op_cursor_pos(message->cursor);
 

@@ -246,11 +246,23 @@ console_widget_NT_t::~console_widget_NT_t()
 	restore_console();
 }
 
+inline WORD console_widget_NT_t::co_remap_default_attr(WORD attr)
+{
+#if CO_REMAP_ATTR_DEFAULT
+	if(attr == CO_ATTR_DEFAULT)
+		return (WORD)console->config.attr;
+#endif		
+	return attr;
+}
+
 void console_widget_NT_t::draw()
 {
 	if (console == NULL) {
 		COORD c = {0, 0};
 		DWORD z;
+		WORD  attr;	
+		
+		attr = co_remap_default_attr(blank.Attributes);
 		
 		if (!FillConsoleOutputCharacter(own_out_h, 
 		                                blank.Char.AsciiChar, 
@@ -260,7 +272,7 @@ void console_widget_NT_t::draw()
 			co_debug("FillConsoleOutputCharacter() error 0x%lx",
 				 GetLastError());
 		if (!FillConsoleOutputAttribute(own_out_h, 
-		                                blank.Attributes, 
+		                                attr, 
 		                                win_size.X * win_size.Y, 
 		                                c, 
 		                                &z))
@@ -274,7 +286,7 @@ void console_widget_NT_t::draw()
 	int                count = win_size.X * win_size.Y;
 
 	do {
-		ci->Attributes         = cell->attr;
+		ci->Attributes         = co_remap_default_attr(cell->attr);
 		(ci++)->Char.AsciiChar = (cell++)->ch;
 	} while (--count);
 
@@ -298,7 +310,7 @@ void console_widget_NT_t::update()
 	int                count = win_size.X * win_size.Y;
 
 	do {
-		cell->attr   = ci->Attributes;
+		cell->attr   = (unsigned char)co_remap_default_attr(ci->Attributes);
 		(cell++)->ch = (ci++)->Char.AsciiChar;
 	} while(--count != 0);
 }
@@ -416,7 +428,7 @@ console_widget_NT_t::op_putcs(
 	CHAR_INFO*         ci    = &screen[(win_size.X * r.Top) + r.Left];
 
 	do {
-		ci->Attributes = cells->attr;
+		ci->Attributes	       = co_remap_default_attr(cells->attr);
 		(ci++)->Char.AsciiChar = (cells++)->ch;
 	} while (count--);
 
@@ -450,7 +462,7 @@ console_widget_NT_t::op_putc(
 
 	CHAR_INFO* ci = &screen[(win_size.X * r.Top) + r.Left];
 	
-	ci->Attributes     = ((C & 0xFF00) >> 8);
+	ci->Attributes     = co_remap_default_attr((C & 0xFF00) >> 8);
 	ci->Char.AsciiChar = (C & 0x00FF);
 
 	if (!WriteConsoleOutput(own_out_h, screen, win_size, c, &r))
@@ -489,7 +501,7 @@ co_rc_t console_widget_NT_t::op_clear(const co_console_unit&	 T,
 	if (B >= win_size.Y || R >= win_size.X)
 		return CO_RC(ERROR);
 
-	clear_blank.Attributes     = charattr >> 8;
+	clear_blank.Attributes     = co_remap_default_attr(charattr >> 8);
 	clear_blank.Char.AsciiChar = charattr & 0xff;
 
 	y = T;

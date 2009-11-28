@@ -16,22 +16,32 @@ extern "C" {
 
 #include "common.h"
 
-#define CO_ENABLE_CON_SCROLL		0 /* 1=Enable console scrolling,    0=disable */
-#define CO_ENABLE_CON_COLOR		0 /* 1=Enable console screen color, 0=disable */
+#define CO_ENABLE_CON_SCROLL	0 /* 1=Enable console scrolling,    0=disable */
+#define CO_ENABLE_CON_COLOR	1 /* 1=Enable console screen color, 0=disable */
+
+#define CO_REMAP_ATTR_DEFAULT	0
+  /* Replace default linux attribute "gray on black" by user setting
+  */
+
+#if !CO_ENABLE_CON_COLOR
+# undef  CO_REMAP_ATTR_DEFAULT
+# define CO_REMAP_ATTR_DEFAULT	0
+#endif
 
 /* Color attributes */
 typedef enum co_color_t
-{ CO_COLOR_BLACK,	     /* 0x00 */
-  CO_COLOR_RED,		     /* 0x01 */
-  CO_COLOR_GREEN,	     /* 0x02 */
-  CO_COLOR_YELLOW,	     /* 0x03 */
-  CO_COLOR_BLUE,	     /* 0x04 */
-  CO_COLOR_MAGENTA,	     /* 0x05 */
-  CO_COLOR_CYAN, 	     /* 0x06 */
-  CO_COLOR_WHITE	     /* 0x07 */
+{ CO_COLOR_BLACK   = 0x00,
+  CO_COLOR_BLUE    = 0x01,
+  CO_COLOR_GREEN   = 0x02,
+  CO_COLOR_RED     = 0x04,
+  CO_COLOR_BROWN   = CO_COLOR_RED   | CO_COLOR_GREEN,
+  CO_COLOR_MAGENTA = CO_COLOR_RED   | CO_COLOR_BLUE,
+  CO_COLOR_CYAN    = CO_COLOR_GREEN | CO_COLOR_BLUE,
+  CO_COLOR_GRAY    = CO_COLOR_RED   | CO_COLOR_GREEN | CO_COLOR_BLUE
 }co_color_t;
 
 #define CO_ATTR_BRIGHT		0x08
+#define CO_ATTR_DEFAULT		((CO_COLOR_BLACK << 4) | CO_COLOR_GRAY)	
 
 /*
  * Per block device configuration
@@ -311,6 +321,7 @@ typedef struct co_config {
 
 	/* User console configuration */
 	co_console_config_t console;
+
 } co_config_t;
 
 #if defined __cplusplus
