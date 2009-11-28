@@ -23,8 +23,6 @@ co_rc_t co_console_create(co_console_config_t* config_par,
 {
 	unsigned long      struct_size;
 	co_console_t*      console;
-	co_console_cell_t* cell_p; /* _p postfix denotes pointer 	     */
-	int	           row_n;  /* _n postfix denotes number of (counter) */
 
 	/*
 	 * Use only one allocation for the entire console object so it would 
@@ -37,23 +35,11 @@ co_rc_t co_console_create(co_console_config_t* config_par,
 	if (console == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 
-	memset(console, 0, sizeof(co_console_t));
+	memset(console, 0, struct_size);
 
 	console->size	= struct_size;
 	console->config	= *config_par;
 	console->screen	= ((co_console_cell_t*)((char*)console + sizeof(co_console_t)));
-	
-	/* Clear screen with space and user attr */
-	cell_p = console->screen;
-	for(row_n = 0; row_n < config_par->y; row_n++) {
-		int col_n;
-	
-	  	for(col_n = 0; col_n < config_par->x; col_n++) {
-	  		cell_p->ch   = ' ';
-	    		cell_p->attr = config_par->attr;
-	    		cell_p++;
-	  	}
-	}
 	
 	*console_out = console;
 
