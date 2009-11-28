@@ -1,5 +1,6 @@
 * Version 0.8.0
   Console and daemons:
+  * New: "color=black,white" sets default color.(Peter Kuznetsov)
   * New: "cursor=1..99" sets cursor size of nt-console (Peter Kuznetsov)
 
   Kernel:
