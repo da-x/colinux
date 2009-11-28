@@ -93,7 +93,7 @@ void co_console_destroy(co_console_t* console)
  *   CO_OPERATION_CONSOLE_SET_ORIGIN	- Ignored here and in all consoles
  *   CO_OPERATION_CONSOLE_SAVE_SCREEN	- Ignored here and in all consoles
  *   CO_OPERATION_CONSOLE_INVERT_REGION	- Ignored here and in all consoles
- *   CO_OPERATION_CONSOLE_SIZES		- Ignored here and in all consoles
+ *   CO_OPERATION_CONSOLE_CONFIG	- Ignored here and in all consoles
  *   CO_OPERATION_CONSOLE_INIT		- Ignored here and in all consoles
  *   CO_OPERATION_CONSOLE_DEINIT	- Ignored here and in all consoles
  */
@@ -230,15 +230,15 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 	}
 
 	case CO_OPERATION_CONSOLE_STARTUP:
-		message->type       = CO_OPERATION_CONSOLE_SIZES;
-		message->sizes.cols = console->config.x;
-		message->sizes.rows = console->config.y;
+		message->type        = CO_OPERATION_CONSOLE_CONFIG;
+		message->config.cols = console->config.x;
+		message->config.rows = console->config.y;
 #if defined UNUSED
 		/* 'backbuf' - offset of the first byte outside screen. It is not used in the guest
 		 *             linux kernel, nor in the host. 
 		 * TODO - remove 'backbuf' from 'sizes' struct in 'include/linux/cooperative.h'
 		 */
-		message->sizes.backbuf = console->config.x * console->config.y;
+		message->config.backbuf = console->config.x * console->config.y;
 #endif		
 		break;
 
@@ -252,7 +252,7 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 	case CO_OPERATION_CONSOLE_SET_ORIGIN:
 	case CO_OPERATION_CONSOLE_SAVE_SCREEN:
 	case CO_OPERATION_CONSOLE_INVERT_REGION:
-	case CO_OPERATION_CONSOLE_SIZES:
+	case CO_OPERATION_CONSOLE_CONFIG:
 		break;
 	}
 

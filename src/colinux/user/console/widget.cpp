@@ -260,7 +260,7 @@ co_console_t* console_widget_t::get_console()
 	CO_OPERATION_CONSOLE_SET_ORIGIN		- Ignored
 	CO_OPERATION_CONSOLE_SAVE_SCREEN	- Ignored
 	CO_OPERATION_CONSOLE_INVERT_REGION	- Ignored
-	CO_OPERATION_CONSOLE_SIZES		- Ignored
+	CO_OPERATION_CONSOLE_CONFIG		- Ignored
 */
 co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 {
@@ -359,7 +359,7 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 	case CO_OPERATION_CONSOLE_SET_ORIGIN:
 	case CO_OPERATION_CONSOLE_SAVE_SCREEN:
 	case CO_OPERATION_CONSOLE_INVERT_REGION:
-	case CO_OPERATION_CONSOLE_SIZES:
+	case CO_OPERATION_CONSOLE_CONFIG:
 		break;
 	}
 

@@ -54,9 +54,9 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 +		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
 +		message->type = CO_OPERATION_CONSOLE_STARTUP;
 +		co_switch_wrapper();
-+		if (message->type == CO_OPERATION_CONSOLE_SIZES) {
-+			cocon_cols = message->sizes.cols;
-+			cocon_rows = message->sizes.rows;
++		if (message->type == CO_OPERATION_CONSOLE_CONFIG) {
++			cocon_cols = message->config.cols;
++			cocon_rows = message->config.rows;
 +		}
 +		co_passage_page_release(flags);
 +	}

@@ -1907,7 +1907,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_OPERATION_CONSOLE_SET_ORIGIN,
 +	CO_OPERATION_CONSOLE_SAVE_SCREEN,
 +	CO_OPERATION_CONSOLE_INVERT_REGION,
-+	CO_OPERATION_CONSOLE_SIZES,
++	CO_OPERATION_CONSOLE_CONFIG,
 +} co_operation_console_t;
 +
 +
@@ -1964,7 +1964,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +			co_console_unit rows;
 +			co_console_unit cols;
 +			co_console_unit backbuf;
-+		} sizes;
++		} config;
 +		co_cursor_pos_t cursor;
 +	};
 +} __attribute__((packed)) co_console_message_t;
