@@ -121,14 +121,16 @@ co_rc_t console_widget_t::event(co_console_message_t* message)
 #endif
 		return op_scroll_up(message->scroll.top, 
 				    message->scroll.bottom,
-				    message->scroll.lines);
+				    message->scroll.lines,
+				    message->scroll.charattr);
 	case CO_OPERATION_CONSOLE_SCROLL_DOWN:
 #if DEBUG_CONSOLE
 		co_debug("CO_OPERATION_CONSOLE_SCROLL_DOWN");
 #endif
 		return op_scroll_down(message->scroll.top, 
 				      message->scroll.bottom,
-				      message->scroll.lines);
+				      message->scroll.lines,
+				      message->scroll.charattr);
 
 	case CO_OPERATION_CONSOLE_BMOVE:
 #if DEBUG_CONSOLE

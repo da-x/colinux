@@ -1653,7 +1653,7 @@ Index: linux-2.6.25-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.25-source/include/linux/cooperative.h
-@@ -0,0 +1,397 @@
+@@ -0,0 +1,399 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1676,7 +1676,7 @@ Index: linux-2.6.25-source/include/linux/cooperative.h
 +
 +#include <asm/cooperative.h>
 +
-+#define CO_LINUX_API_VERSION    13
++#define CO_LINUX_API_VERSION    14
 +
 +#pragma pack(0)
 +
@@ -1912,6 +1912,7 @@ Index: linux-2.6.25-source/include/linux/cooperative.h
 +			co_console_unit top;
 +			co_console_unit bottom;
 +			co_console_unit lines;
++			co_console_character charattr;
 +		} scroll;
 +		struct {
 +			co_console_unit y;
@@ -1948,6 +1949,7 @@ Index: linux-2.6.25-source/include/linux/cooperative.h
 +			co_console_unit rows;
 +			co_console_unit cols;
 +			co_console_unit backbuf;
++			co_console_unit attr;
 +		} config;
 +		co_cursor_pos_t cursor;
 +	};

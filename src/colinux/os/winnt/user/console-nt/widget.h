@@ -60,12 +60,14 @@ protected:
 	co_rc_t op_scroll_up(
 		const co_console_unit &topRow,
 		const co_console_unit &bottomRow,
-		const co_console_unit &lines);
+		const co_console_unit &lines,
+		const co_console_character &charattr);
 
 	co_rc_t op_scroll_down(
 		const co_console_unit &topRow,
 		const co_console_unit &bottomRow,
-		const co_console_unit &lines);
+		const co_console_unit &lines,
+		const co_console_character &charattr);
 
 	co_rc_t op_putcs(
 		const co_console_unit &Y,

@@ -298,7 +298,7 @@ void console_widget_NT_t::update()
 	int                count = win_size.X * win_size.Y;
 
 	do {
-		cell->attr   = (unsigned char)ci->Attributes;
+		cell->attr   = ci->Attributes;
 		(cell++)->ch = (ci++)->Char.AsciiChar;
 	} while(--count != 0);
 }
@@ -311,10 +311,12 @@ co_rc_t console_widget_NT_t::set_cursor_size(const int curs_size)
 
 co_rc_t console_widget_NT_t::op_scroll_up(const co_console_unit& T,
 					  const co_console_unit& B,
-					  const co_console_unit& L)
+					  const co_console_unit& L,
+					  const co_console_character& C)
 {
 	SMALL_RECT src_r;
 	COORD      dst_c;
+	CHAR_INFO  blank;
 
 	src_r.Left   = win_region.Left;
 	src_r.Right  = win_region.Right;
@@ -323,6 +325,9 @@ co_rc_t console_widget_NT_t::op_scroll_up(const co_console_unit& T,
 	
 	dst_c.X      = 0;
 	dst_c.Y      = src_r.Top - L;
+
+	blank.Attributes     = (C & 0xFF00) >> 8;
+	blank.Char.AsciiChar = (C & 0x00FF);
 
 	if (!ScrollConsoleScreenBuffer(own_out_h, &src_r, &src_r, dst_c, &blank))
 		co_debug("ScrollConsoleScreenBuffer() error 0x%lx",
@@ -333,10 +338,12 @@ co_rc_t console_widget_NT_t::op_scroll_up(const co_console_unit& T,
 
 co_rc_t console_widget_NT_t::op_scroll_down(const co_console_unit& T,
 					    const co_console_unit& B,
-					    const co_console_unit& L)
+					    const co_console_unit& L,
+					    const co_console_character& C)
 {
 	SMALL_RECT src_r;
 	COORD 	   dst_c;
+	CHAR_INFO  blank;
 
 	src_r.Left   = win_region.Left;
 	src_r.Right  = win_region.Right;
@@ -345,6 +352,9 @@ co_rc_t console_widget_NT_t::op_scroll_down(const co_console_unit& T,
 	
 	dst_c.X      = 0;
 	dst_c.Y      = src_r.Top + L;
+
+	blank.Attributes     = (C & 0xFF00) >> 8;
+	blank.Char.AsciiChar = (C & 0x00FF);
 
 	if (!ScrollConsoleScreenBuffer(own_out_h, &src_r, &src_r, dst_c, &blank))
 		co_debug("ScrollConsoleScreenBuffer() error 0x%lx",

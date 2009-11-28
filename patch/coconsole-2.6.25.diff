@@ -66,7 +66,7 @@ Index: linux-2.6.25-source/drivers/video/console/cocon.c
 ===================================================================
 --- linux-2.6.25-source.orig/drivers/video/console/cocon.c
 +++ linux-2.6.25-source/drivers/video/console/cocon.c
-@@ -467,8 +467,8 @@
+@@ -472,8 +472,8 @@
  	co_send_message_restore(flags);
  }
  
@@ -77,3 +77,17 @@ Index: linux-2.6.25-source/drivers/video/console/cocon.c
  {
  	return -EINVAL;
  }
+Index: linux-2.6.25-source/drivers/char/vt.c
+===================================================================
+--- linux-2.6.25-source.orig/drivers/char/vt.c
++++ linux-2.6.25-source/drivers/char/vt.c
+@@ -2789,7 +2789,8 @@
+ 		vc->vc_palette[k++] = default_grn[j] ;
+ 		vc->vc_palette[k++] = default_blu[j] ;
+ 	}
+-	vc->vc_def_color       = 0x07;   /* white */
++	if (!vc->vc_def_color)
++		vc->vc_def_color       = 0x07;   /* white */
+ 	vc->vc_ulcolor         = default_underline_color;
+ 	vc->vc_itcolor         = default_italic_color;
+ 	vc->vc_halfcolor       = 0x08;   /* grey */

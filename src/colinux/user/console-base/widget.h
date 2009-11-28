@@ -65,12 +65,14 @@ protected: // methods
 	virtual co_rc_t op_scroll_up(
 		const co_console_unit& topRow,
 		const co_console_unit& bottomRow,
-		const co_console_unit& lines) = 0;
+		const co_console_unit& lines,
+		const co_console_character& charattr) = 0;
 
 	virtual co_rc_t op_scroll_down(
 		const co_console_unit& topRow,
 		const co_console_unit& bottomRow,
-		const co_console_unit& lines) = 0;
+		const co_console_unit& lines,
+		const co_console_character& charattr) = 0;
 
 	virtual co_rc_t op_bmove(
 		const co_console_unit& Y,

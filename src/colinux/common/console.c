@@ -16,11 +16,6 @@
 /*
  * Console initialization.
  */
-static void blank_char(co_console_cell_t* cell, int attr)
-{
-	cell->ch   = ' ';  	/* Space			*/
-	cell->attr = attr;	/* Default is white on black 	*/
-}
 
 /* Create the console object */
 co_rc_t co_console_create(co_console_config_t* config_par,
@@ -107,6 +102,8 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 		unsigned long b     = message->scroll.bottom + 1;
 		unsigned long dir;
 		unsigned long lines = message->scroll.lines;
+		co_console_cell_t blank = *(co_console_cell_t*)(&message->scroll.charattr);
+		co_console_cell_t* cell_p;
 		unsigned long x;
 		unsigned long y;
 
@@ -126,18 +123,22 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 				&console->screen[console->config.x * (t + lines)],
 				console->config.x*(b - t - lines) * sizeof(co_console_cell_t));
 
-			for (y = b - lines; y < b; y++)
-				for (x = 0; x < console->config.x; x++)
-					blank_char(&console->screen[y * console->config.x + x], console->config.attr);
+			for (y = b - lines; y < b; y++) {
+				cell_p = &console->screen[y * console->config.x];
+				for (x = console->config.x; x > 0; x--)
+					*cell_p++ = blank;
+			}
 		}
 		else {
 			memmove(&console->screen[console->config.x * (t + lines)],
 				&console->screen[console->config.x * (t)],
 				console->config.x*(b - t - lines) * sizeof(co_console_cell_t));
 
-			for (y = t; y < t + lines; y++)
-				for (x = 0; x < console->config.x; x++)
-					blank_char(&console->screen[y*console->config.x + x], console->config.attr);
+			for (y = t; y < t + lines; y++) {
+				cell_p = &console->screen[y * console->config.x];
+				for (x = console->config.x; x > 0; x--)
+					*cell_p++ = blank;
+			}
 		}
 
 		break;
@@ -233,6 +234,7 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 		message->type        = CO_OPERATION_CONSOLE_CONFIG;
 		message->config.cols = console->config.x;
 		message->config.rows = console->config.y;
+		message->config.attr = console->config.attr;
 #if defined UNUSED
 		/* 'backbuf' - offset of the first byte outside screen. It is not used in the guest
 		 *             linux kernel, nor in the host. 
