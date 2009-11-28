@@ -19,15 +19,6 @@ extern "C" {
 #define CO_ENABLE_CON_SCROLL	0 /* 1=Enable console scrolling,    0=disable */
 #define CO_ENABLE_CON_COLOR	1 /* 1=Enable console screen color, 0=disable */
 
-#define CO_REMAP_ATTR_DEFAULT	0
-  /* Replace default linux attribute "gray on black" by user setting
-  */
-
-#if !CO_ENABLE_CON_COLOR
-# undef  CO_REMAP_ATTR_DEFAULT
-# define CO_REMAP_ATTR_DEFAULT	0
-#endif
-
 /* Color attributes */
 typedef enum co_color_t
 { CO_COLOR_BLACK   = 0x00,
