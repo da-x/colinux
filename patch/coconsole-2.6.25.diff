@@ -66,7 +66,7 @@ Index: linux-2.6.25-source/drivers/video/console/cocon.c
 ===================================================================
 --- linux-2.6.25-source.orig/drivers/video/console/cocon.c
 +++ linux-2.6.25-source/drivers/video/console/cocon.c
-@@ -491,8 +491,8 @@
+@@ -495,8 +495,8 @@
  	co_send_message_restore(flags);
  }
  
