@@ -1072,12 +1072,18 @@ static co_rc_t parse_args_config_cursor(co_command_line_params_t cmdline,
 		}
 		
 		/* User can set size of cursor == 100, but actual value of
-		 * it can not exceed 99 (in NT console curs_size == 100 
-		 * becomes invisible)
+		 * it can not exceed 99. Set cursor size in accordance with
+		 * the kernel.
 		 */
-		if(size_prc > CO_CONSOLE_FAT_CURSOR)
-			size_prc = CO_CONSOLE_FAT_CURSOR;
-		
+		if(size_prc > CO_CONSOLE_HIDDEN_CURSOR) {
+			if(     size_prc < 10)	size_prc = 10;
+			else if(size_prc < 33)	size_prc = 33;
+			else if(size_prc < 50)	size_prc = 50;
+			else if(size_prc < 66)	size_prc = 66;
+			else			size_prc = CO_CONSOLE_FAT_CURSOR;
+		}
+			
+					
 		conf->console.curs_size_prc = size_prc;
 	}
 #if COLINUX_DEBUG_CURSOR

@@ -91,6 +91,7 @@ co_rc_t console_widget_t::event(co_console_message_t* message)
 #if DEBUG_CONSOLE
 		co_debug("CO_OPERATION_CONSOLE_INIT");
 #endif
+		set_cursor_size(console->config.curs_size_prc);
 		break;
 
 	case CO_OPERATION_CONSOLE_DEINIT:
@@ -144,12 +145,15 @@ co_rc_t console_widget_t::event(co_console_message_t* message)
 				message->bmove.right);
 
 
-	// Supported only CO_OPERATION_CONSOLE_CURSOR_MOVE
 	case CO_OPERATION_CONSOLE_CURSOR_DRAW:
 #if DEBUG_CONSOLE
 		co_debug("CO_OPERATION_CONSOLE_CURSOR_DRAW");
 #endif
+#if 0 // TODO
+		set_cursor_size(message->cursor.height);
+#else		
 		set_cursor_size(console->config.curs_size_prc);
+#endif		
 		return op_cursor_pos(message->cursor);
 
 	case CO_OPERATION_CONSOLE_CURSOR_ERASE:

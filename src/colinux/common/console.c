@@ -217,17 +217,11 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 	}
 
 	case CO_OPERATION_CONSOLE_STARTUP:
-		message->type        = CO_OPERATION_CONSOLE_CONFIG;
-		message->config.cols = console->config.x;
-		message->config.rows = console->config.y;
-		message->config.attr = console->config.attr;
-#if defined UNUSED
-		/* 'backbuf' - offset of the first byte outside screen. It is not used in the guest
-		 *             linux kernel, nor in the host. 
-		 * TODO - remove 'backbuf' from 'sizes' struct in 'include/linux/cooperative.h'
-		 */
-		message->config.backbuf = console->config.x * console->config.y;
-#endif		
+		message->type            = CO_OPERATION_CONSOLE_CONFIG;
+		message->config.cols     = console->config.x;
+		message->config.rows     = console->config.y;
+		message->config.attr     = console->config.attr;
+		message->config.curs_prc = console->config.curs_size_prc;
 		break;
 
 	case CO_OPERATION_CONSOLE_INIT:
