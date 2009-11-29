@@ -1964,7 +1964,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +		struct {
 +			co_console_unit rows;
 +			co_console_unit cols;
-+			co_console_unit backbuf;
++			co_console_unit curs_prc;
 +			co_console_unit attr;
 +		} config;
 +		co_cursor_pos_t cursor;

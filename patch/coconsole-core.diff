@@ -1,8 +1,8 @@
-Index: linux-2.6.22-source/drivers/video/console/cocon.c
+Index: linux-2.6.25-source/drivers/video/console/cocon.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/drivers/video/console/cocon.c
-@@ -0,0 +1,506 @@
++++ linux-2.6.25-source/drivers/video/console/cocon.c
+@@ -0,0 +1,532 @@
 +/*
 + *  linux/drivers/video/cocon.c -- Cooperative Linux console VGA driver
 + *
@@ -38,6 +38,7 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 +static int cocon_cols = 80;
 +static int cocon_rows = 25;
 +static int cocon_attr = 0x07; /* fg=white, bg=black */
++static int cocon_curs_prc = 10;   /* two scanlines 	*/
 +
 +static const char __init *cocon_startup(void)
 +{
@@ -59,6 +60,7 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 +			cocon_cols = message->config.cols;
 +			cocon_rows = message->config.rows;
 +			cocon_attr = message->config.attr;
++			cocon_curs_prc = message->config.curs_prc;
 +		}
 +		co_passage_page_release(flags);
 +	}
@@ -71,13 +73,34 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 +	unsigned long flags;
 +	co_console_message_t *message;
 +	co_message_t *co_message;
++	int cursor_type;
 +
 +	/* We cannot be loaded as a module, therefore init is always 1 */
 +	c->vc_can_do_color = 1;
 +	c->vc_cols = cocon_cols;
 +	c->vc_rows = cocon_rows;
++
 +	/* drivers/char/vt.c: Must hack vc_init() for vc_def_color */
 +	c->vc_def_color = cocon_attr;
++
++	/* Convert cursor size to cursor type */
++        if(cocon_curs_prc == 0)
++		cursor_type = CUR_NONE;
++	else if(cocon_curs_prc <= 10)
++		cursor_type = CUR_UNDERLINE;
++	else if(cocon_curs_prc <= 33)
++		cursor_type = CUR_LOWER_THIRD;
++	else if(cocon_curs_prc <= 50)
++		cursor_type = CUR_LOWER_HALF;
++	else if(cocon_curs_prc <= 66)
++		cursor_type = CUR_TWO_THIRDS;
++	else
++		cursor_type = CUR_BLOCK;
++
++	/* Replace cursor type in low nibble */
++	c->vc_cursor_type &= ~CUR_HWMASK;
++	c->vc_cursor_type |=  cursor_type;
++
 +	c->vc_complement_mask = 0x7700;
 +	c->vc_visible_origin = 0;
 +	c->vc_origin = 0;
@@ -276,7 +299,10 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 +
 +	switch (c->vc_cursor_type & CUR_HWMASK) {
 +	case CUR_UNDERLINE:
-+		message->cursor.height = 5;
++		message->cursor.height = 10;
++		break;
++	case CUR_BLOCK:
++		message->cursor.height = 99;
 +		break;
 +	case CUR_TWO_THIRDS:
 +		message->cursor.height = 66;
@@ -290,8 +316,8 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 +	case CUR_NONE:
 +		message->cursor.height = 0;
 +		break;
-+          default:
-+		message->cursor.height = 5;
++        default:
++		message->cursor.height = 10;
 +		break;
 +	}
 +
