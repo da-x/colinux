@@ -84,8 +84,8 @@ void console_widget_t::damage_console(int x_, int y_, int w_, int h_)
 	cx = x();
 	cy = y();
 
-	cx -= ((letter_x * console->config.x) - w()) / 2;
-	cy -= ((letter_y * console->config.y) - h()) / 2;
+	cx -= (fit_x - w()) / 2;
+	cy -= (fit_y - h()) / 2;
 
 	damage(1, 
 	       cx + x_ * letter_x, 
@@ -106,20 +106,14 @@ void console_widget_t::draw()
 
 	fl_font(FL_SCREEN, font_size);
 
-	letter_x = (int)fl_width('A');
-	letter_y = (int)fl_height();
-	
-	fit_x = letter_x * console->config.x;
-	fit_y = letter_y * console->config.y;
-	
 	int x_, y_, w_, h_, cx, cy;	
 	fl_clip_box(x(), y(), w(), h(), x_, y_, w_, h_);
 
 	cx = x();
 	cy = y();
 
-	cx -= ((letter_x * console->config.x) - w()) / 2;
-	cy -= ((letter_y * console->config.y) - h()) / 2;
+	cx -= (fit_x - w()) / 2;
+	cy -= (fit_y - h()) / 2;
 	
 	x_ -= cx;
 	y_ -= cy;
@@ -141,20 +135,20 @@ void console_widget_t::draw()
 
 	if (y_ < 0) {
 		fl_color(FL_BLACK);
-		fl_rectf(cx, y(), console->config.x * letter_x, -y_);
+		fl_rectf(cx, y(), fit_x, -y_);
 	}
 
-	if (x_ + w_ > console->config.x*letter_x) {
+	if (x_ + w_ > fit_x) {
 		fl_color(FL_BLACK);
-		fl_rectf(cx+console->config.x * letter_x, y(), x_ + w_ - console->config.x * letter_x, h_);
+		fl_rectf(cx + fit_x, y(), x_ + w_ - fit_x, h_);
 
 		x2 = console->config.x;
 	}
 
-	if (y_ + h_ > console->config.y*letter_y) {
+	if (y_ + h_ > fit_y) {
 		fl_color(FL_BLACK);
-		fl_rectf(cx, cy + console->config.y * letter_y, 
-			 console->config.x*letter_x, y_ + h_ - console->config.y * letter_y);
+		fl_rectf(cx, cy + fit_y,
+			 fit_x, y_ + h_ - fit_y);
 	}
 
 	fl_push_clip(x(), y(), w(), h());
@@ -170,21 +164,21 @@ void console_widget_t::draw()
 		co_console_cell_t* cell;
 		co_console_cell_t* start;
 		co_console_cell_t* end;
-		co_console_cell_t* limit = &console->screen[console->config.y*console->config.x];
 		char               text_buff[0x100];
 
 		start = row_start + x1;
 		end   = row_start + x2;
 		cell  = start;
 
-		if (end > limit) {
+		if (end > cell_limit) {
 			// co_debug("BUG: end=%p limit=%p row=%p start=%p x1=%d x2=%d y1=%d y2=%d",
 			//     end, limit, row_start, start, x1, x2, y1, y2);
-			end = limit; // Hack: Fix the overrun!
+			end = cell_limit; // Hack: Fix the overrun!
 		}
 		
 		while (cell < end) {
-			while (cell < end  &&  start->attr == cell->attr  &&  cell - start < sizeof(text_buff)) {
+			while (cell < end  &&  start->attr == cell->attr  &&
+			       cell - start < (int)sizeof(text_buff)) {
 				text_buff[cell - start] = cell->ch;
 				cell++;
 			}
@@ -225,6 +219,17 @@ void console_widget_t::draw()
 void console_widget_t::set_console(co_console_t* _console)
 {
 	console = _console;
+
+	fl_font(FL_SCREEN, font_size);
+
+	// Calculate constats for this font
+	letter_x = (int)fl_width('A');
+	letter_y = (int)fl_height();
+
+	fit_x = letter_x * console->config.x;
+	fit_y = letter_y * console->config.y;
+
+	cell_limit = &console->screen[console->config.y * console->config.x];
 }
 
 co_console_t* console_widget_t::get_console()
@@ -275,11 +280,10 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 	{
 	case CO_OPERATION_CONSOLE_CURSOR_DRAW:
 	case CO_OPERATION_CONSOLE_CURSOR_ERASE:
-	case CO_OPERATION_CONSOLE_CURSOR_MOVE: {
+	case CO_OPERATION_CONSOLE_CURSOR_MOVE:
 		// Only for using below
 		saved_cursor = console->cursor;
 		break;
-	}
 	default:
 		break;
 	}

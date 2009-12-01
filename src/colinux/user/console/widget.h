@@ -36,6 +36,7 @@ public:
 protected:
 	int           font_size;
 	co_console_t* console;
+	co_console_cell_t* cell_limit;
 	int 	      letter_x;
 	int 	      letter_y;
 	double	      cursor_blink_interval;
