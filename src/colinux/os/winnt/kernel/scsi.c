@@ -48,7 +48,7 @@ struct _io_req {
 #endif
 };
 
-#define IO_QUEUE_SIZE CO_ARCH_PAGE_SIZE/sizeof(struct _io_req)
+#define IO_QUEUE_SIZE 32
 static struct _io_req io_queue[IO_QUEUE_SIZE];
 static int next_entry = 0;
 
@@ -328,7 +328,7 @@ int scsi_file_io(co_monitor_t *mp, co_scsi_dev_t *dp, co_scsi_io_t *io) {
 	co_debug("submitting req...\n");
 #endif
 #if COSCSI_ASYNC
-	IoQueueWorkItem(r->pIoWorkItem, _scsi_dio, CriticalWorkQueue, r);
+	IoQueueWorkItem(r->pIoWorkItem, _scsi_dio, DelayedWorkQueue, r);
 	return 0;
 #else
 	return _scsi_dio(coLinux_DeviceObject, r);
