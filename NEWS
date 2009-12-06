@@ -8,6 +8,9 @@
     If user used mem=1000, then this crashed Linux kernel or the host.
     Maximal guest memory limit is 984 MB, host driver will adjust it now.
 
+  Console:
+  * FLTK: Fix buffer overflow for option cocon=x*y with x > 256 columns.
+
 * Version 0.7.5
   * Bug #1959846, #2760666: Don't crash the host, if an other virtualization
     runs in VMX mode.

@@ -173,7 +173,8 @@ void console_widget_t::draw()
 		}
 		
 		while (cell < end) {
-			while (cell < end  &&  start->attr == cell->attr) {
+			while (cell < end  &&  start->attr == cell->attr  &&
+			       cell - start < (int)sizeof(text_buff)) {
 				text_buff[cell - start] = cell->ch;
 				cell++;
 			}
