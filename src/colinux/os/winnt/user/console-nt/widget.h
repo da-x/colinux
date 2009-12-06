@@ -30,7 +30,7 @@ public:
 	co_rc_t idle();
 	co_rc_t title(const char*);
 	void update();
-	co_rc_t set_cursor_size(const int size_prc);
+	co_rc_t set_cursor_size(const int cursor_size);
 
 protected:
 	HANDLE 		    own_out_h; // Handle of the own screen buffer

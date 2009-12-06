@@ -8,8 +8,6 @@
  *
  */ 
 
-#define CO_CURSOR_POS_SIZE 30
-
 #include "widget.h"
 	
 static int default_red[] = {0x00,0xaa,0x00,0xaa,0x00,0xaa,0x00,0xaa,
@@ -197,19 +195,23 @@ void console_widget_t::draw()
 			start = cell;
 		}
 
-		if (!cursor_blink_state)
-			continue;
+		// The cell under the cursor
+		if (cursor_blink_state && console->cursor.y == yi &&
+		    console->cursor.x >= x1 && console->cursor.x <= x2 &&
+		    console->cursor.height != CO_CUR_NONE) {
+			int cursize;
 
-		if (console->cursor.y == yi) {
-			if (console->cursor.x >= x1 && console->cursor.x <= x2) {
-				fl_color(0xff, 0xff, 0xff);
-				fl_rectf(cx + letter_x * console->cursor.x, 
-					 cy + letter_y * console->cursor.y + 
-					 (letter_y * (CO_CURSOR_POS_SIZE - 
-					              console->cursor.height)) / CO_CURSOR_POS_SIZE,
-					 letter_x, 
-					 (letter_y * console->cursor.height) / CO_CURSOR_POS_SIZE);
-			}
+			if (console->cursor.height <= CO_CUR_BLOCK &&
+			    console->cursor.height > CO_CUR_NONE)
+				cursize = cursize_tab[console->cursor.height];
+			else
+				cursize = cursize_tab[CO_CUR_DEF];
+
+			fl_color(0xff, 0xff, 0xff);
+			fl_rectf(cx + letter_x * console->cursor.x, 
+				 cy + letter_y * console->cursor.y + letter_y - cursize,
+				 letter_x,
+				 cursize);
 		}
 	}
 	
@@ -230,6 +232,13 @@ void console_widget_t::set_console(co_console_t* _console)
 	fit_y = letter_y * console->config.y;
 
 	cell_limit = &console->screen[console->config.y * console->config.x];
+
+	cursize_tab[CO_CUR_UNDERLINE]	= letter_y / 6 + 1; /* round up 0.1667 */
+	cursize_tab[CO_CUR_LOWER_THIRD]	= letter_y / 3;
+	cursize_tab[CO_CUR_LOWER_HALF]	= letter_y / 2;
+	cursize_tab[CO_CUR_TWO_THIRDS]	= (letter_y * 2) / 3 + 1; /* round up 0.667 */
+	cursize_tab[CO_CUR_BLOCK]	= letter_y;
+	cursize_tab[CO_CUR_DEF]		= cursize_tab[console->config.curs_type_size];
 }
 
 co_console_t* console_widget_t::get_console()

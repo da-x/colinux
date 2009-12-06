@@ -215,7 +215,7 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 	SetConsoleActiveScreenBuffer(own_out_h);
 	
 	/* Set cursor size for own screen buffer */
-	console->cursor.height = console->config.curs_size_prc;
+	console->cursor.height = console->config.curs_type_size;
 	set_cursor_size(console->cursor.height);
 
 	// Fixup, if resize failed from smaller start window
@@ -305,7 +305,7 @@ void console_widget_NT_t::update()
 
 co_rc_t console_widget_NT_t::set_cursor_size(const int curs_size)
 {       
-	co_console_set_cursor_size((void*)own_out_h, (int)curs_size);
+	co_console_set_cursor_size((void*)own_out_h, curs_size);
 	return CO_RC(OK);
 }
 

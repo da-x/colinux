@@ -29,14 +29,16 @@ extern "C" {
 #define CO_CONSOLE_HEIGHT		25
 
 /* Cursor size */
-#define CO_CONSOLE_HIDDEN_CURSOR	0
-  /* Invisible cursor */
+/* Definitions for cursor.height Taken from Linux console_struct.h */
+#define CO_CUR_DEF		0	/* User defined */
+#define CO_CUR_NONE		1	/* 0 */
+#define CO_CUR_UNDERLINE	2	/* 1/6 */
+#define CO_CUR_LOWER_THIRD	3	/* 1/3 */
+#define CO_CUR_LOWER_HALF	4	/* 2/2 */
+#define CO_CUR_TWO_THIRDS	5	/* 2/3 */
+#define CO_CUR_BLOCK		6	/* 1 */
 
-#define CO_CONSOLE_NORM_CURSOR		10
-  /* Normal cursor (two scanlines) */
-
-#define CO_CONSOLE_FAT_CURSOR		99
-  /* "Fat" cursor (max possible size) */
+#define CO_CUR_DEFAULT		CO_CUR_UNDERLINE /* default */
 
 /*
  * This is a generic console implementation. It receives 'messages'

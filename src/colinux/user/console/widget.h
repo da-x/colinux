@@ -41,6 +41,7 @@ protected:
 	int 	      letter_y;
 	double	      cursor_blink_interval;
 	int 	      cursor_blink_state;
+	int           cursize_tab[CO_CUR_BLOCK+1];
 
 protected:
 	virtual void draw();

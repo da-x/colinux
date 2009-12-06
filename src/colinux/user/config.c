@@ -1048,7 +1048,7 @@ static co_rc_t parse_args_config_cursor(co_command_line_params_t cmdline,
 	char*   p;
 	co_rc_t rc;
 
-	conf->console.curs_size_prc = CO_CONSOLE_NORM_CURSOR;
+	conf->console.curs_type_size = CO_CUR_DEFAULT;
 
 	rc = co_cmdline_get_next_equality(cmdline,
 					  "cursor", 
@@ -1062,11 +1062,11 @@ static co_rc_t parse_args_config_cursor(co_command_line_params_t cmdline,
 		return rc;
 
 	if (exists) {
-		int size_prc;
+		int size_prc, cursize;
 
 		size_prc = (int)strtol(buf, &p, 0);
 
-		if(size_prc < CO_CONSOLE_HIDDEN_CURSOR || size_prc > 100) { 
+		if (size_prc < 0 || size_prc > 100) { 
 			co_terminal_print("Invalid arg (%d) for cursor\n", size_prc);
 			return CO_RC(INVALID_PARAMETER);
 		}
@@ -1075,19 +1075,18 @@ static co_rc_t parse_args_config_cursor(co_command_line_params_t cmdline,
 		 * it can not exceed 99. Set cursor size in accordance with
 		 * the kernel.
 		 */
-		if(size_prc > CO_CONSOLE_HIDDEN_CURSOR) {
-			if(     size_prc < 10)	size_prc = 10;
-			else if(size_prc < 33)	size_prc = 33;
-			else if(size_prc < 50)	size_prc = 50;
-			else if(size_prc < 66)	size_prc = 66;
-			else			size_prc = CO_CONSOLE_FAT_CURSOR;
-		}
-			
-					
-		conf->console.curs_size_prc = size_prc;
+		if      (size_prc <=   0) cursize = CO_CUR_NONE;
+		else if (size_prc <=  16) cursize = CO_CUR_UNDERLINE;
+		else if (size_prc <=  33) cursize = CO_CUR_LOWER_THIRD;
+		else if (size_prc <=  50) cursize = CO_CUR_LOWER_HALF;
+		else if (size_prc <=  66) cursize = CO_CUR_TWO_THIRDS;
+		else if (size_prc <= 100) cursize = CO_CUR_BLOCK;
+		else			  cursize = CO_CUR_DEFAULT;
+
+		conf->console.curs_type_size = cursize;
 	}
 #if COLINUX_DEBUG_CURSOR
-	co_terminal_print("cursor=%d\n", conf->console.curs_size_prc);
+	co_terminal_print("cursor=%d\n", conf->console.curs_type_size);
 #endif
 	return CO_RC(OK);
 }

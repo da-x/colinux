@@ -217,11 +217,10 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 	}
 
 	case CO_OPERATION_CONSOLE_STARTUP:
-		message->type            = CO_OPERATION_CONSOLE_CONFIG;
-		message->config.cols     = console->config.x;
-		message->config.rows     = console->config.y;
-		message->config.attr     = console->config.attr;
-		message->config.curs_prc = console->config.curs_size_prc;
+		message->type        = CO_OPERATION_CONSOLE_CONFIG;
+		message->config.cols = console->config.x;
+		message->config.rows = console->config.y;
+		message->config.attr = console->config.attr;
 		break;
 
 	case CO_OPERATION_CONSOLE_INIT:

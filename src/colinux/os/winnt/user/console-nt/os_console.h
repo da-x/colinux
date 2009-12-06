@@ -8,13 +8,11 @@
 extern "C" {
 #endif
 
-int co_console_set_cursor_size(void* out_h, int curs_size_prc);
+int co_console_set_cursor_size(void* out_h, const int cursor_type);
   /* Set cursor size 
      Parameters:
        out_h         - console output handle
-       curs_size_prc - size of cursor in percent
-         <= 0   - turn of the cursor
-         == 100 - set "fat" (full size) cursor
+       curs_size_prc - size of cursor in Linux kernel defines
         
      Returns:
        >= 0 - norm
@@ -22,7 +20,6 @@ int co_console_set_cursor_size(void* out_h, int curs_size_prc);
                   == 0 - cursor is invisible 
        <  0 - error
   */
-
 
 #if defined __cplusplus
 }

@@ -91,7 +91,7 @@ co_rc_t console_widget_t::event(co_console_message_t* message)
 #if DEBUG_CONSOLE
 		co_debug("CO_OPERATION_CONSOLE_INIT");
 #endif
-		set_cursor_size(console->config.curs_size_prc);
+		set_cursor_size(console->config.curs_type_size);
 		break;
 
 	case CO_OPERATION_CONSOLE_DEINIT:
@@ -149,19 +149,17 @@ co_rc_t console_widget_t::event(co_console_message_t* message)
 #if DEBUG_CONSOLE
 		co_debug("CO_OPERATION_CONSOLE_CURSOR_DRAW");
 #endif
-#if 0 // TODO
-		set_cursor_size(message->cursor.height);
-#else		
-		set_cursor_size(console->config.curs_size_prc);
-#endif		
+		if (message->cursor.height == CO_CUR_DEF)
+			set_cursor_size(console->config.curs_type_size);
+		else
+			set_cursor_size(message->cursor.height);
 		return op_cursor_pos(message->cursor);
 
 	case CO_OPERATION_CONSOLE_CURSOR_ERASE:
 #if DEBUG_CONSOLE
 		co_debug("CO_OPERATION_CONSOLE_CURSOR_ERASE");
 #endif
-		set_cursor_size(0);
-		return op_cursor_pos(message->cursor);
+		return set_cursor_size(CO_CUR_NONE);
 
 	case CO_OPERATION_CONSOLE_CURSOR_MOVE:
 #if DEBUG_CONSOLE
@@ -216,13 +214,13 @@ co_rc_t console_widget_t::event(co_console_message_t* message)
 #endif
 		break;
 	case CO_OPERATION_CONSOLE_INVERT_REGION:
+#if DEBUG_CONSOLE
+		co_debug("CO_OPERATION_CONSOLE_INVERT_REGION");
+#endif
 		// op_invert - dummy function
 		return op_invert(message->invert.y, 
 				 message->invert.x,
 				 message->invert.count);
-#if DEBUG_CONSOLE
-		co_debug("CO_OPERATION_CONSOLE_INVERT_REGION");
-#endif
 		break;
 	default:
 		co_debug("CO_OPERATION_CONSOLE_%d", message->type);

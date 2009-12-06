@@ -206,8 +206,8 @@ typedef struct co_config_console {
 	/* int max_x; */
 	int max_y;
 
-	/* Cursor size in percent */ 
-	int curs_size_prc;
+	/* Cursor size in Linux kernel types */ 
+	int curs_type_size;
 
 	/* Colors for clear screen: (bg << 4) | fg */ 
 	int attr;

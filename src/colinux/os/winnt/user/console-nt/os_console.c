@@ -6,42 +6,58 @@
  */
 
 #include <windows.h>
+#include <colinux/common/console.h>
 
 #include "os_console.h"
 
 /* Set cursor size 
    Parameters:
-     curs_size_prc - size of cursor in percent
+     cursor_type - size of cursor in Linux kernel defines
    Returns:
      >= 0 - norm
               old size of cursor in percent  
      <  0 - error
 */
-int co_console_set_cursor_size(void* out_h, int curs_size_prc)
+int co_console_set_cursor_size(void* out_h, const int cursor_type)
 {
-	int     res;
-	
-	res   = -1;
-	if((HANDLE)out_h != INVALID_HANDLE_VALUE) {
-		CONSOLE_CURSOR_INFO curs_info;
-		
-		GetConsoleCursorInfo((HANDLE)out_h, &curs_info);
-		res = curs_info.dwSize;
-		if(!curs_info.bVisible) {
-			res = 0;
-		}
-		if(curs_size_prc <= 0) {
-			curs_size_prc      = 0;
+	CONSOLE_CURSOR_INFO curs_info;
+	int     res = -1;
+
+	if((HANDLE)out_h == INVALID_HANDLE_VALUE)
+		return -1;
+
+	GetConsoleCursorInfo((HANDLE)out_h, &curs_info);
+	res = curs_info.dwSize;
+	if(!curs_info.bVisible)
+		res = 0;
+
+	curs_info.bVisible = TRUE;
+	switch (cursor_type) {
+		case CO_CUR_NONE:
+			curs_info.dwSize = 1;
 			curs_info.bVisible = FALSE;
-			
-		} else {
-			if(curs_size_prc > 99) {
-				curs_size_prc = 99;
-			}
-			curs_info.bVisible = TRUE;
-		}
-		curs_info.dwSize = curs_size_prc;
-		SetConsoleCursorInfo((HANDLE)out_h, &curs_info);
+			break;
+		case CO_CUR_UNDERLINE:
+			curs_info.dwSize = 16;
+			break;
+		case CO_CUR_LOWER_THIRD:
+			curs_info.dwSize = 33;
+			break;
+		case CO_CUR_LOWER_HALF:
+			curs_info.dwSize = 50;
+			break;
+		case CO_CUR_TWO_THIRDS:
+			curs_info.dwSize = 66;
+			break;
+		case CO_CUR_BLOCK:
+			curs_info.dwSize = 99;
+			break;
+		case CO_CUR_DEF:
+		default:
+			curs_info.dwSize = 10;  /* This will never use in normal way */
 	}
+
+	SetConsoleCursorInfo((HANDLE)out_h, &curs_info);
+
 	return res;
 } 
