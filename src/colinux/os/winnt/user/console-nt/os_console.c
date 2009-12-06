@@ -13,23 +13,13 @@
 /* Set cursor size 
    Parameters:
      cursor_type - size of cursor in Linux kernel defines
-   Returns:
-     >= 0 - norm
-              old size of cursor in percent  
-     <  0 - error
 */
-int co_console_set_cursor_size(void* out_h, const int cursor_type)
+void co_console_set_cursor_size(void* out_h, const int cursor_type)
 {
 	CONSOLE_CURSOR_INFO curs_info;
-	int     res = -1;
 
 	if((HANDLE)out_h == INVALID_HANDLE_VALUE)
-		return -1;
-
-	GetConsoleCursorInfo((HANDLE)out_h, &curs_info);
-	res = curs_info.dwSize;
-	if(!curs_info.bVisible)
-		res = 0;
+		return;
 
 	curs_info.bVisible = TRUE;
 	switch (cursor_type) {
@@ -58,6 +48,4 @@ int co_console_set_cursor_size(void* out_h, const int cursor_type)
 	}
 
 	SetConsoleCursorInfo((HANDLE)out_h, &curs_info);
-
-	return res;
 } 
