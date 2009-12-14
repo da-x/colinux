@@ -1,0 +1,15 @@
+# Bugfix this build error with unionfs as module:
+# "security_inode_permission" [fs/unionfs/unionfs.ko] undefined!
+
+Index: linux-2.6.26.8-source/security/security.c
+===================================================================
+--- linux-2.6.26.8-source.orig/security/security.c
++++ linux-2.6.26.8-source/security/security.c
+@@ -469,6 +469,7 @@
+ 		return 0;
+ 	return security_ops->inode_permission(inode, mask, nd);
+ }
++EXPORT_SYMBOL_GPL(security_inode_permission);
+ 
+ int security_inode_setattr(struct dentry *dentry, struct iattr *attr)
+ {

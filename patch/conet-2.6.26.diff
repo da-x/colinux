@@ -1,0 +1,70 @@
+Implements network support
+
+
+Index: linux-2.6.26-source/drivers/net/Kconfig
+===================================================================
+--- linux-2.6.26-source.orig/drivers/net/Kconfig
++++ linux-2.6.26-source/drivers/net/Kconfig
+@@ -147,6 +147,11 @@
+ 	  When one end receives the packet it appears on its pair and vice
+ 	  versa.
+ 
++config CONET_COOPERATIVE
++	bool 'Cooperative Virtual Ethernet driver support'
++	depends on COOPERATIVE
++	select MII
++
+ config NET_SB1000
+ 	tristate "General Instruments Surfboard 1000"
+ 	depends on PNP
+@@ -181,7 +186,7 @@
+ 
+ menuconfig NET_ETHERNET
+ 	bool "Ethernet (10 or 100Mbit)"
+-	depends on !UML
++	depends on !UML && !COOPERATIVE
+ 	---help---
+ 	  Ethernet (also called IEEE 802.3 or ISO 8802-2) is the most common
+ 	  type of Local Area Network (LAN) in universities and companies.
+@@ -1895,7 +1900,7 @@
+ 
+ menuconfig NETDEV_1000
+ 	bool "Ethernet (1000 Mbit)"
+-	depends on !UML
++	depends on !UML && !COOPERATIVE
+ 	default y
+ 	---help---
+ 	  Ethernet (also called IEEE 802.3 or ISO 8802-2) is the most common
+@@ -2360,7 +2365,7 @@
+ 
+ menuconfig NETDEV_10000
+ 	bool "Ethernet (10000 Mbit)"
+-	depends on !UML
++	depends on !UML && !COOPERATIVE
+ 	default y
+ 	---help---
+ 	  Say Y here to get to see options for 10 Gigabit Ethernet drivers.
+Index: linux-2.6.26-source/drivers/net/Makefile
+===================================================================
+--- linux-2.6.26-source.orig/drivers/net/Makefile
++++ linux-2.6.26-source/drivers/net/Makefile
+@@ -184,6 +184,7 @@
+ 
+ # This is also a 82596 and should probably be merged
+ obj-$(CONFIG_LP486E) += lp486e.o
++obj-$(CONFIG_CONET_COOPERATIVE) += conet.o
+ 
+ obj-$(CONFIG_ETH16I) += eth16i.o
+ obj-$(CONFIG_ZORRO8390) += zorro8390.o
+Index: linux-2.6.26-source/drivers/net/conet.c
+===================================================================
+--- linux-2.6.26-source.orig/drivers/net/conet.c
++++ linux-2.6.26-source/drivers/net/conet.c
+@@ -346,7 +346,6 @@
+ 		rc = -ENOMEM;
+ 		goto error_out_pdev;
+ 	}
+-	SET_MODULE_OWNER(dev);
+ 	SET_NETDEV_DEV(dev, &pdev->dev);
+ 	memcpy(dev->dev_addr, addr, 6);
+ 

@@ -4,7 +4,13 @@
   * New: "cursor=1..99" sets cursor size of nt-console (Peter Kuznetsov)
 
   Kernel:
-  * has been updated to 2.6.25.20
+  * Version 2.6.26.8
+    o ext4fs enabled, backport patch 2.6.26-ext4-7 added.
+      Please read about using ext4 in kernel 2.6.26:
+      http://ext4.wiki.kernel.org/index.php/Ext4_Howto#For_people_who_are_running_Debian
+      (Thanks Frédéric L. W. Meunier)
+    o Squashfs 3.4, unionfs 2.5.3
+  * Version to 2.6.25.20
 
 * Version 0.7.6
   * Bug #2895531: "mkfs.ext3 freezes on scsi disks" fixed by limit number
