@@ -95,12 +95,7 @@ Index: linux-2.6.25-source/include/linux/console_struct.h
 ===================================================================
 --- linux-2.6.25-source.orig/include/linux/console_struct.h
 +++ linux-2.6.25-source/include/linux/console_struct.h
-@@ -1,3 +1,4 @@
-+
- /*
-  * console_struct.h
-  *
-@@ -131,7 +132,11 @@
+@@ -131,7 +131,11 @@
  #define CUR_HWMASK	0x0f
  #define CUR_SWMASK	0xfff0
  
