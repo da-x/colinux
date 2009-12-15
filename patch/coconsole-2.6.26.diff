@@ -103,7 +103,7 @@ Index: linux-2.6.26-source/drivers/char/vt.c
  		vc->vc_palette[k++] = default_blu[j] ;
  	}
 -	vc->vc_def_color       = 0x07;   /* white */
-+	if (!vc_def_color)
++	if (!vc->vc_def_color)
 +		vc->vc_def_color       = 0x07;   /* white */
  	vc->vc_ulcolor         = default_underline_color;
  	vc->vc_itcolor         = default_italic_color;
