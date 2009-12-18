@@ -715,13 +715,6 @@ static co_rc_t flat_mode_inode_rename(co_filesystem_t *filesystem, co_inode_t *o
 	char *old_dirname = NULL, *new_dirname = NULL;
 	co_rc_t rc;
 
-	if (new_inode->parent == old_inode) {
-		// Workarround, prevents memory corruption from upper-lower side effect
-		// Example: mv /cofs/testdir /cofs/TESTDIR/somedir
-		co_debug("Parent can not rename itself (%s,%s)", old_inode->name, new_inode->name);
-		return CO_RC(INVALID_PARAMETER);
-	}
-
 	rc = co_os_fs_dir_inode_to_path(filesystem, old_inode, &old_dirname, oldname);
 	if (CO_OK(rc)) {
 		rc = co_os_fs_dir_inode_to_path(filesystem, new_inode, &new_dirname, newname);
