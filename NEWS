@@ -7,6 +7,7 @@
   * Bug #2893343: VMALLOC_END was overlapping coLinux shared host memory.
     If user used mem=1000, then this crashed Linux kernel or the host.
     Maximal guest memory limit is 984 MB, host driver will adjust it now.
+  * Bug #2911886: Move file to subdirecory was blocked under cofs.
 
   Console:
   * FLTK: Fix buffer overflow for option cocon=x*y with x > 256 columns.

@@ -526,6 +526,16 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	int block_size;
 	int char_count;
 	co_rc_t rc;
+	int len;
+
+	// Check, that nobody move parent directory as new subdirectory
+	len = strlen(filename);
+	if (strncasecmp(filename, dest_filename, len) == 0 && dest_filename[len] == '\\') {
+		// Workarround, prevents memory corruption from upper-lower side effect
+		// Example: mv /cofs/testdir /cofs/TESTDIR/somedir
+		co_debug("Parent can not rename itself (%s,%s)", filename, dest_filename);
+		return CO_RC(INVALID_PARAMETER);
+	}
 
 	char_count = co_utf8_mbstrlen(dest_filename);
 	block_size = (char_count + 1)*sizeof(WCHAR) + sizeof(FILE_RENAME_INFORMATION);
