@@ -431,16 +431,15 @@ static bool_t co_terminate(co_monitor_t *cmon)
 
 static bool_t co_idle(co_monitor_t *cmon)
 {
-	bool_t      next_iter = PTRUE;
 	co_queue_t* queue;
 
 	co_os_wait_sleep(cmon->idle_wait);
 
 	queue = &cmon->linux_message_queue;
 	if (co_queue_size(queue) == 0)
-		next_iter = PFALSE;
-
-	return next_iter;
+		return PFALSE;
+	else
+		return PTRUE;
 }
 
 static void co_free_pages(co_monitor_t *cmon, vm_ptr_t address, int num_pages)
