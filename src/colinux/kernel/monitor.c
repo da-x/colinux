@@ -463,14 +463,11 @@ static co_rc_t co_alloc_pages(co_monitor_t *cmon, vm_ptr_t address, int num_page
 	scan_address = address;
 	for (i=0; i < num_pages; i++, scan_address += CO_ARCH_PAGE_SIZE) {
 		rc = co_monitor_alloc_and_map_page(cmon, scan_address);
-		if (!CO_OK(rc))
+		if (!CO_OK(rc)) {
+			scan_address = address;
+			for (; i; i--, scan_address += CO_ARCH_PAGE_SIZE)
+				co_monitor_free_and_unmap_page(cmon, scan_address);
 			break;
-	}
-
-	if (!CO_OK(rc)) {
-		scan_address = address;
-		for (; i; i--, scan_address += CO_ARCH_PAGE_SIZE) {
-			co_monitor_free_and_unmap_page(cmon, scan_address);
 		}
 	}
 
