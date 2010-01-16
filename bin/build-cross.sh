@@ -247,8 +247,7 @@ check_gcc_guest()
 
 	# Get version number
 	local PATH="$PATH:$COLINUX_GCC_GUEST_PATH"
-	ver=`${COLINUX_GCC_GUEST_TARGET}-gcc -dumpversion 2>/dev/null || \
-	     gcc -dumpversion 2>/dev/null`
+	ver=`${COLINUX_GCC_GUEST_TARGET}-gcc -dumpversion 2>/dev/null`
 
 	if [ -z "$ver" ]
 	then
