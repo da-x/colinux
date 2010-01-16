@@ -534,7 +534,7 @@ void console_window_t::handle_message(co_message_t* message)
 }
 
 // nlucas: this code is identical to console_window_t::handle_scancode
-//         in colinux\user\console-base\console.cpp.
+//         in colinux\user\console-nt\console.cpp.
 void console_window_t::handle_scancode(co_scan_code_t sc)
 {
 	if (state != CO_CONSOLE_STATE_ATTACHED)

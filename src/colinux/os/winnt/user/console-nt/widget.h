@@ -15,7 +15,7 @@
 #include <windows.h>
 
 extern "C" {
-#include <colinux/user/console-base/console.h>
+#include <colinux/user/console-nt/console.h>
 }
 
 class console_widget_NT_t:public console_widget_t {

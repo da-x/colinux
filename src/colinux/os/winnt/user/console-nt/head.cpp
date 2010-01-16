@@ -19,7 +19,7 @@ extern "C" {
 #include <colinux/os/user/misc.h>
 }
 
-#include <colinux/user/console-base/main.h>
+#include <colinux/user/console-nt/main.h>
 #include "console.h"
 
 COLINUX_DEFINE_MODULE("colinux-console-nt");

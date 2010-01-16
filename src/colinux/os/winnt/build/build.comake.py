@@ -110,8 +110,8 @@ targets['colinux-serial-daemon.exe'] = Target(
 
 targets['colinux-console-fltk.exe'] = Target(
     inputs = user_res + [
-       Input('../user/console/build.a'),
-       Input('../../../user/console/build.a'),
+       Input('../user/console-fltk/build.a'),
+       Input('../../../user/console-fltk/build.a'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('g++', libs=['fltk', 'mingw32'], lflags=['-mwindows']),
@@ -120,7 +120,7 @@ targets['colinux-console-fltk.exe'] = Target(
 targets['colinux-console-nt.exe'] = Target(
     inputs = user_res + [
        Input('../user/console-nt/build.a'),
-       Input('../../../user/console-base/build.a'),
+       Input('../../../user/console-nt/build.a'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('g++'),
