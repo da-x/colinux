@@ -23,6 +23,7 @@
 #include <FL/Fl_Button.H>
 
 extern "C" {
+ #include <colinux/common/version.h>
 #include <colinux/common/messages.h>
 #include <colinux/user/monitor.h>
 #include <colinux/os/user/misc.h>
@@ -85,9 +86,10 @@ void console_idle(void *data)
 }
 
 console_main_window_t::console_main_window_t(console_window_t *console)
-	: Fl_Double_Window(640, 480), console(console)
+	: Fl_Double_Window(640, 480), 
+	console(console)
 {
-	label("Cooperative Linux console");
+	label("Cooperative Linux console [" COLINUX_VERSION "]" );
 }
 
 int console_main_window_t::handle(int event)

@@ -17,4 +17,14 @@ extern int co_user_console_main(int argc, char **argv);
 extern void co_user_console_handle_scancode(co_scan_code_t sc);
 extern void co_user_console_keyboard_focus_change(unsigned long keyboard_focus);
 
+/**
+ * Console startup parameters
+ *
+ */
+struct console_parameters_t
+{
+   co_id_t     instance_id;    // colinux instance id to attach to
+   char  *     motd;           // Message of the day
+};
+
 #endif

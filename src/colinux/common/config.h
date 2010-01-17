@@ -216,6 +216,10 @@ typedef struct co_config {
 	 * Video devices
 	 */
 	co_video_dev_desc_t video_devs[CO_MODULE_MAX_COVIDEO];
+	/* was for cofb
+	 * Size of the video memory (in KB)
+	 */
+	unsigned long video_size;
 
 	/*
 	 * SCSI devices

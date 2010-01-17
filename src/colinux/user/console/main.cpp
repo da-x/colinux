@@ -9,9 +9,8 @@
  */ 
 
 #include "console.h"
-
-static console_window_t *global_window = 0;
-
+#include "main.h"
+static console_window_t *global_window = 0; 
 void co_user_console_handle_scancode(co_scan_code_t sc)
 {
 	if (!global_window)

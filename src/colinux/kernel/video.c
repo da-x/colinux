@@ -18,7 +18,7 @@
 #ifdef CONFIG_COOPERATIVE_VIDEO
 #include <linux/covideo.h>
 
-#define COVIDEO_DEBUG 1
+#define COVIDEO_DEBUG 
 
 static int co_video_test(co_monitor_t *cmon, co_video_dev_t *dp) {
         unsigned char *p, *t, *t0, *t1;
@@ -110,7 +110,7 @@ int co_monitor_video_device_init(co_monitor_t *cmon, int unit, co_video_dev_desc
 	co_rc_t rc;
 
 #if COVIDEO_DEBUG
-	co_debug("unit: %d, size: %d\n", unit, cp->size);
+	co_debug("covideo unit: %d, size: %d\n", unit, cp->size);
 #endif
 
 	rc = co_monitor_malloc(cmon, sizeof(co_video_dev_t), (void **)&dp);
@@ -166,7 +166,7 @@ co_rc_t co_video_attach(co_monitor_t *cmon, co_monitor_ioctl_video_t *params) {
 	}
 
 #ifdef COVDEO_DEBUG
-	co_debug("address: %08lXh\n", params->address );
+	co_debug("covideo address: %08lXh\n", params->address );
 #endif
 
         return CO_RC(OK);

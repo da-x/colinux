@@ -43,6 +43,8 @@ extern co_rc_t co_user_monitor_get_state(co_user_monitor_t *umon,
 extern co_rc_t co_user_monitor_reset(co_user_monitor_t *umon);
 extern co_rc_t co_user_monitor_status(co_user_monitor_t *umon, 
 				      co_monitor_ioctl_status_t *status);
+extern co_rc_t co_user_monitor_video_attach(co_user_monitor_t *umon,
+				   co_monitor_ioctl_video_attach_t *params);
 
 extern co_rc_t co_user_monitor_message_send(co_user_monitor_t *umon,  co_message_t *message);
 

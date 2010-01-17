@@ -229,6 +229,15 @@ co_rc_t co_user_monitor_status(co_user_monitor_t *umon,
 					     &params->pc, sizeof(*params));
 }
 
+co_rc_t co_user_monitor_video_attach(co_user_monitor_t *umon,
+			    co_monitor_ioctl_video_attach_t*params)
+{
+	return co_manager_io_monitor_unisize(umon->handle,
+     CO_MONITOR_IOCTL_VIDEO_ATTACH,
+     &params->pc, sizeof(*params));
+}
+				    						     					     
+
 co_rc_t co_user_monitor_conet_bind_adapter(co_user_monitor_t *umon,
 				co_monitor_ioctl_conet_bind_adapter_t *params)
 {

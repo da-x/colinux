@@ -145,6 +145,12 @@ typedef struct {
 	unsigned char buf[0];
 } co_monitor_ioctl_load_initrd_t;
 
+/* interface for CO_MONITOR_IOCTL_VIDEO_ATTACH: */
+typedef struct {
+  co_manager_ioctl_monitor_t pc;
+  void * video_buffer;    /* shared video buffer as output */
+} co_monitor_ioctl_video_attach_t;
+
 /* interface for CO_MONITOR_IOCTL_GET_CONSOLE: */
 typedef struct {
 	co_manager_ioctl_monitor_t pc;
