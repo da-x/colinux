@@ -1,8 +1,8 @@
 * Version 0.8.0
-  * Bug #2911886: Move file to subdirecory was blocked under cofs.
+  * Bug #2911988: Can't read empty file on cofs.
 
   Console and daemons:
-  * New: "color=black,white" sets default color.(Peter Kuznetsov)
+  * New: "color=black,white" sets default color. (Peter Kuznetsov)
   * New: "cursor=1..99" sets cursor size of nt-console (Peter Kuznetsov)
 
   Kernel:
@@ -12,7 +12,7 @@
       http://ext4.wiki.kernel.org/index.php/Ext4_Howto#For_people_who_are_running_Debian
       (Thanks Frédéric L. W. Meunier)
     o Squashfs 3.4, unionfs 2.5.3
-  * Version to 2.6.25.20
+  * Version 2.6.25.20
 
 * Version 0.7.6
   * Bug #2895531: "mkfs.ext3 freezes on scsi disks" fixed by limit number
@@ -23,6 +23,7 @@
   * Bug #2893343: VMALLOC_END was overlapping coLinux shared host memory.
     If user used mem=1000, then this crashed Linux kernel or the host.
     Maximal guest memory limit is 984 MB, host driver will adjust it now.
+  * Bug #2911886: Move file to subdirecory was blocked under cofs.
 
   Console:
   * FLTK: Fix buffer overflow for option cocon=x*y with x > 256 columns.
