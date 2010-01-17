@@ -58,6 +58,7 @@ void co_winnt_free_unicode(UNICODE_STRING *unicode_str)
 co_rc_t co_status_convert(NTSTATUS status)
 {
 	switch (status) {
+	case STATUS_END_OF_FILE:
 	case STATUS_PENDING:
 	case STATUS_SUCCESS: return CO_RC(OK);
 	case STATUS_NO_SUCH_FILE: 
