@@ -43,16 +43,3 @@ Index: linux-2.6.26.8-source/include/linux/cooperative.h
  		co_cursor_pos_t cursor;
  	};
  } __attribute__((packed)) co_console_message_t;
-Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
-===================================================================
---- linux-2.6.26.8-source.orig/drivers/video/console/cocon.c
-+++ linux-2.6.26.8-source/drivers/video/console/cocon.c
-@@ -467,7 +467,7 @@
- 	co_send_message_restore(flags);
- }
- 
--static int cocon_resize(struct vc_data *vc, unsigned int width,
-+static int cocon_resize(struct vc_data *vc, unsigned int width, 
- 			unsigned int height, unsigned int user)
- {
- 	return -EINVAL;

@@ -1,7 +1,8 @@
-diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.colinux/arch/i386/mm/ioremap.c linux-2.6.26.8-source/arch/i386/mm/ioremap.c
---- linux-2.6.26.8.colinux/arch/i386/mm/ioremap.c	2010-01-03 18:01:29.000000000 -0500
-+++ linux-2.6.26.8-source/arch/i386/mm/ioremap.c	2009-12-31 13:29:39.000000000 -0500
-@@ -132,6 +132,11 @@ static void __iomem *__ioremap_caller(re
+Index: linux-2.6.26.8-source/arch/i386/mm/ioremap.c
+===================================================================
+--- linux-2.6.26.8-source.orig/arch/i386/mm/ioremap.c
++++ linux-2.6.26.8-source/arch/i386/mm/ioremap.c
+@@ -132,6 +132,16 @@
  	pgprot_t prot;
  	int retval;
  
@@ -10,16 +11,6 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +		return NULL;
 +	}
 +
- 	/* Don't allow wraparound or zero size */
- 	last_addr = phys_addr + size - 1;
- 	if (!size || last_addr < phys_addr)
-diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.colinux/arch/x86/mm/ioremap.c linux-2.6.26.8-source/arch/x86/mm/ioremap.c
---- linux-2.6.26.8.colinux/arch/x86/mm/ioremap.c	2010-01-03 18:01:29.000000000 -0500
-+++ linux-2.6.26.8-source/arch/x86/mm/ioremap.c	2009-12-31 13:29:39.000000000 -0500
-@@ -132,6 +132,11 @@ static void __iomem *__ioremap_caller(re
- 	pgprot_t prot;
- 	int retval;
- 
 +	if (cooperative_mode_enabled()) {
 +		panic("__ioremap %ld:%ld\n", phys_addr, size);
 +		return NULL;
@@ -28,22 +19,24 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
  	/* Don't allow wraparound or zero size */
  	last_addr = phys_addr + size - 1;
  	if (!size || last_addr < phys_addr)
-diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.colinux/drivers/input/mouse/comouse.c linux-2.6.26.8-source/drivers/input/mouse/comouse.c
---- linux-2.6.26.8.colinux/drivers/input/mouse/comouse.c	2010-01-03 18:01:37.000000000 -0500
-+++ linux-2.6.26.8-source/drivers/input/mouse/comouse.c	2009-12-29 22:28:37.000000000 -0500
+Index: linux-2.6.26.8-source/drivers/input/mouse/comouse.c
+===================================================================
+--- linux-2.6.26.8-source.orig/drivers/input/mouse/comouse.c
++++ linux-2.6.26.8-source/drivers/input/mouse/comouse.c
 @@ -29,7 +29,8 @@
  #include <linux/interrupt.h>
  #include <linux/cooperative_internal.h>
  
 -#define COMOUSE_DEBUG 1
-+#undef COMOUSE_DEBUG 
++#undef COMOUSE_DEBUG
 +#define LONG(x) (long)(x)
  
  MODULE_AUTHOR("Steve Shoecraft <sshoecraft@earthlink.net");
  MODULE_DESCRIPTION("Cooperative Mouse Driver");
-diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.colinux/drivers/video/cofb.c linux-2.6.26.8-source/drivers/video/cofb.c
---- linux-2.6.26.8.colinux/drivers/video/cofb.c	1969-12-31 19:00:00.000000000 -0500
-+++ linux-2.6.26.8-source/drivers/video/cofb.c	2010-01-03 16:59:06.000000000 -0500
+Index: linux-2.6.26.8-source/drivers/video/cofb.c
+===================================================================
+--- /dev/null
++++ linux-2.6.26.8-source/drivers/video/cofb.c
 @@ -0,0 +1,561 @@
 +/*
 + *  linux/drivers/video/cofb.c -- CoLinux Virtual frame buffer device
@@ -470,7 +463,7 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +
 +static
 +void cofb_fillrect( struct fb_info* info, const struct fb_fillrect* fr )
-+{	
++{
 +	cofb_lock();
 +	cfb_fillrect( info, fr );
 +	cofb_mem->header.flags |= CO_VIDEO_FLAG_DIRTY;
@@ -481,7 +474,7 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +
 +static
 +void cofb_copyarea( struct fb_info* info, const struct fb_copyarea* ca )
-+{	
++{
 +	cofb_lock();
 +	cfb_copyarea( info, ca );
 +	cofb_mem->header.flags |= CO_VIDEO_FLAG_DIRTY;
@@ -516,7 +509,7 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +{
 +	if ( regno >= 256 )  /* no. of hw registers */
 +		return 1;
-+	
++
 +#define CNVT_TOHW(val,width) ((((val)<<(width))+0x7FFF-(val))>>16)
 +	red = CNVT_TOHW(red, info->var.red.length);
 +	green = CNVT_TOHW(green, info->var.green.length);
@@ -559,10 +552,10 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 + *        to mark the video mem "dirty". Maybe fb_sync() can help with this.
 + */
 +static
-+int cofb_mmap( struct fb_info *info, 
++int cofb_mmap( struct fb_info *info,
 +		struct vm_area_struct *vma )
 +{       // point to vptr_self_map-pagesize 0xfe80 0000-pagesize where last pte is
-+        // shoul store host pfn for video buffer	
++        // shoul store host pfn for video buffer
 +	u32 * ptes = (u32 *) (co_video_base + (1 << PMD_SHIFT) - PAGE_SIZE);
 +	u_long num_pages = (vma->vm_end - vma->vm_start) >> PAGE_SHIFT;
 +	printk( KERN_INFO"cofb_mmap: start=%lXh pages=%lu fix.smem_len=%X\n",
@@ -589,7 +582,7 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +					vma->vm_page_prot ))return -EAGAIN;
 +		++i;
 +	}
-+        
++
 +	return 0;
 +}
 +
@@ -606,548 +599,40 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +
 +MODULE_LICENSE("GPL");
 +#endif				/* MODULE */
-diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.colinux/drivers/video/console/cocon.c linux-2.6.26.8-source/drivers/video/console/cocon.c
---- linux-2.6.26.8.colinux/drivers/video/console/cocon.c	2010-01-03 18:01:35.000000000 -0500
-+++ linux-2.6.26.8-source/drivers/video/console/cocon.c	2009-12-23 16:38:06.000000000 -0500
-@@ -1,501 +1,648 @@
--/*
-- *  linux/drivers/video/cocon.c -- Cooperative Linux console VGA driver
-- *
-- *  This file is subject to the terms and conditions of the GNU General Public
-- *  License.  See the file COPYING in the main directory of this archive for
-- *  more details.
-- *
+Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
+===================================================================
+--- linux-2.6.26.8-source.orig/drivers/video/console/cocon.c
++++ linux-2.6.26.8-source/drivers/video/console/cocon.c
+@@ -5,11 +5,14 @@
+  *  License.  See the file COPYING in the main directory of this archive for
+  *  more details.
+  *
 - *  Based on code copied from vgacon.c.
-- *
-- *  Dan Aloni <da-x@gmx.net>, 2003-2004 (c)
-- */
--
--#include <linux/module.h>
--#include <linux/types.h>
--#include <linux/sched.h>
--#include <linux/fs.h>
--#include <linux/kernel.h>
--#include <linux/tty.h>
--#include <linux/console.h>
--#include <linux/string.h>
--#include <linux/kd.h>
--#include <linux/slab.h>
--#include <linux/vt_kern.h>
--#include <linux/selection.h>
--#include <linux/init.h>
--
--#include <linux/cooperative_internal.h>
--
--/*
-- *  Interface used by the world
-- */
--
--static int cocon_cols = 80;
--static int cocon_rows = 25;
--
--static const char __init *cocon_startup(void)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	co_message = co_send_message_save(&flags);
--	if (co_message) {
--		message = (co_console_message_t *)co_message->data;
--		co_message->from = CO_MODULE_LINUX;
--		co_message->to = CO_MODULE_CONSOLE;
--		co_message->priority = CO_PRIORITY_DISCARDABLE;
--		co_message->type = CO_MESSAGE_TYPE_STRING;
--		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_STARTUP;
--		co_switch_wrapper();
--		if (message->type == CO_OPERATION_CONSOLE_SIZES) {
--			cocon_cols = message->sizes.cols;
--			cocon_rows = message->sizes.rows;
--		}
--		co_passage_page_release(flags);
--	}
--
--	return "CoCON";
--}
--
--static void cocon_init(struct vc_data *c, int init)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	/* We cannot be loaded as a module, therefore init is always 1 */
--	c->vc_can_do_color = 1;
--	c->vc_cols = cocon_cols;
--	c->vc_rows = cocon_rows;
--	c->vc_complement_mask = 0x7700;
--	c->vc_visible_origin = 0;
--	c->vc_origin = 0;
--
--	co_message = co_send_message_save(&flags);
--	if (!co_message)
--		return;
--
--	message = (co_console_message_t *)co_message->data;
--	co_message->from = CO_MODULE_LINUX;
--	co_message->to = CO_MODULE_CONSOLE;
--	co_message->priority = CO_PRIORITY_DISCARDABLE;
--	co_message->type = CO_MESSAGE_TYPE_STRING;
--	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--	message->type = CO_OPERATION_CONSOLE_INIT;
--	co_send_message_restore(flags);
--}
--
--static void cocon_deinit(struct vc_data *c)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	co_message = co_send_message_save(&flags);
--	if (!co_message)
--		return;
--
--	message = (co_console_message_t *)co_message->data;
--	co_message->from = CO_MODULE_LINUX;
--	co_message->to = CO_MODULE_CONSOLE;
--	co_message->priority = CO_PRIORITY_DISCARDABLE;
--	co_message->type = CO_MESSAGE_TYPE_STRING;
--	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--	message->type = CO_OPERATION_CONSOLE_DEINIT;
--	co_send_message_restore(flags);
--
--}
--
--static void cocon_clear(struct vc_data *c, int top, int left, int rows, int cols)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	co_message = co_send_message_save(&flags);
--	if (!co_message)
--		return;
--
--	message = (co_console_message_t *)co_message->data;
--	co_message->from = CO_MODULE_LINUX;
--	co_message->to = CO_MODULE_CONSOLE;
--	co_message->priority = CO_PRIORITY_DISCARDABLE;
--	co_message->type = CO_MESSAGE_TYPE_STRING;
--	co_message->size = ((char *)(&message->clear + 1)) - ((char *)message);
--	message->type = CO_OPERATION_CONSOLE_CLEAR;
--	message->clear.top = top;
--	message->clear.left = left;
--	message->clear.bottom = top + rows - 1;
--	message->clear.right = left + cols - 1;
--	message->clear.charattr = c->vc_video_erase_char;
--	co_send_message_restore(flags);
--}
--
--static void cocon_putc(struct vc_data *c, int charattr, int y, int x)
--{
--	unsigned long flags;
--	co_message_t *co_message;
--	co_console_message_t *message;
--
--	co_message = co_send_message_save(&flags);
--	if (!co_message)
--		return;
--
--	message = (co_console_message_t *)co_message->data;
--	co_message->from = CO_MODULE_LINUX;
--	co_message->to = CO_MODULE_CONSOLE;
--	co_message->priority = CO_PRIORITY_DISCARDABLE;
--	co_message->type = CO_MESSAGE_TYPE_STRING;
--	co_message->size = ((char *)(&message->putc + 1)) - ((char *)message);
--	message->type = CO_OPERATION_CONSOLE_PUTC;
--	message->putc.x = x;
--	message->putc.y = y;
--	message->putc.charattr = charattr;
--	co_send_message_restore(flags);
--}
--
--
--static void cocon_putcs(struct vc_data *conp,
--			const unsigned short *s, int count, int yy, int xx)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	if (count > CO_MAX_PARAM_SIZE/2 - 16)
--		return;
--
--	co_message = co_send_message_save(&flags);
--	if (!co_message)
--		return;
--
--	message = (co_console_message_t *)co_message->data;
--	co_message->from = CO_MODULE_LINUX;
--	co_message->to = CO_MODULE_CONSOLE;
--	co_message->priority = CO_PRIORITY_DISCARDABLE;
--	co_message->type = CO_MESSAGE_TYPE_STRING;
--	co_message->size = ((char *)(&message->putcs + 1)) - ((char *)message) +
--		count * sizeof(unsigned short);
--	message->type = CO_OPERATION_CONSOLE_PUTCS;
--	message->putcs.x = xx;
--	message->putcs.y = yy;
--	message->putcs.count = count;
--	memcpy(&message->putcs.data, s, count * sizeof(unsigned short));
--	co_send_message_restore(flags);
--}
--
--static u8 cocon_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink, u8 underline, u8 reverse, u8 italic)
--{
--	u8 attr = color;
--
--	if (underline)
--		attr = (attr & 0xf0) | c->vc_ulcolor;
--	else if (intensity == 0)
--		attr = (attr & 0xf0) | c->vc_halfcolor;
--	if (reverse)
--		attr = ((attr) & 0x88) | ((((attr) >> 4) | ((attr) << 4)) & 0x77);
--	if (blink)
--		attr ^= 0x80;
--	if (intensity == 2)
--		attr ^= 0x08;
--
--	return attr;
--}
--
--static void cocon_invert_region(struct vc_data *c, u16 *p, int count)
--{
--	unsigned long flags;
--	co_message_t *co_message;
--	co_console_message_t *message;
--	unsigned long x = (unsigned long)(p - c->vc_origin);  // UPDATE: vc_origin = 0; but not yet
--
--	co_message = co_send_message_save(&flags);
--	if (co_message) {
--		message = (co_console_message_t *)co_message->data;
--		co_message->from = CO_MODULE_LINUX;
--		co_message->to = CO_MODULE_CONSOLE;
--		co_message->priority = CO_PRIORITY_DISCARDABLE;
--		co_message->type = CO_MESSAGE_TYPE_STRING;
--		co_message->size = ((char *)(&message->invert + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_INVERT_REGION;
--		message->invert.y = ((unsigned)x)/c->vc_cols;
--		message->invert.x = ((unsigned)x)-(message->invert.y);
--		message->invert.count = count;
--		co_send_message_restore(flags);
--	}
--
--	while (count--) {
--		u16 a = scr_readw(p);
--		a = ((a) & 0x88ff) | (((a) & 0x7000) >> 4) | (((a) & 0x0700) << 4);
--		scr_writew(a, p++);
--        }
--
--}
--
--static void cocon_cursor(struct vc_data *c, int mode)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	co_message = co_send_message_save(&flags);
--	if (!co_message)
--		return;
--
--	message = (co_console_message_t *)co_message->data;
--	co_message->from = CO_MODULE_LINUX;
--	co_message->to = CO_MODULE_CONSOLE;
--	co_message->priority = CO_PRIORITY_DISCARDABLE;
--	co_message->type = CO_MESSAGE_TYPE_STRING;
--	co_message->size = ((char *)(&message->cursor + 1)) - ((char *)message);;
--	if (mode==CM_ERASE) {
--		message->type = CO_OPERATION_CONSOLE_CURSOR_ERASE;
--		message->cursor.height = 0;
--		co_send_message_restore(flags);
--		return;
--	}
--
--	if(mode==CM_MOVE) {
--		message->type = CO_OPERATION_CONSOLE_CURSOR_MOVE;
--	} else /*(mode==CM_DRAW)*/ {
--		message->type = CO_OPERATION_CONSOLE_CURSOR_DRAW;
--	}
--	message->cursor.x = c->vc_x;
--	message->cursor.y = c->vc_y;
--
--	switch (c->vc_cursor_type & CUR_HWMASK) {
--	case CUR_UNDERLINE:
--		message->cursor.height = 5;
--		break;
--	case CUR_TWO_THIRDS:
--		message->cursor.height = 66;
--		break;
--	case CUR_LOWER_THIRD:
--		message->cursor.height = 33;
--		break;
--	case CUR_LOWER_HALF:
--		message->cursor.height = 50;
--		break;
--	case CUR_NONE:
--		message->cursor.height = 0;
--		break;
--          default:
--		message->cursor.height = 5;
--		break;
--	}
--
--	co_send_message_restore(flags);
--}
--
--static int cocon_switch(struct vc_data *c)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	co_message = co_send_message_save(&flags);
--	if (co_message) {
--		message = (co_console_message_t *)co_message->data;
--		co_message->from = CO_MODULE_LINUX;
--		co_message->to = CO_MODULE_CONSOLE;
--		co_message->priority = CO_PRIORITY_DISCARDABLE;
--		co_message->type = CO_MESSAGE_TYPE_STRING;
--		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_SWITCH;
--		co_send_message_restore(flags);
--	}
--
--	return 1;	/* Redrawing not needed */
--}
--
--static int cocon_set_palette(struct vc_data *c, unsigned char *table)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	co_message = co_send_message_save(&flags);
--	if (co_message) {
--		message = (co_console_message_t *)co_message->data;
--		co_message->from = CO_MODULE_LINUX;
--		co_message->to = CO_MODULE_CONSOLE;
--		co_message->priority = CO_PRIORITY_DISCARDABLE;
--		co_message->type = CO_MESSAGE_TYPE_STRING;
--		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_SET_PALETTE;
--		co_send_message_restore(flags);
--	}
--
--	return 1;
--}
--
--static int cocon_blank(struct vc_data *c, int blank, int mode_switchg)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	co_message = co_send_message_save(&flags);
--	if (co_message) {
--		message = (co_console_message_t *)co_message->data;
--		co_message->from = CO_MODULE_LINUX;
--		co_message->to = CO_MODULE_CONSOLE;
--		co_message->priority = CO_PRIORITY_DISCARDABLE;
--		co_message->type = CO_MESSAGE_TYPE_STRING;
--		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_BLANK;
--		co_send_message_restore(flags);
--	}
--
--	return 1;
--}
--
--
--static int cocon_scrolldelta(struct vc_data *c, int lines)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	co_message = co_send_message_save(&flags);
--	if (co_message) {
--		message = (co_console_message_t *)co_message->data;
--		co_message->from = CO_MODULE_LINUX;
--		co_message->to = CO_MODULE_CONSOLE;
--		co_message->priority = CO_PRIORITY_DISCARDABLE;
--		co_message->type = CO_MESSAGE_TYPE_STRING;
--		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_SCROLLDELTA;
--		co_send_message_restore(flags);
--	}
--
--	return 1;
--}
--
--static int cocon_set_origin(struct vc_data *c)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	co_message = co_send_message_save(&flags);
--	if (co_message) {
--		message = (co_console_message_t *)co_message->data;
--		co_message->from = CO_MODULE_LINUX;
--		co_message->to = CO_MODULE_CONSOLE;
--		co_message->priority = CO_PRIORITY_DISCARDABLE;
--		co_message->type = CO_MESSAGE_TYPE_STRING;
--		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_SET_ORIGIN;
--		co_send_message_restore(flags);
--	}
--
--	return 1;
--}
--
--static void cocon_save_screen(struct vc_data *c)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	co_message = co_send_message_save(&flags);
--	if (co_message) {
--		message = (co_console_message_t *)co_message->data;
--		co_message->from = CO_MODULE_LINUX;
--		co_message->to = CO_MODULE_CONSOLE;
--		co_message->priority = CO_PRIORITY_DISCARDABLE;
--		co_message->type = CO_MESSAGE_TYPE_STRING;
--		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_SAVE_SCREEN;
--		co_send_message_restore(flags);
--	}
--}
--
--static int cocon_scroll(struct vc_data *c, int t, int b, int dir, int lines)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	co_message = co_send_message_save(&flags);
--	if (co_message) {
--		message = (co_console_message_t *)co_message->data;
--		co_message->from = CO_MODULE_LINUX;
--		co_message->to = CO_MODULE_CONSOLE;
--		co_message->priority = CO_PRIORITY_DISCARDABLE;
--		co_message->type = CO_MESSAGE_TYPE_STRING;
--		co_message->size = ((char *)(&message->scroll + 1)) - ((char *)message);
--		if (dir == SM_UP)
--			message->type = CO_OPERATION_CONSOLE_SCROLL_UP;
--		else
--			message->type = CO_OPERATION_CONSOLE_SCROLL_DOWN;
--		message->scroll.top = t;
--		message->scroll.bottom = b-1;
--		message->scroll.lines = lines;
--		co_send_message_restore(flags);
--	}
--
--	return 0;
--}
--
--static void cocon_bmove(struct vc_data *c, int sy, int sx, int dy, int dx, int h, int w)
--{
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	co_message = co_send_message_save(&flags);
--	if (!co_message)
--		return;
--
--	message = (co_console_message_t *)co_message->data;
--	co_message->from = CO_MODULE_LINUX;
--	co_message->to = CO_MODULE_CONSOLE;
--	co_message->priority = CO_PRIORITY_DISCARDABLE;
--	co_message->type = CO_MESSAGE_TYPE_STRING;
--	co_message->size = ((char *)(&message->bmove + 1)) - ((char *)message);
--	message->type = CO_OPERATION_CONSOLE_BMOVE;
--	message->bmove.row = dy;
--	message->bmove.column = dx;
--	message->bmove.top = sy;
--	message->bmove.left = sx;
--	message->bmove.bottom = sy + h - 1;
--	message->bmove.right = sx + w - 1;
--	co_send_message_restore(flags);
--}
--
--static int cocon_resize(struct vc_data *vc, unsigned int width, 
--			unsigned int height, unsigned int user)
--{
--	return -EINVAL;
--}
--
--/*
-- *  The console `switch' structure for the VGA based console
-- */
--
--const struct consw colinux_con = {
--	con_startup:		cocon_startup,
--	con_init:		cocon_init,
--	con_deinit:		cocon_deinit,
--	con_clear:		cocon_clear,
--	con_putc:		cocon_putc,
--	con_putcs:		cocon_putcs,
--	con_cursor:		cocon_cursor,
--	con_scroll:		cocon_scroll,
--	con_bmove:		cocon_bmove,
--	con_switch:		cocon_switch,
--	con_blank:		cocon_blank,
--	con_resize: 		cocon_resize,
--	con_set_palette:	cocon_set_palette,
--	con_scrolldelta:	cocon_scrolldelta,
--	con_set_origin:		cocon_set_origin,
--	con_save_screen:	cocon_save_screen,
--	con_build_attr:		cocon_build_attr,
--	con_invert_region:	cocon_invert_region,
--};
--
--MODULE_LICENSE("GPL");
-+/*
-+ *  linux/drivers/video/cocon.c -- Cooperative Linux console VGA driver
-+ *
-+ *  This file is subject to the terms and conditions of the GNU General Public
-+ *  License.  See the file COPYING in the main directory of this archive for
-+ *  more details.
-+ *
 + *  Nuno Lucas <lucas@xpto.ath.cx>, 2005 (c)
 + *   Re-implemented to use a shared video memory buffer.
-+ *
-+ *  Dan Aloni <da-x@gmx.net>, 2003-2004 (c)
+  *
+  *  Dan Aloni <da-x@gmx.net>, 2003-2004 (c)
 + *   Based on code copied from vgacon.c.
-+ */
-+
+  */
+ 
 +/*#include <linux/config.h>*/
-+#include <linux/module.h>
-+#include <linux/types.h>
-+#include <linux/sched.h>
-+#include <linux/fs.h>
-+#include <linux/kernel.h>
-+#include <linux/tty.h>
-+#include <linux/console.h>
-+#include <linux/string.h>
-+#include <linux/kd.h>
-+#include <linux/slab.h>
-+#include <linux/vt_kern.h>
-+#include <linux/selection.h>
-+#include <linux/init.h>
+ #include <linux/module.h>
+ #include <linux/types.h>
+ #include <linux/sched.h>
+@@ -23,460 +26,604 @@
+ #include <linux/vt_kern.h>
+ #include <linux/selection.h>
+ #include <linux/init.h>
 +#include <linux/font.h>
 +#include <linux/delay.h>
 +#include <linux/hardirq.h>      /* in_atomic() */
-+
-+#include <linux/cooperative_internal.h>
+ 
+ #include <linux/cooperative_internal.h>
 +#include <linux/cooperative_video.h>
-+
+ 
 +/* --------------------------------------------------------------------- */
-+/*
+ /*
+- *  Interface used by the world
 + * Virtual hardware info
 + *
 + *  cocon uses all available video memory for the screen and backlog.
@@ -1202,10 +687,12 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +
 +/*
 + * Parse boot configuration: vga=COLSxROWS
-+ */
+  */
 +static int __init cocon_cols = 80;
 +static int __init cocon_rows = 25;
-+
+ 
+-static int cocon_cols = 80;
+-static int cocon_rows = 25;
 +static int cocon_setup( char *options )
 +{
 +	if (!options || !*options)
@@ -1224,7 +711,8 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +	return 1;
 +}
 +__setup("vga=", cocon_setup);
-+
+ 
+-static const char __init *cocon_startup(void)
 +/* --------------------------------------------------------------------- */
 +/*
 + * Lock video memory.
@@ -1242,7 +730,24 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 + */
 +static int cocon_no_unlock = 0;
 +static void cocon_lock(void)
-+{
+ {
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
+-
+-	co_message = co_send_message_save(&flags);
+-	if (co_message) {
+-		message = (co_console_message_t *)co_message->data;
+-		co_message->from = CO_MODULE_LINUX;
+-		co_message->to = CO_MODULE_CONSOLE;
+-		co_message->priority = CO_PRIORITY_DISCARDABLE;
+-		co_message->type = CO_MESSAGE_TYPE_STRING;
+-		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+-		message->type = CO_OPERATION_CONSOLE_STARTUP;
+-		co_switch_wrapper();
+-		if (message->type == CO_OPERATION_CONSOLE_SIZES) {
+-			cocon_cols = message->sizes.cols;
+-			cocon_rows = message->sizes.rows;
 +	/*
 +	 * If the locking fails, sleep for a while, so the lock owner
 +	 * has time to release the lock.
@@ -1254,11 +759,13 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +			/* Fake success if we can't wait */
 +			cocon_no_unlock = 1;
 +			return;
-+		}
+ 		}
+-		co_passage_page_release(flags);
 +		msleep( 5 );
-+	}
+ 	}
 +}
-+
+ 
+-	return "CoCON";
 +/* --------------------------------------------------------------------- */
 +/*
 + *  Release lock on video memory.
@@ -1277,8 +784,9 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +	}
 +	BUG_ON( co_atomic_read(&cocon_info->header.lock) != 0 );
 +	co_atomic_unlock( &cocon_info->header.lock );
-+}
-+
+ }
+ 
+-static void cocon_init(struct vc_data *c, int init)
 +/* --------------------------------------------------------------------- */
 +/*
 + * Setup video memory for cocon usage.
@@ -1294,11 +802,24 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 + *     Take initial columns/rows from boot parameters.
 + */
 +static const char *cocon_startup(void)
-+{
+ {
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
 +	printk(KERN_INFO"cocon: video=%lXh (size=%lu bytes)\n", co_video_base, co_video_size );
-+
+ 
+-	/* We cannot be loaded as a module, therefore init is always 1 */
+-	c->vc_can_do_color = 1;
+-	c->vc_cols = cocon_cols;
+-	c->vc_rows = cocon_rows;
+-	c->vc_complement_mask = 0x7700;
+-	c->vc_visible_origin = 0;
+-	c->vc_origin = 0;
 +	BUG_ON( co_video_size < 4096 );
-+
+ 
+-	co_message = co_send_message_save(&flags);
+-	if (!co_message)
+-		return;
 +	cocon_info = (struct cocon_video_mem_info *) co_video_base;
 +	cocon_info->header.magic = CO_VIDEO_MAGIC_COCON;
 +	cocon_info->header.size  = sizeof(*cocon_info);
@@ -1368,15 +889,41 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +	/* Set flags that signal changes */
 +	cocon_info->header.flags |= CO_VIDEO_FLAG_INFO_CHANGE
 +					| CO_VIDEO_FLAG_DIRTY;
-+
+ 
+-	message = (co_console_message_t *)co_message->data;
+-	co_message->from = CO_MODULE_LINUX;
+-	co_message->to = CO_MODULE_CONSOLE;
+-	co_message->priority = CO_PRIORITY_DISCARDABLE;
+-	co_message->type = CO_MESSAGE_TYPE_STRING;
+-	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+-	message->type = CO_OPERATION_CONSOLE_INIT;
+-	co_send_message_restore(flags);
+-}
+-
+-static void cocon_deinit(struct vc_data *c)
+-{
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
 +	/* All done, unlock memory */
 +	cocon_unlock();
-+
+ 
+-	co_message = co_send_message_save(&flags);
+-	if (!co_message)
+-		return;
 +	return "CoCON";
 +}
-+
+ 
+-	message = (co_console_message_t *)co_message->data;
+-	co_message->from = CO_MODULE_LINUX;
+-	co_message->to = CO_MODULE_CONSOLE;
+-	co_message->priority = CO_PRIORITY_DISCARDABLE;
+-	co_message->type = CO_MESSAGE_TYPE_STRING;
+-	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+-	message->type = CO_OPERATION_CONSOLE_DEINIT;
+-	co_send_message_restore(flags);
 +/* --------------------------------------------------------------------- */
-+
+ 
 +static
 +void cocon_init( struct vc_data *c, int init )
 +{
@@ -1389,31 +936,79 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +	c->vc_origin = 0;
 +	c->vc_scan_lines = ROWS*cocon_info->font_height;
 +	c->vc_font.height = cocon_info->font_height;
-+}
-+
+ }
+ 
+-static void cocon_clear(struct vc_data *c, int top, int left, int rows, int cols)
+-{
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
 +/* --------------------------------------------------------------------- */
-+
+ 
+-	co_message = co_send_message_save(&flags);
+-	if (!co_message)
+-		return;
 +static
 +void cocon_deinit( struct vc_data *c )
 +{
 +}
-+
+ 
+-	message = (co_console_message_t *)co_message->data;
+-	co_message->from = CO_MODULE_LINUX;
+-	co_message->to = CO_MODULE_CONSOLE;
+-	co_message->priority = CO_PRIORITY_DISCARDABLE;
+-	co_message->type = CO_MESSAGE_TYPE_STRING;
+-	co_message->size = ((char *)(&message->clear + 1)) - ((char *)message);
+-	message->type = CO_OPERATION_CONSOLE_CLEAR;
+-	message->clear.top = top;
+-	message->clear.left = left;
+-	message->clear.bottom = top + rows - 1;
+-	message->clear.right = left + cols - 1;
+-	message->clear.charattr = c->vc_video_erase_char;
+-	co_send_message_restore(flags);
+-}
+-
+-static void cocon_putc(struct vc_data *c, int charattr, int y, int x)
+-{
+-	unsigned long flags;
+-	co_message_t *co_message;
+-	co_console_message_t *message;
 +/* --------------------------------------------------------------------- */
-+
+ 
+-	co_message = co_send_message_save(&flags);
+-	if (!co_message)
+-		return;
 +static
 +void cocon_clear( struct vc_data *c, int top, int left, int rows, int cols )
 +{
 +	int j;
-+
+ 
+-	message = (co_console_message_t *)co_message->data;
+-	co_message->from = CO_MODULE_LINUX;
+-	co_message->to = CO_MODULE_CONSOLE;
+-	co_message->priority = CO_PRIORITY_DISCARDABLE;
+-	co_message->type = CO_MESSAGE_TYPE_STRING;
+-	co_message->size = ((char *)(&message->putc + 1)) - ((char *)message);
+-	message->type = CO_OPERATION_CONSOLE_PUTC;
+-	message->putc.x = x;
+-	message->putc.y = y;
+-	message->putc.charattr = charattr;
+-	co_send_message_restore(flags);
 +	cocon_lock();
 +	for ( j = top; j < top+rows; ++j )
 +		scr_memsetw( SCRWP(j,left), BLANK(c), cols*2 );
 +	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
 +	cocon_unlock();
-+}
-+
+ }
+ 
 +/* --------------------------------------------------------------------- */
-+
+ 
+-static void cocon_putcs(struct vc_data *conp,
+-			const unsigned short *s, int count, int yy, int xx)
+-{
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
 +static
 +void cocon_putc( struct vc_data *c, int charattr, int y, int x )
 +{
@@ -1422,9 +1017,28 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
 +	cocon_unlock();
 +}
-+
+ 
+-	if (count > CO_MAX_PARAM_SIZE/2 - 16)
+-		return;
 +/* --------------------------------------------------------------------- */
-+
+ 
+-	co_message = co_send_message_save(&flags);
+-	if (!co_message)
+-		return;
+-
+-	message = (co_console_message_t *)co_message->data;
+-	co_message->from = CO_MODULE_LINUX;
+-	co_message->to = CO_MODULE_CONSOLE;
+-	co_message->priority = CO_PRIORITY_DISCARDABLE;
+-	co_message->type = CO_MESSAGE_TYPE_STRING;
+-	co_message->size = ((char *)(&message->putcs + 1)) - ((char *)message) +
+-		count * sizeof(unsigned short);
+-	message->type = CO_OPERATION_CONSOLE_PUTCS;
+-	message->putcs.x = xx;
+-	message->putcs.y = yy;
+-	message->putcs.count = count;
+-	memcpy(&message->putcs.data, s, count * sizeof(unsigned short));
+-	co_send_message_restore(flags);
 +static
 +void cocon_putcs( struct vc_data *c, const u16* s, int count, int y, int x )
 +{
@@ -1432,32 +1046,66 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +	scr_memcpyw( SCRWP(y,x), s, count*2 );
 +	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
 +	cocon_unlock();
-+}
-+
+ }
+ 
+-static u8 cocon_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink, u8 underline, u8 reverse, u8 italic)
 +/* --------------------------------------------------------------------- */
 +
 +static
 +u8 cocon_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink,
 +			u8 underline, u8 reverse)
-+{
-+	u8 attr = color;
-+
+ {
+ 	u8 attr = color;
+ 
+-	if (underline)
 +	if ( underline )
-+		attr = (attr & 0xf0) | c->vc_ulcolor;
+ 		attr = (attr & 0xf0) | c->vc_ulcolor;
+-	else if (intensity == 0)
 +	else if ( intensity == 0 )
-+		attr = (attr & 0xf0) | c->vc_halfcolor;
+ 		attr = (attr & 0xf0) | c->vc_halfcolor;
+-	if (reverse)
+-		attr = ((attr) & 0x88) | ((((attr) >> 4) | ((attr) << 4)) & 0x77);
+-	if (blink)
 +	if ( reverse )
 +		attr = (attr & 0x88) | (((attr >> 4) | (attr << 4)) & 0x77);
 +	if ( blink )
-+		attr ^= 0x80;
+ 		attr ^= 0x80;
+-	if (intensity == 2)
 +	if ( intensity == 2 )
-+		attr ^= 0x08;
-+
-+	return attr;
-+}
-+
+ 		attr ^= 0x08;
+ 
+ 	return attr;
+ }
+ 
+-static void cocon_invert_region(struct vc_data *c, u16 *p, int count)
+-{
+-	unsigned long flags;
+-	co_message_t *co_message;
+-	co_console_message_t *message;
+-	unsigned long x = (unsigned long)(p - c->vc_origin);  // UPDATE: vc_origin = 0; but not yet
+-
+-	co_message = co_send_message_save(&flags);
+-	if (co_message) {
+-		message = (co_console_message_t *)co_message->data;
+-		co_message->from = CO_MODULE_LINUX;
+-		co_message->to = CO_MODULE_CONSOLE;
+-		co_message->priority = CO_PRIORITY_DISCARDABLE;
+-		co_message->type = CO_MESSAGE_TYPE_STRING;
+-		co_message->size = ((char *)(&message->invert + 1)) - ((char *)message);
+-		message->type = CO_OPERATION_CONSOLE_INVERT_REGION;
+-		message->invert.y = ((unsigned)x)/c->vc_cols;
+-		message->invert.x = ((unsigned)x)-(message->invert.y);
+-		message->invert.count = count;
+-		co_send_message_restore(flags);
+-	}
+-
+-	while (count--) {
+-		u16 a = scr_readw(p);
+-		a = ((a) & 0x88ff) | (((a) & 0x7000) >> 4) | (((a) & 0x0700) << 4);
+-		scr_writew(a, p++);
+-        }
 +/* --------------------------------------------------------------------- */
-+
+ 
 +static
 +void cocon_invert_region( struct vc_data *c, u16 *p, int count )
 +{
@@ -1468,10 +1116,29 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +			| ((a & 0x0700) << 4);
 +		scr_writew( a, p++ );
 +	}
-+}
-+
+ }
+ 
+-static void cocon_cursor(struct vc_data *c, int mode)
+-{
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
 +/* --------------------------------------------------------------------- */
-+
+ 
+-	co_message = co_send_message_save(&flags);
+-	if (!co_message)
+-		return;
+-
+-	message = (co_console_message_t *)co_message->data;
+-	co_message->from = CO_MODULE_LINUX;
+-	co_message->to = CO_MODULE_CONSOLE;
+-	co_message->priority = CO_PRIORITY_DISCARDABLE;
+-	co_message->type = CO_MESSAGE_TYPE_STRING;
+-	co_message->size = ((char *)(&message->cursor + 1)) - ((char *)message);;
+-	if (mode==CM_ERASE) {
+-		message->type = CO_OPERATION_CONSOLE_CURSOR_ERASE;
+-		message->cursor.height = 0;
+-		co_send_message_restore(flags);
 +static
 +void cocon_cursor( struct vc_data *c, int mode )
 +{
@@ -1481,8 +1148,8 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +		cocon_info->header.flags |= CO_VIDEO_COCON_CURSOR_HIDE;
 +		cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
 +		cocon_unlock();
-+		return;
-+	}
+ 		return;
+ 	}
 +	cocon_lock();
 +	cocon_info->cur_x = c->vc_x;
 +	cocon_info->cur_y = c->vc_y;
@@ -1513,44 +1180,143 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +			cocon_unlock();
 +			return 0;
 +		}
-+
+ 
+-	if(mode==CM_MOVE) {
+-		message->type = CO_OPERATION_CONSOLE_CURSOR_MOVE;
+-	} else /*(mode==CM_DRAW)*/ {
+-		message->type = CO_OPERATION_CONSOLE_CURSOR_DRAW;
+-	}
+-	message->cursor.x = c->vc_x;
+-	message->cursor.y = c->vc_y;
+-
+-	switch (c->vc_cursor_type & CUR_HWMASK) {
+-	case CUR_UNDERLINE:
+-		message->cursor.height = 5;
+-		break;
+-	case CUR_TWO_THIRDS:
+-		message->cursor.height = 66;
+-		break;
+-	case CUR_LOWER_THIRD:
+-		message->cursor.height = 33;
+-		break;
+-	case CUR_LOWER_HALF:
+-		message->cursor.height = 50;
+-		break;
+-	case CUR_NONE:
+-		message->cursor.height = 0;
+-		break;
+-          default:
+-		message->cursor.height = 5;
+-		break;
+-	}
 +		cocon_info->num_cols = c->vc_cols;
 +		cocon_info->num_rows = c->vc_rows;
-+
+ 
+-	co_send_message_restore(flags);
+-}
 +		/* Rebase screen offset */
 +		cocon_info->scr_base = cocon_info->scr_end - COLS*ROWS*2;
 +		BUG_ON( cocon_scr_base < cocon_scr_start );
-+
+ 
+-static int cocon_switch(struct vc_data *c)
+-{
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
+-
+-	co_message = co_send_message_save(&flags);
+-	if (co_message) {
+-		message = (co_console_message_t *)co_message->data;
+-		co_message->from = CO_MODULE_LINUX;
+-		co_message->to = CO_MODULE_CONSOLE;
+-		co_message->priority = CO_PRIORITY_DISCARDABLE;
+-		co_message->type = CO_MESSAGE_TYPE_STRING;
+-		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+-		message->type = CO_OPERATION_CONSOLE_SWITCH;
+-		co_send_message_restore(flags);
+-	}
+-
+-	return 1;	/* Redrawing not needed */
+-}
+-
+-static int cocon_set_palette(struct vc_data *c, unsigned char *table)
+-{
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
+-
+-	co_message = co_send_message_save(&flags);
+-	if (co_message) {
+-		message = (co_console_message_t *)co_message->data;
+-		co_message->from = CO_MODULE_LINUX;
+-		co_message->to = CO_MODULE_CONSOLE;
+-		co_message->priority = CO_PRIORITY_DISCARDABLE;
+-		co_message->type = CO_MESSAGE_TYPE_STRING;
+-		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+-		message->type = CO_OPERATION_CONSOLE_SET_PALETTE;
+-		co_send_message_restore(flags);
 +		cocon_info->header.flags |= CO_VIDEO_FLAG_INFO_CHANGE;
 +		cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
 +
 +		cocon_unlock();
-+	}
-+
+ 	}
+ 
+-	return 1;
 +	return 1;	/* Redrawing needed */
-+}
-+
+ }
+ 
+-static int cocon_blank(struct vc_data *c, int blank, int mode_switchg)
 +/* --------------------------------------------------------------------- */
 +
 +static
 +int cocon_set_palette( struct vc_data *c, unsigned char *table )
-+{
+ {
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
+-
+-	co_message = co_send_message_save(&flags);
+-	if (co_message) {
+-		message = (co_console_message_t *)co_message->data;
+-		co_message->from = CO_MODULE_LINUX;
+-		co_message->to = CO_MODULE_CONSOLE;
+-		co_message->priority = CO_PRIORITY_DISCARDABLE;
+-		co_message->type = CO_MESSAGE_TYPE_STRING;
+-		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+-		message->type = CO_OPERATION_CONSOLE_BLANK;
+-		co_send_message_restore(flags);
+-	}
 +	return -EINVAL;
 +}
 +
 +/* --------------------------------------------------------------------- */
-+
+ 
 +static
 +int cocon_blank( struct vc_data *c, int blank, int mode_switchg )
 +{
-+	return 1;
-+}
-+
+ 	return 1;
+ }
+ 
 +/* --------------------------------------------------------------------- */
-+
+ 
+-static int cocon_scrolldelta(struct vc_data *c, int lines)
 +static
 +int cocon_scrolldelta( struct vc_data *c, int lines )
-+{
+ {
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
+-
+-	co_message = co_send_message_save(&flags);
+-	if (co_message) {
+-		message = (co_console_message_t *)co_message->data;
+-		co_message->from = CO_MODULE_LINUX;
+-		co_message->to = CO_MODULE_CONSOLE;
+-		co_message->priority = CO_PRIORITY_DISCARDABLE;
+-		co_message->type = CO_MESSAGE_TYPE_STRING;
+-		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+-		message->type = CO_OPERATION_CONSOLE_SCROLLDELTA;
+-		co_send_message_restore(flags);
 +	int backlines = (cocon_scr_base - cocon_scr_start)/(COLS*2);
 +	int scrollback = cocon_info->scrollback;
 +
@@ -1573,31 +1339,87 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +			cocon_info->scrollback -= lines;
 +		cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
 +		cocon_unlock();
-+	}
-+
+ 	}
+ 
+-	return 1;
 +	return 0;
-+}
-+
+ }
+ 
+-static int cocon_set_origin(struct vc_data *c)
 +/* --------------------------------------------------------------------- */
 +
 +static
 +int cocon_set_origin( struct vc_data *c )
-+{
+ {
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
+-
+-	co_message = co_send_message_save(&flags);
+-	if (co_message) {
+-		message = (co_console_message_t *)co_message->data;
+-		co_message->from = CO_MODULE_LINUX;
+-		co_message->to = CO_MODULE_CONSOLE;
+-		co_message->priority = CO_PRIORITY_DISCARDABLE;
+-		co_message->type = CO_MESSAGE_TYPE_STRING;
+-		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+-		message->type = CO_OPERATION_CONSOLE_SET_ORIGIN;
+-		co_send_message_restore(flags);
+-	}
 +	cocon_lock();
 +	cocon_info->scrollback = 0;
 +	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
 +	cocon_unlock();
-+
+ 
+-	return 1;
 +	return 0;
-+}
-+
+ }
+ 
+-static void cocon_save_screen(struct vc_data *c)
 +/* --------------------------------------------------------------------- */
 +
 +static
 +void cocon_save_screen( struct vc_data *c )
-+{
-+}
-+
+ {
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
+-
+-	co_message = co_send_message_save(&flags);
+-	if (co_message) {
+-		message = (co_console_message_t *)co_message->data;
+-		co_message->from = CO_MODULE_LINUX;
+-		co_message->to = CO_MODULE_CONSOLE;
+-		co_message->priority = CO_PRIORITY_DISCARDABLE;
+-		co_message->type = CO_MESSAGE_TYPE_STRING;
+-		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+-		message->type = CO_OPERATION_CONSOLE_SAVE_SCREEN;
+-		co_send_message_restore(flags);
+-	}
+ }
+ 
+-static int cocon_scroll(struct vc_data *c, int t, int b, int dir, int lines)
+-{
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
+-
+-	co_message = co_send_message_save(&flags);
+-	if (co_message) {
+-		message = (co_console_message_t *)co_message->data;
+-		co_message->from = CO_MODULE_LINUX;
+-		co_message->to = CO_MODULE_CONSOLE;
+-		co_message->priority = CO_PRIORITY_DISCARDABLE;
+-		co_message->type = CO_MESSAGE_TYPE_STRING;
+-		co_message->size = ((char *)(&message->scroll + 1)) - ((char *)message);
+-		if (dir == SM_UP)
+-			message->type = CO_OPERATION_CONSOLE_SCROLL_UP;
+-		else
+-			message->type = CO_OPERATION_CONSOLE_SCROLL_DOWN;
+-		message->scroll.top = t;
+-		message->scroll.bottom = b-1;
+-		message->scroll.lines = lines;
+-		co_send_message_restore(flags);
 +/* --------------------------------------------------------------------- */
 +
 +static
@@ -1623,24 +1445,44 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +		scr_memmovew(SCRWP(t+lines,0), SCRWP(t,0), (b-t-lines)*COLS*2);
 +		scr_memsetw(SCRWP(t,0), BLANK(c), lines*COLS*2);
 +		break;
-+	}
+ 	}
 +	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
 +	cocon_unlock();
-+
-+	return 0;
-+}
-+
+ 
+ 	return 0;
+ }
+ 
+-static void cocon_bmove(struct vc_data *c, int sy, int sx, int dy, int dx, int h, int w)
 +/* --------------------------------------------------------------------- */
 +
 +static
 +void cocon_bmove(struct vc_data *c, int sy, int sx,
 +			int dy, int dx, int h, int w)
-+{
+ {
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
 +	u16 *src, *dest;
-+
+ 
+-	co_message = co_send_message_save(&flags);
+-	if (!co_message)
 +	if ( w <= 0 || h <= 0 )
-+		return;
-+
+ 		return;
+ 
+-	message = (co_console_message_t *)co_message->data;
+-	co_message->from = CO_MODULE_LINUX;
+-	co_message->to = CO_MODULE_CONSOLE;
+-	co_message->priority = CO_PRIORITY_DISCARDABLE;
+-	co_message->type = CO_MESSAGE_TYPE_STRING;
+-	co_message->size = ((char *)(&message->bmove + 1)) - ((char *)message);
+-	message->type = CO_OPERATION_CONSOLE_BMOVE;
+-	message->bmove.row = dy;
+-	message->bmove.column = dx;
+-	message->bmove.top = sy;
+-	message->bmove.left = sx;
+-	message->bmove.bottom = sy + h - 1;
+-	message->bmove.right = sx + w - 1;
+-	co_send_message_restore(flags);
 +	cocon_lock();
 +	if ( sx==0 && dx==0 && w==COLS )
 +	{
@@ -1672,13 +1514,16 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +	}
 +	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
 +	cocon_unlock();
-+}
-+
+ }
+ 
+-static int cocon_resize(struct vc_data *vc, unsigned int width,
+-			unsigned int height, unsigned int user)
 +/* --------------------------------------------------------------------- */
 +
 +static int
 +cocon_font_set( struct vc_data* vc, struct console_font* f, unsigned flags )
-+{
+ {
+-	return -EINVAL;
 +	if ( cocon_info->font_data == 0 )
 +		return -ENOMEM;  /* Not enough video memory for font ops */
 +
@@ -1732,37 +1577,35 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +	}
 +
 +	return 0;
-+}
-+
-+/*
-+ *  The console `switch' structure for the VGA based console
-+ */
-+const struct consw colinux_con = {
-+	con_startup:		cocon_startup,
-+	con_init:		cocon_init,
-+	con_deinit:		cocon_deinit,
-+	con_clear:		cocon_clear,
-+	con_putc:		cocon_putc,
-+	con_putcs:		cocon_putcs,
-+	con_cursor:		cocon_cursor,
-+	con_scroll:		cocon_scroll,
-+	con_bmove:		cocon_bmove,
-+	con_switch:		cocon_switch,
-+	con_blank:		cocon_blank,
-+	con_set_palette:	cocon_set_palette,
-+	con_scrolldelta:	cocon_scrolldelta,
-+	con_set_origin:		cocon_set_origin,
-+	con_save_screen:	cocon_save_screen,
-+	con_build_attr:		cocon_build_attr,
-+	con_invert_region:	cocon_invert_region,
+ }
+ 
+ /*
+  *  The console `switch' structure for the VGA based console
+  */
+-
+ const struct consw colinux_con = {
+ 	con_startup:		cocon_startup,
+ 	con_init:		cocon_init,
+@@ -489,13 +636,13 @@
+ 	con_bmove:		cocon_bmove,
+ 	con_switch:		cocon_switch,
+ 	con_blank:		cocon_blank,
+-	con_resize: 		cocon_resize,
+ 	con_set_palette:	cocon_set_palette,
+ 	con_scrolldelta:	cocon_scrolldelta,
+ 	con_set_origin:		cocon_set_origin,
+ 	con_save_screen:	cocon_save_screen,
+ 	con_build_attr:		cocon_build_attr,
+ 	con_invert_region:	cocon_invert_region,
 +	con_font_set:           cocon_font_set,
-+};
-+
-+MODULE_LICENSE("GPL");
-diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.colinux/drivers/video/covideo.c linux-2.6.26.8-source/drivers/video/covideo.c
---- linux-2.6.26.8.colinux/drivers/video/covideo.c	2010-01-03 18:01:40.000000000 -0500
-+++ linux-2.6.26.8-source/drivers/video/covideo.c	2009-12-16 15:07:34.000000000 -0500
-@@ -15,8 +15,8 @@ MODULE_AUTHOR("Steve Shoecraft <sshoecra
+ };
+ 
+ MODULE_LICENSE("GPL");
+Index: linux-2.6.26.8-source/drivers/video/covideo.c
+===================================================================
+--- linux-2.6.26.8-source.orig/drivers/video/covideo.c
++++ linux-2.6.26.8-source/drivers/video/covideo.c
+@@ -15,8 +15,8 @@
  MODULE_DESCRIPTION("Cooperative Linux Video Driver");
  MODULE_LICENSE("GPL");
  
@@ -1773,14 +1616,15 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
  
  #if COVIDEO_DEBUG
  #define dprintk(m) printk m
-diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.colinux/drivers/video/Kconfig linux-2.6.26.8-source/drivers/video/Kconfig
---- linux-2.6.26.8.colinux/drivers/video/Kconfig	2010-01-03 18:01:41.000000000 -0500
-+++ linux-2.6.26.8-source/drivers/video/Kconfig	2009-12-16 15:43:05.000000000 -0500
-@@ -1967,6 +1967,17 @@ config FB_AM200EPD
+Index: linux-2.6.26.8-source/drivers/video/Kconfig
+===================================================================
+--- linux-2.6.26.8-source.orig/drivers/video/Kconfig
++++ linux-2.6.26.8-source/drivers/video/Kconfig
+@@ -1967,6 +1967,17 @@
         help
           This enables support for the Metronome display controller used on
           the E-Ink AM-200 EPD devkit.
-+         
++
 +config FB_COFB
 +        bool "Cooperative Virtual Frame Buffer support"
 +	depends on FB && COOPERATIVE
@@ -1794,10 +1638,11 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
  
  config FB_VIRTUAL
  	tristate "Virtual Frame Buffer support (ONLY FOR TESTING!)"
-diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.colinux/drivers/video/Makefile linux-2.6.26.8-source/drivers/video/Makefile
---- linux-2.6.26.8.colinux/drivers/video/Makefile	2010-01-03 18:01:41.000000000 -0500
-+++ linux-2.6.26.8-source/drivers/video/Makefile	2009-12-16 16:58:33.000000000 -0500
-@@ -127,6 +127,7 @@ obj-$(CONFIG_FB_IMAC)             += ima
+Index: linux-2.6.26.8-source/drivers/video/Makefile
+===================================================================
+--- linux-2.6.26.8-source.orig/drivers/video/Makefile
++++ linux-2.6.26.8-source/drivers/video/Makefile
+@@ -127,6 +127,7 @@
  obj-$(CONFIG_FB_EFI)              += efifb.o
  obj-$(CONFIG_FB_VGA16)            += vga16fb.o
  obj-$(CONFIG_FB_OF)               += offb.o
@@ -1805,10 +1650,11 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
  obj-$(CONFIG_FB_BF54X_LQ043)	  += bf54x-lq043fb.o
  obj-$(CONFIG_FB_BFIN_T350MCQB)	  += bfin-t350mcqb-fb.o
  
-diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.colinux/include/linux/cooperative_internal.h linux-2.6.26.8-source/include/linux/cooperative_internal.h
---- linux-2.6.26.8.colinux/include/linux/cooperative_internal.h	2010-01-03 18:01:29.000000000 -0500
-+++ linux-2.6.26.8-source/include/linux/cooperative_internal.h	2009-12-16 16:15:45.000000000 -0500
-@@ -30,7 +30,8 @@ typedef struct co_proc_counts {
+Index: linux-2.6.26.8-source/include/linux/cooperative_internal.h
+===================================================================
+--- linux-2.6.26.8-source.orig/include/linux/cooperative_internal.h
++++ linux-2.6.26.8-source/include/linux/cooperative_internal.h
+@@ -30,7 +30,8 @@
  
  extern co_proc_counts_t co_proc_counts;
  #endif
@@ -1818,9 +1664,10 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
  #define co_io_buffer ((co_io_buffer_t *)CO_VPTR_IO_AREA_START)
  #define cooperative_mode_enabled()     1
  
-diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.colinux/include/linux/cooperative_video.h linux-2.6.26.8-source/include/linux/cooperative_video.h
---- linux-2.6.26.8.colinux/include/linux/cooperative_video.h	1969-12-31 19:00:00.000000000 -0500
-+++ linux-2.6.26.8-source/include/linux/cooperative_video.h	2009-12-15 23:54:38.000000000 -0500
+Index: linux-2.6.26.8-source/include/linux/cooperative_video.h
+===================================================================
+--- /dev/null
++++ linux-2.6.26.8-source/include/linux/cooperative_video.h
 @@ -0,0 +1,180 @@
 +/*
 + *  linux/include/linux/cooperative_video.h
@@ -2002,10 +1849,11 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +
 +
 +
-diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.colinux/include/linux/mm.h linux-2.6.26.8-source/include/linux/mm.h
---- linux-2.6.26.8.colinux/include/linux/mm.h	2008-11-10 14:18:24.000000000 -0500
-+++ linux-2.6.26.8-source/include/linux/mm.h	2009-12-30 00:02:24.000000000 -0500
-@@ -108,6 +108,7 @@ extern unsigned int kobjsize(const void 
+Index: linux-2.6.26.8-source/include/linux/mm.h
+===================================================================
+--- linux-2.6.26.8-source.orig/include/linux/mm.h
++++ linux-2.6.26.8-source/include/linux/mm.h
+@@ -108,6 +108,7 @@
  
  #define VM_CAN_NONLINEAR 0x08000000	/* Has ->fault & does nonlinear pages */
  #define VM_MIXEDMAP	0x10000000	/* Can contain "struct page" and pure PFN pages */
@@ -2013,9 +1861,10 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
  
  #ifndef VM_STACK_DEFAULT_FLAGS		/* arch can override this */
  #define VM_STACK_DEFAULT_FLAGS VM_DATA_DEFAULT_FLAGS
-diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.colinux/kernel/cooperative.c linux-2.6.26.8-source/kernel/cooperative.c
---- linux-2.6.26.8.colinux/kernel/cooperative.c	2010-01-03 18:01:29.000000000 -0500
-+++ linux-2.6.26.8-source/kernel/cooperative.c	2009-12-16 18:48:24.000000000 -0500
+Index: linux-2.6.26.8-source/kernel/cooperative.c
+===================================================================
+--- linux-2.6.26.8-source.orig/kernel/cooperative.c
++++ linux-2.6.26.8-source/kernel/cooperative.c
 @@ -17,7 +17,8 @@
  #include <linux/cooperative_internal.h>
  
@@ -2026,7 +1875,7 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
  co_boot_params_t co_boot_params;
  
  typedef struct {
-@@ -36,6 +37,9 @@ co_proc_counts_t co_proc_counts;
+@@ -36,6 +37,9 @@
  
  void __init co_start_kernel(void)
  {
@@ -2036,10 +1885,11 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
          memcpy(&co_boot_params, co_passage_page->params, sizeof(co_boot_params));
  
  	co_arch_start_kernel();
-diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.colinux/mm/memory.c linux-2.6.26.8-source/mm/memory.c
---- linux-2.6.26.8.colinux/mm/memory.c	2008-11-10 14:18:24.000000000 -0500
-+++ linux-2.6.26.8-source/mm/memory.c	2010-01-03 16:36:24.000000000 -0500
-@@ -680,7 +680,8 @@ int copy_page_range(struct mm_struct *ds
+Index: linux-2.6.26.8-source/mm/memory.c
+===================================================================
+--- linux-2.6.26.8-source.orig/mm/memory.c
++++ linux-2.6.26.8-source/mm/memory.c
+@@ -680,7 +680,8 @@
  static unsigned long zap_pte_range(struct mmu_gather *tlb,
  				struct vm_area_struct *vma, pmd_t *pmd,
  				unsigned long addr, unsigned long end,
@@ -2049,7 +1899,7 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
  {
  	struct mm_struct *mm = tlb->mm;
  	pte_t *pte;
-@@ -703,7 +704,7 @@ static unsigned long zap_pte_range(struc
+@@ -703,7 +704,7 @@
  			struct page *page;
  
  			page = vm_normal_page(vma, addr, ptent);
@@ -2058,7 +1908,7 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
  				/*
  				 * unmap_shared_mapping_pages() wants to
  				 * invalidate cache without truncating:
-@@ -765,7 +766,8 @@ static unsigned long zap_pte_range(struc
+@@ -765,7 +766,8 @@
  static inline unsigned long zap_pmd_range(struct mmu_gather *tlb,
  				struct vm_area_struct *vma, pud_t *pud,
  				unsigned long addr, unsigned long end,
@@ -2068,7 +1918,7 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
  {
  	pmd_t *pmd;
  	unsigned long next;
-@@ -778,7 +780,7 @@ static inline unsigned long zap_pmd_rang
+@@ -778,7 +780,7 @@
  			continue;
  		}
  		next = zap_pte_range(tlb, vma, pmd, addr, next,
@@ -2077,7 +1927,7 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
  	} while (pmd++, addr = next, (addr != end && *zap_work > 0));
  
  	return addr;
-@@ -787,7 +789,8 @@ static inline unsigned long zap_pmd_rang
+@@ -787,7 +789,8 @@
  static inline unsigned long zap_pud_range(struct mmu_gather *tlb,
  				struct vm_area_struct *vma, pgd_t *pgd,
  				unsigned long addr, unsigned long end,
@@ -2087,7 +1937,7 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
  {
  	pud_t *pud;
  	unsigned long next;
-@@ -800,7 +803,7 @@ static inline unsigned long zap_pud_rang
+@@ -800,7 +803,7 @@
  			continue;
  		}
  		next = zap_pmd_range(tlb, vma, pud, addr, next,
@@ -2096,7 +1946,7 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
  	} while (pud++, addr = next, (addr != end && *zap_work > 0));
  
  	return addr;
-@@ -827,7 +830,8 @@ static unsigned long unmap_page_range(st
+@@ -827,7 +830,8 @@
  			continue;
  		}
  		next = zap_pud_range(tlb, vma, pgd, addr, next,
@@ -2106,7 +1956,7 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
  	} while (pgd++, addr = next, (addr != end && *zap_work > 0));
  	tlb_end_vma(tlb, vma);
  
-@@ -1402,7 +1406,11 @@ static int remap_pte_range(struct mm_str
+@@ -1402,7 +1406,11 @@
  	arch_enter_lazy_mmu_mode();
  	do {
  		BUG_ON(!pte_none(*pte));
@@ -2118,7 +1968,7 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
  		pfn++;
  	} while (pte++, addr += PAGE_SIZE, addr != end);
  	arch_leave_lazy_mmu_mode();
-@@ -1468,7 +1476,12 @@ int remap_pfn_range(struct vm_area_struc
+@@ -1468,7 +1476,12 @@
  	unsigned long end = addr + PAGE_ALIGN(size);
  	struct mm_struct *mm = vma->vm_mm;
  	int err;
@@ -2128,7 +1978,7 @@ diff -x '*~' -x '*.orig' -x patches -x series -x '*.bak' -Nurp linux-2.6.26.8.co
 +		printk( KERN_ERR"remap_pfn_range: invalid call!" );
 +		return -1;
 +	}
-+	
++
  	/*
  	 * Physically remapped pages are special. Tell the
  	 * rest of the world about it:
