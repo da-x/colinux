@@ -81,7 +81,7 @@ void console_screen::refresh_callback( void* v )
         ::Sleep( 10 );  // Let other threads run (so the lock is released)
         return; // Not attached or already locked. Retry on next callback.
     }
-
+#define IDLE_REFRESH_RATE 100
     // Check buffer signature
     if ( video->magic != this_.engine_id() )
     {   // Set new rendering engine
@@ -97,7 +97,7 @@ void console_screen::refresh_callback( void* v )
     {   // Check if 100 msecs elapsed since last redraw
         refresh = elapsed > 100? true : false;
     }
-    else if ( video->magic == CO_VIDEO_MAGIC_COFB && elapsed > 500 )
+    else if ( video->magic == CO_VIDEO_MAGIC_COFB && elapsed > IDLE_REFRESH_RATE )
     {
 	/*
 	 * This is for the case where linux fb programs write directly

@@ -339,7 +339,9 @@ void console_main_window::handle_mouse_event( )
     // Get x,y relative to the termninal screen
     int x = wScreen_->mouse_x( Fl::event_x() );
     int y = wScreen_->mouse_y( Fl::event_y() );
-
+    // it is unsign format in the host/guest message, negative value not allowed
+    x = x<0 ? 0:x;
+    y = y<0 ? 0:y;
     /* Transform to the comouse virtual screen size
      *
      * FIXME:
