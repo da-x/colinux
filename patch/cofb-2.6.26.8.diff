@@ -2,7 +2,7 @@ Index: linux-2.6.26.8-source/arch/i386/mm/ioremap.c
 ===================================================================
 --- linux-2.6.26.8-source.orig/arch/i386/mm/ioremap.c
 +++ linux-2.6.26.8-source/arch/i386/mm/ioremap.c
-@@ -132,6 +132,16 @@
+@@ -132,6 +132,16 @@ static void __iomem *__ioremap_caller(re
  	pgprot_t prot;
  	int retval;
  
@@ -23,21 +23,47 @@ Index: linux-2.6.26.8-source/drivers/input/mouse/comouse.c
 ===================================================================
 --- linux-2.6.26.8-source.orig/drivers/input/mouse/comouse.c
 +++ linux-2.6.26.8-source/drivers/input/mouse/comouse.c
-@@ -29,7 +29,8 @@
- #include <linux/interrupt.h>
- #include <linux/cooperative_internal.h>
+@@ -62,7 +62,7 @@ static irqreturn_t comouse_isr(int irq, 
+ 			input_report_key( comouse_dev, BTN_MIDDLE, data->btns & 4 );
  
--#define COMOUSE_DEBUG 1
-+#undef COMOUSE_DEBUG
-+#define LONG(x) (long)(x)
+ 			input_sync( comouse_dev );
+-#ifdef COMOUSE_DEBUG
++#if COMOUSE_DEBUG
+ 			printk( KERN_DEBUG "comouse: x:%d y:%d buttons:%u wheel: %d.\n",
+ 				data->abs_x, data->abs_y, data->btns, data->rel_z );
+ #endif
+@@ -104,18 +104,20 @@ static int __init comouse_init(void) {
+ #endif
  
- MODULE_AUTHOR("Steve Shoecraft <sshoecraft@earthlink.net");
- MODULE_DESCRIPTION("Cooperative Mouse Driver");
+ 	/* Buttons */
+-	comouse_dev->evbit[LONG(EV_KEY)] |= BIT(EV_KEY);
+-	comouse_dev->keybit[LONG(BTN_TOUCH)] |= BIT(BTN_TOUCH);
+-	comouse_dev->keybit[LONG(BTN_LEFT)] |= BIT(BTN_LEFT) | BIT(BTN_MIDDLE) | BIT(BTN_RIGHT);
++	set_bit( EV_KEY, comouse_dev->evbit );
++	set_bit( BTN_TOUCH , comouse_dev->keybit );
++	set_bit( BTN_LEFT  , comouse_dev->keybit );
++	set_bit( BTN_RIGHT , comouse_dev->keybit );
++	set_bit( BTN_MIDDLE, comouse_dev->keybit );
+ 
+ 	/* Movement */
+-	comouse_dev->evbit[LONG(EV_ABS)] |= BIT(EV_ABS);
++	set_bit( EV_ABS, comouse_dev->evbit );
+ 	input_set_abs_params(comouse_dev, ABS_X, 0, CO_MOUSE_MAX_X, 0, 0);
+ 	input_set_abs_params(comouse_dev, ABS_Y, 0, CO_MOUSE_MAX_Y, 0, 0);
+ 
+ 	/* Wheel */
+-	comouse_dev->evbit[LONG(EV_REL)] |= BIT(EV_REL);
+-	comouse_dev->relbit[LONG(REL_WHEEL)] |= BIT(REL_WHEEL);
++	set_bit( EV_REL, comouse_dev->evbit );
++	set_bit( REL_WHEEL, comouse_dev->relbit );
+ 
+ 	err = input_register_device(comouse_dev);
+ 	if (err) {
 Index: linux-2.6.26.8-source/drivers/video/cofb.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.26.8-source/drivers/video/cofb.c
-@@ -0,0 +1,561 @@
+@@ -0,0 +1,552 @@
 +/*
 + *  linux/drivers/video/cofb.c -- CoLinux Virtual frame buffer device
 + *
@@ -489,15 +515,6 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +	cofb_lock();
 +	cfb_imageblit( info, img );
 +	cofb_mem->header.flags |= CO_VIDEO_FLAG_DIRTY;
-+	// test direct access from kernel, has to be 640x480x32
-+	int y,x;char* base=co_video_base+PAGE_SIZE;
-+	char* p;
-+	for (y=0;y<40;y++)for(x=600;x<640;x++){
-+	  p = base+640*y*4+x*4;
-+	  *(p) += 100;
-+	  *(p+1) += 15+(x-600)*5;
-+	  *(p+2) += 200-(y)*5;
-+	}
 +	cofb_unlock();
 +}
 +
@@ -1586,7 +1603,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
  const struct consw colinux_con = {
  	con_startup:		cocon_startup,
  	con_init:		cocon_init,
-@@ -489,13 +636,13 @@
+@@ -489,13 +636,13 @@ const struct consw colinux_con = {
  	con_bmove:		cocon_bmove,
  	con_switch:		cocon_switch,
  	con_blank:		cocon_blank,
@@ -1605,7 +1622,7 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 ===================================================================
 --- linux-2.6.26.8-source.orig/drivers/video/covideo.c
 +++ linux-2.6.26.8-source/drivers/video/covideo.c
-@@ -15,8 +15,8 @@
+@@ -15,8 +15,8 @@ MODULE_AUTHOR("Steve Shoecraft <sshoecra
  MODULE_DESCRIPTION("Cooperative Linux Video Driver");
  MODULE_LICENSE("GPL");
  
@@ -1620,11 +1637,10 @@ Index: linux-2.6.26.8-source/drivers/video/Kconfig
 ===================================================================
 --- linux-2.6.26.8-source.orig/drivers/video/Kconfig
 +++ linux-2.6.26.8-source/drivers/video/Kconfig
-@@ -1967,6 +1967,17 @@
-        help
+@@ -1968,6 +1968,17 @@ config FB_AM200EPD
           This enables support for the Metronome display controller used on
           the E-Ink AM-200 EPD devkit.
-+
+ 
 +config FB_COFB
 +        bool "Cooperative Virtual Frame Buffer support"
 +	depends on FB && COOPERATIVE
@@ -1635,14 +1651,15 @@ Index: linux-2.6.26.8-source/drivers/video/Kconfig
 +
 +	  If unsure, say Y.
 +
- 
++
  config FB_VIRTUAL
  	tristate "Virtual Frame Buffer support (ONLY FOR TESTING!)"
+ 	depends on FB
 Index: linux-2.6.26.8-source/drivers/video/Makefile
 ===================================================================
 --- linux-2.6.26.8-source.orig/drivers/video/Makefile
 +++ linux-2.6.26.8-source/drivers/video/Makefile
-@@ -127,6 +127,7 @@
+@@ -127,6 +127,7 @@ obj-$(CONFIG_FB_IMAC)             += ima
  obj-$(CONFIG_FB_EFI)              += efifb.o
  obj-$(CONFIG_FB_VGA16)            += vga16fb.o
  obj-$(CONFIG_FB_OF)               += offb.o
@@ -1654,7 +1671,7 @@ Index: linux-2.6.26.8-source/include/linux/cooperative_internal.h
 ===================================================================
 --- linux-2.6.26.8-source.orig/include/linux/cooperative_internal.h
 +++ linux-2.6.26.8-source/include/linux/cooperative_internal.h
-@@ -30,7 +30,8 @@
+@@ -30,7 +30,8 @@ typedef struct co_proc_counts {
  
  extern co_proc_counts_t co_proc_counts;
  #endif
@@ -1853,7 +1870,7 @@ Index: linux-2.6.26.8-source/include/linux/mm.h
 ===================================================================
 --- linux-2.6.26.8-source.orig/include/linux/mm.h
 +++ linux-2.6.26.8-source/include/linux/mm.h
-@@ -108,6 +108,7 @@
+@@ -108,6 +108,7 @@ extern unsigned int kobjsize(const void 
  
  #define VM_CAN_NONLINEAR 0x08000000	/* Has ->fault & does nonlinear pages */
  #define VM_MIXEDMAP	0x10000000	/* Can contain "struct page" and pure PFN pages */
@@ -1875,7 +1892,7 @@ Index: linux-2.6.26.8-source/kernel/cooperative.c
  co_boot_params_t co_boot_params;
  
  typedef struct {
-@@ -36,6 +37,9 @@
+@@ -36,6 +37,9 @@ co_proc_counts_t co_proc_counts;
  
  void __init co_start_kernel(void)
  {
@@ -1889,7 +1906,7 @@ Index: linux-2.6.26.8-source/mm/memory.c
 ===================================================================
 --- linux-2.6.26.8-source.orig/mm/memory.c
 +++ linux-2.6.26.8-source/mm/memory.c
-@@ -680,7 +680,8 @@
+@@ -680,7 +680,8 @@ int copy_page_range(struct mm_struct *ds
  static unsigned long zap_pte_range(struct mmu_gather *tlb,
  				struct vm_area_struct *vma, pmd_t *pmd,
  				unsigned long addr, unsigned long end,
@@ -1899,7 +1916,7 @@ Index: linux-2.6.26.8-source/mm/memory.c
  {
  	struct mm_struct *mm = tlb->mm;
  	pte_t *pte;
-@@ -703,7 +704,7 @@
+@@ -703,7 +704,7 @@ static unsigned long zap_pte_range(struc
  			struct page *page;
  
  			page = vm_normal_page(vma, addr, ptent);
@@ -1908,7 +1925,7 @@ Index: linux-2.6.26.8-source/mm/memory.c
  				/*
  				 * unmap_shared_mapping_pages() wants to
  				 * invalidate cache without truncating:
-@@ -765,7 +766,8 @@
+@@ -765,7 +766,8 @@ static unsigned long zap_pte_range(struc
  static inline unsigned long zap_pmd_range(struct mmu_gather *tlb,
  				struct vm_area_struct *vma, pud_t *pud,
  				unsigned long addr, unsigned long end,
@@ -1918,7 +1935,7 @@ Index: linux-2.6.26.8-source/mm/memory.c
  {
  	pmd_t *pmd;
  	unsigned long next;
-@@ -778,7 +780,7 @@
+@@ -778,7 +780,7 @@ static inline unsigned long zap_pmd_rang
  			continue;
  		}
  		next = zap_pte_range(tlb, vma, pmd, addr, next,
@@ -1927,7 +1944,7 @@ Index: linux-2.6.26.8-source/mm/memory.c
  	} while (pmd++, addr = next, (addr != end && *zap_work > 0));
  
  	return addr;
-@@ -787,7 +789,8 @@
+@@ -787,7 +789,8 @@ static inline unsigned long zap_pmd_rang
  static inline unsigned long zap_pud_range(struct mmu_gather *tlb,
  				struct vm_area_struct *vma, pgd_t *pgd,
  				unsigned long addr, unsigned long end,
@@ -1937,7 +1954,7 @@ Index: linux-2.6.26.8-source/mm/memory.c
  {
  	pud_t *pud;
  	unsigned long next;
-@@ -800,7 +803,7 @@
+@@ -800,7 +803,7 @@ static inline unsigned long zap_pud_rang
  			continue;
  		}
  		next = zap_pmd_range(tlb, vma, pud, addr, next,
@@ -1946,7 +1963,7 @@ Index: linux-2.6.26.8-source/mm/memory.c
  	} while (pud++, addr = next, (addr != end && *zap_work > 0));
  
  	return addr;
-@@ -827,7 +830,8 @@
+@@ -827,7 +830,8 @@ static unsigned long unmap_page_range(st
  			continue;
  		}
  		next = zap_pud_range(tlb, vma, pgd, addr, next,
@@ -1956,7 +1973,7 @@ Index: linux-2.6.26.8-source/mm/memory.c
  	} while (pgd++, addr = next, (addr != end && *zap_work > 0));
  	tlb_end_vma(tlb, vma);
  
-@@ -1402,7 +1406,11 @@
+@@ -1402,7 +1406,11 @@ static int remap_pte_range(struct mm_str
  	arch_enter_lazy_mmu_mode();
  	do {
  		BUG_ON(!pte_none(*pte));
@@ -1968,17 +1985,15 @@ Index: linux-2.6.26.8-source/mm/memory.c
  		pfn++;
  	} while (pte++, addr += PAGE_SIZE, addr != end);
  	arch_leave_lazy_mmu_mode();
-@@ -1468,7 +1476,12 @@
+@@ -1468,6 +1476,11 @@ int remap_pfn_range(struct vm_area_struc
  	unsigned long end = addr + PAGE_ALIGN(size);
  	struct mm_struct *mm = vma->vm_mm;
  	int err;
--
 +	/* Check we are only being called for colinux "IO" memory */
 +	if (!(vma->vm_flags & VM_CO_IO)) {
 +		printk( KERN_ERR"remap_pfn_range: invalid call!" );
 +		return -1;
 +	}
-+
+ 
  	/*
  	 * Physically remapped pages are special. Tell the
- 	 * rest of the world about it:
