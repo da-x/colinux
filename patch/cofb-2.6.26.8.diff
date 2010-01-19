@@ -2,15 +2,10 @@ Index: linux-2.6.26.8-source/arch/i386/mm/ioremap.c
 ===================================================================
 --- linux-2.6.26.8-source.orig/arch/i386/mm/ioremap.c
 +++ linux-2.6.26.8-source/arch/i386/mm/ioremap.c
-@@ -132,6 +132,16 @@ static void __iomem *__ioremap_caller(re
+@@ -132,6 +132,11 @@ static void __iomem *__ioremap_caller(re
  	pgprot_t prot;
  	int retval;
  
-+	if (cooperative_mode_enabled()) {
-+		panic("__ioremap %ld:%ld\n", phys_addr, size);
-+		return NULL;
-+	}
-+
 +	if (cooperative_mode_enabled()) {
 +		panic("__ioremap %ld:%ld\n", phys_addr, size);
 +		return NULL;
@@ -1618,21 +1613,6 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
  };
  
  MODULE_LICENSE("GPL");
-Index: linux-2.6.26.8-source/drivers/video/covideo.c
-===================================================================
---- linux-2.6.26.8-source.orig/drivers/video/covideo.c
-+++ linux-2.6.26.8-source/drivers/video/covideo.c
-@@ -15,8 +15,8 @@ MODULE_AUTHOR("Steve Shoecraft <sshoecra
- MODULE_DESCRIPTION("Cooperative Linux Video Driver");
- MODULE_LICENSE("GPL");
- 
--#define COVIDEO_DEBUG 0
--#define COVIDEO_MEMTEST 0
-+#define COVIDEO_DEBUG 1
-+#define COVIDEO_MEMTEST 1
- 
- #if COVIDEO_DEBUG
- #define dprintk(m) printk m
 Index: linux-2.6.26.8-source/drivers/video/Kconfig
 ===================================================================
 --- linux-2.6.26.8-source.orig/drivers/video/Kconfig
