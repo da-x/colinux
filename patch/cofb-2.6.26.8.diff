@@ -18,6 +18,24 @@ Index: linux-2.6.26.8-source/drivers/input/mouse/comouse.c
 ===================================================================
 --- linux-2.6.26.8-source.orig/drivers/input/mouse/comouse.c
 +++ linux-2.6.26.8-source/drivers/input/mouse/comouse.c
+@@ -29,7 +29,7 @@
+ #include <linux/interrupt.h>
+ #include <linux/cooperative_internal.h>
+ 
+-#define COMOUSE_DEBUG 1
++#define COMOUSE_DEBUG 0
+ 
+ MODULE_AUTHOR("Steve Shoecraft <sshoecraft@earthlink.net");
+ MODULE_DESCRIPTION("Cooperative Mouse Driver");
+@@ -53,7 +53,7 @@ static irqreturn_t comouse_isr(int irq, 
+ 			input_report_abs( comouse_dev, ABS_Y, data->abs_y );
+ 
+ 			/* Wheel */
+-			if ( data->rel_z ) input_report_rel( comouse_dev, REL_WHEEL, data->rel_z );
++			if ( data->rel_z ) input_report_rel( comouse_dev, REL_WHEEL, -data->rel_z );
+ 
+ 			/* Buttons */
+ 			input_report_key( comouse_dev, BTN_TOUCH, data->btns & 1 );
 @@ -62,7 +62,7 @@ static irqreturn_t comouse_isr(int irq, 
  			input_report_key( comouse_dev, BTN_MIDDLE, data->btns & 4 );
  
@@ -58,7 +76,7 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.26.8-source/drivers/video/cofb.c
-@@ -0,0 +1,552 @@
+@@ -0,0 +1,550 @@
 +/*
 + *  linux/drivers/video/cofb.c -- CoLinux Virtual frame buffer device
 + *
@@ -102,7 +120,7 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +static int cofb_mmap(struct fb_info*, struct vm_area_struct*);
 +static int cofb_blank(int blank, struct fb_info *info);
 +static int cofb_pan_display(struct fb_var_screeninfo *var, const struct fb_info *info){
-+  printk(KERN_INFO"cofb pan display\n");
++  /* NOT IMPLEMENTED*/
 +  return 0;
 +}
 +/* --------------------------------------------------------------------- */
@@ -335,11 +353,10 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +
 +	return rc;
 +}
++
 +module_init(cofb_init);
 +static int __init vfb_probe(struct platform_device *dev)
 +{
-+
-+
 +	printk(KERN_INFO
 +	       "fb?d: Virtual frame buffer device, using ?ldK of video memory\n");
 +	return 0;
@@ -552,7 +569,6 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +	 * If non-zero is returned, the screen will be blanked by fbcon.
 +	 * NOTE: The cursor will disapear because fbcon hides it on blank.
 +	 */
-+	printk( KERN_INFO"cofb_blank\n");
 +	return 0;
 +}
 +
@@ -1661,6 +1677,50 @@ Index: linux-2.6.26.8-source/include/linux/cooperative_internal.h
  #define co_io_buffer ((co_io_buffer_t *)CO_VPTR_IO_AREA_START)
  #define cooperative_mode_enabled()     1
  
+@@ -117,6 +118,43 @@ static inline void co_send_message_resto
+ 	co_passage_page_release(flags);
+ }
+ 
++static inline co_message_t *co_console_message0(unsigned long *pflags)
++{
++        co_console_message_t *message;
++        co_message_t *co_message;
++        co_message = co_send_message_save(pflags);
++        
++        if (!co_message) return NULL;
++        message = (co_console_message_t *)co_message->data;
++        co_message->from = CO_MODULE_LINUX;
++        co_message->to = CO_MODULE_CONSOLE;
++        co_message->priority = CO_PRIORITY_DISCARDABLE;
++        co_message->type = CO_MESSAGE_TYPE_STRING;
++        co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++        return co_message;
++}
++
++static inline co_console_message_t *co_console_message_get(unsigned long *pflags, int type)
++{
++        co_console_message_t *message;
++        co_message_t *co_message = co_console_message0(pflags);
++
++        if (co_message) return NULL;
++        message = (co_console_message_t *)co_message->data;
++        co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++        message->type = type;
++        return message;
++}
++
++static inline void co_console_message(int type)
++{
++        unsigned long flags;
++        co_console_message_t *message;
++
++        message = co_console_message_get(&flags, type);
++        if (message) co_send_message_restore(flags);
++}
++
+ #else
+ 
+ #define co_printk(line, size)          do {} while (0)
 Index: linux-2.6.26.8-source/include/linux/cooperative_video.h
 ===================================================================
 --- /dev/null
@@ -1977,3 +2037,42 @@ Index: linux-2.6.26.8-source/mm/memory.c
  
  	/*
  	 * Physically remapped pages are special. Tell the
+Index: linux-2.6.26.8-source/drivers/video/console/fbcon.c
+===================================================================
+--- linux-2.6.26.8-source.orig/drivers/video/console/fbcon.c
++++ linux-2.6.26.8-source/drivers/video/console/fbcon.c
+@@ -90,6 +90,8 @@
+ #endif
+ 
+ #include "fbcon.h"
++#include <linux/cooperative_internal.h>
++#include <linux/cooperative_video.h>
+ 
+ #ifdef FBCONDEBUG
+ #  define DPRINTK(fmt, args...) printk(KERN_DEBUG "%s: " fmt, __func__ , ## args)
+@@ -1335,6 +1337,25 @@ static void fbcon_putcs(struct vc_data *
+ 		ops->putcs(vc, info, s, count, real_y(p, ypos), xpos,
+ 			   get_color(vc, info, scr_readw(s), 1),
+ 			   get_color(vc, info, scr_readw(s), 0));
++
++        unsigned long flags;
++        co_console_message_t *message;
++        co_message_t *co_message;
++        co_message = co_send_message_save(&flags);
++        if (!co_message) return;
++        message = (co_console_message_t *)co_message->data;
++        co_message->from = CO_MODULE_LINUX;
++        co_message->to = CO_MODULE_CONSOLE;
++        co_message->priority = CO_PRIORITY_DISCARDABLE;
++        co_message->type = CO_MESSAGE_TYPE_STRING;
++        co_message->size = ((char *)(&message->putcs + 1)) - ((char *)message) +
++                count * sizeof(unsigned short);
++        message->type = CO_OPERATION_CONSOLE_PUTCS;
++        message->putcs.x = xpos;
++        message->putcs.y = ypos;
++        message->putcs.count = count;
++        memcpy(&message->putcs.data, s, count * sizeof(unsigned short));
++        co_send_message_restore(flags);
+ }
+ 
+ static void fbcon_putc(struct vc_data *vc, int c, int ypos, int xpos)
