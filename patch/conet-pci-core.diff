@@ -355,9 +355,6 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +	SET_NETDEV_DEV(dev, &pdev->dev);
 +	memcpy(dev->dev_addr, addr, 6);
 +
-+	spin_lock_init(&priv->ioctl_lock);
-+	spin_lock_init(&priv->rx_lock);
-+
 +	dev->open = conet_open;
 +	dev->stop = conet_stop;
 +	dev->hard_start_xmit = conet_hard_start_xmit;
@@ -369,6 +366,9 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +	priv = netdev_priv(dev);
 +	priv->unit = unit;
 +	priv->pdev = pdev;
++
++	spin_lock_init(&priv->ioctl_lock);
++	spin_lock_init(&priv->rx_lock);
 +
 +	priv->mii_if.full_duplex = 1;
 +	priv->mii_if.phy_id_mask = 0x1f;
