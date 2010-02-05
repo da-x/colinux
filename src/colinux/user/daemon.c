@@ -602,7 +602,7 @@ co_rc_t co_daemon_handle_printk(co_daemon_t *daemon, co_message_t* message)
 		char *string_start = (char *)message->data;
                
 		if (string_start[0] == '<' && string_start[2] == '>' &&
-		    (string_start[1] >= '0' && string_start[1] <= '7' ||
+		    ((string_start[1] >= '0' && string_start[1] <= '7') ||
 		     string_start[1] == 'c' || string_start[1] == 'd'))
 		{
 			string_start += 3;
