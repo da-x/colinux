@@ -2,7 +2,7 @@ Index: linux-2.6.22-source/arch/i386/pci/copci.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/arch/i386/pci/copci.c
-@@ -0,0 +1,297 @@
+@@ -0,0 +1,301 @@
 +
 +#include <linux/kernel.h>
 +#include <linux/pci.h>
@@ -210,10 +210,15 @@ Index: linux-2.6.22-source/arch/i386/pci/copci.c
 +	unsigned char addr[6];
 +	unsigned long flags;
 +	int x,id,class,count,unit,irq;
++	const int max_count = COPCI_MAX_SLOTS * COPCI_MAX_FUNCS;
 +
 +#if COPCI_DEBUG
-+	printk(KERN_INFO "COPCI: Initializing\n");
++	printk(KERN_INFO "COPCI: Initializing max slots:%d max func:%d size:%d\n",
++		COPCI_MAX_SLOTS, COPCI_MAX_FUNCS, COPCI_MAX_SLOTS*COPCI_MAX_FUNCS*sizeof(*cp));
 +#endif
++
++	guest_cp = kmalloc(max_count * sizeof(*cp), GFP_KERNEL);
++	BUG_ON(!guest_cp);
 +
 +	/* Get our config */
 +	co_passage_page_assert_valid();
@@ -224,10 +229,9 @@ Index: linux-2.6.22-source/arch/i386/pci/copci.c
 +	co_passage_page->params[2] = 0;
 +	co_switch_wrapper();
 +	count = co_passage_page->params[0];
++	BUG_ON(count>max_count);
 +	host_cp = (copci_config_t *) &co_passage_page->params[1];
-+	x = count * sizeof(*cp);
-+	guest_cp = kmalloc(x, GFP_KERNEL);
-+	memcpy(guest_cp, host_cp, x);
++	memcpy(guest_cp, host_cp, count * sizeof(*cp));
 +	co_passage_page_release(flags);
 +
 +	cp = guest_cp;
