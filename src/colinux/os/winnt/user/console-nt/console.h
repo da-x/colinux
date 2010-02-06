@@ -18,7 +18,7 @@
 
 class console_window_NT_t : public console_window_t {
 public:
-	virtual const char *get_name();
+	virtual const char* get_name();
 };
 
 #endif

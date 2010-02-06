@@ -373,6 +373,10 @@ static int pvsnfmt_str(char **pinsertion, long *nmax, const char fmt, int flags,
         flags |= FLAG_LEFT_ALIGN;
     }
 
+    /* Prevent NULL pointers exceptions */
+    if (!str)
+	str = "(null)";
+
     /* Truncate due to precision */
     if (precision < 0)
         len = co_strlen(str);

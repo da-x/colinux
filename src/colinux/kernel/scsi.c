@@ -60,7 +60,7 @@ void co_scsi_request(co_monitor_t *cmon, int op, int unit) {
 
 			for(x=0; x < CO_MODULE_MAX_COSCSI; x++) {
 				if (cmon->scsi_devs[x])
-					co_passage_page->params[x+1] =  cmon->scsi_devs[x]->conf->type | COSCSI_DEVICE_ENABLED;
+					co_passage_page->params[x+1] = cmon->scsi_devs[x]->conf->type | COSCSI_DEVICE_ENABLED;
 				else
 					co_passage_page->params[x+1] = 0;
 			}

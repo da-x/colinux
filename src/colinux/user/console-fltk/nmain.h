@@ -8,12 +8,11 @@
  * the root directory.
  *
  */ 
-#ifndef __COLINUX_USER_CONSOLE_MAIN_H__
-#define __COLINUX_USER_CONSOLE_MAIN_H__
+#ifndef __COLINUX_USER_CONSOLE_NMAIN_H__
+#define __COLINUX_USER_CONSOLE_NMAIN_H__
 
-extern "C" {
-    #include <colinux/common/common.h>
-}
+#include <colinux/common/common.h>
+
 extern void co_user_nconsole_handle_scancode(co_scan_code_t sc);
 extern int co_user_nconsole_main(int argc, char **argv);
 	

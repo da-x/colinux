@@ -16,10 +16,12 @@
 #include "options.h"
 #include "log_window.h"
 #include "nselect_monitor.h"
-
+#include <colinux/common/version.h>
 extern "C" {
-    #include <colinux/common/version.h>
-    #include <colinux/common/messages.h>
+#include <colinux/common/messages.h>
+#include <colinux/user/monitor.h>
+#include <colinux/os/user/misc.h>
+#include <colinux/os/alloc.h>
 }
 
 #include <FL/x.H>

@@ -2050,7 +2050,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/fbcon.c
  
  #ifdef FBCONDEBUG
  #  define DPRINTK(fmt, args...) printk(KERN_DEBUG "%s: " fmt, __func__ , ## args)
-@@ -1335,6 +1337,25 @@ static void fbcon_putcs(struct vc_data *
+@@ -1335,6 +1337,21 @@ static void fbcon_putcs(struct vc_data *
  		ops->putcs(vc, info, s, count, real_y(p, ypos), xpos,
  			   get_color(vc, info, scr_readw(s), 1),
  			   get_color(vc, info, scr_readw(s), 0));
@@ -2058,13 +2058,9 @@ Index: linux-2.6.26.8-source/drivers/video/console/fbcon.c
 +        unsigned long flags;
 +        co_console_message_t *message;
 +        co_message_t *co_message;
-+        co_message = co_send_message_save(&flags);
++        co_message = co_console_message0(&flags);
 +        if (!co_message) return;
 +        message = (co_console_message_t *)co_message->data;
-+        co_message->from = CO_MODULE_LINUX;
-+        co_message->to = CO_MODULE_CONSOLE;
-+        co_message->priority = CO_PRIORITY_DISCARDABLE;
-+        co_message->type = CO_MESSAGE_TYPE_STRING;
 +        co_message->size = ((char *)(&message->putcs + 1)) - ((char *)message) +
 +                count * sizeof(unsigned short);
 +        message->type = CO_OPERATION_CONSOLE_PUTCS;

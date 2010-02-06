@@ -10,7 +10,29 @@
 #ifndef __COLINUX_LINUX_CONFIG_H__
 #define __COLINUX_LINUX_CONFIG_H__
 
+#if defined __cplusplus
+extern "C" {
+#endif
+
 #include "common.h"
+
+#define CO_ENABLE_CON_SCROLL	0 /* 1=Enable console scrolling,    0=disable */
+#define CO_ENABLE_CON_COLOR	1 /* 1=Enable console screen color, 0=disable */
+
+/* Color attributes */
+typedef enum co_color_t
+{ CO_COLOR_BLACK   = 0x00,
+  CO_COLOR_BLUE    = 0x01,
+  CO_COLOR_GREEN   = 0x02,
+  CO_COLOR_RED     = 0x04,
+  CO_COLOR_BROWN   = CO_COLOR_RED   | CO_COLOR_GREEN,
+  CO_COLOR_MAGENTA = CO_COLOR_RED   | CO_COLOR_BLUE,
+  CO_COLOR_CYAN    = CO_COLOR_GREEN | CO_COLOR_BLUE,
+  CO_COLOR_GRAY    = CO_COLOR_RED   | CO_COLOR_GREEN | CO_COLOR_BLUE
+}co_color_t;
+
+#define CO_ATTR_BRIGHT		0x08
+#define CO_ATTR_DEFAULT		((CO_COLOR_BLACK << 4) | CO_COLOR_GRAY)	
 
 /*
  * Per block device configuration
@@ -34,24 +56,24 @@ typedef struct co_block_dev_desc {
 	 * the Linux side, for example: hda4, sda2, hdb2.
 	 */
 	bool_t alias_used;
-	char alias[20];
+	char   alias[20];
 } co_block_dev_desc_t;
 
 typedef struct co_video_dev_desc {
-	bool_t enabled;
-	int size;
+	bool_t 	enabled;
+	int	size;
 } co_video_dev_desc_t;
 
 typedef struct co_audio_dev_desc {
-	bool_t enabled;
+	bool_t	enabled;
 } co_audio_dev_desc_t;
 
 typedef struct co_scsi_dev_desc {
-	bool_t enabled;
-	int type;				/* SCSI type */
+	bool_t	enabled;
+	int	type;				/* SCSI type */
 	co_pathname_t pathname;			/* Path */
-	int is_dev;				/* 0 = file, 1 = device */
-	int size;				/* Size, for files */
+	int	is_dev;				/* 0 = file, 1 = device */
+	int	size;				/* Size, for files */
 } co_scsi_dev_desc_t;
 
 typedef enum {
@@ -91,7 +113,7 @@ typedef struct co_netdev_desc {
 	/*
 	 * MAC address for the Linux side. 
 	 */
-	bool_t manual_mac_address;
+	bool_t 	      manual_mac_address;
 	unsigned char mac_address[6];
 
 	/* Slirp Parameters */
@@ -144,12 +166,12 @@ typedef struct co_serialdev_desc {
 	bool_t enabled;
 
 	/* Device name on host side */
-	char *desc;
+	char* desc;
 
 	/*
 	 * Individual mode setting
 	 */
-	char *mode;
+	char* mode;
 
 } co_serialdev_desc_t;
 
@@ -164,15 +186,32 @@ typedef struct co_execute_desc {
 	bool_t enabled;
 
 	/* Executable program name */
-	char *prog;
+	char* prog;
 
 	/* Optional args */
-	char *args;
+	char* args;
 
 	/* PID, if program running */
 	int pid;
 
 } co_execute_desc_t;
+
+/* User defined console configuration */ 
+typedef struct co_config_console {
+	/* Dimensions of the console screen */
+	int x;
+	int y;
+
+	/* Dimensions of the console buffer */
+	/* int max_x; */
+	int max_y;
+
+	/* Cursor size in Linux kernel types */ 
+	int curs_type_size;
+
+	/* Colors for clear screen: (bg << 4) | fg */ 
+	int attr;
+} co_console_config_t;
 
 /*
  * Per-machine coLinux configuration
@@ -216,7 +255,7 @@ typedef struct co_config {
 	 * Video devices
 	 */
 	co_video_dev_desc_t video_devs[CO_MODULE_MAX_COVIDEO];
-	/* was for cofb
+	/* for cofb
 	 * Size of the video memory (in KB)
 	 */
 	unsigned long video_size;
@@ -267,18 +306,21 @@ typedef struct co_config {
 	/*
 	 * The pathname of the initrd file.
 	 */
-	bool_t initrd_enabled;
-	co_pathname_t initrd_path;
-
-	/* Dimensions of the console */
-	struct {
-		int size_x, size_y;
-	} console;
+	bool_t		initrd_enabled;
+	co_pathname_t	initrd_path;
 
 	/*
 	 * Enable asynchronious block device operations.
 	 */
 	int cobd_async_enable;
+
+	/* User console configuration */
+	co_console_config_t console;
+
 } co_config_t;
 
+#if defined __cplusplus
+}
 #endif
+
+#endif /* __COLINUX_LINUX_CONFIG_H__ */

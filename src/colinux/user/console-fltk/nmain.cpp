@@ -10,22 +10,16 @@
  */ 
 #include "nmain.h"
 #include "nconsole.h"
-
-extern "C" {
-    #include <colinux/common/version.h>
-    #include <colinux/user/debug.h>
-}
+#include <colinux/common/version.h>
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <FL/Fl.H>
 
-// Needed for co_debug*() routines (one for each application)
-//COLINUX_DEFINE_MODULE( "colinux-console-fltk" )
 static console_main_window* global_window = NULL;
+
 void co_user_nconsole_handle_scancode(co_scan_code_t sc)
 {
      if (!global_window)

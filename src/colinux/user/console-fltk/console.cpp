@@ -23,7 +23,6 @@
 #include <FL/Fl_Button.H>
 
 extern "C" {
- #include <colinux/common/version.h>
 #include <colinux/common/messages.h>
 #include <colinux/user/monitor.h>
 #include <colinux/os/user/misc.h>
@@ -32,64 +31,63 @@ extern "C" {
 
 #include "main.h"
 
-static void console_window_cb(Fl_Widget *widget, void* v) 
+static void console_window_cb(Fl_Widget* widget, void* v) 
 {
-	((console_window_t *)v)->finish();
+	((console_window_t*)v)->finish();
 }
 
-static void console_quit_cb(Fl_Widget *widget, void* v) 
+static void console_quit_cb(Fl_Widget* widget, void* v) 
 {
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->finish();
+	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->finish();
 }
 
-static void console_select_cb(Fl_Widget *widget, void* v) 
+static void console_select_cb(Fl_Widget* widget, void* v) 
 {
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->select_monitor();
+	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->select_monitor();
 }
 
-static void console_attach_cb(Fl_Widget *widget, void* v) 
+static void console_attach_cb(Fl_Widget* widget, void* v) 
 {
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->attach();
+	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->attach();
 }
 
 static void console_detach_cb(Fl_Widget *widget, void* v) 
 {
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->detach();
+	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->detach();
 }
 
-static void console_send_ctrl_alt_del_cb(Fl_Widget *widget, void* v) 
+static void console_send_ctrl_alt_del_cb(Fl_Widget* widget, void* v) 
 {
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del(
+	((console_window_t *)(((Fl_Menu_Item*)v)->user_data_))->send_ctrl_alt_del(
 					CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL);
 }
 
-static void console_send_shutdown_cb(Fl_Widget *widget, void* v)
+static void console_send_shutdown_cb(Fl_Widget* widget, void* v)
 {
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del(
+	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->send_ctrl_alt_del(
 					CO_LINUX_MESSAGE_POWER_SHUTDOWN);
 }
 
-static void console_send_poweroff_cb(Fl_Widget *widget, void* v)
+static void console_send_poweroff_cb(Fl_Widget* widget, void* v)
 {
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->send_ctrl_alt_del(
+	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->send_ctrl_alt_del(
 					CO_LINUX_MESSAGE_POWER_OFF);
 }
 
-static void console_about_cb(Fl_Widget *widget, void* v) 
+static void console_about_cb(Fl_Widget* widget, void* v) 
 {
-	((console_window_t *)(((Fl_Menu_Item *)v)->user_data_))->about();
+	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->about();
 }
 
-void console_idle(void *data)
+void console_idle(void* data)
 {
-	((console_window_t *)data)->idle();
+	((console_window_t*)data)->idle();
 }
 
-console_main_window_t::console_main_window_t(console_window_t *console)
-	: Fl_Double_Window(640, 480), 
-	console(console)
+console_main_window_t::console_main_window_t(console_window_t* console)
+: Fl_Double_Window(640, 480), console(console)
 {
-	label("Cooperative Linux console [" COLINUX_VERSION "]" );
+	label("Cooperative Linux console");
 }
 
 int console_main_window_t::handle(int event)
@@ -118,11 +116,12 @@ console_window_t::console_window_t()
 
 	/* Default settings */
 	start_parameters.attach_id = CO_INVALID_ID;
-	attached_id = CO_INVALID_ID;
-	state =	CO_CONSOLE_STATE_DETACHED;
-	window = 0;
-	widget = 0;
-	resized_on_attach = PTRUE;
+	attached_id	  	   = CO_INVALID_ID;
+	state		  	   = CO_CONSOLE_STATE_DETACHED;
+	window		  	   = 0;
+	widget	          	   = 0;
+	resized_on_attach 	   = PTRUE;
+	
 	rc = co_reactor_create(&reactor);
 }
 
@@ -132,11 +131,11 @@ console_window_t::~console_window_t()
 
 co_rc_t console_window_t::parse_args(int argc, char **argv)
 {
-	char **param_scan = argv;
+	char** param_scan = argv;
 
 	/* Parse command line */
 	while (argc > 0) {
-		const char *option;
+		const char* option;
 
 		if (strcmp(*param_scan, (option = "-a")) == 0) {
 			param_scan++;
@@ -150,8 +149,7 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 			}
 
 			start_parameters.attach_id = atoi(*param_scan);
-		} else
-		if (strcmp(*param_scan, (option = "-p")) == 0) {
+		} else if (strcmp(*param_scan, (option = "-p")) == 0) {
 			co_rc_t rc;
 
 			param_scan++;
@@ -185,31 +183,32 @@ co_rc_t console_window_t::start()
 	window->callback(console_window_cb, this);
 
 	Fl_Menu_Item console_menuitems[] = {
-		{ "File", 0, 0, 0, FL_SUBMENU },
+		{ "File", 0, NULL, NULL, FL_SUBMENU },
 		{ "Quit", 0, (Fl_Callback *)console_quit_cb, this },
 		{ 0 },
 
-		{ "Monitor", 0, 0, 0, FL_SUBMENU },
-		{ "Select", 0, (Fl_Callback *)console_select_cb, this, FL_MENU_DIVIDER },
-		{ "Attach", 0, (Fl_Callback *)console_attach_cb, this, },
-		{ "Detach", 0, (Fl_Callback *)console_detach_cb, this, FL_MENU_DIVIDER },
-		{ "Power off", 0, (Fl_Callback *)console_send_poweroff_cb, this, },
+		{ "Monitor"  , 0, NULL, NULL, FL_SUBMENU },
+		{ "Select"   , 0, (Fl_Callback*)console_select_cb, this, FL_MENU_DIVIDER },
+		{ "Attach"   , 0, (Fl_Callback*)console_attach_cb, this, },
+		{ "Detach"   , 0, (Fl_Callback*)console_detach_cb, this, FL_MENU_DIVIDER },
+		{ "Power off", 0, (Fl_Callback*)console_send_poweroff_cb, this, },
 		{ "Reboot - Ctrl-Alt-Del", 0, (Fl_Callback *)console_send_ctrl_alt_del_cb, this, },
-		{ "Shutdown", 0, (Fl_Callback *)console_send_shutdown_cb, this, },
+		{ "Shutdown" , 0, (Fl_Callback*)console_send_shutdown_cb, this, },
 		{ 0 },
 
-		{ "Help", 0, 0, 0, FL_SUBMENU },
-		{ "About", 0, (Fl_Callback *)console_about_cb, this, },
+		{ "Help" , 0, NULL, NULL, FL_SUBMENU },
+		{ "About", 0, (Fl_Callback*)console_about_cb, this, },
 		{ 0 },
 
 		{ 0 }
 	};
 
 	unsigned int i;
-	for (i=0; i < sizeof(console_menuitems)/sizeof(console_menuitems[0]); i++)
-		console_menuitems[i].user_data((void *)this);
+	
+	for (i = 0; i < sizeof(console_menuitems) / sizeof(console_menuitems[0]); i++)
+		console_menuitems[i].user_data((void*)this);
 
-	int swidth = 640;
+	int swidth  = 640;
 	int sheight = 480;
 
 	menu = new Fl_Menu_Bar(0, 0, swidth, 30);
@@ -218,15 +217,18 @@ co_rc_t console_window_t::start()
 	menu->when(FL_WHEN_RELEASE_ALWAYS);
 	menu->copy(console_menuitems, window);
 
-	Fl_Group *tile = new Fl_Group(0, 30, swidth, sheight-30);
-	widget = new console_widget_t(0, 30, swidth, sheight-120);
-	text_widget = new Fl_Text_Display(0, sheight-120+30, swidth, 70);
+	Fl_Group* tile = new Fl_Group(0, 30, swidth, sheight-30);
+	
+	widget	    = new console_widget_t(0, 30, swidth, sheight - 120);
+	text_widget = new Fl_Text_Display(0, sheight - 120 + 30, swidth, 70);
 
-	Fl_Group *tile2 = new Fl_Group(0, sheight-120+30, swidth, 90);
+	Fl_Group* tile2 = new Fl_Group(0, sheight - 120 + 30, swidth, 90);
+	
 	text_widget->buffer(new Fl_Text_Buffer());
 	text_widget->insert_position(0);
 
-	Fl_Box *box = new Fl_Box(0, sheight-20, swidth, 20);
+	Fl_Box* box = new Fl_Box(0, sheight - 20, swidth, 20);
+	
 	box->label("");
 	box->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE); 
 	tile2->end();
@@ -248,9 +250,10 @@ co_rc_t console_window_t::start()
 	// Default Font is "Terminal" with size 18
 	// Sample WinNT environment: set COLINUX_CONSOLE_FONT=Lucida Console:12
 	// Change only font size:    set COLINUX_CONSOLE_FONT=:12
-	char * env_font = getenv ("COLINUX_CONSOLE_FONT");
+	char* env_font = getenv("COLINUX_CONSOLE_FONT");
+	
 	if (env_font) {
-		char *p = strchr (env_font, ':');
+		char* p = strchr (env_font, ':');
 
 		if (p) {
 			int size = atoi (p+1);
@@ -289,19 +292,21 @@ co_rc_t console_window_t::start()
 	return CO_RC(OK);
 }
 
-console_window_t *g_console;
+console_window_t* g_console;
 
-co_rc_t console_window_t::message_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
+co_rc_t console_window_t::message_receive(co_reactor_user_t user,
+		                          unsigned char*    buffer, 
+		                          unsigned long     size)
 {
-	co_message_t *message;
+	co_message_t* message;
 	unsigned long message_size;
-	long size_left = size;
-	long position = 0;
+	long          size_left = size;
+	long          position  = 0;
 
 	while (size_left > 0) {
-		message = (typeof(message))(&buffer[position]);
+		message      = (typeof(message))(&buffer[position]);
 		message_size = message->size + sizeof(*message);
-		size_left -= message_size;
+		size_left   -= message_size;
 		if (size_left >= 0) {
 			g_console->handle_message(message);
 		}
@@ -313,10 +318,10 @@ co_rc_t console_window_t::message_receive(co_reactor_user_t user, unsigned char 
 
 co_rc_t console_window_t::attach()
 {
-	co_rc_t rc = CO_RC(OK);  
-	co_module_t modules[] = {CO_MODULE_CONSOLE, };
-	co_monitor_ioctl_get_console_t get_console;
-	co_console_t *console;
+	co_rc_t				rc        = CO_RC(OK);  
+	co_module_t			modules[] = {CO_MODULE_CONSOLE, };
+	co_monitor_ioctl_get_console_t 	get_console;
+	co_console_t*			console;
 
 	if (state != CO_CONSOLE_STATE_DETACHED) {
 		rc = CO_RC(ERROR);
@@ -325,9 +330,11 @@ co_rc_t console_window_t::attach()
 
 	g_console = this;
 
-	rc = co_user_monitor_open(reactor, message_receive,
-				  attached_id, modules, 
-				  sizeof(modules)/sizeof(co_module_t),
+	rc = co_user_monitor_open(reactor, 
+				  message_receive,
+				  attached_id, 
+				  modules, 
+				  sizeof(modules) / sizeof(co_module_t),
 				  &message_monitor);
 	if (!CO_OK(rc)) {
 		log("Monitor%d: Error connecting\n", attached_id);
@@ -340,7 +347,7 @@ co_rc_t console_window_t::attach()
 		return rc;
 	}
 
-	rc = co_console_create(get_console.x, get_console.y, 0, &console);
+	rc = co_console_create(&get_console.config, &console);
 	if (!CO_OK(rc))
 		return rc;
 
@@ -349,8 +356,7 @@ co_rc_t console_window_t::attach()
 	Fl::add_idle(console_idle, this);
 
 	resized_on_attach = PFALSE;
-
-	state = CO_CONSOLE_STATE_ATTACHED;
+	state		  = CO_CONSOLE_STATE_ATTACHED;
 
 	menu_item_deactivate(console_select_cb);
 	menu_item_activate(console_send_poweroff_cb);
@@ -412,20 +418,22 @@ co_rc_t console_window_t::send_ctrl_alt_del(co_linux_message_power_type_t powero
 		return CO_RC(ERROR);
 
 	struct {
-		co_message_t message;
-		co_linux_message_t linux_msg;
+		co_message_t		 message;
+		co_linux_message_t	 linux_msg;
 		co_linux_message_power_t data;
 	} message;
 	
-	message.message.from = CO_MODULE_DAEMON;
-	message.message.to = CO_MODULE_LINUX;
+	message.message.from     = CO_MODULE_DAEMON;
+	message.message.to	 = CO_MODULE_LINUX;
 	message.message.priority = CO_PRIORITY_IMPORTANT;
-	message.message.type = CO_MESSAGE_TYPE_OTHER;
-	message.message.size = sizeof(message.linux_msg) + sizeof(message.data);
+	message.message.type	 = CO_MESSAGE_TYPE_OTHER;
+	message.message.size     = sizeof(message.linux_msg) + sizeof(message.data);
+	
 	message.linux_msg.device = CO_DEVICE_POWER;
-	message.linux_msg.unit = 0;
-	message.linux_msg.size = sizeof(message.data);
-	message.data.type = poweroff;
+	message.linux_msg.unit   = 0;
+	message.linux_msg.size	 = sizeof(message.data);
+	
+	message.data.type	 = poweroff;
 
 	co_user_monitor_message_send(message_monitor, &message.message);
 
@@ -450,7 +458,7 @@ void console_window_t::global_resize_constraint()
 			int w_diff = (int)(widget->w() - widget->fit_x);
 			int h_diff = (int)(widget->h() - widget->fit_y);
 			
-			if (h_diff != 0   ||  w_diff != 0) {
+			if (h_diff != 0 || w_diff != 0) {
 				if (resized_on_attach == PFALSE) {
 					/* co_debug("%d, %d", window->w() - w_diff, window->h() - h_diff); */
 					window->size(window->w() - w_diff, window->h() - h_diff);
@@ -474,10 +482,12 @@ void console_window_t::idle()
 		// Option in environment: "COLINUX_CONSOLE_EXIT_ON_DETACH=1"
 		// Exit Console after detach
 		if (CO_OK(rc) && state != CO_CONSOLE_STATE_ATTACHED) {
-			char * str = getenv ("COLINUX_CONSOLE_EXIT_ON_DETACH");
-			if (str && atoi(str) != 0) {
+			char* str;
+			
+			str = getenv("COLINUX_CONSOLE_EXIT_ON_DETACH");
+			if (str != NULL && atoi(str) != 0) {
 				log("Console exit after detach\n");
-				exit (0);
+				exit(0);
 			}
 		}
 	}
@@ -485,25 +495,26 @@ void console_window_t::idle()
 
 void console_window_t::select_monitor()
 {
-	select_monitor_widget_t *dialog = new select_monitor_widget_t(400, 220);
+	select_monitor_widget_t* dialog = new select_monitor_widget_t(400, 220);
 	dialog->populate(this);
 }
 
+// Show the "About Box" dialog
 co_rc_t console_window_t::about()
 {
-	// Show the "About Box" dialog
-	about_box * win = new about_box( );
-	win->set_modal( );
-	win->show( );
+	about_box* win = new about_box();
+	
+	win->set_modal();
+	win->show();
 
 	return CO_RC(OK);
 }
 
-void console_window_t::handle_message(co_message_t *message)
+void console_window_t::handle_message(co_message_t* message)
 {
 	switch (message->from) {
 	case CO_MODULE_LINUX: {
-		co_console_message_t *console_message;
+		co_console_message_t* console_message;
 
 		console_message = (typeof(console_message))(message->data);
 		widget->handle_console_event(console_message);
@@ -514,7 +525,7 @@ void console_window_t::handle_message(co_message_t *message)
 		if (message->type == CO_MESSAGE_TYPE_STRING) {
 			co_module_name_t module_name;
 
-			((char *)message->data)[message->size - 1] = '\0';
+			((char*)message->data)[message->size - 1] = '\0';
 			log("%s: %s", co_module_repr(message->from, &module_name), message->data);
 		}
 		break;
@@ -523,7 +534,7 @@ void console_window_t::handle_message(co_message_t *message)
 }
 
 // nlucas: this code is identical to console_window_t::handle_scancode
-//         in colinux\user\console-base\console.cpp.
+//         in colinux\user\console-nt\console.cpp.
 void console_window_t::handle_scancode(co_scan_code_t sc)
 {
 	if (state != CO_CONSOLE_STATE_ATTACHED)
@@ -535,32 +546,34 @@ void console_window_t::handle_scancode(co_scan_code_t sc)
 		co_scan_code_t		code;
 	} message;
 
-	message.message.from = CO_MODULE_CONSOLE;
-	message.message.to = CO_MODULE_LINUX;
+	message.message.from     = CO_MODULE_CONSOLE;
+	message.message.to       = CO_MODULE_LINUX;
 	message.message.priority = CO_PRIORITY_DISCARDABLE;
-	message.message.type = CO_MESSAGE_TYPE_OTHER;
-	message.message.size = sizeof(message) - sizeof(message.message);
+	message.message.type     = CO_MESSAGE_TYPE_OTHER;
+	message.message.size     = sizeof(message) - sizeof(message.message);
+	
 	message.msg_linux.device = CO_DEVICE_KEYBOARD;
-	message.msg_linux.unit = 0;
-	message.msg_linux.size = sizeof(message.code);
-	message.code = sc;
+	message.msg_linux.unit	 = 0;
+	message.msg_linux.size	 = sizeof(message.code);
+	
+	message.code		 = sc;
 
 	co_user_monitor_message_send(message_monitor, &message.message);
 }
 
-Fl_Menu_Item *console_window_t::find_menu_item_by_callback(Fl_Callback *cb)
+Fl_Menu_Item* console_window_t::find_menu_item_by_callback(Fl_Callback *cb)
 {
 	return NULL;
 }
 
 void console_window_t::menu_item_activate(Fl_Callback *cb)
 {
-	int i;
-	int count = menu->size();
-	const Fl_Menu_Item *items = menu->menu();
-	Fl_Menu_Item items_copy[count];
+	int                 i;
+	int  		    count = menu->size();
+	const Fl_Menu_Item* items = menu->menu();
+	Fl_Menu_Item	    items_copy[count];
 
-	for (i=0; i < count; i++) {
+	for (i = 0; i < count; i++) {
 		items_copy[i] = items[i];
 		if (items_copy[i].callback() == cb)
 			items_copy[i].activate();
@@ -569,14 +582,14 @@ void console_window_t::menu_item_activate(Fl_Callback *cb)
 	menu->copy(items_copy);
 }
 
-void console_window_t::menu_item_deactivate(Fl_Callback *cb)
+void console_window_t::menu_item_deactivate(Fl_Callback* cb)
 {
-	int i;
-	int count = menu->size();
-	const Fl_Menu_Item *items = menu->menu();
-	Fl_Menu_Item items_copy[count];
+	int		    i;
+	int		    count = menu->size();
+	const Fl_Menu_Item* items = menu->menu();
+	Fl_Menu_Item	    items_copy[count];
 
-	for (i=0; i < count; i++) {
+	for (i = 0; i < count; i++) {
 		items_copy[i] = items[i];
 		if (items_copy[i].callback() == cb)
 			items_copy[i].deactivate();
@@ -585,9 +598,9 @@ void console_window_t::menu_item_deactivate(Fl_Callback *cb)
 	menu->copy(items_copy);
 }
 
-void console_window_t::log(const char *format, ...)
+void console_window_t::log(const char* format, ...)
 {
-	char buf[0x100];
+	char	buf[0x100];
 	va_list ap;
 
 	va_start(ap, format);

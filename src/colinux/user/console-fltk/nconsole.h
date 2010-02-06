@@ -8,15 +8,18 @@
  * the root directory.
  *
  */ 
-#ifndef __COLINUX_USER_CONSOLE_H__
-#define __COLINUX_USER_CONSOLE_H__
+#ifndef __COLINUX_USER_NCONSOLE_H__
+#define __COLINUX_USER_NCONSOLE_H__
 
 
 #include "input.h"
 extern "C" {
-    #include <colinux/user/reactor.h>
-    #include <colinux/user/monitor.h>
-    #include <colinux/user/manager.h>
+#include <colinux/user/debug.h>
+#include <colinux/user/monitor.h>
+#include <colinux/user/manager.h>
+#include <colinux/user/reactor.h>
+#include <colinux/common/console.h>
+#include <colinux/os/user/daemon.h>
 }
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Button.H>

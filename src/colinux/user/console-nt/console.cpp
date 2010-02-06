@@ -8,6 +8,11 @@
  * the root directory.
  *
  */
+ 
+ /* 
+  * OS independent main window class.
+  * Used for building colinux-console-nt.exe 
+  */
 
 #include <stdlib.h>
 #include <string.h>
@@ -27,10 +32,10 @@ extern "C" {
 console_window_t::console_window_t()
 {
 	start_parameters.attach_id = CO_INVALID_ID;
-	instance_id = CO_INVALID_ID;
-	widget = NULL;
-	message_monitor = NULL;
-	attached = PFALSE;
+	instance_id		   = CO_INVALID_ID;
+	widget			   = NULL;
+	message_monitor		   = NULL;
+	attached		   = PFALSE;
 	co_reactor_create(&reactor);
 }
 
@@ -61,10 +66,10 @@ void console_window_t::syntax()
 	co_terminal_print("\n");
 }
 
-co_rc_t console_window_t::parse_args(int argc, char **argv)
+co_rc_t console_window_t::parse_args(int argc, char** argv)
 {
-	bool_t pidfile_specified;
-	co_pathname_t pidfile;
+	bool_t 		pidfile_specified;
+	co_pathname_t	pidfile;
 	co_command_line_params_t cmdline;
 	co_rc_t rc;
 
@@ -76,15 +81,20 @@ co_rc_t console_window_t::parse_args(int argc, char **argv)
 		goto out_clean;
 	}
 
-	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-a",
-				NULL, &start_parameters.attach_id);
+	rc = co_cmdline_params_one_arugment_int_parameter(
+			cmdline,
+			"-a",
+			NULL, 
+			&start_parameters.attach_id);
 
 	if (!CO_OK(rc)) {
 		syntax();
 		goto out;
 	}
 
-	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-p",
+	rc = co_cmdline_params_one_arugment_parameter(
+			cmdline,
+			"-p",
 			&pidfile_specified,
 			pidfile, sizeof(pidfile));
 
@@ -120,19 +130,21 @@ co_rc_t console_window_t::send_ctrl_alt_del()
 		return CO_RC(ERROR);
 
 	struct {
-		co_message_t message;
-		co_linux_message_t linux_msg;
+		co_message_t		 message;
+		co_linux_message_t	 linux_msg;
 		co_linux_message_power_t data;
 	} message;
 	
-	message.message.from = CO_MODULE_DAEMON;
-	message.message.to = CO_MODULE_LINUX;
+	message.message.from     = CO_MODULE_DAEMON;
+	message.message.to       = CO_MODULE_LINUX;
 	message.message.priority = CO_PRIORITY_IMPORTANT;
-	message.message.type = CO_MESSAGE_TYPE_OTHER;
-	message.message.size = sizeof(message.linux_msg) + sizeof(message.data);
+	message.message.type     = CO_MESSAGE_TYPE_OTHER;
+	message.message.size     = sizeof(message.linux_msg) + sizeof(message.data);
+	
 	message.linux_msg.device = CO_DEVICE_POWER;
-	message.linux_msg.unit = 0;
-	message.linux_msg.size = sizeof(message.data);
+	message.linux_msg.unit   = 0;
+	message.linux_msg.size   = sizeof(message.data);
+	
 	message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
 	
 	co_user_monitor_message_send(message_monitor, &message.message);
@@ -159,17 +171,20 @@ co_rc_t console_window_t::start()
 	return attach();
 }
 
-co_rc_t console_window_t::message_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size)
+// Process all messages in buffer
+co_rc_t console_window_t::message_receive(co_reactor_user_t user,
+	                                  unsigned char*    buffer,
+	                                  unsigned long     size)
 {
-	co_message_t *message;
+	co_message_t* message;
 	unsigned long message_size;
-	long size_left = size;
-	long position = 0;
+	long          size_left = size;
+	long          position  = 0;
 
 	while (size_left > 0) {
-		message = (typeof(message))(&buffer[position]);
+		message      = (typeof(message))(&buffer[position]);
 		message_size = message->size + sizeof(*message);
-		size_left -= message_size;
+		size_left   -= message_size;
 		if (size_left >= 0) {
 			global_window->event(message);
 		}
@@ -181,17 +196,19 @@ co_rc_t console_window_t::message_receive(co_reactor_user_t user, unsigned char 
 
 co_rc_t console_window_t::attach()
 {
-	co_module_t modules[] = {CO_MODULE_CONSOLE, };
+	co_module_t                    modules[] = {CO_MODULE_CONSOLE, };
 	co_monitor_ioctl_get_console_t get_console;
-	co_console_t *console = NULL;
-	co_rc_t rc;
+	co_console_t*                  console = NULL;
+	co_rc_t                        rc;
 
 	if (attached)
 		return CO_RC(ERROR);
 
-	rc = co_user_monitor_open(reactor, message_receive,
-				  instance_id, modules, 
-				  sizeof(modules)/sizeof(co_module_t),
+	rc = co_user_monitor_open(reactor, 
+				  message_receive,
+				  instance_id,
+				  modules, 
+				  sizeof(modules) / sizeof(co_module_t),
 				  &message_monitor);
 	if (!CO_OK(rc)) {
 		log("Monitor%d: Error connecting to instance\n", instance_id);
@@ -204,7 +221,7 @@ co_rc_t console_window_t::attach()
 		return rc;
 	}
 
-	rc = co_console_create(get_console.x, get_console.y, 0, &console);
+	rc = co_console_create(&get_console.config, &console);
 	if (!CO_OK(rc))
 		return rc;
 
@@ -213,7 +230,7 @@ co_rc_t console_window_t::attach()
 	rc = widget->set_window(this);
 	if (!CO_OK(rc))
 		return rc;
-
+	
 	widget->redraw();
 	widget->title("Console - Cooperative Linux - [To Exit, Press Window+Alt Keys]");
 
@@ -248,7 +265,8 @@ void console_window_t::event(co_message_t *message)
 	switch (message->from) {
 
 	case CO_MODULE_LINUX:{
-		co_console_message_t *console_message;
+		co_console_message_t* console_message;
+		
 		console_message = (typeof(console_message)) (message->data);
 		widget->event(console_message);
 		break;
@@ -278,20 +296,20 @@ void console_window_t::handle_scancode(co_scan_code_t sc) const
 		co_scan_code_t		code;
 	} message;
 
-	message.message.from = CO_MODULE_CONSOLE;
-	message.message.to = CO_MODULE_LINUX;
+	message.message.from     = CO_MODULE_CONSOLE;
+	message.message.to       = CO_MODULE_LINUX;
 	message.message.priority = CO_PRIORITY_DISCARDABLE;
-	message.message.type = CO_MESSAGE_TYPE_OTHER;
-	message.message.size = sizeof (message) - sizeof (message.message);
-	message.linux.device = CO_DEVICE_KEYBOARD;
-	message.linux.unit = 0;
-	message.linux.size = sizeof (message.code);
-	message.code = sc;
+	message.message.type     = CO_MESSAGE_TYPE_OTHER;
+	message.message.size     = sizeof (message) - sizeof (message.message);
+	message.linux.device     = CO_DEVICE_KEYBOARD;
+	message.linux.unit       = 0;
+	message.linux.size       = sizeof (message.code);
+	message.code             = sc;
 
 	co_user_monitor_message_send(message_monitor, &message.message);
 }
 
-void console_window_t::log(const char *format, ...) const
+void console_window_t::log(const char* format, ...) const
 {
 	char buf[0x100];
 	va_list ap;

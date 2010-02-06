@@ -54,22 +54,22 @@ typedef struct co_monitor {
 	/*
 	 * Pointer back to the manager.
 	 */
-	struct co_manager *manager; 
-	int refcount;
-	bool_t listed_in_manager;
-	co_list_t node;
-	co_id_t id;
+	struct co_manager* manager; 
+	int                refcount;
+	bool_t 		   listed_in_manager;
+	co_list_t	   node;
+	co_id_t		   id;
 
 	/*
 	 * OS-dependant data:
 	 */
-	struct co_monitor_osdep *osdep; 
+	struct co_monitor_osdep* osdep; 
 
 	/*
 	 * State of monitor.
 	 */ 
-	co_monitor_state_t state;
-	co_termination_reason_t termination_reason;
+	co_monitor_state_t		  state;
+	co_termination_reason_t		  termination_reason;
 	co_monitor_linux_bug_invocation_t bug_info;
 
 	/*
@@ -80,18 +80,18 @@ typedef struct co_monitor {
 	/*
 	 * The passage page
 	 */
-	struct co_arch_passage_page *passage_page;  /* The virtual address of the 
-						       PP in the host */
-	vm_ptr_t passage_page_vaddr;                /* The virtual address of the 
-						       PP in Linux */
-	struct co_archdep_monitor *archdep;         /* Architecture dependent data */
+	struct co_arch_passage_page* passage_page;       /* The virtual address of the 
+						            PP in the host */
+	vm_ptr_t		     passage_page_vaddr; /* The virtual address of the 
+						            PP in Linux */
+	struct co_archdep_monitor*   archdep;            /* Architecture dependent data */
 
 	/*
 	 * Core stuff (Linux kernel image) 
 	 */
-	vm_ptr_t core_vaddr;             /* Where the core sits (the famous C0100000) */
-	vm_ptr_t core_end;               /* Where the core ends */
-	unsigned long core_pages;        /* number of pages our core takes */    
+	vm_ptr_t	    core_vaddr;  /* Where the core sits (the famous C0100000) */
+	vm_ptr_t	    core_end;    /* Where the core ends */
+	unsigned long	    core_pages;  /* number of pages our core takes */    
 	co_symbols_import_t import;      /* Addresse of symbols in the kernel */
 
 	/*
@@ -101,7 +101,7 @@ typedef struct co_monitor {
 	unsigned long physical_frames;  /* The number of pages in that RAM */
 	unsigned long end_physical;     /* In what virtual address the map of the 
 					   pseudo physical RAM ends */
-	co_pfn_t **pp_pfns;
+	co_pfn_t** pp_pfns;
 
 	/* 
 	 * Dynamic allocations in the host
@@ -113,25 +113,25 @@ typedef struct co_monitor {
 	 */
 	linux_pgd_t pgd;             /* Pointer to the physical address PGD of 
 					Linux (to be put in CR3 eventually */
-	co_pfn_t **pgd_pfns;
+	co_pfn_t**  pgd_pfns;
 
 
 	/*
 	 * Devices
 	 */
 	co_monitor_device_t devices[CO_DEVICES_TOTAL];
-	bool_t timer_interrupt;
+	bool_t		    timer_interrupt;
 
         /*
          * Timer
          */
-        co_os_timer_t timer;
-	co_timestamp_t timestamp;
-	co_timestamp_t timestamp_freq;
+        co_os_timer_t	   timer;
+	co_timestamp_t	   timestamp;
+	co_timestamp_t	   timestamp_freq;
 	unsigned long long timestamp_reminder;
-	co_os_wait_t idle_wait;
+	co_os_wait_t	   idle_wait;
 
-	/* was for cofb
+	/* for cofb
 	 * Video memory
 	 *
 	 * video_buffer      : virtual address the video memory buffer
@@ -150,43 +150,43 @@ typedef struct co_monitor {
 	/*
 	 * Video devices
 	*/
-	struct co_video_dev *video_devs[CO_MODULE_MAX_COVIDEO];
+	struct co_video_dev* video_devs[CO_MODULE_MAX_COVIDEO];
 
 	/*
 	 * SCSI devices
 	 */
-	struct co_scsi_dev *scsi_devs[CO_MODULE_MAX_COSCSI];
+	struct co_scsi_dev* scsi_devs[CO_MODULE_MAX_COSCSI];
 
 	/* 
 	 * Block devices
 	 */
-	struct co_block_dev *block_devs[CO_MODULE_MAX_COBD];
+	struct co_block_dev* block_devs[CO_MODULE_MAX_COBD];
 
 	/*
 	 * File Systems
 	 */
-	struct co_filesystem *filesystems[CO_MODULE_MAX_COFS];
+	struct co_filesystem* filesystems[CO_MODULE_MAX_COFS];
 
 	/*
 	 * Audio devices
 	*/
-	struct co_audio_dev *audio_devs[CO_MODULE_MAX_COAUDIO];
+	struct co_audio_dev* audio_devs[CO_MODULE_MAX_COAUDIO];
 
 	/*
 	 * Message passing stuff
 	 */ 
-	co_queue_t linux_message_queue;
-	co_os_mutex_t linux_message_queue_mutex;
+	co_queue_t	linux_message_queue;
+	co_os_mutex_t 	linux_message_queue_mutex;
 
-	co_io_buffer_t *io_buffer;
-	co_monitor_user_kernel_shared_t *shared;
-	void *shared_user_address;
-	void *shared_handle;
+	co_io_buffer_t* 		 io_buffer;
+	co_monitor_user_kernel_shared_t* shared;
+	void*			         shared_user_address;
+	void*				 shared_handle;
 
-	struct co_manager_open_desc *connected_modules[CO_MONITOR_MODULES_COUNT];
-	co_os_mutex_t connected_modules_write_lock;
+	struct co_manager_open_desc* connected_modules[CO_MONITOR_MODULES_COUNT];
+	co_os_mutex_t 		     connected_modules_write_lock;
 
-	co_console_t *console;
+	co_console_t* console;
 
         /*
 	 * initrd
@@ -199,8 +199,8 @@ typedef struct co_monitor {
 	 * is loaded in order to get kernel-specific info (such as 
 	 * segment registers) and API version.
 	 */
-	co_info_t info;
-	co_arch_info_t arch_info;
+	co_info_t 	info;
+	co_arch_info_t 	arch_info;
 } co_monitor_t;
 
 
@@ -208,9 +208,13 @@ extern co_rc_t co_monitor_create(struct co_manager *manager, co_manager_ioctl_cr
 extern co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_t monitor_owner);
 
 struct co_manager_open_desc;
-extern co_rc_t co_monitor_ioctl(co_monitor_t *cmon, co_manager_ioctl_monitor_t *io_buffer,
-				unsigned long in_size, unsigned long out_size, 
-				unsigned long *return_size, struct co_manager_open_desc *opened_manager);
+
+extern co_rc_t co_monitor_ioctl(co_monitor_t*		     cmon, 
+				co_manager_ioctl_monitor_t*  io_buffer,
+				unsigned long		     in_size,
+				unsigned long		     out_size, 
+				unsigned long*		     return_size,
+				struct co_manager_open_desc* opened_manager);
 
 extern co_rc_t co_monitor_alloc_pages(co_monitor_t *cmon, unsigned long pages, void **address);
 extern co_rc_t co_monitor_free_pages(co_monitor_t *cmon, unsigned long pages, void *address);
@@ -224,7 +228,13 @@ extern co_rc_t co_monitor_message_from_user_free(co_monitor_t *monitor, co_messa
 /* support kernel mode conet module */
 extern co_rc_t co_conet_register_protocol(co_monitor_t *monitor);
 extern co_rc_t co_conet_unregister_protocol(co_monitor_t *monitor);
-extern co_rc_t co_conet_bind_adapter(co_monitor_t *monitor, int conet_unit, char *netcfg_id, int promise, char mac[6]);
+
+extern co_rc_t co_conet_bind_adapter(co_monitor_t* monitor,
+				     int	   conet_unit,
+				     char*	   netcfg_id,
+				     int	   promise,
+				     char 	   mac[6]);
+
 extern co_rc_t co_conet_unbind_adapter(co_monitor_t *monitor, int conet_unit);
 extern co_rc_t co_conet_inject_packet_to_adapter(co_monitor_t *monitor, int conet_unit, void *packet_data, int length);
 
