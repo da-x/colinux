@@ -56,8 +56,8 @@ targets['colinux-slirp-net-daemon'] = Target(
 
 targets['colinux-console-fltk'] = Target(
     inputs = [
-       Input('../user/console/build.o'),
-       Input('../../../user/console/build.a'),
+       Input('../user/console-fltk/build.o'),
+       Input('../../../user/console-fltk/build.a'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('g++', libs=['X11', 'fltk'],

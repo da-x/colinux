@@ -29,6 +29,47 @@ extern "C" {
 #include <assert.h>
 #include <stdio.h>
 
+/*
+ * First attempt to make the console copy/paste text.
+ * This needs more work to get right, but at least it's a start ;)
+ */
+static int PasteClipboardIntoColinux( )
+{
+	// Lock clipboard for inspection -- TODO: try again on failure
+	if ( ! ::OpenClipboard(NULL) )
+	{
+		co_debug( "OpenClipboard() error 0x%lx !", ::GetLastError() );
+		return -1;
+	}
+	HANDLE h = ::GetClipboardData( CF_TEXT );
+	if ( h == NULL )
+	{
+		::CloseClipboard( );
+		return 0;	// Empty (for text)
+	}
+	unsigned char* s = (unsigned char *) ::GlobalLock( h );
+	if ( s == NULL )
+	{
+		::CloseClipboard( );
+		return 0;
+	}
+	/* Fake keyboard input */
+	for ( ; *s != '\0'; ++s )
+	{
+		co_scan_code_t sc;
+
+		if ( *s == '\n' )
+			continue;	// ignore '\n'
+
+		sc.mode = CO_KBD_SCANCODE_ASCII;
+		sc.code = *s;
+		co_user_nconsole_handle_scancode( sc );
+	}
+	::GlobalUnlock( h );
+	::CloseClipboard( );
+	return 0;
+}
+
 
 /* ----------------------------------------------------------------------- */
 /**
@@ -319,7 +360,8 @@ int console_main_window::handle( int event )
         return 1;
     case FL_PASTE:
       {
-        int c = input_.paste_text( Fl::event_length(), Fl::event_text() );
+        //TODO, cleanu paste_text int c = input_.paste_text( Fl::event_length(), Fl::event_text() );
+	int c = PasteClipboardIntoColinux();
         status( "%d of %d characters pasted...\n", c, Fl::event_length() );
         return 1;
       }

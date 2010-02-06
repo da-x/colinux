@@ -12,7 +12,7 @@
 #include <windows.h>
 
 #include "widget.h"
-#include <colinux/user/console-base/main.h>
+#include <colinux/user/console-nt/main.h>
 
 extern "C" {
 #include <colinux/os/alloc.h>

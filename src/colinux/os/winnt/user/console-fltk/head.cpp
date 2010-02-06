@@ -15,8 +15,8 @@ extern "C" {
 	#include "../osdep.h"
 }
 
-#include <colinux/user/console/nmain.h>
-#include <colinux/user/console/input.h>
+#include <colinux/user/console-fltk/nmain.h>
+#include <colinux/user/console-fltk/input.h>
 #include <FL/x.H>
 
 COLINUX_DEFINE_MODULE("colinux-console-fltk");

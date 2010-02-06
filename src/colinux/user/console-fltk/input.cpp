@@ -227,7 +227,7 @@ bool console_input::send_mouse_event( co_mouse_data_t& data )
 /**
  * Paste text buffer as input.
  *
- * To handle simbols in source we pass each character as an Alt+123
+ * To handle symbols in source we pass each character as an Alt+123
  * sequence. This can be very slow, but in the future this can be better
  * if we implement a shared buffer to pass keystrokes and mouse messages.
  *
@@ -235,6 +235,8 @@ bool console_input::send_mouse_event( co_mouse_data_t& data )
  */
 int console_input::paste_text( int len, const char* s )
 {
+    
+    //PasteClipboardIntoColinux();return;
     static const char kpad_code[10] /* keypad scan codes ['0'..'9'] */
 	= { 0x52, 0x4F, 0x50, 0x51, 0x4B, 0x4C, 0x4D, 0x47, 0x48, 0x49 };
 
