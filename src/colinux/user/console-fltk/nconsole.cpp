@@ -31,6 +31,61 @@ extern "C" {
 #include <assert.h>
 #include <stdio.h>
 
+/**
+ * Parse application command line arguments and fills params structure
+ * with the parsing result.
+ *
+ * Returns zero on success or the number with the position of the parameter
+ * that failed to be parsed.
+ */
+co_rc_t console_main_window::parse_args( int argc, char**argv )
+{
+	char** param_scan = argv;
+
+	/* Parse command line */
+	while (argc > 0) {
+		const char* option;
+
+		if (strcmp(*param_scan, (option = "-a")) == 0) {
+			param_scan++;
+			argc--;
+
+			if (argc <= 0) {
+				co_terminal_print(
+					"Parameter of command line option %s not specified\n",
+					option);
+				return CO_RC(ERROR);
+			}
+
+			start_parameters.attach_id = atoi(*param_scan);
+		} else if (strcmp(*param_scan, (option = "-p")) == 0) {
+			co_rc_t rc;
+
+			param_scan++;
+			argc--;
+
+			if (argc <= 0) {
+				co_terminal_print(
+					"Parameter of command line option %s not specified\n",
+					option);
+				return CO_RC(ERROR);
+			}
+
+			rc = read_pid_from_file(*param_scan, &start_parameters.attach_id);
+			if (!CO_OK(rc)) {
+				co_terminal_print(
+					"error on reading PID from file '%s'\n", *param_scan);
+				return CO_RC(ERROR);
+			}
+		}
+
+		param_scan++;
+		argc--;
+	}
+
+	return CO_RC(OK);
+}
+
 /*
  * First attempt to make the console copy/paste text.
  * This needs more work to get right, but at least it's a start ;)
@@ -174,6 +229,7 @@ console_main_window::console_main_window( )
   , mouse_scale_y_( CO_MOUSE_MAX_Y )
   , prefs_( Fl_Preferences::USER, "coLinux.org", "FLTK console" )
 {
+    start_parameters.attach_id = CO_INVALID_ID;
     // Set pointer to self for static methods
     this_ = this;
     // Set close callback
@@ -218,7 +274,8 @@ console_main_window::console_main_window( )
     wStatus_->end( );
 
     resizable( wScroll_ );
-    end( );
+    end();
+    show();
 
 #ifdef _WIN32
     /*
@@ -285,7 +342,7 @@ void console_main_window::on_quit( Fl_Widget*, void* )
  *
  * Returns zero on success.
  */
-int console_main_window::start( console_parameters_t &params )
+int console_main_window::start()
 {
     // Create reactor object
     co_rc_t rc = co_reactor_create( &reactor_ );
@@ -298,13 +355,9 @@ int console_main_window::start( console_parameters_t &params )
     // Use last saved preferences
     load_preferences( );
 
-    // Show "Message Of The Day", if given.
-    if ( params.motd )
-        log( params.motd );
-
     // Attach to given instance or to the first available
-    if ( params.instance_id != CO_INVALID_ID )
-        attach( params.instance_id );
+    if ( start_parameters.attach_id != CO_INVALID_ID )
+        attach( start_parameters.attach_id );
     else
         attach( find_first_monitor() );
 

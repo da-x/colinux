@@ -13,6 +13,7 @@
 
 
 #include "input.h"
+#include "console.h"
 extern "C" {
 #include <colinux/user/debug.h>
 #include <colinux/user/monitor.h>
@@ -31,7 +32,6 @@ extern "C" {
 
 class console_screen;
 class console_log_window;
-struct console_parameters_t;
 
 
 /**
@@ -43,13 +43,14 @@ class console_main_window : public Fl_Double_Window
     typedef Fl_Double_Window        super_;
     typedef console_main_window     self_t;
 public:
+    co_rc_t parse_args( int argc, char** args );
     void handle_scancode(co_scan_code_t sc);
     // Basic initialization
      console_main_window( );
     ~console_main_window( );
 
     // Use params for setup and show window
-    int start( console_parameters_t &params );
+    int start();
 
     /**
      * Thread message identifiers for asynch messages.
@@ -133,6 +134,7 @@ private:
     static void on_idle( void* );
 
 private:
+    co_console_start_parameters_t start_parameters;
     // Colinux Instance Data
     co_id_t                 attached_id_;       // Current attached monitor
     co_reactor_t            reactor_;           // colinux message engine
