@@ -85,7 +85,7 @@ void console_idle(void* data)
 }
 
 console_main_window_t::console_main_window_t(console_window_t* console)
-: Fl_Double_Window(640, 480), console(console)
+: Fl_Double_Window(640, 480+30+90), console(console)
 {
 	label("Cooperative Linux console");
 }
@@ -111,6 +111,7 @@ int console_main_window_t::handle(int event)
 }
 
 console_window_t::console_window_t()
+:wScroll_(NULL),wScreen_(NULL)
 {
 	co_rc_t rc;
 
@@ -118,8 +119,8 @@ console_window_t::console_window_t()
 	start_parameters.attach_id = CO_INVALID_ID;
 	attached_id	  	   = CO_INVALID_ID;
 	state		  	   = CO_CONSOLE_STATE_DETACHED;
-	window		  	   = 0;
-	widget	          	   = 0;
+	window		  	   = NULL;
+	widget	          	   = NULL;
 	resized_on_attach 	   = PTRUE;
 	
 	rc = co_reactor_create(&reactor);
@@ -208,21 +209,31 @@ co_rc_t console_window_t::start()
 	for (i = 0; i < sizeof(console_menuitems) / sizeof(console_menuitems[0]); i++)
 		console_menuitems[i].user_data((void*)this);
 
+	const int mh = 30; 	    // menu height
+	const int sh = 90;          // status bar height
 	int swidth  = 640;
-	int sheight = 480;
-
-	menu = new Fl_Menu_Bar(0, 0, swidth, 30);
+	int sheight = 480+mh+sh;
+	menu = new Fl_Menu_Bar(0, 0, swidth, mh);
 	menu->box(FL_UP_BOX);
 	menu->align(FL_ALIGN_CENTER);
 	menu->when(FL_WHEN_RELEASE_ALWAYS);
 	menu->copy(console_menuitems, window);
+   	Fl_Group* tile = new Fl_Group(0, mh, swidth, sheight-mh);
+    // Console window (inside a scroll group)
+    wScroll_ = new Fl_Scroll(0,mh, swidth,sheight-mh-sh);
+    wScroll_->box( FL_THIN_DOWN_FRAME );
+    {
+        const int bdx = Fl::box_dx( FL_THIN_DOWN_FRAME );
+        const int bdy = Fl::box_dx( FL_THIN_DOWN_FRAME );
+	widget	    = new console_widget_t(0, mh, swidth, sheight - sh-mh);
+        wScreen_ = new console_screen( 0, 0 + mh,
+                                       640 + 0*2, 480 + 0*2 );
+    }
+    wScroll_->end( );
+    // Status bar
+	text_widget = new Fl_Text_Display(0, sheight - sh, swidth, sh-20);
 
-	Fl_Group* tile = new Fl_Group(0, 30, swidth, sheight-30);
-	
-	widget	    = new console_widget_t(0, 30, swidth, sheight - 120);
-	text_widget = new Fl_Text_Display(0, sheight - 120 + 30, swidth, 70);
-
-	Fl_Group* tile2 = new Fl_Group(0, sheight - 120 + 30, swidth, 90);
+	Fl_Group* tile2 = new Fl_Group(0, sheight - sh, swidth, sh);
 	
 	text_widget->buffer(new Fl_Text_Buffer());
 	text_widget->insert_position(0);
@@ -322,6 +333,7 @@ co_rc_t console_window_t::attach()
 	co_module_t			modules[] = {CO_MODULE_CONSOLE, };
 	co_monitor_ioctl_get_console_t 	get_console;
 	co_console_t*			console;
+    co_monitor_ioctl_video_attach_t ioctl_video;
 
 	if (state != CO_CONSOLE_STATE_DETACHED) {
 		rc = CO_RC(ERROR);
@@ -350,9 +362,18 @@ co_rc_t console_window_t::attach()
 	rc = co_console_create(&get_console.config, &console);
 	if (!CO_OK(rc))
 		return rc;
-
-	widget->set_console(console);
-
+	if (widget)
+	   widget->set_console(console);
+    /* Get pointer to shared video buffer */
+    rc = co_user_monitor_video_attach(message_monitor, &ioctl_video);
+    if ( !CO_OK(rc) )
+    {
+        log( "Monitor%d: Error attaching video output! (rc=%X)\n", attached_id, rc );
+        co_user_monitor_close(message_monitor);
+        return false;
+    }
+    /* Start rendering coLinux screen */
+    wScreen_->attach(ioctl_video.video_buffer);
 	Fl::add_idle(console_idle, this);
 
 	resized_on_attach = PFALSE;
@@ -365,7 +386,7 @@ co_rc_t console_window_t::attach()
 	menu_item_activate(console_detach_cb);
 	menu_item_deactivate(console_attach_cb);
 
-	widget->redraw();
+	if(widget)widget->redraw();
 
 	log("Monitor%d: Attached\n", attached_id);
 
@@ -405,7 +426,7 @@ co_rc_t console_window_t::detach()
 
 	state = CO_CONSOLE_STATE_DETACHED;
 
-	widget->redraw();
+	if(widget)widget->redraw();
 
 	log("Monitor%d: Detached\n", attached_id);
 

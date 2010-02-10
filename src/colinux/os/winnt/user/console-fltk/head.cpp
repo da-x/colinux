@@ -15,7 +15,7 @@ extern "C" {
 	#include "../osdep.h"
 }
 
-#include <colinux/user/console-fltk/nmain.h>
+#include <colinux/user/console-fltk/main.h>
 #include <colinux/user/console-fltk/input.h>
 #include <FL/x.H>
 
@@ -43,10 +43,10 @@ static void handle_scancode( WORD code )
 	if ( code & 0xE000 )
 	{
 		sc.code = 0xE0;
-		co_user_nconsole_handle_scancode( sc );
+		co_user_console_handle_scancode( sc );
 	}
 	sc.code = code & 0xFF;
-	co_user_nconsole_handle_scancode( sc );
+	co_user_console_handle_scancode( sc );
 }
 
 /*
@@ -83,7 +83,7 @@ static int PasteClipboardIntoColinux( )
 
 		sc.mode = CO_KBD_SCANCODE_ASCII;
 		sc.code = *s;
-		co_user_nconsole_handle_scancode( sc );
+		co_user_console_handle_scancode( sc );
 	}
 	::GlobalUnlock( h );
 	::CloseClipboard( );
@@ -190,7 +190,7 @@ int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR cmdLine, int )
 	co_os_parse_args( cmdLine, &argc, &argv );
 
 	// Run main console procedure
-	return co_user_nconsole_main(argc, argv);
+	return co_user_console_main(argc, argv);
 }
 
 /**

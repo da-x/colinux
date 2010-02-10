@@ -20,6 +20,7 @@
 #include <FL/Fl_Menu.H>
 #include <FL/Fl_Menu_Bar.H>
 #include <FL/Fl_Widget.H>
+#include <FL/Fl_Scroll.H>
 
 extern "C" {
 #include <colinux/user/debug.h>
@@ -31,6 +32,7 @@ extern "C" {
 }
 
 #include "widget.h"
+#include "screen.h"
 
 typedef struct co_console_start_parameters {
 	co_id_t attach_id;
@@ -92,7 +94,8 @@ protected:
 
 	Fl_Menu_Bar *menu;
 	Fl_Text_Display *text_widget;
-
+    Fl_Scroll           *   wScroll_;
+    console_screen      *   wScreen_;
 	Fl_Menu_Item *find_menu_item_by_callback(Fl_Callback *cb);
 	void menu_item_activate(Fl_Callback *cb);
 	void menu_item_deactivate(Fl_Callback *cb);
