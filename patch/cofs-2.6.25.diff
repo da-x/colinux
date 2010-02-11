@@ -54,7 +54,7 @@ Index: linux-2.6.25-source/fs/cofusefs/dir.c
 ===================================================================
 --- linux-2.6.25-source.orig/fs/cofusefs/dir.c
 +++ linux-2.6.25-source/fs/cofusefs/dir.c
-@@ -72,15 +72,15 @@
+@@ -72,15 +72,17 @@
  {
  	struct inode *inode;
  
@@ -64,21 +64,21 @@ Index: linux-2.6.25-source/fs/cofusefs/dir.c
 -			fuse_init_inode(inode, attr);
 -
 -		change_attributes(inode, attr);
--		inode->i_version = version;
--	}
 +	inode = iget_locked(sb, ino);
 +	if (!inode)
 +		return ERR_PTR(-ENOMEM);
-+	if (!inode->i_private)
++	if ((inode->i_state & I_NEW)) {
 +		fuse_init_inode(inode, attr);
+ 		inode->i_version = version;
++		unlock_new_inode(inode);
+ 	}
  
 +	change_attributes(inode, attr);
-+	inode->i_version = version;
-+	unlock_new_inode(inode);
++
  	return inode;
  }
  
-@@ -119,8 +119,8 @@
+@@ -119,8 +121,8 @@
  	err = fuse_do_lookup(dir, entry, &outarg, &version);
  	if(!err) {
  		inode = fuse_iget(dir->i_sb, outarg.ino, &outarg.attr, version);
@@ -89,7 +89,7 @@ Index: linux-2.6.25-source/fs/cofusefs/dir.c
  	} else if(err != -ENOENT)
  		return err;
  
-@@ -173,8 +173,8 @@
+@@ -173,8 +175,8 @@
  		return out.h.error;
  
  	inode = fuse_iget(dir->i_sb, outarg.ino, &outarg.attr, out.h.unique);
