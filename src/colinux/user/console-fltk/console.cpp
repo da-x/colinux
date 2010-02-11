@@ -88,8 +88,9 @@ Fl_Menu_Item console_main_window::menu_items_[]
             { " Dettach "  , 0, on_dettach    , 0, FL_MENU_DIVIDER },
             { " Pause "    , 0, unimplemented },
             { " Resume "   , 0, unimplemented , 0, FL_MENU_DIVIDER },
-            { " Reboot "   , 0, on_power      , (void*)0 },
-            { " Shutdown " , 0, on_power      , (void*)1 },
+            { " Power off ", 0, on_power      , (void*)CO_LINUX_MESSAGE_POWER_OFF },
+            { " Reboot - Ctrl-Alt-Del ",0, on_power, (void*)CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL },
+            { " Shutdown " , 0, on_power      , (void*)CO_LINUX_MESSAGE_POWER_SHUTDOWN },
             { 0 },
         { "Inspect", 0,0,0, FL_SUBMENU },
             { " Manager Status ", 0, on_inspect, (void*)1 },
@@ -477,11 +478,11 @@ void console_main_window::on_power( Fl_Widget*, void* v )
     msg.linux_msg.unit   = 0;
     msg.linux_msg.size   = sizeof(msg.data);
 
-    if ( unsigned(v) == 0 )
-        msg.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
-    else
-        msg.data.type = CO_LINUX_MESSAGE_POWER_SHUTDOWN;
-
+    //if ( unsigned(v) == 0 )
+    //    msg.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
+    //else
+    //    msg.data.type = CO_LINUX_MESSAGE_POWER_SHUTDOWN;
+    msg.data.type = static_cast<co_linux_message_power_type_t>((unsigned)(v));
     co_user_monitor_message_send( this_->monitor_, &msg.message );
 }
 

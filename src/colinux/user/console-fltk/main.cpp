@@ -121,6 +121,7 @@ int co_user_console_main( int argc, char **argv )
 
     // Create main window object
     console_main_window * app_window = new console_main_window( );
+    global_window = app_window;
 
     // Parse user arguments
     ret = parse_args( argc, argv, params );
