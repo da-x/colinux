@@ -65,7 +65,7 @@ create_md5sums()
 	|| error_exit 10 "can not create md5sum"
 
 	# Md5sums for patches
-	local SERIES=`cat patch/series-$KERNEL_VERSION`
+	local SERIES=`grep -v '#.*' patch/series-$KERNEL_VERSION`
 	for name in $SERIES
 	do
 		if [ -e "patch/$name" ]
@@ -104,7 +104,8 @@ extract_kernel()
 
 emulate_quilt_push()
 {
-	while read name level
+	grep -v '#.*' series |\
+	while read name level 
 	do
 		if [ -e "patches/$name" ]
 		then
@@ -113,7 +114,7 @@ emulate_quilt_push()
 			patch $level -f < "patches/$name" \
 			|| error_exit 10 "$name patch failed"
 		fi
-	done < series
+	done
 }
 
 # Standard patch, user patches...
