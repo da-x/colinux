@@ -121,8 +121,8 @@ emulate_quilt_push()
 patch_kernel_source()
 {
 	cd "$COLINUX_TARGET_KERNEL_SOURCE"
-	test -f "series"  || ln -s "$TOPDIR/patch/series-$KERNEL_VERSION" "series"
-	test -f "patches" || ln -s "$TOPDIR/patch" "patches"
+	test -f patches || ln -s "$TOPDIR/patch" patches
+	test -f series  || ln -s "patches/series-$KERNEL_VERSION" series
 
 	# Hotfix for 2.6.25 and 2.6.22 "core" patches
 	test -d arch/i386 || ln -s x86 arch/i386
