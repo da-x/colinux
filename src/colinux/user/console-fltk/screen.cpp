@@ -7,7 +7,7 @@
  * the root directory.
  *
  */
-#include "nconsole.h"
+#include "console.h"
 #include "screen_cocon.h"
 #include "screen_cofb.h"
 #include <FL/x.H>

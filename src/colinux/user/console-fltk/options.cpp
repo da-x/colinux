@@ -8,7 +8,7 @@
  *
  */
 #include "options.h"
-#include "nconsole.h"
+#include "console.h"
 
 #include <FL/fl_ask.H>
 #include <FL/fl_draw.H>

@@ -8,7 +8,7 @@
  *
  */
 #include "log_window.h"
-#include "nconsole.h"
+#include "console.h"
 #include <FL/Fl.H>
 #include <assert.h>
 #include <string.h>
