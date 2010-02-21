@@ -1413,8 +1413,10 @@ co_monitor_user_video_attach( co_monitor_t *monitor,
 	co_id_t user_id = co_os_current_id( );
 
 	/* FIXME: Return a CO_RC_ALREADY_ATTACHED like error */
-	if ( monitor->video_user_id != CO_INVALID_ID )
+	if ( monitor->video_user_id != CO_INVALID_ID ){
+		co_debug_system( "Error video already attached fixme \n");
 		return CO_RC(ERROR);
+	}
 
 	/* Create user space mapping */
 	rc = co_os_userspace_map( monitor->video_buffer, video_pages,
@@ -1469,6 +1471,9 @@ co_rc_t co_monitor_refdown(co_monitor_t* cmon, bool_t user_context, bool_t monit
 		return CO_RC(ERROR);
 
 	manager = cmon->manager;
+
+        if (co_os_current_id() == cmon->video_user_id)
+	        co_monitor_user_video_dettach(cmon);
 
 	co_os_mutex_acquire(manager->lock);
 	if (monitor_owner  &&  cmon->listed_in_manager) {
@@ -1631,7 +1636,7 @@ co_rc_t co_monitor_ioctl(co_monitor_t* 		     cmon,
 		return co_monitor_user_video_attach(cmon, params);
 	}
 #ifdef CONFIG_COOPERATIVE_VIDEO
-	/*case CO_MONITOR_IOCTL_VIDEO_ATTACH: {
+	/*TODO merge cofb and covideo case CO_MONITOR_IOCTL_VIDEO_ATTACH: {
 		co_monitor_ioctl_video_t* params;
 
 		*return_size = sizeof(*params);
