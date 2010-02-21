@@ -12,11 +12,11 @@
 #define __COLINUX_USER_CONSOLE_MAIN_H__
 
 extern "C" {
-    #include <colinux/common/common.h>
+#include <colinux/common/common.h>
 }
 
-extern void co_user_console_handle_scancode(co_scan_code_t sc);
-extern int co_user_console_main(int argc, char **argv);
+//extern void co_user_console_handle_scancode(co_scan_code_t sc);
+//extern int co_user_console_main(int argc, char **argv);
 
 /**
  * Console startup parameters

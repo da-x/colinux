@@ -186,7 +186,8 @@ void console_input::send_scan_( unsigned scan )
     msg.msg_linux.device = CO_DEVICE_KEYBOARD;
     msg.msg_linux.unit   = 0;
     msg.msg_linux.size   = sizeof(msg.code);
-    msg.code.mode        = CO_KBD_SCANCODE_ASCII; //was code.down=1
+    msg.code.mode        = CO_KBD_SCANCODE_RAW; 
+    //msg.code.mode        = CO_KBD_SCANCODE_ASCII; //was code.down=1
     msg.code.code        = scan & 0xFF;
 
     co_user_monitor_message_send( monitor_, &msg.message );

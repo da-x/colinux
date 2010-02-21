@@ -114,7 +114,7 @@ targets['colinux-console-fltk.exe'] = Target(
        Input('../../../user/console-fltk/build.a'),
     ] + user_dep,
     tool = Compiler(),
-    mono_options = generate_options('g++', libs=['fltk', 'mingw32'], lflags=['-mwindows']),
+    mono_options = generate_options('g++', libs=['fltk'], lflags=['-mwindows']),
 )
 
 targets['colinux-console-nt.exe'] = Target(

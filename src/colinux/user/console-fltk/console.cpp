@@ -319,9 +319,8 @@ int console_main_window::handle( int event )
         return 1;
     case FL_PASTE:
       {
-        //int c = input_.paste_text( Fl::event_length(), Fl::event_text() );
-	PasteClipboardIntoColinux();
-        status( "%d characters pasted...\n", Fl::event_length() );
+        int c = input_.paste_text( Fl::event_length(), Fl::event_text() );
+        status( "%d of %d characters pasted...\n",c, Fl::event_length() );
         return 1;
       }
     }
@@ -561,7 +560,7 @@ void console_main_window::handle_message( co_message_t * msg )
     {
         co_module_name_t mod_name;
         ((char *)msg->data)[msg->size - 1] = '\0';
-        log( "%s: %s\n", co_module_repr(msg->from, &mod_name), msg->data );
+        //log( "%s: %s\n", co_module_repr(msg->from, &mod_name), msg->data );
         return;
     }
 
@@ -1176,6 +1175,6 @@ void console_main_window::handle_scancode(co_scan_code_t sc)
         message.msg_linux.unit = 0;
         message.msg_linux.size = sizeof(message.code);
         message.code = sc;
-
+        log("sc: %x\n",sc.code);
         co_user_monitor_message_send(monitor_, &message.message);
 }

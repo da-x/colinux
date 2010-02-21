@@ -24,7 +24,7 @@ extern "C" {
 #include <FL/Fl.H>
 
 // Needed for co_debug*() routines (one for each application)
-//COLINUX_DEFINE_MODULE( "colinux-console-fltk" )
+COLINUX_DEFINE_MODULE( "colinux-console-fltk" )
 
 
 /**
@@ -98,7 +98,7 @@ int parse_args( int argc, char** args, console_parameters_t& params )
 /**
  * Fltk Console application entry.
  */
-int co_user_console_main( int argc, char **argv )
+int main( int argc, char **argv )
 {
     console_parameters_t    params;
     int                     ret;
