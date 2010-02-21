@@ -25,6 +25,7 @@ extern "C" {
 #include <FL/Fl_Preferences.H>
 #include <FL/Fl_Double_Window.H>
 
+extern int PasteClipboardIntoColinux();
 
 class console_screen;
 class console_log_window;

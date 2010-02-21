@@ -151,3 +151,4 @@ int co_user_console_main( int argc, char **argv )
     // Enter main window loop
     return Fl::run( );
 }
+

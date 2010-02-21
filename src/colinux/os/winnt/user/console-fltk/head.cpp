@@ -53,7 +53,7 @@ static void handle_scancode( WORD code )
  * First attempt to make the console copy/paste text.
  * This needs more work to get right, but at least it's a start ;)
  */
-static int PasteClipboardIntoColinux( )
+int PasteClipboardIntoColinux( )
 {
 	// Lock clipboard for inspection -- TODO: try again on failure
 	if ( ! ::OpenClipboard(NULL) )
@@ -87,7 +87,7 @@ static int PasteClipboardIntoColinux( )
 	}
 	::GlobalUnlock( h );
 	::CloseClipboard( );
-	return 0;
+	return 1;
 }
 
 

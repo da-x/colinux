@@ -319,8 +319,9 @@ int console_main_window::handle( int event )
         return 1;
     case FL_PASTE:
       {
-        int c = input_.paste_text( Fl::event_length(), Fl::event_text() );
-        status( "%d of %d characters pasted...\n", c, Fl::event_length() );
+        //int c = input_.paste_text( Fl::event_length(), Fl::event_text() );
+	PasteClipboardIntoColinux();
+        status( "%d characters pasted...\n", Fl::event_length() );
         return 1;
       }
     }
