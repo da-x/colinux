@@ -1154,27 +1154,3 @@ void console_main_window::on_calibrate( Fl_Widget*, void* )
     /* TODO: */
 }
 
-/* ----------------------------------------------------------------------- */
-void console_main_window::handle_scancode(co_scan_code_t sc)
-{
-        if ( !is_attached())
-                return;
-
-        struct {
-                co_message_t            message;
-                co_linux_message_t      msg_linux;
-                co_scan_code_t          code;
-        } message;
-
-        message.message.from = CO_MODULE_CONSOLE;
-        message.message.to = CO_MODULE_LINUX;
-        message.message.priority = CO_PRIORITY_DISCARDABLE;
-        message.message.type = CO_MESSAGE_TYPE_OTHER;
-        message.message.size = sizeof(message) - sizeof(message.message);
-        message.msg_linux.device = CO_DEVICE_KEYBOARD;
-        message.msg_linux.unit = 0;
-        message.msg_linux.size = sizeof(message.code);
-        message.code = sc;
-        log("sc: %x\n",sc.code);
-        co_user_monitor_message_send(monitor_, &message.message);
-}

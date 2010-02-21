@@ -39,14 +39,6 @@ static char MOTD_HELP[]
 
 static console_main_window* global_window = NULL;
 
-void co_user_console_handle_scancode(co_scan_code_t sc)
-{
-	if (!global_window)
-		return;
-	
-	global_window->handle_scancode(sc);
-}
-
 /**
  * Parse application command line arguments and fills params structure
  * with the parsing result.
