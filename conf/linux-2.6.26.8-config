@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.26.8
-# Mon Nov 16 22:28:28 2009
+# Sun Feb 28 22:06:32 2010
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -133,7 +133,7 @@ CONFIG_KMOD=y
 CONFIG_BLOCK=y
 # CONFIG_LBD is not set
 # CONFIG_BLK_DEV_IO_TRACE is not set
-# CONFIG_LSF is not set
+CONFIG_LSF=y
 # CONFIG_BLK_DEV_BSG is not set
 
 #
