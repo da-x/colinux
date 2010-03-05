@@ -1,11 +1,11 @@
-# Downloaded from (22-Sep-2008):
-#  http://debian-knoppix.alioth.debian.org/sources/cloop_2.625-1.tar.gz
+# Downloaded from (5-Jan-2009):
+# http://debian-knoppix.alioth.debian.org/sources/cloop_2.628-2.tar.gz
 
-Index: linux-2.6.25-source/drivers/block/cloop.c
+Index: linux-2.6.26-source/drivers/block/compressed_loop.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.25-source/drivers/block/compressed_loop.c
-@@ -0,0 +1,1172 @@
++++ linux-2.6.26-source/drivers/block/compressed_loop.c
+@@ -0,0 +1,1256 @@
 +/*
 + *  compressed_loop.c: Read-only compressed loop blockdevice
 + *  hacked up by Rusty in 1999, extended and maintained by Klaus Knopper
@@ -28,7 +28,7 @@ Index: linux-2.6.25-source/drivers/block/cloop.c
 + */
 +
 +#define CLOOP_NAME "cloop"
-+#define CLOOP_VERSION "2.625"
++#define CLOOP_VERSION "2.628"
 +#define CLOOP_MAX 8
 +
 +#ifndef KBUILD_MODNAME
@@ -54,7 +54,6 @@ Index: linux-2.6.25-source/drivers/block/cloop.c
 +#include <linux/major.h>
 +#include <linux/vmalloc.h>
 +#include <linux/slab.h>
-+#include <asm/semaphore.h>
 +#include <asm/div64.h> /* do_div() for 64bit division */
 +#include <asm/uaccess.h>
 +#include <asm/byteorder.h>
@@ -913,6 +912,52 @@ Index: linux-2.6.25-source/drivers/block/cloop.c
 +}
 +/* EOF get/set_status */
 +
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28)  /* API change in 2.6.28 */
++static int cloop_ioctl(struct block_device *bdev, fmode_t mode,
++	unsigned int cmd, unsigned long arg)
++{
++ struct cloop_device *clo;
++ int cloop_num, err=0;
++ if (!bdev) return -EINVAL;
++ cloop_num = MINOR(bdev->bd_dev);
++ if (cloop_num < 0 || cloop_num > cloop_count-1) return -ENODEV;
++ clo = &cloop_dev[cloop_num];
++ switch (cmd)
++  { /* We use the same ioctls that loop does */
++   case LOOP_CHANGE_FD:
++   case LOOP_SET_FD:
++    err = cloop_set_fd(cloop_num, NULL, bdev, arg);
++    if (err == 0 && clo->suspended)
++     {
++      /* Okay, we have again a backing file - get reqs again - FF */
++      clo->suspended=0;
++     }
++     break;
++   case LOOP_CLR_FD:
++     err = cloop_clr_fd(cloop_num, bdev);
++     break;
++   case LOOP_SET_STATUS:
++    err = cloop_set_status_old(clo, (struct loop_info __user *) arg);
++    break;
++   case LOOP_GET_STATUS:
++    err = cloop_get_status_old(clo, (struct loop_info __user *) arg);
++    break;
++   case LOOP_SET_STATUS64:
++    err = cloop_set_status64(clo, (struct loop_info64 __user *) arg);
++    break;
++   case LOOP_GET_STATUS64:
++    err = cloop_get_status64(clo, (struct loop_info64 __user *) arg);
++    break;
++   case CLOOP_SUSPEND:
++     err = clo_suspend_fd(cloop_num);
++     break;
++   default:
++     err = -EINVAL;
++  }
++ return err;
++}
++#else
 +static int cloop_ioctl(struct inode *inode, struct file *file,
 +	unsigned int cmd, unsigned long arg)
 +{
@@ -920,8 +965,8 @@ Index: linux-2.6.25-source/drivers/block/cloop.c
 + int cloop_num, err=0;
 + if (!inode) return -EINVAL;
 + if (MAJOR(inode->i_rdev) != cloop_major) {
-+   printk(KERN_WARNING "cloop_ioctl: pseudo-major != %d\n",
-+          cloop_major);
++   printk(KERN_WARNING "cloop_ioctl: pseudo-major %d != %d\n",
++          MAJOR(inode->i_rdev), cloop_major);
 +   return -ENODEV;
 +  }
 + cloop_num = MINOR(inode->i_rdev);
@@ -961,14 +1006,46 @@ Index: linux-2.6.25-source/drivers/block/cloop.c
 +  }
 + return err;
 +}
++#endif
 +
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28)  /* API change in 2.6.28 */
++static int cloop_open(struct block_device *bdev, fmode_t mode)
++{
++ int cloop_num;
++ if(!bdev) return -EINVAL;
++ cloop_num=MINOR(bdev->bd_dev);
++ if(cloop_num > cloop_count-1) return -ENODEV;
++ /* Allow write open for ioctl, but not for mount. */
++ /* losetup uses write-open and flags=0x8002 to set a new file */
++ if(mode & FMODE_WRITE)
++  {
++   printk(KERN_WARNING "%s: Can't open device read-write in mode 0x%x\n", cloop_name, mode);
++   return -EROFS;
++  }
++ cloop_dev[cloop_num].refcnt+=1;
++ return 0;
++}
++
++static int cloop_close(struct gendisk *disk, fmode_t mode)
++{
++ int cloop_num, err=0;
++ if(!disk) return 0;
++ cloop_num=((struct cloop_device *)disk->private_data)->clo_number;
++ if(cloop_num < 0 || cloop_num > (cloop_count-1)) return 0;
++ cloop_dev[cloop_num].refcnt-=1;
++ return err;
++}
++
++#else
 +static int cloop_open(struct inode *inode, struct file *file)
 +{
 + int cloop_num;
 + if(!inode) return -EINVAL;
 + if(MAJOR(inode->i_rdev) != cloop_major)
 +  {
-+   printk(KERN_WARNING "%s: pseudo-major != %d\n", cloop_name, cloop_major);
++   printk(KERN_WARNING "%s: pseudo-major %d != %d\n", cloop_name,
++          MAJOR(inode->i_rdev), cloop_major);
 +   return -ENODEV;
 +  }
 + cloop_num=MINOR(inode->i_rdev);
@@ -990,7 +1067,8 @@ Index: linux-2.6.25-source/drivers/block/cloop.c
 + if(!inode) return 0;
 + if(MAJOR(inode->i_rdev) != cloop_major)
 +  {
-+   printk(KERN_WARNING "%s: pseudo-major != %d\n", cloop_name, cloop_major);
++   printk(KERN_WARNING "%s: pseudo-major %d != %d\n", cloop_name,
++          MAJOR(inode->i_rdev), cloop_major);
 +   return 0;
 +  }
 + cloop_num=MINOR(inode->i_rdev);
@@ -998,13 +1076,19 @@ Index: linux-2.6.25-source/drivers/block/cloop.c
 + cloop_dev[cloop_num].refcnt-=1;
 + return err;
 +}
++#endif
 +
 +static struct block_device_operations clo_fops =
 +{
 +        owner:		THIS_MODULE,
 +        open:           cloop_open,
 +        release:        cloop_close,
-+        ioctl:          cloop_ioctl
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28)  /* API change in 2.6.28 */
++	locked_ioctl:
++#else
++        ioctl:
++#endif
++			cloop_ioctl
 +};
 +
 +static int cloop_register_blkdev(int major_nr)
@@ -1178,10 +1262,10 @@ Index: linux-2.6.25-source/drivers/block/cloop.c
 +"depends=";
 +#endif
 +#endif
-Index: linux-2.6.25-source/drivers/block/compressed_loop.h
+Index: linux-2.6.26-source/drivers/block/compressed_loop.h
 ===================================================================
 --- /dev/null
-+++ linux-2.6.25-source/drivers/block/compressed_loop.h
++++ linux-2.6.26-source/drivers/block/compressed_loop.h
 @@ -0,0 +1,26 @@
 +#ifndef _COMPRESSED_LOOP_H
 +#define _COMPRESSED_LOOP_H
