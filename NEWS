@@ -10,7 +10,7 @@
       Please read about using ext4 in kernel 2.6.26:
       http://ext4.wiki.kernel.org/index.php/Ext4_Howto#For_people_who_are_running_Debian
       (Thanks Frédéric L. W. Meunier)
-    o Squashfs 3.4, unionfs 2.5.3, Cloop 2.628
+    o Squashfs 3.4, Unionfs 2.5.4, Cloop 2.628
   * Version 2.6.25.20
 
 * Version 0.7.6
