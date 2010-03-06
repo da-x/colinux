@@ -14,7 +14,7 @@ download_files()
 {
 	download_file "$GCC_ARCHIVE1" "$GCC_URL"
 	download_file "$GCC_ARCHIVE2" "$GCC_URL"
-	download_file "$BINUTILS_ARCHIVE" "$MINGW_URL"
+	download_file "$BINUTILS_ARCHIVE" "$BINUTILS_URL"
 	download_file "$MINGW_ARCHIVE" "$MINGW_URL"
 	download_file "$W32API_ARCHIVE" "$MINGW_URL"
 }

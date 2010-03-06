@@ -65,11 +65,12 @@ MINGW_URL=http://heanet.dl.sourceforge.net/sourceforge/mingw
 MINGW=mingw-runtime-$MINGW_VERSION
 MINGW_ARCHIVE=$MINGW.tar.gz
 
-BINUTILS_VERSION="2.17.50"
-BINUTILS_RELEASE="$BINUTILS_VERSION-20070129-1"
+BINUTILS_VERSION="2.19.1"
+BINUTILS_URL=ftp://ftp.gnu.org/pub/gnu/binutils
+BINUTILS_RELEASE="$BINUTILS_VERSION"
 BINUTILS=binutils-$BINUTILS_RELEASE
-BINUTILS_ARCHIVE=$BINUTILS-src.tar.gz
-BINUTILS_PATCH="patch/$BINUTILS.diff"
+BINUTILS_ARCHIVE=$BINUTILS.tar.bz2
+#BINUTILS_PATCH="patch/$BINUTILS.diff"
 
 # Minimal binutils version for target. Requirements from Linux kernel
 BINUTILS_REQUIREMENTS="2.12.0"
@@ -79,7 +80,7 @@ GCC_RELEASE="$GCC_VERSION"
 GCC=gcc-$GCC_RELEASE
 GCC_ARCHIVE1=gcc-core-$GCC_RELEASE.tar.bz2
 GCC_ARCHIVE2=gcc-g++-$GCC_RELEASE.tar.bz2
-GCC_URL=ftp://ftp.gnu.org/pub/gnu/gcc/gcc-$GCC_VERSION/
+GCC_URL=ftp://ftp.gnu.org/pub/gnu/gcc/gcc-$GCC_VERSION
 #GCC_PATCH="patch/$GCC.diff"
 
 W32API_VERSION=3.13
