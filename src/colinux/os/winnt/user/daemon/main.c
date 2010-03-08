@@ -10,7 +10,9 @@
  * the root directory.
  *
  */ 
-
+ 
+/* Main program of the "colinux-daemon.exe" */
+ 
 #include <stdio.h>
 #include <windows.h>
 #include <stdarg.h>
@@ -33,9 +35,10 @@
 
 COLINUX_DEFINE_MODULE("colinux-daemon");
 
-static co_daemon_t *g_daemon = NULL;
 bool_t co_running_as_service = PFALSE;
-static bool_t stoped = PFALSE;
+
+static co_daemon_t* g_daemon = NULL;
+static bool_t	    stoped   = PFALSE;
 
 /*
  * co_winnt_daemon_stop:
@@ -64,22 +67,22 @@ void co_winnt_daemon_stop(void)
  * This is needed because the default handler just calls ExitProcess(),
  * making sh*t out of the colinux system.
  */
-static BOOL WINAPI co_winnt_daemon_ctrl_handler( DWORD dwCtrlType )
+static BOOL WINAPI co_winnt_daemon_ctrl_handler(DWORD dwCtrlType)
 {
-	switch ( dwCtrlType )
+	switch (dwCtrlType)
 	{
 	case CTRL_C_EVENT:
 	case CTRL_BREAK_EVENT:
 		return TRUE;	// Don't let the user kill us that easily ;)
 	case CTRL_LOGOFF_EVENT:	
 		// Only shutdown if we are not a service
-		if ( co_running_as_service )
+		if (co_running_as_service)
 		    return FALSE;
 		// Shutdown to avoid corrupting the fs
 	case CTRL_CLOSE_EVENT:
 	case CTRL_SHUTDOWN_EVENT:
 		// Shutdown CoLinux "gracefully"
-		co_winnt_daemon_stop( );
+		co_winnt_daemon_stop();
 		return TRUE;
 	}
 	// Let windows or others handle it
@@ -88,7 +91,7 @@ static BOOL WINAPI co_winnt_daemon_ctrl_handler( DWORD dwCtrlType )
 	return FALSE;
 }
 
-co_rc_t co_winnt_daemon_main(co_start_parameters_t *start_parameters) 
+co_rc_t co_winnt_daemon_main(co_start_parameters_t* start_parameters) 
 {
 	co_rc_t rc;
 
@@ -97,11 +100,12 @@ co_rc_t co_winnt_daemon_main(co_start_parameters_t *start_parameters)
 		co_winnt_daemon_syntax();
 		return CO_RC(OK);
 	}
-
+	
+	/* Workaround multiprocessor bug */
 	co_winnt_affinity_workaround();
 
 	// Don't get aborted ;)
-	SetConsoleCtrlHandler( co_winnt_daemon_ctrl_handler, TRUE );
+	SetConsoleCtrlHandler(co_winnt_daemon_ctrl_handler, TRUE);
 
 	rc = co_daemon_create(start_parameters, &g_daemon);
 	if (!CO_OK(rc))
@@ -222,7 +226,9 @@ static co_rc_t co_winnt_main(LPSTR szCmdLine)
 			co_terminal_print("daemon: config not specified\n");
 			return CO_RC(ERROR);
 		}
-		return co_winnt_daemon_install_as_service(winnt_parameters.service_name, szCmdLine, start_parameters.network_types);
+		return co_winnt_daemon_install_as_service(winnt_parameters.service_name,
+							  szCmdLine,
+							  start_parameters.network_types);
 	}
 
 	if (winnt_parameters.remove_service) {
@@ -236,7 +242,8 @@ static co_rc_t co_winnt_main(LPSTR szCmdLine)
 	if (winnt_parameters.run_service) {
 		co_running_as_service = PTRUE;
 
-		co_terminal_print("colinux: running as service '%s'\n", winnt_parameters.service_name);
+		co_terminal_print("colinux: running as service '%s'\n",
+				  winnt_parameters.service_name);
 		if (start_parameters.launch_console)
 		{
 			co_terminal_print("colinux: not spawning a console, because we're running as service.\n");
@@ -259,10 +266,10 @@ static co_rc_t co_winnt_main(LPSTR szCmdLine)
 
 HINSTANCE co_current_win32_instance;
 
-int WINAPI WinMain(HINSTANCE hInstance, 
-		   HINSTANCE hPrevInstance,
-		   LPSTR szCmdLine,
-		   int iCmdShow) 
+int WINAPI WinMain(HINSTANCE	hInstance, 
+		   HINSTANCE	hPrevInstance,
+		   LPSTR	szCmdLine,
+		   int		iCmdShow) 
 {
 	co_rc_t rc;
 	int ret;

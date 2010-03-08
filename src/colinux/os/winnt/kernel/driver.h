@@ -11,8 +11,8 @@
 #ifndef __CO_WINNT_DRIVER_H__
 #define __CO_WINNT_DRIVER_H__
 
-#define CO_DRIVER_TYPE  0x00008300
-#define CO_DRIVER_NAME "CoLinuxDriver"
-#define CO_DRIVER_USER_PATH "\\\\.\\" CO_DRIVER_NAME
+#define CO_DRIVER_TYPE  	0x00008300
+#define CO_DRIVER_NAME 		"CoLinuxDriver"
+#define CO_DRIVER_USER_PATH 	"\\\\.\\" CO_DRIVER_NAME
 
 #endif

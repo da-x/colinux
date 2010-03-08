@@ -11,9 +11,27 @@
 #ifndef __COLINUX_OS_USER_CONFIG_H__
 #define __COLINUX_OS_USER_CONFIG_H__
 
+#if defined __cplusplus
+extern "C" {
+#endif
+
 #include <colinux/common/common.h>
 
-co_rc_t co_config_user_string_read(int monitor_index, const char *device_name, int device_index, const char *value_name, char *value, int size);
-co_rc_t co_config_user_string_write(int monitor_index, const char *device_name, int device_index, const char *value_name, const char *value);
+co_rc_t co_config_user_string_read(int		monitor_index,
+				   const char*	device_name,
+				   int		device_index,
+				   const char*	value_name,
+				   char*	value,
+				   int 		size);
 
+co_rc_t co_config_user_string_write(int		monitor_index,
+				    const char* device_name, 
+				    int		device_index,
+				    const char*	value_name,
+				    const char*	value);
+
+#if defined __cplusplus
+}
 #endif
+
+#endif /* __COLINUX_OS_USER_CONFIG_H__ */

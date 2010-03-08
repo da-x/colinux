@@ -16,7 +16,7 @@ extern "C" {
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <FL/x.h>
-#include <colinux/user/console/main.h>
+#include <colinux/user/console-fltk/main.h>
 
 #include <stdio.h>
 

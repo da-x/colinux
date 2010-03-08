@@ -58,6 +58,7 @@ void co_winnt_free_unicode(UNICODE_STRING *unicode_str)
 co_rc_t co_status_convert(NTSTATUS status)
 {
 	switch (status) {
+	case STATUS_END_OF_FILE:
 	case STATUS_PENDING:
 	case STATUS_SUCCESS: return CO_RC(OK);
 	case STATUS_NO_SUCH_FILE: 
@@ -526,6 +527,16 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 	int block_size;
 	int char_count;
 	co_rc_t rc;
+	int len;
+
+	// Check, that nobody move parent directory as new subdirectory
+	len = strlen(filename);
+	if (strncasecmp(filename, dest_filename, len) == 0 && dest_filename[len] == '\\') {
+		// Workarround, prevents memory corruption from upper-lower side effect
+		// Example: mv /cofs/testdir /cofs/TESTDIR/somedir
+		co_debug("Parent can not rename itself (%s,%s)", filename, dest_filename);
+		return CO_RC(INVALID_PARAMETER);
+	}
 
 	char_count = co_utf8_mbstrlen(dest_filename);
 	block_size = (char_count + 1)*sizeof(WCHAR) + sizeof(FILE_RENAME_INFORMATION);
