@@ -6,6 +6,14 @@
      an OS switch, example for page allocations. This ends with an endless
      FPU fault, see bug#2524658.
 
+ * COFB:
+   * Merge with covideo.
+   * Implement mouse handling X module, ref. vbmouse in vbox.
+   * Make screen scroll working.
+   * Test linux host cofb.
+   * Copy from X window then paste to host.
+   * Seamless window ref. vbox addon
+ 
  * Consoles:
    * Make the consoles scrollable/resizable.
    * Add select, copy and paste to and from console and to and from
