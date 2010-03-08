@@ -8,8 +8,8 @@
  * the root directory.
  *
  */ 
-#ifndef __COLINUX_USER_NSELECT_MONITOR_H__
-#define __COLINUX_USER_NSELECT_MONITOR_H__
+#ifndef __COLINUX_USER_SELECT_MONITOR_H__
+#define __COLINUX_USER_SELECT_MONITOR_H__
 
 extern "C" {
     #include <colinux/common/common.h>
