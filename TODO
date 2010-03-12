@@ -1,3 +1,7 @@
+ * Build system
+   * MinGW32 GCC > 4.1.2 will crash on loading linux.sys, because object divdi3
+     contains debug symbols (.debug_line, .debug_ranges) in relocation tables.
+
  * Kernel:
    * Merge coLinux kernel patch with official kernels paravirt_ops.
      "lguest" in kernel code is a good start point.
@@ -13,7 +17,12 @@
    * Test linux host cofb.
    * Copy from X window then paste to host.
    * Seamless window ref. vbox addon
- 
+
+ * Operating system ports:
+   * Create build environment, driver and daemons for 64 bit Windows.
+   * Upgrade Linux as host for more recent kernels, and for 64 bit.
+   * Continue OSX port.
+
  * Consoles:
    * Make the consoles scrollable/resizable.
    * Add select, copy and paste to and from console and to and from
@@ -71,26 +80,15 @@
    * Import features from UML
 
  * conet: 
-   * To fix: If the host connection is lost and returned, colinux-daemon will not 
-     automatically return conet.
+   * To fix: If the host connection is lost and returned, colinux-daemon will
+     not automatically return conet.
    * Possibly WinPCAP related, but a fix for support of wireless networks
      would be great.
    * Possibly WinPCAP related, compatibility with IPv6: IPv6 can be
      obtained but setting the IPv6 host address based on routeradvertisements
      is not working fine (I can see IPv6 traffic though in coLinux).
-   * Tune performance (i.e reduce round trip time and increase bandwidth).
 
  * Root file system images: 
-   * Fix and improve the Debian image.
-     * Add ssh to it. the fact that we will end with the same sshd private keys
-       all around the world is not a big issue :)
-     * Fix the minor bits of editing needed as described on the Wiki.
-     * Edit /etc/fstab to use extfs3
-     * Etc-update and etc-upgrade up to today (a few packages but several Mo)
-     * Remove some orphan package, like lilo? 
-     * Add some 'obvious' packages that seems to be missing like ftp, strace. 
-       the kind of software that we might need BEFORE being able to use apt-get.
-     * And call it with a n+1 release name.
    * Post more images on SourceForge. Send me URLs of ready images. I will
      not accept images that are tied to specific coLinux releases.
 
@@ -103,4 +101,3 @@
    * Clear out some function naming brain damage and make more use
      of the 'static' keyword :).
    * The usual tidbits: comments, refactoring, etc.
-
