@@ -18,11 +18,6 @@
    * Copy from X window then paste to host.
    * Seamless window ref. vbox addon
 
- * Operating system ports:
-   * Create build environment, driver and daemons for 64 bit Windows.
-   * Upgrade Linux as host for more recent kernels, and for 64 bit.
-   * Continue OSX port.
-
  * Consoles:
    * Make the consoles scrollable/resizable.
    * Add select, copy and paste to and from console and to and from
@@ -65,6 +60,11 @@
      devices. More user friendliness could be added there to support the
      installation of one or more TAP devices.
    * Add nice wizards for the newbies.
+
+ * Operating system ports:
+   * Create build environment, driver and daemons for 64 bit Windows.
+   * Upgrade Linux as host for more recent kernels, and for 64 bit.
+   * Continue OSX port.
 
  * Miscellaneous enhancements and fixes:
    * Lack of entropy - empty /dev/random
