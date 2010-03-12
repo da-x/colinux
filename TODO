@@ -1,3 +1,4 @@
+xxdiff --decision --merge --merged-filename="/tmp/xxdiff-subversion.Z8EQhh" --title1 ".mine" --title2 ".r1347" --title3 ".r1385" devel/.svn/tmp/tempfile.tmp devel/.svn/text-base/TODO.svn-base devel/.svn/tmp/text-base/TODO.svn-base
  * Build system
    * MinGW32 GCC > 4.1.2 will crash on loading linux.sys, because object divdi3
      contains debug symbols (.debug_line, .debug_ranges) in relocation tables.
@@ -9,6 +10,19 @@
      Problem is, that inside usage of sse/mmx registers we can not allow
      an OS switch, example for page allocations. This ends with an endless
      FPU fault, see bug#2524658.
+
+ * COFB:
+   * Merge with covideo.
+   * Implement mouse handling X module, ref. vbmouse in vbox.
+   * Make screen scroll working.
+   * Test linux host cofb.
+   * Copy from X window then paste to host.
+   * Seamless window ref. vbox addon
+
+ * Operating system ports:
+   * Create build environment, driver and daemons for 64 bit Windows.
+   * Upgrade Linux as host for more recent kernels, and for 64 bit.
+   * Continue OSX port.
 
  * Consoles:
    * Make the consoles scrollable/resizable.
