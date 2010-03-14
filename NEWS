@@ -16,6 +16,11 @@
   Updated tools:
   * binutils 2.19.1
 
+* Version 0.7.7
+
+  Kernel:
+  * CONFIG_SYSFS_DEPRECATED: Disabled. Newer udev don't like it. (El Topo)
+
 * Version 0.7.6
   * Bug #2895531: "mkfs.ext3 freezes on scsi disks" fixed by limit number
     of entries in scsi queue from 73 to 32, and changed type from Critical-
