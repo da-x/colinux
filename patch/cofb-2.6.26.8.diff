@@ -76,7 +76,7 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.26.8-source/drivers/video/cofb.c
-@@ -0,0 +1,550 @@
+@@ -0,0 +1,549 @@
 +/*
 + *  linux/drivers/video/cofb.c -- CoLinux Virtual frame buffer device
 + *
@@ -600,15 +600,14 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +
 +	/* Map pfn's one by one (as they aren't contiguous) */
 +	unsigned long i = 0;
++	unsigned long uva = vma->vm_start;
 +	while ( i < num_pages )
 +	{
-+		unsigned long uva = vma->vm_start + i*PAGE_SIZE;
-+		unsigned long pa = ptes[i+1] & PAGE_MASK;
-+// was io_remap_page_range( vma, uva, pa, PAGE_SIZE,
-+//                                         vma->vm_page_prot );
-+		if(io_remap_pfn_range( vma, uva, (pa)>>PAGE_SHIFT, PAGE_SIZE,
-+					vma->vm_page_prot ))return -EAGAIN;
++		unsigned long pa = (ptes[i+1] & PAGE_MASK) >> PAGE_SHIFT;
++		if(io_remap_pfn_range(vma, uva, pa, PAGE_SIZE, vma->vm_page_prot))
++			return -EAGAIN;
 +		++i;
++		uva += PAGE_SIZE;
 +	}
 +
 +	return 0;
