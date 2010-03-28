@@ -735,7 +735,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
  #include <linux/module.h>
  #include <linux/types.h>
  #include <linux/sched.h>
-@@ -23,460 +26,604 @@
+@@ -23,23 +26,169 @@
  #include <linux/vt_kern.h>
  #include <linux/selection.h>
  #include <linux/init.h>
@@ -745,6 +745,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
  
  #include <linux/cooperative_internal.h>
 +#include <linux/cooperative_video.h>
++#include <linux/covideo.h>
  
 +/* --------------------------------------------------------------------- */
  /*
@@ -827,8 +828,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 +	return 1;
 +}
 +__setup("vga=", cocon_setup);
- 
--static const char __init *cocon_startup(void)
++
 +/* --------------------------------------------------------------------- */
 +/*
 + * Lock video memory.
@@ -846,24 +846,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 + */
 +static int cocon_no_unlock = 0;
 +static void cocon_lock(void)
- {
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	co_message = co_send_message_save(&flags);
--	if (co_message) {
--		message = (co_console_message_t *)co_message->data;
--		co_message->from = CO_MODULE_LINUX;
--		co_message->to = CO_MODULE_CONSOLE;
--		co_message->priority = CO_PRIORITY_DISCARDABLE;
--		co_message->type = CO_MESSAGE_TYPE_STRING;
--		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_STARTUP;
--		co_switch_wrapper();
--		if (message->type == CO_OPERATION_CONSOLE_SIZES) {
--			cocon_cols = message->sizes.cols;
--			cocon_rows = message->sizes.rows;
++{
 +	/*
 +	 * If the locking fails, sleep for a while, so the lock owner
 +	 * has time to release the lock.
@@ -875,13 +858,11 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 +			/* Fake success if we can't wait */
 +			cocon_no_unlock = 1;
 +			return;
- 		}
--		co_passage_page_release(flags);
++		}
 +		msleep( 5 );
- 	}
++	}
 +}
- 
--	return "CoCON";
++
 +/* --------------------------------------------------------------------- */
 +/*
 + *  Release lock on video memory.
@@ -900,9 +881,9 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 +	}
 +	BUG_ON( co_atomic_read(&cocon_info->header.lock) != 0 );
 +	co_atomic_unlock( &cocon_info->header.lock );
- }
++}
  
--static void cocon_init(struct vc_data *c, int init)
+-static const char __init *cocon_startup(void)
 +/* --------------------------------------------------------------------- */
 +/*
 + * Setup video memory for cocon usage.
@@ -919,23 +900,54 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 + */
 +static const char *cocon_startup(void)
  {
--	unsigned long flags;
--	co_console_message_t *message;
++	unsigned long cp_buffer, cp_size;
+ 	unsigned long flags;
+ 	co_console_message_t *message;
 -	co_message_t *co_message;
+-
++	co_message_t *co_message; 
+ 	co_message = co_send_message_save(&flags);
++
+ 	if (co_message) {
+ 		message = (co_console_message_t *)co_message->data;
+ 		co_message->from = CO_MODULE_LINUX;
+@@ -49,434 +198,472 @@ static const char __init *cocon_startup(
+ 		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+ 		message->type = CO_OPERATION_CONSOLE_STARTUP;
+ 		co_switch_wrapper();
+-		if (message->type == CO_OPERATION_CONSOLE_SIZES) {
+-			cocon_cols = message->sizes.cols;
+-			cocon_rows = message->sizes.rows;
+-		}
++		/* don't create more call stack in between?? */
+ 		co_passage_page_release(flags);
+-	}
++	} 
++        /* Get our config */
++        co_passage_page_assert_valid();
++        co_passage_page_acquire(&flags);
++        co_passage_page->operation = CO_OPERATION_DEVICE;
++        co_passage_page->params[0] = CO_DEVICE_VIDEO;
++        co_passage_page->params[1] = CO_VIDEO_GET_CONFIG;
++        //co_passage_page->params[2] = unit;
++        co_passage_page->params[2] = 0xdeadbeef;
++        co_switch_wrapper();
++        //rc = co_passage_page->params[0];
++        int rc = co_passage_page->params[0];
++        covideo_config_t *cp = (covideo_config_t *) &co_passage_page->params[1];
++        cp_buffer = (unsigned long)cp->buffer;
++        cp_size = cp->size;
++        /* don't create more call stack in between?? */
++        co_passage_page_release(flags);
++        printk( KERN_INFO"cofb: %x testbase %lXh mem: %lu bytes\n", rc,cp_buffer, cp_size );
++	/* it is possible to write to both co_video_base and send host console message
++	 * but when cofb is on, it will switch to fbcon very soon. 
++	 * TODO, in fbcon implement host console message
++	 */
 +	printk(KERN_INFO"cocon: video=%lXh (size=%lu bytes)\n", co_video_base, co_video_size );
- 
--	/* We cannot be loaded as a module, therefore init is always 1 */
--	c->vc_can_do_color = 1;
--	c->vc_cols = cocon_cols;
--	c->vc_rows = cocon_rows;
--	c->vc_complement_mask = 0x7700;
--	c->vc_visible_origin = 0;
--	c->vc_origin = 0;
++
 +	BUG_ON( co_video_size < 4096 );
- 
--	co_message = co_send_message_save(&flags);
--	if (!co_message)
--		return;
++
 +	cocon_info = (struct cocon_video_mem_info *) co_video_base;
 +	cocon_info->header.magic = CO_VIDEO_MAGIC_COCON;
 +	cocon_info->header.size  = sizeof(*cocon_info);
@@ -1005,7 +1017,37 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 +	/* Set flags that signal changes */
 +	cocon_info->header.flags |= CO_VIDEO_FLAG_INFO_CHANGE
 +					| CO_VIDEO_FLAG_DIRTY;
++
++	/* All done, unlock memory */
++	cocon_unlock();
  
+ 	return "CoCON";
+ }
+ 
+-static void cocon_init(struct vc_data *c, int init)
+-{
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
++/* --------------------------------------------------------------------- */
+ 
++static
++void cocon_init( struct vc_data *c, int init )
++{
+ 	/* We cannot be loaded as a module, therefore init is always 1 */
+ 	c->vc_can_do_color = 1;
+-	c->vc_cols = cocon_cols;
+-	c->vc_rows = cocon_rows;
++	c->vc_cols = COLS;
++	c->vc_rows = ROWS;
+ 	c->vc_complement_mask = 0x7700;
+ 	c->vc_visible_origin = 0;
+ 	c->vc_origin = 0;
+-
+-	co_message = co_send_message_save(&flags);
+-	if (!co_message)
+-		return;
+-
 -	message = (co_console_message_t *)co_message->data;
 -	co_message->from = CO_MODULE_LINUX;
 -	co_message->to = CO_MODULE_CONSOLE;
@@ -1014,22 +1056,20 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
 -	message->type = CO_OPERATION_CONSOLE_INIT;
 -	co_send_message_restore(flags);
--}
--
++	c->vc_scan_lines = ROWS*cocon_info->font_height;
++	c->vc_font.height = cocon_info->font_height;
+ }
+ 
 -static void cocon_deinit(struct vc_data *c)
 -{
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
-+	/* All done, unlock memory */
-+	cocon_unlock();
- 
+-
 -	co_message = co_send_message_save(&flags);
 -	if (!co_message)
 -		return;
-+	return "CoCON";
-+}
- 
+-
 -	message = (co_console_message_t *)co_message->data;
 -	co_message->from = CO_MODULE_LINUX;
 -	co_message->to = CO_MODULE_CONSOLE;
@@ -1038,37 +1078,22 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -	co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
 -	message->type = CO_OPERATION_CONSOLE_DEINIT;
 -	co_send_message_restore(flags);
+-
+-}
 +/* --------------------------------------------------------------------- */
  
-+static
-+void cocon_init( struct vc_data *c, int init )
-+{
-+	/* We cannot be loaded as a module, therefore init is always 1 */
-+	c->vc_can_do_color = 1;
-+	c->vc_cols = COLS;
-+	c->vc_rows = ROWS;
-+	c->vc_complement_mask = 0x7700;
-+	c->vc_visible_origin = 0;
-+	c->vc_origin = 0;
-+	c->vc_scan_lines = ROWS*cocon_info->font_height;
-+	c->vc_font.height = cocon_info->font_height;
- }
- 
 -static void cocon_clear(struct vc_data *c, int top, int left, int rows, int cols)
--{
++static
++void cocon_deinit( struct vc_data *c )
+ {
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
-+/* --------------------------------------------------------------------- */
- 
+-
 -	co_message = co_send_message_save(&flags);
 -	if (!co_message)
 -		return;
-+static
-+void cocon_deinit( struct vc_data *c )
-+{
-+}
- 
+-
 -	message = (co_console_message_t *)co_message->data;
 -	co_message->from = CO_MODULE_LINUX;
 -	co_message->to = CO_MODULE_CONSOLE;
@@ -1082,8 +1107,8 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -	message->clear.right = left + cols - 1;
 -	message->clear.charattr = c->vc_video_erase_char;
 -	co_send_message_restore(flags);
--}
--
+ }
+ 
 -static void cocon_putc(struct vc_data *c, int charattr, int y, int x)
 -{
 -	unsigned long flags;
@@ -1121,13 +1146,12 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
  
 -static void cocon_putcs(struct vc_data *conp,
 -			const unsigned short *s, int count, int yy, int xx)
--{
++static
++void cocon_putc( struct vc_data *c, int charattr, int y, int x )
+ {
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
-+static
-+void cocon_putc( struct vc_data *c, int charattr, int y, int x )
-+{
 +	cocon_lock();
 +	*SCRWP(y,x) = charattr;
 +	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
@@ -1199,7 +1223,8 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -	co_message_t *co_message;
 -	co_console_message_t *message;
 -	unsigned long x = (unsigned long)(p - c->vc_origin);  // UPDATE: vc_origin = 0; but not yet
--
++/* --------------------------------------------------------------------- */
+ 
 -	co_message = co_send_message_save(&flags);
 -	if (co_message) {
 -		message = (co_console_message_t *)co_message->data;
@@ -1213,15 +1238,6 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -		message->invert.x = ((unsigned)x)-(message->invert.y);
 -		message->invert.count = count;
 -		co_send_message_restore(flags);
--	}
--
--	while (count--) {
--		u16 a = scr_readw(p);
--		a = ((a) & 0x88ff) | (((a) & 0x7000) >> 4) | (((a) & 0x0700) << 4);
--		scr_writew(a, p++);
--        }
-+/* --------------------------------------------------------------------- */
- 
 +static
 +void cocon_invert_region( struct vc_data *c, u16 *p, int count )
 +{
@@ -1231,7 +1247,14 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 +		a = (a & 0x88ff) | ((a & 0x7000) >> 4)
 +			| ((a & 0x0700) << 4);
 +		scr_writew( a, p++ );
-+	}
+ 	}
+-
+-	while (count--) {
+-		u16 a = scr_readw(p);
+-		a = ((a) & 0x88ff) | (((a) & 0x7000) >> 4) | (((a) & 0x0700) << 4);
+-		scr_writew(a, p++);
+-        }
+-
  }
  
 -static void cocon_cursor(struct vc_data *c, int mode)
@@ -1239,12 +1262,12 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
-+/* --------------------------------------------------------------------- */
- 
+-
 -	co_message = co_send_message_save(&flags);
 -	if (!co_message)
 -		return;
--
++/* --------------------------------------------------------------------- */
+ 
 -	message = (co_console_message_t *)co_message->data;
 -	co_message->from = CO_MODULE_LINUX;
 -	co_message->to = CO_MODULE_CONSOLE;
@@ -1339,7 +1362,9 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
--
++		cocon_info->header.flags |= CO_VIDEO_FLAG_INFO_CHANGE;
++		cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
+ 
 -	co_message = co_send_message_save(&flags);
 -	if (co_message) {
 -		message = (co_console_message_t *)co_message->data;
@@ -1350,17 +1375,25 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
 -		message->type = CO_OPERATION_CONSOLE_SWITCH;
 -		co_send_message_restore(flags);
--	}
--
++		cocon_unlock();
+ 	}
+ 
 -	return 1;	/* Redrawing not needed */
--}
--
++	return 1;	/* Redrawing needed */
+ }
+ 
 -static int cocon_set_palette(struct vc_data *c, unsigned char *table)
--{
++/* --------------------------------------------------------------------- */
++
++static
++int cocon_set_palette( struct vc_data *c, unsigned char *table )
+ {
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
--
++	return -EINVAL;
++}
+ 
 -	co_message = co_send_message_save(&flags);
 -	if (co_message) {
 -		message = (co_console_message_t *)co_message->data;
@@ -1371,26 +1404,27 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
 -		message->type = CO_OPERATION_CONSOLE_SET_PALETTE;
 -		co_send_message_restore(flags);
-+		cocon_info->header.flags |= CO_VIDEO_FLAG_INFO_CHANGE;
-+		cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
-+
-+		cocon_unlock();
- 	}
+-	}
++/* --------------------------------------------------------------------- */
  
--	return 1;
-+	return 1;	/* Redrawing needed */
++static
++int cocon_blank( struct vc_data *c, int blank, int mode_switchg )
++{
+ 	return 1;
  }
  
 -static int cocon_blank(struct vc_data *c, int blank, int mode_switchg)
 +/* --------------------------------------------------------------------- */
 +
 +static
-+int cocon_set_palette( struct vc_data *c, unsigned char *table )
++int cocon_scrolldelta( struct vc_data *c, int lines )
  {
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
--
++	int backlines = (cocon_scr_base - cocon_scr_start)/(COLS*2);
++	int scrollback = cocon_info->scrollback;
+ 
 -	co_message = co_send_message_save(&flags);
 -	if (co_message) {
 -		message = (co_console_message_t *)co_message->data;
@@ -1401,41 +1435,6 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
 -		message->type = CO_OPERATION_CONSOLE_BLANK;
 -		co_send_message_restore(flags);
--	}
-+	return -EINVAL;
-+}
-+
-+/* --------------------------------------------------------------------- */
- 
-+static
-+int cocon_blank( struct vc_data *c, int blank, int mode_switchg )
-+{
- 	return 1;
- }
- 
-+/* --------------------------------------------------------------------- */
- 
--static int cocon_scrolldelta(struct vc_data *c, int lines)
-+static
-+int cocon_scrolldelta( struct vc_data *c, int lines )
- {
--	unsigned long flags;
--	co_console_message_t *message;
--	co_message_t *co_message;
--
--	co_message = co_send_message_save(&flags);
--	if (co_message) {
--		message = (co_console_message_t *)co_message->data;
--		co_message->from = CO_MODULE_LINUX;
--		co_message->to = CO_MODULE_CONSOLE;
--		co_message->priority = CO_PRIORITY_DISCARDABLE;
--		co_message->type = CO_MESSAGE_TYPE_STRING;
--		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
--		message->type = CO_OPERATION_CONSOLE_SCROLLDELTA;
--		co_send_message_restore(flags);
-+	int backlines = (cocon_scr_base - cocon_scr_start)/(COLS*2);
-+	int scrollback = cocon_info->scrollback;
-+
 +	if ( lines > 0 )
 +	{
 +		cocon_lock();
@@ -1461,12 +1460,38 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 +	return 0;
  }
  
--static int cocon_set_origin(struct vc_data *c)
 +/* --------------------------------------------------------------------- */
-+
+ 
+-static int cocon_scrolldelta(struct vc_data *c, int lines)
 +static
 +int cocon_set_origin( struct vc_data *c )
  {
+-	unsigned long flags;
+-	co_console_message_t *message;
+-	co_message_t *co_message;
++	cocon_lock();
++	cocon_info->scrollback = 0;
++	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
++	cocon_unlock();
+ 
+-	co_message = co_send_message_save(&flags);
+-	if (co_message) {
+-		message = (co_console_message_t *)co_message->data;
+-		co_message->from = CO_MODULE_LINUX;
+-		co_message->to = CO_MODULE_CONSOLE;
+-		co_message->priority = CO_PRIORITY_DISCARDABLE;
+-		co_message->type = CO_MESSAGE_TYPE_STRING;
+-		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
+-		message->type = CO_OPERATION_CONSOLE_SCROLLDELTA;
+-		co_send_message_restore(flags);
+-	}
+-
+-	return 1;
++	return 0;
+ }
+ 
+-static int cocon_set_origin(struct vc_data *c)
+-{
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
@@ -1482,25 +1507,25 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -		message->type = CO_OPERATION_CONSOLE_SET_ORIGIN;
 -		co_send_message_restore(flags);
 -	}
-+	cocon_lock();
-+	cocon_info->scrollback = 0;
-+	cocon_info->header.flags |= CO_VIDEO_FLAG_DIRTY;
-+	cocon_unlock();
++/* --------------------------------------------------------------------- */
  
 -	return 1;
-+	return 0;
++static
++void cocon_save_screen( struct vc_data *c )
++{
  }
  
 -static void cocon_save_screen(struct vc_data *c)
 +/* --------------------------------------------------------------------- */
 +
 +static
-+void cocon_save_screen( struct vc_data *c )
++int cocon_scroll( struct vc_data *c, int t, int b, int dir, int lines )
  {
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
--
++	int backlines = (cocon_scr_base - cocon_scr_start)/(COLS*2);
+ 
 -	co_message = co_send_message_save(&flags);
 -	if (co_message) {
 -		message = (co_console_message_t *)co_message->data;
@@ -1512,14 +1537,18 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -		message->type = CO_OPERATION_CONSOLE_SAVE_SCREEN;
 -		co_send_message_restore(flags);
 -	}
- }
+-}
++	if (!lines)
++		return 0;
  
 -static int cocon_scroll(struct vc_data *c, int t, int b, int dir, int lines)
 -{
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
--
++	if (lines > c->vc_rows)	/* maximum realistic size */
++		lines = c->vc_rows;
+ 
 -	co_message = co_send_message_save(&flags);
 -	if (co_message) {
 -		message = (co_console_message_t *)co_message->data;
@@ -1536,19 +1565,6 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -		message->scroll.bottom = b-1;
 -		message->scroll.lines = lines;
 -		co_send_message_restore(flags);
-+/* --------------------------------------------------------------------- */
-+
-+static
-+int cocon_scroll( struct vc_data *c, int t, int b, int dir, int lines )
-+{
-+	int backlines = (cocon_scr_base - cocon_scr_start)/(COLS*2);
-+
-+	if (!lines)
-+		return 0;
-+
-+	if (lines > c->vc_rows)	/* maximum realistic size */
-+		lines = c->vc_rows;
-+
 +	cocon_lock();
 +	switch (dir)
 +	{
@@ -1702,7 +1718,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
  const struct consw colinux_con = {
  	con_startup:		cocon_startup,
  	con_init:		cocon_init,
-@@ -489,13 +636,13 @@ const struct consw colinux_con = {
+@@ -489,13 +676,13 @@ const struct consw colinux_con = {
  	con_bmove:		cocon_bmove,
  	con_switch:		cocon_switch,
  	con_blank:		cocon_blank,

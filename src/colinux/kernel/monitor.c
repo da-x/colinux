@@ -369,11 +369,9 @@ static bool_t device_request(co_monitor_t *cmon, co_device_t device, unsigned lo
 		co_scsi_request(cmon, params[0], params[1]);
 		return PTRUE;
 
-#ifdef CONFIG_COOPERATIVE_VIDEO
 	case CO_DEVICE_VIDEO:
 		co_video_request(cmon, params[0], params[1]);
 		return PTRUE;
-#endif
 
 	default:
 		break;

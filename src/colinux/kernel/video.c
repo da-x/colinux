@@ -10,12 +10,12 @@
  */
 
 #include <colinux/common/libc.h>
+#include <colinux/common/ioctl.h>
 #include <colinux/kernel/monitor.h>
 #include <colinux/os/alloc.h>
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/kernel/video.h>
 
-#ifdef CONFIG_COOPERATIVE_VIDEO
 #include <linux/covideo.h>
 
 #define COVIDEO_DEBUG 1
@@ -79,14 +79,14 @@ void co_video_request(co_monitor_t *cmon, int op, int unit) {
 	co_debug("op: %d, unit: %d", op, unit);
 #endif
 	// test merge of cofb and covideo, cp->buffer = dp->buffer;
-if (op == CO_VIDEO_GET_CONFIG){
+ if (op == CO_VIDEO_GET_CONFIG){
 			covideo_config_t *cp = (covideo_config_t *) &co_passage_page->params[1];
 
 			cp->buffer = cmon->video_vm_address;
 			cp->size   = cmon->video_size;
 			co_passage_page->params[0] = 0;
 	return;
-}
+ }
 	dp = get_dp(cmon, unit);
 	if (!dp) {
 		co_passage_page->params[0] = 1;
@@ -195,4 +195,3 @@ co_rc_t co_video_detach(co_monitor_t *cmon, co_monitor_ioctl_video_t *params) {
 
 	return CO_RC(OK);
 }
-#endif /* CONFIG_COOPERATIVE_VIDEO */
