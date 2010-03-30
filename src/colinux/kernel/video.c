@@ -82,7 +82,7 @@ void co_video_request(co_monitor_t *cmon, int op, int unit) {
  if (op == CO_VIDEO_GET_CONFIG){
 			covideo_config_t *cp = (covideo_config_t *) &co_passage_page->params[1];
 
-			cp->buffer = cmon->video_vm_address;
+			cp->buffer = (int *)cmon->video_vm_address;
 			cp->size   = cmon->video_size;
 			co_passage_page->params[0] = 0;
 	return;

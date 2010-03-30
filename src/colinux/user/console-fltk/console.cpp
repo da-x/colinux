@@ -558,7 +558,7 @@ void console_main_window::handle_message( co_message_t * msg )
     // Messages received from other modules (daemons)
     if ( msg->type == CO_MESSAGE_TYPE_STRING )
     {
-        co_module_name_t mod_name;
+        //co_module_name_t mod_name;
         ((char *)msg->data)[msg->size - 1] = '\0';
         //log( "%s: %s\n", co_module_repr(msg->from, &mod_name), msg->data );
         return;
