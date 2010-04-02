@@ -1,0 +1,9 @@
+Use cofb under X window (based on usage on debian distribution)
+framebuffer X driver, install xserver-xorg-video-fbdev from aptitude
+
+To let detect X auto detect mouse
+ln -s /dev/input/mouse0 /dev/mouse
+To disable X window mouse acceleration.
+xset m 1 0 
+
+
