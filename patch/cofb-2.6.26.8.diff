@@ -76,7 +76,7 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.26.8-source/drivers/video/cofb.c
-@@ -0,0 +1,638 @@
+@@ -0,0 +1,654 @@
 +/*
 + *  linux/drivers/video/cofb.c -- CoLinux Virtual frame buffer device
 + *
@@ -267,11 +267,31 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +static
 +int __init cofb_init( void )
 +{
++	unsigned fb_start = PAGE_SIZE;
++	unsigned fb_avail;
++	unsigned long flags;
++	covideo_config_t *cp;
 +	int rc;
 +
-+	printk( KERN_INFO"cofb: videobase %X mem: %lu KB\n", co_video_base,co_video_size >> 10 );
++        /* Get our config */
++        co_passage_page_assert_valid();
++        co_passage_page_acquire(&flags);
++        co_passage_page->operation = CO_OPERATION_DEVICE;
++        co_passage_page->params[0] = CO_DEVICE_VIDEO;
++        co_passage_page->params[1] = CO_VIDEO_GET_CONFIG;
++        //co_passage_page->params[2] = unit;
++        co_switch_wrapper();
++        rc = co_passage_page->params[0];
++        cp = (covideo_config_t *) &co_passage_page->params[1];
++	cofb_mem = (struct cofb_video_mem_info *) cp->buffer;
++	fb_avail = cp->size - 2*PAGE_SIZE;
++	co_passage_page_release(flags);
 +
-+	cofb_mem = (struct cofb_video_mem_info *) co_video_base;
++        /* If unable to get size, silently skip this device */
++        if (rc) return 0;
++
++	printk( KERN_INFO"cofb: videobase %X mem: %lu KB\n", cofb_mem,fb_avail >> 10 );
++	//printk( KERN_INFO"cofb: videobase %X mem: %lu KB\n", co_video_base,co_video_size >> 10 );
 +
 +#ifndef MODULE
 +	char *option = NULL;
@@ -280,12 +300,9 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +	rc = cofb_setup( option );
 +	if ( rc )
 +		return rc;
-+	printk( KERN_INFO"cofb: pass cofb_setup \n" );
 +#endif
 +
 +	/* Calculate fb sizes and start */
-+	unsigned fb_start = PAGE_SIZE;
-+	unsigned fb_avail = co_video_size - 2*PAGE_SIZE;
 +	unsigned bytes_per_pixel = (cofb_bpp + 7) >> 3;
 +	unsigned bwidth = cofb_width * bytes_per_pixel;
 +	unsigned fb_size  = PAGE_ALIGN( bwidth * cofb_height );
@@ -305,7 +322,7 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +	}
 +
 +	info->fbops		= &cofb_ops;
-+	info->screen_base	= (char __iomem *) (co_video_base + fb_start);
++	info->screen_base	= (char __iomem *)(cofb_mem) + fb_start;
 +	info->screen_size	= fb_avail;
 +	info->pseudo_palette	= info->par;
 +	info->par		= NULL;
@@ -350,7 +367,7 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +	}
 +
 +	printk( "fb%d: %s device ready, using %luKB (%dx%dx%d)\n",
-+		info->node, info->fix.id, co_video_size >> 10,
++		info->node, info->fix.id, fb_avail >> 10,
 +		info->var.xres, info->var.yres, info->var.bits_per_pixel );
 +
 +	/* All done, success! */
@@ -491,10 +508,10 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +	 */
 +
 +	/* Setup the shared buffer data */
-+	cofb_mem = (struct cofb_video_mem_info *) co_video_base;
++	//always fixed? cofb_mem = (struct cofb_video_mem_info *) co_video_base;
 +	cofb_lock();
 +	cofb_mem->header.magic = CO_VIDEO_MAGIC_COFB;
-+	cofb_mem->header.size  = sizeof(*cofb_mem);
++	cofb_mem->header.size  = sizeof(struct cofb_video_mem_info);
 +	cofb_mem->header.flags = CO_VIDEO_FLAG_INFO_CHANGE | CO_VIDEO_FLAG_DIRTY;
 +	cofb_mem->width        = info->var.xres_virtual;
 +	cofb_mem->height       = info->var.yres_virtual;
@@ -593,9 +610,9 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +static
 +int cofb_mmap( struct fb_info *info,
 +		struct vm_area_struct *vma )
-+{       // point to vptr_self_map-pagesize 0xfe80 0000-pagesize where last pte is
-+        // shoul store host pfn for video buffer
-+	u32 * ptes = (u32 *) (co_video_base + (1 << PMD_SHIFT) - PAGE_SIZE);
++{       // point to vptr_self_map-pagesize 0xfe80 0000-pagesize where last pte
++        // should store host pfn for video buffer
++	u32 * ptes = (u32 *) ((cofb_mem) + (1 << PMD_SHIFT) - PAGE_SIZE);
 +	u_long num_pages = (vma->vm_end - vma->vm_start) >> PAGE_SHIFT;
 +	printk( KERN_INFO"cofb_mmap: start=%lXh pages=%lu fix.smem_len=%X\n",
 +		vma->vm_start, num_pages, info->fix.smem_len );
@@ -657,7 +674,6 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +	cp = (covideo_config_t *) &co_passage_page->params[1];
 +	//co_video_base = cp->buffer;
 +	//co_video_size = cp->size;
-+	printk( KERN_INFO"cofb: testbase %X mem: %lu KB\n", cp->buffer, cp->size >> 10 );
 +	co_passage_page_release(flags);
 +	cofb_init();
 +	/* If unable to get size, silently skip this device */
@@ -735,7 +751,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
  #include <linux/module.h>
  #include <linux/types.h>
  #include <linux/sched.h>
-@@ -23,23 +26,169 @@
+@@ -23,23 +26,168 @@
  #include <linux/vt_kern.h>
  #include <linux/selection.h>
  #include <linux/init.h>
@@ -789,27 +805,25 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 + *    | [padding]                        |
 + *    +----------------------------------+ co_video_base + co_video_size
 + *
-+ */
+  */
 +static struct cocon_video_mem_info *    cocon_info;
-+
++static unsigned long cocon_size;
 +/* Some shortcuts */
 +#define COLS             (cocon_info->num_cols)
 +#define ROWS             (cocon_info->num_rows)
 +#define BLANK(vc)        (vc->vc_video_erase_char)
-+#define cocon_scr_start  (co_video_base + cocon_info->scr_start)
-+#define cocon_scr_base   (co_video_base + cocon_info->scr_base)
-+#define cocon_scr_end    (co_video_base + cocon_info->scr_end)
-+#define cocon_font_data  (co_video_base + cocon_info->font_data)
-+#define SCRWP(y,x)       (((u16*)cocon_scr_base) + (y)*COLS + (x))
++#define COCON_SCR_START  ((u8*)(cocon_info) + cocon_info->scr_start)
++#define COCON_SCR_BASE   ((u8*)(cocon_info) + cocon_info->scr_base)
++#define COCON_SCR_END    ((u8*)(cocon_info) + cocon_info->scr_end)
++#define COCON_FONT_DATA  ((u8*)(cocon_info) + cocon_info->font_data)
++#define SCRWP(y,x)       (((u16*)COCON_SCR_BASE) + (y)*COLS + (x))
 +
 +/*
 + * Parse boot configuration: vga=COLSxROWS
-  */
++ */
 +static int __init cocon_cols = 80;
 +static int __init cocon_rows = 25;
- 
--static int cocon_cols = 80;
--static int cocon_rows = 25;
++
 +static int cocon_setup( char *options )
 +{
 +	if (!options || !*options)
@@ -828,7 +842,9 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 +	return 1;
 +}
 +__setup("vga=", cocon_setup);
-+
+ 
+-static int cocon_cols = 80;
+-static int cocon_rows = 25;
 +/* --------------------------------------------------------------------- */
 +/*
 + * Lock video memory.
@@ -900,7 +916,6 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 + */
 +static const char *cocon_startup(void)
  {
-+	unsigned long cp_buffer, cp_size;
  	unsigned long flags;
  	co_console_message_t *message;
 -	co_message_t *co_message;
@@ -911,7 +926,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
  	if (co_message) {
  		message = (co_console_message_t *)co_message->data;
  		co_message->from = CO_MODULE_LINUX;
-@@ -49,434 +198,472 @@ static const char __init *cocon_startup(
+@@ -49,434 +197,471 @@ static const char __init *cocon_startup(
  		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
  		message->type = CO_OPERATION_CONSOLE_STARTUP;
  		co_switch_wrapper();
@@ -935,25 +950,24 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 +        //rc = co_passage_page->params[0];
 +        int rc = co_passage_page->params[0];
 +        covideo_config_t *cp = (covideo_config_t *) &co_passage_page->params[1];
-+        cp_buffer = (unsigned long)cp->buffer;
-+        cp_size = cp->size;
++        cocon_info = (struct cocon_video_mem_info *) cp->buffer;
++        cocon_size = cp->size;
 +        /* don't create more call stack in between?? */
 +        co_passage_page_release(flags);
-+        printk( KERN_INFO"cofb: %x testbase %lXh mem: %lu bytes\n", rc,cp_buffer, cp_size );
++        printk( KERN_INFO"cocon: %x video=%lXh mem: %lu bytes\n", rc,cocon_info, cocon_size );
 +	/* it is possible to write to both co_video_base and send host console message
 +	 * but when cofb is on, it will switch to fbcon very soon. 
 +	 * TODO, in fbcon implement host console message
 +	 */
-+	printk(KERN_INFO"cocon: video=%lXh (size=%lu bytes)\n", co_video_base, co_video_size );
++	//printk(KERN_INFO"cocon: video=%lXh (size=%lu bytes)\n", co_video_base, co_video_size );
 +
-+	BUG_ON( co_video_size < 4096 );
-+
-+	cocon_info = (struct cocon_video_mem_info *) co_video_base;
++	BUG_ON( cocon_size < 4096 );
++	
 +	cocon_info->header.magic = CO_VIDEO_MAGIC_COCON;
-+	cocon_info->header.size  = sizeof(*cocon_info);
++	cocon_info->header.size  = sizeof(struct cocon_video_mem_info);
 +
 +	/* Align start to 32 bits */
-+	cocon_info->scr_start = sizeof(*cocon_info);
++	cocon_info->scr_start = sizeof(struct cocon_video_mem_info);
 +	cocon_info->scr_start = (cocon_info->scr_start + 3) & ~0x03;
 +
 +	/* Setup default 8x16 font data */
@@ -962,17 +976,17 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 +	cocon_info->font_height = f->height;
 +
 +	/* Check if we have enough memory for font ops ( >= 32KB) */
-+	if ( co_video_size >= (32 << 10) )
++	if ( cocon_size >= (32 << 10) )
 +	{
 +		/*
 +		 * If more than 48KB, reserve 32KB for font data (enough for
 +		 * table of 256 chars, 32x32 cells), else reserve 16KB for
 +		 * font data (enough for table of 256 chars, 16x32 cells).
 +		 */
-+		if ( co_video_size >= (48 << 10) )
-+			cocon_info->scr_end = co_video_size - (32 << 10);
++		if ( cocon_size >= (48 << 10) )
++			cocon_info->scr_end = cocon_size - (32 << 10);
 +		else
-+			cocon_info->scr_end = co_video_size - (16 << 10);
++			cocon_info->scr_end = cocon_size - (16 << 10);
 +		/*
 +		 * This give us a minimum of 16KB for screen & backlog,
 +		 * enough for a 80x50 screen (with 51 lines of backlog).
@@ -982,14 +996,14 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 +
 +		int fwb    = (f->width - 1)/8 + 1;   /* bytes per scanline */
 +		int fdsize = fwb * f->height * 256;
-+		int favail = co_video_base + co_video_size - cocon_font_data;
++		int favail = (u8*)(cocon_info) + cocon_size - COCON_FONT_DATA;
 +		BUG_ON( favail < fdsize );
-+		memcpy( (void*)cocon_font_data, f->data, fdsize );
++		memcpy( (void*)COCON_FONT_DATA, f->data, fdsize );
 +	}
 +	else
 +	{
 +		/* No space for font data. */
-+		cocon_info->scr_end     = co_video_size;
++		cocon_info->scr_end     = cocon_size;
 +		cocon_info->font_count  = 0;
 +		cocon_info->font_data   = 0;
 +	}
@@ -1002,17 +1016,17 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 +	cocon_info->scr_base = cocon_info->scr_end - (COLS*ROWS*2);
 +
 +	/* Adjust backlog to full lines */
-+	int backlines = (cocon_scr_base - cocon_scr_start)/(COLS*2);
++	int backlines = (COCON_SCR_BASE - COCON_SCR_START)/(COLS*2);
 +	cocon_info->scr_start = cocon_info->scr_base - backlines*COLS*2;
 +
 +	printk(KERN_INFO"cocon: scr_start=%lXh scr_base=%lXh scr_end=%lXh\n",
-+			cocon_scr_start, cocon_scr_base, cocon_scr_end );
++			COCON_SCR_START, COCON_SCR_BASE, COCON_SCR_END );
 +	printk(KERN_INFO"cocon: %dx%d font=%d chars scrollback=%d lines\n",
 +			COLS, ROWS, cocon_info->font_count, backlines );
 +
 +	/* Some sanity checks */
-+	BUG_ON( cocon_scr_start > cocon_scr_base );
-+	BUG_ON( cocon_scr_end > co_video_base + co_video_size );
++	BUG_ON( COCON_SCR_START > COCON_SCR_BASE );
++	BUG_ON( COCON_SCR_END > (u8*)(cocon_info) + cocon_size );
 +
 +	/* Set flags that signal changes */
 +	cocon_info->header.flags |= CO_VIDEO_FLAG_INFO_CHANGE
@@ -1262,12 +1276,12 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
--
++/* --------------------------------------------------------------------- */
+ 
 -	co_message = co_send_message_save(&flags);
 -	if (!co_message)
 -		return;
-+/* --------------------------------------------------------------------- */
- 
+-
 -	message = (co_console_message_t *)co_message->data;
 -	co_message->from = CO_MODULE_LINUX;
 -	co_message->to = CO_MODULE_CONSOLE;
@@ -1355,7 +1369,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -}
 +		/* Rebase screen offset */
 +		cocon_info->scr_base = cocon_info->scr_end - COLS*ROWS*2;
-+		BUG_ON( cocon_scr_base < cocon_scr_start );
++		BUG_ON( COCON_SCR_BASE < COCON_SCR_START );
  
 -static int cocon_switch(struct vc_data *c)
 -{
@@ -1422,7 +1436,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
-+	int backlines = (cocon_scr_base - cocon_scr_start)/(COLS*2);
++	int backlines = (COCON_SCR_BASE - COCON_SCR_START)/(COLS*2);
 +	int scrollback = cocon_info->scrollback;
  
 -	co_message = co_send_message_save(&flags);
@@ -1495,7 +1509,8 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
--
++/* --------------------------------------------------------------------- */
+ 
 -	co_message = co_send_message_save(&flags);
 -	if (co_message) {
 -		message = (co_console_message_t *)co_message->data;
@@ -1507,8 +1522,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -		message->type = CO_OPERATION_CONSOLE_SET_ORIGIN;
 -		co_send_message_restore(flags);
 -	}
-+/* --------------------------------------------------------------------- */
- 
+-
 -	return 1;
 +static
 +void cocon_save_screen( struct vc_data *c )
@@ -1524,7 +1538,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 -	unsigned long flags;
 -	co_console_message_t *message;
 -	co_message_t *co_message;
-+	int backlines = (cocon_scr_base - cocon_scr_start)/(COLS*2);
++	int backlines = (COCON_SCR_BASE - COCON_SCR_START)/(COLS*2);
  
 -	co_message = co_send_message_save(&flags);
 -	if (co_message) {
@@ -1660,7 +1674,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 +		return -ENOMEM;  /* Not enough video memory for font ops */
 +
 +	/* Check we have enough space to store the font data */
-+	unsigned mem_avail = co_video_base + co_video_size - cocon_font_data;
++	unsigned mem_avail = (u8*)(cocon_info) + cocon_size - COCON_FONT_DATA;
 +	unsigned fwb = (f->width - 1)/8 + 1;   /* bytes per scanline */
 +	unsigned data_size = fwb * f->height * f->charcount;
 +	unsigned chlen = fwb*f->height;
@@ -1681,7 +1695,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 +
 +	/* Copy "compressed" font data (comes as 32 scanlines per char) */
 +	unsigned i;
-+	u8* fdata = (u8 *) cocon_font_data;
++	u8* fdata = (u8 *) COCON_FONT_DATA;
 +	for ( i = 0; i < f->charcount; ++i )
 +		memcpy( &fdata[i*chlen], &f->data[i*fwb*32], chlen );
 +
@@ -1693,7 +1707,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 +	if ( !(flags & KD_FONT_FLAG_DONT_RECALC) )
 +	{
 +		int rows = vc->vc_scan_lines / f->height;
-+		int max_rows = (cocon_scr_end - cocon_scr_start)/(COLS*2);
++		int max_rows = (COCON_SCR_END - COCON_SCR_START)/(COLS*2);
 +		if ( rows > max_rows )
 +			rows = max_rows;
 +
@@ -1718,7 +1732,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
  const struct consw colinux_con = {
  	con_startup:		cocon_startup,
  	con_init:		cocon_init,
-@@ -489,13 +676,13 @@ const struct consw colinux_con = {
+@@ -489,13 +674,13 @@ const struct consw colinux_con = {
  	con_bmove:		cocon_bmove,
  	con_switch:		cocon_switch,
  	con_blank:		cocon_blank,
@@ -1771,17 +1785,7 @@ Index: linux-2.6.26.8-source/include/linux/cooperative_internal.h
 ===================================================================
 --- linux-2.6.26.8-source.orig/include/linux/cooperative_internal.h
 +++ linux-2.6.26.8-source/include/linux/cooperative_internal.h
-@@ -30,7 +30,8 @@ typedef struct co_proc_counts {
- 
- extern co_proc_counts_t co_proc_counts;
- #endif
--
-+extern unsigned long co_video_base;
-+extern unsigned long co_video_size;
- #define co_io_buffer ((co_io_buffer_t *)CO_VPTR_IO_AREA_START)
- #define cooperative_mode_enabled()     1
- 
-@@ -117,6 +118,43 @@ static inline void co_send_message_resto
+@@ -117,6 +117,43 @@ static inline void co_send_message_resto
  	co_passage_page_release(flags);
  }
  
@@ -2022,30 +2026,6 @@ Index: linux-2.6.26.8-source/include/linux/mm.h
  
  #ifndef VM_STACK_DEFAULT_FLAGS		/* arch can override this */
  #define VM_STACK_DEFAULT_FLAGS VM_DATA_DEFAULT_FLAGS
-Index: linux-2.6.26.8-source/kernel/cooperative.c
-===================================================================
---- linux-2.6.26.8-source.orig/kernel/cooperative.c
-+++ linux-2.6.26.8-source/kernel/cooperative.c
-@@ -17,7 +17,8 @@
- #include <linux/cooperative_internal.h>
- 
- CO_TRACE_STOP;
--
-+unsigned long co_video_base;
-+unsigned long co_video_size;
- co_boot_params_t co_boot_params;
- 
- typedef struct {
-@@ -36,6 +37,9 @@ co_proc_counts_t co_proc_counts;
- 
- void __init co_start_kernel(void)
- {
-+ 	co_boot_params_t *params = (co_boot_params_t *)co_passage_page->params;
-+        co_video_base = params->filler[0];
-+        co_video_size = params->filler[1];
-         memcpy(&co_boot_params, co_passage_page->params, sizeof(co_boot_params));
- 
- 	co_arch_start_kernel();
 Index: linux-2.6.26.8-source/mm/memory.c
 ===================================================================
 --- linux-2.6.26.8-source.orig/mm/memory.c
