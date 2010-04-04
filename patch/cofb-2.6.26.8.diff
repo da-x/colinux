@@ -279,7 +279,7 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +        co_passage_page->operation = CO_OPERATION_DEVICE;
 +        co_passage_page->params[0] = CO_DEVICE_VIDEO;
 +        co_passage_page->params[1] = CO_VIDEO_GET_CONFIG;
-+        //co_passage_page->params[2] = unit;
++        co_passage_page->params[2] = 0; // unit, default to only one device
 +        co_switch_wrapper();
 +        rc = co_passage_page->params[0];
 +        cp = (covideo_config_t *) &co_passage_page->params[1];
@@ -926,7 +926,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
  	if (co_message) {
  		message = (co_console_message_t *)co_message->data;
  		co_message->from = CO_MODULE_LINUX;
-@@ -49,434 +197,471 @@ static const char __init *cocon_startup(
+@@ -49,434 +197,470 @@ static const char __init *cocon_startup(
  		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
  		message->type = CO_OPERATION_CONSOLE_STARTUP;
  		co_switch_wrapper();
@@ -944,8 +944,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
 +        co_passage_page->operation = CO_OPERATION_DEVICE;
 +        co_passage_page->params[0] = CO_DEVICE_VIDEO;
 +        co_passage_page->params[1] = CO_VIDEO_GET_CONFIG;
-+        //co_passage_page->params[2] = unit;
-+        co_passage_page->params[2] = 0xdeadbeef;
++        co_passage_page->params[2] = 0; // unit, default to only one device
 +        co_switch_wrapper();
 +        //rc = co_passage_page->params[0];
 +        int rc = co_passage_page->params[0];
@@ -1732,7 +1731,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/cocon.c
  const struct consw colinux_con = {
  	con_startup:		cocon_startup,
  	con_init:		cocon_init,
-@@ -489,13 +674,13 @@ const struct consw colinux_con = {
+@@ -489,13 +673,13 @@ const struct consw colinux_con = {
  	con_bmove:		cocon_bmove,
  	con_switch:		cocon_switch,
  	con_blank:		cocon_blank,
