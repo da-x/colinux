@@ -612,7 +612,7 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +		struct vm_area_struct *vma )
 +{       // point to vptr_self_map-pagesize 0xfe80 0000-pagesize where last pte
 +        // should store host pfn for video buffer
-+	u32 * ptes = (u32 *) ((cofb_mem) + (1 << PMD_SHIFT) - PAGE_SIZE);
++	u32 * ptes = (u32 *) ((unsigned long)(cofb_mem) + (1 << PMD_SHIFT) - PAGE_SIZE);
 +	u_long num_pages = (vma->vm_end - vma->vm_start) >> PAGE_SHIFT;
 +	printk( KERN_INFO"cofb_mmap: start=%lXh pages=%lu fix.smem_len=%X\n",
 +		vma->vm_start, num_pages, info->fix.smem_len );

@@ -307,7 +307,7 @@ int console_main_window::handle( int event )
         if ( is_attached() && Fl::event_inside(wScroll_) )
         {
             handle_mouse_event( );
-            return 1;
+            //return 1;
         }
         break;
     case FL_KEYUP:
