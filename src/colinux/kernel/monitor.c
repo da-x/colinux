@@ -88,7 +88,8 @@ guest_video_init( co_monitor_t *cmon )
 	co_rc_t rc;
 
 	// Align guest address at a page dir offset
-	cmon->video_devs[0]->buffer = (CO_VPTR_SELF_MAP - cmon->video_devs[0]->size)&CO_ARCH_PMD_MASK;
+	unsigned long video_vm_address = (CO_VPTR_SELF_MAP - cmon->video_devs[0]->size)&CO_ARCH_PMD_MASK;
+	cmon->video_devs[0]->buffer = cmon->video_buffer;
 	//cmon->video_vm_address = (CO_VPTR_SELF_MAP - cmon->video_size)&CO_ARCH_PMD_MASK;
 	//cmon->video_vm_address &= CO_ARCH_PMD_MASK;
 	video_num_pages = cmon->video_devs[0]->size >> CO_ARCH_PAGE_SHIFT;
@@ -106,7 +107,7 @@ guest_video_init( co_monitor_t *cmon )
 
 	// Create PTE for it on the page directory
 	//video_map_offset = ((cmon->video_vm_address >> PGDIR_SHIFT) * sizeof(linux_pte_t));
-	video_map_offset = ((cmon->video_devs[0]->buffer >> PGDIR_SHIFT) * sizeof(linux_pte_t));
+	video_map_offset = ((video_vm_address >> PGDIR_SHIFT) * sizeof(linux_pte_t));
 	rc = co_monitor_create_ptes(
 		cmon,
 		cmon->import.kernel_swapper_pg_dir + video_map_offset,
@@ -133,7 +134,7 @@ guest_video_init( co_monitor_t *cmon )
 			unsigned long host_addr = (unsigned long)cmon->video_buffer
 						+ pte*CO_ARCH_PAGE_SIZE;
 			unsigned long pa = co_os_virt_to_phys( (void*)host_addr );
-			//co_debug_system( "%08lX ", pa );
+			//if(pte<5 || pte>video_num_pages-5)co_debug_system( "cofb %d pa %X ",pte,pa );
 			ptes[pte] = pa | _PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED;
 		}
 		else
@@ -616,7 +617,7 @@ static void co_monitor_getpp(co_monitor_t* cmon,
 		t = vaddr;
 		for(i=0; i < len; i += 4) {
 			pa = co_os_virt_to_phys(buffer);
-
+			//if(i<20||i>len-20)co_debug_system( "covideo %d pa %X ",i, pa );
 			*pp++ = pa;
 			t += CO_ARCH_PAGE_SIZE;
 			buffer += CO_ARCH_PAGE_SIZE;
