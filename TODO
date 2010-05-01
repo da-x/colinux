@@ -13,7 +13,10 @@
  * COFB:
    * Merge with covideo.
    * Implement mouse handling X module, ref. vbmouse in vbox.
-   * Make screen scroll working.
+   * Make screen scroll bar out of guest mouse region.
+   * menu->view->fit height to better use 16x9 notebook screen space.
+   * hide host mouse when in guest region. Or the easy way is use right-ctrl key 
+     to switch between host and guest control.
    * Test linux host cofb.
    * Copy from X window then paste to host.
    * Seamless window ref. vbox addon
