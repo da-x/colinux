@@ -1278,7 +1278,8 @@ co_rc_t co_monitor_create(co_manager_t*		     manager,
 	cmon->video_user_id = CO_INVALID_ID;
 	co_video_dev_t *dp = cmon->video_devs[0];
 	//cmon->video_size = params->config.video_size << 10;
-	dp->size = params->config.video_devs[0].size;
+	if (!params->config.video_devs[0].enabled) dp->size = 4096<<10;
+        else dp->size = params->config.video_devs[0].size;
 	//cmon->video_buffer = co_os_malloc( cmon->video_size );
 	cmon->video_buffer = co_os_malloc( dp->size );
 	if ( cmon->video_buffer == NULL )
