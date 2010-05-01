@@ -258,7 +258,7 @@ typedef struct co_config {
 	/* for cofb
 	 * Size of the video memory (in KB)
 	 */
-	unsigned long video_size;
+	//unsigned long video_size;
 
 	/*
 	 * SCSI devices

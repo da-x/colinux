@@ -1268,24 +1268,24 @@ co_rc_t co_monitor_create(co_manager_t*		     manager,
 	 * Initialize video memory buffer.
 	 * params->config.video_size comes in KB
 	 * We don't allow more than 4MB of video, and assure 4KB at least.
-	 */
 	if ( params->config.video_size <= 0 )
 		params->config.video_size = 64;
 	else if ( params->config.video_size < 4 )
 		params->config.video_size = 4;
 	else if ( params->config.video_size > 4096 )
 		params->config.video_size = 4096;
+	*/
 	cmon->video_user_id = CO_INVALID_ID;
 	co_video_dev_t *dp = cmon->video_devs[0];
 	//cmon->video_size = params->config.video_size << 10;
-	dp->size = params->config.video_size << 10;
+	dp->size = params->config.video_devs[0].size;
 	//cmon->video_buffer = co_os_malloc( cmon->video_size );
 	cmon->video_buffer = co_os_malloc( dp->size );
 	if ( cmon->video_buffer == NULL )
 	{
 		rc = CO_RC(OUT_OF_MEMORY);
 		co_debug_system( "Error allocating video buffer (size=%d KB)\n",
-				(int)params->config.video_size);
+				(int)dp->size);
 				//(int)cmon->video_size >> 10 );
 		goto out_free_buffer;
 	}

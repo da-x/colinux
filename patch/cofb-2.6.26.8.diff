@@ -2273,3 +2273,21 @@
  
  #pragma pack(0)
  
+--- linux-2.6.26.8-source.orig/arch/i386/pci/copci.c
++++ linux-2.6.26.8-source/arch/i386/pci/copci.c
+@@ -228,13 +228,13 @@
+ 	cp = guest_cp;
+ 	for(x=0; x < count; x++, cp++) {
+ 		switch(cp->type) {
+-#ifdef CONFIG_COOPERATIVE_VIDEO
++//#ifdef CONFIG_COOPERATIVE_VIDEO
+ 		case CO_DEVICE_VIDEO:
+ 			id = PCI_DEVICE_ID_COVIDEO;
+ 			class = PCI_CLASS_DISPLAY_OTHER;
+ 			irq = 0;
+ 			break;
+-#endif
++//#endif
+ #ifdef CONFIG_COOPERATIVE_AUDIO
+ 		case CO_DEVICE_AUDIO:
+ 			id = PCI_DEVICE_ID_COAUDIO;

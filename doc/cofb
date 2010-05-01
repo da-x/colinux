@@ -1,3 +1,12 @@
+for startup config file example,
+#pci0=0,video,0; not activated yet
+#video=cofb:1024x768x32
+video=cofb:800x600x32
+#video=cofb:off
+#video_mem=4096, not used obsolete cofb parameter, replaced by cofb_mem0
+#cofb_mem0 to config.video_devs[0].size KB
+cofb_mem0=4096
+
 Use cofb under X window (based on usage on debian distribution)
 framebuffer X driver, install xserver-xorg-video-fbdev from aptitude
 
