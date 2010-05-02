@@ -70,7 +70,7 @@
  	if (err) {
 --- /dev/null
 +++ linux-2.6.26.8-source/drivers/video/cofb.c
-@@ -0,0 +1,784 @@
+@@ -0,0 +1,786 @@
 +/*
 + *  linux/drivers/video/cofb.c -- CoLinux Virtual frame buffer device
 + *
@@ -183,8 +183,8 @@
 +	.fb_copyarea	= cofb_copyarea,
 +	.fb_imageblit	= cofb_imageblit,
 +	//not found .fb_cursor	= soft_cursor,
-+	//.fb_mmap	= covideo_mmap,
-+	.fb_mmap	= cofb_mmap,
++	.fb_mmap	= covideo_mmap,
++	//.fb_mmap	= cofb_mmap,
 +	.fb_blank	= cofb_blank,
 +	.fb_pan_display = cofb_pan_display,
 +};
@@ -335,7 +335,7 @@
 +        cp = (covideo_config_t *) &co_passage_page->params[1];
 +	void* host_buffer = (struct cofb_video_mem_info *) cp->buffer;
 +	/* memory address is predeterminged */
-+	cofb_mem = (struct cofb_video_mem_info *)((CO_VPTR_SELF_MAP-cp->size)&0xffc00000);
++	//cofb_mem = (struct cofb_video_mem_info *)((CO_VPTR_SELF_MAP-cp->size)&0xffc00000);
 +	fb_avail = cp->size - 2*PAGE_SIZE;
 +	co_passage_page_release(flags);
 +
@@ -374,6 +374,7 @@
 +		return 0;
 +	}
 +	co_video_base = buffer;
++	cofb_mem = (struct cofb_video_mem_info *)buffer;
 +	printk(KERN_INFO "covideo%d: buffer: %p, size: %d\n", 0, buffer, fb_avail);
 +	/* Test buffer */
 +	//if (test_buffer(buffer, 0, fb_avail)) return -EIO;
@@ -704,7 +705,7 @@
 +	                       | VM_DONTCOPY | VM_DONTEXPAND;
 +
 +        pos = (unsigned long) info->screen_base;
-+        pos = (unsigned long) co_video_base;
++        pos = (unsigned long) co_video_base + PAGE_SIZE;
 +        while (size > 0) {
 +                pfn = cofb_vmalloc_to_pfn((void *)pos);
 +                if (io_remap_pfn_range(vma, start, pfn, PAGE_SIZE, PAGE_SHARED))
@@ -792,14 +793,15 @@
 +	co_passage_page->operation = CO_OPERATION_DEVICE;
 +	co_passage_page->params[0] = CO_DEVICE_VIDEO;
 +	co_passage_page->params[1] = CO_VIDEO_GET_CONFIG;
-+	//co_passage_page->params[2] = unit;
++	co_passage_page->params[2] = 0;
 +	co_switch_wrapper();
 +	rc = co_passage_page->params[0];
 +	cp = (covideo_config_t *) &co_passage_page->params[1];
 +	//co_video_base = cp->buffer;
 +	//co_video_size = cp->size;
 +	co_passage_page_release(flags);
-+	cofb_init();
++	printk(KERN_INFO"cofb pci probei\n");
++	//cofb_init();
 +	/* If unable to get size, silently skip this device */
 +	if (rc) return 0;
 +}
@@ -1047,7 +1049,7 @@
  	if (co_message) {
  		message = (co_console_message_t *)co_message->data;
  		co_message->from = CO_MODULE_LINUX;
-@@ -49,434 +197,471 @@
+@@ -49,434 +197,478 @@
  		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
  		message->type = CO_OPERATION_CONSOLE_STARTUP;
  		co_switch_wrapper();
@@ -1066,14 +1068,21 @@
 +        co_passage_page->params[1] = CO_VIDEO_GET_CONFIG;
 +        co_passage_page->params[2] = 0; // unit, default to only one device
 +        co_switch_wrapper();
-+        //rc = co_passage_page->params[0];
 +        int rc = co_passage_page->params[0];
 +        covideo_config_t *cp = (covideo_config_t *) &co_passage_page->params[1];
 +        //cocon_info = (struct cocon_video_mem_info *) cp->buffer;
++	void* host_buffer = cp->buffer;
 +	cocon_info = (struct cocon_video_mem_info *) ((CO_VPTR_SELF_MAP-cp->size)&0xffc00000);
 +        cocon_size = cp->size;
 +        /* don't create more call stack in between?? */
 +        co_passage_page_release(flags);
++        // allocate memory for cofb,
++	/*void* buffer = co_map_buffer(host_buffer, fb_avail);
++	if (!buffer) {
++        	printk(KERN_ERR "cocon%d: unable to map video buffer!\n", 0);
++		return 0;
++	}
++	cocon_info = (struct cocon_video_mem_info *)buffer;*/
 +        printk( KERN_INFO"cocon: %x video=%lXh mem: %lu bytes\n", rc,cocon_info, cocon_size );
 +	/* it is possible to write to both co_video_base and send host console message
 +	 * but when cofb is on, it will switch to fbcon very soon.
@@ -1852,7 +1861,7 @@
  const struct consw colinux_con = {
  	con_startup:		cocon_startup,
  	con_init:		cocon_init,
-@@ -489,13 +674,13 @@
+@@ -489,13 +681,13 @@
  	con_bmove:		cocon_bmove,
  	con_switch:		cocon_switch,
  	con_blank:		cocon_blank,

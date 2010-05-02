@@ -141,7 +141,7 @@ typedef struct co_monitor {
 	 * video_user_handle : handle for the user address mapping
 	 * video_user_id     : PID of the video client process
 	 */
-	void *         video_buffer;
+	//void *         video_buffer;
 	//unsigned long  video_vm_address;
 	//unsigned long  video_size;
 	void *         video_user_address;
