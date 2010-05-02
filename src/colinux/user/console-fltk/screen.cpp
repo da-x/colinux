@@ -8,7 +8,7 @@
  *
  */
 #include "console.h"
-#include "screen_cocon.h"
+//#include "screen_cocon.h"
 #include "screen_cofb.h"
 #include <FL/x.H>
 #include <FL/Fl.H>
@@ -173,7 +173,8 @@ bool console_screen::engine_init( co_video_header* video )
             Fl::error( "Unexpected video output header size!" );
             return false;
         }
-        render_ = new screen_cocon_render( (cocon_video_mem_info*)video );
+	return false;
+        //render_ = new screen_cocon_render( (cocon_video_mem_info*)video );
         break;
     case CO_VIDEO_MAGIC_COFB:
         if ( video->size != sizeof(cofb_video_mem_info) )
