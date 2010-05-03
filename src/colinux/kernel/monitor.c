@@ -302,11 +302,11 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 	}
 
 	// Map video memory into the guest OS
-	
+        /*	
 	rc = guest_video_init( cmon );
 	if ( !CO_OK(rc) )
 	        goto out_error;
-
+        */
 	co_debug("initialization finished");
 
 out_error:

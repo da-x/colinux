@@ -4,10 +4,10 @@
  	pgprot_t prot;
  	int retval;
  
-+	if (cooperative_mode_enabled()) {
++	/*if (cooperative_mode_enabled()) {
 +		panic("__ioremap %ld:%ld\n", phys_addr, size);
 +		return NULL;
-+	}
++	}*/
 +
  	/* Don't allow wraparound or zero size */
  	last_addr = phys_addr + size - 1;
@@ -70,7 +70,7 @@
  	if (err) {
 --- /dev/null
 +++ linux-2.6.26.8-source/drivers/video/cofb.c
-@@ -0,0 +1,948 @@
+@@ -0,0 +1,790 @@
 +/*
 + *  linux/drivers/video/cofb.c -- CoLinux Virtual frame buffer device
 + *
@@ -703,12 +703,14 @@
 +
 +	if (size > info->screen_size) return -EINVAL;
 +
-+	vma->vm_flags |= VM_IO | VM_RESERVED | VM_CO_IO
-+	                       | VM_DONTCOPY | VM_DONTEXPAND;
++	//vma->vm_flags |= VM_IO | VM_RESERVED | VM_CO_IO
++	//                       | VM_DONTCOPY | VM_DONTEXPAND;
 +
 +        pos = (unsigned long) info->screen_base;
 +        pos = (unsigned long) co_video_base + PAGE_SIZE;
 +        while (size > 0) {
++		// pfn is host pfn, so io_remap has to change for cofb, can we get
++		// guest pfn then use PP_TO_P???
 +                pfn = cofb_vmalloc_to_pfn((void *)pos);
 +                if (io_remap_pfn_range(vma, start, pfn, PAGE_SIZE, PAGE_SHARED))
 +                        return -EAGAIN;
@@ -745,8 +747,8 @@
 +	}
 +
 +	/* Don't dump mem, no swap, no vma copy, no mremap() */
-+	vma->vm_flags |= VM_IO | VM_RESERVED | VM_CO_IO
-+			| VM_DONTCOPY | VM_DONTEXPAND;
++	vma->vm_flags |= VM_IO | VM_RESERVED | VM_DONTCOPY | VM_DONTEXPAND;
++		//| VM_CO_IO
 +
 +	/* Map pfn's one by one (as they aren't contiguous) */
 +	unsigned long i = 0;
@@ -858,166 +860,6 @@
 +
 +module_init(covideo_pci_init);
 +module_exit(covideo_pci_exit);
-+
-+static const char *cofb_startup(void)
-+{
-+	return "CofbCON";
-+}
-+
-+/* --------------------------------------------------------------------- */
-+
-+static
-+void cofbcon_init( struct vc_data *c, int init )
-+{
-+	/* We cannot be loaded as a module, therefore init is always 1
-+	c->vc_can_do_color = 1;
-+	c->vc_cols = 137;
-+	c->vc_rows = 80;
-+	c->vc_complement_mask = 0x7700;
-+	c->vc_visible_origin = 0;
-+	c->vc_origin = 0;
-+	c->vc_scan_lines = 80*8;
-+	c->vc_font.height = 8;*/
-+}
-+
-+/* --------------------------------------------------------------------- */
-+
-+static
-+void cofb_deinit( struct vc_data *c )
-+{
-+}
-+
-+/* --------------------------------------------------------------------- */
-+
-+static
-+void cofb_clear( struct vc_data *c, int top, int left, int rows, int cols )
-+{
-+}
-+
-+/* --------------------------------------------------------------------- */
-+
-+static
-+void cofb_putc( struct vc_data *c, int charattr, int y, int x )
-+{
-+}
-+
-+/* --------------------------------------------------------------------- */
-+
-+static
-+void cofb_putcs( struct vc_data *c, const u16* s, int count, int y, int x )
-+{
-+   //printk("cofbcon putcs\n");
-+}
-+
-+/* --------------------------------------------------------------------- */
-+
-+static
-+u8 cofb_build_attr(struct vc_data *c, u8 color, u8 intensity, u8 blink,
-+			u8 underline, u8 reverse)
-+{
-+	u8 attr = color;
-+	return attr;
-+}
-+
-+/* --------------------------------------------------------------------- */
-+
-+static
-+void cofb_invert_region( struct vc_data *c, u16 *p, int count )
-+{
-+}
-+
-+/* --------------------------------------------------------------------- */
-+
-+static
-+void cofb_cursor( struct vc_data *c, int mode )
-+{
-+}
-+
-+/* --------------------------------------------------------------------- */
-+
-+static
-+int cofb_switch( struct vc_data *c )
-+{
-+	return 1;	/* Redrawing needed */
-+}
-+
-+/* --------------------------------------------------------------------- */
-+
-+static
-+int cofb_set_palette( struct vc_data *c, unsigned char *table )
-+{
-+	return -EINVAL;
-+}
-+
-+/* --------------------------------------------------------------------- */
-+
-+static
-+int cofbcon_blank( struct vc_data *c, int blank, int mode_switchg )
-+{
-+	return 1;
-+}
-+
-+/* --------------------------------------------------------------------- */
-+
-+static
-+int cofb_scrolldelta( struct vc_data *c, int lines )
-+{
-+	return 0;
-+}
-+
-+static
-+int cofb_set_origin( struct vc_data *c )
-+{
-+	return 0;
-+}
-+
-+static
-+void cofb_save_screen( struct vc_data *c )
-+{
-+}
-+
-+static
-+int cofb_scroll( struct vc_data *c, int t, int b, int dir, int lines )
-+{
-+	return 0;
-+}
-+
-+static
-+void cofb_bmove(struct vc_data *c, int sy, int sx,
-+			int dy, int dx, int h, int w)
-+{
-+}
-+
-+static int
-+cofb_font_set( struct vc_data* vc, struct console_font* f, unsigned flags )
-+{
-+	return 0;
-+}
-+
-+/*
-+ *  The console `switch' structure for the VGA based console
-+ */
-+const struct consw a_colinux_con = {
-+	con_startup:		cofb_startup,
-+	con_init:		cofbcon_init,
-+	//con_deinit:		cofb_deinit,
-+	//con_clear:		cofb_clear,
-+	//con_putc:		cofb_putc,
-+	//con_putcs:		cofb_putcs,
-+	//con_cursor:		cofb_cursor,
-+	//con_scroll:		cofb_scroll,
-+	//con_bmove:		cofb_bmove,
-+	con_switch:		cofb_switch,
-+	//con_blank:		cofbcon_blank,
-+	//con_set_palette:	cofb_set_palette,
-+	//con_scrolldelta:	cofb_scrolldelta,
-+	//con_set_origin:		cofb_set_origin,
-+	//con_save_screen:	cofb_save_screen,
-+	//con_build_attr:		cofb_build_attr,
-+	//con_invert_region:	cofb_invert_region,
-+	//con_font_set:           cofb_font_set,
-+};
-+
 +
 --- linux-2.6.26.8-source.orig/drivers/video/console/cocon.c
 +++ linux-2.6.26.8-source/drivers/video/console/cocon.c
@@ -1365,80 +1207,69 @@
  
  #define VM_CAN_NONLINEAR 0x08000000	/* Has ->fault & does nonlinear pages */
  #define VM_MIXEDMAP	0x10000000	/* Can contain "struct page" and pure PFN pages */
-+#define VM_CO_IO        0x80000000      /* Pseudo IO memory */
++//#define VM_CO_IO        0x80000000      /* Pseudo IO memory */
  
  #ifndef VM_STACK_DEFAULT_FLAGS		/* arch can override this */
  #define VM_STACK_DEFAULT_FLAGS VM_DATA_DEFAULT_FLAGS
 --- linux-2.6.26.8-source.orig/mm/memory.c
 +++ linux-2.6.26.8-source/mm/memory.c
-@@ -680,7 +680,8 @@
- static unsigned long zap_pte_range(struct mmu_gather *tlb,
+@@ -681,6 +681,7 @@
  				struct vm_area_struct *vma, pmd_t *pmd,
  				unsigned long addr, unsigned long end,
--				long *zap_work, struct zap_details *details)
-+				long *zap_work, struct zap_details *details,
-+				int io_page)
+ 				long *zap_work, struct zap_details *details)
++				//int io_page)
  {
  	struct mm_struct *mm = tlb->mm;
  	pte_t *pte;
-@@ -703,7 +704,7 @@
+@@ -703,6 +704,7 @@
  			struct page *page;
  
  			page = vm_normal_page(vma, addr, ptent);
--			if (unlikely(details) && page) {
-+			if (unlikely(details) && page && !io_page) {
++			//if (unlikely(details) && page && !io_page) {
+ 			if (unlikely(details) && page) {
  				/*
  				 * unmap_shared_mapping_pages() wants to
- 				 * invalidate cache without truncating:
-@@ -765,7 +766,8 @@
- static inline unsigned long zap_pmd_range(struct mmu_gather *tlb,
+@@ -766,6 +768,7 @@
  				struct vm_area_struct *vma, pud_t *pud,
  				unsigned long addr, unsigned long end,
--				long *zap_work, struct zap_details *details)
-+				long *zap_work, struct zap_details *details,
-+				int io_page)
+ 				long *zap_work, struct zap_details *details)
++				//int io_page)
  {
  	pmd_t *pmd;
  	unsigned long next;
-@@ -778,7 +780,7 @@
- 			continue;
+@@ -779,6 +782,7 @@
  		}
  		next = zap_pte_range(tlb, vma, pmd, addr, next,
--						zap_work, details);
-+						zap_work, details,io_page);
+ 						zap_work, details);
++						//zap_work, details,io_page);
  	} while (pmd++, addr = next, (addr != end && *zap_work > 0));
  
  	return addr;
-@@ -787,7 +789,8 @@
- static inline unsigned long zap_pud_range(struct mmu_gather *tlb,
+@@ -788,6 +792,7 @@
  				struct vm_area_struct *vma, pgd_t *pgd,
  				unsigned long addr, unsigned long end,
--				long *zap_work, struct zap_details *details)
-+				long *zap_work, struct zap_details *details,
-+				int io_page)
+ 				long *zap_work, struct zap_details *details)
++				//int io_page)
  {
  	pud_t *pud;
  	unsigned long next;
-@@ -800,7 +803,7 @@
- 			continue;
+@@ -801,6 +806,7 @@
  		}
  		next = zap_pmd_range(tlb, vma, pud, addr, next,
--						zap_work, details);
-+						zap_work, details, io_page);
+ 						zap_work, details);
++						//zap_work, details, io_page);
  	} while (pud++, addr = next, (addr != end && *zap_work > 0));
  
  	return addr;
-@@ -827,7 +830,8 @@
- 			continue;
+@@ -828,6 +834,7 @@
  		}
  		next = zap_pud_range(tlb, vma, pgd, addr, next,
--						zap_work, details);
-+						zap_work, details,
-+				vma->vm_flags & VM_CO_IO);
+ 						zap_work, details);
++				//vma->vm_flags & VM_CO_IO);
  	} while (pgd++, addr = next, (addr != end && *zap_work > 0));
  	tlb_end_vma(tlb, vma);
  
-@@ -1402,7 +1406,11 @@
+@@ -1402,7 +1409,11 @@
  	arch_enter_lazy_mmu_mode();
  	do {
  		BUG_ON(!pte_none(*pte));
@@ -1450,15 +1281,15 @@
  		pfn++;
  	} while (pte++, addr += PAGE_SIZE, addr != end);
  	arch_leave_lazy_mmu_mode();
-@@ -1468,6 +1476,11 @@
+@@ -1468,6 +1479,11 @@
  	unsigned long end = addr + PAGE_ALIGN(size);
  	struct mm_struct *mm = vma->vm_mm;
  	int err;
 +	/* Check we are only being called for colinux "IO" memory */
-+	if (!(vma->vm_flags & VM_CO_IO)) {
++	/*if (!(vma->vm_flags & VM_CO_IO)) {
 +		printk( KERN_ERR"remap_pfn_range: invalid call!" );
 +		return -1;
-+	}
++	}*/
  
  	/*
  	 * Physically remapped pages are special. Tell the
