@@ -155,6 +155,25 @@ don't depend on each other.  The parameters are case sensitive.
 
 	Example:
 	cocon=120x40
+    
+    cursor=<SIZE>
+     
+        This option allows you to set the size of the cursor in the percentage.
+
+	Examples:
+	cursor=0   # Turn off cursor
+	cursor=100 # Set the cursor to the maximum size
+
+    color=<FOREGROUND>,<BACKGROUND>
+    
+	Set the color '<FOREGROUND> on <BACKGROUND>' instead of the default
+	linux color 'gray on black'. Foreground and background colors can be
+	any of black, red, green, brown, blue, magenta, cyan, gray, darkgray,
+	brightred, brightgreen, yellow, brightblue, brightmagenta, brightcyan,
+	white.    	
+
+	Example:
+	color=yellow,black
 
     cobdX=<path to image file>
 

@@ -14,11 +14,11 @@ mouse-core.diff
 mouse-2.6.22.diff
 cofs-core.diff
 cofs-2.6.22.diff
-cloop-core-2.06.diff
-cloop-2.6.22.diff
 squashfs3.2-core.diff
 squashfs3.2-2.6.22.diff
-unionfs-2.2.4_for_2.6.22.18.diff
+unionfs-2.5.4_for_2.6.22.19.diff
+cloop-core-2.628.diff
+cloop-2.6.22.diff
 pci-core.diff
 pci-2.6.22.diff
 scsi-core.diff
@@ -27,4 +27,3 @@ audio-core.diff
 audio-2.6.22.diff
 video-core.diff
 video-2.6.22.diff
-cobd-async-2.6.22.diff

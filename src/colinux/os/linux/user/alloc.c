@@ -8,6 +8,8 @@
  *
  */
 
+/* Linux host: allocate memory in linux user space */
+
 #include <malloc.h>
 
 #include <colinux/os/alloc.h>

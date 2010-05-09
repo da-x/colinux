@@ -10,7 +10,35 @@
 #ifndef __COLINUX_COMMON_CONSOLE__
 #define __COLINUX_COMMON_CONSOLE__
 
-#include "common.h"
+#ifndef __COLINUX_LINUX_CONFIG_H__ /* Exclude circullar "include" */
+# include "config.h" 
+#endif
+
+#if defined __cplusplus
+extern "C" {
+#endif
+
+/* Set lines limit for console buffer in 2 ... 500 */
+#define CO_CONSOLE_MIN_ROWS		2
+#define CO_CONSOLE_MAX_ROWS		500
+
+#define CO_CONSOLE_MIN_COLS		16
+
+/* Default console screen dimentions */
+#define CO_CONSOLE_WIDTH		80
+#define CO_CONSOLE_HEIGHT		25
+
+/* Cursor size */
+/* Definitions for cursor.height Taken from Linux console_struct.h */
+#define CO_CUR_DEF		0	/* User defined */
+#define CO_CUR_NONE		1	/* 0 */
+#define CO_CUR_UNDERLINE	2	/* 1/6 */
+#define CO_CUR_LOWER_THIRD	3	/* 1/3 */
+#define CO_CUR_LOWER_HALF	4	/* 2/2 */
+#define CO_CUR_TWO_THIRDS	5	/* 2/3 */
+#define CO_CUR_BLOCK		6	/* 1 */
+
+#define CO_CUR_DEFAULT		CO_CUR_UNDERLINE /* default */
 
 /*
  * This is a generic console implementation. It receives 'messages'
@@ -24,10 +52,6 @@
  * (as it is needed by the Linux code).
  */
 
-#define CO_CONSOLE_WIDTH      80
-#define CO_CONSOLE_HEIGHT     25
-#define CO_CONSOLE_HEIGHT_BUF  0
-
 typedef struct co_console_cell { 
 	unsigned char ch;
 	unsigned char attr;
@@ -35,33 +59,35 @@ typedef struct co_console_cell {
 
 typedef struct co_console {
 	/* size of this struct */
-	unsigned long size;
+	unsigned long	size;
 
-	/* dimentions of the console */
-	long x, y;
+        /* User defined configuration */ 
+	co_console_config_t config;
 
 	/* On-screen data */
-	co_console_cell_t *screen;
+	co_console_cell_t* screen;
 
-	/* <not yet implemented> */
-	/* Off-screen (scrolled data) */
-	co_console_cell_t *backlog;
-	long max_blacklog;
-	long used_blacklog;
-	long last_blacklog;
-	/* </not yet implemented> */
-
-	/* Cursor pos */
+	/* Cursor position and height in percent
+	 * Defined in 'linux/cooperative.h' as x, y, height.
+	 */
 	co_cursor_pos_t cursor;
-
-	/* Size of the cursor (0-empty, 255-full) */
-	unsigned char cursor_size;
 } co_console_t;
 
-extern co_rc_t co_console_create(long x, long y, long max_blacklog, co_console_t **console_out);
-extern co_rc_t co_console_op(co_console_t *console, co_console_message_t *message);
-extern void co_console_destroy(co_console_t *console);
-extern void co_console_pickle(co_console_t *console);
-extern void co_console_unpickle(co_console_t *console);
+extern co_rc_t co_console_create(co_console_config_t* config_p,
+			  	 co_console_t**       console_out);
+  /* Create the console object.
+  */
+		                 
+extern co_rc_t co_console_op(co_console_t* console, co_console_message_t* message);
+extern void co_console_destroy(co_console_t* console);
 
+#if defined UNUSED
+extern void co_console_pickle(co_console_t* console);
+extern void co_console_unpickle(co_console_t* console);
 #endif
+
+#if defined __cplusplus
+}
+#endif
+
+#endif /* __COLINUX_COMMON_CONSOLE__ */

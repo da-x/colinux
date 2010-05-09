@@ -177,15 +177,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  
  source kernel/power/Kconfig
  
-@@ -1056,6 +1078,7 @@
- endmenu
- 
- menu "Bus options (PCI, PCMCIA, EISA, MCA, ISA)"
-+	depends on !COOPERATIVE
- 
- config PCI
- 	bool "PCI support" if !X86_VISWS
-@@ -1264,7 +1287,7 @@
+@@ -1264,7 +1286,7 @@
  
  config X86_BIOS_REBOOT
  	bool
@@ -494,6 +486,16 @@ Index: linux-2.6.22-source/arch/i386/kernel/entry.S
  	jmp ret_from_intr
  ENDPROC(common_interrupt)
  	CFI_ENDPROC
+@@ -724,6 +728,9 @@
+ 	testl $0x4, %eax		# EM (math emulation bit)
+ 	jne device_not_available_emulate
+ 	preempt_stop(CLBR_ANY)
++#if defined(CONFIG_COOPERATIVE) && !defined(CONFIG_PREEMPT)
++	DISABLE_INTERRUPTS(CLBR_ANY)
++#endif
+ 	call math_state_restore
+ 	jmp ret_from_exception
+ device_not_available_emulate:
 Index: linux-2.6.22-source/arch/i386/kernel/head.S
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/kernel/head.S
@@ -806,22 +808,14 @@ Index: linux-2.6.22-source/arch/i386/kernel/traps.c
  	if (notify_die(DIE_DEBUG, "debug", regs, condition, error_code,
  					SIGTRAP) == NOTIFY_STOP)
  		return;
-@@ -1047,6 +1061,20 @@
+@@ -1047,6 +1061,12 @@
  	struct task_struct *tsk = thread->task;
  
  	clts();		/* Allow maths ops (or we recurse) */
 +#ifdef CONFIG_COOPERATIVE
 +	if (!co_host_fpu_saved) {
-+#ifndef CONFIG_PREEMPT
-+		unsigned long flags;
-+
-+		local_irq_save(flags);
-+#endif
 +		CO_FPU_SAVE(co_host_fpu);
 +		co_host_fpu_saved = 1;
-+#ifndef CONFIG_PREEMPT
-+		local_irq_restore(flags);
-+#endif
 +	}
 +#endif /* CONFIG_COOPERATIVE */
  	if (!tsk_used_math(tsk))
@@ -1675,7 +1669,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/include/linux/cooperative.h
-@@ -0,0 +1,390 @@
+@@ -0,0 +1,398 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1698,7 +1692,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +
 +#include <asm/cooperative.h>
 +
-+#define CO_LINUX_API_VERSION    13
++#define CO_LINUX_API_VERSION    14
 +
 +#pragma pack(0)
 +
@@ -1913,7 +1907,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +	CO_OPERATION_CONSOLE_SET_ORIGIN,
 +	CO_OPERATION_CONSOLE_SAVE_SCREEN,
 +	CO_OPERATION_CONSOLE_INVERT_REGION,
-+	CO_OPERATION_CONSOLE_SIZES,
++	CO_OPERATION_CONSOLE_CONFIG,
 +} co_operation_console_t;
 +
 +
@@ -1934,6 +1928,7 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +			co_console_unit top;
 +			co_console_unit bottom;
 +			co_console_unit lines;
++			co_console_character charattr;
 +		} scroll;
 +		struct {
 +			co_console_unit y;
@@ -1969,8 +1964,8 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +		struct {
 +			co_console_unit rows;
 +			co_console_unit cols;
-+			co_console_unit backbuf;
-+		} sizes;
++			co_console_unit attr;
++		} config;
 +		co_cursor_pos_t cursor;
 +	};
 +} __attribute__((packed)) co_console_message_t;
@@ -2024,12 +2019,19 @@ Index: linux-2.6.22-source/include/linux/cooperative.h
 +			unsigned long long size;
 +			unsigned long long disk_size;
 +			vm_ptr_t address;
++			void * irq_request;
++			int async;
 +		};
 +		struct {
 +			char alias[20];
 +		};
 +	};
 +} __attribute__((packed)) co_block_request_t;
++
++typedef struct {
++	void * irq_request;
++	int uptodate;
++} __attribute__((packed)) co_block_intr_t;
 +
 +typedef struct {
 +	co_network_request_type_t type;
@@ -2215,7 +2217,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/kernel/cooperative.c
-@@ -0,0 +1,461 @@
+@@ -0,0 +1,462 @@
 +/*
 + *  linux/kernel/cooperative.c
 + *
@@ -2342,6 +2344,7 @@ Index: linux-2.6.22-source/kernel/cooperative.c
 +#endif
 +	case CO_DEVICE_SCSI: irq = SCSI_IRQ; break;
 +	case CO_DEVICE_MOUSE: irq = MOUSE_IRQ; break;
++	case CO_DEVICE_BLOCK: irq = BLOCKDEV_IRQ; break;
 +	default:
 +		BUG_ON((unsigned long)message->device >= (unsigned long)CO_DEVICES_TOTAL);
 +		co_free_message(node_message);

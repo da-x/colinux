@@ -76,7 +76,6 @@ void redir_x _P((u_int32_t, int, int, int));
 void getouraddr _P((void));
 inline  void slirp_insque  _P((void *, void *));
 inline  void slirp_remque  _P((void *));
-int add_exec _P((struct ex_list **, int, char *, int, int));
 int slirp_openpty _P((int *, int *));
 int fork_exec _P((struct socket *, char *, int));
 void snooze_hup _P((int));

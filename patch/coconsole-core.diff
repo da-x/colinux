@@ -1,8 +1,8 @@
-Index: linux-2.6.22-source/drivers/video/console/cocon.c
+Index: linux-2.6.25.20-source/drivers/video/console/cocon.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/drivers/video/console/cocon.c
-@@ -0,0 +1,501 @@
++++ linux-2.6.25.20-source/drivers/video/console/cocon.c
+@@ -0,0 +1,488 @@
 +/*
 + *  linux/drivers/video/cocon.c -- Cooperative Linux console VGA driver
 + *
@@ -37,6 +37,7 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 +
 +static int cocon_cols = 80;
 +static int cocon_rows = 25;
++static int cocon_attr = 0x07; /* fg=white, bg=black */
 +
 +static const char __init *cocon_startup(void)
 +{
@@ -54,9 +55,10 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 +		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
 +		message->type = CO_OPERATION_CONSOLE_STARTUP;
 +		co_switch_wrapper();
-+		if (message->type == CO_OPERATION_CONSOLE_SIZES) {
-+			cocon_cols = message->sizes.cols;
-+			cocon_rows = message->sizes.rows;
++		if (message->type == CO_OPERATION_CONSOLE_CONFIG) {
++			cocon_cols = message->config.cols;
++			cocon_rows = message->config.rows;
++			cocon_attr = message->config.attr;
 +		}
 +		co_passage_page_release(flags);
 +	}
@@ -74,6 +76,10 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 +	c->vc_can_do_color = 1;
 +	c->vc_cols = cocon_cols;
 +	c->vc_rows = cocon_rows;
++
++	/* drivers/char/vt.c: Must hack vc_init() for vc_def_color */
++	c->vc_def_color = cocon_attr;
++
 +	c->vc_complement_mask = 0x7700;
 +	c->vc_visible_origin = 0;
 +	c->vc_origin = 0;
@@ -257,7 +263,7 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 +	co_message->size = ((char *)(&message->cursor + 1)) - ((char *)message);;
 +	if (mode==CM_ERASE) {
 +		message->type = CO_OPERATION_CONSOLE_CURSOR_ERASE;
-+		message->cursor.height = 0;
++		message->cursor.height = CUR_NONE;
 +		co_send_message_restore(flags);
 +		return;
 +	}
@@ -269,27 +275,7 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 +	}
 +	message->cursor.x = c->vc_x;
 +	message->cursor.y = c->vc_y;
-+
-+	switch (c->vc_cursor_type & CUR_HWMASK) {
-+	case CUR_UNDERLINE:
-+		message->cursor.height = 5;
-+		break;
-+	case CUR_TWO_THIRDS:
-+		message->cursor.height = 66;
-+		break;
-+	case CUR_LOWER_THIRD:
-+		message->cursor.height = 33;
-+		break;
-+	case CUR_LOWER_HALF:
-+		message->cursor.height = 50;
-+		break;
-+	case CUR_NONE:
-+		message->cursor.height = 0;
-+		break;
-+          default:
-+		message->cursor.height = 5;
-+		break;
-+	}
++	message->cursor.height = c->vc_cursor_type & CUR_HWMASK;
 +
 +	co_send_message_restore(flags);
 +}
@@ -440,6 +426,7 @@ Index: linux-2.6.22-source/drivers/video/console/cocon.c
 +		message->scroll.top = t;
 +		message->scroll.bottom = b-1;
 +		message->scroll.lines = lines;
++		message->scroll.charattr = c->vc_video_erase_char;
 +		co_send_message_restore(flags);
 +	}
 +

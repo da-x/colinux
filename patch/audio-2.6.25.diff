@@ -1,0 +1,32 @@
+Index: linux-2.6.25-source/sound/pci/Kconfig
+===================================================================
+--- linux-2.6.25-source.orig/sound/pci/Kconfig
++++ linux-2.6.25-source/sound/pci/Kconfig
+@@ -3,6 +3,14 @@
+ menu "PCI devices"
+ 	depends on SND!=n && PCI
+ 
++config COOPERATIVE_AUDIO
++	bool "Cooperative audio support"
++	default n
++	depends on COOPERATIVE
++	select SND_PCM
++	help
++	   Say Y here if you are compiling in Cooperative mode
++
+ config SND_AD1889
+ 	tristate "Analog Devices AD1889"
+ 	depends on SND
+Index: linux-2.6.25-source/sound/pci/Makefile
+===================================================================
+--- linux-2.6.25-source.orig/sound/pci/Makefile
++++ linux-2.6.25-source/sound/pci/Makefile
+@@ -28,6 +28,8 @@
+ snd-via82xx-objs := via82xx.o
+ snd-via82xx-modem-objs := via82xx_modem.o
+ 
++obj-$(CONFIG_COOPERATIVE_AUDIO) += coaudio.o
++
+ # Toplevel Module Dependency
+ obj-$(CONFIG_SND_AD1889) += snd-ad1889.o
+ obj-$(CONFIG_SND_ALS300) += snd-als300.o

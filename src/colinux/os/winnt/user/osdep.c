@@ -8,13 +8,15 @@
  */
 co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 {
-	char *param_scan;
-	long param_count = 0, i, j;
-	char **param_array;
+	char*  param_scan;
+	long   param_count = 0;
+	long   i;
+	long   j;
+	char** param_array;
 
 	param_scan = szCmdLine;
 	while (*param_scan != '\0') {
-		while (*param_scan == ' ')
+		while (*param_scan == ' ' || *param_scan == '\t')
 			param_scan++;
 
 		if (*param_scan == '\0')
@@ -38,7 +40,7 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 			if (*param_scan == '\0')
 				break;
 			
-			if (*param_scan == ' ')
+			if (*param_scan == ' ' || *param_scan == '\t')
 				break;
 		}
 		param_count++;
@@ -48,14 +50,14 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 	if (param_array == NULL)
 		return CO_RC(OUT_OF_MEMORY);
 
-	memset(param_array, 0, sizeof(char *)*param_count + 1);
+	memset(param_array, 0, sizeof(char*)*param_count + 1);
 
 	i = 0;
 	param_scan = szCmdLine;
 	while (*param_scan != '\0') {
 		int size = 0;
 
-		while (*param_scan == ' ')
+		while (*param_scan == ' ' || *param_scan == '\t')
 			param_scan++;
 
 		if (*param_scan == '\0')
@@ -85,7 +87,7 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 			if (*param_scan == '\0')
 				break;
 			
-			if (*param_scan == ' ')
+			if (*param_scan == ' ' || *param_scan == '\t')
 				break;
 
 			size++;
@@ -100,7 +102,7 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 	i = 0;
 	param_scan = szCmdLine;
 	while (*param_scan != '\0') {
-		while (*param_scan == ' ')
+		while (*param_scan == ' '|| *param_scan == '\t')
 			param_scan++;
 
 		if (*param_scan == '\0')
@@ -136,7 +138,7 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 			if (*param_scan == '\0')
 				break;
 			
-			if (*param_scan == ' ')
+			if (*param_scan == ' ' || *param_scan == '\t')
 				break;
 
 			param_array[i][j] = *param_scan;
@@ -148,13 +150,13 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 		i++;
 	}
 	
-	*args = param_array;
+	*args  = param_array;
 	*count = param_count;
 
 	return CO_RC(OK);
 
 error:
-	for (i=0; i < param_count; i++)
+	for (i = 0; i < param_count; i++)
 		if (param_array[i])
 			co_os_free(param_array[i]);
 

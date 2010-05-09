@@ -1,3 +1,6 @@
+
+/* Linux host: allocate memory in linux kernel space */
+
 #include "linux_inc.h"
 
 #include <colinux/user/debug.h>

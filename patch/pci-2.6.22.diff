@@ -2,15 +2,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
 ===================================================================
 --- linux-2.6.22-source.orig/arch/i386/Kconfig
 +++ linux-2.6.22-source/arch/i386/Kconfig
-@@ -1078,7 +1078,6 @@
- endmenu
- 
- menu "Bus options (PCI, PCMCIA, EISA, MCA, ISA)"
--	depends on !COOPERATIVE
- 
- config PCI
- 	bool "PCI support" if !X86_VISWS
-@@ -1115,6 +1114,9 @@
+@@ -1114,6 +1114,9 @@
  	  direct access method and falls back to the BIOS if that doesn't
  	  work. If unsure, go with the default, which is "Any".
  
@@ -20,7 +12,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  config PCI_GOBIOS
  	bool "BIOS"
  
-@@ -1129,6 +1131,11 @@
+@@ -1128,6 +1131,11 @@
  
  endchoice
  
@@ -32,7 +24,7 @@ Index: linux-2.6.22-source/arch/i386/Kconfig
  config PCI_BIOS
  	bool
  	depends on !X86_VISWS && PCI && (PCI_GOBIOS || PCI_GOANY)
-@@ -1150,6 +1157,7 @@
+@@ -1149,6 +1157,7 @@
  
  config ISA_DMA_API
  	bool

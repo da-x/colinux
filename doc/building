@@ -27,6 +27,7 @@ Table of Contents
   5.2.2 Running the compiling script
   5.2.3 Create a pre-distributable package as ZIP
   5.2.4 Source tree example for a MinGW build process
+  5.2.5 Create coLinux installer with wine
   5.3 For Linux as host
   5.3.1 For Linux as host with different libraries (patched FLTK)
   6. Create, resize and optimize images
@@ -556,6 +557,24 @@ Source tree after building cross compiler and coLinux binaries:
 	+-- lib/
 	+-- man/
 	+-- share/
+
+5.2.5 Create coLinux installer with wine
+
+Install "wine" on your development system.
+
+Download NSIS installer from SF
+https://sourceforge.net/projects/nsis/files/NSIS%202/2.32/nsis-2.32-setup.exe/download
+
+Install NSIS in english default path (it's hard coded in coLinux build scripts):
+
+    TZ="" LANG="" wine nsis-2.32-setup.exe
+
+Copy the file "initrd.gz" and the directory "netdriver" from old installation to
+src/colinux/os/winnt/user/install/premaid
+
+Run the "make installer". Finaly you would find the file "coLinux.exe" in directory
+"src/colinux/os/winnt/user/install". Be carefully with coping this file, because it
+is a soft link.
 
 
 5.3. For Linux as host

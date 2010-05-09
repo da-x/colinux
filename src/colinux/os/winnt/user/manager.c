@@ -7,6 +7,8 @@
  * the root directory.
  */ 
 
+/* WinNT dependend file I/O operations */ 
+
 #include <windows.h>
 #include <winioctl.h>
 #include <stdarg.h>
@@ -35,9 +37,12 @@ static co_manager_handle_t co_os_manager_open_(int verbose)
 		return NULL;
 
 	handle->handle = CreateFile(CO_DRIVER_USER_PATH, 
-				    GENERIC_READ | GENERIC_WRITE, 0, NULL, 
+				    GENERIC_READ | GENERIC_WRITE, 
+				    0, 
+				    NULL, 
 				    OPEN_EXISTING, 
-				    FILE_ATTRIBUTE_NORMAL  | FILE_FLAG_OVERLAPPED, NULL);
+				    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, 
+				    NULL);
 
 	if (handle->handle == INVALID_HANDLE_VALUE) {
 		if (verbose)
@@ -67,12 +72,12 @@ void co_os_manager_close(co_manager_handle_t handle)
 
 co_rc_t co_os_manager_ioctl(
 	co_manager_handle_t kernel_device,
-	unsigned long code,
-	void *input_buffer,
-	unsigned long input_buffer_size,
-	void *output_buffer,
-	unsigned long output_buffer_size,
-	unsigned long *output_returned)
+	unsigned long	    code,
+	void*	            input_buffer,
+	unsigned long	    input_buffer_size,
+	void*		    output_buffer,
+	unsigned long	    output_buffer_size,
+	unsigned long*	    output_returned)
 {
 	DWORD   BytesReturned = 0;
 	BOOL    rc;
@@ -82,10 +87,14 @@ co_rc_t co_os_manager_ioctl(
 
 	code = CO_WINNT_IOCTL(code);
 
-	rc = DeviceIoControl(kernel_device->handle, code,
-			     input_buffer, input_buffer_size, 
-			     output_buffer, output_buffer_size, 
-			     output_returned, NULL);
+	rc = DeviceIoControl(kernel_device->handle, 
+			     code,
+			     input_buffer, 
+			     input_buffer_size, 
+			     output_buffer, 
+			     output_buffer_size, 
+			     output_returned, 
+			     NULL);
 
 	if (rc == FALSE) {
 		return CO_RC(ERROR);
@@ -94,7 +103,7 @@ co_rc_t co_os_manager_ioctl(
 	return CO_RC(OK);
 }
  
-static co_rc_t co_winnt_check_driver(IN LPCTSTR DriverName, bool_t *installed)
+static co_rc_t co_winnt_check_driver(IN LPCTSTR DriverName, bool_t* installed)
 { 
 	SC_HANDLE schService; 
 	SC_HANDLE schSCManager; 
@@ -125,15 +134,19 @@ co_rc_t co_os_manager_is_installed(bool_t *installed)
 }
 
 co_rc_t co_os_reactor_monitor_create(
-	co_reactor_t reactor, co_manager_handle_t whandle,
-	co_reactor_user_receive_func_t receive,
-	co_reactor_user_t *handle_out)
+	co_reactor_t 			reactor, 
+	co_manager_handle_t 		whandle,
+	co_reactor_user_receive_func_t 	receive,
+	co_reactor_user_t*		handle_out)
 {
 	*handle_out = NULL;
 
 	return co_winnt_reactor_packet_user_create(
-		reactor, whandle->handle, whandle->handle, receive,
-		(co_winnt_reactor_packet_user_t *)handle_out);
+				reactor, 
+				whandle->handle, 
+				whandle->handle, 
+				receive,
+				(co_winnt_reactor_packet_user_t*)handle_out);
 	
 }
 

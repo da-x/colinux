@@ -1,8 +1,8 @@
-Index: linux-2.6.22-source/drivers/block/cobd.c
+Index: linux-2.6.25-source/drivers/block/cobd.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/drivers/block/cobd.c
-@@ -0,0 +1,529 @@
++++ linux-2.6.25-source/drivers/block/cobd.c
+@@ -0,0 +1,574 @@
 +/*
 + *  Copyright (C) 2003 Dan Aloni <da-x@colinux.org>
 + *
@@ -23,6 +23,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 +#include <linux/file.h>
 +#include <linux/ioctl.h>
 +#include <linux/ctype.h>
++#include <linux/interrupt.h>
 +
 +#include <asm/uaccess.h>
 +#include <asm/types.h>
@@ -155,7 +156,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 +/*
 + * Handle an I/O request.
 + */
-+static int cobd_transfer(struct cobd_device *cobd, struct request *req)
++static int cobd_transfer(struct cobd_device *cobd, struct request *req, int *async)
 +{
 +	co_block_request_t *co_request;
 +	unsigned long flags;
@@ -168,15 +169,15 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 +	co_passage_page->params[0] = CO_DEVICE_BLOCK;
 +	co_passage_page->params[1] = cobd->unit;
 +	co_request = (co_block_request_t *)&co_passage_page->params[2];
-+	if (!rq_data_dir(req))
-+		co_request->type = CO_BLOCK_READ;
-+	else
-+		co_request->type = CO_BLOCK_WRITE;
++	co_request->type = (rq_data_dir(req) == READ) ? CO_BLOCK_READ : CO_BLOCK_WRITE;
++	co_request->irq_request = req;
 +	co_request->offset = ((unsigned long long)(req->sector)) << hardsect_size_shift;
 +	co_request->size = req->current_nr_sectors << hardsect_size_shift;
 +	co_request->address = req->buffer;
 +	co_request->rc = 0;
++	co_request->async = 0;
 +	co_switch_wrapper();
++	*async = co_request->async;
 +	ret = co_request->rc;
 +
 +	co_passage_page_release(flags);
@@ -190,6 +191,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 +
 +        while ((req = elv_next_request(q)) != NULL) {
 +		int ret;
++		int async;
 +
 +		if (!blk_fs_request(req)) {
 +			end_request(req, 0);
@@ -197,18 +199,52 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 +		}
 +		cobd = (struct cobd_device *)(req->rq_disk->private_data);
 +
-+		ret = cobd_transfer(cobd, req);
++		ret = cobd_transfer(cobd, req, &async);
 +
 +		/*
 +		 * OK:   ret ==  0 --> uptodate = 1
 +		 * FAIL: ret == -1 --> uptodate = 0
 +		 */
 +		if (ret == CO_BLOCK_REQUEST_RETCODE_OK) {
++			if (async)
++				break; /* wait for interrupt */
 +			end_request(req, 1);
 +		} else {
 +			end_request(req, 0);
 +		}
 +        }
++}
++
++static irqreturn_t cobd_interrupt(int irq, void *dev_id)
++{
++	co_message_node_t *input;
++
++	while (co_get_message(&input, CO_DEVICE_BLOCK)) {
++		co_linux_message_t *message;
++		co_block_intr_t *intr;
++		struct request *req;
++
++		message = (co_linux_message_t *)&input->msg.data;
++		if (message->unit >= CO_MODULE_MAX_COBD) {
++			printk("cobd interrupt: buggy unit reception: %x\n", message->unit);
++			goto goto_next_message;
++		}
++
++		BUG_ON(message->size != sizeof(co_block_intr_t));
++		intr = (co_block_intr_t *)message->data;
++		req = intr->irq_request;
++		BUG_ON(!req);
++
++		spin_lock(&cobd_lock);
++		end_request(req, intr->uptodate);
++		do_cobd_request(req->q);
++		spin_unlock(&cobd_lock);
++
++goto_next_message:
++		co_free_message(input);
++	}
++
++	return IRQ_HANDLED;
 +}
 +
 +static struct block_device_operations cobd_fops = {
@@ -222,9 +258,15 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 +{
 +	int result, i;
 +
++	if (request_irq(BLOCKDEV_IRQ, &cobd_interrupt, 0, "cobd", NULL)) {
++		printk("cobd: unable to get IRQ%d\n", BLOCKDEV_IRQ);
++		return -EBUSY;
++	}
++
 +	if (register_blkdev(COLINUX_MAJOR, "cobd")) {
 +		printk(KERN_WARNING "Unable to get major number %d for cobd device\n", COLINUX_MAJOR);
-+		return -EIO;
++		result = -EIO;
++		goto fail_irq;
 +	}
 +
 +	result = -ENOMEM; /* for the possible errors */
@@ -280,6 +322,8 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 +	if (unregister_blkdev(COLINUX_MAJOR, "cobd"))
 +		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
 +
++fail_irq:
++	free_irq(BLOCKDEV_IRQ, NULL);
 +	return result;
 +}
 +
@@ -478,6 +522,7 @@ Index: linux-2.6.22-source/drivers/block/cobd.c
 +	if (unregister_blkdev(COLINUX_MAJOR, "cobd"))
 +		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
 +
++	free_irq(BLOCKDEV_IRQ, NULL);
 +	kfree(cobd_disks);
 +}
 +

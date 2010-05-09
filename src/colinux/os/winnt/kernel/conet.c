@@ -411,7 +411,7 @@ static NDIS_STATUS DDKAPI co_conet_proto_receive(
 		message = (struct conet_message *)co_os_malloc(sizeof(struct conet_message));
 		if ( !message ) {
 			conet_debug("leave: allocate message fail");
-			return NDIS_STATUS_SUCCESS;
+			return NDIS_STATUS_RESOURCES;
 		}
 
 		message->message.from = CO_MODULE_CONET0 + adapter->conet_unit;

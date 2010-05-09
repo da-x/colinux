@@ -8,6 +8,10 @@
  *
  */
 
+ /* 
+  * WinNT dependent main program for the text mode console.
+  * Used for building colinux-console-nt.exe 
+  */
 #include <windows.h>
 
 extern "C" {
@@ -15,18 +19,18 @@ extern "C" {
 #include <colinux/os/user/misc.h>
 }
 
-#include <colinux/user/console-base/main.h>
+#include <colinux/user/console-nt/main.h>
 #include "console.h"
 
 COLINUX_DEFINE_MODULE("colinux-console-nt");
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
 	int status;
 
 	global_window = new console_window_NT_t;
 
-	if (!global_window) {
+	if (global_window == NULL) {
 		co_terminal_print("Unable to create console window");
 		return -1; 
 	}

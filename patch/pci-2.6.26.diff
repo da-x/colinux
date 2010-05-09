@@ -1,0 +1,128 @@
+Index: linux-2.6.26-source/arch/x86/Kconfig
+===================================================================
+--- linux-2.6.26-source.orig/arch/x86/Kconfig
++++ linux-2.6.26-source/arch/x86/Kconfig
+@@ -1524,6 +1524,9 @@
+ 	  direct access method and falls back to the BIOS if that doesn't
+ 	  work. If unsure, go with the default, which is "Any".
+ 
++config PCI_GOCO
++	bool "Cooperative"
++
+ config PCI_GOBIOS
+ 	bool "BIOS"
+ 
+@@ -1542,6 +1545,11 @@
+ 
+ endchoice
+ 
++config PCI_COOPERATIVE
++	bool
++ 	depends on PCI && PCI_GOCO && COOPERATIVE
++	default y
++
+ config PCI_BIOS
+ 	def_bool y
+ 	depends on X86_32 && !X86_VISWS && PCI && (PCI_GOBIOS || PCI_GOANY)
+@@ -1603,6 +1611,7 @@
+ 
+ # x86_64 have no ISA slots, but do have ISA-style DMA.
+ config ISA_DMA_API
++	depends on !COOPERATIVE
+ 	def_bool y
+ 
+ if X86_32
+Index: linux-2.6.26-source/arch/x86/kernel/cpu/cyrix.c
+===================================================================
+--- linux-2.6.26-source.orig/arch/x86/kernel/cpu/cyrix.c
++++ linux-2.6.26-source/arch/x86/kernel/cpu/cyrix.c
+@@ -231,6 +231,7 @@
+ 
+ 	case 4: /* MediaGX/GXm or Geode GXM/GXLV/GX1 */
+ #ifdef CONFIG_PCI
++#ifndef CONFIG_COOPERATIVE
+ 	{
+ 		u32 vendor, device;
+ 		/*
+@@ -263,6 +264,7 @@
+ 			mark_tsc_unstable("cyrix 5510/5520 detected");
+ 	}
+ #endif
++#endif
+ 		c->x86_cache_size = 16;	/* Yep 16K integrated cache thats it */
+ 
+ 		/* GXm supports extended cpuid levels 'ala' AMD */
+Index: linux-2.6.26-source/arch/x86/pci/init.c
+===================================================================
+--- linux-2.6.26-source.orig/arch/x86/pci/init.c
++++ linux-2.6.26-source/arch/x86/pci/init.c
+@@ -11,6 +11,9 @@
+ 
+ 	type = pci_direct_probe();
+ #endif
++#ifdef CONFIG_PCI_COOPERATIVE
++	pci_cooperative_init();
++#endif
+ 
+ 	pci_mmcfg_early_init();
+ 
+Index: linux-2.6.26-source/arch/x86/pci/pci.h
+===================================================================
+--- linux-2.6.26-source.orig/arch/x86/pci/pci.h
++++ linux-2.6.26-source/arch/x86/pci/pci.h
+@@ -99,6 +99,7 @@
+ extern struct pci_raw_ops pci_direct_conf1;
+ 
+ extern int pci_direct_probe(void);
++extern void pci_cooperative_init(void);
+ extern void pci_direct_init(int type);
+ extern void pci_pcbios_init(void);
+ extern int pci_olpc_init(void);
+Index: linux-2.6.26-source/arch/x86/pci/Makefile_32
+===================================================================
+--- linux-2.6.26-source.orig/arch/x86/pci/Makefile_32
++++ linux-2.6.26-source/arch/x86/pci/Makefile_32
+@@ -1,5 +1,6 @@
+ obj-y				:= i386.o init.o
+ 
++obj-$(CONFIG_PCI_COOPERATIVE)	+= copci.o
+ obj-$(CONFIG_PCI_BIOS)		+= pcbios.o
+ obj-$(CONFIG_PCI_MMCONFIG)	+= mmconfig_32.o direct.o mmconfig-shared.o
+ obj-$(CONFIG_PCI_DIRECT)	+= direct.o
+@@ -21,4 +22,8 @@
+ # Necessary for NUMAQ as well
+ pci-$(CONFIG_NUMA)		+= mp_bus_to_node.o
+ 
+-obj-y				+= $(pci-y) common.o early.o
++pci-$(CONFIG_COOPERATIVE)	:= legacy.o irq_cooperative.o
++obj-y				+= $(pci-y) common.o
++ifndef CONFIG_COOPERATIVE
++obj-y				+= early.o
++endif
+Index: linux-2.6.26-source/drivers/pci/pci.c
+===================================================================
+--- linux-2.6.26-source.orig/drivers/pci/pci.c
++++ linux-2.6.26-source/drivers/pci/pci.c
+@@ -1694,7 +1694,9 @@
+ EXPORT_SYMBOL_GPL(pci_intx);
+ EXPORT_SYMBOL(pci_set_dma_mask);
+ EXPORT_SYMBOL(pci_set_consistent_dma_mask);
++#ifndef CONFIG_COOPERATIVE
+ EXPORT_SYMBOL(pci_assign_resource);
++#endif
+ EXPORT_SYMBOL(pci_find_parent_resource);
+ EXPORT_SYMBOL(pci_select_bars);
+ 
+Index: linux-2.6.26-source/include/asm-x86/pci.h
+===================================================================
+--- linux-2.6.26-source.orig/include/asm-x86/pci.h
++++ linux-2.6.26-source/include/asm-x86/pci.h
+@@ -67,7 +67,7 @@
+ 			       int write_combine);
+ 
+ 
+-#ifdef CONFIG_PCI
++#if defined(CONFIG_PCI) && !defined(CONFIG_COOPERATIVE)
+ extern void early_quirks(void);
+ static inline void pci_dma_burst_advice(struct pci_dev *pdev,
+ 					enum pci_dma_burst_strategy *strat,

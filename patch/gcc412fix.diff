@@ -1,0 +1,12 @@
+Index: linux-2.6.25-source/arch/x86/kernel/vm86_32.c
+===================================================================
+--- linux-2.6.25-source.orig/arch/x86/kernel/vm86_32.c
++++ linux-2.6.25-source/arch/x86/kernel/vm86_32.c
+@@ -44,6 +44,7 @@
+ 
+ #include <asm/uaccess.h>
+ #include <asm/io.h>
++#include <asm/pgtable.h>
+ #include <asm/tlbflush.h>
+ #include <asm/irq.h>
+ 

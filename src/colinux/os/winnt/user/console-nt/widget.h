@@ -15,7 +15,7 @@
 #include <windows.h>
 
 extern "C" {
-#include <colinux/user/console-base/console.h>
+#include <colinux/user/console-nt/console.h>
 }
 
 class console_widget_NT_t:public console_widget_t {
@@ -25,30 +25,33 @@ public:
 
 	void draw();
 	co_rc_t loop();
-	co_rc_t set_window(console_window_t *w);
-	co_rc_t console_window(class console_window_t *);
+	co_rc_t set_window(console_window_t* w);
+	co_rc_t console_window(class console_window_t*);
 	co_rc_t idle();
-	co_rc_t title(const char *);
+	co_rc_t title(const char*);
 	void update();
+	co_rc_t set_cursor_size(const int cursor_size);
 
 protected:
-	HANDLE buffer;
-	CHAR_INFO blank;
-	SMALL_RECT region;
-	COORD size;
-	CHAR_INFO *screen;
-	HANDLE input;
-	HANDLE output;
-	CONSOLE_CURSOR_INFO cursor;
+	HANDLE 		    own_out_h; // Handle of the own screen buffer
+	HANDLE		    std_out_h; // Handle of the standard screen buffer
+	HANDLE		    input;
 
-	HWND saved_hwnd;
-        DWORD saved_mode;
-	HANDLE saved_output;
-        HANDLE saved_input;
+	CHAR_INFO 	    blank;
+	SMALL_RECT 	    win_region;
+	COORD 		    win_size;
+	COORD 		    buf_size;
+	CHAR_INFO*	    screen;
+	CONSOLE_CURSOR_INFO cursor_info;
+
+	HWND		    saved_hwnd;
+        DWORD		    saved_mode;
+	HANDLE		    saved_output;
+        HANDLE		    saved_input;
 	CONSOLE_CURSOR_INFO saved_cursor;
-        bool allocated_console;
+        bool		    allocated_console;
 
-	void init_new_console();
+	void save_standard_console();
 	void restore_console();
 
 	void process_key_event(KEY_EVENT_RECORD& ker);
@@ -57,12 +60,14 @@ protected:
 	co_rc_t op_scroll_up(
 		const co_console_unit &topRow,
 		const co_console_unit &bottomRow,
-		const co_console_unit &lines);
+		const co_console_unit &lines,
+		const co_console_character &charattr);
 
 	co_rc_t op_scroll_down(
 		const co_console_unit &topRow,
 		const co_console_unit &bottomRow,
-		const co_console_unit &lines);
+		const co_console_unit &lines,
+		const co_console_character &charattr);
 
 	co_rc_t op_putcs(
 		const co_console_unit &Y,
@@ -73,10 +78,10 @@ protected:
 	co_rc_t op_putc(
 		const co_console_unit &Y,
 		const co_console_unit &X,
-		const co_console_character &charattr);
+		const co_console_character& charattr);
 
-	co_rc_t op_cursor(
-		const co_cursor_pos_t &position);
+	co_rc_t op_cursor_pos(
+		const co_cursor_pos_t& position);
 
 	co_rc_t op_clear(
 		const co_console_unit &T,

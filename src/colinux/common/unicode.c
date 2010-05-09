@@ -14,6 +14,8 @@
  * the root directory.
  */
 
+/* OS independent UTF-8 library */
+
 #include "unicode.h"
 
 #include <colinux/common/libc.h>

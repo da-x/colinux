@@ -65,7 +65,7 @@ create_md5sums()
 	|| error_exit 10 "can not create md5sum"
 
 	# Md5sums for patches
-	local SERIES=`cat patch/series-$KERNEL_VERSION`
+	local SERIES=`grep -v '#.*' patch/series-$KERNEL_VERSION`
 	for name in $SERIES
 	do
 		if [ -e "patch/$name" ]
@@ -104,7 +104,8 @@ extract_kernel()
 
 emulate_quilt_push()
 {
-	while read name level
+	grep -v '#.*' series |\
+	while read name level 
 	do
 		if [ -e "patches/$name" ]
 		then
@@ -113,15 +114,18 @@ emulate_quilt_push()
 			patch $level -f < "patches/$name" \
 			|| error_exit 10 "$name patch failed"
 		fi
-	done < series
+	done
 }
 
 # Standard patch, user patches...
 patch_kernel_source()
 {
 	cd "$COLINUX_TARGET_KERNEL_SOURCE"
-	test -f "series"  || ln -s "$TOPDIR/patch/series-$KERNEL_VERSION" "series"
-	test -f "patches" || ln -s "$TOPDIR/patch" "patches"
+	test -f patches || ln -s "$TOPDIR/patch" patches
+	test -f series  || ln -s "patches/series-$KERNEL_VERSION" series
+
+	# Hotfix for 2.6.25 and 2.6.22 "core" patches
+	test -d arch/i386 || ln -s x86 arch/i386
 
 	if quilt --version >/dev/null 2>&1
 	then

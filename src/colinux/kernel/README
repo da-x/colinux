@@ -1,4 +1,4 @@
-The code in this directory is ther OS independent kernel code driver.
+The code in this directory is the OS independent kernel code driver.
 
 It is responsible for the following:
  * Monitor - allocating, maintaining and running the coLinux kernel.

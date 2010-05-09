@@ -25,8 +25,8 @@ then
 fi
 
 echo "Build premaid"
-cd $TOPDIR/src/colinux/os/winnt/user/install && . ./premaid.sh
 cd $BINDIR
+./premaid.sh
 
 # Create ZIP files
 build_package

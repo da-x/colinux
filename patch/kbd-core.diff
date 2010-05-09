@@ -2,7 +2,7 @@ Index: linux-2.6.22-source/drivers/input/serio/cokbd.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.22-source/drivers/input/serio/cokbd.c
-@@ -0,0 +1,153 @@
+@@ -0,0 +1,133 @@
 +/*
 + *  Cooperative Linux virtual keyboard controller driver
 + *
@@ -43,22 +43,6 @@ Index: linux-2.6.22-source/drivers/input/serio/cokbd.c
 +static irqreturn_t cokbdio_interrupt(int irq, void *dev_id);
 +
 +/*
-+ * cokbd_flush() flushes all data that may be in the keyboard buffers
-+ */
-+
-+static int cokbd_flush(void)
-+{
-+#if (0)
-+	co_linux_message_t *message;
-+
-+	while (co_get_message(&message, CO_DEVICE_KEYBOARD)) {
-+		co_free_message(message);
-+	}
-+#endif
-+	return 0;
-+}
-+
-+/*
 + * cokbd_write() sends a byte out through the keyboard interface.
 + */
 +
@@ -76,8 +60,6 @@ Index: linux-2.6.22-source/drivers/input/serio/cokbd.c
 +
 +static int cokbd_open(struct serio *port)
 +{
-+	cokbd_flush();
-+
 +	if (request_irq(KEYBOARD_IRQ, cokbdio_interrupt, 0, "cokbd", NULL)) {
 +		printk(KERN_ERR "cobkd.c: Can't get irq %d for %s, unregistering the port.\n", KEYBOARD_IRQ, "KBD");
 +		serio_unregister_port(port);
@@ -92,8 +74,6 @@ Index: linux-2.6.22-source/drivers/input/serio/cokbd.c
 +	printk(KERN_INFO "cokbd closed\n");
 +
 +	free_irq(KEYBOARD_IRQ, NULL);
-+
-+	cokbd_flush();
 +}
 +
 +/*
