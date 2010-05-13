@@ -12,9 +12,11 @@
 #define __COLINUX_USER_CONSOLE_MAIN_H__
 
 #include <colinux/common/common.h>
+#include "console.h"
 
 extern int co_user_console_main(int argc, char **argv);
 extern void co_user_console_handle_scancode(co_scan_code_t sc);
 extern void co_user_console_keyboard_focus_change(unsigned long keyboard_focus);
+console_window_t* co_user_console_get_window(void);
 
 #endif

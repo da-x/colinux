@@ -93,7 +93,12 @@ console_main_window_t::console_main_window_t(console_window_t* console)
 int console_main_window_t::handle(int event)
 {
 	long last_focus = keyboard_focus;
+	char str[0x100];
+	int x, y;
 
+	x = Fl::event_x();
+	y = Fl::event_y();
+	
 	switch (event) {
 	case FL_FOCUS:
 		keyboard_focus = 1;
@@ -101,6 +106,22 @@ int console_main_window_t::handle(int event)
 
 	case FL_UNFOCUS:
 		keyboard_focus = 0;
+		break;
+        
+	case FL_PUSH:
+		/* Should add test for which button was pressed */
+		if(Fl::event_button() == FL_RIGHT_MOUSE)
+			console->get_widget()->mouse_push(x, y, true);
+		else if(Fl::event_button() == FL_LEFT_MOUSE)
+			console->get_widget()->mouse_push(x, y, false);
+		break;
+		
+	case FL_DRAG:
+		console->get_widget()->mouse_drag(x, y);
+		break;
+
+	case FL_RELEASE:
+		console->get_widget()->mouse_release(x, y);
 		break;
 	}
 
@@ -121,7 +142,6 @@ console_window_t::console_window_t()
 	window		  	   = 0;
 	widget	          	   = 0;
 	resized_on_attach 	   = PTRUE;
-	
 	rc = co_reactor_create(&reactor);
 }
 
@@ -211,18 +231,18 @@ co_rc_t console_window_t::start()
 	int swidth  = 640;
 	int sheight = 480;
 
-	menu = new Fl_Menu_Bar(0, 0, swidth, 30);
+	menu = new Fl_Menu_Bar(0, 0, swidth, MENU_SIZE_PIXELS);
 	menu->box(FL_UP_BOX);
 	menu->align(FL_ALIGN_CENTER);
 	menu->when(FL_WHEN_RELEASE_ALWAYS);
 	menu->copy(console_menuitems, window);
 
-	Fl_Group* tile = new Fl_Group(0, 30, swidth, sheight-30);
+	Fl_Group* tile = new Fl_Group(0, MENU_SIZE_PIXELS, swidth, sheight-MENU_SIZE_PIXELS);
 	
-	widget	    = new console_widget_t(0, 30, swidth, sheight - 120);
-	text_widget = new Fl_Text_Display(0, sheight - 120 + 30, swidth, 70);
+	widget	    = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, sheight - 120);
+	text_widget = new Fl_Text_Display(0, sheight - 120 + MENU_SIZE_PIXELS, swidth, 70);
 
-	Fl_Group* tile2 = new Fl_Group(0, sheight - 120 + 30, swidth, 90);
+	Fl_Group* tile2 = new Fl_Group(0, sheight - 120 + MENU_SIZE_PIXELS, swidth, 90);
 	
 	text_widget->buffer(new Fl_Text_Buffer());
 	text_widget->insert_position(0);
@@ -610,5 +630,10 @@ void console_window_t::log(const char* format, ...)
 	text_widget->insert_position(text_widget->buffer()->length());
 	text_widget->show_insert_position();
 	text_widget->insert(buf);	
+}
+
+console_widget_t * console_window_t::get_widget()
+{
+    return widget;
 }
 

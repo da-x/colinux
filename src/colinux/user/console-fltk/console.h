@@ -77,9 +77,9 @@ public:
 
 	void handle_message(co_message_t *message);
 	void handle_scancode(co_scan_code_t sc);
-
+    console_widget_t * get_widget();
 	void log(const char *format, ...);
-
+	
 protected:
 	co_console_state_t state;
 	co_id_t attached_id;
@@ -99,6 +99,7 @@ protected:
 	void global_resize_constraint();
 
 	static co_rc_t message_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size);
+	
 };
 
 extern void console_idle(void *data);

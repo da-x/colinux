@@ -16,9 +16,9 @@ extern "C" {
 }
 
 #include <colinux/user/console-fltk/main.h>
+#include <colinux/user/console-fltk/widget.h>
 
 COLINUX_DEFINE_MODULE("colinux-console-fltk");
-
 
 /*
  * Storage of current keyboard state.
@@ -94,6 +94,48 @@ static int PasteClipboardIntoColinux()
 	return 0;
 }
 
+/* copy the entire screen to the clipboard, adding new-line chars at the end of each line */
+static int CopyLinuxIntoClipboard()
+{
+	/* Lock clipboard for writing -- TODO: try again on failure */
+	if ( ! ::OpenClipboard(NULL) )
+	{
+		co_debug("OpenClipboard() error 0x%lx !", ::GetLastError());
+		return -1;
+	}
+
+	/* clear clipboard */
+	if ( ! ::EmptyClipboard() )
+	{
+		co_debug("EmptyClipboard() error 0x%lx !", ::GetLastError());
+		return -1;
+	}
+
+	/* get control to the widget */
+	console_widget_t* my_widget = co_user_console_get_window()->get_widget();
+
+	/* allocate memory for clipboard, plus 1 byte for null termination */
+	HGLOBAL hMemClipboard = ::GlobalAlloc(GMEM_MOVEABLE, 
+		(my_widget->screen_size_bytes()+1));
+	if (hMemClipboard==NULL)
+	{
+		::CloseClipboard();
+		co_debug( "GlobalAlloc() error 0x%lx !", ::GetLastError() );
+		return -1;
+	}
+
+	/* paste data into clipboard */
+	my_widget->copy_mouse_selection((char*)::GlobalLock(hMemClipboard));
+
+	/* unlock memory (but don't free it-- it's now owned by the OS) */
+	::GlobalUnlock(hMemClipboard);
+	::SetClipboardData(CF_TEXT, hMemClipboard);
+	
+	/* and we're done */
+	::CloseClipboard();
+
+	return 0;
+}
 
 static LRESULT CALLBACK keyboard_hook(
     int    nCode,
@@ -132,7 +174,15 @@ static LRESULT CALLBACK keyboard_hook(
 	case 'V':
 		if ( !released && (vkey_state[255] & 1) )
 		{
-			PasteClipboardIntoColinux( );
+			PasteClipboardIntoColinux();
+			return 1;	/* key processed */
+		}
+		break;
+        
+    case 'C':
+		if ( !released && (vkey_state[255] & 1) )
+		{
+			CopyLinuxIntoClipboard( );
 			return 1;	/* key processed */
 		}
 		break;
@@ -197,3 +247,5 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR cmdLine, int)
 	// Run main console procedure
 	return co_user_console_main(argc, argv);
 }
+
+

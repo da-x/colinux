@@ -12,6 +12,11 @@
 
 static console_window_t* global_window = NULL;
 
+console_window_t* co_user_console_get_window(void)
+{
+    return global_window;
+}
+
 void co_user_console_handle_scancode(co_scan_code_t sc)
 {
 	if (!global_window)

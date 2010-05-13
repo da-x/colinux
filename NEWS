@@ -1,3 +1,7 @@
+* Version 0.7.8
+  Console:
+  * New: Mouse copy&paste with key Win-C in FLTK console. (Shai Vaingast)
+
 * Version 0.7.7
   Console and daemons:
   * New: "color=black,white" sets default color. (Peter Kuznetsov)
