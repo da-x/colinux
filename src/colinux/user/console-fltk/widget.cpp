@@ -35,20 +35,21 @@ console_widget_t::console_widget_t(int		x,
 	letter_x	      = font_size;
 	letter_y	      = font_size;
 	cursor_blink_interval = 0.1;
-	cursor_blink_state    = 1;
-	console               = NULL;
-	fit_x                 = 0;
-	fit_y		      = 0;
-	
+	cursor_blink_state	= 1;
+	console				= NULL;
+	fit_x				= 0;
+	fit_y				= 0;
+
+	/* variables supporting mouse copy/paste operations */
 	mouse_copy			= false;
 	mouse_start_x		= 0;
 	mouse_start_y		= 0;
-	mouse_sx = 0;
-	mouse_wx = 0;
-	mouse_sy = 0; 
-	mouse_wy = 0;
-	loc_start = 0;
-	loc_end = 0;
+	mouse_sx			= 0;
+	mouse_wx			= 0;
+	mouse_sy			= 0; 
+	mouse_wy			= 0;
+	loc_start			= 0;
+	loc_end 			= 0;
 
 	Fl::add_timeout(cursor_blink_interval,
 		        (Fl_Timeout_Handler)(console_widget_t::static_blink_handler),
@@ -312,7 +313,10 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 	if (!CO_OK(rc))
 		return rc;
 
-	mouse_clear();
+	/* clear old mouse selection */
+	if(mouse_copy)
+		mouse_clear();
+
 	switch (message->type) 
 	{
 	case CO_OPERATION_CONSOLE_SCROLL_UP:
@@ -393,9 +397,10 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 
 void console_widget_t::mouse_push(int x, int y, bool drag_type)
 {
-	set_rect(mouse_sx, mouse_sy, mouse_wx, mouse_wy);
+	/* mouse button was pressed (left or right) */
+	invert_area(mouse_sx, mouse_sy, mouse_wx, mouse_wy);
 	damage_console(0, 0, console->config.x, console->config.y);
-	
+
 	mouse_start_x = x;
 	mouse_start_y = y;
 	mouse_sx = 0;
@@ -405,6 +410,8 @@ void console_widget_t::mouse_push(int x, int y, bool drag_type)
 	loc_start = 0;
 	loc_end = 0;
 	mouse_copy = true;
+	
+	/* mouse_drag_type indicates whether rectangle select or line select mode */
 	mouse_drag_type = drag_type;
 	
 	return;
@@ -412,36 +419,30 @@ void console_widget_t::mouse_push(int x, int y, bool drag_type)
 
 void console_widget_t::mouse_drag(int x, int y)
 {
-	/* feature to add, ALT does a rectangle copy */
+	/* selection is being performed by dragging the mouse */
 	if (!mouse_copy)
 		return;
 
 	/* clear old selection */
-	set_rect(mouse_sx, mouse_sy, mouse_wx, mouse_wy);
+	invert_area(mouse_sx, mouse_sy, mouse_wx, mouse_wy);
 	damage_console(0, 0, console->config.x, console->config.y);
+	
+	/* calculate selection area */
 	calc_area(x, y);
 
 	/* set new selection */
-	set_rect(mouse_sx, mouse_sy, mouse_wx, mouse_wy);
+	invert_area(mouse_sx, mouse_sy, mouse_wx, mouse_wy);
 	damage_console(0, 0, console->config.x, console->config.y);
-	/*
-	if(mouse_drag_type) // rect select
-		damage_console(MIN(mouse_sx, old_sx), MIN(mouse_sy, old_sy), 
-			MAX(mouse_wx, old_wx), MAX(mouse_wy, old_wy));
-	else
-		damage_console(0, MIN(mouse_sy, old_sy), 
-			console->config.x, MAX(mouse_wy, old_wy)-MIN(mouse_sy, old_sy));
-	*/
+
 	return;
 }
 
 void console_widget_t::mouse_clear(void)
 {
-	if(mouse_copy)
-	{
-		set_rect(mouse_sx, mouse_sy, mouse_wx, mouse_wy);
-		damage_console(0, 0, console->config.x, console->config.y);
-	}
+	/* clear mouse selection */
+	invert_area(mouse_sx, mouse_sy, mouse_wx, mouse_wy);
+	damage_console(0, 0, console->config.x, console->config.y);
+
 	mouse_start_x = 0;
 	mouse_start_y = 0;
 	mouse_sx = 0;
@@ -458,28 +459,13 @@ void console_widget_t::mouse_clear(void)
 void console_widget_t::mouse_release(int x, int y)
 {
 	/* copy and paste into the command line by faking keyboard */
-	/*
-	if(!mouse_copy)
-		return;
-		
-	co_scan_code_t sc;
-	sc.mode = CO_KBD_SCANCODE_ASCII;
-
-	for(int i_y=mouse_sy; i_y<mouse_sy+mouse_wy; i_y++)
-	{
-		for(int i_x=mouse_sx; i_x<mouse_sx+mouse_wx; i_x++)
-		{
-			sc.code = (console->screen+i_x+i_y*console->config.x)->ch;
-			co_user_console_handle_scancode( sc );
-		}
-	}
-	*/
+	/* not implemented yet */
 	return;
 }
 
 void console_widget_t::copy_mouse_selection(char*str)
 {
-	/* copies mouse selection to supplied string */
+	/* copies mouse selection to supplied string pointer */
 	if(str==NULL)
 		return;
 	if(!mouse_copy)
@@ -495,6 +481,8 @@ void console_widget_t::copy_mouse_selection(char*str)
 				*(str+indx_str) = (console->screen+i_x+i_y*console->config.x)->ch;
 				indx_str++;
 			}
+			*(str+indx_str) = '\r';
+			indx_str++;
 			*(str+indx_str) = '\n';
 			indx_str++;
 		}
@@ -509,17 +497,19 @@ void console_widget_t::copy_mouse_selection(char*str)
 		}
 	}
 	
-	/* null terminate the string */
+	/* null-terminate the string */
 	*(str+indx_str) = 0;
 }
 
 int console_widget_t::screen_size_bytes(void)
 {
+	/* returns screen size in bytes */
 	return (console->config.x * console->config.y);
 }
 
-void console_widget_t::set_rect(int sx, int sy, int wx, int wy)
+void console_widget_t::invert_area(int sx, int sy, int wx, int wy)
 {
+	/* inverse selection area attribute */
 	if(mouse_drag_type) 
 	{
 		/* rect select */
@@ -539,43 +529,44 @@ void console_widget_t::set_rect(int sx, int sy, int wx, int wy)
 
 void console_widget_t::calc_area(int x, int y)
 {
-	if(mouse_start_x<x)
-	{
-		mouse_sx = loc_x(mouse_start_x);
-		mouse_wx = loc_x(x)-loc_x(mouse_start_x);
-	}
-	else
-	{
-		mouse_sx = loc_x(x);
-		mouse_wx = loc_x(mouse_start_x)-loc_x(x);
-	}
+	/* calculate selection area */
 
-	if(mouse_start_y<y)
-	{
-		mouse_sy = loc_y(mouse_start_y);
-		mouse_wy = loc_y(y)-loc_y(mouse_start_y);
-	}
-	else
-	{
-		mouse_sy = loc_y(y);
-		mouse_wy = loc_y(mouse_start_y)-loc_y(y);
-	}
-
-	/* no point if mouse selection is empty */
-	mouse_wx = (mouse_wx == 0) ? 1 : mouse_wx;
-	mouse_wy = (mouse_wy == 0) ? 1 : mouse_wy;
-	
-	if(mouse_sx+mouse_wx > console->config.x)
-		mouse_wx = console->config.x - mouse_sx;
-	if(mouse_sy+mouse_wy > console->config.y)
-		mouse_wy = console->config.y - mouse_sy;
+	if(mouse_drag_type)
+	{ 
+		/* copy rect */
+		/* calculate selection start location and selection width and height */
 		
-	loc_start = loc_x(mouse_start_x) + loc_y(mouse_start_y) * console->config.x;
-	loc_end = loc_x(x) + loc_y(y) * console->config.x;
-	if(loc_start>loc_end)
+		mouse_sx = i_min(loc_x(mouse_start_x), loc_x(x));
+		mouse_wx = i_abs(loc_x(x)-loc_x(mouse_start_x));
+		mouse_sy = i_min(loc_y(mouse_start_y), loc_y(y));
+		mouse_wy = i_abs(loc_y(y)-loc_y(mouse_start_y));
+
+		/* no point if mouse selection is empty */
+		mouse_wx = (mouse_wx == 0) ? 1 : mouse_wx;
+		mouse_wy = (mouse_wy == 0) ? 1 : mouse_wy;
+
+		/* clip selection to the size of the console */
+		mouse_wx = (mouse_sx+mouse_wx > console->config.x) ?
+			console->config.x - mouse_sx : mouse_wx;
+
+		mouse_wy = (mouse_sy+mouse_wy > console->config.y) ? 
+			console->config.y : mouse_wy;
+	}
+	else
 	{
-		loc_start = loc_x(x) + loc_y(y) * console->config.x;
-		loc_end = loc_x(mouse_start_x) + loc_y(mouse_start_y) * console->config.x;
+		/* copy lines */
+
+		/* calculate start and end of selection */
+		loc_start = loc_x(mouse_start_x) + loc_y(mouse_start_y) * console->config.x;
+		loc_end = loc_x(x) + loc_y(y) * console->config.x;
+		
+		/* swap start and end as needed */
+		if(loc_start>loc_end)
+		{
+			int temp = loc_start;
+			loc_start = loc_end;
+			loc_end = temp;
+		}
 	}
 
 	return;
@@ -583,16 +574,22 @@ void console_widget_t::calc_area(int x, int y)
 
 int console_widget_t::loc_x(int mouse_x)
 {
+	/* calculate location of the mouse in screen text coordinates */
 	int loc_x = mouse_x/letter_x;
-	loc_x = (loc_x>console->config.x) ? console->config.x : loc_x;
-	loc_x = (loc_x<0) ? 0 : loc_x;
+
+	/* clip mouse location to screen only */
+	loc_x = i_min(console->config.x, loc_x);
+	loc_x = i_max(0, loc_x);
 	return loc_x;
 }
 
 int console_widget_t::loc_y(int mouse_y)
 {
+	/* calculate location of the mouse in screen text coordinates */
 	int loc_y = (mouse_y-MENU_SIZE_PIXELS)/letter_y;
-	loc_y = (loc_y>console->config.y) ? console->config.y : loc_y;
-	loc_y = (loc_y<0) ? 0 : loc_y;
+	
+	/* clip mouse location to screen only */
+	loc_y = i_min(console->config.y, loc_y);
+	loc_y = i_max(0, loc_y);
 	return loc_y;
 }

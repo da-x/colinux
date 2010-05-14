@@ -17,8 +17,6 @@
 #include <FL/fl_draw.H>
 
 #define MENU_SIZE_PIXELS ((int)30)
-#define MIN(a, b)	(((a)<(b)) ? (a) : (b))
-#define MAX(a, b)	(((a)>(b)) ? (a) : (b))
 
 extern "C" {
 #include <colinux/common/console.h>
@@ -42,7 +40,6 @@ public:
 	void mouse_push(int x, int y, bool drag_type);
 	void mouse_drag(int x, int y);
 	void mouse_release(int x, int y);
-	void mouse_clear(void);
 	void copy_mouse_selection(char*str);
 	
 protected:
@@ -64,11 +61,17 @@ protected:
 	virtual void draw();
 	static void static_blink_handler(class console_widget_t* widget);
 	void blink_handler();
-	void set_rect(int sx, int sy, int wx, int wy);
+	void invert_area(int sx, int sy, int wx, int wy);
 	void calc_area(int x, int y);
 	int loc_x(int mouse_x);
 	int loc_y(int mouse_y);
+	void mouse_clear(void);
 	
+	/* internal helper functions */
+	int i_min(int a, int b) { return (a<b) ? a : b; };
+	int i_max(int a, int b) { return (a>b) ? a : b; };
+	int i_abs(int a) { return (a>0) ? a : -a; };
+
 };
 
 #endif

@@ -93,7 +93,6 @@ console_main_window_t::console_main_window_t(console_window_t* console)
 int console_main_window_t::handle(int event)
 {
 	long last_focus = keyboard_focus;
-	char str[0x100];
 	int x, y;
 
 	x = Fl::event_x();
