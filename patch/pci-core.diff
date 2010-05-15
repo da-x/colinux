@@ -1,7 +1,7 @@
-Index: linux-2.6.22-source/arch/i386/pci/copci.c
+Index: linux-2.6.22-source/arch/x86/pci/copci.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/arch/i386/pci/copci.c
++++ linux-2.6.22-source/arch/x86/pci/copci.c
 @@ -0,0 +1,301 @@
 +
 +#include <linux/kernel.h>
@@ -18,7 +18,7 @@ Index: linux-2.6.22-source/arch/i386/pci/copci.c
 +#define COPCI_DEBUG_IO 0
 +
 +/* For PCI or other memory-mapped resources */
-+/* Symbol needed, dummy for coLinux. (copied from arch/i386/kernel/e820.c) */
++/* Symbol needed, dummy for coLinux. (copied from arch/x86/kernel/e820.c) */
 +unsigned long pci_mem_start = 0x10000000;
 +EXPORT_SYMBOL(pci_mem_start);
 +
@@ -304,10 +304,10 @@ Index: linux-2.6.22-source/arch/i386/pci/copci.c
 +
 +	raw_pci_ops = &copci_ops;
 +}
-Index: linux-2.6.22-source/arch/i386/pci/irq_cooperative.c
+Index: linux-2.6.22-source/arch/x86/pci/irq_cooperative.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/arch/i386/pci/irq_cooperative.c
++++ linux-2.6.22-source/arch/x86/pci/irq_cooperative.c
 @@ -0,0 +1,36 @@
 +/*
 + *	Low-Level PCI Support for PC -- Routing of Interrupts
