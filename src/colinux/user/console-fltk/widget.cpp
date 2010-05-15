@@ -503,8 +503,8 @@ void console_widget_t::copy_mouse_selection(char*str)
 
 int console_widget_t::screen_size_bytes(void)
 {
-	/* returns screen size in bytes */
-	return (console->config.x * console->config.y);
+	/* returns screen size in bytes, adding 2 for each row to acccount for carriage-return line-feed chars */
+	return ((console->config.x+2) * console->config.y);
 }
 
 void console_widget_t::invert_area(int sx, int sy, int wx, int wy)
