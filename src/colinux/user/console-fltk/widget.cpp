@@ -34,7 +34,7 @@ console_widget_t::console_widget_t(int		x,
 	font_size 	      = 18;
 	letter_x	      = font_size;
 	letter_y	      = font_size;
-	cursor_blink_interval = 0.1;
+	cursor_blink_interval = 0.2;
 	cursor_blink_state	= 1;
 	console				= NULL;
 	fit_x				= 0;
@@ -64,6 +64,7 @@ void console_widget_t::static_blink_handler(console_widget_t* widget)
 void console_widget_t::blink_handler()
 {
 	if (console) {
+		cursor_blink_state = !cursor_blink_state;
 		damage_console(console->cursor.x, console->cursor.y, 1, 1);
 
 		/* 
