@@ -576,7 +576,8 @@ void console_widget_t::calc_area(int x, int y)
 int console_widget_t::loc_x(int mouse_x)
 {
 	/* calculate location of the mouse in screen text coordinates */
-	int loc_x = mouse_x/letter_x;
+	int border_x = (fit_x-w()) / 2;
+	int loc_x = (mouse_x+border_x)/letter_x;
 
 	/* clip mouse location to screen only */
 	loc_x = i_min(console->config.x, loc_x);
@@ -587,7 +588,8 @@ int console_widget_t::loc_x(int mouse_x)
 int console_widget_t::loc_y(int mouse_y)
 {
 	/* calculate location of the mouse in screen text coordinates */
-	int loc_y = (mouse_y-MENU_SIZE_PIXELS)/letter_y;
+	int border_y = (fit_y - h()) / 2;
+	int loc_y = (mouse_y-MENU_SIZE_PIXELS+border_y)/letter_y;
 	
 	/* clip mouse location to screen only */
 	loc_y = i_min(console->config.y, loc_y);
