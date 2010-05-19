@@ -1,7 +1,13 @@
-import re, os
-from sets import Set as set
+import re, os, sys
 from target import RawInput
 from lib import normal_path
+
+old_set = False
+if not (sys.version_info[1]>=6):
+    # sets are deprecated since Python version 2.6
+    # this will not work in version 3.x of Python but there's some time until then
+    old_set = True
+    from sets import Set as set
 
 cdeps_cache = {}
 
@@ -32,8 +38,10 @@ def calc_deps(pathname):
                     result_set = _recurse(included_path)
                     
             if result_set:
-                set_union.union_update(result_set)
-                    
+                if old_set:
+                    set_union.union_update(result_set)
+                else:
+                    set_union.update(result_set)
         cdeps_cache[pathname] = set_union
         return set_union
 

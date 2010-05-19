@@ -2,6 +2,9 @@
   Console:
   * New: Mouse copy&paste with key Win-C in FLTK console. (Shai Vaingast)
 
+  Buildsystem:
+  * Supress warnings from Python 2.6. (Shai Vaingast)
+
 * Version 0.7.7
   Console and daemons:
   * New: "color=black,white" sets default color. (Peter Kuznetsov)
