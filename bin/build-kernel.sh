@@ -138,6 +138,10 @@ patch_kernel_source()
 
 	# Copy coLinux Version into kernel localversion
 	echo "-co-$CO_VERSION" > localversion-cooperative
+
+	# Add SVN revision on snapshots
+	test -n "$COLINUX_SVN_REVISION" && \
+	echo "$COLINUX_SVN_REVISION" >localversion-svn
 }
 
 configure_kernel()
