@@ -127,6 +127,8 @@ int console_main_window_t::handle(int event)
 	if (last_focus != keyboard_focus)
 		co_user_console_keyboard_focus_change(keyboard_focus);
 
+	console->lock_size();
+
 	return Fl_Double_Window::handle(event);
 }
 
@@ -628,7 +630,7 @@ void console_window_t::log(const char* format, ...)
 
 	text_widget->insert_position(text_widget->buffer()->length());
 	text_widget->show_insert_position();
-	text_widget->insert(buf);	
+	text_widget->insert(buf);
 }
 
 console_widget_t * console_window_t::get_widget()
@@ -636,3 +638,11 @@ console_widget_t * console_window_t::get_widget()
     return widget;
 }
 
+void console_window_t::lock_size()
+{
+	if(resized_on_attach==PTRUE)
+	{
+		resized_on_attach = PFALSE;
+		global_resize_constraint();
+	}
+}
