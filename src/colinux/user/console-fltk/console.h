@@ -77,9 +77,8 @@ public:
 
 	void handle_message(co_message_t *message);
 	void handle_scancode(co_scan_code_t sc);
-    console_widget_t * get_widget();
+	console_widget_t * get_widget();
 	void log(const char *format, ...);
-	void lock_size();
 	
 protected:
 	co_console_state_t state;
