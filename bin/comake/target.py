@@ -1,4 +1,15 @@
-import os, copy, md5
+import os, copy, sys
+
+if sys.version_info[1]>=5:
+    # md5 is deprecated since Python version 2.5
+    # this will not work in version 3.x of Python but there's some time until then
+    import hashlib
+    use_hashlib = True
+else:
+    # for compatability reasons for those still using ver <= Python 2.4
+    import md5
+    use_hashlib = False
+
 from lib import normal_path
 
 class RawTarget(object):
@@ -75,7 +86,10 @@ class Target(object):
                 self.tool = Empty()
 
     def cache(self):
-        hasho = md5.md5()
+        if use_hashlib:
+            hasho = hashlib.md5()
+        else:
+            hasho = md5.md5()
         for inputo in self.inputs:
             hasho.update(inputo.hash)
         hasho.update(self.tool.cache(self))

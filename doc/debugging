@@ -141,6 +141,9 @@ Stepguide for colinux-daebug-daemon
    It is not strictly necessary to use this program; the XML-formatted messages
    are in ASCII and are easy enough to read directly.
 
+   With a small shell command under Linux you can extract the text:
+   sed -ne 's|<string>\(.*\)</string>|\1|p' <debug.xml >debug.txt
+
 8) The source code for colinux-debug-daemon is in the source tarball, in
    src/colinux/user/debug/main.c
 

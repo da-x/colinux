@@ -945,38 +945,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  static inline int is_kernel_text(unsigned long addr)
  {
  	if (addr >= PAGE_OFFSET && addr <= (unsigned long)__init_end)
-@@ -191,7 +195,12 @@
- 				    is_kernel_text(addr2))
- 					prot = PAGE_KERNEL_LARGE_EXEC;
- 
--				set_pmd(pmd, pfn_pmd(pfn, prot));
-+printk("init_32.c:%d pmd = %p pfn = %d pfn_pmd %d pte_mask = %lx\n",
-+	__LINE__, pmd, pfn, pfn_pmd(pfn, prot), (unsigned long)__supported_pte_mask);
-+BUG();
-+				set_pmd(pmd, pfn_pmd(pfn, prot));	// <<=== TODO: Crash
-+BUG();
-+////		set_pmd(pmd, __pmd(CO_PP_TO_P(__pa(page_table)) | _PAGE_TABLE));
- 
- 				pfn += PTRS_PER_PTE;
- 				continue;
-@@ -206,7 +215,15 @@
- 				if (is_kernel_text(addr))
- 					prot = PAGE_KERNEL_EXEC;
- 
--				set_pte(pte, pfn_pte(pfn, prot));
-+printk("init_32.c:%d pte =%p pfn = %d pfn_pte %d pte_mask = %lx\n",
-+	__LINE__, pte, pfn, pfn_pte(pfn, prot), (unsigned long)__supported_pte_mask);
-+{
-+//    int i = *(int*)pte; // <=== Crash
-+//    printk("*pte = %x\n", i);
-+}
-+BUG();
-+				set_pte(pte, pfn_pte(pfn, prot)); // <=== Crash
-+BUG();
- 			}
- 		}
- 	}
-@@ -218,6 +235,7 @@
+@@ -218,6 +222,7 @@
  		return 1;
  	return 0;
  }
@@ -984,7 +953,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  #ifdef CONFIG_HIGHMEM
  pte_t *kmap_pte;
-@@ -390,6 +408,7 @@
+@@ -390,6 +395,7 @@
  
  	paravirt_pagetable_setup_start(pgd_base);
  
@@ -992,7 +961,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  	/* Enable PSE if available */
  	if (cpu_has_pse)
  		set_in_cr4(X86_CR4_PSE);
-@@ -403,6 +422,7 @@
+@@ -403,6 +409,7 @@
  
  	kernel_physical_mapping_init(pgd_base);
  	remap_numa_kva();
@@ -1000,7 +969,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  	/*
  	 * Fixed mappings, only the page table structure has to be
-@@ -543,6 +563,7 @@
+@@ -543,6 +550,7 @@
   * used to involve black magic jumps to work around some nasty CPU bugs,
   * but fortunately the switch to using exceptions got rid of all that.
   */
@@ -1008,7 +977,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  static void __init test_wp_bit(void)
  {
  	printk(KERN_INFO
-@@ -563,6 +584,7 @@
+@@ -563,6 +571,7 @@
  		printk(KERN_CONT "Ok.\n");
  	}
  }
@@ -1016,17 +985,30 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  static struct kcore_list kcore_mem, kcore_vmalloc;
  
-@@ -625,6 +647,9 @@
+@@ -621,15 +630,15 @@
+ 
+ #if 1 /* double-sanity-check paranoia */
+ 	printk(KERN_INFO "virtual kernel memory layout:\n"
+-		"    fixmap  : 0x%08lx - 0x%08lx   (%4ld kB)\n"
++		"    fixmap  : 0x%08lx - 0x%08lx  (%4ld kB)\n"
  #ifdef CONFIG_HIGHMEM
- 		"    pkmap   : 0x%08lx - 0x%08lx   (%4ld kB)\n"
- #endif
-+#ifdef CONFIG_COOPERATIVE
-+		"    colinux : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+-		"    pkmap   : 0x%08lx - 0x%08lx   (%4ld kB)\n"
++		"    pkmap   : 0x%08lx - 0x%08lx  (%4ld kB)\n"
 +#endif
- 		"    vmalloc : 0x%08lx - 0x%08lx   (%4ld MB)\n"
- 		"    lowmem  : 0x%08lx - 0x%08lx   (%4ld MB)\n"
- 		"      .init : 0x%08lx - 0x%08lx   (%4ld kB)\n"
-@@ -638,6 +663,11 @@
++#ifdef CONFIG_COOPERATIVE
++		"    colinux : 0x%08lx - 0x%08lx  (%4ld MB)\n"
+ #endif
+-		"    vmalloc : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+-		"    lowmem  : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+-		"      .init : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+-		"      .data : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+-		"      .text : 0x%08lx - 0x%08lx   (%4ld kB)\n",
++		"    vmalloc : 0x%08lx - 0x%08lx  (%4ld MB)\n",
++
+ 		FIXADDR_START, FIXADDR_TOP,
+ 		(FIXADDR_TOP - FIXADDR_START) >> 10,
+ 
+@@ -638,8 +647,19 @@
  		(LAST_PKMAP*PAGE_SIZE) >> 10,
  #endif
  
@@ -1036,9 +1018,18 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
 +#endif
 +
  		VMALLOC_START, VMALLOC_END,
- 		(VMALLOC_END - VMALLOC_START) >> 20,
+-		(VMALLOC_END - VMALLOC_START) >> 20,
++		(VMALLOC_END - VMALLOC_START) >> 20);
++
++	printk(KERN_INFO
++		"    lowmem  : 0x%08lx - 0x%08lx  (%4ld MB)\n"
++		"      .init : 0x%08lx - 0x%08lx  (%4ld kB)\n"
++		"      .data : 0x%08lx - 0x%08lx  (%4ld kB)\n"
++		"      .text : 0x%08lx - 0x%08lx  (%4ld kB)\n",
  
-@@ -658,12 +688,20 @@
+ 		(unsigned long)__va(0), (unsigned long)high_memory,
+ 		((unsigned long)high_memory - (unsigned long)__va(0)) >> 20,
+@@ -658,12 +678,20 @@
  	BUG_ON(PKMAP_BASE + LAST_PKMAP*PAGE_SIZE	> FIXADDR_START);
  	BUG_ON(VMALLOC_END				> PKMAP_BASE);
  #endif
@@ -1059,7 +1050,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  	cpa_init();
  
-@@ -694,6 +732,7 @@
+@@ -694,6 +722,7 @@
   * This function cannot be __init, since exceptions don't work in that
   * section.  Put this after the callers, so that it cannot be inlined.
   */
@@ -1067,7 +1058,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  static noinline int do_test_wp_bit(void)
  {
  	char tmp_reg;
-@@ -713,6 +752,7 @@
+@@ -713,6 +742,7 @@
  
  	return flag;
  }
@@ -1075,22 +1066,23 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  #ifdef CONFIG_DEBUG_RODATA
  const int rodata_test_data = 0xC3;
-@@ -770,7 +810,7 @@
+@@ -770,7 +800,9 @@
  	 */
  	printk(KERN_INFO "debug: unmapping init memory %08lx..%08lx\n",
  		begin, PAGE_ALIGN(end));
--	set_memory_np(begin, (end - begin) >> PAGE_SHIFT);
-+//FIXME:	set_memory_np(begin, (end - begin) >> PAGE_SHIFT);
++#ifndef CONFIG_COOPERATIVE
+ 	set_memory_np(begin, (end - begin) >> PAGE_SHIFT);
++#endif /* !CONFIG_COOPERATIVE */
  #else
  	unsigned long addr;
  
-@@ -779,7 +819,8 @@
+@@ -779,7 +811,9 @@
  	 * we are going to free part of that, we need to make that
  	 * writeable first.
  	 */
--	set_memory_rw(begin, (end - begin) >> PAGE_SHIFT);
-+//FIXME: Crashing!
-+//	set_memory_rw(begin, (end - begin) >> PAGE_SHIFT);
++#ifndef CONFIG_COOPERATIVE
+ 	set_memory_rw(begin, (end - begin) >> PAGE_SHIFT);
++#endif /* !CONFIG_COOPERATIVE */
  
  	for (addr = begin; addr < end; addr += PAGE_SIZE) {
  		ClearPageReserved(virt_to_page(addr));
@@ -1359,13 +1351,13 @@ Index: linux-2.6.25-source/include/asm-x86/cooperative.h
 + * Address space layout:
 + */
 +
-+#define CO_VPTR_BASE                         (0xffc00000)
-+#define CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP   (CO_VPTR_BASE - 0x1000000)
-+#define CO_VPTR_PSEUDO_RAM_PAGE_TABLES       (CO_VPTR_BASE - 0x1100000)
-+#define CO_VPTR_PASSAGE_PAGE                 (CO_VPTR_BASE - 0x1101000)
-+#define CO_VPTR_IO_AREA_SIZE                 (0x10000)
-+#define CO_VPTR_IO_AREA_START                (CO_VPTR_BASE - 0x1200000)
-+#define CO_VPTR_SELF_MAP                     (CO_VPTR_BASE - 0x1400000)
++#define CO_VPTR_BASE                         (0xffc00000ul)
++#define CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP   (CO_VPTR_BASE - 0x1000000ul)
++#define CO_VPTR_PSEUDO_RAM_PAGE_TABLES       (CO_VPTR_BASE - 0x1100000ul)
++#define CO_VPTR_PASSAGE_PAGE                 (CO_VPTR_BASE - 0x1101000ul)
++#define CO_VPTR_IO_AREA_SIZE                 (0x10000ul)
++#define CO_VPTR_IO_AREA_START                (CO_VPTR_BASE - 0x1200000ul)
++#define CO_VPTR_SELF_MAP                     (CO_VPTR_BASE - 0x1400000ul)
 +
 +#define CO_VPTR_BASE_START			CO_VPTR_SELF_MAP
 +#define CO_VPTR_BASE_END			CO_VPTR_BASE
@@ -1631,7 +1623,7 @@ Index: linux-2.6.25-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.25-source/include/linux/cooperative.h
-@@ -0,0 +1,397 @@
+@@ -0,0 +1,398 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1654,7 +1646,7 @@ Index: linux-2.6.25-source/include/linux/cooperative.h
 +
 +#include <asm/cooperative.h>
 +
-+#define CO_LINUX_API_VERSION    13
++#define CO_LINUX_API_VERSION    14
 +
 +#pragma pack(0)
 +
@@ -1869,7 +1861,7 @@ Index: linux-2.6.25-source/include/linux/cooperative.h
 +	CO_OPERATION_CONSOLE_SET_ORIGIN,
 +	CO_OPERATION_CONSOLE_SAVE_SCREEN,
 +	CO_OPERATION_CONSOLE_INVERT_REGION,
-+	CO_OPERATION_CONSOLE_SIZES,
++	CO_OPERATION_CONSOLE_CONFIG,
 +} co_operation_console_t;
 +
 +
@@ -1890,6 +1882,7 @@ Index: linux-2.6.25-source/include/linux/cooperative.h
 +			co_console_unit top;
 +			co_console_unit bottom;
 +			co_console_unit lines;
++			co_console_character charattr;
 +		} scroll;
 +		struct {
 +			co_console_unit y;
@@ -1925,8 +1918,8 @@ Index: linux-2.6.25-source/include/linux/cooperative.h
 +		struct {
 +			co_console_unit rows;
 +			co_console_unit cols;
-+			co_console_unit backbuf;
-+		} sizes;
++			co_console_unit attr;
++		} config;
 +		co_cursor_pos_t cursor;
 +	};
 +} __attribute__((packed)) co_console_message_t;

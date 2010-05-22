@@ -124,9 +124,6 @@ patch_kernel_source()
 	test -f patches || ln -s "$TOPDIR/patch" patches
 	test -f series  || ln -s "patches/series-$KERNEL_VERSION" series
 
-	# Hotfix for 2.6.25 and 2.6.22 "core" patches
-	test -d arch/i386 || ln -s x86 arch/i386
-
 	if quilt --version >/dev/null 2>&1
 	then
 		# use quilt for patching, don't trust users settings
@@ -141,6 +138,10 @@ patch_kernel_source()
 
 	# Copy coLinux Version into kernel localversion
 	echo "-co-$CO_VERSION" > localversion-cooperative
+
+	# Add SVN revision on snapshots
+	test -n "$COLINUX_SVN_REVISION" && \
+	echo "$COLINUX_SVN_REVISION" >localversion-svn
 }
 
 configure_kernel()

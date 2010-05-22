@@ -1,17 +1,3 @@
---- linux-2.6.26.8-source.orig/arch/i386/mm/ioremap.c
-+++ linux-2.6.26.8-source/arch/i386/mm/ioremap.c
-@@ -132,6 +132,11 @@
- 	pgprot_t prot;
- 	int retval;
- 
-+	/*if (cooperative_mode_enabled()) {
-+		panic("__ioremap %ld:%ld\n", phys_addr, size);
-+		return NULL;
-+	}*/
-+
- 	/* Don't allow wraparound or zero size */
- 	last_addr = phys_addr + size - 1;
- 	if (!size || last_addr < phys_addr)
 --- linux-2.6.26.8-source.orig/drivers/input/mouse/comouse.c
 +++ linux-2.6.26.8-source/drivers/input/mouse/comouse.c
 @@ -29,7 +29,7 @@
@@ -1337,8 +1323,8 @@
  
  #pragma pack(0)
  
---- linux-2.6.26.8-source.orig/arch/i386/pci/copci.c
-+++ linux-2.6.26.8-source/arch/i386/pci/copci.c
+--- linux-2.6.26.8-source.orig/arch/x86/pci/copci.c
++++ linux-2.6.26.8-source/arch/x86/pci/copci.c
 @@ -228,13 +228,13 @@
  	cp = guest_cp;
  	for(x=0; x < count; x++, cp++) {
