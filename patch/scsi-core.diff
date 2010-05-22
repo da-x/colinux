@@ -1,8 +1,13 @@
-Index: linux-2.6.22-source/drivers/scsi/coscsi.c
+Index: linux-2.6.25-source/drivers/scsi/coscsi.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/drivers/scsi/coscsi.c
-@@ -0,0 +1,1160 @@
++++ linux-2.6.25-source/drivers/scsi/coscsi.c
+@@ -0,0 +1,1165 @@
++/*
++ *  Copyright (C) 2008 Steve Shoecraft
++ *
++ *  Cooperative Linux SCSI Driver implementation
++ */
 +
 +#include <linux/module.h>
 +#include <linux/interrupt.h>
@@ -114,22 +119,21 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +
 +#if DUMP_DATA
 +static void _dump_data(int unit, char *str, void *data, int data_len) {
-+        unsigned char *p;
-+        int x,y,len;
++	unsigned char *p;
++	int x,y,len;
 +
-+        printk(KERN_INFO "scsi%d: %s(%d bytes):\n",unit,str,data_len);
-+//	len = min(16, data_len);
++	printk(KERN_INFO "scsi%d: %s(%d bytes):\n",unit,str,data_len);
 +	len = data_len;
-+        p = data;
-+        for(x=y=0; x < len; x++) {
-+                printk(KERN_INFO " %02x", p[x]);
-+                y++;
-+                if (y > 15) {
-+                        printk(KERN_INFO "\n");
-+                        y = 0;
-+                }
-+        }
-+        if (y) printk(KERN_INFO "\n");
++	p = data;
++	for(x=y=0; x < len; x++) {
++		printk(KERN_INFO " %02x", p[x]);
++		y++;
++		if (y > 15) {
++			printk(KERN_INFO "\n");
++			y = 0;
++		}
++	}
++	if (y) printk(KERN_INFO "\n");
 +}
 +#define dump_data(u, s,a,b) _dump_data(u,s,a,b)
 +#else
@@ -156,7 +160,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +		info = (co_scsi_intr_t *) &message->data;
 +		scp = info->ctx;
 +		scp->result = info->result;
-+		scp->resid = info->delta;
++		scsi_set_resid(scp, info->delta);
 +#if COSCSI_DEBUG_ISR
 +		printk(KERN_INFO "coscsi_isr: scp: %p result: %d, delta: %d\n", scp, info->result, info->delta);
 +#endif
@@ -194,11 +198,11 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +		co_passage_page->params[1] = CO_SCSI_OPEN;
 +		co_passage_page->params[2] = dp->unit;
 +
-+        	co_switch_wrapper();
++		co_switch_wrapper();
 +
 +		rc = co_passage_page->params[0];
 +		if (!rc) dp->os_handle = (void *) co_passage_page->params[1];
-+        	co_passage_page_release(flags);
++		co_passage_page_release(flags);
 +	}
 +
 +#if COSCSI_DEBUG_HOST
@@ -226,10 +230,10 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	co_passage_page->params[1] = CO_SCSI_CLOSE;
 +	co_passage_page->params[2] = dp->unit;
 +
-+       	co_switch_wrapper();
++	co_switch_wrapper();
 +
 +	rc = co_passage_page->params[0];
-+       	co_passage_page_release(flags);
++	co_passage_page_release(flags);
 +
 +	dp->os_handle = 0;
 +#if COSCSI_DEBUG_HOST
@@ -249,7 +253,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +
 +static int host_rw(coscsi_worker_t *wp, unsigned long long lba, unsigned long num, int write)
 +{
-+	struct scatterlist *sg = (struct scatterlist *)wp->scp->request_buffer;
++	struct scatterlist *sg = scsi_sglist(wp->scp);
 +	struct scsi_cmnd *scp = wp->scp;
 +	unsigned long flags;
 +	co_scsi_io_t *iop;
@@ -265,9 +269,8 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +			return 1;
 +	}
 +
-+
 +	/* XXX needed when clustering is enabled */
-+	count = dma_map_sg(&scp->device->host->shost_gendev, sg, scp->use_sg, scp->sc_data_direction);
++	count = dma_map_sg(&scp->device->host->shost_gendev, sg, scsi_sg_count(scp), scp->sc_data_direction);
 +
 +	/* Get passage page */
 +	co_passage_page_assert_valid();
@@ -283,27 +286,27 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	iop->offset = lba * scp->device->sector_size;
 +	iop->count = count;
 +	iop->write = write;
-+	iop->sg = scp->request_buffer;
++	iop->sg = scsi_sglist(scp);
 +	iop->reqlen = total = num * scp->device->sector_size;
 +
 +	/* Do it */
-+     	co_switch_wrapper();
++	co_switch_wrapper();
 +
 +	rc = co_passage_page->params[0];
-+       	co_passage_page_release(flags);
++	co_passage_page_release(flags);
 +
-+	dma_unmap_sg(&scp->device->host->shost_gendev, sg, scp->use_sg, scp->sc_data_direction);
++	dma_unmap_sg(&scp->device->host->shost_gendev, sg, scsi_sg_count(scp), scp->sc_data_direction);
 +
 +#if COSCSI_DUMP_STATS
 +	if (rc == GOOD) {
 +		if (count > max_segs) {
 +			max_segs = count;
-+			printk(KERN_INFO "COSCSI: max_segs: %d\n", max_segs);
++			printk(KERN_WARN "COSCSI: max_segs: %d\n", max_segs);
 +		}
 +
 +		if (total > max_xfer) {
 +			max_xfer = total;
-+			printk(KERN_INFO "COSCSI: max_xfer: %dKB\n", max_xfer >> 10);
++			printk(KERN_WARN "COSCSI: max_xfer: %dKB\n", max_xfer >> 10);
 +		}
 +	}
 +#endif
@@ -352,11 +355,11 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	co_passage_page->params[1] = CO_SCSI_SIZE;
 +	co_passage_page->params[2] = dp->unit;
 +
-+       	co_switch_wrapper();
++	co_switch_wrapper();
 +
 +	rc = co_passage_page->params[0];
 +	dp->size = *((unsigned long long *)&co_passage_page->params[1]);
-+       	co_passage_page_release(flags);
++	co_passage_page_release(flags);
 +
 +	bits = get_bs_bits(dp, scp->device->sector_size);
 +
@@ -389,23 +392,23 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	}
 +
 +	/* Scatter/Gather */
-+	if (scp->use_sg) {
++	if (scsi_sg_count(scp)) {
 +		struct scatterlist *sg;
 +
 +		/* Should never be more than 1 for non r/w transfers */
-+		if (scp->use_sg > 1) panic("COSCSI: host_pass: use_sg (%d) > 1!\n", scp->use_sg);
++		if (scsi_sg_count(scp) > 1) panic("COSCSI: host_pass: use_sg (%d) > 1!\n", scsi_sg_count(scp));
 +
-+		sg = (struct scatterlist *)scp->request_buffer;
++		sg = scsi_sglist(scp);
 +#if COSCSI_DEBUG_HOST
 +		if (dp->debug) printk(KERN_INFO "host_pass: sg: page: %p, offset: %d, length: %d\n",
-+			sg->page, sg->offset, sg->length);
++			sg_page(sg), sg->offset, sg->length);
 +#endif
-+		buffer = page_address(sg->page) + sg->offset;
++		buffer = sg_virt(sg);
 +		buflen = sg->length;
 +	/* Direct */
 +	} else {
-+		buffer = scp->request_buffer;
-+		buflen = scp->request_bufflen;
++		buffer = scsi_sglist(scp);
++		buflen = scsi_bufflen(scp);
 +	}
 +
 +	co_passage_page_assert_valid();
@@ -422,10 +425,10 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	pass->buffer = buffer;
 +	pass->buflen = buflen;
 +
-+       	co_switch_wrapper();
++	co_switch_wrapper();
 +
 +	rc = co_passage_page->params[0];
-+       	co_passage_page_release(flags);
++	co_passage_page_release(flags);
 +
 +#if COSCSI_DEBUG_PASS
 +	if (rc == GOOD && dp->debug) dump_data(dp->unit, "host_pass", buffer, buflen);
@@ -460,20 +463,19 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	int act_len;
 +
 +	/* Scatter/Gather */
-+	if (scp->use_sg) {
++	if (scsi_sg_count(scp)) {
 +		struct scatterlist *sg;
 +		int i;
 +
-+		/* Should never be more than 1 for non r/w transfers */
-+		if (scp->use_sg > COSCSI_SGSIZE) panic("COSCSI: response: use_sg (%d) > %d!\n", scp->use_sg, COSCSI_SGSIZE);
++		/* scatter-gather list too long? */
++		BUG_ON(scsi_sg_count(scp) > COSCSI_SGSIZE);
 +
-+		sg = (struct scatterlist *)scp->request_buffer;
-+		for (i = scp->use_sg; i; i--, sg++) {
++		scsi_for_each_sg(scp, sg, scsi_sg_count(scp), i) {
 +#if COSCSI_DEBUG
 +			if (wp->dp->debug) printk(KERN_INFO "response: sg: page: %p, offset: %d, length: %d\n",
-+				sg->page, sg->offset, sg->length);
++				sg_page(sg), sg->offset, sg->length);
 +#endif
-+			buffer = page_address(sg->page) + sg->offset;
++			buffer = sg_virt(sg);
 +			buflen = sg->length;
 +			act_len = min(buflen, len);
 +#if COSCSI_DEBUG_COMM
@@ -484,9 +486,9 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +			len -= act_len;
 +		}
 +	/* Direct */
-+        } else {
-+		buffer = scp->request_buffer;
-+		buflen = scp->request_bufflen;
++	} else {
++		buffer = scsi_sglist(scp);
++		buflen = scsi_bufflen(scp);
 +		if (!buflen) return GOOD;
 +		act_len = min(buflen, len);
 +#if COSCSI_DEBUG_COMM
@@ -520,16 +522,17 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +
 +static int inquiry(coscsi_worker_t *wp) {
 +	int x, alloc_len;
++	struct scsi_cmnd *scp = wp->scp;
 +
-+	alloc_len = (wp->scp->cmnd[3] << 8) + wp->scp->cmnd[4];
++	alloc_len = (scp->cmnd[3] << 8) + scp->cmnd[4];
 +#if COSCSI_DEBUG_INQ
-+	if (wp->dp->debug) printk(KERN_INFO "scsi_inq: alloc_len: %d, buflen: %d\n", alloc_len, wp->scp->request_bufflen);
++	if (wp->dp->debug) printk(KERN_INFO "scsi_inq: alloc_len: %d, buflen: %d\n", alloc_len, scsi_bufflen(scp));
 +#endif
 +
 +	/* EVPD? */
-+	if (wp->scp->cmnd[1] & 1) {
++	if (scp->cmnd[1] & 1) {
 +		coscsi_page_t *vpd = wp->dp->rom->vpd;
-+		int page = wp->scp->cmnd[2];
++		int page = scp->cmnd[2];
 +
 +#if COSCSI_DEBUG_INQ
 +		if (wp->dp->debug) printk(KERN_INFO "scsi_inq: sending VPD page %d\n", page);
@@ -571,12 +574,13 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +
 +static int read_capacity(coscsi_worker_t *wp) {
 +	coscsi_device_t *dp = wp->dp;
++	struct scsi_cmnd *scp = wp->scp;
 +
 +	/* Get the size */
-+	if (host_size(dp, wp->scp)) return check_condition(dp, HARDWARE_ERROR, 0x3e, 1);
++	if (host_size(dp, scp)) return check_condition(dp, HARDWARE_ERROR, 0x3e, 1);
 +
 +	/* Convert to read_capacity format */
-+	if (dp->max_lba > 0xfffffffe || wp->scp->cmnd[8] & 1) {
++	if (dp->max_lba > 0xfffffffe || scp->cmnd[8] & 1) {
 +		dp->msg[0] = 0xff;
 +		dp->msg[1] = 0xff;
 +		dp->msg[2] = 0xff;
@@ -587,10 +591,10 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +		dp->msg[2] = (wp->dp->max_lba >> 8) & 0xff;
 +		dp->msg[3] = wp->dp->max_lba & 0xff;
 +	}
-+	dp->msg[4] = (wp->scp->device->sector_size >> 24);
-+	dp->msg[5] = (wp->scp->device->sector_size >> 16) & 0xff;
-+	dp->msg[6] = (wp->scp->device->sector_size >> 8) & 0xff;
-+	dp->msg[7] = wp->scp->device->sector_size & 0xff;
++	dp->msg[4] = (scp->device->sector_size >> 24);
++	dp->msg[5] = (scp->device->sector_size >> 16) & 0xff;
++	dp->msg[6] = (scp->device->sector_size >> 8) & 0xff;
++	dp->msg[7] = scp->device->sector_size & 0xff;
 +
 +	return response(wp, &dp->msg, 8);
 +}
@@ -600,6 +604,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	int offset, bd_len, page;
 +	coscsi_page_t *pages = wp->dp->rom->mode;
 +	coscsi_device_t *dp = wp->dp;
++	struct scsi_cmnd *scp = wp->scp;
 +	register int x;
 +
 +	memset(data, 0, sizeof(data));
@@ -621,19 +626,19 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +		ap[2] = (dp->max_lba >> 8) & 0xff;
 +		ap[3] = dp->max_lba & 0xff;
 +	}
-+	ap[5] = (wp->scp->device->sector_size >> 16) & 0xff;
-+	ap[6] = (wp->scp->device->sector_size >> 8) & 0xff;
-+	ap[7] = wp->scp->device->sector_size & 0xff;
++	ap[5] = (scp->device->sector_size >> 16) & 0xff;
++	ap[6] = (scp->device->sector_size >> 8) & 0xff;
++	ap[7] = scp->device->sector_size & 0xff;
 +
 +	offset += bd_len;
 +	ap = data + offset;
 +#if COSCSI_DEBUG_SENSE
 +	if (dp->debug) printk(KERN_INFO "mode_sense: ap: %p, offset: %d\n", ap, offset);
 +#endif
-+	page = wp->scp->cmnd[2] & 0x3f;
++	page = scp->cmnd[2] & 0x3f;
 +	if (page == 0x3f) {
 +		/* All pages */
-+		if (wp->scp->cmnd[3] == 0 || wp->scp->cmnd[3] == 0xFF) {
++		if (scp->cmnd[3] == 0 || scp->cmnd[3] == 0xFF) {
 +			for(x=0; pages[x].page; x++) {
 +#if COSCSI_DEBUG_SENSE
 +				if (dp->debug) dump_data(dp->unit, "page", pages[x].page, pages[x].size);
@@ -668,7 +673,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	if (dp->debug) printk(KERN_INFO "scsi_mode_sense: offset: %d\n", offset);
 +#endif
 +	data[0] = offset - 1;
-+	return response(wp, data, min(wp->scp->cmnd[4], offset));
++	return response(wp, data, min(scp->cmnd[4], offset));
 +}
 +
 +/*
@@ -718,7 +723,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	}
 +
 +#if COSCSI_DEBUG_XFER
-+	if (dp->debug) printk(KERN_INFO "read_write: lba: %lld, num: %ld\n", lba, num);
++	if (wp->dp->debug) printk(KERN_INFO "read_write: lba: %lld, num: %ld\n", lba, num);
 +#endif
 +
 +	if (host_rw(wp, lba, num, (wp->scp->cmnd[0] & 2) >> 1))
@@ -942,7 +947,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	case TYPE_ROM:
 +	case TYPE_WORM:
 +		/* XXX required to get rid of "unaligned transfer" errors */
-+	        blk_queue_hardsect_size(sdev->request_queue, 2048);
++		blk_queue_hardsect_size(sdev->request_queue, 2048);
 +		break;
 +	default:
 +		break;
@@ -997,7 +1002,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	co_passage_page->params[0] = CO_DEVICE_SCSI;
 +	co_passage_page->params[1] = CO_SCSI_GET_CONFIG;
 +	co_passage_page->params[2] = 0;
-+        co_switch_wrapper();
++	co_switch_wrapper();
 +
 +	/* Get the result */
 +	if (!co_passage_page->params[0]) {
@@ -1033,7 +1038,7 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +	}
 +
 +	/* Release the page */
-+        co_passage_page_release(flags);
++	co_passage_page_release(flags);
 +
 +#if COSCSI_DUMP_CONFIG
 +	printk(KERN_INFO "SCSI: device configuration:\n");
@@ -1110,8 +1115,8 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +static struct pci_driver coscsi_pci_driver = {
 +	.name		= "coscsi",
 +	.id_table	= coscsi_pci_ids,
-+	.probe		= coscsi_pci_probe,
-+	.remove		= __devexit_p(coscsi_pci_remove),
++	.probe		= coscsi_pci_probe,			/* FIXME: Use bus_type methods */
++	.remove		= __devexit_p(coscsi_pci_remove),	/* FIXME: Use bus_type methods */
 +};
 +
 +extern int coio_test(void);
@@ -1158,15 +1163,15 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi.c
 +#if COSCSI_DEBUG_PCI
 +	printk(KERN_INFO "coscsi_pci_exit: exiting\n");
 +#endif
-+        pci_unregister_driver(&coscsi_pci_driver);
++	pci_unregister_driver(&coscsi_pci_driver);
 +}
 +
 +module_init(coscsi_pci_init);
 +module_exit(coscsi_pci_exit);
-Index: linux-2.6.22-source/drivers/scsi/coscsi_rom.h
+Index: linux-2.6.25-source/drivers/scsi/coscsi_rom.h
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/drivers/scsi/coscsi_rom.h
++++ linux-2.6.25-source/drivers/scsi/coscsi_rom.h
 @@ -0,0 +1,142 @@
 +
 +#ifndef __COSCSI_ROM_H
@@ -1310,10 +1315,10 @@ Index: linux-2.6.22-source/drivers/scsi/coscsi_rom.h
 +};
 +
 +#endif
-Index: linux-2.6.22-source/include/scsi/coscsi.h
+Index: linux-2.6.25-source/include/scsi/coscsi.h
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/include/scsi/coscsi.h
++++ linux-2.6.25-source/include/scsi/coscsi.h
 @@ -0,0 +1,66 @@
 +
 +#ifndef __SCSI_COSCSI_H
