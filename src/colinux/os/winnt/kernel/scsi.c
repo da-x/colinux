@@ -253,7 +253,10 @@ static int _scsi_dio(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 				sg->dma_address + CO_ARCH_KERNEL_OFFSET,
 				sg->length,
 				0);
-		if (!CO_OK(rc))	break;
+		if (!CO_OK(rc))	{
+			co_debug("scsi_io: error transfer rc:%x", (unsigned int)rc);
+			break;
+		}
 	}
 
 	co_monitor_host_linuxvm_transfer_unmap(r->mp, sg_page, sg_pfn);
