@@ -30,18 +30,18 @@ co_rc_t co_monitor_host_linuxvm_transfer_map(
 	co_rc_t rc;
 
 	if ((vaddr < CO_ARCH_KERNEL_OFFSET) || (vaddr >= cmon->end_physical)) {
-		co_debug_error("monitor: transfer: off bounds: %p", (void*)vaddr);
+		co_debug_error("monitor: transfer map: off bounds: %p", (void*)vaddr);
 		return CO_RC(TRANSFER_OFF_BOUNDS);
 	}
 
 	if ((vaddr + size < CO_ARCH_KERNEL_OFFSET) || (vaddr + size > cmon->end_physical)) {
-		co_debug_error("monitor: transfer: end off bounds: %p", (void*)(vaddr + size));
+		co_debug_error("monitor: transfer map: end off bounds: %p", (void*)(vaddr + size));
 		return CO_RC(TRANSFER_OFF_BOUNDS);
 	}
 
 	one_copy = ((vaddr + CO_ARCH_PAGE_SIZE) & CO_ARCH_PAGE_MASK) - vaddr;
 	if (size <= 0 || size > one_copy) {
-		co_debug_error("monitor: transfer: bad size: %ld (%ld)", size, one_copy);
+		co_debug_error("monitor: transfer map: bad size: %ld (%ld)", size, one_copy);
 		return CO_RC(TRANSFER_OFF_BOUNDS);
 	}
 
