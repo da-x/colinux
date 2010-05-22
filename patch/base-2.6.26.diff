@@ -1121,18 +1121,25 @@ Index: linux-2.6.26-source/arch/x86/mm/ioremap.c
  	return 0;
  }
  
-@@ -259,6 +264,11 @@
+@@ -259,6 +264,10 @@
   */
  void __iomem *ioremap_nocache(resource_size_t phys_addr, unsigned long size)
  {
-+	if (cooperative_mode_enabled()) {
-+		panic("ioremap_nocache %zu:%lu\n", phys_addr, size);
-+		return NULL;
-+	}
-+
++#ifdef CONFIG_COOPERATIVE
++	panic("ioremap_nocache %zu:%lu\n", phys_addr, size);
++	return NULL;
++#else /* CONFIG_COOPERATIVE */
  	/*
  	 * Ideally, this should be:
  	 *	pat_wc_enabled ? _PAGE_CACHE_UC : _PAGE_CACHE_UC_MINUS;
+@@ -270,6 +279,7 @@
+ 
+ 	return __ioremap_caller(phys_addr, size, val,
+ 				__builtin_return_address(0));
++#endif /* CONFIG_COOPERATIVE */
+ }
+ EXPORT_SYMBOL(ioremap_nocache);
+ 
 @@ -295,6 +305,11 @@
  
  void __iomem *ioremap_cache(resource_size_t phys_addr, unsigned long size)
