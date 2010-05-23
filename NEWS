@@ -20,6 +20,7 @@
 
   Kernel:
   * CONFIG_SYSFS_DEPRECATED: Disabled. Newer udev don't like it. (El Topo)
+  * scsi: Fix "unhandled opcode 51" (GPCMD_READ_DISC_INFO) for DVD/CDROM.
 
   Updated tools:
   * binutils 2.19.1

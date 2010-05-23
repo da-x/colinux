@@ -47,7 +47,7 @@ Index: linux-2.6.26-source/drivers/scsi/coscsi.c
 ===================================================================
 --- linux-2.6.26-source.orig/drivers/scsi/coscsi.c
 +++ linux-2.6.26-source/drivers/scsi/coscsi.c
-@@ -151,7 +151,7 @@
+@@ -152,7 +152,7 @@
  		info = (co_scsi_intr_t *) &message->data;
  		scp = info->ctx;
  		scp->result = info->result;
@@ -56,7 +56,7 @@ Index: linux-2.6.26-source/drivers/scsi/coscsi.c
  #if COSCSI_DEBUG_ISR
  		printk(KERN_INFO "coscsi_isr: scp: %p result: %d, delta: %d\n", scp, info->result, info->delta);
  #endif
-@@ -244,7 +244,7 @@
+@@ -245,7 +245,7 @@
  
  static int host_rw(coscsi_worker_t *wp, unsigned long long lba, unsigned long num, int write)
  {
@@ -66,7 +66,7 @@ Index: linux-2.6.26-source/drivers/scsi/coscsi.c
  	unsigned long flags;
  	co_scsi_io_t *iop;
 @@ -262,7 +262,7 @@
- 
+ 	}
  
  	/* XXX needed when clustering is enabled */
 -	count = dma_map_sg(&scp->device->host->shost_gendev, sg, scp->use_sg, scp->sc_data_direction);
@@ -170,7 +170,7 @@ Index: linux-2.6.26-source/drivers/scsi/coscsi.c
  #endif
  
  	/* EVPD? */
-@@ -1105,8 +1104,8 @@
+@@ -1113,8 +1112,8 @@
  static struct pci_driver coscsi_pci_driver = {
  	.name		= "coscsi",
  	.id_table	= coscsi_pci_ids,
