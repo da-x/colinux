@@ -7,7 +7,7 @@
 
   Kernel:
   * Version 2.6.26.8
-    o ext4fs enabled, backport patch 2.6.26-ext4-7 added.
+    o ext4fs enabled as module, backport patch 2.6.26-ext4-7 added.
       Please read about using ext4 in kernel 2.6.26:
       http://ext4.wiki.kernel.org/index.php/Ext4_Howto#For_people_who_are_running_Debian
       (Thanks Frédéric L. W. Meunier)
