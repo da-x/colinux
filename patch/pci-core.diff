@@ -1,8 +1,13 @@
-Index: linux-2.6.22-source/arch/x86/pci/copci.c
+Index: linux-2.6.25-source/arch/x86/pci/copci.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/arch/x86/pci/copci.c
-@@ -0,0 +1,297 @@
++++ linux-2.6.25-source/arch/x86/pci/copci.c
+@@ -0,0 +1,306 @@
++/*
++ *  Copyright (C) 2008 Steve Shoecraft
++ *
++ *  Cooperative Linux PCI Driver implementation
++ */
 +
 +#include <linux/kernel.h>
 +#include <linux/pci.h>
@@ -210,10 +215,15 @@ Index: linux-2.6.22-source/arch/x86/pci/copci.c
 +	unsigned char addr[6];
 +	unsigned long flags;
 +	int x,id,class,count,unit,irq;
++	const int max_count = COPCI_MAX_SLOTS * COPCI_MAX_FUNCS;
 +
 +#if COPCI_DEBUG
-+	printk(KERN_INFO "COPCI: Initializing\n");
++	printk(KERN_INFO "COPCI: Initializing max slots:%d max func:%d size:%d\n",
++		COPCI_MAX_SLOTS, COPCI_MAX_FUNCS, COPCI_MAX_SLOTS*COPCI_MAX_FUNCS*sizeof(*cp));
 +#endif
++
++	guest_cp = kmalloc(max_count * sizeof(*cp), GFP_KERNEL);
++	BUG_ON(!guest_cp);
 +
 +	/* Get our config */
 +	co_passage_page_assert_valid();
@@ -224,10 +234,9 @@ Index: linux-2.6.22-source/arch/x86/pci/copci.c
 +	co_passage_page->params[2] = 0;
 +	co_switch_wrapper();
 +	count = co_passage_page->params[0];
++	BUG_ON(count>max_count);
 +	host_cp = (copci_config_t *) &co_passage_page->params[1];
-+	x = count * sizeof(*cp);
-+	guest_cp = kmalloc(x, GFP_KERNEL);
-+	memcpy(guest_cp, host_cp, x);
++	memcpy(guest_cp, host_cp, count * sizeof(*cp));
 +	co_passage_page_release(flags);
 +
 +	cp = guest_cp;
@@ -300,11 +309,11 @@ Index: linux-2.6.22-source/arch/x86/pci/copci.c
 +
 +	raw_pci_ops = &copci_ops;
 +}
-Index: linux-2.6.22-source/arch/x86/pci/irq_cooperative.c
+Index: linux-2.6.25-source/arch/x86/pci/irq_cooperative.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/arch/x86/pci/irq_cooperative.c
-@@ -0,0 +1,36 @@
++++ linux-2.6.25-source/arch/x86/pci/irq_cooperative.c
+@@ -0,0 +1,26 @@
 +/*
 + *	Low-Level PCI Support for PC -- Routing of Interrupts
 + *
@@ -314,16 +323,6 @@ Index: linux-2.6.22-source/arch/x86/pci/irq_cooperative.c
 +#include <linux/types.h>
 +#include <linux/kernel.h>
 +#include <linux/pci.h>
-+#include <linux/init.h>
-+#include <linux/slab.h>
-+#include <linux/interrupt.h>
-+#include <linux/dmi.h>
-+#include <asm/io.h>
-+#include <asm/smp.h>
-+#include <asm/io_apic.h>
-+#include <linux/irq.h>
-+#include <linux/acpi.h>
-+
 +#include "pci.h"
 +
 +/*
@@ -341,10 +340,10 @@ Index: linux-2.6.22-source/arch/x86/pci/irq_cooperative.c
 +
 +int (*pcibios_enable_irq)(struct pci_dev *dev) = copci_enable_irq;
 +void (*pcibios_disable_irq)(struct pci_dev *dev) = copci_disable_irq;
-Index: linux-2.6.22-source/include/linux/cooperative_pci.h
+Index: linux-2.6.25-source/include/linux/cooperative_pci.h
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/include/linux/cooperative_pci.h
++++ linux-2.6.25-source/include/linux/cooperative_pci.h
 @@ -0,0 +1,22 @@
 +
 +#ifndef __LINUX_COOPERATIVE_PCI_H
@@ -368,10 +367,10 @@ Index: linux-2.6.22-source/include/linux/cooperative_pci.h
 +#define PCI_CO_MAC6             0x46
 +
 +#endif
-Index: linux-2.6.22-source/include/linux/copci.h
+Index: linux-2.6.25-source/include/linux/copci.h
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/include/linux/copci.h
++++ linux-2.6.25-source/include/linux/copci.h
 @@ -0,0 +1,33 @@
 +
 +#ifndef _LINUX_COPCI_H_

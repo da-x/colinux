@@ -1,5 +1,7 @@
---- linux-2.6.26.8-source.orig/drivers/input/mouse/comouse.c
-+++ linux-2.6.26.8-source/drivers/input/mouse/comouse.c
+Index: linux-2.6.26.8-source/drivers/input/mouse/comouse.c
+===================================================================
+--- linux-2.6.26.8-source.orig/drivers/input/mouse/comouse.c	2010-05-22 17:35:59.000000000 -0600
++++ linux-2.6.26.8-source/drivers/input/mouse/comouse.c	2010-05-22 17:36:05.000000000 -0600
 @@ -29,7 +29,7 @@
  #include <linux/interrupt.h>
  #include <linux/cooperative_internal.h>
@@ -54,8 +56,10 @@
  
  	err = input_register_device(comouse_dev);
  	if (err) {
---- /dev/null
-+++ linux-2.6.26.8-source/drivers/video/cofb.c
+Index: linux-2.6.26.8-source/drivers/video/cofb.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.6.26.8-source/drivers/video/cofb.c	2010-05-22 17:36:05.000000000 -0600
 @@ -0,0 +1,790 @@
 +/*
 + *  linux/drivers/video/cofb.c -- CoLinux Virtual frame buffer device
@@ -847,89 +851,10 @@
 +module_init(covideo_pci_init);
 +module_exit(covideo_pci_exit);
 +
---- linux-2.6.26.8-source.orig/drivers/video/console/cocon.c
-+++ linux-2.6.26.8-source/drivers/video/console/cocon.c
-@@ -32,6 +32,7 @@
- 
- static int cocon_cols = 80;
- static int cocon_rows = 25;
-+static int cocon_attr = 0x07; /* fg=white, bg=black */
- 
- static const char __init *cocon_startup(void)
- {
-@@ -49,9 +50,10 @@
- 		co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
- 		message->type = CO_OPERATION_CONSOLE_STARTUP;
- 		co_switch_wrapper();
--		if (message->type == CO_OPERATION_CONSOLE_SIZES) {
--			cocon_cols = message->sizes.cols;
--			cocon_rows = message->sizes.rows;
-+		if (message->type == CO_OPERATION_CONSOLE_CONFIG) {
-+			cocon_cols = message->config.cols;
-+			cocon_rows = message->config.rows;
-+			cocon_attr = message->config.attr;
- 		}
- 		co_passage_page_release(flags);
- 	}
-@@ -69,6 +71,10 @@
- 	c->vc_can_do_color = 1;
- 	c->vc_cols = cocon_cols;
- 	c->vc_rows = cocon_rows;
-+
-+	/* drivers/char/vt.c: Must hack vc_init() for vc_def_color */
-+	c->vc_def_color = cocon_attr;
-+
- 	c->vc_complement_mask = 0x7700;
- 	c->vc_visible_origin = 0;
- 	c->vc_origin = 0;
-@@ -252,7 +258,7 @@
- 	co_message->size = ((char *)(&message->cursor + 1)) - ((char *)message);;
- 	if (mode==CM_ERASE) {
- 		message->type = CO_OPERATION_CONSOLE_CURSOR_ERASE;
--		message->cursor.height = 0;
-+		message->cursor.height = CUR_NONE;
- 		co_send_message_restore(flags);
- 		return;
- 	}
-@@ -264,27 +270,7 @@
- 	}
- 	message->cursor.x = c->vc_x;
- 	message->cursor.y = c->vc_y;
--
--	switch (c->vc_cursor_type & CUR_HWMASK) {
--	case CUR_UNDERLINE:
--		message->cursor.height = 5;
--		break;
--	case CUR_TWO_THIRDS:
--		message->cursor.height = 66;
--		break;
--	case CUR_LOWER_THIRD:
--		message->cursor.height = 33;
--		break;
--	case CUR_LOWER_HALF:
--		message->cursor.height = 50;
--		break;
--	case CUR_NONE:
--		message->cursor.height = 0;
--		break;
--          default:
--		message->cursor.height = 5;
--		break;
--	}
-+	message->cursor.height = c->vc_cursor_type & CUR_HWMASK;
- 
- 	co_send_message_restore(flags);
- }
-@@ -435,6 +421,7 @@
- 		message->scroll.top = t;
- 		message->scroll.bottom = b-1;
- 		message->scroll.lines = lines;
-+		message->scroll.charattr = c->vc_video_erase_char;
- 		co_send_message_restore(flags);
- 	}
- 
---- linux-2.6.26.8-source.orig/drivers/video/Kconfig
-+++ linux-2.6.26.8-source/drivers/video/Kconfig
+Index: linux-2.6.26.8-source/drivers/video/Kconfig
+===================================================================
+--- linux-2.6.26.8-source.orig/drivers/video/Kconfig	2010-05-22 17:35:59.000000000 -0600
++++ linux-2.6.26.8-source/drivers/video/Kconfig	2010-05-22 17:36:05.000000000 -0600
 @@ -1968,6 +1968,17 @@
           This enables support for the Metronome display controller used on
           the E-Ink AM-200 EPD devkit.
@@ -948,8 +873,10 @@
  config FB_VIRTUAL
  	tristate "Virtual Frame Buffer support (ONLY FOR TESTING!)"
  	depends on FB
---- linux-2.6.26.8-source.orig/drivers/video/Makefile
-+++ linux-2.6.26.8-source/drivers/video/Makefile
+Index: linux-2.6.26.8-source/drivers/video/Makefile
+===================================================================
+--- linux-2.6.26.8-source.orig/drivers/video/Makefile	2010-05-22 17:35:59.000000000 -0600
++++ linux-2.6.26.8-source/drivers/video/Makefile	2010-05-22 17:36:05.000000000 -0600
 @@ -127,6 +127,7 @@
  obj-$(CONFIG_FB_EFI)              += efifb.o
  obj-$(CONFIG_FB_VGA16)            += vga16fb.o
@@ -958,8 +885,10 @@
  obj-$(CONFIG_FB_BF54X_LQ043)	  += bf54x-lq043fb.o
  obj-$(CONFIG_FB_BFIN_T350MCQB)	  += bfin-t350mcqb-fb.o
  
---- linux-2.6.26.8-source.orig/include/linux/cooperative_internal.h
-+++ linux-2.6.26.8-source/include/linux/cooperative_internal.h
+Index: linux-2.6.26.8-source/include/linux/cooperative_internal.h
+===================================================================
+--- linux-2.6.26.8-source.orig/include/linux/cooperative_internal.h	2010-05-22 17:35:51.000000000 -0600
++++ linux-2.6.26.8-source/include/linux/cooperative_internal.h	2010-05-22 17:36:05.000000000 -0600
 @@ -117,6 +117,43 @@
  	co_passage_page_release(flags);
  }
@@ -1004,8 +933,10 @@
  #else
  
  #define co_printk(line, size)          do {} while (0)
---- /dev/null
-+++ linux-2.6.26.8-source/include/linux/cooperative_video.h
+Index: linux-2.6.26.8-source/include/linux/cooperative_video.h
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.6.26.8-source/include/linux/cooperative_video.h	2010-05-22 17:36:05.000000000 -0600
 @@ -0,0 +1,180 @@
 +/*
 + *  linux/include/linux/cooperative_video.h
@@ -1187,8 +1118,10 @@
 +
 +
 +
---- linux-2.6.26.8-source.orig/include/linux/mm.h
-+++ linux-2.6.26.8-source/include/linux/mm.h
+Index: linux-2.6.26.8-source/include/linux/mm.h
+===================================================================
+--- linux-2.6.26.8-source.orig/include/linux/mm.h	2010-05-22 17:34:27.000000000 -0600
++++ linux-2.6.26.8-source/include/linux/mm.h	2010-05-22 17:36:05.000000000 -0600
 @@ -108,6 +108,7 @@
  
  #define VM_CAN_NONLINEAR 0x08000000	/* Has ->fault & does nonlinear pages */
@@ -1197,8 +1130,10 @@
  
  #ifndef VM_STACK_DEFAULT_FLAGS		/* arch can override this */
  #define VM_STACK_DEFAULT_FLAGS VM_DATA_DEFAULT_FLAGS
---- linux-2.6.26.8-source.orig/mm/memory.c
-+++ linux-2.6.26.8-source/mm/memory.c
+Index: linux-2.6.26.8-source/mm/memory.c
+===================================================================
+--- linux-2.6.26.8-source.orig/mm/memory.c	2010-05-22 17:34:27.000000000 -0600
++++ linux-2.6.26.8-source/mm/memory.c	2010-05-22 17:36:05.000000000 -0600
 @@ -681,6 +681,7 @@
  				struct vm_area_struct *vma, pmd_t *pmd,
  				unsigned long addr, unsigned long end,
@@ -1279,8 +1214,10 @@
  
  	/*
  	 * Physically remapped pages are special. Tell the
---- linux-2.6.26.8-source.orig/drivers/video/console/fbcon.c
-+++ linux-2.6.26.8-source/drivers/video/console/fbcon.c
+Index: linux-2.6.26.8-source/drivers/video/console/fbcon.c
+===================================================================
+--- linux-2.6.26.8-source.orig/drivers/video/console/fbcon.c	2010-05-22 17:34:27.000000000 -0600
++++ linux-2.6.26.8-source/drivers/video/console/fbcon.c	2010-05-22 17:36:05.000000000 -0600
 @@ -90,6 +90,8 @@
  #endif
  
@@ -1312,8 +1249,10 @@
  }
  
  static void fbcon_putc(struct vc_data *vc, int c, int ypos, int xpos)
---- linux-2.6.26.8-source.orig/include/linux/cooperative.h
-+++ linux-2.6.26.8-source/include/linux/cooperative.h
+Index: linux-2.6.26.8-source/include/linux/cooperative.h
+===================================================================
+--- linux-2.6.26.8-source.orig/include/linux/cooperative.h	2010-05-22 17:36:05.000000000 -0600
++++ linux-2.6.26.8-source/include/linux/cooperative.h	2010-05-22 17:36:05.000000000 -0600
 @@ -20,7 +20,7 @@
  
  #include <asm/cooperative.h>
@@ -1323,9 +1262,11 @@
  
  #pragma pack(0)
  
---- linux-2.6.26.8-source.orig/arch/x86/pci/copci.c
-+++ linux-2.6.26.8-source/arch/x86/pci/copci.c
-@@ -228,13 +228,13 @@
+Index: linux-2.6.26.8-source/arch/x86/pci/copci.c
+===================================================================
+--- linux-2.6.26.8-source.orig/arch/x86/pci/copci.c	2010-05-22 17:35:59.000000000 -0600
++++ linux-2.6.26.8-source/arch/x86/pci/copci.c	2010-05-22 17:36:05.000000000 -0600
+@@ -237,13 +237,13 @@
  	cp = guest_cp;
  	for(x=0; x < count; x++, cp++) {
  		switch(cp->type) {

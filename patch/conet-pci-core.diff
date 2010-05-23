@@ -49,7 +49,7 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +
 +static int conet_open(struct net_device *dev)
 +{
-+	struct conet_priv *priv = (struct conet_priv *)dev->priv;
++	struct conet_priv *priv = netdev_priv(dev);
 +
 +	if (priv->flags & CONET_FLAG_ENABLED) return 0;
 +
@@ -62,7 +62,7 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +
 +static int conet_stop(struct net_device *dev)
 +{
-+	struct conet_priv *priv = (struct conet_priv *)dev->priv;
++	struct conet_priv *priv = netdev_priv(dev);
 +
 +	priv->flags &= ~CONET_FLAG_ENABLED;
 +
@@ -75,7 +75,7 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +{
 +	int len;
 +	char *data;
-+	struct conet_priv *priv = (struct conet_priv *)dev->priv;
++	struct conet_priv *priv = netdev_priv(dev);
 +
 +	len = skb->len < ETH_ZLEN ? ETH_ZLEN : skb->len;
 +	data = skb->data;
@@ -100,7 +100,7 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +static void conet_rx(struct net_device *dev, co_linux_message_t *message)
 +{
 +	struct sk_buff *skb;
-+	struct conet_priv *priv = (struct conet_priv *)dev->priv;
++	struct conet_priv *priv = netdev_priv(dev);
 +	int len;
 +	unsigned char *buf;
 +
@@ -175,7 +175,7 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +			continue;
 +		}
 +
-+		priv = (struct conet_priv *)dev->priv;
++		priv = netdev_priv(dev);
 +		spin_lock(&priv->rx_lock);
 +#if 0
 +		if (priv->flags & CONET_FLAG_HANDLING) {
@@ -198,7 +198,7 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +
 +static struct net_device_stats* conet_get_stats(struct net_device *dev)
 +{
-+	struct conet_priv *priv = dev->priv;
++	struct conet_priv *priv = netdev_priv(dev);
 +
 +	return &priv->stats;
 +}
@@ -355,9 +355,6 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +	SET_NETDEV_DEV(dev, &pdev->dev);
 +	memcpy(dev->dev_addr, addr, 6);
 +
-+	spin_lock_init(&priv->ioctl_lock);
-+	spin_lock_init(&priv->rx_lock);
-+
 +	dev->open = conet_open;
 +	dev->stop = conet_stop;
 +	dev->hard_start_xmit = conet_hard_start_xmit;
@@ -369,6 +366,9 @@ Index: linux-2.6.22-source/drivers/net/conet.c
 +	priv = netdev_priv(dev);
 +	priv->unit = unit;
 +	priv->pdev = pdev;
++
++	spin_lock_init(&priv->ioctl_lock);
++	spin_lock_init(&priv->rx_lock);
 +
 +	priv->mii_if.full_duplex = 1;
 +	priv->mii_if.phy_id_mask = 0x1f;

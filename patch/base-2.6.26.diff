@@ -981,17 +981,30 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  
  static struct kcore_list kcore_mem, kcore_vmalloc;
  
-@@ -620,6 +631,9 @@
+@@ -616,15 +627,15 @@
+ 
+ #if 1 /* double-sanity-check paranoia */
+ 	printk(KERN_INFO "virtual kernel memory layout:\n"
+-		"    fixmap  : 0x%08lx - 0x%08lx   (%4ld kB)\n"
++		"    fixmap  : 0x%08lx - 0x%08lx  (%4ld kB)\n"
  #ifdef CONFIG_HIGHMEM
- 		"    pkmap   : 0x%08lx - 0x%08lx   (%4ld kB)\n"
- #endif
-+#ifdef CONFIG_COOPERATIVE
-+		"    colinux : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+-		"    pkmap   : 0x%08lx - 0x%08lx   (%4ld kB)\n"
++		"    pkmap   : 0x%08lx - 0x%08lx  (%4ld kB)\n"
 +#endif
- 		"    vmalloc : 0x%08lx - 0x%08lx   (%4ld MB)\n"
- 		"    lowmem  : 0x%08lx - 0x%08lx   (%4ld MB)\n"
- 		"      .init : 0x%08lx - 0x%08lx   (%4ld kB)\n"
-@@ -632,6 +646,10 @@
++#ifdef CONFIG_COOPERATIVE
++		"    colinux : 0x%08lx - 0x%08lx  (%4ld MB)\n"
+ #endif
+-		"    vmalloc : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+-		"    lowmem  : 0x%08lx - 0x%08lx   (%4ld MB)\n"
+-		"      .init : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+-		"      .data : 0x%08lx - 0x%08lx   (%4ld kB)\n"
+-		"      .text : 0x%08lx - 0x%08lx   (%4ld kB)\n",
++		"    vmalloc : 0x%08lx - 0x%08lx  (%4ld MB)\n",
++
+ 		FIXADDR_START, FIXADDR_TOP,
+ 		(FIXADDR_TOP - FIXADDR_START) >> 10,
+ 
+@@ -632,9 +643,19 @@
  		PKMAP_BASE, PKMAP_BASE+LAST_PKMAP*PAGE_SIZE,
  		(LAST_PKMAP*PAGE_SIZE) >> 10,
  #endif
@@ -1001,8 +1014,18 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
 +#endif
  
  		VMALLOC_START, VMALLOC_END,
- 		(VMALLOC_END - VMALLOC_START) >> 20,
-@@ -653,12 +671,20 @@
+-		(VMALLOC_END - VMALLOC_START) >> 20,
++		(VMALLOC_END - VMALLOC_START) >> 20);
++
++	printk(KERN_INFO
++		"    lowmem  : 0x%08lx - 0x%08lx  (%4ld MB)\n"
++		"      .init : 0x%08lx - 0x%08lx  (%4ld kB)\n"
++		"      .data : 0x%08lx - 0x%08lx  (%4ld kB)\n"
++		"      .text : 0x%08lx - 0x%08lx  (%4ld kB)\n",
+ 
+ 		(unsigned long)__va(0), (unsigned long)high_memory,
+ 		((unsigned long)high_memory - (unsigned long)__va(0)) >> 20,
+@@ -653,12 +674,20 @@
  	BUG_ON(PKMAP_BASE + LAST_PKMAP*PAGE_SIZE	> FIXADDR_START);
  	BUG_ON(VMALLOC_END				> PKMAP_BASE);
  #endif
@@ -1023,7 +1046,7 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  
  	cpa_init();
  	save_pg_dir();
-@@ -681,6 +707,7 @@
+@@ -681,6 +710,7 @@
   * This function cannot be __init, since exceptions don't work in that
   * section.  Put this after the callers, so that it cannot be inlined.
   */
@@ -1031,7 +1054,7 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  static noinline int do_test_wp_bit(void)
  {
  	char tmp_reg;
-@@ -700,6 +727,7 @@
+@@ -700,6 +730,7 @@
  
  	return flag;
  }
@@ -1039,7 +1062,7 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  
  #ifdef CONFIG_DEBUG_RODATA
  const int rodata_test_data = 0xC3;
-@@ -749,7 +777,9 @@
+@@ -749,7 +780,9 @@
  	 */
  	printk(KERN_INFO "debug: unmapping init memory %08lx..%08lx\n",
  		begin, PAGE_ALIGN(end));
@@ -1049,7 +1072,7 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  #else
  	unsigned long addr;
  
-@@ -758,7 +788,9 @@
+@@ -758,7 +791,9 @@
  	 * we are going to free part of that, we need to make that
  	 * writeable first.
  	 */
@@ -1098,18 +1121,25 @@ Index: linux-2.6.26-source/arch/x86/mm/ioremap.c
  	return 0;
  }
  
-@@ -259,6 +264,11 @@
+@@ -259,6 +264,10 @@
   */
  void __iomem *ioremap_nocache(resource_size_t phys_addr, unsigned long size)
  {
-+	if (cooperative_mode_enabled()) {
-+		panic("ioremap_nocache %zu:%lu\n", phys_addr, size);
-+		return NULL;
-+	}
-+
++#ifdef CONFIG_COOPERATIVE
++	panic("ioremap_nocache %zu:%lu\n", phys_addr, size);
++	return NULL;
++#else /* CONFIG_COOPERATIVE */
  	/*
  	 * Ideally, this should be:
  	 *	pat_wc_enabled ? _PAGE_CACHE_UC : _PAGE_CACHE_UC_MINUS;
+@@ -270,6 +279,7 @@
+ 
+ 	return __ioremap_caller(phys_addr, size, val,
+ 				__builtin_return_address(0));
++#endif /* CONFIG_COOPERATIVE */
+ }
+ EXPORT_SYMBOL(ioremap_nocache);
+ 
 @@ -295,6 +305,11 @@
  
  void __iomem *ioremap_cache(resource_size_t phys_addr, unsigned long size)

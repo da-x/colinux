@@ -1,7 +1,7 @@
-Index: linux-2.6.22-source/fs/cofusefs/dev.c
+Index: linux-2.6.25-source/fs/cofusefs/dev.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/fs/cofusefs/dev.c
++++ linux-2.6.25-source/fs/cofusefs/dev.c
 @@ -0,0 +1,235 @@
 +/*
 +    FUSE: Filesystem in Userspace
@@ -238,11 +238,11 @@ Index: linux-2.6.22-source/fs/cofusefs/dev.c
 + * c-basic-offset: 8
 + * End:
 + */
-Index: linux-2.6.22-source/fs/cofusefs/dir.c
+Index: linux-2.6.25-source/fs/cofusefs/dir.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/fs/cofusefs/dir.c
-@@ -0,0 +1,817 @@
++++ linux-2.6.25-source/fs/cofusefs/dir.c
+@@ -0,0 +1,819 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001-2004  Miklos Szeredi <miklos@szeredi.hu>
@@ -317,14 +317,16 @@ Index: linux-2.6.22-source/fs/cofusefs/dir.c
 +{
 +	struct inode *inode;
 +
-+	inode = iget(sb, ino);
-+	if(inode) {
-+		if (!inode->i_private)
-+			fuse_init_inode(inode, attr);
-+
-+		change_attributes(inode, attr);
++	inode = iget_locked(sb, ino);
++	if (!inode)
++		return ERR_PTR(-ENOMEM);
++	if ((inode->i_state & I_NEW)) {
++		fuse_init_inode(inode, attr);
 +		inode->i_version = version;
++		unlock_new_inode(inode);
 +	}
++
++	change_attributes(inode, attr);
 +
 +	return inode;
 +}
@@ -364,8 +366,8 @@ Index: linux-2.6.22-source/fs/cofusefs/dir.c
 +	err = fuse_do_lookup(dir, entry, &outarg, &version);
 +	if(!err) {
 +		inode = fuse_iget(dir->i_sb, outarg.ino, &outarg.attr, version);
-+		if(!inode)
-+			return -ENOMEM;
++		if (IS_ERR(inode))
++			return PTR_ERR(inode);
 +	} else if(err != -ENOENT)
 +		return err;
 +
@@ -418,8 +420,8 @@ Index: linux-2.6.22-source/fs/cofusefs/dir.c
 +		return out.h.error;
 +
 +	inode = fuse_iget(dir->i_sb, outarg.ino, &outarg.attr, out.h.unique);
-+	if(!inode)
-+		return -ENOMEM;
++	if (IS_ERR(inode))
++		return PTR_ERR(inode);
 +
 +	/* Don't allow userspace to do really stupid things... */
 +	if((inode->i_mode ^ mode) & S_IFMT) {
@@ -1060,10 +1062,10 @@ Index: linux-2.6.22-source/fs/cofusefs/dir.c
 + * c-basic-offset: 8
 + * End:
 + */
-Index: linux-2.6.22-source/fs/cofusefs/file.c
+Index: linux-2.6.25-source/fs/cofusefs/file.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/fs/cofusefs/file.c
++++ linux-2.6.25-source/fs/cofusefs/file.c
 @@ -0,0 +1,446 @@
 +/*
 +    FUSE: Filesystem in Userspace
@@ -1436,10 +1438,10 @@ Index: linux-2.6.22-source/fs/cofusefs/file.c
 +		/* FIXME: check sync_mode, and wait for previous writes (or
 +		   signal userspace to do this) */
 +		if(wbc->nonblocking) {
-+			SetPageWriteback(page);
++			TestSetPageWriteback(page);
 +			err = write_buffer_nonblock(inode, page, 0, count);
 +			if (err)
-+				ClearPageWriteback(page);
++				TestClearPageWriteback(page);
 +			if(err == -EWOULDBLOCK) {
 +				__set_page_dirty_nobuffers(page);
 +				err = 0;
@@ -1484,7 +1486,7 @@ Index: linux-2.6.22-source/fs/cofusefs/file.c
 +	.open		= fuse_open,
 +	.release	= fuse_release,
 +	.fsync		= fuse_fsync,
-+	.sendfile	= generic_file_sendfile,
++	.splice_read	= generic_file_splice_read,
 +};
 +
 +static struct address_space_operations fuse_file_aops  = {
@@ -1511,10 +1513,10 @@ Index: linux-2.6.22-source/fs/cofusefs/file.c
 + * c-basic-offset: 8
 + * End:
 + */
-Index: linux-2.6.22-source/fs/cofusefs/fuse_i.h
+Index: linux-2.6.25-source/fs/cofusefs/fuse_i.h
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/fs/cofusefs/fuse_i.h
++++ linux-2.6.25-source/fs/cofusefs/fuse_i.h
 @@ -0,0 +1,245 @@
 +/*
 +    COFUSE: Filesystem in an host of Cooperative Linux
@@ -1761,11 +1763,11 @@ Index: linux-2.6.22-source/fs/cofusefs/fuse_i.h
 +	unsigned long flags;
 +	char name[0x80];
 +};
-Index: linux-2.6.22-source/fs/cofusefs/inode.c
+Index: linux-2.6.25-source/fs/cofusefs/inode.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/fs/cofusefs/inode.c
-@@ -0,0 +1,442 @@
++++ linux-2.6.25-source/fs/cofusefs/inode.c
+@@ -0,0 +1,407 @@
 +/*
 +    FUSE: Filesystem in Userspace
 +    Copyright (C) 2001	Miklos Szeredi (miklos@szeredi.hu)
@@ -1783,17 +1785,13 @@ Index: linux-2.6.22-source/fs/cofusefs/inode.c
 +#include <linux/ctype.h>
 +#include <linux/proc_fs.h>
 +#include <linux/statfs.h>
++#include <linux/exportfs.h>
 +
 +#define FUSE_SUPER_MAGIC 0x65735546
 +
 +#ifndef FS_BINARY_MOUNTDATA
 +#define FS_BINARY_MOUNTDATA 0
 +#endif
-+
-+static void fuse_read_inode(struct inode *inode)
-+{
-+	/* No op */
-+}
 +
 +static void fuse_clear_inode(struct inode *inode)
 +{
@@ -1950,37 +1948,7 @@ Index: linux-2.6.22-source/fs/cofusefs/inode.c
 +	return fuse_iget(sb, 1, &attr, 0);
 +}
 +
-+
-+static struct dentry *fuse_get_dentry(struct super_block *sb, void *vobjp)
-+{
-+	__u32 *objp = vobjp;
-+	unsigned long ino = objp[0];
-+	/* __u32 generation = objp[1]; */
-+	struct inode *inode;
-+	struct dentry *entry;
-+
-+	if(ino == 0)
-+		return ERR_PTR(-ESTALE);
-+
-+	inode = ilookup(sb, ino);
-+	if(!inode)
-+		return ERR_PTR(-ESTALE);
-+
-+	entry = d_alloc_anon(inode);
-+	if(!entry) {
-+		iput(inode);
-+		return ERR_PTR(-ENOMEM);
-+	}
-+
-+	return entry;
-+}
-+
-+static struct export_operations fuse_export_operations = {
-+	.get_dentry	= fuse_get_dentry,
-+};
-+
 +static struct super_operations fuse_super_operations = {
-+	.read_inode	= fuse_read_inode,
 +	.clear_inode	= fuse_clear_inode,
 +	.put_super	= fuse_put_super,
 +	.statfs		= fuse_statfs,
@@ -1997,7 +1965,6 @@ Index: linux-2.6.22-source/fs/cofusefs/inode.c
 +	sb->s_magic = FUSE_SUPER_MAGIC;
 +	sb->s_op = &fuse_super_operations;
 +	sb->s_maxbytes = MAX_LFS_FILESIZE;
-+	sb->s_export_op = &fuse_export_operations;
 +
 +	fc = co_get_conn(co_d);
 +	if(fc == NULL)
@@ -2208,10 +2175,10 @@ Index: linux-2.6.22-source/fs/cofusefs/inode.c
 + * c-basic-offset: 8
 + * End:
 + */
-Index: linux-2.6.22-source/fs/cofusefs/util.c
+Index: linux-2.6.25-source/fs/cofusefs/util.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/fs/cofusefs/util.c
++++ linux-2.6.25-source/fs/cofusefs/util.c
 @@ -0,0 +1,69 @@
 +/*
 +    FUSE: Filesystem in Userspace
@@ -2282,10 +2249,10 @@ Index: linux-2.6.22-source/fs/cofusefs/util.c
 + * c-basic-offset: 8
 + * End:
 + */
-Index: linux-2.6.22-source/include/linux/cooperative_fs.h
+Index: linux-2.6.25-source/include/linux/cooperative_fs.h
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/include/linux/cooperative_fs.h
++++ linux-2.6.25-source/include/linux/cooperative_fs.h
 @@ -0,0 +1,273 @@
 +/*
 +    FUSE: Filesystem in Userspace
