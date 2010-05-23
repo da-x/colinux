@@ -20,12 +20,6 @@
 
  * Consoles:
    * Make the consoles scrollable/resizable.
-   * Add select, copy and paste to and from console and to and from
-     host-environment (not so much mouse but using keys). Is now
-     overcome by using SSH + putty, but that makes the console less
-     usefull.
-   * Paste clipboard feature is superfluous, as it is already provided in
-     the nt console by the OS.
    * Focus change handling.
      If a key is pressed and only released after changing window focus, it
      will stay pressed forever until it is pressed/released again.
