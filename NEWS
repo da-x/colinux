@@ -3,7 +3,7 @@
   * New: "color=black,white" sets default color. (Peter Kuznetsov)
   * New: "cursor=1..99" sets cursor size of nt-console. (Peter Kuznetsov)
   * TAB as separator in command line args. (Peter Kuznetsov)
-  * Supress "<d>" KERN_DEFAULT and "<c>" KERN_CONT on daemon printk output.
+  * Suppress "<d>" KERN_DEFAULT and "<c>" KERN_CONT on daemon printk output.
 
   Kernel:
   * Version 2.6.26.8
@@ -13,14 +13,12 @@
       (Thanks Frédéric L. W. Meunier)
     o Squashfs 3.4, Unionfs 2.5.4, Cloop 2.628
   * Version 2.6.25.20
+  * CONFIG_SYSFS_DEPRECATED: Disabled. Newer udev don't like it. (El Topo)
+  * scsi: Fix "unhandled opcode 51" (GPCMD_READ_DISC_INFO) for DVD/CDROM.
 
   Buildsystem / sources:
   * Source format cleanup. (Peter Kuznetsov)
   * premaid.sh moved into bin directory.
-
-  Kernel:
-  * CONFIG_SYSFS_DEPRECATED: Disabled. Newer udev don't like it. (El Topo)
-  * scsi: Fix "unhandled opcode 51" (GPCMD_READ_DISC_INFO) for DVD/CDROM.
 
   Updated tools:
   * binutils 2.19.1
