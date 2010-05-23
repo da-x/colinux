@@ -1,7 +1,7 @@
 Index: linux-2.6.26.8-source/drivers/input/mouse/comouse.c
 ===================================================================
---- linux-2.6.26.8-source.orig/drivers/input/mouse/comouse.c	2010-05-22 17:35:59.000000000 -0600
-+++ linux-2.6.26.8-source/drivers/input/mouse/comouse.c	2010-05-22 17:36:05.000000000 -0600
+--- linux-2.6.26.8-source.orig/drivers/input/mouse/comouse.c	2010-05-22 20:20:54.000000000 -0600
++++ linux-2.6.26.8-source/drivers/input/mouse/comouse.c	2010-05-22 20:23:07.000000000 -0600
 @@ -29,7 +29,7 @@
  #include <linux/interrupt.h>
  #include <linux/cooperative_internal.h>
@@ -59,8 +59,8 @@ Index: linux-2.6.26.8-source/drivers/input/mouse/comouse.c
 Index: linux-2.6.26.8-source/drivers/video/cofb.c
 ===================================================================
 --- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ linux-2.6.26.8-source/drivers/video/cofb.c	2010-05-22 17:36:05.000000000 -0600
-@@ -0,0 +1,790 @@
++++ linux-2.6.26.8-source/drivers/video/cofb.c	2010-05-22 22:41:05.000000000 -0600
+@@ -0,0 +1,711 @@
 +/*
 + *  linux/drivers/video/cofb.c -- CoLinux Virtual frame buffer device
 + *
@@ -88,11 +88,10 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +#include <linux/console.h>
 +#include <linux/cooperative_pci.h>
 +#include <linux/covideo.h>
-+/* --------------------------------------------------------------------- */
 +
-+MODULE_AUTHOR( "Nuno Lucas <nuno.lucas@zmail.pt>" );
-+MODULE_DESCRIPTION( "Virtual CoLinux FB driver" );
-+MODULE_LICENSE( "GPL" );
++MODULE_AUTHOR("Nuno Lucas <nuno.lucas@zmail.pt>");
++MODULE_DESCRIPTION("Virtual CoLinux FB driver");
++MODULE_LICENSE("GPL");
 +
 +#define COVIDEO_DEBUG 1
 +#define COVIDEO_MEMTEST 1
@@ -102,19 +101,7 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +#else
 +#define dprintk(m) /* noop */
 +#endif
-+/* --------------------------------------------------------------------- */
-+/*
-+ * Driver Interface
-+ */
-+static int cofb_check_var(struct fb_var_screeninfo*, struct fb_info*);
-+static int cofb_set_par(struct fb_info*);
-+static int cofb_setcolreg(u_int, u_int,u_int,u_int,u_int, struct fb_info*);
-+static void cofb_fillrect(struct fb_info*, const struct fb_fillrect*);
-+static void cofb_copyarea(struct fb_info*, const struct fb_copyarea*);
-+static void cofb_imageblit(struct fb_info*, const struct fb_image*);
-+static int cofb_mmap(struct fb_info*, struct vm_area_struct*);
-+static int covideo_mmap(struct fb_info*, struct vm_area_struct*);
-+static int cofb_blank(int blank, struct fb_info *info);
++
 +static int cofb_pan_display(struct fb_var_screeninfo *var, const struct fb_info *info){
 +  /* NOT IMPLEMENTED*/
 +  return 0;
@@ -162,75 +149,7 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +	.accel =	FB_ACCEL_NONE,
 +};
 +
-+static struct fb_ops cofb_ops = {
-+	.owner		= THIS_MODULE,
-+	.fb_read        = fb_sys_read,
-+	.fb_write       = fb_sys_write,
-+	.fb_check_var	= cofb_check_var,
-+	.fb_set_par	= cofb_set_par,
-+	.fb_setcolreg	= cofb_setcolreg,
-+	.fb_fillrect	= cofb_fillrect,
-+	.fb_copyarea	= cofb_copyarea,
-+	.fb_imageblit	= cofb_imageblit,
-+	//not found .fb_cursor	= soft_cursor,
-+	.fb_mmap	= covideo_mmap,
-+	//.fb_mmap	= cofb_mmap,
-+	.fb_blank	= cofb_blank,
-+	.fb_pan_display = cofb_pan_display,
-+};
 +
-+/* Simple page-level checkerboard test */
-+static int test_buffer(void *buffer, int unit, int size) {
-+	unsigned char *p, *t, *t0, *t1;
-+	unsigned long flags;
-+	int npages,rc;
-+	register int i;
-+
-+	printk(KERN_INFO "covideo%d: testing buffer at 0x%p (size: %d)\n", unit, buffer, size);
-+	rc = 1;
-+	t1 = 0;
-+	if ((t0 = kmalloc(PAGE_SIZE, GFP_KERNEL)) == 0) goto test_out;
-+	memset(t0, 0, PAGE_SIZE);
-+	if ((t1 = kmalloc(PAGE_SIZE, GFP_KERNEL)) == 0) goto test_out;
-+	memset(t1, 0xFF, PAGE_SIZE);
-+	npages = size >> PAGE_SHIFT;
-+
-+	p = buffer;
-+	for(i=0; i < npages; i++) {
-+		t = (i & 1 ? t1 : t0);
-+		memcpy(p, t, PAGE_SIZE);
-+		p += PAGE_SIZE;
-+	}
-+
-+	co_passage_page_assert_valid();
-+	co_passage_page_acquire(&flags);
-+	co_passage_page->operation = CO_OPERATION_DEVICE;
-+	co_passage_page->params[0] = CO_DEVICE_VIDEO;
-+	co_passage_page->params[1] = CO_VIDEO_TEST;
-+	co_passage_page->params[2] = unit;
-+	co_switch_wrapper();
-+	rc = co_passage_page->params[0];
-+	co_passage_page_release(flags);
-+
-+	/* Fail on host side? */
-+	if (rc) goto test_out;
-+
-+	p = buffer;
-+	for(i=0; i < npages; i++) {
-+		t = (i & 1 ? t0 : t1);
-+		if (memcmp(p, t, PAGE_SIZE) != 0)
-+			goto test_out;
-+		p += PAGE_SIZE;
-+	}
-+
-+	rc = 0;
-+
-+test_out:
-+	if (t0) kfree(t0);
-+	if (t1) kfree(t1);
-+	printk(KERN_INFO "covideo%d: test %s!\n", unit, (rc ? "failed" : "passed"));
-+	return rc;
-+}
 +
 +/* --------------------------------------------------------------------- */
 +/*
@@ -258,220 +177,6 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +	co_atomic_unlock( &cofb_mem->header.lock );
 +}
 +
-+/* --------------------------------------------------------------------- */
-+/*
-+ * Parse fb options.
-+ *
-+ * The boot parameters are given like: "video=cofb:800x600x32"
-+ */
-+static
-+int __init cofb_setup( char* options )
-+{
-+	if (!options || !*options)
-+		return 0;
-+
-+	printk( KERN_INFO"cofb: parameters '%s'\n", options );
-+
-+	int width, height, bpp;
-+	char *p;
-+
-+	if (!(p = strsep(&options, "x")) || !*p)
-+		return 0;
-+	width = simple_strtoul(p, NULL, 10);
-+	if (width <= 0)
-+		return -1;
-+	if (!(p = strsep(&options, "x")) || !*p)
-+		return 0;
-+	height = simple_strtoul(p, NULL, 10);
-+	if (height <= 0)
-+		return -1;
-+	if (!(p = strsep(&options, "x")) || !*p)
-+		return 0;
-+	bpp = simple_strtoul(p, NULL, 10);
-+	if (bpp <= 0)
-+		return -1;
-+
-+	cofb_width  = width;
-+	cofb_height = height;
-+	cofb_bpp    = bpp;
-+
-+	printk( KERN_INFO"cofb: boot mode %dx%dx%d\n", width, height, bpp );
-+
-+	return 0;
-+}
-+
-+/* --------------------------------------------------------------------- */
-+/*
-+ * Driver initialization.
-+ */
-+static
-+int __init cofb_init( void )
-+{
-+	unsigned fb_start = PAGE_SIZE;
-+	unsigned fb_avail;
-+	unsigned long flags;
-+	covideo_config_t *cp;
-+	int rc;
-+
-+        /* Get our config */
-+        co_passage_page_assert_valid();
-+        co_passage_page_acquire(&flags);
-+        co_passage_page->operation = CO_OPERATION_DEVICE;
-+        co_passage_page->params[0] = CO_DEVICE_VIDEO;
-+        co_passage_page->params[1] = CO_VIDEO_GET_CONFIG;
-+        co_passage_page->params[2] = 0; // unit, default to only one device
-+        co_switch_wrapper();
-+        rc = co_passage_page->params[0];
-+        cp = (covideo_config_t *) &co_passage_page->params[1];
-+	void* host_buffer = (struct cofb_video_mem_info *) cp->buffer;
-+	/* memory address is predeterminged */
-+	//cofb_mem = (struct cofb_video_mem_info *)((CO_VPTR_SELF_MAP-cp->size)&0xffc00000);
-+	fb_avail = cp->size - 2*PAGE_SIZE;
-+	co_passage_page_release(flags);
-+
-+        /* If unable to get size, silently skip this device */
-+        if (rc) return 0;
-+
-+	printk( KERN_INFO"cofb: videobase %X mem: %lu KB\n", cofb_mem,fb_avail >> 10 );
-+	printk(KERN_INFO"cofb: host buffer %X\n", host_buffer);
-+	//printk( KERN_INFO"cofb: videobase %X mem: %lu KB\n", co_video_base,co_video_size >> 10 );
-+
-+#ifndef MODULE
-+	char *option = NULL;
-+	if ( fb_get_options("cofb", &option) )
-+		return -ENODEV;
-+	rc = cofb_setup( option );
-+	if ( rc )
-+		return rc;
-+#endif
-+
-+	/* Calculate fb sizes and start */
-+	unsigned bytes_per_pixel = (cofb_bpp + 7) >> 3;
-+	unsigned bwidth = cofb_width * bytes_per_pixel;
-+	unsigned fb_size  = PAGE_ALIGN( bwidth * cofb_height );
-+
-+	/* Check we have enough memory */
-+	if ( fb_avail < fb_size ) {
-+		printk( KERN_ERR"cofb: not enough video memory for %dx%dx%d!\n",
-+			cofb_width, cofb_height, cofb_bpp );
-+		return -ENOMEM;
-+	}
-+
-+	/* Map host buffer into our space */
-+	void* buffer = co_map_buffer(host_buffer, fb_avail);
-+	if (!buffer) {
-+		printk(KERN_ERR "covideo%d: unable to map video buffer!\n", 0);
-+		return 0;
-+	}
-+	co_video_base = buffer;
-+	cofb_mem = (struct cofb_video_mem_info *)buffer;
-+	printk(KERN_INFO "covideo%d: buffer: %p, size: %d\n", 0, buffer, fb_avail);
-+	/* Test buffer */
-+	//if (test_buffer(buffer, 0, fb_avail)) return -EIO;
-+
-+
-+	/* Setup framebuffer */
-+	struct fb_info* info = framebuffer_alloc( sizeof(u32)*256, NULL );
-+	if ( !info ) {
-+		printk( KERN_ERR"cofb: error allocating fb info!\n" );
-+		return -ENOMEM;
-+	}
-+
-+	info->fbops		= &cofb_ops;
-+	info->screen_base	= (char __iomem *)(cofb_mem) + fb_start;
-+	info->screen_size	= fb_avail;
-+	info->pseudo_palette	= info->par;
-+	info->par		= NULL;
-+	info->flags		= FBINFO_FLAG_DEFAULT;
-+
-+	strcpy( info->fix.id	, "CoFB" );
-+	info->fix.visual        = FB_VISUAL_TRUECOLOR;
-+	info->fix.type		= FB_TYPE_PACKED_PIXELS;
-+	info->fix.ypanstep	= 1;
-+	info->fix.accel		= FB_ACCEL_NONE;
-+
-+	info->fix.smem_start	= PAGE_SIZE;
-+	info->fix.smem_len	= fb_avail;
-+
-+	info->var.xres_virtual	= info->var.xres = cofb_width;
-+	info->var.yres_virtual	= info->var.yres = cofb_height;
-+	info->var.bits_per_pixel= cofb_bpp;
-+	info->var.activate	= FB_ACTIVATE_NOW;
-+	info->var.height	= -1;
-+	info->var.width		= -1;
-+	info->var.vmode		= FB_VMODE_NONINTERLACED;
-+        // assume fresh buffer, locked, unlock first
-+	printk("cofb unlock\n");
-+	cofb_unlock();
-+	/* Let cofb_check_var() fill the rest for us */
-+	rc = cofb_check_var( &info->var, info );
-+	if ( rc < 0 ) {
-+		printk( KERN_ERR"cofb: %d bit color not supported yet!\n", cofb_bpp );
-+		goto err1;
-+	}
-+
-+	/* Allocate 256 color map */
-+	rc = fb_alloc_cmap( &info->cmap, 256, 0 );
-+	if ( rc < 0 ) {
-+		printk( KERN_ERR"cofb: error allocating cmap! (rc=%d)\n", rc );
-+		goto err1;
-+	}
-+
-+	/* fb core will call our ops from this moment */
-+	rc = register_framebuffer( info );
-+	if ( rc < 0 ) {
-+		printk( KERN_ERR"cofb: framebuffer register error %d!", rc );
-+		goto err2;
-+	}
-+
-+	printk( "cofb%d: %s device ready, using %luKB (%dx%dx%d)\n",
-+		info->node, info->fix.id, fb_avail >> 10,
-+		info->var.xres, info->var.yres, info->var.bits_per_pixel );
-+
-+	/* All done, success! */
-+	return 0;
-+
-+err2:
-+	fb_dealloc_cmap( &info->cmap );
-+
-+err1:
-+	framebuffer_release( info );
-+
-+	return rc;
-+}
-+
-+module_init(cofb_init);
-+static int __init vfb_probe(struct platform_device *dev)
-+{
-+	printk(KERN_INFO
-+	       "fb?d: Virtual frame buffer device, using ?ldK of video memory\n");
-+	return 0;
-+
-+}
-+
-+static int vfb_remove(struct platform_device *dev)
-+{
-+	struct fb_info *info = platform_get_drvdata(dev);
-+
-+	if (info) {
-+		unregister_framebuffer(info);
-+		//rvfree(videomemory, videomemorysize);
-+		framebuffer_release(info);
-+	}
-+	return 0;
-+}
-+
-+static struct platform_driver vfb_driver = {
-+	.probe	= vfb_probe,
-+	.remove = vfb_remove,
-+	.driver = {
-+		.name	= "vfb",
-+	},
-+};
-+
-+static struct platform_device *vfb_device;
-+
-+/* --------------------------------------------------------------------- */
 +/*
 + * cofb_check_var - Optional function. Validates a var passed in.
 + * @var: frame buffer variable screen structure
@@ -627,8 +332,6 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +	cofb_unlock();
 +}
 +
-+/* --------------------------------------------------------------------- */
-+
 +static
 +int cofb_setcolreg( u_int regno, u_int red, u_int green, u_int blue,
 +			u_int transp, struct fb_info *info )
@@ -653,7 +356,6 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +	return 0;
 +}
 +
-+/* --------------------------------------------------------------------- */
 +/*
 + * Blank display.
 + *
@@ -760,44 +462,262 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +	return 0;
 +}
 +
-+/* --------------------------------------------------------------------- */
++static struct fb_ops cofb_ops = {
++	.owner		= THIS_MODULE,
++	.fb_read        = fb_sys_read,
++	.fb_write       = fb_sys_write,
++	.fb_check_var	= cofb_check_var,
++	.fb_set_par	= cofb_set_par,
++	.fb_setcolreg	= cofb_setcolreg,
++	.fb_fillrect	= cofb_fillrect,
++	.fb_copyarea	= cofb_copyarea,
++	.fb_imageblit	= cofb_imageblit,
++	//not found .fb_cursor	= soft_cursor,
++	.fb_mmap	= covideo_mmap,
++	//.fb_mmap	= cofb_mmap,
++	.fb_blank	= cofb_blank,
++	.fb_pan_display = cofb_pan_display,
++};
 +
-+#ifdef MODULE
-+static void __exit vfb_exit(void)
-+{
-+	platform_device_unregister(vfb_device);
-+	platform_driver_unregister(&vfb_driver);
++/* Simple page-level checkerboard test */
++static int test_buffer(void *buffer, int unit, int size) {
++	unsigned char *p, *t, *t0, *t1;
++	unsigned long flags;
++	int npages,rc;
++	register int i;
++
++	printk(KERN_INFO "covideo%d: testing buffer at 0x%p (size: %d)\n", unit, buffer, size);
++	rc = 1;
++	t1 = 0;
++	if ((t0 = kmalloc(PAGE_SIZE, GFP_KERNEL)) == 0) goto test_out;
++	memset(t0, 0, PAGE_SIZE);
++	if ((t1 = kmalloc(PAGE_SIZE, GFP_KERNEL)) == 0) goto test_out;
++	memset(t1, 0xFF, PAGE_SIZE);
++	npages = size >> PAGE_SHIFT;
++
++	p = buffer;
++	for(i=0; i < npages; i++) {
++		t = (i & 1 ? t1 : t0);
++		memcpy(p, t, PAGE_SIZE);
++		p += PAGE_SIZE;
++	}
++
++	co_passage_page_assert_valid();
++	co_passage_page_acquire(&flags);
++	co_passage_page->operation = CO_OPERATION_DEVICE;
++	co_passage_page->params[0] = CO_DEVICE_VIDEO;
++	co_passage_page->params[1] = CO_VIDEO_TEST;
++	co_passage_page->params[2] = unit;
++	co_switch_wrapper();
++	rc = co_passage_page->params[0];
++	co_passage_page_release(flags);
++
++	/* Fail on host side? */
++	if (rc) goto test_out;
++
++	p = buffer;
++	for(i=0; i < npages; i++) {
++		t = (i & 1 ? t0 : t1);
++		if (memcmp(p, t, PAGE_SIZE) != 0)
++			goto test_out;
++		p += PAGE_SIZE;
++	}
++
++	rc = 0;
++
++test_out:
++	if (t0) kfree(t0);
++	if (t1) kfree(t1);
++	printk(KERN_INFO "covideo%d: test %s!\n", unit, (rc ? "failed" : "passed"));
++	return rc;
 +}
 +
-+module_exit(vfb_exit);
-+#endif				/* MODULE */
++/*
++ * Parse fb options.
++ *
++ * The boot parameters are given like: "video=cofb:800x600x32"
++ */
++static
++int __init cofb_setup( char* options )
++{
++	if (!options || !*options)
++		return 0;
++
++	printk( KERN_INFO"cofb: parameters '%s'\n", options );
++
++	int width, height, bpp;
++	char *p;
++
++	if (!(p = strsep(&options, "x")) || !*p)
++		return 0;
++	width = simple_strtoul(p, NULL, 10);
++	if (width <= 0)
++		return -1;
++	if (!(p = strsep(&options, "x")) || !*p)
++		return 0;
++	height = simple_strtoul(p, NULL, 10);
++	if (height <= 0)
++		return -1;
++	if (!(p = strsep(&options, "x")) || !*p)
++		return 0;
++	bpp = simple_strtoul(p, NULL, 10);
++	if (bpp <= 0)
++		return -1;
++
++	cofb_width  = width;
++	cofb_height = height;
++	cofb_bpp    = bpp;
++
++	printk( KERN_INFO"cofb: boot mode %dx%dx%d\n", width, height, bpp );
++
++	return 0;
++}
++
++/*
++ * Driver initialization.
++ */
++static
++int __init cofb_init( void )
++{
++	unsigned fb_start = PAGE_SIZE;
++	unsigned fb_avail;
++	unsigned long flags;
++	covideo_config_t *cp;
++	int rc;
++
++        /* Get our config */
++        co_passage_page_assert_valid();
++        co_passage_page_acquire(&flags);
++        co_passage_page->operation = CO_OPERATION_DEVICE;
++        co_passage_page->params[0] = CO_DEVICE_VIDEO;
++        co_passage_page->params[1] = CO_VIDEO_GET_CONFIG;
++        co_passage_page->params[2] = 0; // unit, default to only one device
++        co_switch_wrapper();
++        rc = co_passage_page->params[0];
++        cp = (covideo_config_t *) &co_passage_page->params[1];
++	void* host_buffer = (struct cofb_video_mem_info *) cp->buffer;
++	/* memory address is predeterminged */
++	//cofb_mem = (struct cofb_video_mem_info *)((CO_VPTR_SELF_MAP-cp->size)&0xffc00000);
++	fb_avail = cp->size - 2*PAGE_SIZE;
++	co_passage_page_release(flags);
++
++        /* If unable to get size, silently skip this device */
++        if (rc) return 0;
++
++	printk( KERN_INFO"cofb: videobase %X mem: %lu KB\n", cofb_mem,fb_avail >> 10 );
++	printk(KERN_INFO"cofb: host buffer %X\n", host_buffer);
++	//printk( KERN_INFO"cofb: videobase %X mem: %lu KB\n", co_video_base,co_video_size >> 10 );
++
++#ifndef MODULE
++	char *option = NULL;
++	if ( fb_get_options("cofb", &option) )
++		return -ENODEV;
++	rc = cofb_setup( option );
++	if ( rc )
++		return rc;
++#endif
++
++	/* Calculate fb sizes and start */
++	unsigned bytes_per_pixel = (cofb_bpp + 7) >> 3;
++	unsigned bwidth = cofb_width * bytes_per_pixel;
++	unsigned fb_size  = PAGE_ALIGN( bwidth * cofb_height );
++
++	/* Check we have enough memory */
++	if ( fb_avail < fb_size ) {
++		printk( KERN_ERR"cofb: not enough video memory for %dx%dx%d!\n",
++			cofb_width, cofb_height, cofb_bpp );
++		return -ENOMEM;
++	}
++
++	/* Map host buffer into our space */
++	void* buffer = co_map_buffer(host_buffer, fb_avail);
++	if (!buffer) {
++		printk(KERN_ERR "covideo%d: unable to map video buffer!\n", 0);
++		return 0;
++	}
++	co_video_base = buffer;
++	cofb_mem = (struct cofb_video_mem_info *)buffer;
++	printk(KERN_INFO "covideo%d: buffer: %p, size: %d\n", 0, buffer, fb_avail);
++	/* Test buffer */
++	//if (test_buffer(buffer, 0, fb_avail)) return -EIO;
++
++
++	/* Setup framebuffer */
++	struct fb_info* info = framebuffer_alloc( sizeof(u32)*256, NULL );
++	if ( !info ) {
++		printk( KERN_ERR"cofb: error allocating fb info!\n" );
++		return -ENOMEM;
++	}
++
++	info->fbops		= &cofb_ops;
++	info->screen_base	= (char __iomem *)(cofb_mem) + fb_start;
++	info->screen_size	= fb_avail;
++	info->pseudo_palette	= info->par;
++	info->par		= NULL;
++	info->flags		= FBINFO_FLAG_DEFAULT;
++
++	strcpy( info->fix.id	, "CoFB" );
++	info->fix.visual        = FB_VISUAL_TRUECOLOR;
++	info->fix.type		= FB_TYPE_PACKED_PIXELS;
++	info->fix.ypanstep	= 1;
++	info->fix.accel		= FB_ACCEL_NONE;
++
++	info->fix.smem_start	= PAGE_SIZE;
++	info->fix.smem_len	= fb_avail;
++
++	info->var.xres_virtual	= info->var.xres = cofb_width;
++	info->var.yres_virtual	= info->var.yres = cofb_height;
++	info->var.bits_per_pixel= cofb_bpp;
++	info->var.activate	= FB_ACTIVATE_NOW;
++	info->var.height	= -1;
++	info->var.width		= -1;
++	info->var.vmode		= FB_VMODE_NONINTERLACED;
++        // assume fresh buffer, locked, unlock first
++	printk("cofb unlock\n");
++	cofb_unlock();
++	/* Let cofb_check_var() fill the rest for us */
++	rc = cofb_check_var( &info->var, info );
++	if ( rc < 0 ) {
++		printk( KERN_ERR"cofb: %d bit color not supported yet!\n", cofb_bpp );
++		goto err1;
++	}
++
++	/* Allocate 256 color map */
++	rc = fb_alloc_cmap( &info->cmap, 256, 0 );
++	if ( rc < 0 ) {
++		printk( KERN_ERR"cofb: error allocating cmap! (rc=%d)\n", rc );
++		goto err1;
++	}
++
++	/* fb core will call our ops from this moment */
++	rc = register_framebuffer( info );
++	if ( rc < 0 ) {
++		printk( KERN_ERR"cofb: framebuffer register error %d!", rc );
++		goto err2;
++	}
++
++	printk( "cofb%d: %s device ready, using %luKB (%dx%dx%d)\n",
++		info->node, info->fix.id, fb_avail >> 10,
++		info->var.xres, info->var.yres, info->var.bits_per_pixel );
++
++	/* All done, success! */
++	return 0;
++
++err2:
++	fb_dealloc_cmap( &info->cmap );
++
++err1:
++	framebuffer_release( info );
++
++	return rc;
++}
 +
 +/*
 + * PCI Probe - probe for a single device
 +*/
 +static int __devinit covideo_pci_probe( struct pci_dev *pdev, const struct pci_device_id *id )
 +{
-+	int rc;
-+	unsigned long flags;
-+	covideo_config_t *cp;
-+
-+	/* Get our config */
-+	co_passage_page_assert_valid();
-+	co_passage_page_acquire(&flags);
-+	co_passage_page->operation = CO_OPERATION_DEVICE;
-+	co_passage_page->params[0] = CO_DEVICE_VIDEO;
-+	co_passage_page->params[1] = CO_VIDEO_GET_CONFIG;
-+	co_passage_page->params[2] = 0;
-+	co_switch_wrapper();
-+	rc = co_passage_page->params[0];
-+	cp = (covideo_config_t *) &co_passage_page->params[1];
-+	//co_video_base = cp->buffer;
-+	//co_video_size = cp->size;
-+	co_passage_page_release(flags);
-+	printk(KERN_INFO"cofb pci probei\n");
-+	//cofb_init();
-+	/* If unable to get size, silently skip this device */
-+	if (rc) return 0;
++        return 0;
 +}
 +/*
 + * PCI Remove - hotplug removal
@@ -848,13 +768,14 @@ Index: linux-2.6.26.8-source/drivers/video/cofb.c
 +        pci_unregister_driver(&covideo_pci_driver);
 +}
 +
-+module_init(covideo_pci_init);
-+module_exit(covideo_pci_exit);
++module_init(cofb_init);
++//module_init(covideo_pci_init);
++//module_exit(covideo_pci_exit);
 +
 Index: linux-2.6.26.8-source/drivers/video/Kconfig
 ===================================================================
---- linux-2.6.26.8-source.orig/drivers/video/Kconfig	2010-05-22 17:35:59.000000000 -0600
-+++ linux-2.6.26.8-source/drivers/video/Kconfig	2010-05-22 17:36:05.000000000 -0600
+--- linux-2.6.26.8-source.orig/drivers/video/Kconfig	2010-05-22 20:20:54.000000000 -0600
++++ linux-2.6.26.8-source/drivers/video/Kconfig	2010-05-22 20:23:07.000000000 -0600
 @@ -1968,6 +1968,17 @@
           This enables support for the Metronome display controller used on
           the E-Ink AM-200 EPD devkit.
@@ -875,8 +796,8 @@ Index: linux-2.6.26.8-source/drivers/video/Kconfig
  	depends on FB
 Index: linux-2.6.26.8-source/drivers/video/Makefile
 ===================================================================
---- linux-2.6.26.8-source.orig/drivers/video/Makefile	2010-05-22 17:35:59.000000000 -0600
-+++ linux-2.6.26.8-source/drivers/video/Makefile	2010-05-22 17:36:05.000000000 -0600
+--- linux-2.6.26.8-source.orig/drivers/video/Makefile	2010-05-22 20:20:54.000000000 -0600
++++ linux-2.6.26.8-source/drivers/video/Makefile	2010-05-22 20:23:07.000000000 -0600
 @@ -127,6 +127,7 @@
  obj-$(CONFIG_FB_EFI)              += efifb.o
  obj-$(CONFIG_FB_VGA16)            += vga16fb.o
@@ -887,8 +808,8 @@ Index: linux-2.6.26.8-source/drivers/video/Makefile
  
 Index: linux-2.6.26.8-source/include/linux/cooperative_internal.h
 ===================================================================
---- linux-2.6.26.8-source.orig/include/linux/cooperative_internal.h	2010-05-22 17:35:51.000000000 -0600
-+++ linux-2.6.26.8-source/include/linux/cooperative_internal.h	2010-05-22 17:36:05.000000000 -0600
+--- linux-2.6.26.8-source.orig/include/linux/cooperative_internal.h	2010-05-22 20:20:55.000000000 -0600
++++ linux-2.6.26.8-source/include/linux/cooperative_internal.h	2010-05-22 20:23:07.000000000 -0600
 @@ -117,6 +117,43 @@
  	co_passage_page_release(flags);
  }
@@ -936,7 +857,7 @@ Index: linux-2.6.26.8-source/include/linux/cooperative_internal.h
 Index: linux-2.6.26.8-source/include/linux/cooperative_video.h
 ===================================================================
 --- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ linux-2.6.26.8-source/include/linux/cooperative_video.h	2010-05-22 17:36:05.000000000 -0600
++++ linux-2.6.26.8-source/include/linux/cooperative_video.h	2010-05-22 20:23:07.000000000 -0600
 @@ -0,0 +1,180 @@
 +/*
 + *  linux/include/linux/cooperative_video.h
@@ -1120,8 +1041,8 @@ Index: linux-2.6.26.8-source/include/linux/cooperative_video.h
 +
 Index: linux-2.6.26.8-source/include/linux/mm.h
 ===================================================================
---- linux-2.6.26.8-source.orig/include/linux/mm.h	2010-05-22 17:34:27.000000000 -0600
-+++ linux-2.6.26.8-source/include/linux/mm.h	2010-05-22 17:36:05.000000000 -0600
+--- linux-2.6.26.8-source.orig/include/linux/mm.h	2010-05-22 20:20:55.000000000 -0600
++++ linux-2.6.26.8-source/include/linux/mm.h	2010-05-22 20:23:07.000000000 -0600
 @@ -108,6 +108,7 @@
  
  #define VM_CAN_NONLINEAR 0x08000000	/* Has ->fault & does nonlinear pages */
@@ -1132,8 +1053,8 @@ Index: linux-2.6.26.8-source/include/linux/mm.h
  #define VM_STACK_DEFAULT_FLAGS VM_DATA_DEFAULT_FLAGS
 Index: linux-2.6.26.8-source/mm/memory.c
 ===================================================================
---- linux-2.6.26.8-source.orig/mm/memory.c	2010-05-22 17:34:27.000000000 -0600
-+++ linux-2.6.26.8-source/mm/memory.c	2010-05-22 17:36:05.000000000 -0600
+--- linux-2.6.26.8-source.orig/mm/memory.c	2010-05-22 20:20:55.000000000 -0600
++++ linux-2.6.26.8-source/mm/memory.c	2010-05-22 20:23:07.000000000 -0600
 @@ -681,6 +681,7 @@
  				struct vm_area_struct *vma, pmd_t *pmd,
  				unsigned long addr, unsigned long end,
@@ -1216,8 +1137,8 @@ Index: linux-2.6.26.8-source/mm/memory.c
  	 * Physically remapped pages are special. Tell the
 Index: linux-2.6.26.8-source/drivers/video/console/fbcon.c
 ===================================================================
---- linux-2.6.26.8-source.orig/drivers/video/console/fbcon.c	2010-05-22 17:34:27.000000000 -0600
-+++ linux-2.6.26.8-source/drivers/video/console/fbcon.c	2010-05-22 17:36:05.000000000 -0600
+--- linux-2.6.26.8-source.orig/drivers/video/console/fbcon.c	2010-05-22 20:20:54.000000000 -0600
++++ linux-2.6.26.8-source/drivers/video/console/fbcon.c	2010-05-22 20:23:07.000000000 -0600
 @@ -90,6 +90,8 @@
  #endif
  
@@ -1251,21 +1172,21 @@ Index: linux-2.6.26.8-source/drivers/video/console/fbcon.c
  static void fbcon_putc(struct vc_data *vc, int c, int ypos, int xpos)
 Index: linux-2.6.26.8-source/include/linux/cooperative.h
 ===================================================================
---- linux-2.6.26.8-source.orig/include/linux/cooperative.h	2010-05-22 17:36:05.000000000 -0600
-+++ linux-2.6.26.8-source/include/linux/cooperative.h	2010-05-22 17:36:05.000000000 -0600
+--- linux-2.6.26.8-source.orig/include/linux/cooperative.h	2010-05-22 20:20:55.000000000 -0600
++++ linux-2.6.26.8-source/include/linux/cooperative.h	2010-05-22 20:23:07.000000000 -0600
 @@ -20,7 +20,7 @@
  
  #include <asm/cooperative.h>
  
--#define CO_LINUX_API_VERSION    1014
+-#define CO_LINUX_API_VERSION    14
 +#define CO_LINUX_API_VERSION    1016
  
  #pragma pack(0)
  
 Index: linux-2.6.26.8-source/arch/x86/pci/copci.c
 ===================================================================
---- linux-2.6.26.8-source.orig/arch/x86/pci/copci.c	2010-05-22 17:35:59.000000000 -0600
-+++ linux-2.6.26.8-source/arch/x86/pci/copci.c	2010-05-22 17:36:05.000000000 -0600
+--- linux-2.6.26.8-source.orig/arch/x86/pci/copci.c	2010-05-22 20:20:55.000000000 -0600
++++ linux-2.6.26.8-source/arch/x86/pci/copci.c	2010-05-22 20:23:07.000000000 -0600
 @@ -237,13 +237,13 @@
  	cp = guest_cp;
  	for(x=0; x < count; x++, cp++) {
@@ -1282,3 +1203,87 @@ Index: linux-2.6.26.8-source/arch/x86/pci/copci.c
  #ifdef CONFIG_COOPERATIVE_AUDIO
  		case CO_DEVICE_AUDIO:
  			id = PCI_DEVICE_ID_COAUDIO;
+Index: linux-2.6.26.8-source/drivers/video/covideo.c
+===================================================================
+--- linux-2.6.26.8-source.orig/drivers/video/covideo.c	2010-05-22 20:34:26.000000000 -0600
++++ linux-2.6.26.8-source/drivers/video/covideo.c	2010-05-22 22:36:56.000000000 -0600
+@@ -1,3 +1,13 @@
++/*
++ *  linux/drivers/video/cofb.c -- CoLinux Virtual frame buffer device
++ *
++ *      Copyright (C) 2005 Nuno Lucas
++ *	Based on vfb.c and other fb drivers.
++ *
++ *  This file is subject to the terms and conditions of the GNU General Public
++ *  License. See the file COPYING in the main directory of this archive for
++ *  more details.
++ */
+ 
+ #include <linux/module.h>
+ #include <linux/pci.h>
+@@ -15,8 +25,8 @@
+ MODULE_DESCRIPTION("Cooperative Linux Video Driver");
+ MODULE_LICENSE("GPL");
+ 
+-#define COVIDEO_DEBUG 0
+-#define COVIDEO_MEMTEST 0
++#define COVIDEO_DEBUG 1
++#define COVIDEO_MEMTEST 1
+ 
+ #if COVIDEO_DEBUG
+ #define dprintk(m) printk m
+@@ -104,13 +114,25 @@
+         return (length);
+ }
+ 
++/*
++ * cofb_check_var - Optional function. Validates a var passed in.
++ * @var: frame buffer variable screen structure
++ * @info: frame buffer structure that represents a single frame buffer
++ *
++ * Returns negative errno on error, or zero on success.
++ */
+ static int covideo_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
+ {
+ 	struct covideo_par *par = info->par;
+         u_long line_length;
+ 
+ //	uprintk("checking var...\n");
+-
++        /* Return a mode that works on the 1 MB default video_mem */
++        if ( var->xres < 320 || var->yres < 200 || var->bits_per_pixel < 16 ) {
++                var->xres = 640;
++                var->yres = 480;
++                var->bits_per_pixel = 24;
++        }
+ //	printk("check_var: xres: %d, yres: %d, bpp: %d\n", var->xres, var->yres, var->bits_per_pixel);
+ 
+ 	/* We only do 32 BPP */
+@@ -218,6 +240,9 @@
+                 var->transp.offset = 24;
+                 var->transp.length = 8;
+                 break;
++	default:
++                printk(KERN_INFO"cofb: %d bit per pixel not supported\n",var->bits_per_pixel);
++                return -EINVAL; /* No support for this color mode */
+         }
+         var->red.msb_right = 0;
+         var->green.msb_right = 0;
+@@ -323,8 +348,17 @@
+ 	return 0;
+ }
+ 
++/*
++ * Blank display.
++ *
++ * We don't want users to be scared when the console gets black.
++ */
+ static int covideo_blank(int blank_mode, struct fb_info *info)
+ {
++        /*
++         * If non-zero is returned, the screen will be blanked by fbcon.
++         * NOTE: The cursor will disapear because fbcon hides it on blank.
++         */
+ 	return 0;
+ }
+ 
