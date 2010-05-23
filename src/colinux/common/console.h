@@ -66,6 +66,9 @@ typedef struct co_console {
 
 	/* On-screen data */
 	co_console_cell_t* screen;
+	
+	/* back log buffer */
+	co_console_cell_t* buffer;
 
 	/* Cursor position and height in percent
 	 * Defined in 'linux/cooperative.h' as x, y, height.

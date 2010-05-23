@@ -186,6 +186,26 @@ static LRESULT CALLBACK keyboard_hook(
 			return 1;	/* key processed */
 		}
 		break;
+
+	case VK_PRIOR:
+		if ( !released && (vkey_state[255] & 1) )
+		{
+			// page up with windows key
+			console_widget_t* my_widget = co_user_console_get_window()->get_widget();
+			my_widget->scroll_page_up();
+			return 1;	/* key processed */
+		}
+		break;
+
+	case VK_NEXT:
+		if ( !released && (vkey_state[255] & 1) )
+		{
+			// page down with windows key
+			console_widget_t* my_widget = co_user_console_get_window()->get_widget();
+			my_widget->scroll_page_down();
+			return 1;	/* key processed */
+		}
+		break;
 	}
 
 	/* Normal key processing */

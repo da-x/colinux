@@ -122,6 +122,11 @@ int console_main_window_t::handle(int event)
 	case FL_RELEASE:
 		console->get_widget()->mouse_release(x, y);
 		break;
+
+	case FL_MOUSEWHEEL:
+		console->get_widget()->scroll_back_buffer(Fl::event_dy());
+		break;
+
 	}
 
 	if (last_focus != keyboard_focus)

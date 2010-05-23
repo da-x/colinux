@@ -51,6 +51,8 @@ console_widget_t::console_widget_t(int		x,
 	loc_start			= 0;
 	loc_end 			= 0;
 
+	int scroll_lines	= 0;
+
 	Fl::add_timeout(cursor_blink_interval,
 		        (Fl_Timeout_Handler)(console_widget_t::static_blink_handler),
 		        this);
@@ -63,7 +65,7 @@ void console_widget_t::static_blink_handler(console_widget_t* widget)
 
 void console_widget_t::blink_handler()
 {
-	if (console) {
+	if (console && !scroll_lines) {
 		cursor_blink_state = !cursor_blink_state;
 		damage_console(console->cursor.x, console->cursor.y, 1, 1);
 
@@ -171,7 +173,7 @@ void console_widget_t::draw()
 		if (yi >= console->config.y)
 			break;
 
-		co_console_cell_t* row_start = &console->screen[yi * console->config.x];
+		co_console_cell_t* row_start = &console->screen[(yi+scroll_lines) * console->config.x];
 		co_console_cell_t* cell;
 		co_console_cell_t* start;
 		co_console_cell_t* end;
@@ -209,22 +211,25 @@ void console_widget_t::draw()
 		}
 
 		// The cell under the cursor
-		if (cursor_blink_state && console->cursor.y == yi &&
-		    console->cursor.x >= x1 && console->cursor.x <= x2 &&
-		    console->cursor.height != CO_CUR_NONE) {
-			int cursize;
+		if(!scroll_lines)
+		{
+			if (cursor_blink_state && console->cursor.y == yi &&
+				console->cursor.x >= x1 && console->cursor.x <= x2 &&
+				console->cursor.height != CO_CUR_NONE) {
+				int cursize;
 
-			if (console->cursor.height <= CO_CUR_BLOCK &&
-			    console->cursor.height > CO_CUR_NONE)
-				cursize = cursize_tab[console->cursor.height];
-			else
-				cursize = cursize_tab[CO_CUR_DEF];
+				if (console->cursor.height <= CO_CUR_BLOCK &&
+					console->cursor.height > CO_CUR_NONE)
+					cursize = cursize_tab[console->cursor.height];
+				else
+					cursize = cursize_tab[CO_CUR_DEF];
 
-			fl_color(0xff, 0xff, 0xff);
-			fl_rectf(cx + letter_x * console->cursor.x, 
-				 cy + letter_y * console->cursor.y + letter_y - cursize,
-				 letter_x,
-				 cursize);
+				fl_color(0xff, 0xff, 0xff);
+				fl_rectf(cx + letter_x * console->cursor.x, 
+					 cy + letter_y * console->cursor.y + letter_y - cursize,
+					 letter_x,
+					 cursize);
+			}
 		}
 	}
 	
@@ -317,6 +322,13 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 	/* clear old mouse selection */
 	if(mouse_copy)
 		mouse_clear();
+
+	// clear scrollling if any in use
+	if(scroll_lines)
+	{
+		scroll_lines = 0;
+		damage_console(0, 0, console->config.x, console->config.y);
+	}
 
 	switch (message->type) 
 	{
@@ -475,11 +487,12 @@ void console_widget_t::copy_mouse_selection(char*str)
 	if(mouse_drag_type)
 	{
 		/* copy rect */
-		for(int i_y=mouse_sy; i_y<mouse_sy+mouse_wy; i_y++)
+		int dy = console->config.max_y-console->config.y+scroll_lines;
+		for(int i_y=mouse_sy+dy; i_y<mouse_sy+mouse_wy+dy; i_y++)
 		{
 			for(int i_x=mouse_sx; i_x<mouse_sx+mouse_wx; i_x++)
 			{
-				*(str+indx_str) = (console->screen+i_x+i_y*console->config.x)->ch;
+				*(str+indx_str) = (console->buffer+i_x+i_y*console->config.x)->ch;
 				indx_str++;
 			}
 			*(str+indx_str) = '\r';
@@ -491,9 +504,10 @@ void console_widget_t::copy_mouse_selection(char*str)
 	else
 	{
 		/* copy lines */
-		for(int i_loc=loc_start; i_loc<loc_end; i_loc++)
+		int d = (console->config.max_y-console->config.y+scroll_lines)*console->config.x;
+		for(int i_loc=loc_start+d; i_loc<loc_end+d; i_loc++)
 		{
-			*(str+indx_str) = (console->screen+i_loc)->ch;
+			*(str+indx_str) = (console->buffer+i_loc)->ch;
 			indx_str++;
 		}
 	}
@@ -511,19 +525,23 @@ int console_widget_t::screen_size_bytes(void)
 void console_widget_t::invert_area(int sx, int sy, int wx, int wy)
 {
 	/* inverse selection area attribute */
+
+	// we mark the buffer, not the screen
 	if(mouse_drag_type) 
 	{
 		/* rect select */
-		for(int i_y=sy; i_y<sy+wy; i_y++)
+		int dy = console->config.max_y-console->config.y+scroll_lines;
+		for(int i_y=sy+dy; i_y<sy+wy+dy; i_y++)
 			for(int i_x=sx; i_x<sx+wx; i_x++)
-				(console->screen+i_x+i_y*console->config.x)->attr = 
-					~((console->screen+i_x+i_y*console->config.x)->attr);
+				(console->buffer+i_x+i_y*console->config.x)->attr = 
+					~((console->buffer+i_x+i_y*console->config.x)->attr);
 	}
 	else
 	{
 		/* line select */
-		for(int i_loc=loc_start; i_loc<loc_end; i_loc++)
-			(console->screen+i_loc)->attr = ~((console->screen+i_loc)->attr);
+		int d = (console->config.max_y-console->config.y+scroll_lines)*console->config.x;
+		for(int i_loc=loc_start+d; i_loc<loc_end+d; i_loc++)
+			(console->buffer+i_loc)->attr = ~((console->buffer+i_loc)->attr);
 	}
 	return;
 }
@@ -595,4 +613,28 @@ int console_widget_t::loc_y(int mouse_y)
 	loc_y = i_min(console->config.y, loc_y);
 	loc_y = i_max(0, loc_y);
 	return loc_y;
+}
+
+void console_widget_t::scroll_back_buffer(int delta)
+{ 
+	if(mouse_copy)
+		mouse_clear();
+
+	/* limit scroll display to scroll buffer */
+	int old_scroll_lines = scroll_lines;
+	scroll_lines += delta;
+	scroll_lines = i_max(scroll_lines, console->config.y-console->config.max_y);
+	scroll_lines = i_min(scroll_lines, 0);
+	
+	damage_console(0, 0, console->config.x, console->config.y);
+}
+
+void console_widget_t::scroll_page_up()
+{ 
+	scroll_back_buffer(-console->config.y);
+}
+
+void console_widget_t::scroll_page_down()
+{ 
+	scroll_back_buffer(console->config.y);
 }

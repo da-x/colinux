@@ -41,7 +41,10 @@ public:
 	void mouse_drag(int x, int y);
 	void mouse_release(int x, int y);
 	void copy_mouse_selection(char*str);
-	
+	void scroll_back_buffer(int delta);
+	void scroll_page_up();
+	void scroll_page_down();
+
 protected:
 	int           font_size;
 	co_console_t* console;
@@ -55,7 +58,8 @@ protected:
 	bool 		mouse_copy, mouse_drag_type;
 	int 		mouse_start_x, mouse_start_y, mouse_sx, mouse_wx,
 		mouse_sy, mouse_wy, loc_start, loc_end;
-	
+		
+	int scroll_lines;
 
 protected:
 	virtual void draw();
@@ -66,7 +70,7 @@ protected:
 	int loc_x(int mouse_x);
 	int loc_y(int mouse_y);
 	void mouse_clear(void);
-	
+
 	/* internal helper functions */
 	int i_min(int a, int b) { return (a<b) ? a : b; };
 	int i_max(int a, int b) { return (a>b) ? a : b; };

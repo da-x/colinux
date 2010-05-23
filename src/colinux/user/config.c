@@ -1022,7 +1022,7 @@ static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, co_conf
 		if(x     < CO_CONSOLE_MIN_COLS	|| 
 		   y     < CO_CONSOLE_MIN_ROWS  || 
 		   max_y > CO_CONSOLE_MAX_ROWS) {
-			co_terminal_print("Invalid args (%ux%u,%u) for cocon\n",
+			co_terminal_print("Invalid args (%ux%ux%u) for cocon\n",
 					  x, y, max_y);
 			return CO_RC(INVALID_PARAMETER);
 		}

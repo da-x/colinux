@@ -39,7 +39,10 @@ co_rc_t co_console_create(co_console_config_t* config_par,
 
 	console->size	= struct_size;
 	console->config	= *config_par;
-	console->screen	= ((co_console_cell_t*)((char*)console + sizeof(co_console_t)));
+	console->buffer = ((co_console_cell_t*)((char*)console + sizeof(co_console_t)));
+	console->screen	= ((co_console_cell_t*)((char*)console + 
+		sizeof(co_console_cell_t)*(config_par->max_y-config_par->y) * config_par->x +
+		+ sizeof(co_console_t)));
 	
 	*console_out = console;
 
@@ -83,50 +86,44 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 	switch (message->type) 
 	{
 	case CO_OPERATION_CONSOLE_SCROLL_UP:
-	case CO_OPERATION_CONSOLE_SCROLL_DOWN: {
-		unsigned long t     = message->scroll.top;
-		unsigned long b     = message->scroll.bottom + 1;
-		unsigned long dir;
+	{
 		unsigned long lines = message->scroll.lines;
-		co_console_cell_t blank = *(co_console_cell_t*)(&message->scroll.charattr);
-		co_console_cell_t* cell_p;
-		unsigned long x;
-		unsigned long y;
+		co_console_cell_t blank = *(co_console_cell_t*)(&message->scroll.charattr), 
+			*cell_p;
+			
+		// now we use the buffer, which will also scroll the screen
+		memmove(console->buffer,
+			console->buffer + console->config.x * lines,
+			console->config.x*(console->config.max_y-lines) * sizeof(co_console_cell_t));
 
-		if(message->type == CO_OPERATION_CONSOLE_SCROLL_UP)
-			dir = 1;
-		else
-			dir = 2;
-
-		if (b > console->config.y)
-			return CO_RC(ERROR);
-
-		if (t + lines >= console->config.y)
-			return CO_RC(ERROR);
-
-		if (dir == 1) {
-			memmove(&console->screen[console->config.x * t],
-				&console->screen[console->config.x * (t + lines)],
-				console->config.x*(b - t - lines) * sizeof(co_console_cell_t));
-
-			for (y = b - lines; y < b; y++) {
-				cell_p = &console->screen[y * console->config.x];
-				for (x = console->config.x; x > 0; x--)
-					*cell_p++ = blank;
-			}
+		// here we can use the screen or the buffer, it does not matter but we have to use proper indexing
+		unsigned long x, y;
+		for (y = console->config.y - lines; y < console->config.y; y++) 
+		{
+			cell_p = console->screen + y * console->config.x;
+			for (x = console->config.x; x > 0; x--)
+				*cell_p++ = blank;
 		}
-		else {
-			memmove(&console->screen[console->config.x * (t + lines)],
-				&console->screen[console->config.x * (t)],
-				console->config.x*(b - t - lines) * sizeof(co_console_cell_t));
+		break;
+	}
+	
+	case CO_OPERATION_CONSOLE_SCROLL_DOWN: 
+	{
+		unsigned long lines = message->scroll.lines;
+		co_console_cell_t blank = *(co_console_cell_t*)(&message->scroll.charattr), 
+			*cell_p;
+	
+		memmove(console->screen + console->config.x * lines,
+			console->screen,
+			console->config.x*(console->config.y-lines) * sizeof(co_console_cell_t));
 
-			for (y = t; y < t + lines; y++) {
-				cell_p = &console->screen[y * console->config.x];
-				for (x = console->config.x; x > 0; x--)
-					*cell_p++ = blank;
-			}
+		unsigned long x, y;
+		for (y = 0; y < lines; y++) 
+		{
+			cell_p = console->screen + y * console->config.x;
+			for (x = console->config.x; x > 0; x--)
+				*cell_p++ = blank;
 		}
-
 		break;
 	}
 	case CO_OPERATION_CONSOLE_PUTCS: {
