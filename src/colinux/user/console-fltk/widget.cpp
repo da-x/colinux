@@ -51,7 +51,7 @@ console_widget_t::console_widget_t(int		x,
 	loc_start			= 0;
 	loc_end 			= 0;
 
-	int scroll_lines	= 0;
+	scroll_lines		= 0;
 
 	Fl::add_timeout(cursor_blink_interval,
 		        (Fl_Timeout_Handler)(console_widget_t::static_blink_handler),
@@ -483,37 +483,38 @@ void console_widget_t::copy_mouse_selection(char*str)
 		return;
 	if(!mouse_copy)
 		return;
-	int indx_str = 0;
 	if(mouse_drag_type)
 	{
 		/* copy rect */
 		int dy = console->config.max_y-console->config.y+scroll_lines;
 		for(int i_y=mouse_sy+dy; i_y<mouse_sy+mouse_wy+dy; i_y++)
 		{
-			for(int i_x=mouse_sx; i_x<mouse_sx+mouse_wx; i_x++)
+			char * last = str;
+			co_console_cell_t* cellp = &console->buffer[i_y*console->config.x];
+
+			for(int i = mouse_wx; i > 0; i--, cellp++)
 			{
-				*(str+indx_str) = (console->buffer+i_x+i_y*console->config.x)->ch;
-				indx_str++;
+				if ((*str++ = cellp->ch) != ' ')
+					last = str;
 			}
-			*(str+indx_str) = '\r';
-			indx_str++;
-			*(str+indx_str) = '\n';
-			indx_str++;
+			str = last;
+			*str++ = '\r';
+			*str++ = '\n';
 		}
 	}
 	else
 	{
 		/* copy lines */
 		int d = (console->config.max_y-console->config.y+scroll_lines)*console->config.x;
-		for(int i_loc=loc_start+d; i_loc<loc_end+d; i_loc++)
+		co_console_cell_t* cellp = &console->buffer[loc_start+d];
+		for(int i = loc_end - loc_start; i > 0; i--, cellp++)
 		{
-			*(str+indx_str) = (console->buffer+i_loc)->ch;
-			indx_str++;
+			*str++ = cellp->ch;
 		}
 	}
 	
 	/* null-terminate the string */
-	*(str+indx_str) = 0;
+	*str = 0;
 }
 
 int console_widget_t::screen_size_bytes(void)
@@ -621,7 +622,6 @@ void console_widget_t::scroll_back_buffer(int delta)
 		mouse_clear();
 
 	/* limit scroll display to scroll buffer */
-	int old_scroll_lines = scroll_lines;
 	scroll_lines += delta;
 	scroll_lines = i_max(scroll_lines, console->config.y-console->config.max_y);
 	scroll_lines = i_min(scroll_lines, 0);
