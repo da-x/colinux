@@ -2,7 +2,7 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.25-source/drivers/scsi/coscsi.c
-@@ -0,0 +1,1165 @@
+@@ -0,0 +1,1175 @@
 +/*
 + *  Copyright (C) 2008 Steve Shoecraft
 + *
@@ -27,6 +27,7 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
 +#include <linux/cooperative_internal.h>
 +#include <linux/cooperative_pci.h>
 +
++#include <linux/cdrom.h>
 +#include <scsi/coscsi.h>
 +
 +/* Special pass through type */
@@ -66,9 +67,10 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
 +#define DUMP_DATA 0
 +#endif
 +
-+/* OPs not found in scsi.h */
-+#define GET_CONFIGURATION	0x46
-+#define GET_EVENT_STATUS	0x4a
++/* OPs not found in scsi.h, use from cdrom.h */
++#define GET_CONFIGURATION	GPCMD_GET_CONFIGURATION
++#define GET_EVENT_STATUS	GPCMD_GET_EVENT_STATUS_NOTIFICATION
++#define READ_DISC_INFO		GPCMD_READ_DISC_INFO
 +
 +/* Sense codes */
 +#define LOGICAL_UNIT_NOT_READY 0x4
@@ -924,10 +926,18 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
 +	case SYNCHRONIZE_CACHE:
 +		scp->result = GOOD;
 +		break;
++	case READ_DISC_INFO:
++		{
++			disc_information di = { 0, };
++
++			di.disc_information_length = cpu_to_be16(1);
++			/* di.erasable = 0; */
++			scp->result = response(&worker, &di, sizeof(di.disc_information_length) + 1);
++		}
++		break;
 +	default:
 +		printk(KERN_NOTICE "scsi%d: unhandled opcode: %x\n", dp->unit, scp->cmnd[0]);
 +		scp->result = check_condition(dp, ILLEGAL_REQUEST, INVALID_FIELD_IN_CDB, 0);
-+		break;
 +	}
 +
 +req_done:
