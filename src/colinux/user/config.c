@@ -992,7 +992,7 @@ static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, co_conf
 
 	conf->console.x     = CO_CONSOLE_WIDTH;
 	conf->console.y     = CO_CONSOLE_HEIGHT;
-	conf->console.max_y = CO_CONSOLE_HEIGHT;
+	conf->console.max_y = CO_CONSOLE_MAX_ROWS;
 
 	rc = co_cmdline_get_next_equality(cmdline,
 					  "cocon",
@@ -1015,7 +1015,8 @@ static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, co_conf
 		y = strtol(p, &p, 0);
 		if (*p != '\0') p++;
 		max_y = strtol(p, &p, 0);
-
+		
+		if(!max_y) max_y = CO_CONSOLE_MAX_ROWS;
 		if(max_y < y) max_y = y;
 
 		/* Check screen limits */

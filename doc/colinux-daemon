@@ -150,7 +150,7 @@ don't depend on each other.  The parameters are case sensitive.
 
     cocon=<COLS>,<ROWS>,<SCROLLBACK>
 
-	This specifies the console size. Default is 80x25. Minmum is 16x2,
+	This specifies the console size. Default is 80x25x500. Minmum is 16x2,
 	maximal value for <ROWS> or <SCROLLBACK> is 500.
 	As separator can use 'x' or comma.
 
