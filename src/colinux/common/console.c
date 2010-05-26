@@ -96,7 +96,7 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 		co_console_cell_t blank = *(co_console_cell_t*)(&message->scroll.charattr);
 		co_console_cell_t *dest;
 
-		if(t)
+		if(t || (b!=console->config.y))
 		{
 			// i.e., t is non-zero, meaning scroll inside an editor for example
 			if (b > console->config.max_y)
@@ -142,7 +142,7 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 		co_console_cell_t blank = *(co_console_cell_t*)(&message->scroll.charattr);
 		co_console_cell_t *dest;
 
-		if(t)
+		if(t || (b!=console->config.y))
 		{
 			unsigned long t_count = config_x * t;
 
