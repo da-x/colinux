@@ -1622,7 +1622,7 @@ Index: linux-2.6.26-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.26-source/include/linux/cooperative.h
-@@ -0,0 +1,398 @@
+@@ -0,0 +1,399 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1861,6 +1861,7 @@ Index: linux-2.6.26-source/include/linux/cooperative.h
 +	CO_OPERATION_CONSOLE_SAVE_SCREEN,
 +	CO_OPERATION_CONSOLE_INVERT_REGION,
 +	CO_OPERATION_CONSOLE_CONFIG,
++	CO_OPERATION_CONSOLE_INIT_SCROLLBUFFER,
 +} co_operation_console_t;
 +
 +

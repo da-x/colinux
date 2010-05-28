@@ -51,7 +51,7 @@ static void handle_scancode(WORD code)
  * First attempt to make the console copy/paste text.
  * This needs more work to get right, but at least it's a start ;)
  */
-static int PasteClipboardIntoColinux()
+int PasteClipboardIntoColinux(void)
 {
 	// Lock clipboard for inspection -- TODO: try again on failure
 	if ( ! ::OpenClipboard(NULL) )
@@ -95,7 +95,7 @@ static int PasteClipboardIntoColinux()
 }
 
 /* copy the entire screen to the clipboard, adding new-line chars at the end of each line */
-static int CopyLinuxIntoClipboard()
+int CopyLinuxIntoClipboard(void)
 {
 	/* Lock clipboard for writing -- TODO: try again on failure */
 	if ( ! ::OpenClipboard(NULL) )

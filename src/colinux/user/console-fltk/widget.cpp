@@ -65,18 +65,10 @@ void console_widget_t::static_blink_handler(console_widget_t* widget)
 
 void console_widget_t::blink_handler()
 {
-	if (console && !scroll_lines) {
+	if (console && !scroll_lines) 
+	{
 		cursor_blink_state = !cursor_blink_state;
 		damage_console(console->cursor.x, console->cursor.y, 1, 1);
-
-		/* 
-
-		For the cursor to blink we would do: cursor_blink_state = !cursor_blink_state
-
-		However, we need to fix a problem with console_idle() which causes timers not
-		to execute unless there are input events.
-		
-		*/
 	}
 
 	Fl::add_timeout(cursor_blink_interval,
@@ -482,7 +474,10 @@ void console_widget_t::copy_mouse_selection(char*str)
 	if(str==NULL)
 		return;
 	if(!mouse_copy)
+	{
+		*str = 0;
 		return;
+	}
 	if(mouse_drag_type)
 	{
 		/* copy rect */
@@ -490,7 +485,7 @@ void console_widget_t::copy_mouse_selection(char*str)
 		for(int i_y=mouse_sy+dy; i_y<mouse_sy+mouse_wy+dy; i_y++)
 		{
 			char * last = str;
-			co_console_cell_t* cellp = &console->buffer[i_y*console->config.x];
+			co_console_cell_t* cellp = &console->buffer[i_y*console->config.x+mouse_sx];
 
 			for(int i = mouse_wx; i > 0; i--, cellp++)
 			{
@@ -618,6 +613,9 @@ int console_widget_t::loc_y(int mouse_y)
 
 void console_widget_t::scroll_back_buffer(int delta)
 { 
+	if(!console)
+		return;
+
 	if(mouse_copy)
 		mouse_clear();
 
@@ -629,12 +627,14 @@ void console_widget_t::scroll_back_buffer(int delta)
 	damage_console(0, 0, console->config.x, console->config.y);
 }
 
-void console_widget_t::scroll_page_up()
+void console_widget_t::scroll_page_up(void)
 { 
-	scroll_back_buffer(-console->config.y);
+	if(console)
+		scroll_back_buffer(-console->config.y);
 }
 
-void console_widget_t::scroll_page_down()
+void console_widget_t::scroll_page_down(void)
 { 
-	scroll_back_buffer(console->config.y);
+	if(console)
+		scroll_back_buffer(console->config.y);
 }

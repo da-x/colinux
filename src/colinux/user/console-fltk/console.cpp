@@ -84,6 +84,27 @@ void console_idle(void* data)
 	((console_window_t*)data)->idle();
 }
 
+static void console_copy_cb(Fl_Widget *widget, void* v) 
+{
+	CopyLinuxIntoClipboard();
+}
+
+static void console_paste_cb(Fl_Widget *widget, void* v) 
+{
+	PasteClipboardIntoColinux();
+}
+
+static void console_scrollpageup_cb(Fl_Widget *widget, void* v) 
+{
+	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->scroll_page_up();
+}
+
+static void console_scrollpagedown_cb(Fl_Widget *widget, void* v) 
+{
+	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->scroll_page_down();
+}
+
+
 console_main_window_t::console_main_window_t(console_window_t* console)
 : Fl_Double_Window(640, 480), console(console)
 {
@@ -108,7 +129,8 @@ int console_main_window_t::handle(int event)
 		break;
         
 	case FL_PUSH:
-		/* Should add test for which button was pressed */
+		if(y<MENU_SIZE_PIXELS)
+			break;
 		if(Fl::event_button() == FL_RIGHT_MOUSE)
 			console->get_widget()->mouse_push(x, y, true);
 		else if(Fl::event_button() == FL_LEFT_MOUSE)
@@ -218,6 +240,16 @@ co_rc_t console_window_t::start()
 		{ "Power off", 0, (Fl_Callback*)console_send_poweroff_cb, this, },
 		{ "Reboot - Ctrl-Alt-Del", 0, (Fl_Callback *)console_send_ctrl_alt_del_cb, this, },
 		{ "Shutdown" , 0, (Fl_Callback*)console_send_shutdown_cb, this, },
+		{ 0 },
+
+		{ "Edit" , 0, NULL, NULL, FL_SUBMENU },
+		{ "Copy (WinKey+C)", 0, (Fl_Callback*)console_copy_cb, this, },
+		{ "Paste (WinKey+V)", 0, (Fl_Callback*)console_paste_cb, this, },
+		{ 0 },
+
+		{ "View" , 0, NULL, NULL, FL_SUBMENU },
+		{ "Page up (WinKey+PgUp, mouse wheel)", 0, (Fl_Callback*)console_scrollpageup_cb, this, },
+		{ "Page down (WinKey+PgDn, mouse wheel)", 0, (Fl_Callback*)console_scrollpagedown_cb, this, },
 		{ 0 },
 
 		{ "Help" , 0, NULL, NULL, FL_SUBMENU },
@@ -499,7 +531,6 @@ void console_window_t::idle()
 {
 	co_rc_t rc;
 
-	// co_user_console_get_window()->resizable(NULL);
 	global_resize_constraint();
 
 	rc = co_reactor_select(reactor, 1);

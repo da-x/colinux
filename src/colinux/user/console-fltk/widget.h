@@ -42,8 +42,8 @@ public:
 	void mouse_release(int x, int y);
 	void copy_mouse_selection(char*str);
 	void scroll_back_buffer(int delta);
-	void scroll_page_up();
-	void scroll_page_down();
+	void scroll_page_up(void);
+	void scroll_page_down(void);
 
 protected:
 	int           font_size;

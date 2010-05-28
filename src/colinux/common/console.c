@@ -272,6 +272,29 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 		message->config.attr = console->config.attr;
 		break;
 
+	case CO_OPERATION_CONSOLE_INIT_SCROLLBUFFER:
+	{
+		/* Copy array of char-attr pairs to screen */
+		int                x     = message->putcs.x;
+		int                y     = message->putcs.y;
+		int                count = message->putcs.count;
+		unsigned long   config_x = console->config.x;
+		co_console_cell_t* cells = (co_console_cell_t *)&message->putcs.data;
+		co_console_cell_t* dest;
+
+		if (y >= console->config.max_y || x >= config_x)
+			return CO_RC(ERROR);
+
+		if (count > config_x - x)
+			count = config_x - x;
+
+		dest = console->buffer + config_x * y + x;
+		while (count-- > 0)
+			*dest++ = *cells++;
+
+		break;
+	}
+	
 	case CO_OPERATION_CONSOLE_SWITCH:
 		// clear scroll buffer
 		if (console == NULL)

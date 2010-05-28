@@ -1362,7 +1362,7 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 		(monitor->console->config.x * sizeof(co_console_cell_t));
 
 	params->config	  = monitor->console->config;
-							  
+
 	co_message = co_os_malloc(size + sizeof(*co_message));
 	if (!co_message)
 		return CO_RC(OUT_OF_MEMORY);
@@ -1373,15 +1373,39 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 	co_message->to	     = CO_MODULE_CONSOLE;
 	co_message->priority = CO_PRIORITY_DISCARDABLE;
 	co_message->type     = CO_MESSAGE_TYPE_STRING;
+	co_message->size     = size;
+
+	// send the scrollback buffer via init command
+	co_message->from     = CO_MODULE_LINUX;
+	co_message->to       = CO_MODULE_CONSOLE;
+	co_message->priority = CO_PRIORITY_DISCARDABLE;
+	co_message->type     = CO_MESSAGE_TYPE_STRING;
 	co_message->size     = size; 
-	
+
+	// send the scroll buffer via a special CO operation
+	message->type	     = CO_OPERATION_CONSOLE_INIT_SCROLLBUFFER;
+	message->putcs.x     = 0;
+	message->putcs.count = monitor->console->config.x;
+	for (y = monitor->console->config.y; y < monitor->console->config.max_y; y++) 
+	{
+		co_memcpy(&message->putcs.data, 
+			  monitor->console->buffer+y * monitor->console->config.x, 
+			  monitor->console->config.x * sizeof(unsigned short));
+		message->putcs.y = y;
+
+		/* Redirect each string operation to user level */
+		incoming_message(monitor, co_message);
+	}
+
+	// send the viewable area via putcs command
 	message->type	     = CO_OPERATION_CONSOLE_PUTCS;
 	message->putcs.x     = 0;
 	message->putcs.count = monitor->console->config.x;
 
-	for (y = 0; y < monitor->console->config.y; y++) {
+	for (y = 0; y < monitor->console->config.y; y++) 
+	{
 		co_memcpy(&message->putcs.data, 
-			  &monitor->console->screen[y * monitor->console->config.x], 
+			  monitor->console->screen + y * monitor->console->config.x, 
 			  monitor->console->config.x * sizeof(unsigned short));
 		message->putcs.y = y;
 
