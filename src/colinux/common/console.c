@@ -272,9 +272,16 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 		message->config.attr = console->config.attr;
 		break;
 
+	case CO_OPERATION_CONSOLE_SWITCH:
+		// clear scroll buffer
+		if (console == NULL)
+			return CO_RC(OUT_OF_MEMORY);
+		memset(console->buffer, 0, 
+			sizeof(co_console_cell_t) * console->config.x * (console->config.max_y-console->config.y));
+		break;
+
 	case CO_OPERATION_CONSOLE_INIT:
 	case CO_OPERATION_CONSOLE_DEINIT:
-	case CO_OPERATION_CONSOLE_SWITCH:
 	case CO_OPERATION_CONSOLE_BLANK:
 	case CO_OPERATION_CONSOLE_FONT_OP:
 	case CO_OPERATION_CONSOLE_SET_PALETTE:
