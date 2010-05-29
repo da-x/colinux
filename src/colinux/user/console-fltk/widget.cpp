@@ -53,6 +53,7 @@ console_widget_t::console_widget_t(int		x,
 
 	scroll_lines		= 0;
 
+	font_name 			= FL_SCREEN;
 	Fl::add_timeout(cursor_blink_interval,
 		        (Fl_Timeout_Handler)(console_widget_t::static_blink_handler),
 		        this);
@@ -76,9 +77,32 @@ void console_widget_t::blink_handler()
 		        this);
 }
 
-void console_widget_t::set_font_size(int size)
+void console_widget_t::set_font_size(int new_size)
 {
-	font_size = size;
+	font_size = new_size;
+	update_font();
+}
+
+void console_widget_t::set_font_name(int new_name)
+{
+	font_name = new_name;
+	update_font();
+}
+
+void console_widget_t::update_font(void)
+{
+	fl_font(font_name, font_size);
+
+	// Calculate constats for this font
+	letter_x = (int)fl_width('A');
+	letter_y = (int)fl_height();
+
+	if(console)
+	{
+		fit_x = letter_x * console->config.x;
+		fit_y = letter_y * console->config.y;
+		damage_console(0, 0, console->config.x, console->config.y);
+	}
 }
 
 void console_widget_t::damage_console(int x_, int y_, int w_, int h_)
@@ -109,7 +133,7 @@ void console_widget_t::draw()
 		return;
 	}
 
-	fl_font(FL_SCREEN, font_size);
+	fl_font(font_name, font_size);
 
 	int x_, y_, w_, h_, cx, cy;	
 	fl_clip_box(x(), y(), w(), h(), x_, y_, w_, h_);
@@ -232,7 +256,7 @@ void console_widget_t::set_console(co_console_t* _console)
 {
 	console = _console;
 
-	fl_font(FL_SCREEN, font_size);
+	fl_font(font_name, font_size);
 
 	// Calculate constats for this font
 	letter_x = (int)fl_width('A');
@@ -382,6 +406,7 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 
 	}
 
+	case CO_OPERATION_CONSOLE_INIT_SCROLLBUFFER:
 	case CO_OPERATION_CONSOLE_STARTUP:
 	case CO_OPERATION_CONSOLE_INIT:
 	case CO_OPERATION_CONSOLE_DEINIT:

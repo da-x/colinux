@@ -29,7 +29,8 @@ public:
 	int fit_y;
 public:
 	console_widget_t(int x, int y, int w, int h, const char* label = 0); 
-	void set_font_size(int size);
+	void set_font_size(int new_size);
+	void set_font_name(int new_name);
 	void set_console(co_console_t* _console);
 	co_console_t* get_console();
 	void damage_console(int x, int y, int w, int h);
@@ -46,7 +47,7 @@ public:
 	void scroll_page_down(void);
 
 protected:
-	int           font_size;
+	int           font_size, font_name;
 	co_console_t* console;
 	co_console_cell_t* cell_limit;
 	int 	      letter_x;
@@ -70,6 +71,7 @@ protected:
 	int loc_x(int mouse_x);
 	int loc_y(int mouse_y);
 	void mouse_clear(void);
+	void update_font(void);
 
 	/* internal helper functions */
 	int i_min(int a, int b) { return (a<b) ? a : b; };
