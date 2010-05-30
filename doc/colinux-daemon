@@ -577,12 +577,17 @@ Used keys in Windows Registry
 [HKEY_CURRENT_USER\Software\coLinux\monitor\M\ethX]
 "mac"="00:ff:XX:XX:XX:XX"
 
+# Font and font size for console FLTK
+[HKEY_CURRENT_USER\Software\coLinux\console\Font]
+"Size"=dword:000000012
+"Font"=dword:0000000d
+
 # Debug level for kernel driver load
 [HKEY_LOCAL_MACHINE\SOFTWARE\coLinux]
 "Debug"=dword:0000001f
 
 # Message file for event logging, if running as service
-[HKEY_LOCAL_MACHINE\SYSTEM\\CurrentControlSet\Services\Eventlog\Application\coLinux]
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Eventlog\Application\coLinux]
 "EventMessageFile"="C:\coLinux\colinux-daemon.exe"
 
 

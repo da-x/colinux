@@ -20,6 +20,8 @@ extern "C" {
 
 COLINUX_DEFINE_MODULE("colinux-console-fltk");
 
+#define SOFTWARE_COLINUX_CONSOLE_FONT_KEY "Software\\coLinux\\console\\Font"
+
 /*
  * Storage of current keyboard state.
  * For every virtual key (256), it is 0 (for released) or the scancode
@@ -178,15 +180,13 @@ static LRESULT CALLBACK keyboard_hook(
 			return 1;	/* key processed */
 		}
 		break;
-        
-    case 'C':
+	case 'C':
 		if ( !released && (vkey_state[255] & 1) )
 		{
 			CopyLinuxIntoClipboard( );
 			return 1;	/* key processed */
 		}
 		break;
-
 	case VK_PRIOR:
 		if ( !released && (vkey_state[255] & 1) )
 		{
@@ -196,7 +196,6 @@ static LRESULT CALLBACK keyboard_hook(
 			return 1;	/* key processed */
 		}
 		break;
-
 	case VK_NEXT:
 		if ( !released && (vkey_state[255] & 1) )
 		{
@@ -247,6 +246,64 @@ void co_user_console_keyboard_focus_change( unsigned long keyboard_focus )
 	}
 }
 
+int ReadRegistry(int key)
+{
+	HKEY hKey;
+
+	DWORD value=-1, reg_size = sizeof(value);
+	
+	if(::RegOpenKeyEx(HKEY_CURRENT_USER, TEXT(SOFTWARE_COLINUX_CONSOLE_FONT_KEY), 0, KEY_READ, &hKey)==ERROR_SUCCESS)
+	{
+		switch(key)
+		{
+			case REGISTRY_FONT_SIZE:
+				if(::RegQueryValueEx(hKey, TEXT("Size"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
+					value = -1;
+				break;
+			
+			case REGISTRY_FONT:
+				if(::RegQueryValueEx(hKey, TEXT("Font"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
+					value = -1;
+				break;
+					
+			default:
+				break;
+		}
+	}
+	RegCloseKey(hKey);
+
+	return value;
+}
+
+int WriteRegistry(int key, int new_value)
+{
+	HKEY hKey;
+
+	DWORD value=new_value, reg_size = sizeof(value);
+	LONG retval;
+	retval = ::RegCreateKeyEx(HKEY_CURRENT_USER, TEXT(SOFTWARE_COLINUX_CONSOLE_FONT_KEY), 0, NULL, REG_OPTION_NON_VOLATILE, 
+		KEY_ALL_ACCESS, NULL, &hKey, NULL);
+	if(retval==ERROR_SUCCESS)
+	{
+		switch(key)
+		{
+			case REGISTRY_FONT_SIZE:
+				::RegSetValueEx(hKey, TEXT("Size"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
+				break;
+			
+			case REGISTRY_FONT:
+				::RegSetValueEx(hKey, TEXT("Font"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
+				break;
+					
+			default:
+				break;
+		}
+	}
+	RegCloseKey(hKey);
+
+	return value;
+}
+
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR cmdLine, int)
 {
 	// Initialize keyboard hook
@@ -267,5 +324,3 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR cmdLine, int)
 	// Run main console procedure
 	return co_user_console_main(argc, argv);
 }
-
-

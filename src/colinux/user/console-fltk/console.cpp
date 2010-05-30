@@ -108,84 +108,98 @@ static void console_fontcourier_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->set_font_name(FL_COURIER);
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->resize_font();
+	WriteRegistry(REGISTRY_FONT, FL_COURIER);
 }
 
 static void console_fontscreen_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->set_font_name(FL_SCREEN);
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->resize_font();
+	WriteRegistry(REGISTRY_FONT, FL_SCREEN);
 }
 
 static void console_fontscreenbold_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->set_font_name(FL_SCREEN_BOLD);
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->resize_font();
+	WriteRegistry(REGISTRY_FONT, FL_SCREEN_BOLD);
 }
 
 static void console_fontcourierbold_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->set_font_name(FL_COURIER_BOLD);
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->resize_font();
+	WriteRegistry(REGISTRY_FONT, FL_COURIER_BOLD);
 }
 
 static void console_fontcourieritalic_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->set_font_name(FL_COURIER_ITALIC);
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->resize_font();
+	WriteRegistry(REGISTRY_FONT, FL_COURIER_ITALIC);
 }
 
 static void console_fontcourierbolditalic_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->set_font_name(FL_COURIER_BOLD_ITALIC);
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->resize_font();
+	WriteRegistry(REGISTRY_FONT, FL_COURIER_BOLD_ITALIC);
 }
 
 static void console_fontsize8_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->set_font_size(8);
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->resize_font();
+	WriteRegistry(REGISTRY_FONT_SIZE, 8);
 }
 
 static void console_fontsize10_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->set_font_size(10);
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->resize_font();
+	WriteRegistry(REGISTRY_FONT_SIZE, 10);
 }
 
 static void console_fontsize12_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->set_font_size(12);
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->resize_font();
+	WriteRegistry(REGISTRY_FONT_SIZE, 12);
 }
 
 static void console_fontsize14_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->set_font_size(14);
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->resize_font();
+	WriteRegistry(REGISTRY_FONT_SIZE, 14);
 }
 
 static void console_fontsize16_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->set_font_size(16);
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->resize_font();
+	WriteRegistry(REGISTRY_FONT_SIZE, 16);
 }
 
 static void console_fontsize18_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->set_font_size(18);
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->resize_font();
+	WriteRegistry(REGISTRY_FONT_SIZE, 18);
 }
 
 static void console_fontsize24_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->set_font_size(24);
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->resize_font();
+	WriteRegistry(REGISTRY_FONT_SIZE, 24);
 }
 
 static void console_fontsize36_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->set_font_size(36);
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->resize_font();
+	WriteRegistry(REGISTRY_FONT_SIZE, 36);
 }
 
 console_main_window_t::console_main_window_t(console_window_t* console)
@@ -310,6 +324,15 @@ co_rc_t console_window_t::start()
 {
 	window = new console_main_window_t(this);
 	window->callback(console_window_cb, this);
+	
+	// read font and font size from registry
+	int reg_font = ReadRegistry(REGISTRY_FONT);
+	int reg_font_size = ReadRegistry(REGISTRY_FONT_SIZE);
+
+	if(reg_font==-1)
+		reg_font = FL_SCREEN;
+	if(reg_font_size==-1)
+		reg_font_size = 18;
 
 	Fl_Menu_Item console_menuitems[] = {
 		{ "File", 0, NULL, NULL, FL_SUBMENU },
@@ -334,22 +357,36 @@ co_rc_t console_window_t::start()
 		{ "Page up (WinKey+PgUp, mouse wheel)", 0, (Fl_Callback*)console_scrollpageup_cb, this, },
 		{ "Page down (WinKey+PgDn, mouse wheel)", 0, (Fl_Callback*)console_scrollpagedown_cb, this, },
 		{ "Font" , 0, NULL, NULL, FL_SUBMENU },
-			{ "Courier", 0, (Fl_Callback*)console_fontcourier_cb, this, FL_MENU_RADIO},
-			{ "Courier bold", 0, (Fl_Callback*)console_fontcourierbold_cb, this, FL_MENU_RADIO },
-			{ "Courier italic", 0, (Fl_Callback*)console_fontcourieritalic_cb, this, FL_MENU_RADIO },
-			{ "Courier bold italic", 0, (Fl_Callback*)console_fontcourierbolditalic_cb, this, FL_MENU_RADIO },
-			{ "Screen", 0, (Fl_Callback*)console_fontscreen_cb, this, FL_MENU_RADIO | FL_MENU_VALUE },
-			{ "Screen bold", 0, (Fl_Callback*)console_fontscreenbold_cb, this, FL_MENU_RADIO },
+			{ "Courier", 0, (Fl_Callback*)console_fontcourier_cb, this, 
+				FL_MENU_RADIO | ((reg_font==FL_COURIER) ? FL_MENU_VALUE : 0)},
+			{ "Courier bold", 0, (Fl_Callback*)console_fontcourierbold_cb, this, 
+				FL_MENU_RADIO | ((reg_font==FL_COURIER_BOLD) ? FL_MENU_VALUE : 0)},
+			{ "Courier italic", 0, (Fl_Callback*)console_fontcourieritalic_cb, this, 
+				FL_MENU_RADIO | ((reg_font==FL_COURIER_ITALIC) ? FL_MENU_VALUE : 0)},
+			{ "Courier bold italic", 0, (Fl_Callback*)console_fontcourierbolditalic_cb, this, 
+				FL_MENU_RADIO | ((reg_font==FL_COURIER_BOLD_ITALIC) ? FL_MENU_VALUE : 0)},
+			{ "Screen", 0, (Fl_Callback*)console_fontscreen_cb, this, 
+				FL_MENU_RADIO | ((reg_font==FL_SCREEN) ? FL_MENU_VALUE : 0)},
+			{ "Screen bold", 0, (Fl_Callback*)console_fontscreenbold_cb, this, 
+				FL_MENU_RADIO | ((reg_font==FL_SCREEN_BOLD) ? FL_MENU_VALUE : 0)},
 			{ 0 },
 		{ "Font size" , 0, NULL, NULL, FL_SUBMENU },
-			{ "8", 0, (Fl_Callback*)console_fontsize8_cb, this, FL_MENU_RADIO },
-			{ "10", 0, (Fl_Callback*)console_fontsize10_cb, this, FL_MENU_RADIO },
-			{ "12", 0, (Fl_Callback*)console_fontsize12_cb, this, FL_MENU_RADIO },
-			{ "14", 0, (Fl_Callback*)console_fontsize14_cb, this, FL_MENU_RADIO },
-			{ "16", 0, (Fl_Callback*)console_fontsize16_cb, this, FL_MENU_RADIO },
-			{ "18", 0, (Fl_Callback*)console_fontsize18_cb, this, FL_MENU_RADIO | FL_MENU_VALUE},
-			{ "24", 0, (Fl_Callback*)console_fontsize24_cb, this, FL_MENU_RADIO },
-			{ "36", 0, (Fl_Callback*)console_fontsize36_cb, this, FL_MENU_RADIO },
+			{ "8", 0, (Fl_Callback*)console_fontsize8_cb, this, 
+				FL_MENU_RADIO | ((reg_font_size==8) ? FL_MENU_VALUE : 0)},
+			{ "10", 0, (Fl_Callback*)console_fontsize10_cb, this, 
+				FL_MENU_RADIO | ((reg_font_size==10) ? FL_MENU_VALUE : 0)},
+			{ "12", 0, (Fl_Callback*)console_fontsize12_cb, this, 
+				FL_MENU_RADIO | ((reg_font_size==12) ? FL_MENU_VALUE : 0)},
+			{ "14", 0, (Fl_Callback*)console_fontsize14_cb, this, 
+				FL_MENU_RADIO | ((reg_font_size==14) ? FL_MENU_VALUE : 0)},
+			{ "16", 0, (Fl_Callback*)console_fontsize16_cb, this, 
+				FL_MENU_RADIO | ((reg_font_size==16) ? FL_MENU_VALUE : 0)},
+			{ "18", 0, (Fl_Callback*)console_fontsize18_cb, this, 
+				FL_MENU_RADIO | ((reg_font_size==18) ? FL_MENU_VALUE : 0)},
+			{ "24", 0, (Fl_Callback*)console_fontsize24_cb, this, 
+				FL_MENU_RADIO | ((reg_font_size==24) ? FL_MENU_VALUE : 0)},
+			{ "36", 0, (Fl_Callback*)console_fontsize36_cb, this, 
+				FL_MENU_RADIO | ((reg_font_size==36) ? FL_MENU_VALUE : 0)},
 			{ 0 },
 		{ 0 },
 
@@ -377,6 +414,8 @@ co_rc_t console_window_t::start()
 	Fl_Group* tile = new Fl_Group(0, MENU_SIZE_PIXELS, swidth, sheight-MENU_SIZE_PIXELS);
 	
 	widget	    = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, sheight - 120);
+	widget->set_font_name(reg_font);
+	widget->set_font_size(reg_font_size);
 	text_widget = new Fl_Text_Display(0, sheight - 120 + MENU_SIZE_PIXELS, swidth, 70);
 
 	Fl_Group* tile2 = new Fl_Group(0, sheight - 120 + MENU_SIZE_PIXELS, swidth, 90);
