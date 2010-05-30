@@ -173,6 +173,27 @@ void co_user_console_keyboard_focus_change(unsigned long keyboard_focus)
 {
 }
 
+// Dummy functions
+int PasteClipboardIntoColinux(void)
+{
+	return -1;
+}
+
+int CopyLinuxIntoClipboard(void)
+{
+	return -1;
+}
+
+int ReadRegistry(int key)
+{
+	return -1;
+}
+
+int WriteRegistry(int key, int value)
+{
+	return value;
+}
+
 int main(int argc, char **argv) 
 {
 	fl_x_global_event_hook = global_event_hook;
