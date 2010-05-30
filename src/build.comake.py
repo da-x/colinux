@@ -80,6 +80,7 @@ else:
     settings.target_kernel_includes = [
         pathjoin(settings.target_kernel_build, 'include'),
         pathjoin(settings.target_kernel_build, 'include2'),
+        pathjoin(settings.target_kernel_source, 'arch/x86/include'),
         pathjoin(settings.target_kernel_source, 'include') ]
 
 if not hasattr(settings, 'final_build_target'):

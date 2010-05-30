@@ -1,0 +1,258 @@
+Index: linux-2.6.33-source/include/linux/major.h
+===================================================================
+--- linux-2.6.33-source.orig/include/linux/major.h
++++ linux-2.6.33-source/include/linux/major.h
+@@ -131,6 +131,7 @@
+ #define VIOCD_MAJOR		113
+ 
+ #define ATARAID_MAJOR		114
++#define COLINUX_MAJOR		117
+ 
+ #define SCSI_DISK8_MAJOR	128
+ #define SCSI_DISK9_MAJOR	129
+Index: linux-2.6.33-source/drivers/block/Kconfig
+===================================================================
+--- linux-2.6.33-source.orig/drivers/block/Kconfig
++++ linux-2.6.33-source/drivers/block/Kconfig
+@@ -383,6 +383,15 @@
+ 	  will prevent RAM block device backing store memory from being
+ 	  allocated from highmem (only a problem for highmem systems).
+ 
++config BLK_DEV_COBD
++	tristate 'Cooperative block device support'
++	default y
++	depends on COOPERATIVE
++	help
++	  Virtual block device support for cooperative kernels.
++
++	  If unsure, say Y.
++
+ config CDROM_PKTCDVD
+ 	tristate "Packet writing on CD/DVD media"
+ 	depends on !UML
+Index: linux-2.6.33-source/drivers/block/Makefile
+===================================================================
+--- linux-2.6.33-source.orig/drivers/block/Makefile
++++ linux-2.6.33-source/drivers/block/Makefile
+@@ -14,6 +14,7 @@
+ obj-$(CONFIG_ATARI_FLOPPY)	+= ataflop.o
+ obj-$(CONFIG_AMIGA_Z2RAM)	+= z2ram.o
+ obj-$(CONFIG_BLK_DEV_RAM)	+= brd.o
++obj-$(CONFIG_BLK_DEV_COBD)	+= cobd.o
+ obj-$(CONFIG_BLK_DEV_LOOP)	+= loop.o
+ obj-$(CONFIG_BLK_DEV_XD)	+= xd.o
+ obj-$(CONFIG_BLK_CPQ_DA)	+= cpqarray.o
+Index: linux-2.6.33-source/drivers/block/cobd.c
+===================================================================
+--- linux-2.6.33-source.orig/drivers/block/cobd.c
++++ linux-2.6.33-source/drivers/block/cobd.c
+@@ -44,7 +44,6 @@
+ 	long rc;
+ 
+ 	co_passage_page_assert_valid();
+-
+ 	co_passage_page_acquire(&flags);
+ 	co_passage_page->operation = CO_OPERATION_DEVICE;
+ 	co_passage_page->params[0] = CO_DEVICE_BLOCK;
+@@ -70,21 +69,21 @@
+ 	return cobd_request(cobd, CO_BLOCK_GET_ALIAS, out_request);
+ }
+ 
+-static int cobd_ioctl(struct inode * inode, struct file * file,
++static int cobd_ioctl(struct block_device *bdev, fmode_t mode,
+ 		      unsigned int cmd, unsigned long arg)
+ {
+ 	return -ENOTTY; /* unknown command */
+ }
+ 
+-static int cobd_open(struct inode *inode, struct file *file)
++static int cobd_open(struct block_device *bdev, fmode_t mode)
+ {
+-	struct cobd_device *cobd = (struct cobd_device *)(inode->i_bdev->bd_disk->private_data);
++	struct cobd_device *cobd = bdev->bd_disk->private_data;
+ 	co_block_request_t *co_request;
+ 	co_block_request_t stat_request;
+ 	unsigned long flags;
+ 	int result;
+ 
+-	if (cobd->device  &&  cobd->device != inode->i_bdev)
++	if (cobd->device && cobd->device != bdev)
+ 		return -EBUSY;
+ 
+ 	if (cobd->refcount == 0) {
+@@ -96,7 +95,6 @@
+ 	result = 0;
+ 
+ 	co_passage_page_assert_valid();
+-
+ 	co_passage_page_acquire(&flags);
+ 	co_passage_page->operation = CO_OPERATION_DEVICE;
+ 	co_passage_page->params[0] = CO_DEVICE_BLOCK;
+@@ -114,22 +112,21 @@
+ 		return result;
+ 
+ 	if (cobd->refcount == 1) {
+-		set_capacity(inode->i_bdev->bd_disk, stat_request.disk_size >> hardsect_size_shift);
+-		cobd->device = inode->i_bdev;
++		set_capacity(bdev->bd_disk, stat_request.disk_size >> hardsect_size_shift);
++		cobd->device = bdev;
+ 	}
+ 
+ 	return 0;
+ }
+ 
+-static int cobd_release(struct inode *inode, struct file *file)
++static int cobd_release(struct gendisk *disk, fmode_t mode)
+ {
+-	struct cobd_device *cobd = (struct cobd_device *)(inode->i_bdev->bd_disk->private_data);
++	struct cobd_device *cobd = disk->private_data;
+ 	co_block_request_t *co_request;
+ 	unsigned long flags;
+ 	int ret = 0;
+ 
+ 	co_passage_page_assert_valid();
+-
+ 	co_passage_page_acquire(&flags);
+ 	co_passage_page->operation = CO_OPERATION_DEVICE;
+ 	co_passage_page->params[0] = CO_DEVICE_BLOCK;
+@@ -151,14 +148,17 @@
+ /*
+  * Handle an I/O request.
+  */
+-static int cobd_transfer(struct cobd_device *cobd, struct request *req, int *async)
++static void cobd_transfer(struct request_queue *q, struct request *req)
+ {
++	struct cobd_device *cobd = (struct cobd_device *)(req->rq_disk->private_data);
+ 	co_block_request_t *co_request;
+ 	unsigned long flags;
++	int async;
+ 	int ret;
+ 
+-	co_passage_page_assert_valid();
++next_segment:
+ 
++	co_passage_page_assert_valid();
+ 	co_passage_page_acquire(&flags);
+ 	co_passage_page->operation = CO_OPERATION_DEVICE;
+ 	co_passage_page->params[0] = CO_DEVICE_BLOCK;
+@@ -166,47 +166,43 @@
+ 	co_request = (co_block_request_t *)&co_passage_page->params[2];
+ 	co_request->type = (rq_data_dir(req) == READ) ? CO_BLOCK_READ : CO_BLOCK_WRITE;
+ 	co_request->irq_request = req;
+-	co_request->offset = ((unsigned long long)(req->sector)) << hardsect_size_shift;
+-	co_request->size = req->current_nr_sectors << hardsect_size_shift;
++	co_request->offset = ((unsigned long long)blk_rq_pos(req)) << hardsect_size_shift;
++	co_request->size = blk_rq_cur_bytes(req);
+ 	co_request->address = req->buffer;
+ 	co_request->rc = 0;
+ 	co_request->async = 0;
+ 	co_switch_wrapper();
+-	*async = co_request->async;
++	async = co_request->async;
+ 	ret = co_request->rc;
+-
+ 	co_passage_page_release(flags);
+-	return ret;
++
++	/*
++	 * OK:   ret ==  0
++	 * FAIL: ret == -1
++	 */
++	if (ret == CO_BLOCK_REQUEST_RETCODE_OK) {
++		if (async)
++			return; /* wait for interrupt */
++
++		if (__blk_end_request_cur(req, 0))
++			goto next_segment;
++
++	} else {
++		__blk_end_request_all(req, -EIO);
++	}
+ }
+ 
+-static void do_cobd_request(request_queue_t *q)
++static void do_cobd_request(struct request_queue *q)
+ {
+         struct request *req;
+-	struct cobd_device *cobd;
+-
+-        while ((req = elv_next_request(q)) != NULL) {
+-		int ret;
+-		int async;
+ 
++        while ((req = blk_fetch_request(q)) != NULL) {
+ 		if (!blk_fs_request(req)) {
+-			end_request(req, 0);
++			__blk_end_request_all(req, -EIO);
+ 			continue;
+ 		}
+-		cobd = (struct cobd_device *)(req->rq_disk->private_data);
+-
+-		ret = cobd_transfer(cobd, req, &async);
+ 
+-		/*
+-		 * OK:   ret ==  0 --> uptodate = 1
+-		 * FAIL: ret == -1 --> uptodate = 0
+-		 */
+-		if (ret == CO_BLOCK_REQUEST_RETCODE_OK) {
+-			if (async)
+-				break; /* wait for interrupt */
+-			end_request(req, 1);
+-		} else {
+-			end_request(req, 0);
+-		}
++		cobd_transfer(q, req);
+         }
+ }
+ 
+@@ -231,8 +227,10 @@
+ 		BUG_ON(!req);
+ 
+ 		spin_lock(&cobd_lock);
+-		end_request(req, intr->uptodate);
+-		do_cobd_request(req->q);
++		if (__blk_end_request_cur(req, intr->uptodate ? 0 : -EIO))
++			cobd_transfer(req->q, req); /* next segment */
++		else
++			do_cobd_request(req->q);
+ 		spin_unlock(&cobd_lock);
+ 
+ goto_next_message:
+@@ -284,7 +282,7 @@
+ 		if (!disk->queue)
+ 			goto fail_malloc4;
+ 
+-		blk_queue_hardsect_size(disk->queue, hardsect_size);
++		blk_queue_logical_block_size(disk->queue, hardsect_size);
+ 
+ 		cobd->unit = i;
+ 		disk->major = COLINUX_MAJOR;
+@@ -314,8 +312,7 @@
+ 	kfree(cobd_disks);
+ 
+ fail_malloc:
+-	if (unregister_blkdev(COLINUX_MAJOR, "cobd"))
+-		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
++	unregister_blkdev(COLINUX_MAJOR, "cobd");
+ 
+ fail_irq:
+ 	free_irq(BLOCKDEV_IRQ, NULL);
+@@ -460,7 +457,7 @@
+ 	}
+ 
+ 	cobd = &cobd_devs[cobd_unit];
+-	blk_queue_hardsect_size(disk->queue, hardsect_size);
++	blk_queue_logical_block_size(disk->queue, hardsect_size);
+ 	disk->major = alias->major->number;
+ 	disk->first_minor = alias->minor_start + index;
+ 	disk->fops = &cobd_fops;
+@@ -514,8 +511,7 @@
+ 		put_disk(cobd_disks[i]);
+ 	}
+ 
+-	if (unregister_blkdev(COLINUX_MAJOR, "cobd"))
+-		printk(KERN_WARNING "cobd: cannot unregister blkdev\n");
++	unregister_blkdev(COLINUX_MAJOR, "cobd");
+ 
+ 	free_irq(BLOCKDEV_IRQ, NULL);
+ 	kfree(cobd_disks);

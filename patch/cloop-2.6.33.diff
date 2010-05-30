@@ -1,0 +1,30 @@
+Index: linux-2.6.33-source/drivers/block/Kconfig
+===================================================================
+--- linux-2.6.33-source.orig/drivers/block/Kconfig
++++ linux-2.6.33-source/drivers/block/Kconfig
+@@ -271,6 +271,12 @@
+ 	  instead, which can be configured to be on-disk compatible with the
+ 	  cryptoloop device.
+ 
++config BLK_DEV_CLOOP
++	tristate "Compressed Loopback device support (from Knoppix)"
++	default m
++	help
++	  Adds an compressed loopback device.
++
+ source "drivers/block/drbd/Kconfig"
+ 
+ config BLK_DEV_NBD
+Index: linux-2.6.33-source/drivers/block/Makefile
+===================================================================
+--- linux-2.6.33-source.orig/drivers/block/Makefile
++++ linux-2.6.33-source/drivers/block/Makefile
+@@ -15,6 +15,8 @@
+ obj-$(CONFIG_AMIGA_Z2RAM)	+= z2ram.o
+ obj-$(CONFIG_BLK_DEV_RAM)	+= brd.o
+ obj-$(CONFIG_BLK_DEV_COBD)	+= cobd.o
++obj-$(CONFIG_BLK_DEV_CLOOP)	+= cloop.o
++cloop-objs := compressed_loop.o
+ obj-$(CONFIG_BLK_DEV_LOOP)	+= loop.o
+ obj-$(CONFIG_BLK_DEV_XD)	+= xd.o
+ obj-$(CONFIG_BLK_CPQ_DA)	+= cpqarray.o

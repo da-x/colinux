@@ -1,0 +1,100 @@
+Implements network support
+
+
+Index: linux-2.6.33-source/drivers/net/Kconfig
+===================================================================
+--- linux-2.6.33-source.orig/drivers/net/Kconfig
++++ linux-2.6.33-source/drivers/net/Kconfig
+@@ -139,6 +139,11 @@
+ 	  When one end receives the packet it appears on its pair and vice
+ 	  versa.
+ 
++config CONET_COOPERATIVE
++	bool 'Cooperative Virtual Ethernet driver support'
++	depends on COOPERATIVE
++	select MII
++
+ config NET_SB1000
+ 	tristate "General Instruments Surfboard 1000"
+ 	depends on PNP
+@@ -173,7 +178,7 @@
+ 
+ menuconfig NET_ETHERNET
+ 	bool "Ethernet (10 or 100Mbit)"
+-	depends on !UML
++	depends on !UML && !COOPERATIVE
+ 	---help---
+ 	  Ethernet (also called IEEE 802.3 or ISO 8802-2) is the most common
+ 	  type of Local Area Network (LAN) in universities and companies.
+@@ -1963,7 +1968,7 @@
+ 
+ menuconfig NETDEV_1000
+ 	bool "Ethernet (1000 Mbit)"
+-	depends on !UML
++	depends on !UML && !COOPERATIVE
+ 	default y
+ 	---help---
+ 	  Ethernet (also called IEEE 802.3 or ISO 8802-2) is the most common
+@@ -2497,7 +2502,7 @@
+ 
+ menuconfig NETDEV_10000
+ 	bool "Ethernet (10000 Mbit)"
+-	depends on !UML
++	depends on !UML && !COOPERATIVE
+ 	default y
+ 	---help---
+ 	  Say Y here to get to see options for 10 Gigabit Ethernet drivers.
+Index: linux-2.6.33-source/drivers/net/Makefile
+===================================================================
+--- linux-2.6.33-source.orig/drivers/net/Makefile
++++ linux-2.6.33-source/drivers/net/Makefile
+@@ -206,6 +206,7 @@
+ 
+ # This is also a 82596 and should probably be merged
+ obj-$(CONFIG_LP486E) += lp486e.o
++obj-$(CONFIG_CONET_COOPERATIVE) += conet.o
+ 
+ obj-$(CONFIG_ETH16I) += eth16i.o
+ obj-$(CONFIG_ZORRO8390) += zorro8390.o 8390.o
+Index: linux-2.6.33-source/drivers/net/conet.c
+===================================================================
+--- linux-2.6.33-source.orig/drivers/net/conet.c
++++ linux-2.6.33-source/drivers/net/conet.c
+@@ -1,3 +1,4 @@
++
+ /*
+  *  Copyright (C) 2003-2004 Dan Aloni <da-x@gmx.net>
+  *  Copyright (C) 2004 Pat Erley
+@@ -321,6 +322,14 @@
+ 
+ MODULE_DEVICE_TABLE(pci, conet_pci_ids);
+ 
++static const struct net_device_ops net_ops = {
++	.ndo_open		= conet_open,
++	.ndo_stop		= conet_stop,
++	.ndo_start_xmit 	= conet_hard_start_xmit,
++	.ndo_get_stats		= conet_get_stats,
++	.ndo_do_ioctl		= conet_ioctl,
++};
++
+ static int __devinit conet_pci_probe( struct pci_dev *pdev,
+                                     const struct pci_device_id *ent)
+ {
+@@ -346,16 +355,11 @@
+ 		rc = -ENOMEM;
+ 		goto error_out_pdev;
+ 	}
+-	SET_MODULE_OWNER(dev);
+ 	SET_NETDEV_DEV(dev, &pdev->dev);
+ 	memcpy(dev->dev_addr, addr, 6);
+ 
+-	dev->open = conet_open;
+-	dev->stop = conet_stop;
+-	dev->hard_start_xmit = conet_hard_start_xmit;
++	dev->netdev_ops	= &net_ops;
+ 	dev->ethtool_ops = &conet_ethtool_ops;
+-	dev->get_stats = conet_get_stats;
+-	dev->do_ioctl = conet_ioctl;
+ 	dev->irq = pdev->irq;
+ 
+ 	priv = netdev_priv(dev);

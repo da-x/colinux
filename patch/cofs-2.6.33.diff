@@ -1,0 +1,228 @@
+Implements host filesystem support
+
+
+Index: linux-2.6.33-source/fs/cofusefs/Kconfig
+===================================================================
+--- /dev/null
++++ linux-2.6.33-source/fs/cofusefs/Kconfig
+@@ -0,0 +1,13 @@
++config COFUSE_FS
++	tristate "Cooperative Host file system support (COFUSE)"
++	depends on COOPERATIVE
++	default y
++	help
++	  In Cooperative mode, this file system allows you to mount an host
++	  directory structure to a local mountpoint.
++	  COFUSE (Cooperative FUSE) is based on the original FUSE
++	  (File System in User Space).
++
++	  To compile the cofuse support as a module, choose M here: the
++	  module will be called cofusefs.
++
+Index: linux-2.6.33-source/fs/Kconfig
+===================================================================
+--- linux-2.6.33-source.orig/fs/Kconfig
++++ linux-2.6.33-source/fs/Kconfig
+@@ -62,6 +62,7 @@
+ source "fs/autofs/Kconfig"
+ source "fs/autofs4/Kconfig"
+ source "fs/fuse/Kconfig"
++source "fs/cofusefs/Kconfig"
+ 
+ config CUSE
+ 	tristate "Character device in Userpace support"
+Index: linux-2.6.33-source/fs/Makefile
+===================================================================
+--- linux-2.6.33-source.orig/fs/Makefile
++++ linux-2.6.33-source/fs/Makefile
+@@ -108,6 +108,7 @@
+ obj-$(CONFIG_AUTOFS4_FS)	+= autofs4/
+ obj-$(CONFIG_ADFS_FS)		+= adfs/
+ obj-$(CONFIG_FUSE_FS)		+= fuse/
++obj-$(CONFIG_COFUSE_FS)		+= cofusefs/
+ obj-$(CONFIG_UDF_FS)		+= udf/
+ obj-$(CONFIG_SUN_OPENPROMFS)	+= openpromfs/
+ obj-$(CONFIG_OMFS_FS)		+= omfs/
+Index: linux-2.6.33-source/fs/cofusefs/Makefile
+===================================================================
+--- /dev/null
++++ linux-2.6.33-source/fs/cofusefs/Makefile
+@@ -0,0 +1,8 @@
++#
++# Makefile for the Linux cofuse filesystem routines.
++#
++
++obj-$(CONFIG_COFUSE_FS) += cofusefs.o
++
++cofusefs-objs := inode.o dir.o file.o util.o dev.o
++
+Index: linux-2.6.33-source/fs/cofusefs/dir.c
+===================================================================
+--- linux-2.6.33-source.orig/fs/cofusefs/dir.c
++++ linux-2.6.33-source/fs/cofusefs/dir.c
+@@ -28,7 +28,7 @@
+ static void change_attributes(struct inode *inode, struct fuse_attr *attr)
+ {
+ 	if(S_ISREG(inode->i_mode) && i_size_read(inode) != attr->size)
+-		invalidate_mapping_pages(inode->i_mapping, 0, -1);
++		invalidate_inode_pages2(inode->i_mapping);
+ 
+ 	inode->i_mode    = (inode->i_mode & S_IFMT) + (attr->mode & 07777);
+ 	inode->i_nlink   = attr->nlink;
+@@ -388,7 +388,7 @@
+ 
+ 	if(inode->i_ino == FUSE_ROOT_INO) {
+ 		if(!(fc->flags & FUSE_ALLOW_OTHER) &&
+-		   current->fsuid != fc->uid)
++		   current_fsuid() != fc->uid)
+ 			return -EACCES;
+ 	} else if(!(fc->flags & COFS_MOUNT_NOCACHE) &&
+ 		  time_before_eq(jiffies, entry->d_time + FUSE_REVALIDATE_TIME))
+@@ -397,11 +397,11 @@
+ 	return fuse_do_getattr(inode);
+ }
+ 
+-static int _fuse_permission(struct inode *inode, int mask)
++static int fuse_permission(struct inode *inode, int mask)
+ {
+ 	struct fuse_conn *fc = INO_FC(inode);
+ 
+-	if(!(fc->flags & FUSE_ALLOW_OTHER) && current->fsuid != fc->uid)
++	if(!(fc->flags & FUSE_ALLOW_OTHER) && current_fsuid() != fc->uid)
+ 		return -EACCES;
+ 	else if(fc->flags & FUSE_DEFAULT_PERMISSIONS) {
+ 		int err = generic_permission(inode, mask, NULL);
+@@ -758,12 +758,6 @@
+ 	return _fuse_create(dir, entry, mode);
+ }
+ 
+-static int fuse_permission(struct inode *inode, int mask,
+-			    struct nameidata *nd)
+-{
+-	return _fuse_permission(inode, mask);
+-}
+-
+ static int fuse_dentry_revalidate(struct dentry *entry, struct nameidata *nd)
+ {
+ 	return _fuse_dentry_revalidate(entry);
+Index: linux-2.6.33-source/fs/cofusefs/file.c
+===================================================================
+--- linux-2.6.33-source.orig/fs/cofusefs/file.c
++++ linux-2.6.33-source/fs/cofusefs/file.c
+@@ -42,7 +42,7 @@
+ 	in.args[0].value = &inarg;
+ 	request_send(fc, &in, &out);
+ 	if(!out.h.error && !(fc->flags & FUSE_KERNEL_CACHE)) {
+-		invalidate_mapping_pages(inode->i_mapping, 0, -1);
++		invalidate_inode_pages2(inode->i_mapping);
+ 	}
+ 
+ 	return out.h.error;
+@@ -385,28 +385,54 @@
+ 	return err;
+ }
+ 
+-static int fuse_prepare_write(struct file *file, struct page *page,
+-			      unsigned offset, unsigned to)
++static int fuse_write_begin(struct file *file, struct address_space *mapping,
++			loff_t pos, unsigned len, unsigned flags,
++			struct page **pagep, void **fsdata)
+ {
+-	/* No op */
++	pgoff_t index = pos >> PAGE_CACHE_SHIFT;
++
++	*pagep = grab_cache_page_write_begin(mapping, index, flags);
++	if (!*pagep)
++		return -ENOMEM;
+ 	return 0;
+ }
+ 
+-static int fuse_commit_write(struct file *file, struct page *page,
+-			     unsigned offset, unsigned to)
++static int fuse_buffered_write(struct file *file, struct inode *inode,
++			       loff_t pos, unsigned count, struct page *page)
+ {
+ 	int err;
+-	struct inode *inode = page->mapping->host;
++	unsigned offset = pos & (PAGE_CACHE_SIZE - 1);
++
++	if (is_bad_inode(inode))
++		return -EIO;
+ 
+-	err = write_buffer(inode, page, offset, to - offset);
+-	if(!err) {
+-		loff_t pos = (page->index << PAGE_CACHE_SHIFT) + to;
++	err = write_buffer(inode, page, offset, count);
++	if (!err) {
++		pos += count;
+ 		if(pos > i_size_read(inode))
+ 			i_size_write(inode, pos);
++		if (count == PAGE_CACHE_SIZE)
++			SetPageUptodate(page);
+ 	}
+-	return err;
++	return err ? err : count;
++}
++
++static int fuse_write_end(struct file *file, struct address_space *mapping,
++			loff_t pos, unsigned len, unsigned copied,
++			struct page *page, void *fsdata)
++{
++	struct inode *inode = mapping->host;
++	int res = 0;
++
++	if (copied)
++		res = fuse_buffered_write(file, inode, pos, copied, page);
++
++	unlock_page(page);
++	page_cache_release(page);
++	return res;
+ }
+ 
++
+ static struct file_operations fuse_file_operations = {
+ 	.llseek		= generic_file_llseek,
+ 	.read		= fuse_file_read,
+@@ -421,10 +447,10 @@
+ };
+ 
+ static struct address_space_operations fuse_file_aops  = {
+-	.readpage =		fuse_readpage,
+-	.writepage =		fuse_writepage,
+-	.prepare_write =	fuse_prepare_write,
+-	.commit_write =		fuse_commit_write,
++	.readpage	= fuse_readpage,
++	.writepage	= fuse_writepage,
++	.write_begin	= fuse_write_begin,
++	.write_end	= fuse_write_end,
+ };
+ 
+ void fuse_init_file_inode(struct inode *inode)
+Index: linux-2.6.33-source/fs/cofusefs/fuse_i.h
+===================================================================
+--- linux-2.6.33-source.orig/fs/cofusefs/fuse_i.h
++++ linux-2.6.33-source/fs/cofusefs/fuse_i.h
+@@ -85,7 +85,7 @@
+ 	struct fuse_out_arg args[3];
+ };
+ 
+-#define FUSE_IN_INIT { {0, 0, 0, current->fsuid, current->fsgid}, 0}
++#define FUSE_IN_INIT { {0, 0, 0, current_fsuid(), current_fsgid()}, 0}
+ #define FUSE_OUT_INIT { {0, 0}, 0, 0}
+ 
+ struct fuse_req;
+Index: linux-2.6.33-source/fs/cofusefs/inode.c
+===================================================================
+--- linux-2.6.33-source.orig/fs/cofusefs/inode.c
++++ linux-2.6.33-source/fs/cofusefs/inode.c
+@@ -355,8 +355,8 @@
+ 	struct fuse_mount_data md = {0, };
+ 	int ret;
+ 
+-	co_md.uid = current->uid;
+-	co_md.gid = current->gid;
++	co_md.uid = current_uid();
++	co_md.gid = current_gid();
+ 	co_md.dir_mode = FUSE_S_IRWXU | FUSE_S_IRGRP | FUSE_S_IXGRP |
+ 		FUSE_S_IROTH | FUSE_S_IXOTH | S_IFDIR;
+ 	co_md.file_mode = FUSE_S_IRWXU | FUSE_S_IRGRP | FUSE_S_IXGRP |

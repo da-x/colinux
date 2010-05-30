@@ -1,0 +1,55 @@
+Mouse driver
+
+
+Index: linux-2.6.33-source/drivers/input/mouse/Kconfig
+===================================================================
+--- linux-2.6.33-source.orig/drivers/input/mouse/Kconfig
++++ linux-2.6.33-source/drivers/input/mouse/Kconfig
+@@ -12,9 +12,19 @@
+ 
+ if INPUT_MOUSE
+ 
++config MOUSE_COOPERATIVE
++	bool "Cooperative Mouse driver"
++       	default n
++        depends on COOPERATIVE
++        ---help---
++          Virtual mouse driver for cooperative kernels.
++
++          If unsure, say N
++
+ config MOUSE_PS2
+ 	tristate "PS/2 mouse"
+ 	default y
++	depends on !COOPERATIVE
+ 	select SERIO
+ 	select SERIO_LIBPS2
+ 	select SERIO_I8042 if X86
+@@ -137,6 +147,7 @@
+ 
+ config MOUSE_SERIAL
+ 	tristate "Serial mouse"
++	depends on !COOPERATIVE
+ 	select SERIO
+ 	help
+ 	  Say Y here if you have a serial (RS-232, COM port) mouse connected
+@@ -261,6 +272,7 @@
+ 
+ config MOUSE_VSXXXAA
+ 	tristate "DEC VSXXX-AA/GA mouse and VSXXX-AB tablet"
++	depends on !COOPERATIVE
+ 	select SERIO
+ 	help
+ 	  Say Y (or M) if you want to use a DEC VSXXX-AA (hockey
+Index: linux-2.6.33-source/drivers/input/mouse/Makefile
+===================================================================
+--- linux-2.6.33-source.orig/drivers/input/mouse/Makefile
++++ linux-2.6.33-source/drivers/input/mouse/Makefile
+@@ -14,6 +14,7 @@
+ obj-$(CONFIG_MOUSE_MAPLE)		+= maplemouse.o
+ obj-$(CONFIG_MOUSE_PC110PAD)		+= pc110pad.o
+ obj-$(CONFIG_MOUSE_PS2)			+= psmouse.o
++obj-$(CONFIG_MOUSE_COOPERATIVE)		+= comouse.o
+ obj-$(CONFIG_MOUSE_PXA930_TRKBALL)	+= pxa930_trkball.o
+ obj-$(CONFIG_MOUSE_RISCPC)		+= rpcmouse.o
+ obj-$(CONFIG_MOUSE_SERIAL)		+= sermouse.o
