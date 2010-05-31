@@ -91,8 +91,8 @@ W32API_ARCHIVE=$W32API-dev.tar.gz
 #W32API_PATCH="patch/$W32API_SRC.diff"
 
 
-FLTK_VERSION="1.1.6"
-FLTK_URL=http://heanet.dl.sourceforge.net/sourceforge/fltk 
+FLTK_VERSION="1.1.10"
+FLTK_URL=http://ftp.funet.fi/pub/mirrors/ftp.easysw.com/pub/fltk/$FLTK_VERSION
 FLTK=fltk-$FLTK_VERSION
 FLTK_ARCHIVE=$FLTK-source.tar.bz2
 FLTK_PATCH="patch/$FLTK-win32.diff"

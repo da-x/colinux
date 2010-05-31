@@ -636,19 +636,18 @@ PATH=.:$PATH is needed, if the executables aren't installed in your e.g
 - Patch and build fltk from source
 
   cd /tmp
-  tar xjf fltk-1.1.6-source.tar.bz2
-  cd fltk-1.1.6
-  patch -p1 < colinux-source/patch/fltk-1.1.6-linux-patch.diff
+  tar xjf fltk-1.1.10-source.tar.bz2
+  cd fltk-1.1.10
+  patch -p1 < ...colinux-source/patch/fltk-1.1.10-linux-patch.diff
   ./configure --prefix=$HOME/i686-pc-linux-local
-  make -C src
   make -C src install
   make -C FL install
   cd /tmp
-  rm -r fltk-1.1.6
+  rm -r fltk-1.1.10
 
 - Run coLinux configure with path to this fltk
 
-  cd colinux-source
+  cd ...colinux-source
   export PATH=$HOME/i686-linux-local/bin:$PATH
   ./configure --target=i686-pc-linux ...
 

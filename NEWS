@@ -13,6 +13,9 @@
   Buildsystem:
   * Suppress warnings from Python 2.6. (Shai Vaingast)
 
+  Updated libraries and tools:
+  * FLTK 1.1.10, fixes problems with Window border frame on Vista.
+
 * Version 0.7.7
   Console and daemons:
   * New: "color=black,white" sets default color. (Peter Kuznetsov)
