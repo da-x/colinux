@@ -54,6 +54,7 @@ console_widget_t::console_widget_t(int		x,
 	scroll_lines		= 0;
 
 	font_name 			= FL_SCREEN;
+	copy_spaces			= true;
 	Fl::add_timeout(cursor_blink_interval,
 		        (Fl_Timeout_Handler)(console_widget_t::static_blink_handler),
 		        this);
@@ -507,19 +508,36 @@ void console_widget_t::copy_mouse_selection(char*str)
 	{
 		/* copy rect */
 		int dy = console->config.max_y-console->config.y+scroll_lines;
-		for(int i_y=mouse_sy+dy; i_y<mouse_sy+mouse_wy+dy; i_y++)
+		if(!copy_spaces)
 		{
-			char * last = str;
-			co_console_cell_t* cellp = &console->buffer[i_y*console->config.x+mouse_sx];
-
-			for(int i = mouse_wx; i > 0; i--, cellp++)
+			// do not copy trailing spaces
+			for(int i_y=mouse_sy+dy; i_y<mouse_sy+mouse_wy+dy; i_y++)
 			{
-				if ((*str++ = cellp->ch) != ' ')
-					last = str;
+				char * last = str;
+				co_console_cell_t* cellp = &console->buffer[i_y*console->config.x+mouse_sx];
+
+				for(int i = mouse_wx; i > 0; i--, cellp++)
+				{
+					if ((*str++ = cellp->ch) != ' ')
+						last = str;
+				}
+				str = last;
+				*str++ = '\r';
+				*str++ = '\n';
 			}
-			str = last;
-			*str++ = '\r';
-			*str++ = '\n';
+		}
+		else
+		{
+			// include trailing spaces
+			for(int i_y=mouse_sy+dy; i_y<mouse_sy+mouse_wy+dy; i_y++)
+			{
+				co_console_cell_t* cellp = console->buffer+i_y*console->config.x+mouse_sx;
+
+				for(int i = 0; i < mouse_wx; i++)
+					*str++ = cellp++->ch;
+				*str++ = '\r';
+				*str++ = '\n';
+			}
 		}
 	}
 	else

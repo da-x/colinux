@@ -45,6 +45,8 @@ public:
 	void scroll_back_buffer(int delta);
 	void scroll_page_up(void);
 	void scroll_page_down(void);
+	void toggle_copy_spaces(void) { copy_spaces = !copy_spaces; }
+	bool get_copy_spaces(void) { return copy_spaces; }
 
 protected:
 	int           font_size, font_name;
@@ -56,7 +58,7 @@ protected:
 	int 	      cursor_blink_state;
 	int           cursize_tab[CO_CUR_BLOCK+1];
 	
-	bool 		mouse_copy, mouse_drag_type;
+	bool 		mouse_copy, mouse_drag_type, copy_spaces;
 	int 		mouse_start_x, mouse_start_y, mouse_sx, mouse_wx,
 		mouse_sy, mouse_wy, loc_start, loc_end;
 		

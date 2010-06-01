@@ -265,7 +265,12 @@ int ReadRegistry(int key)
 				if(::RegQueryValueEx(hKey, TEXT("Font"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
 					value = -1;
 				break;
-					
+
+			case REGISTRY_COPYSPACES:
+				if(::RegQueryValueEx(hKey, TEXT("CopySpaces"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
+					value = -1;
+				break;
+				
 			default:
 				break;
 		}
@@ -295,6 +300,10 @@ int WriteRegistry(int key, int new_value)
 				::RegSetValueEx(hKey, TEXT("Font"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
 				break;
 					
+			case REGISTRY_COPYSPACES:
+				::RegSetValueEx(hKey, TEXT("CopySpaces"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
+				break;
+				
 			default:
 				break;
 		}

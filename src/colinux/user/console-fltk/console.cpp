@@ -94,6 +94,14 @@ static void console_paste_cb(Fl_Widget *widget, void* v)
 	PasteClipboardIntoColinux();
 }
 
+static void console_copyspaces_cb(Fl_Widget *widget, void* v) 
+{
+	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->toggle_copy_spaces();
+	WriteRegistry(REGISTRY_COPYSPACES, 
+		((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->get_copy_spaces());
+}
+
+
 static void console_scrollpageup_cb(Fl_Widget *widget, void* v) 
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->scroll_page_up();
@@ -328,11 +336,14 @@ co_rc_t console_window_t::start()
 	// read font and font size from registry
 	int reg_font = ReadRegistry(REGISTRY_FONT);
 	int reg_font_size = ReadRegistry(REGISTRY_FONT_SIZE);
+	int reg_copyspaces = ReadRegistry(REGISTRY_COPYSPACES);
 
 	if(reg_font==-1)
 		reg_font = FL_SCREEN;
 	if(reg_font_size==-1)
 		reg_font_size = 18;
+	if(reg_copyspaces==-1)
+		reg_copyspaces = 1;
 
 	Fl_Menu_Item console_menuitems[] = {
 		{ "File", 0, NULL, NULL, FL_SUBMENU },
@@ -350,7 +361,9 @@ co_rc_t console_window_t::start()
 
 		{ "Edit" , 0, NULL, NULL, FL_SUBMENU },
 		{ "Copy (WinKey+C)", 0, (Fl_Callback*)console_copy_cb, this, },
-		{ "Paste (WinKey+V)", 0, (Fl_Callback*)console_paste_cb, this, },
+		{ "Paste (WinKey+V)", 0, (Fl_Callback*)console_paste_cb, this, FL_MENU_DIVIDER },
+		{ "Copy trailing spaces", 0, (Fl_Callback*)console_copyspaces_cb, this, 
+			FL_MENU_TOGGLE | ((reg_copyspaces) ? FL_MENU_VALUE : 0)},
 		{ 0 },
 
 		{ "View" , 0, NULL, NULL, FL_SUBMENU },
@@ -416,6 +429,8 @@ co_rc_t console_window_t::start()
 	widget	    = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, sheight - 120);
 	widget->set_font_name(reg_font);
 	widget->set_font_size(reg_font_size);
+	if(widget->get_copy_spaces()!=reg_copyspaces)
+		widget->toggle_copy_spaces();
 	text_widget = new Fl_Text_Display(0, sheight - 120 + MENU_SIZE_PIXELS, swidth, 70);
 
 	Fl_Group* tile2 = new Fl_Group(0, sheight - 120 + MENU_SIZE_PIXELS, swidth, 90);
