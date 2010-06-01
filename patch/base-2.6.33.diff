@@ -3922,7 +3922,7 @@ Index: linux-2.6.33-source/arch/x86/kernel/process.c
  /*
   * We use this if we don't have any better
   * idle routine..
-@@ -680,6 +687,7 @@
+@@ -682,6 +689,7 @@
  	return 0;
  }
  early_param("idle", idle_setup);
