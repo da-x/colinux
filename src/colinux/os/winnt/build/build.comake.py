@@ -4,7 +4,7 @@ def optional_targets():
     enable_wx = getenv('COLINUX_ENABLE_WX')
     if enable_wx:
         if enable_wx == "yes":
-	    return [Input('colinux-console-wx.exe')]
+            return [Input('colinux-console-wx.exe')]
     return []
 
 targets['executables'] = Target(
@@ -35,7 +35,7 @@ def generate_options(compiler_def_type, libs=None, lflags=None):
         ),
         appenders = dict(
         compiler_flags = [ '-mno-cygwin' ],
-	linker_flags = lflags,
+        linker_flags = lflags,
         compiler_libs = libs + [
             'user32', 'gdi32', 'ws2_32', 'ntdll', 'kernel32', 'ole32', 'uuid', 'gdi32',
             'msvcrt', 'crtdll', 'shlwapi', 
@@ -49,9 +49,9 @@ def generate_wx_options():
             compiler_strip = True,
         ),
         appenders = dict(
-		compiler_flags = [ '`wx-config --cxxflags`' ],
-		linker_add = [ '`wx-config --libs`' ],
-	)
+                compiler_flags = [ '`wx-config --cxxflags`' ],
+                linker_add = [ '`wx-config --libs`' ],
+        )
     )
 
 user_dep = [Input('../user/user-all.a')]
@@ -127,11 +127,11 @@ targets['colinux-console-nt.exe'] = Target(
 )
 
 targets['colinux-console-wx.exe'] = Target(
-	inputs = user_res + [
-		Input('../../../user/console-wx/build.o'),
-	],
-	tool = Compiler(),
-	mono_options = generate_wx_options(),
+    inputs = user_res + [
+        Input('../../../user/console-wx/build.o'),
+    ],
+    tool = Compiler(),
+    mono_options = generate_wx_options(),
 )
 
 targets['colinux-debug-daemon.exe'] = Target(
@@ -214,10 +214,10 @@ def script_cmdline(scripter, tool_run_inf):
     command_line = ((
         "%s "
         "-Wl,--base-file,%s " 
-	"-Wl,--entry,_DriverEntry@8 "
-	"-nostartfiles -nostdlib "
+        "-Wl,--entry,_DriverEntry@8 "
+        "-nostartfiles -nostdlib "
         "-o junk.tmp %s -lndis -lntoskrnl -lhal -lgcc ; "
-	"rm -f junk.tmp") %
+        "rm -f junk.tmp") %
     (scripter.get_cross_build_tool('gcc', tool_run_inf),
      tool_run_inf.target.pathname,
      inputs[0].pathname))
@@ -238,4 +238,3 @@ targets['installer'] = Target(
     ],
     tool = Empty(),
 )
-
