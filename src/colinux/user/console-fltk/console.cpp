@@ -113,11 +113,6 @@ static void console_scrollpagedown_cb(Fl_Widget *widget, void* v)
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->scroll_page_down();
 }
 
-static void fontdialg_cb(Fl_Widget* widget, void* v) 
-{
-	((console_window_t*)v)->finish();
-}
-
 static void console_font_cb(Fl_Widget *widget, void* v)
 {
 	FontSelectDialog* fsd;
