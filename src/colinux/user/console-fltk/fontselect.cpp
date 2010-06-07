@@ -190,6 +190,7 @@ void FontSelectDialog::click_font(void)
 	int fn = fontobj->value();
 	if (!fn)
 		return;
+	fn--;
 	int i;
 	for(i=0; i<num_fonts; i++)
 	{
@@ -201,7 +202,6 @@ void FontSelectDialog::click_font(void)
 	}
 	if((i==num_fonts) || (fn==-1))
 		return;
-	fn--;
 	textobj->set_font(fn);
 	sizeobj->clear();
 
