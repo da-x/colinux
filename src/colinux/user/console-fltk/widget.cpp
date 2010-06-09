@@ -92,6 +92,8 @@ void console_widget_t::set_font_name(int new_name)
 
 void console_widget_t::update_font(void)
 {
+	Fl::set_fonts(NULL);
+	
 	fl_font(font_name, font_size);
 
 	// Calculate constats for this font

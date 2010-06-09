@@ -19,6 +19,8 @@
 
 #include <windows.h>
 
+#include "main.h"
+
 // callback functions 
 static void size_cb(Fl_Widget *widget, void*v)
 {
@@ -42,7 +44,8 @@ static void on_font_select(Fl_Widget *widget, void* v)
 	cw_inst->get_widget()->set_font_name(fsd_inst->textobj->get_font());
 	cw_inst->get_widget()->set_font_size(fsd_inst->textobj->get_size());
 	cw_inst->resize_font();
-	// WriteRegistry(REGISTRY_FONT_SIZE, 36);
+	WriteRegistry(REGISTRY_FONT, fsd_inst->textobj->get_font());
+	WriteRegistry(REGISTRY_FONT_SIZE, fsd_inst->textobj->get_size());
 }
 
 static void on_fixedpitch_select(Fl_Widget *widget, void* v)
