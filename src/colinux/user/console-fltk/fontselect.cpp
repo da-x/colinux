@@ -59,13 +59,13 @@ static void on_font_close(Fl_Widget *widget, void* v)
 	((FontSelectDialog*)v)->hide();
 }
 
-FontSelectDialog::FontSelectDialog(void*ptr): Fl_Window(530, 370, "Font select") 
+FontSelectDialog::FontSelectDialog(void*ptr, int def_font, int def_size): Fl_Window(530, 370, "Font select") 
 {  
 	ptr_console = ptr;
 	sizeobj = NULL;
 	textobj = NULL;
 	fontobj = NULL;
-	pickedsize = 14;
+	pickedsize = def_size;
 	my_sizes = NULL;
 	numsizes = NULL;
 	lookup = NULL;
@@ -108,8 +108,9 @@ FontSelectDialog::FontSelectDialog(void*ptr): Fl_Window(530, 370, "Font select")
 	end();
 	populate_fonts(false);
 
-	fontobj->value(1);
+	fontobj->value(def_font+1);
 	click_font();
+	click_size();
 }
 
 void FontSelectDialog::populate_fonts(bool fixed_pitch)

@@ -31,6 +31,7 @@ extern "C" {
 }
 
 #include "widget.h"
+#include "fontselect.h"
 
 typedef struct co_console_start_parameters {
 	co_id_t attach_id;
@@ -80,6 +81,7 @@ public:
 	console_widget_t * get_widget();
 	void log(const char *format, ...);
 	void resize_font(void);
+	FontSelectDialog* fsd;
 	
 protected:
 	co_console_state_t state;

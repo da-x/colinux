@@ -38,7 +38,7 @@ private:
 class FontSelectDialog : public Fl_Window
 {
 public:
-	FontSelectDialog(void*ptr);
+	FontSelectDialog(void*ptr, int def_font, int def_size);
 	void click_font(void);
 	void click_size(void);
 	bool get_fixed_pitch(void) { return btn_fixedpitch->value(); };

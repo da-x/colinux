@@ -17,7 +17,6 @@
 #include "console.h"
 #include "about.h"
 #include "select_monitor.h"
-#include "fontselect.h"
 
 #include <FL/Fl_Select_Browser.H>
 #include <FL/Fl_Hold_Browser.H>
@@ -115,9 +114,11 @@ static void console_scrollpagedown_cb(Fl_Widget *widget, void* v)
 
 static void console_font_cb(Fl_Widget *widget, void* v)
 {
-	FontSelectDialog* fsd;
-	fsd = new FontSelectDialog(v);
-	fsd->show();
+	console_window_t* cw_inst = ((console_window_t*)(((Fl_Menu_Item*)v)->user_data_));
+	cw_inst->fsd = new FontSelectDialog(v, 
+		cw_inst->get_widget()->get_font_name(),
+		cw_inst->get_widget()->get_font_size());
+	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->fsd->show();
 }
 
 console_main_window_t::console_main_window_t(console_window_t* console)
@@ -306,8 +307,6 @@ co_rc_t console_window_t::start()
 	Fl_Group* tile = new Fl_Group(0, MENU_SIZE_PIXELS, swidth, sheight-MENU_SIZE_PIXELS);
 	
 	widget	    = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, sheight - 120);
-	widget->set_font_name(reg_font);
-	widget->set_font_size(reg_font_size);
 	if(widget->get_copy_spaces()!=reg_copyspaces)
 		widget->toggle_copy_spaces();
 	text_widget = new Fl_Text_Display(0, sheight - 120 + MENU_SIZE_PIXELS, swidth, 70);
@@ -342,12 +341,15 @@ co_rc_t console_window_t::start()
 	// Change only font size:    set COLINUX_CONSOLE_FONT=:12
 	char* env_font = getenv("COLINUX_CONSOLE_FONT");
 	
-	if (env_font) {
+	if (env_font) 
+	{
 		char* p = strchr (env_font, ':');
 
-		if (p) {
+		if (p) 
+		{
 			int size = atoi (p+1);
-			if (size >= 4 && size <= 24) {
+			if (size >= 4 && size <= 24) 
+			{
 				// Set size
 				widget->set_font_size(size);
 			}
@@ -355,18 +357,26 @@ co_rc_t console_window_t::start()
 		}
 		
 		// Set new font style
-		if (strlen (env_font)) {
+		if(strlen(env_font)) 
+		{
 			// Remember: set_font need a non stack buffer!
 			// Environment is global static.
 			Fl::set_font(FL_SCREEN, env_font);
 
 			// Now check font width
 			fl_font(FL_SCREEN, 18); // Use default High for test here
-			if ((int)fl_width('i') != (int)fl_width('W')) {
+			if ((int)fl_width('i') != (int)fl_width('W')) 
+			{
 				Fl::set_font(FL_SCREEN, "Terminal"); // Restore standard font
 				log("%s: is not fixed font. Using 'Terminal'\n", env_font);
 			}
 		}
+	}
+	else
+	{
+		// use registry values and not environment variable
+		widget->set_font_name(reg_font);
+		widget->set_font_size(reg_font_size);
 	}
 
 	log("Cooperative Linux console started\n");

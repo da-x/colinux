@@ -31,6 +31,8 @@ public:
 	console_widget_t(int x, int y, int w, int h, const char* label = 0); 
 	void set_font_size(int new_size);
 	void set_font_name(int new_name);
+	int get_font_name(void) { return font_name; };
+	int get_font_size(void) { return font_size; };
 	void set_console(co_console_t* _console);
 	co_console_t* get_console();
 	void damage_console(int x, int y, int w, int h);
