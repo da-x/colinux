@@ -101,6 +101,12 @@ static void console_copyspaces_cb(Fl_Widget *widget, void* v)
 		((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->get_copy_spaces());
 }
 
+static void console_exitdetach_cb(Fl_Widget *widget, void* v) 
+{
+	console_window_t* cw_inst = (console_window_t*)(((Fl_Menu_Item*)v)->user_data_);
+	cw_inst->toggle_exitdetach();
+	WriteRegistry(REGISTRY_EXITDETACH, cw_inst->get_exitdetach());
+}
 
 static void console_scrollpageup_cb(Fl_Widget *widget, void* v) 
 {
@@ -245,9 +251,10 @@ co_rc_t console_window_t::start()
 	window->callback(console_window_cb, this);
 	
 	// read font and font size from registry
-	int reg_font = ReadRegistry(REGISTRY_FONT);
-	int reg_font_size = ReadRegistry(REGISTRY_FONT_SIZE);
-	int reg_copyspaces = ReadRegistry(REGISTRY_COPYSPACES);
+	reg_font = ReadRegistry(REGISTRY_FONT);
+	reg_font_size = ReadRegistry(REGISTRY_FONT_SIZE);
+	reg_copyspaces = ReadRegistry(REGISTRY_COPYSPACES);
+	reg_exitdetach = ReadRegistry(REGISTRY_EXITDETACH);
 
 	if(reg_font==-1)
 		reg_font = FL_SCREEN;
@@ -255,39 +262,43 @@ co_rc_t console_window_t::start()
 		reg_font_size = 18;
 	if(reg_copyspaces==-1)
 		reg_copyspaces = 1;
+	if(reg_exitdetach==-1)
+		reg_exitdetach = 0;
 
+		
 	Fl_Menu_Item console_menuitems[] = {
 		{ "File", 0, NULL, NULL, FL_SUBMENU },
-		{ "Quit", 0, (Fl_Callback *)console_quit_cb, this },
-		{ 0 },
-
-		{ "Monitor"  , 0, NULL, NULL, FL_SUBMENU },
 		{ "Select"   , 0, (Fl_Callback*)console_select_cb, this, FL_MENU_DIVIDER },
 		{ "Attach"   , 0, (Fl_Callback*)console_attach_cb, this, },
 		{ "Detach"   , 0, (Fl_Callback*)console_detach_cb, this, FL_MENU_DIVIDER },
 		{ "Power off", 0, (Fl_Callback*)console_send_poweroff_cb, this, },
 		{ "Reboot - Ctrl-Alt-Del", 0, (Fl_Callback *)console_send_ctrl_alt_del_cb, this, },
-		{ "Shutdown" , 0, (Fl_Callback*)console_send_shutdown_cb, this, },
+		{ "Shutdown" , 0, (Fl_Callback*)console_send_shutdown_cb, this, FL_MENU_DIVIDER },
+		{ "Quit", 0, (Fl_Callback *)console_quit_cb, this },
 		{ 0 },
 
 		{ "Edit" , 0, NULL, NULL, FL_SUBMENU },
 		{ "Copy (WinKey+C)", 0, (Fl_Callback*)console_copy_cb, this, },
-		{ "Paste (WinKey+V)", 0, (Fl_Callback*)console_paste_cb, this, FL_MENU_DIVIDER },
-		{ "Copy trailing spaces", 0, (Fl_Callback*)console_copyspaces_cb, this, 
-			FL_MENU_TOGGLE | ((reg_copyspaces) ? FL_MENU_VALUE : 0)},
+		{ "Paste (WinKey+V)", 0, (Fl_Callback*)console_paste_cb, this,  },
 		{ 0 },
 
 		{ "View" , 0, NULL, NULL, FL_SUBMENU },
 		{ "Page up (WinKey+PgUp, mouse wheel)", 0, (Fl_Callback*)console_scrollpageup_cb, this, },
 		{ "Page down (WinKey+PgDn, mouse wheel)", 0, (Fl_Callback*)console_scrollpagedown_cb, this, },
-		{ "Font..." , 0, (Fl_Callback*)console_font_cb, this,  },
 		{ 0 },
-
+		
+		{ "Config" , 0, NULL, NULL, FL_SUBMENU },
+		{ "Font..." , 0, (Fl_Callback*)console_font_cb, this,  FL_MENU_DIVIDER },
+		{ "Copy trailing spaces", 0, (Fl_Callback*)console_copyspaces_cb, this, 
+			FL_MENU_TOGGLE | ((reg_copyspaces) ? FL_MENU_VALUE : 0)},
+		{ "Exit on Detach", 0, (Fl_Callback*)console_exitdetach_cb, this, 
+			FL_MENU_TOGGLE |  ((reg_exitdetach) ? FL_MENU_VALUE : 0)},
+		{ 0 },
+		
 		{ "Help" , 0, NULL, NULL, FL_SUBMENU },
 		{ "About", 0, (Fl_Callback*)console_about_cb, this, },
 		{ 0 },
-
-		{ 0 }
+		{ 0 }		
 	};
 
 	unsigned int i;
@@ -579,18 +590,33 @@ void console_window_t::idle()
 
 	rc = co_reactor_select(reactor, 1);
 
-	if (!CO_OK(rc)) {
+	if (!CO_OK(rc)) 
+	{
 		rc = detach();
 
 		// Option in environment: "COLINUX_CONSOLE_EXIT_ON_DETACH=1"
 		// Exit Console after detach
-		if (CO_OK(rc) && state != CO_CONSOLE_STATE_ATTACHED) {
+		if (CO_OK(rc) && state != CO_CONSOLE_STATE_ATTACHED) 
+		{
 			char* str;
 			
 			str = getenv("COLINUX_CONSOLE_EXIT_ON_DETACH");
-			if (str != NULL && atoi(str) != 0) {
-				log("Console exit after detach\n");
-				exit(0);
+			if(str != NULL)
+			{
+				if ((str[0]=='y') || (str[0]=='Y') || (str[0]=='1'))
+				{
+					log("ENV: Console exit after detach\n");
+					exit(0);
+				}
+			}
+			else
+			{
+				// use registry settings
+				if(reg_exitdetach)
+				{
+					log("REGISTRY: Console exit after detach\n");
+					exit(0);
+				}
 			}
 		}
 	}

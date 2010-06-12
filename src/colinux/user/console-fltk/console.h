@@ -83,6 +83,9 @@ public:
 	void resize_font(void);
 	FontSelectDialog* fsd;
 	
+	int get_exitdetach(void) { return reg_exitdetach; };
+	void toggle_exitdetach(void) { reg_exitdetach=! reg_exitdetach; };
+	
 protected:
 	co_console_state_t state;
 	co_id_t attached_id;
@@ -102,6 +105,9 @@ protected:
 	void global_resize_constraint();
 
 	static co_rc_t message_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size);
+	
+	// registry settings
+	int reg_font, reg_font_size, reg_copyspaces, reg_exitdetach;
 	
 };
 

@@ -271,6 +271,11 @@ int ReadRegistry(int key)
 					value = -1;
 				break;
 				
+			case REGISTRY_EXITDETACH:
+				if(::RegQueryValueEx(hKey, TEXT("ExitDetach"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
+					value = -1;
+				break;
+				
 			default:
 				break;
 		}
@@ -304,6 +309,10 @@ int WriteRegistry(int key, int new_value)
 				::RegSetValueEx(hKey, TEXT("CopySpaces"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
 				break;
 				
+			case REGISTRY_EXITDETACH:
+				::RegSetValueEx(hKey, TEXT("ExitDetach"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
+				break;
+
 			default:
 				break;
 		}
