@@ -1368,19 +1368,13 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 		return CO_RC(OUT_OF_MEMORY);
 
 	message = (co_console_message_t*)co_message->data;
-	
-	co_message->from     = CO_MODULE_LINUX;
-	co_message->to	     = CO_MODULE_CONSOLE;
-	co_message->priority = CO_PRIORITY_DISCARDABLE;
-	co_message->type     = CO_MESSAGE_TYPE_STRING;
-	co_message->size     = size;
 
 	// send the scrollback buffer via init command
 	co_message->from     = CO_MODULE_LINUX;
 	co_message->to       = CO_MODULE_CONSOLE;
 	co_message->priority = CO_PRIORITY_DISCARDABLE;
 	co_message->type     = CO_MESSAGE_TYPE_STRING;
-	co_message->size     = size; 
+	co_message->size     = size;
 
 	// send the scroll buffer via a special CO operation
 	message->type	     = CO_OPERATION_CONSOLE_INIT_SCROLLBUFFER;
