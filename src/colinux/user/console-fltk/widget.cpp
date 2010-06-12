@@ -330,6 +330,10 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 		// Only for using below
 		saved_cursor = console->cursor;
 		break;
+	case CO_OPERATION_CONSOLE_STARTUP:
+		// Workaround: Do not call co_console_op here.
+		// This would destroy io_buffer for CO_OPERATION_CONSOLE_INIT_SCROLLBUFFER
+		return CO_RC(OK);
 	default:
 		break;
 	}
