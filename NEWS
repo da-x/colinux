@@ -6,6 +6,8 @@
     Win+PageUP, Win+PageDown or mouse weel.
   * Disabling console FLTK resize functionality.
   * Enabled blinking cursor support.
+  * New menu option "exit on detach" (quit console after shutting down).
+  * Redesigned menu to be more inline with today's standard menu layout.
 
   Kernel:
   * Version 2.6.33.5
