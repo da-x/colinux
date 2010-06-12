@@ -565,7 +565,7 @@ static void incoming_message(co_monitor_t* cmon, co_message_t* message)
 	switch (message->to) {
 	case CO_MODULE_CONSOLE:
 		if (message->from == CO_MODULE_LINUX) {
-			/* Redirect console operations to user level */
+			/* Redirect console operations to kernel shadow */
 			co_console_op(cmon->console,
 				      (co_console_message_t*)message->data);
 		}
@@ -1370,7 +1370,7 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 	message = (co_console_message_t*)co_message->data;
 
 	// send the scrollback buffer via init command
-	co_message->from     = CO_MODULE_LINUX;
+	co_message->from     = CO_MODULE_MONITOR;
 	co_message->to       = CO_MODULE_CONSOLE;
 	co_message->priority = CO_PRIORITY_DISCARDABLE;
 	co_message->type     = CO_MESSAGE_TYPE_STRING;
@@ -1407,7 +1407,7 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 		incoming_message(monitor, co_message);
 	}
 
-	co_message->from     = CO_MODULE_LINUX;
+	co_message->from     = CO_MODULE_MONITOR;
 	co_message->to       = CO_MODULE_CONSOLE;
 	co_message->priority = CO_PRIORITY_DISCARDABLE;
 	co_message->type     = CO_MESSAGE_TYPE_STRING;

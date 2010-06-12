@@ -603,7 +603,7 @@ void console_window_t::idle()
 			str = getenv("COLINUX_CONSOLE_EXIT_ON_DETACH");
 			if(str != NULL)
 			{
-				if ((str[0]=='y') || (str[0]=='Y') || (str[0]=='1'))
+				if (str[0]=='y' || str[0]=='Y' || str[0]=='1')
 				{
 					log("ENV: Console exit after detach\n");
 					exit(0);
@@ -642,6 +642,7 @@ co_rc_t console_window_t::about()
 void console_window_t::handle_message(co_message_t* message)
 {
 	switch (message->from) {
+	case CO_MODULE_MONITOR:
 	case CO_MODULE_LINUX: {
 		co_console_message_t* console_message;
 

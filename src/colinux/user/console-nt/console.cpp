@@ -264,6 +264,7 @@ void console_window_t::event(co_message_t *message)
 {
 	switch (message->from) {
 
+	case CO_MODULE_MONITOR:
 	case CO_MODULE_LINUX:{
 		co_console_message_t* console_message;
 		
