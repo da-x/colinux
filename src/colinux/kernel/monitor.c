@@ -1353,16 +1353,20 @@ static co_rc_t co_monitor_user_get_state(co_monitor_t* monitor, co_monitor_ioctl
 static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monitor,
                                            co_monitor_ioctl_get_console_t* params)
 {
-	co_message_t*		co_message = NULL;
-	co_console_message_t*	message	   = NULL;
+	co_message_t*		co_message;
+	co_console_message_t*	message;
+	co_console_cell_t*	cellp;
 	unsigned long		size;
 	int 			y;
+	int			config_x = monitor->console->config.x;
+	int			config_y = monitor->console->config.y;
+	int			max_y = monitor->console->config.max_y;
+	int			bytes_per_line = config_x * sizeof(co_console_cell_t);
 
-	size = (((char*)(&message->putcs + 1)) - ((char*)message)) + 
-		(monitor->console->config.x * sizeof(co_console_cell_t));
+	params->config = monitor->console->config;
 
-	params->config	  = monitor->console->config;
-
+	size = (char*)(&message->putcs + 1) - (char*)message + bytes_per_line;
+co_debug("### size %ld", size);
 	co_message = co_os_malloc(size + sizeof(*co_message));
 	if (!co_message)
 		return CO_RC(OUT_OF_MEMORY);
@@ -1377,15 +1381,14 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 	co_message->size     = size;
 
 	// send the scroll buffer via a special CO operation
-	message->type	     = CO_OPERATION_CONSOLE_INIT_SCROLLBUFFER;
+	message->type        = CO_OPERATION_CONSOLE_INIT_SCROLLBUFFER;
 	message->putcs.x     = 0;
-	message->putcs.count = monitor->console->config.x;
+	message->putcs.count = config_x;
 
-	for (y = monitor->console->config.y; y < monitor->console->config.max_y; y++) 
+	cellp = monitor->console->buffer + config_y * config_x;
+	for (y = config_y; y < max_y; y++, cellp += config_x)
 	{
-		co_memcpy(&message->putcs.data, 
-			  monitor->console->buffer+y * monitor->console->config.x, 
-			  monitor->console->config.x * sizeof(unsigned short));
+		co_memcpy(&message->putcs.data, cellp, bytes_per_line);
 		message->putcs.y = y;
 
 		/* Redirect each string operation to user level */
@@ -1393,24 +1396,23 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 	}
 
 	// send the viewable area via putcs command
-	message->type	     = CO_OPERATION_CONSOLE_PUTCS;
+	message->type = CO_OPERATION_CONSOLE_PUTCS;
 
-	for (y = 0; y < monitor->console->config.y; y++) 
+	cellp = monitor->console->screen;
+	for (y = 0; y < config_y; y++, cellp += config_x)
 	{
-		co_memcpy(&message->putcs.data, 
-			  monitor->console->screen + y * monitor->console->config.x, 
-			  monitor->console->config.x * sizeof(unsigned short));
+		co_memcpy(&message->putcs.data, cellp, bytes_per_line);
 		message->putcs.y = y;
 
 		/* Redirect each string operation to user level */
 		incoming_message(monitor, co_message);
 	}
 
-	co_message->size     = ((char*)(&message->cursor + 1)) - ((char*)message);
+	co_message->size = (char*)(&message->cursor + 1) - (char*)message;
 
 	message->type   = CO_OPERATION_CONSOLE_CURSOR_MOVE;
 	message->cursor = monitor->console->cursor;
-	
+
 	/* Redirect cursor operation to user level */
 	incoming_message(monitor, co_message);
 
