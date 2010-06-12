@@ -1380,6 +1380,7 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 	message->type	     = CO_OPERATION_CONSOLE_INIT_SCROLLBUFFER;
 	message->putcs.x     = 0;
 	message->putcs.count = monitor->console->config.x;
+
 	for (y = monitor->console->config.y; y < monitor->console->config.max_y; y++) 
 	{
 		co_memcpy(&message->putcs.data, 
@@ -1393,8 +1394,6 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 
 	// send the viewable area via putcs command
 	message->type	     = CO_OPERATION_CONSOLE_PUTCS;
-	message->putcs.x     = 0;
-	message->putcs.count = monitor->console->config.x;
 
 	for (y = 0; y < monitor->console->config.y; y++) 
 	{
@@ -1407,12 +1406,8 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 		incoming_message(monitor, co_message);
 	}
 
-	co_message->from     = CO_MODULE_MONITOR;
-	co_message->to       = CO_MODULE_CONSOLE;
-	co_message->priority = CO_PRIORITY_DISCARDABLE;
-	co_message->type     = CO_MESSAGE_TYPE_STRING;
 	co_message->size     = ((char*)(&message->cursor + 1)) - ((char*)message);
-	
+
 	message->type   = CO_OPERATION_CONSOLE_CURSOR_MOVE;
 	message->cursor = monitor->console->cursor;
 	
