@@ -76,6 +76,17 @@ co_rc_t console_widget_t::event(co_console_message_t* message)
 	if (!console)
 		return CO_RC(ERROR);
 
+	switch (message->type)
+	{
+	case CO_OPERATION_CONSOLE_STARTUP:
+		// Workaround: Do not call co_console_op here. Size of message data
+		// is 0 and has no space for call back data. This would destroy
+		// io_buffer for next CO_OPERATION_CONSOLE_INIT_SCROLLBUFFER.
+		return CO_RC(OK);
+	default:
+		break;
+	}
+
 	rc = co_console_op(console, message);
 	if (!CO_OK(rc))
 		return rc;

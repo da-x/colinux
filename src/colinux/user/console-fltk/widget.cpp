@@ -318,11 +318,10 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 	co_rc_t		rc;
 	co_cursor_pos_t saved_cursor = {0, };
 	
-	if (!console) {
+	if (!console)
 		return CO_RC(ERROR);
-	}
 
-	switch (message->type) 
+	switch (message->type)
 	{
 	case CO_OPERATION_CONSOLE_CURSOR_DRAW:
 	case CO_OPERATION_CONSOLE_CURSOR_ERASE:
@@ -331,8 +330,9 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 		saved_cursor = console->cursor;
 		break;
 	case CO_OPERATION_CONSOLE_STARTUP:
-		// Workaround: Do not call co_console_op here.
-		// This would destroy io_buffer for CO_OPERATION_CONSOLE_INIT_SCROLLBUFFER
+		// Workaround: Do not call co_console_op here. Size of message data
+		// is 0 and has no space for call back data. This would destroy
+		// io_buffer for next CO_OPERATION_CONSOLE_INIT_SCROLLBUFFER.
 		return CO_RC(OK);
 	default:
 		break;
