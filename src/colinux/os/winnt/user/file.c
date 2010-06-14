@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <windows.h>
 
@@ -23,7 +23,7 @@ co_rc_t co_os_file_load(co_pathname_t pathname, char **out_buf, unsigned long *o
 	co_rc_t rc = CO_RC_OK;
 	char *buf;
 
-	handle = CreateFile(pathname, 
+	handle = CreateFile(pathname,
 			    GENERIC_READ,
 			    FILE_SHARE_READ,
 			    NULL,

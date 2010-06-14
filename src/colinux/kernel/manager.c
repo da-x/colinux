@@ -49,7 +49,7 @@ co_rc_t co_manager_load(co_manager_t *manager)
 	co_rc_t rc;
 
 	co_memset(manager, 0, sizeof(*manager));
-	
+
 	co_debug_startup();
 	co_debug("loaded to host kernel");
 
@@ -105,7 +105,7 @@ co_rc_t co_manager_load(co_manager_t *manager)
 /* error path */
 out_err_os:
 	co_os_manager_free(manager->osdep);
-	
+
 out_err_arch:
 	co_manager_arch_free(manager->archdep);
 
@@ -140,8 +140,8 @@ void co_manager_unload(co_manager_t* manager)
 	manager->state = CO_MANAGER_STATE_NOT_INITIALIZED;
 }
 
-co_rc_t co_manager_send(co_manager_t*		manager, 
-                        co_manager_open_desc_t 	opened, 
+co_rc_t co_manager_send(co_manager_t*		manager,
+                        co_manager_open_desc_t 	opened,
                         co_message_t*		message)
 {
 	bool_t  ret;
@@ -173,7 +173,7 @@ co_rc_t co_manager_send(co_manager_t*		manager,
 co_rc_t co_manager_send_eof(co_manager_t* manager, co_manager_open_desc_t opened)
 {
 	opened->active = PFALSE;
-	
+
 	return co_os_manager_userspace_eof(manager, opened);
 }
 
@@ -187,7 +187,7 @@ co_rc_t co_manager_open(co_manager_t* manager, co_manager_open_desc_t* opened_ou
 		return CO_RC(OUT_OF_MEMORY);
 
 	co_memset(opened, 0, sizeof(*opened));
-	
+
 	rc = co_os_mutex_create(&opened->lock);
 	if (!CO_OK(rc))
 		return rc;
@@ -289,21 +289,21 @@ co_rc_t co_manager_open_desc_deactive_and_close(co_manager_t*	       manager,
 		for (index = 0; index < CO_MONITOR_MODULES_COUNT; index++) {
 			if (mon->connected_modules[index] != opened)
 				continue;
-			
+
 			mon->connected_modules[index] = NULL;
 			co_manager_close(manager, opened);
 		}
 		co_os_mutex_release(mon->connected_modules_write_lock);
 	}
-	
+
 	rc = co_manager_close(manager, opened);
-	
+
 	return rc;
 }
 
 co_rc_t co_manager_ioctl(co_manager_t* 		manager,
-			 unsigned long 		ioctl, 
-			 void*			io_buffer, 
+			 unsigned long 		ioctl,
+			 void*			io_buffer,
 			 unsigned long		in_size,
 			 unsigned long		out_size,
 			 unsigned long*		return_size,
@@ -332,10 +332,10 @@ co_rc_t co_manager_ioctl(co_manager_t* 		manager,
 		}
 
 		co_memcpy(params->compile_time,
-			  compile_time, 
-			  min(sizeof(params->compile_time) - 1, 
+			  compile_time,
+			  min(sizeof(params->compile_time) - 1,
 			      sizeof(compile_time)));
-			      
+
 		*return_size = sizeof(*params);
 		return CO_RC(OK);
 	}
@@ -357,7 +357,7 @@ co_rc_t co_manager_ioctl(co_manager_t* 		manager,
 		vec.vec_size = 0;
 		vec.size     = in_size;
 		vec.ptr      = io_buffer;
-		
+
 		co_debug_write_log(&manager->debug, &opened->debug_section, &vec, 1);
 
 		return CO_RC(OK);
@@ -366,8 +366,8 @@ co_rc_t co_manager_ioctl(co_manager_t* 		manager,
 		co_manager_ioctl_debug_reader_t *params;
 
 		params = (typeof(params))(io_buffer);
-		params->rc = co_debug_read(&manager->debug, 
-					   params->user_buffer, 
+		params->rc = co_debug_read(&manager->debug,
+					   params->user_buffer,
 					   params->user_buffer_size,
 					   &params->filled);
 
@@ -400,12 +400,12 @@ co_rc_t co_manager_ioctl(co_manager_t* 		manager,
 	}
 
 	switch (ioctl) {
-	case CO_MANAGER_IOCTL_CREATE: {		
+	case CO_MANAGER_IOCTL_CREATE: {
 		co_manager_ioctl_create_t* params = (typeof(params))(io_buffer);
-		
+
 		if (opened->monitor)
 			return CO_RC(ERROR);
-			
+
 		rc = co_monitor_create(manager, params, &cmon);
 		if (CO_OK(rc)) {
 			opened->monitor       = cmon;
@@ -474,7 +474,7 @@ co_rc_t co_manager_ioctl(co_manager_t* 		manager,
 				if (old_opened)
 					co_manager_close(manager, old_opened);
 				cmon->connected_modules[module] = opened;
-				opened->ref_count++;			
+				opened->ref_count++;
 			}
 
 			co_os_mutex_release(cmon->connected_modules_write_lock);
@@ -490,22 +490,22 @@ co_rc_t co_manager_ioctl(co_manager_t* 		manager,
 		*return_size = sizeof(*params);
 
 		if (in_size < sizeof(*params)) {
-			co_debug_error("monitor ioctl too small! (%ld < %d)", 
+			co_debug_error("monitor ioctl too small! (%ld < %d)",
 			               in_size, sizeof(*params));
 			params->rc = CO_RC(MONITOR_NOT_LOADED);
 			break;
 		}
-		
+
 		if (!opened->monitor) {
 			params->rc = CO_RC(MONITOR_NOT_LOADED);
 			break;
 		}
-		
+
 		in_size -= sizeof(*params);
 
-		params->rc = co_monitor_ioctl(opened->monitor, 
+		params->rc = co_monitor_ioctl(opened->monitor,
 					      params,
-					      in_size, 
+					      in_size,
 					      out_size,
 					      return_size,
 					      opened);

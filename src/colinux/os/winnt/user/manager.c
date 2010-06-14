@@ -5,9 +5,9 @@
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
- */ 
+ */
 
-/* WinNT dependend file I/O operations */ 
+/* WinNT dependend file I/O operations */
 
 #include <windows.h>
 #include <winioctl.h>
@@ -36,12 +36,12 @@ static co_manager_handle_t co_os_manager_open_(int verbose)
 	if (!handle)
 		return NULL;
 
-	handle->handle = CreateFile(CO_DRIVER_USER_PATH, 
-				    GENERIC_READ | GENERIC_WRITE, 
-				    0, 
-				    NULL, 
-				    OPEN_EXISTING, 
-				    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, 
+	handle->handle = CreateFile(CO_DRIVER_USER_PATH,
+				    GENERIC_READ | GENERIC_WRITE,
+				    0,
+				    NULL,
+				    OPEN_EXISTING,
+				    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
 				    NULL);
 
 	if (handle->handle == INVALID_HANDLE_VALUE) {
@@ -87,13 +87,13 @@ co_rc_t co_os_manager_ioctl(
 
 	code = CO_WINNT_IOCTL(code);
 
-	rc = DeviceIoControl(kernel_device->handle, 
+	rc = DeviceIoControl(kernel_device->handle,
 			     code,
-			     input_buffer, 
-			     input_buffer_size, 
-			     output_buffer, 
-			     output_buffer_size, 
-			     output_returned, 
+			     input_buffer,
+			     input_buffer_size,
+			     output_buffer,
+			     output_buffer_size,
+			     output_returned,
 			     NULL);
 
 	if (rc == FALSE) {
@@ -102,11 +102,11 @@ co_rc_t co_os_manager_ioctl(
 
 	return CO_RC(OK);
 }
- 
+
 static co_rc_t co_winnt_check_driver(IN LPCTSTR DriverName, bool_t* installed)
-{ 
-	SC_HANDLE schService; 
-	SC_HANDLE schSCManager; 
+{
+	SC_HANDLE schService;
+	SC_HANDLE schSCManager;
 
 	*installed = PFALSE;
 
@@ -115,12 +115,12 @@ static co_rc_t co_winnt_check_driver(IN LPCTSTR DriverName, bool_t* installed)
 		if (GetLastError() == ERROR_ACCESS_DENIED)
 			return CO_RC(ACCESS_DENIED);
 
-		return CO_RC(ERROR_ACCESSING_DRIVER); 
+		return CO_RC(ERROR_ACCESSING_DRIVER);
 	}
 
-	schService = OpenService(schSCManager, DriverName, SERVICE_ALL_ACCESS); 
+	schService = OpenService(schSCManager, DriverName, SERVICE_ALL_ACCESS);
 	if (schService != NULL) {
-		CloseServiceHandle(schService); 
+		CloseServiceHandle(schService);
 		*installed = PTRUE;
 	}
 
@@ -134,7 +134,7 @@ co_rc_t co_os_manager_is_installed(bool_t *installed)
 }
 
 co_rc_t co_os_reactor_monitor_create(
-	co_reactor_t 			reactor, 
+	co_reactor_t 			reactor,
 	co_manager_handle_t 		whandle,
 	co_reactor_user_receive_func_t 	receive,
 	co_reactor_user_t*		handle_out)
@@ -142,12 +142,12 @@ co_rc_t co_os_reactor_monitor_create(
 	*handle_out = NULL;
 
 	return co_winnt_reactor_packet_user_create(
-				reactor, 
-				whandle->handle, 
-				whandle->handle, 
+				reactor,
+				whandle->handle,
+				whandle->handle,
 				receive,
 				(co_winnt_reactor_packet_user_t*)handle_out);
-	
+
 }
 
 void co_os_reactor_monitor_destroy(co_reactor_user_t handle)

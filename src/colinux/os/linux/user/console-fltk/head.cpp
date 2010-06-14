@@ -7,7 +7,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 extern "C" {
 	#include <colinux/common/debug.h>
@@ -22,7 +22,7 @@ extern "C" {
 
 COLINUX_DEFINE_MODULE("colinux-fltk-console");
 
-/* 
+/*
  * Stolen WINE goodies...
  *
  * For coLinux's keyboard driver we need something than can convert
@@ -131,7 +131,7 @@ static int global_event_hook(const XEvent& thisevent)
 		int scan = 0;
 
 		len = XLookupString((XKeyEvent *)&(xevent.xkey), buffer, sizeof(buffer)-1, &keysym, 0);
-		
+
 		if (keysym) {
 			if ((keysym >> 8) == 0xFF) {
 				scan = nonchar_key_scan[keysym & 0xff];
@@ -142,7 +142,7 @@ static int global_event_hook(const XEvent& thisevent)
 			} else {
 				scan = keycode - 8;
 			}
-		}	
+		}
 
 		if (xevent.type != KeyPress) {
 			if (scan_code_state[scan] == 0)
@@ -194,7 +194,7 @@ int WriteRegistry(int key, int value)
 	return value;
 }
 
-int main(int argc, char **argv) 
+int main(int argc, char **argv)
 {
 	fl_x_global_event_hook = global_event_hook;
 

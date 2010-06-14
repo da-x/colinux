@@ -40,14 +40,14 @@ msize_init()
 	 * Find a nice value for msize
 	 * XXX if_maxlinkhdr already in mtu
 	 */
-	msize = (if_mtu>if_mru?if_mtu:if_mru) + 
+	msize = (if_mtu>if_mru?if_mtu:if_mru) +
 			if_maxlinkhdr + sizeof(struct m_hdr ) + 6;
 }
 
 /*
  * Get an mbuf from the free list, if there are none
  * malloc one
- * 
+ *
  * Because fragmentation can occur if we alloc new mbufs and
  * free old mbufs, we mark all mbufs above mbuf_thresh as M_DOFREE,
  * which tells m_free to actually free() it
@@ -57,9 +57,9 @@ m_get()
 {
 	register struct mbuf *m;
 	int flags = 0;
-	
+
 	DEBUG_CALL("m_get");
-	
+
 	if (m_freelist.m_next == &m_freelist) {
 		m = (struct mbuf *)malloc(msize);
 		if (m == NULL) goto end_error;
@@ -72,11 +72,11 @@ m_get()
 		m = m_freelist.m_next;
 		remque(m);
 	}
-	
+
 	/* Insert it in the used list */
 	insque(m,&m_usedlist);
 	m->m_flags = (flags | M_USEDLIST);
-	
+
 	/* Initialise it */
 	m->m_size = msize - sizeof(struct m_hdr);
 	m->m_data = m->m_dat;
@@ -92,15 +92,15 @@ void
 m_free(m)
 	struct mbuf *m;
 {
-	
+
   DEBUG_CALL("m_free");
   DEBUG_ARG("m = %lx", (long )m);
-	
+
   if(m) {
 	/* Remove from m_usedlist */
 	if (m->m_flags & M_USEDLIST)
 	   remque(m);
-	
+
 	/* If it's M_EXT, free() it */
 	if (m->m_flags & M_EXT)
 	   free(m->m_ext);
@@ -132,7 +132,7 @@ m_cat(m, n)
 	 */
 	if (M_FREEROOM(m) < n->m_len)
 		m_inc(m,m->m_size+MINCSIZE);
-	
+
 	memcpy(m->m_data+m->m_len, n->m_data, n->m_len);
 	m->m_len += n->m_len;
 
@@ -157,7 +157,7 @@ m_inc(m, size)
 	  dat = (char *)realloc(m->m_ext,size);
 /*		if (dat == NULL)
  *			return (struct mbuf *)NULL;
- */		
+ */
         } else {
 	  datasize = m->m_data - m->m_dat;
 	  dat = (char *)malloc(size);
@@ -165,10 +165,10 @@ m_inc(m, size)
  *			return (struct mbuf *)NULL;
  */
 	  memcpy(dat, m->m_dat, m->m_size);
-	  
+
 	  m->m_flags |= M_EXT;
         }
- 
+
 	m->m_ext = dat;
 	m->m_data = m->m_ext + datasize;
         m->m_size = size;
@@ -222,7 +222,7 @@ dtom(dat)
 	void *dat;
 {
 	struct mbuf *m;
-	
+
 	DEBUG_CALL("dtom");
 	DEBUG_ARG("dat = %lx", (long )dat);
 
@@ -236,9 +236,9 @@ dtom(dat)
 	      return m;
 	  }
 	}
-	
+
 	DEBUG_ERROR((dfd, "dtom failed"));
-	
+
 	return (struct mbuf *)0;
 }
 

@@ -6,13 +6,13 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <colinux/os/user/misc.h>
 
 #include "manager.h"
 
-co_rc_t co_manager_io_monitor(co_manager_handle_t	   handle, 
+co_rc_t co_manager_io_monitor(co_manager_handle_t	   handle,
 			       co_monitor_ioctl_op_t	   op,
 			       co_manager_ioctl_monitor_t* ioctl,
 			       unsigned long 		   in_size,
@@ -23,13 +23,13 @@ co_rc_t co_manager_io_monitor(co_manager_handle_t	   handle,
 
 	ioctl->op = op;
 	ioctl->rc = CO_RC_OK;
-	
+
 	rc = co_os_manager_ioctl(handle,
 				 CO_MANAGER_IOCTL_MONITOR,
-				 ioctl, 
-				 in_size, 
-				 ioctl, 
-				 out_size, 
+				 ioctl,
+				 in_size,
+				 ioctl,
+				 out_size,
 				 &returned);
 	if (!CO_OK(rc))
 		return rc;
@@ -79,7 +79,7 @@ co_rc_t co_manager_info(co_manager_handle_t handle, co_manager_ioctl_info_t* inf
 				 info,
 				 sizeof(*info),
 				 info,
-				 sizeof(*info), 
+				 sizeof(*info),
 				 &returned);
 
 	return rc;
@@ -90,12 +90,12 @@ void co_manager_debug(co_manager_handle_t handle, const char* buf, long size)
 	unsigned long returned	= 0;
 	unsigned long ret	= 0;
 
-	co_os_manager_ioctl(handle, 
+	co_os_manager_ioctl(handle,
 			    CO_MANAGER_IOCTL_DEBUG,
 			    (void*)buf,
 			    size,
-			    &ret, 
-			    sizeof(ret), 
+			    &ret,
+			    sizeof(ret),
 			    &returned);
 }
 

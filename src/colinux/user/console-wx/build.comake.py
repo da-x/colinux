@@ -10,7 +10,7 @@ targets['build.o'] = Target(
 				STRICT=None,
 				HAVE_W32API_H=None,
 				__WXMSW__=None,
-				__WINDOWS__=None, 
+				__WINDOWS__=None,
 			),
 		)
 	)

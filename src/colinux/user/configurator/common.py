@@ -19,11 +19,11 @@ class OptionArrayPanel(OptionPanel):
     CLASS_DESC = None
     LONG_DESC = ''
     SHORT_TREE_DESC = None
-    
+
     def __init__(self, splitter, mainframe, config_item_list=None):
         super(OptionArrayPanel, self).__init__(splitter, mainframe)
         self.mainframe = mainframe
-        
+
         label = wx.StaticText(self.panel, -1, self.CLASS_DESC, style=wx.ALIGN_CENTRE)
         desc = wx.StaticText(self.panel, -1, self.LONG_DESC)
         listctl = wx.ListCtrl(self.panel, -1, style=wx.LC_LIST)
@@ -36,7 +36,7 @@ class OptionArrayPanel(OptionPanel):
         wx.EVT_BUTTON(add, -1, self.add)
         wx.EVT_BUTTON(edit, -1, self.edit)
         wx.EVT_BUTTON(remove, -1, self.remove)
-        
+
         button_sizer = wx.BoxSizer(wx.HORIZONTAL)
         button_sizer.Add(add, 0, wx.ALL, 4)
         button_sizer.Add(edit, 0, wx.ALL, 4)
@@ -50,7 +50,7 @@ class OptionArrayPanel(OptionPanel):
 
         for index, item in enumerate(self.get_item_list().list):
             index = listctl.InsertStringItem(index, item.title(long=True))
-        
+
         self.panel.SetSizer(panel_sizer)
         self.config_item_list = config_item_list
         self.listctl = listctl
@@ -93,7 +93,7 @@ class OptionArrayPanel(OptionPanel):
             self.panel.SetSizer(panelSizer)
             self.title_changed = title_changed
             self.check_index = check_index
-            
+
         def populate(self, panel_sizer):
             pass
 

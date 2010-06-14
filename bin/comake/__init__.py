@@ -8,7 +8,7 @@ def _build_root():
     return dirname(dirname(dirname(__file__)))
 
 build_root = _build_root()
- 
+
 def main(args):
     os.chdir(build_root)
 
@@ -31,7 +31,7 @@ def main(args):
 	    sys.exit(3)
         except TargetNotFoundError:
 	    sys.exit(2)
-            
+
         if '--dump' in args:
             target_tree.dump()
         else:

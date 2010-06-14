@@ -36,10 +36,10 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 					break;
 				param_scan++;
 			}
-			
+
 			if (*param_scan == '\0')
 				break;
-			
+
 			if (*param_scan == ' ' || *param_scan == '\t')
 				break;
 		}
@@ -72,7 +72,7 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 					if (*param_scan == '\0')
 						goto error;
 
-					if ((param_scan[-1] == '\\')  &&  
+					if ((param_scan[-1] == '\\')  &&
 					    (*param_scan != '"'))
 						size++;
 
@@ -83,10 +83,10 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 					break;
 				param_scan++;
 			}
-			
+
 			if (*param_scan == '\0')
 				break;
-			
+
 			if (*param_scan == ' ' || *param_scan == '\t')
 				break;
 
@@ -134,10 +134,10 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 					break;
 				param_scan++;
 			}
-			
+
 			if (*param_scan == '\0')
 				break;
-			
+
 			if (*param_scan == ' ' || *param_scan == '\t')
 				break;
 
@@ -149,7 +149,7 @@ co_rc_t co_os_parse_args(LPSTR szCmdLine, int *count, char ***args)
 
 		i++;
 	}
-	
+
 	*args  = param_array;
 	*count = param_count;
 
@@ -170,7 +170,7 @@ void co_os_free_parsed_args(char **args)
 	char **param_scan;
 
 	param_scan = args;
-	
+
 	while (*param_scan) {
 		co_os_free(*param_scan);
 		param_scan++;

@@ -36,7 +36,7 @@ co_rc_t co_manager_alloc_reversed_pfns(co_manager_t *manager)
 		return CO_RC(OUT_OF_MEMORY);
 
 	co_memset(manager->reversed_map_pfns, 0, map_size);
-	
+
 	co_debug("allocating %ld top level pages", manager->reversed_page_count);
 	for (i=0; i < manager->reversed_page_count; i++) {
 		co_pfn_t pfn;
@@ -48,8 +48,8 @@ co_rc_t co_manager_alloc_reversed_pfns(co_manager_t *manager)
 		manager->reversed_map_pfns[i] = pfn;
 	}
 
-	manager->reversed_map_pgds_count = 
-		(((unsigned long)(CO_VPTR_BASE - CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP) 
+	manager->reversed_map_pgds_count =
+		(((unsigned long)(CO_VPTR_BASE - CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP)
 		  / PTRS_PER_PTE)  / PTRS_PER_PGD) / sizeof(linux_pgd_t);
 
 	co_debug("using %ld table entries for reversed physical mapping", manager->reversed_map_pgds_count);
@@ -64,12 +64,12 @@ co_rc_t co_manager_alloc_reversed_pfns(co_manager_t *manager)
 	for (i=0; i < manager->reversed_map_pgds_count; i++) {
 		co_pfn_t pfn;
 		linux_pte_t *pte;
-	
+
 		if (covered_physical >= manager->hostmem_pages) {
-			manager->reversed_map_pgds[i] = 0; 
+			manager->reversed_map_pgds[i] = 0;
 			continue;
 		}
-		
+
 		rc = co_manager_get_page(manager, &pfn);
 		if (!CO_OK(rc))
 			return rc;
@@ -88,7 +88,7 @@ co_rc_t co_manager_alloc_reversed_pfns(co_manager_t *manager)
 		}
 		co_os_unmap(manager, pte, pfn);
 
-		manager->reversed_map_pgds[i] = (pfn << CO_ARCH_PAGE_SHIFT) | _KERNPG_TABLE; 
+		manager->reversed_map_pgds[i] = (pfn << CO_ARCH_PAGE_SHIFT) | _KERNPG_TABLE;
 
 		covered_physical += (PTRS_PER_PTE * PTRS_PER_PGD);
 	}
@@ -102,7 +102,7 @@ void co_manager_free_reversed_pfns(co_manager_t *manager)
 
 	if (manager->reversed_map_pfns) {
 		for (i=0; i < manager->reversed_page_count; i++)
-			co_os_put_page(manager, manager->reversed_map_pfns[i]);	
+			co_os_put_page(manager, manager->reversed_map_pfns[i]);
 
 		co_os_free(manager->reversed_map_pfns);
 	}
@@ -127,7 +127,7 @@ co_rc_t co_manager_set_reversed_pfn(co_manager_t *manager, co_pfn_t real_pfn, co
 	top_level = real_pfn / PTRS_PER_PTE;
 	if (top_level >= manager->reversed_page_count)
 		return CO_RC(ERROR);
-		
+
 	entry = real_pfn % PTRS_PER_PTE;
 
 	mapped_pfn = manager->reversed_map_pfns[top_level];

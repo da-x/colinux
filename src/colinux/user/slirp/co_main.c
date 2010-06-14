@@ -7,7 +7,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <stdio.h>
 #include <unistd.h>
@@ -81,7 +81,7 @@ void slirp_output(const uint8_t *pkt, int pkt_len)
 		co_linux_message_t message_linux;
 		char data[pkt_len];
 	} message;
-	
+
 	message.message.from = CO_MODULE_CONET0 + g_daemon_parameters.index;
 	message.message.to = CO_MODULE_LINUX;
 	message.message.priority = CO_PRIORITY_DISCARDABLE;
@@ -211,18 +211,18 @@ co_slirp_parse_args(co_command_line_params_t cmdline, start_parameters_t *parame
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-u", 
+	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-u",
 							  &unit_specified, &parameters->index);
 	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-r", &redir_specified,
 						      redir_buff, sizeof(redir_buff));
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-h", &parameters->show_help);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	if (parameters->show_help)
@@ -240,7 +240,7 @@ co_slirp_parse_args(co_command_line_params_t cmdline, start_parameters_t *parame
 	}
 
 	if ((parameters->index < 0) ||
-	    (parameters->index >= CO_MODULE_MAX_CONET)) 
+	    (parameters->index >= CO_MODULE_MAX_CONET))
 	{
 		co_terminal_print("conet-slirp-daemon: invalid index: %d\n", parameters->index);
 		return CO_RC(ERROR);
@@ -259,7 +259,7 @@ co_slirp_parse_args(co_command_line_params_t cmdline, start_parameters_t *parame
 		}
 	}
 
-	return CO_RC(OK);	
+	return CO_RC(OK);
 }
 
 co_rc_t co_slirp_main(int argc, char *argv[])
@@ -319,7 +319,7 @@ out_mutex:
 
 out_params:
 	co_cmdline_params_free(cmdline);
-	
+
 out:
 	if (!CO_OK(rc))
 		co_terminal_print("conet-slirp-daemon: exitcode %x\n", (int)rc);

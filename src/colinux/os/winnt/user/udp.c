@@ -7,7 +7,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -36,9 +36,9 @@ int co_udp_socket_connect(const char *addr, unsigned short int port)
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = inet_addr(addr);
 	server.sin_port = htons(port);
-						
+
 	ret = connect(sock, (struct sockaddr *)&server, sizeof(server));
-	if (ret) 
+	if (ret)
 		return -1;
 
 	return sock;

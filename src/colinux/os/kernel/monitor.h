@@ -19,7 +19,7 @@ extern void co_monitor_os_console_event(co_monitor_t *cmon);
 
 extern void co_monitor_os_network_poll(co_monitor_t *cmon);
 extern void co_monitor_os_network_event(co_monitor_t *cmon);
-	
+
 extern void co_monitor_os_clear_console_detach_event(co_monitor_t *cmon);
 extern void co_monitor_os_set_console_detach_event(co_monitor_t *cmon);
 extern void co_monitor_os_wait_console_detach(co_monitor_t *cmon);

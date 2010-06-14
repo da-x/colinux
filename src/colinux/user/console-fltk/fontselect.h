@@ -21,7 +21,7 @@
 	"01234567890123456789012345\n" \
 	" !#$\%^&*()_+`~[]{}\\|/?.,><"
 bool is_fixed_pitch(Fl_Font test_font);
-class FontDisplay : public Fl_Widget 
+class FontDisplay : public Fl_Widget
 {
 	void draw();
 public:
@@ -44,7 +44,7 @@ public:
 	void *ptr_console;
 	void populate_fonts(bool fixed_pitch, int def_font);
 	FontDisplay *textobj;
-	
+
 private:
 	Fl_Hold_Browser *sizeobj;
 	Fl_Hold_Browser *fontobj;
@@ -53,7 +53,7 @@ private:
 	int *numsizes;
 	int *lookup;
 	char str_label[0x200];
-	
+
 };
 
 #endif

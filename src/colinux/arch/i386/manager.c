@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <colinux/common/libc.h>
 
@@ -21,7 +21,7 @@ co_rc_t co_manager_arch_init(co_manager_t *manager, co_archdep_manager_t *out_ar
 	*out_archdep = NULL;
 
 	co_debug("arch init");
- 
+
 	archdep = co_os_malloc(sizeof(*archdep));
 	if (archdep == NULL)
 		return CO_RC(OUT_OF_MEMORY);

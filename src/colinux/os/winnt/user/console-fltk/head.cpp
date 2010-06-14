@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <windows.h>
 
@@ -61,17 +61,17 @@ int PasteClipboardIntoColinux(void)
 		co_debug( "OpenClipboard() error 0x%lx !", ::GetLastError() );
 		return -1;
 	}
-	
+
 	HANDLE h = ::GetClipboardData(CF_TEXT);
-	
+
 	if (h == NULL )
 	{
 		::CloseClipboard();
 		return 0;	// Empty (for text)
 	}
-	
+
 	unsigned char* s = (unsigned char*) ::GlobalLock(h);
-	
+
 	if ( s == NULL )
 	{
 		::CloseClipboard( );
@@ -89,10 +89,10 @@ int PasteClipboardIntoColinux(void)
 		sc.code = *s;
 		co_user_console_handle_scancode( sc );
 	}
-	
+
 	::GlobalUnlock(h);
 	::CloseClipboard();
-	
+
 	return 0;
 }
 
@@ -117,7 +117,7 @@ int CopyLinuxIntoClipboard(void)
 	console_widget_t* my_widget = co_user_console_get_window()->get_widget();
 
 	/* allocate memory for clipboard, plus 1 byte for null termination */
-	HGLOBAL hMemClipboard = ::GlobalAlloc(GMEM_MOVEABLE, 
+	HGLOBAL hMemClipboard = ::GlobalAlloc(GMEM_MOVEABLE,
 		(my_widget->screen_size_bytes()+1));
 	if (hMemClipboard==NULL)
 	{
@@ -132,7 +132,7 @@ int CopyLinuxIntoClipboard(void)
 	/* unlock memory (but don't free it-- it's now owned by the OS) */
 	::GlobalUnlock(hMemClipboard);
 	::SetClipboardData(CF_TEXT, hMemClipboard);
-	
+
 	/* and we're done */
 	::CloseClipboard();
 
@@ -251,7 +251,7 @@ int ReadRegistry(int key)
 	HKEY hKey;
 
 	DWORD value=-1, reg_size = sizeof(value);
-	
+
 	if(::RegOpenKeyEx(HKEY_CURRENT_USER, TEXT(SOFTWARE_COLINUX_CONSOLE_FONT_KEY), 0, KEY_READ, &hKey)==ERROR_SUCCESS)
 	{
 		switch(key)
@@ -260,7 +260,7 @@ int ReadRegistry(int key)
 				if(::RegQueryValueEx(hKey, TEXT("Size"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
 					value = -1;
 				break;
-			
+
 			case REGISTRY_FONT:
 				if(::RegQueryValueEx(hKey, TEXT("Font"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
 					value = -1;
@@ -270,12 +270,12 @@ int ReadRegistry(int key)
 				if(::RegQueryValueEx(hKey, TEXT("CopySpaces"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
 					value = -1;
 				break;
-				
+
 			case REGISTRY_EXITDETACH:
 				if(::RegQueryValueEx(hKey, TEXT("ExitDetach"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
 					value = -1;
 				break;
-				
+
 			default:
 				break;
 		}
@@ -291,7 +291,7 @@ int WriteRegistry(int key, int new_value)
 
 	DWORD value=new_value, reg_size = sizeof(value);
 	LONG retval;
-	retval = ::RegCreateKeyEx(HKEY_CURRENT_USER, TEXT(SOFTWARE_COLINUX_CONSOLE_FONT_KEY), 0, NULL, REG_OPTION_NON_VOLATILE, 
+	retval = ::RegCreateKeyEx(HKEY_CURRENT_USER, TEXT(SOFTWARE_COLINUX_CONSOLE_FONT_KEY), 0, NULL, REG_OPTION_NON_VOLATILE,
 		KEY_ALL_ACCESS, NULL, &hKey, NULL);
 	if(retval==ERROR_SUCCESS)
 	{
@@ -300,15 +300,15 @@ int WriteRegistry(int key, int new_value)
 			case REGISTRY_FONT_SIZE:
 				::RegSetValueEx(hKey, TEXT("Size"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
 				break;
-			
+
 			case REGISTRY_FONT:
 				::RegSetValueEx(hKey, TEXT("Font"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
 				break;
-					
+
 			case REGISTRY_COPYSPACES:
 				::RegSetValueEx(hKey, TEXT("CopySpaces"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
 				break;
-				
+
 			case REGISTRY_EXITDETACH:
 				::RegSetValueEx(hKey, TEXT("ExitDetach"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
 				break;
@@ -336,7 +336,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR cmdLine, int)
 	//       be caught later
 	int    argc = 0;
 	char** argv = NULL;
-	
+
 	co_os_parse_args(cmdLine, &argc, &argv);
 
 	// Run main console procedure

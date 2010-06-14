@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <windows.h>
 #include <stdio.h>
@@ -151,7 +151,7 @@ void user_network_tap_daemon_t::syntax()
 
 
 int main(int argc, char *argv[])
-{	
+{
 	user_daemon_t *daemon = 0;
 
 	co_debug_start();
@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
 		daemon = new user_network_tap_daemon_t;
 		daemon->run(argc, argv);
 	} catch (user_daemon_exception_t e) {
-		
+
 	}
 
 	if (daemon)

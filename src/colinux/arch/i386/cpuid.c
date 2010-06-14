@@ -13,12 +13,12 @@
 bool_t co_i386_has_cpuid()
 {
 	bool_t has_cpuid = 0;
-        /* 
-	 * This function assumes at least $86. 
+        /*
+	 * This function assumes at least $86.
  	 *
  	 * It's good enough...
 	 */
-	
+
 	asm(
 		/* Try change the CPUID FLAGS bit (put the old FLAGS in ECX) */
 		"pushfl\n"
@@ -85,6 +85,6 @@ co_rc_t co_i386_get_cpuid_capabilities(unsigned long *caps)
 			caps[1] = cpuid.edx;
 		}
 	}
-	
+
 	return CO_RC(OK);
 }

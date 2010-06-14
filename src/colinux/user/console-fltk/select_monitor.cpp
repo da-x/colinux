@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <stdio.h>
 #include <string.h>
@@ -23,7 +23,7 @@ void select_monitor_widget_t::on_button(Fl_Widget* widget)
 {
 	if (widget == select_button) {
 		int selection = browser->value();
-		
+
 		if (selection != 0) {
 			co_id_t id = id_map[selection-1];
 			console->attach_anyhow(id);
@@ -84,11 +84,11 @@ void select_monitor_widget_t::load_monitors_list()
 
 	for (unsigned i = 0; i < list.count; ++i) {
 		char buf[32];
-		
+
 		id_map[i] = list.ids[i];
 		snprintf(buf, sizeof(buf), "Monitor%d (pid=%d)\t", i, (int)id_map[i]);
 		browser->add(buf);
 	}
-	
+
 	id_map_count = list.count;
 }

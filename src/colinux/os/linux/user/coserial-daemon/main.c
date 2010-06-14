@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <stdio.h>
 #include <unistd.h>
@@ -79,7 +79,7 @@ static co_rc_t std_receive(co_reactor_user_t user, unsigned char *buffer, unsign
 	message.message_linux.unit = g_daemon_parameters.index;
 	message.message_linux.size = size;
 	memcpy(message.data, buffer, size);
-	
+
 	g_monitor_handle->reactor_user->send(g_monitor_handle->reactor_user,
 					     (unsigned char *)&message, sizeof(message));
 
@@ -100,7 +100,7 @@ static void syntax(void)
 	co_terminal_print("     colinux-serial-daemon -i pid [-u unit]\n");
 }
 
-static co_rc_t 
+static co_rc_t
 handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 {
 	bool_t instance_specified, unit_specified;
@@ -117,14 +117,14 @@ handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 		goto out_clean;
 	}
 
-	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-i", 
+	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-i",
 			&instance_specified, &start_parameters->instance);
 	if (!CO_OK(rc)) {
 		syntax();
 		goto out;
 	}
 
-	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-u", 
+	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-u",
 			&unit_specified, &start_parameters->index);
 	if (!CO_OK(rc)) {
 		syntax();
@@ -169,7 +169,7 @@ static co_rc_t coserial_main(int argc, char *argv[])
 	rc = co_reactor_create(&g_reactor);
 	if (!CO_OK(rc))
 		return rc;
-	
+
 	co_debug("connecting to monitor");
 
 	module = CO_MODULE_SERIAL0 + g_daemon_parameters.index;
@@ -182,7 +182,7 @@ static co_rc_t coserial_main(int argc, char *argv[])
 
 	co_debug("connected");
 
-	rc = co_linux_reactor_packet_user_create(g_reactor, 
+	rc = co_linux_reactor_packet_user_create(g_reactor,
 						 STDIN_FILENO,
 						 std_receive, &g_reactor_handle);
 	if (!CO_OK(rc))
@@ -215,7 +215,7 @@ static co_rc_t coserial_main(int argc, char *argv[])
 }
 
 int main(int argc, char *argv[])
-{	
+{
 	co_rc_t rc;
 
 	co_debug_start();

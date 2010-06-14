@@ -3,7 +3,7 @@
 #
 # This file will source from toplevel Makefile and scripts.
 # It's no designed to execute directly.
-# 
+#
 # - Dan Aloni <da-x@colinux.org>
 #
 
@@ -316,7 +316,7 @@ strip_kernel()
 		# Function not found by grep
 		echo -e "\nWARNING: $FROM_SOURCE" >&2
 		echo -e "Can't get symbols for stripping! Don't strip vmlinux\n" >&2
-			
+
 		# Fallback into copy mode
 		cp -a $1 $2
 	fi
@@ -333,7 +333,7 @@ build_package()
 	local MODULES_TGZ=$COLINUX_INSTALL_DIR/modules-$COMPLETE_KERNEL_NAME-$DATE.tgz
 	local EXE_DIR="$TOPDIR/src/colinux/os/winnt/build"
 	local PREMAID="$TOPDIR/src/colinux/os/winnt/user/install/premaid"
-	
+
 	echo "Create ZIP packages into $COLINUX_INSTALL_DIR"
 	mkdir -p $COLINUX_INSTALL_DIR
 

@@ -15,7 +15,7 @@ def calc_deps(pathname):
     def _recurse(pathname):
         if pathname in cdeps_cache:
             return cdeps_cache[pathname]
-        
+
         if not os.path.exists(pathname):
             return set()
 
@@ -36,7 +36,7 @@ def calc_deps(pathname):
                     included_path = m.groups(0)[0]
                     included_path = normal_path(os.path.join(os.path.dirname(pathname), included_path))
                     result_set = _recurse(included_path)
-                    
+
             if result_set:
                 if old_set:
                     set_union.union_update(result_set)

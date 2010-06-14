@@ -25,7 +25,7 @@ co_rc_t co_console_create(co_console_config_t* config_par,
 	co_console_t*      console;
 
 	/*
-	 * Use only one allocation for the entire console object so it would 
+	 * Use only one allocation for the entire console object so it would
 	 * be more managable (and less code). All limits are checked in 'config.c'
 	 */
 	struct_size  = sizeof(co_console_cell_t) * config_par->x * config_par->max_y;
@@ -82,7 +82,7 @@ void co_console_destroy(co_console_t* console)
  */
 co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 {
-	switch (message->type) 
+	switch (message->type)
 	{
 	case CO_OPERATION_CONSOLE_SCROLL_UP:
 	{
@@ -131,8 +131,8 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 
 		break;
 	}
-	
-	case CO_OPERATION_CONSOLE_SCROLL_DOWN: 
+
+	case CO_OPERATION_CONSOLE_SCROLL_DOWN:
 	{
 		unsigned long lines = message->scroll.lines;
 		unsigned long t     = message->scroll.top;
@@ -204,7 +204,7 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 		if (y >= console->config.y || x >= config_x)
 			return CO_RC(ERROR);
 
-		console->screen[config_x * y + x] = 
+		console->screen[config_x * y + x] =
 			*(co_console_cell_t*)(&message->putc.charattr);
 
 		break;
@@ -294,12 +294,12 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 
 		break;
 	}
-	
+
 	case CO_OPERATION_CONSOLE_SWITCH:
 		// clear scroll buffer
 		if (console == NULL)
 			return CO_RC(OUT_OF_MEMORY);
-		memset(console->buffer, 0, 
+		memset(console->buffer, 0,
 			sizeof(co_console_cell_t) * console->config.x * (console->config.max_y-console->config.y));
 		break;
 

@@ -8,7 +8,7 @@ class NetworkDevicesOptionArray(OptionArrayPanel):
     def get_item_list(self):
         return self.mainframe.network_devices
 
-    class Item(ConfigurationItem):        
+    class Item(ConfigurationItem):
         def title(self, long=False):
             device = self._xml_item
             index = int(device.attr.index)
@@ -24,10 +24,10 @@ class NetworkDevicesOptionArray(OptionArrayPanel):
             'Bridged Ethernet' : 'bridged',
         }
         types_dict_rev = dict([(a, b) for b, a in types_dict.items()])
-        
+
         def populate(self, panel_sizer):
             sizer = wx.BoxSizer(wx.VERTICAL)
-            
+
             sizer2 = wx.BoxSizer(wx.HORIZONTAL)
             text = wx.StaticText(self.panel, -1, 'Adapter Type: ')
             sizer2.Add(text, 0, 0, 3)
@@ -57,8 +57,8 @@ class NetworkDevicesOptionArray(OptionArrayPanel):
             sizer.Add(sizer2, 0, wx.EXPAND | wx.ALL, 3)
             self.name_combo = comboctrl
             self.load_adapter_list(False)
-            comboctrl.SetValue(str(self.item._xml_item.attr.name))            
-            
+            comboctrl.SetValue(str(self.item._xml_item.attr.name))
+
             sizer2 = wx.BoxSizer(wx.HORIZONTAL)
             text = wx.StaticText(self.panel, -1, 'Index: ')
             sizer2.Add(text, 0, 0, 3)
@@ -66,7 +66,7 @@ class NetworkDevicesOptionArray(OptionArrayPanel):
             wx.EVT_TEXT(textctrl, -1, self.changed)
             sizer2.Add(textctrl, 0, 0, 3)
             sizer.Add(sizer2, 0, wx.EXPAND | wx.ALL, 3)
-            
+
             panel_sizer.Add(sizer, 0, wx.EXPAND | wx.ALL)
 
         def load_adapter_list(self, set_name=True):
@@ -77,7 +77,7 @@ class NetworkDevicesOptionArray(OptionArrayPanel):
             [comboctrl.Append(typename) for typename in adapter_list]
             if adapter_list and set_name:
                 comboctrl.SetValue(adapter_list[0])
-        
+
         def apply(self, event=None):
             try:
                 ret_index = self.check_index(self.index_text.GetValue(), self.item._xml_item.attr.index)
@@ -101,7 +101,7 @@ def get_adapter_list(listtype):
 def win32_get_adapter_list():
     """Get the list of network adapters an their corresponding
     network driver identifier."""
-    
+
     from win32api import RegOpenKeyEx, RegEnumKeyEx
     from win32api import RegQueryValueEx
     from win32con import HKEY_LOCAL_MACHINE
@@ -121,7 +121,7 @@ def win32_get_adapter_list():
         drivername = RegQueryValueEx(subkey, "ComponentId")
         instanceid = RegQueryValueEx(subkey, "NetCfgInstanceId")
         adapter_types[instanceid[0]] = drivername[0]
-        
+
     key = RegOpenKeyEx(HKEY_LOCAL_MACHINE, NETWORK_CONNECTIONS_KEY)
     for value in RegEnumKeyEx(key):
         if value[0].startswith('{'):
@@ -130,7 +130,7 @@ def win32_get_adapter_list():
             name = RegQueryValueEx(subkey, "Name")
             if value[0] in adapter_types:
                 adapters.append((name[0], adapter_types[value[0]]))
-                
+
     return adapters
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -103,18 +103,18 @@ static void co_debug_download_to_network(void)
 			fprintf(stderr, "log ended: %x\n", (int)rc);
 			break;
 		}
-			
+
 		co_debug_tlv_t *tlv;
 		unsigned long size = debug_reader.filled;
 		char *block = debug_reader.user_buffer;
-			
+
 		while (size > 0) {
 			tlv = (co_debug_tlv_t *)block;
 			if (size < sizeof(*tlv))
 				goto error_out3;
-				
+
 			co_udp_socket_send(sock, (char *)tlv, tlv->length + sizeof(*tlv));
-					
+
 			block += sizeof(*tlv) + tlv->length;
 			size -= sizeof(*tlv) + tlv->length;
 		}
@@ -143,14 +143,14 @@ static void print_xml_text(const char *str)
 static void parse_tlv(const co_debug_tlv_t *tlv, const char *block)
 {
 	const co_debug_tlv_t *ptlv;
-	
+
 	fprintf(output_file, "  <log ");
 	ptlv = (const co_debug_tlv_t *)block;
 	while ((char *)ptlv < (char *)&block[tlv->length]) {
 		switch (ptlv->type) {
 		case CO_DEBUG_TYPE_TIMESTAMP: {
 			co_timestamp_t *ts = (typeof(ts))(ptlv->value);
-			fprintf(output_file, " timestamp=\"%08u.%-10u\"", 
+			fprintf(output_file, " timestamp=\"%08u.%-10u\"",
 				(unsigned int)ts->high, (unsigned int)ts->low);
 			break;
 		}
@@ -205,7 +205,7 @@ static void parse_tlv(const co_debug_tlv_t *tlv, const char *block)
 	}
 
 	fprintf(output_file, "</log>\n");
-	
+
 }
 
 static void parse_tlv_buffer(const char *block, long size)
@@ -217,7 +217,7 @@ static void parse_tlv_buffer(const char *block, long size)
 		if (size < sizeof(*tlv))
 		    return;
 
-		parse_tlv(tlv, tlv->value); 
+		parse_tlv(tlv, tlv->value);
 
 		block += sizeof(*tlv) + tlv->length;
 		size -= sizeof(*tlv) + tlv->length;
@@ -257,7 +257,7 @@ static int read_helper (int fd, char * bf, int len)
 	    bf += rd;
 	    len -= rd;
 	}
-	
+
 	return (total_rd);
 }
 
@@ -334,7 +334,7 @@ static facility_descriptor_t facility_descriptors[] = {
 		{NULL, 0},
 	};
 
-void co_update_settings(void) 
+void co_update_settings(void)
 {
 	co_manager_handle_t handle;
 	handle = co_os_manager_open();
@@ -346,7 +346,7 @@ void co_update_settings(void)
 
 	co_rc_t rc;
 	rc = co_manager_debug_levels(handle, &levels);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		goto out;
 
 	facility_descriptor_t *desc_ptr = facility_descriptors;
@@ -358,7 +358,7 @@ void co_update_settings(void)
 
 		if (parameters.settings_change_specified) {
 			const char *settings_found = NULL;
-			
+
 			char string_to_search[co_strlen(desc_ptr->facility_name)+2];
 			snprintf(string_to_search, sizeof(string_to_search), "%s=", desc_ptr->facility_name);
 
@@ -373,14 +373,14 @@ void co_update_settings(void)
 				co_memcpy(number_buf, number, number_scan - number);
 				number_buf[number_scan - number] = '\0';
 				int setting = atoi(number);
-				
+
 				*current_setting = setting;
-				
-				fprintf(stderr, "setting facility %s to %d\n", 
+
+				fprintf(stderr, "setting facility %s to %d\n",
 					desc_ptr->facility_name, setting);
 			}
 		}
-		
+
 		desc_ptr++;
 	}
 
@@ -400,31 +400,31 @@ static co_rc_t co_debug_parse_args(co_command_line_params_t cmdline, co_debug_pa
 	co_rc_t rc;
 
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-d", &parameters->download_mode);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-p", &parameters->parse_mode);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-f", &parameters->output_filename_specified,
 						      parameters->output_filename, sizeof(parameters->output_filename));
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-s", &parameters->settings_change_specified,
 						      parameters->settings_change, sizeof(parameters->settings_change));
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-n", &parameters->network_server_specified,
 						      parameters->network_server, sizeof(parameters->network_server));
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-e", &parameters->rc_specified,
 						      parameters->rc_str, sizeof(parameters->rc_str));
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	return CO_RC(OK);
@@ -479,7 +479,7 @@ co_rc_t co_debug_main(int argc, char *argv[])
 
 		printf(" Translate error code %lx\n", exitcode);
 		printf(" %s\n", buf);
-		return CO_RC(OK);	
+		return CO_RC(OK);
 	}
 
 #ifndef COLINUX_DEBUG
@@ -507,8 +507,8 @@ co_rc_t co_debug_main(int argc, char *argv[])
 		syntax();
 	}
 
-	if (output_file != stdout) 
+	if (output_file != stdout)
 		fclose(output_file);
 
-	return CO_RC(OK);	
+	return CO_RC(OK);
 }

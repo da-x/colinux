@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include "linux_inc.h"
 
@@ -27,7 +27,7 @@ co_rc_t co_os_wait_create(co_os_wait_t *wait_out)
 
 	if (wait == NULL)
 		return CO_RC(OUT_OF_MEMORY);
-	
+
 	init_waitqueue_head(&wait->head);
 
 	*wait_out = wait;
@@ -51,6 +51,6 @@ void co_os_wait_wakeup(co_os_wait_t wait)
 
 void co_os_wait_destroy(co_os_wait_t wait)
 {
-	if (wait != NULL) 
+	if (wait != NULL)
 		co_os_free(wait);
 }

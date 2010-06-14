@@ -2,7 +2,7 @@
 
 import sys, os, re
 
-# 
+#
 # GCC wrapper for auto tracing
 #
 # It works using these steps:
@@ -11,7 +11,7 @@ import sys, os, re
 #    it to output a processed C file instead.
 #  * Execute autotrace.py to add traces to the preprocessed output.
 #  * Compile the preprocessed output with the added traces.
-# 
+#
 
 def reexec(params):
     pid = os.fork()
@@ -20,11 +20,11 @@ def reexec(params):
             os.execvp(params[0], params);
         finally:
             os._exit(-1);
-        
+
     (pid, status) = os.waitpid(pid, 0)
     if not os.WIFEXITED(status):
         sys.exit(-1)
-        
+
     return os.WEXITSTATUS(status)
 
 params = sys.argv[1:]
@@ -48,7 +48,7 @@ params.append('-DCOLINUX_TRACE')
 ppc_params = params[:]
 ppc_params.remove('-c')
 ppc_params.append('-E')
-    
+
 oparam = ppc_params.index('-o')
 
 ppc_file = ppc_params[oparam+1] = ppc_params[oparam+1] + '.ppc.c'

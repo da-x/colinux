@@ -40,7 +40,7 @@ typedef struct start_parameters {
 } start_parameters_t;
 
 /*******************************************************************************
- * Globals 
+ * Globals
  */
 co_reactor_t g_reactor = NULL;
 co_user_monitor_t *g_monitor_handle = NULL;
@@ -106,7 +106,7 @@ static co_rc_t conet_init(void)
 			return CO_RC(ERROR);
 		}
 
-		snprintf(connection_string, 
+		snprintf(connection_string,
 			 sizeof(connection_string),
 			 "%s\\%s\\Connection",
 			 NETWORK_CONNECTIONS_KEY, enum_name);
@@ -117,7 +117,7 @@ static co_rc_t conet_init(void)
 			0,
 			KEY_READ,
 			&connection_key);
-		
+
 		if (status == ERROR_SUCCESS) {
 			len = sizeof (name_data);
 			status = RegQueryValueEx(
@@ -159,7 +159,7 @@ static co_rc_t conet_init(void)
 						strcpy(device_guid, enum_name);
 					}
 				} else {
-					/* 
+					/*
 					 If no name specified and network has an address,
 					  autoselect first device.
 					*/
@@ -183,7 +183,7 @@ static co_rc_t conet_init(void)
 	if (daemon_parameters->promisc == 0)	// promiscuous mode?
 		co_terminal_print("conet-ndis-daemon: Promiscuous mode disabled\n");
 
-	return CO_RC(OK); 
+	return CO_RC(OK);
 }
 
 /********************************************************************************
@@ -209,7 +209,7 @@ static void co_net_syntax()
 	co_terminal_print("                            have problems. It's 1 (enabled) by default\n");
 }
 
-static co_rc_t 
+static co_rc_t
 handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 {
 	char **param_scan = argv;
@@ -234,8 +234,8 @@ handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 				return CO_RC(ERROR);
 			}
 
-			co_snprintf(start_parameters->mac_address, 
-				    sizeof(start_parameters->mac_address), 
+			co_snprintf(start_parameters->mac_address,
+				    sizeof(start_parameters->mac_address),
 				    "%s", *param_scan);
 
 			start_parameters->mac_specified = PTRUE;
@@ -277,8 +277,8 @@ handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 				return CO_RC(ERROR);
 			}
 
-			co_snprintf(start_parameters->interface_name, 
-				    sizeof(start_parameters->interface_name), 
+			co_snprintf(start_parameters->interface_name,
+				    sizeof(start_parameters->interface_name),
 				    "%s", *param_scan);
 
 			start_parameters->name_specified = PTRUE;
@@ -313,7 +313,7 @@ handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 	}
 
 	if ((start_parameters->index < 0) ||
-	    (start_parameters->index >= CO_MODULE_MAX_CONET)) 
+	    (start_parameters->index >= CO_MODULE_MAX_CONET))
 	{
 		co_terminal_print("conet-ndis-daemon: invalid index: %d\n", start_parameters->index);
 		return CO_RC(ERROR);
@@ -329,7 +329,7 @@ handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 		return CO_RC(ERROR);
 	}
 
-	return CO_RC(OK);	
+	return CO_RC(OK);
 }
 
 static int
@@ -364,7 +364,7 @@ conet_ndis_main(int argc, char *argv[])
 
 	modules[0] += start_parameters.index;
 	rc = co_user_monitor_open(g_reactor, monitor_receive,
-				  start_parameters.instance, modules, 
+				  start_parameters.instance, modules,
 				  sizeof(modules)/sizeof(co_module_t),
 				  &g_monitor_handle);
 	if (!CO_OK(rc))
@@ -381,7 +381,7 @@ conet_ndis_main(int argc, char *argv[])
 	ioctl.mac_address[2] = a2;
 	ioctl.mac_address[3] = a3;
 	ioctl.mac_address[4] = a4;
-	ioctl.mac_address[5] = a5;	
+	ioctl.mac_address[5] = a5;
 	strcpy(ioctl.netcfg_id, netcfg_id);
 
 	co_user_monitor_conet_bind_adapter(g_monitor_handle, &ioctl);
@@ -408,10 +408,10 @@ main(int argc, char *argv[])
 	int ret;
 
 	co_debug_start();
-        
+
 	ret = conet_ndis_main(argc, argv);
 
 	co_debug_end();
-    
+
 	return ret;
 }

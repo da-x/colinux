@@ -7,7 +7,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -27,7 +27,7 @@ co_rc_t co_canonize_cobd_path(co_pathname_t *pathname)
 	co_remove_quotation_marks(*pathname);
 
 	if (!(co_strncmp(*pathname, "\\Device\\", 8) == 0  ||
-	      co_strncmp(*pathname, "\\DosDevices\\", 12) == 0)) 
+	      co_strncmp(*pathname, "\\DosDevices\\", 12) == 0))
 	{
 		co_pathname_t copied_path;
 		UNICODE_STRING dos_uni;
@@ -42,7 +42,7 @@ co_rc_t co_canonize_cobd_path(co_pathname_t *pathname)
 			co_terminal_print("%s: Error in path, or to long\n", *pathname);
 			return CO_RC(ERROR);
 		}
-		
+
 		len = co_strlen(copied_path);
 
 		/* Only root dir "C:\" should end with backslash */
@@ -50,7 +50,7 @@ co_rc_t co_canonize_cobd_path(co_pathname_t *pathname)
 		    /* Remove tailing backslash */
 		    copied_path[len--] = '\0';
 		}
-		
+
 		dos_ansi.Buffer = copied_path;
 		dos_ansi.Length = len;
 		dos_ansi.MaximumLength = dos_ansi.Length + 1;
@@ -67,9 +67,9 @@ co_rc_t co_canonize_cobd_path(co_pathname_t *pathname)
 			RtlFreeUnicodeString(&nt_uni);
 			return CO_RC(ERROR);
 		}
-		
+
 		co_snprintf(*pathname, sizeof(*pathname), "%s", nt_ansi.Buffer);
-		
+
 		RtlFreeUnicodeString(&nt_uni);
 		RtlFreeAnsiString(&nt_ansi);
 	}

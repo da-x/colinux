@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #ifndef __COLINUX_WINNT_USER_REACTOR_H__
 #define __COLINUX_WINNT_USER_REACTOR_H__

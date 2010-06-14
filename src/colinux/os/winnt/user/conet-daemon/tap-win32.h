@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #ifndef __CO_TAP_WIN32_H__
 #define __CO_TAP_WIN32_H__

@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #ifndef __COLINUX_LINUX_USER_CONET_DAEMON_TAP_H__
 #define __COLINUX_LINUX_USER_CONET_DAEMON_TAP_H__

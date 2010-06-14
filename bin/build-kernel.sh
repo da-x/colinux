@@ -105,7 +105,7 @@ extract_kernel()
 emulate_quilt_push()
 {
 	grep -v '#.*' series |\
-	while read name level 
+	while read name level
 	do
 		if [ -e "patches/$name" ]
 		then

@@ -10,7 +10,7 @@
 
 #include "os_console.h"
 
-/* Set cursor size 
+/* Set cursor size
    Parameters:
      cursor_type - size of cursor in Linux kernel defines
 */
@@ -48,4 +48,4 @@ void co_console_set_cursor_size(void* out_h, const int cursor_type)
 	}
 
 	SetConsoleCursorInfo((HANDLE)out_h, &curs_info);
-} 
+}

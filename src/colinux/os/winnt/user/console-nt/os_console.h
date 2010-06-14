@@ -9,7 +9,7 @@ extern "C" {
 #endif
 
 void co_console_set_cursor_size(void* out_h, const int cursor_type);
-  /* Set cursor size 
+  /* Set cursor size
      Parameters:
        out_h         - console output handle
        cursor_type   - size of cursor in Linux kernel defines

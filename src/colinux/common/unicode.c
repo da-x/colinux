@@ -4,12 +4,12 @@
  * Dan Aloni <da-x@colinux.org>, 2005 (c)
  *
  * The code in this module was embraced from Linux 2.6.10 (fs/nls):
- * 
+ *
  *    Native language support--charsets and unicode translations.
  *    By Gordon Chaffee 1996, 1997
  *
  *    Unicode based case conversion 1999 by Wolfram Pienkoss
- * 
+ *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  */
@@ -49,7 +49,7 @@ static int utf8_mbtowc(co_wchar_t *p, const unsigned char *s, int n)
 	long l;
 	int c0, c, nc;
 	struct utf8_table *t;
-  
+
 	nc = 0;
 	c0 = *s;
 	l = c0;
@@ -78,10 +78,10 @@ static int utf8_wctomb(unsigned char *s, co_wchar_t wc, int maxlen)
 	long l;
 	int c, nc;
 	struct utf8_table *t;
-	
+
 	if (s == 0)
 		return 0;
-	
+
 	l = wc;
 	nc = 0;
 	for (t = utf8_table; t->cmask && maxlen; t++, maxlen--) {
@@ -111,7 +111,7 @@ int co_utf8_mbstrlen(const char *src)
 
 	while (maxlen > 0  &&  *ip) {
 		length++;
-		
+
 		if (*ip & 0x80) {
 			size = utf8_mbtowc(&op, ip, maxlen);
 			if (size == -1) {
@@ -172,7 +172,7 @@ co_rc_t co_utf8_mbstowcs(co_wchar_t *dest, const char *src, int maxlen)
 	if (maxlen < 0) {
 		return CO_RC(ERROR);
 	}
-		
+
 	/* (op - pwcs) */
 	return CO_RC(OK);
 }
@@ -253,13 +253,13 @@ co_rc_t co_utf8_dup_to_wc(const char *src, co_wchar_t **wstring, unsigned long *
 	buffer = co_os_malloc((size+1)*sizeof(co_wchar_t));
 	if (!buffer)
 		return CO_RC(OUT_OF_MEMORY);
-	
+
 	rc = co_utf8_mbstowcs(buffer, src, size);
 	if (!CO_OK(rc)) {
 		co_os_free(buffer);
 		return rc;
 	}
-	
+
 	if (size_out)
 		*size_out = size - 1;
 

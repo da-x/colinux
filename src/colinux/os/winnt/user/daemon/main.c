@@ -5,14 +5,14 @@
  *
  * Service support by Jaroslaw Kowalski <jaak@zd.com.pl>, 2004 (c)
  * Driver service separation by Daniel R. Slater <dan_slater@yahoo.com>, 2004 (c)
- * 
+ *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
- 
+ */
+
 /* Main program of the "colinux-daemon.exe" */
- 
+
 #include <stdio.h>
 #include <windows.h>
 #include <stdarg.h>
@@ -42,7 +42,7 @@ static bool_t	    stoped   = PFALSE;
 
 /*
  * co_winnt_daemon_stop:
- * 
+ *
  * This callback function is called when Windows sends a Stop request to the
  * coLinux service.
  * Or the user closed the command prompt of colinux-daemon.
@@ -74,7 +74,7 @@ static BOOL WINAPI co_winnt_daemon_ctrl_handler(DWORD dwCtrlType)
 	case CTRL_C_EVENT:
 	case CTRL_BREAK_EVENT:
 		return TRUE;	// Don't let the user kill us that easily ;)
-	case CTRL_LOGOFF_EVENT:	
+	case CTRL_LOGOFF_EVENT:
 		// Only shutdown if we are not a service
 		if (co_running_as_service)
 		    return FALSE;
@@ -91,7 +91,7 @@ static BOOL WINAPI co_winnt_daemon_ctrl_handler(DWORD dwCtrlType)
 	return FALSE;
 }
 
-co_rc_t co_winnt_daemon_main(co_start_parameters_t* start_parameters) 
+co_rc_t co_winnt_daemon_main(co_start_parameters_t* start_parameters)
 {
 	co_rc_t rc;
 
@@ -100,7 +100,7 @@ co_rc_t co_winnt_daemon_main(co_start_parameters_t* start_parameters)
 		co_winnt_daemon_syntax();
 		return CO_RC(OK);
 	}
-	
+
 	/* Workaround multiprocessor bug */
 	co_winnt_affinity_workaround();
 
@@ -266,10 +266,10 @@ static co_rc_t co_winnt_main(LPSTR szCmdLine)
 
 HINSTANCE co_current_win32_instance;
 
-int WINAPI WinMain(HINSTANCE	hInstance, 
+int WINAPI WinMain(HINSTANCE	hInstance,
 		   HINSTANCE	hPrevInstance,
 		   LPSTR	szCmdLine,
-		   int		iCmdShow) 
+		   int		iCmdShow)
 {
 	co_rc_t rc;
 	int ret;

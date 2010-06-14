@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <memory.h>
 
@@ -24,8 +24,8 @@ co_rc_t co_manager_io_monitor_simple(co_manager_handle_t handle, co_monitor_ioct
 	return co_manager_io_monitor_unisize(handle, op, &ioctl, sizeof(ioctl));
 }
 
-co_rc_t co_user_monitor_create(co_user_monitor_t**        out_mon, 
-			       co_manager_ioctl_create_t* params, 
+co_rc_t co_user_monitor_create(co_user_monitor_t**        out_mon,
+			       co_manager_ioctl_create_t* params,
 			       co_manager_handle_t 	  handle)
 {
 	co_user_monitor_t *mon;
@@ -54,7 +54,7 @@ co_rc_t co_user_monitor_create(co_user_monitor_t**        out_mon,
 		co_os_free(mon);
 		return params->rc;
 	}
-	
+
 	mon->handle = handle;
 	*out_mon = mon;
 
@@ -65,7 +65,7 @@ co_rc_t co_user_monitor_open(co_reactor_t 		    reactor,
 			     co_reactor_user_receive_func_t receive,
 			     co_id_t			    id,
 			     co_module_t*		    modules,
-			     int			    num_modules, 
+			     int			    num_modules,
 			     co_user_monitor_t**	    out_mon)
 {
 	co_user_monitor_t*	  mon;
@@ -87,9 +87,9 @@ co_rc_t co_user_monitor_open(co_reactor_t 		    reactor,
 	}
 
 	params.id = id;
-	for (modules_copied = 0; 
-	     modules_copied < num_modules && modules_copied < CO_MANAGER_ATTACH_MAX_MODULES; 
-	     modules_copied++) 
+	for (modules_copied = 0;
+	     modules_copied < num_modules && modules_copied < CO_MANAGER_ATTACH_MAX_MODULES;
+	     modules_copied++)
 	{
 		params.modules[modules_copied] = modules[modules_copied];
 	}
@@ -126,13 +126,13 @@ void co_user_monitor_close(co_user_monitor_t *monitor)
 	if (monitor->reactor_user) {
 		co_os_reactor_monitor_destroy(monitor->reactor_user);
 	}
-		
+
 	co_manager_io_monitor_simple(monitor->handle, CO_MONITOR_IOCTL_CLOSE);
 	co_os_manager_close(monitor->handle);
 	co_os_free(monitor);
 }
 
-co_rc_t co_user_monitor_load_section(co_user_monitor_t*		      umon, 
+co_rc_t co_user_monitor_load_section(co_user_monitor_t*		      umon,
 				     co_monitor_ioctl_load_section_t* params)
 {
 	co_monitor_ioctl_load_section_t *params_copy = NULL;
@@ -140,29 +140,29 @@ co_rc_t co_user_monitor_load_section(co_user_monitor_t*		      umon,
 	co_rc_t rc;
 
 	alloc_size = sizeof(*params);
-	if (params->user_ptr) 
+	if (params->user_ptr)
 		alloc_size += params->size;
-    
+
 	params_copy = co_os_malloc(alloc_size);
 	if (!params_copy)
 		return CO_RC(OUT_OF_MEMORY);
 
 	*params_copy = *params;
 
-	if (params->user_ptr) 
+	if (params->user_ptr)
 		memcpy((unsigned char *)params_copy + sizeof(*params),
 		       params->user_ptr, params->size);
 
-	rc = co_manager_io_monitor_unisize(umon->handle, 
-					   CO_MONITOR_IOCTL_LOAD_SECTION, 
+	rc = co_manager_io_monitor_unisize(umon->handle,
+					   CO_MONITOR_IOCTL_LOAD_SECTION,
 					   &params_copy->pc, alloc_size);
-	
+
 	co_os_free(params_copy);
 
 	return rc;
 }
 
-co_rc_t co_user_monitor_load_initrd(co_user_monitor_t *umon, 
+co_rc_t co_user_monitor_load_initrd(co_user_monitor_t *umon,
 				    void *initrd, unsigned long initrd_size)
 {
 	co_monitor_ioctl_load_initrd_t *params_copy = NULL;
@@ -170,7 +170,7 @@ co_rc_t co_user_monitor_load_initrd(co_user_monitor_t *umon,
 	co_rc_t rc;
 
 	alloc_size = sizeof(*params_copy) + initrd_size;
-    
+
 	params_copy = co_os_malloc(alloc_size);
 	if (!params_copy)
 		return CO_RC(OUT_OF_MEMORY);
@@ -178,10 +178,10 @@ co_rc_t co_user_monitor_load_initrd(co_user_monitor_t *umon,
 	params_copy->size = initrd_size;
 	memcpy(params_copy->buf, initrd, initrd_size);
 
-	rc = co_manager_io_monitor_unisize(umon->handle, 
-					   CO_MONITOR_IOCTL_LOAD_INITRD, 
+	rc = co_manager_io_monitor_unisize(umon->handle,
+					   CO_MONITOR_IOCTL_LOAD_INITRD,
 					   &params_copy->pc, alloc_size);
-	
+
 	co_os_free(params_copy);
 
 	return rc;
@@ -201,25 +201,25 @@ co_rc_t co_user_monitor_start(co_user_monitor_t *umon)
 
 co_rc_t co_user_monitor_any(co_user_monitor_t *umon, co_monitor_ioctl_op_t op)
 {
-	return co_manager_io_monitor_simple(umon->handle, op); 
+	return co_manager_io_monitor_simple(umon->handle, op);
 }
 
 /* Get console dimensions and max buffer size */
-co_rc_t co_user_monitor_get_console(co_user_monitor_t*              umon, 
+co_rc_t co_user_monitor_get_console(co_user_monitor_t*              umon,
 				    co_monitor_ioctl_get_console_t* params)
 {
-	return co_manager_io_monitor_unisize(umon->handle, 
-					     CO_MONITOR_IOCTL_GET_CONSOLE, 
-					     &params->pc, 
+	return co_manager_io_monitor_unisize(umon->handle,
+					     CO_MONITOR_IOCTL_GET_CONSOLE,
+					     &params->pc,
 					     sizeof(*params));
 }
 
-co_rc_t co_user_monitor_get_state(co_user_monitor_t*            umon, 
+co_rc_t co_user_monitor_get_state(co_user_monitor_t*            umon,
 				  co_monitor_ioctl_get_state_t* params)
 {
-	return co_manager_io_monitor_unisize(umon->handle, 
-					     CO_MONITOR_IOCTL_GET_STATE, 
-					     &params->pc, 
+	return co_manager_io_monitor_unisize(umon->handle,
+					     CO_MONITOR_IOCTL_GET_STATE,
+					     &params->pc,
 					     sizeof(*params));
 }
 
@@ -231,32 +231,32 @@ co_rc_t co_user_monitor_reset(co_user_monitor_t* umon)
 
 co_rc_t co_user_monitor_message_send(co_user_monitor_t* umon,  co_message_t* message)
 {
-	return umon->reactor_user->send(umon->reactor_user, 
-					(unsigned char*)message, 
+	return umon->reactor_user->send(umon->reactor_user,
+					(unsigned char*)message,
 					message->size  + sizeof(*message));
 }
 
-co_rc_t co_user_monitor_status(co_user_monitor_t *umon, 
+co_rc_t co_user_monitor_status(co_user_monitor_t *umon,
 			       co_monitor_ioctl_status_t *params)
 {
-	return co_manager_io_monitor_unisize(umon->handle, 
-					     CO_MONITOR_IOCTL_STATUS, 
+	return co_manager_io_monitor_unisize(umon->handle,
+					     CO_MONITOR_IOCTL_STATUS,
 					     &params->pc, sizeof(*params));
 }
 
 co_rc_t co_user_monitor_conet_bind_adapter(co_user_monitor_t *umon,
 				co_monitor_ioctl_conet_bind_adapter_t *params)
 {
-	return co_manager_io_monitor_unisize(umon->handle, 
-					     CO_MONITOR_IOCTL_CONET_BIND_ADAPTER, 
+	return co_manager_io_monitor_unisize(umon->handle,
+					     CO_MONITOR_IOCTL_CONET_BIND_ADAPTER,
 					     &params->pc, sizeof(*params));
 }
 
 co_rc_t co_user_monitor_conet_unbind_adapter(co_user_monitor_t *umon,
 				co_monitor_ioctl_conet_unbind_adapter_t *params)
 {
-	return co_manager_io_monitor_unisize(umon->handle, 
-					     CO_MONITOR_IOCTL_CONET_UNBIND_ADAPTER, 
+	return co_manager_io_monitor_unisize(umon->handle,
+					     CO_MONITOR_IOCTL_CONET_UNBIND_ADAPTER,
 					     &params->pc, sizeof(*params));
 }
 

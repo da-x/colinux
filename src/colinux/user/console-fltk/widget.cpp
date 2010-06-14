@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include "widget.h"
 #include <colinux/user/console-fltk/main.h>
@@ -46,7 +46,7 @@ console_widget_t::console_widget_t(int		x,
 	mouse_start_y		= 0;
 	mouse_sx			= 0;
 	mouse_wx			= 0;
-	mouse_sy			= 0; 
+	mouse_sy			= 0;
 	mouse_wy			= 0;
 	loc_start			= 0;
 	loc_end 			= 0;
@@ -67,14 +67,14 @@ void console_widget_t::static_blink_handler(console_widget_t* widget)
 
 void console_widget_t::blink_handler()
 {
-	if (console && !scroll_lines) 
+	if (console && !scroll_lines)
 	{
 		cursor_blink_state = !cursor_blink_state;
 		damage_console(console->cursor.x, console->cursor.y, 1, 1);
 	}
 
 	Fl::add_timeout(cursor_blink_interval,
-		        (Fl_Timeout_Handler)(console_widget_t::static_blink_handler), 
+		        (Fl_Timeout_Handler)(console_widget_t::static_blink_handler),
 		        this);
 }
 
@@ -93,7 +93,7 @@ void console_widget_t::set_font_name(int new_name)
 void console_widget_t::update_font(void)
 {
 	Fl::set_fonts(NULL);
-	
+
 	fl_font(font_name, font_size);
 
 	// Calculate constats for this font
@@ -119,10 +119,10 @@ void console_widget_t::damage_console(int x_, int y_, int w_, int h_)
 	cx -= (fit_x - w()) / 2;
 	cy -= (fit_y - h()) / 2;
 
-	damage(1, 
-	       cx + x_ * letter_x, 
-	       cy + y_ * letter_y, 
-	       w_ * letter_x, 
+	damage(1,
+	       cx + x_ * letter_x,
+	       cy + y_ * letter_y,
+	       w_ * letter_x,
 	       h_ * letter_y);
 }
 
@@ -138,7 +138,7 @@ void console_widget_t::draw()
 
 	fl_font(font_name, font_size);
 
-	int x_, y_, w_, h_, cx, cy;	
+	int x_, y_, w_, h_, cx, cy;
 	fl_clip_box(x(), y(), w(), h(), x_, y_, w_, h_);
 
 	cx = x();
@@ -146,7 +146,7 @@ void console_widget_t::draw()
 
 	cx -= (fit_x - w()) / 2;
 	cy -= (fit_y - h()) / 2;
-	
+
 	x_ -= cx;
 	y_ -= cy;
 
@@ -207,7 +207,7 @@ void console_widget_t::draw()
 			//     end, limit, row_start, start, x1, x2, y1, y2);
 			end = cell_limit; // Hack: Fix the overrun!
 		}
-		
+
 		while (cell < end) {
 			while (cell < end  &&  start->attr == cell->attr  &&
 			       cell - start < (int)sizeof(text_buff)) {
@@ -216,14 +216,14 @@ void console_widget_t::draw()
 			}
 
 			FL_RGB_COLOR((start->attr >> 4) & 0xf);
-			fl_rectf(cx + letter_x * (start - row_start), 
+			fl_rectf(cx + letter_x * (start - row_start),
 				 cy + letter_y * (yi),
 				 (cell - start) * letter_x,
 				 letter_y);
-			
+
 			FL_RGB_COLOR((start->attr) & 0xf);
-			fl_draw(text_buff, cell - start, 
-				cx + letter_x * (start - row_start), 
+			fl_draw(text_buff, cell - start,
+				cx + letter_x * (start - row_start),
 				cy + letter_y * (yi + 1) - fl_descent());
 
 			start = cell;
@@ -244,14 +244,14 @@ void console_widget_t::draw()
 					cursize = cursize_tab[CO_CUR_DEF];
 
 				fl_color(0xff, 0xff, 0xff);
-				fl_rectf(cx + letter_x * console->cursor.x, 
+				fl_rectf(cx + letter_x * console->cursor.x,
 					 cy + letter_y * console->cursor.y + letter_y - cursize,
 					 letter_x,
 					 cursize);
 			}
 		}
 	}
-	
+
 	fl_pop_clip();
 }
 
@@ -289,17 +289,17 @@ co_console_t* console_widget_t::get_console()
 /* Process console messages:
 	CO_OPERATION_CONSOLE_PUTC		- Put single char
 	CO_OPERATION_CONSOLE_PUTCS		- Put char array
-	
+
 	CO_OPERATION_CONSOLE_CURSOR_MOVE	- Move cursor
 	CO_OPERATION_CONSOLE_CURSOR_DRAW	- Move cursor
 	CO_OPERATION_CONSOLE_CURSOR_ERASE	- Move cursor
-	
+
 	CO_OPERATION_CONSOLE_SCROLL_UP		- Scroll lines up
 	CO_OPERATION_CONSOLE_SCROLL_DOWN	- Scroll lines down
 	CO_OPERATION_CONSOLE_BMOVE		- Move region up/down
-	
+
 	CO_OPERATION_CONSOLE_CLEAR		- Clear region
-	
+
 	CO_OPERATION_CONSOLE_STARTUP		- Ignored
 	CO_OPERATION_CONSOLE_INIT		- Ignored
 	CO_OPERATION_CONSOLE_DEINIT		- Ignored
@@ -317,7 +317,7 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 {
 	co_rc_t		rc;
 	co_cursor_pos_t saved_cursor = {0, };
-	
+
 	if (!console)
 		return CO_RC(ERROR);
 
@@ -353,7 +353,7 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 		damage_console(0, 0, console->config.x, console->config.y);
 	}
 
-	switch (message->type) 
+	switch (message->type)
 	{
 	case CO_OPERATION_CONSOLE_SCROLL_UP:
 	case CO_OPERATION_CONSOLE_SCROLL_DOWN: {
@@ -382,7 +382,7 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 	case CO_OPERATION_CONSOLE_PUTC: {
 		int x = message->putc.x;
 		int y = message->putc.y;
-		
+
 		damage_console(x, y, 1, 1);
 		break;
 	}
@@ -442,15 +442,15 @@ void console_widget_t::mouse_push(int x, int y, bool drag_type)
 	mouse_start_y = y;
 	mouse_sx = 0;
 	mouse_wx = 0;
-	mouse_sy = 0; 
+	mouse_sy = 0;
 	mouse_wy = 0;
 	loc_start = 0;
 	loc_end = 0;
 	mouse_copy = true;
-	
+
 	/* mouse_drag_type indicates whether rectangle select or line select mode */
 	mouse_drag_type = drag_type;
-	
+
 	return;
 }
 
@@ -463,7 +463,7 @@ void console_widget_t::mouse_drag(int x, int y)
 	/* clear old selection */
 	invert_area(mouse_sx, mouse_sy, mouse_wx, mouse_wy);
 	damage_console(0, 0, console->config.x, console->config.y);
-	
+
 	/* calculate selection area */
 	calc_area(x, y);
 
@@ -484,12 +484,12 @@ void console_widget_t::mouse_clear(void)
 	mouse_start_y = 0;
 	mouse_sx = 0;
 	mouse_wx = 0;
-	mouse_sy = 0; 
+	mouse_sy = 0;
 	mouse_wy = 0;
 	loc_start = 0;
 	loc_end = 0;
 	mouse_copy = false;
-	
+
 	return;
 }
 
@@ -556,7 +556,7 @@ void console_widget_t::copy_mouse_selection(char*str)
 			*str++ = cellp->ch;
 		}
 	}
-	
+
 	/* null-terminate the string */
 	*str = 0;
 }
@@ -572,13 +572,13 @@ void console_widget_t::invert_area(int sx, int sy, int wx, int wy)
 	/* inverse selection area attribute */
 
 	// we mark the buffer, not the screen
-	if(mouse_drag_type) 
+	if(mouse_drag_type)
 	{
 		/* rect select */
 		int dy = console->config.max_y-console->config.y+scroll_lines;
 		for(int i_y=sy+dy; i_y<sy+wy+dy; i_y++)
 			for(int i_x=sx; i_x<sx+wx; i_x++)
-				(console->buffer+i_x+i_y*console->config.x)->attr = 
+				(console->buffer+i_x+i_y*console->config.x)->attr =
 					~((console->buffer+i_x+i_y*console->config.x)->attr);
 	}
 	else
@@ -596,10 +596,10 @@ void console_widget_t::calc_area(int x, int y)
 	/* calculate selection area */
 
 	if(mouse_drag_type)
-	{ 
+	{
 		/* copy rect */
 		/* calculate selection start location and selection width and height */
-		
+
 		mouse_sx = i_min(loc_x(mouse_start_x), loc_x(x));
 		mouse_wx = i_abs(loc_x(x)-loc_x(mouse_start_x));
 		mouse_sy = i_min(loc_y(mouse_start_y), loc_y(y));
@@ -613,7 +613,7 @@ void console_widget_t::calc_area(int x, int y)
 		mouse_wx = (mouse_sx+mouse_wx > console->config.x) ?
 			console->config.x - mouse_sx : mouse_wx;
 
-		mouse_wy = (mouse_sy+mouse_wy > console->config.y) ? 
+		mouse_wy = (mouse_sy+mouse_wy > console->config.y) ?
 			console->config.y : mouse_wy;
 	}
 	else
@@ -623,7 +623,7 @@ void console_widget_t::calc_area(int x, int y)
 		/* calculate start and end of selection */
 		loc_start = loc_x(mouse_start_x) + loc_y(mouse_start_y) * console->config.x;
 		loc_end = loc_x(x) + loc_y(y) * console->config.x;
-		
+
 		/* swap start and end as needed */
 		if(loc_start>loc_end)
 		{
@@ -653,7 +653,7 @@ int console_widget_t::loc_y(int mouse_y)
 	/* calculate location of the mouse in screen text coordinates */
 	int border_y = (fit_y - h()) / 2;
 	int loc_y = (mouse_y-MENU_SIZE_PIXELS+border_y)/letter_y;
-	
+
 	/* clip mouse location to screen only */
 	loc_y = i_min(console->config.y, loc_y);
 	loc_y = i_max(0, loc_y);
@@ -661,7 +661,7 @@ int console_widget_t::loc_y(int mouse_y)
 }
 
 void console_widget_t::scroll_back_buffer(int delta)
-{ 
+{
 	if(!console)
 		return;
 
@@ -672,18 +672,18 @@ void console_widget_t::scroll_back_buffer(int delta)
 	scroll_lines += delta;
 	scroll_lines = i_max(scroll_lines, console->config.y-console->config.max_y);
 	scroll_lines = i_min(scroll_lines, 0);
-	
+
 	damage_console(0, 0, console->config.x, console->config.y);
 }
 
 void console_widget_t::scroll_page_up(void)
-{ 
+{
 	if(console)
 		scroll_back_buffer(-console->config.y);
 }
 
 void console_widget_t::scroll_page_down(void)
-{ 
+{
 	if(console)
 		scroll_back_buffer(console->config.y);
 }

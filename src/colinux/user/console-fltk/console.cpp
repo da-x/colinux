@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <stdlib.h>
 #include <string.h>
@@ -31,32 +31,32 @@ extern "C" {
 
 #include "main.h"
 
-static void console_window_cb(Fl_Widget* widget, void* v) 
+static void console_window_cb(Fl_Widget* widget, void* v)
 {
 	((console_window_t*)v)->finish();
 }
 
-static void console_quit_cb(Fl_Widget* widget, void* v) 
+static void console_quit_cb(Fl_Widget* widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->finish();
 }
 
-static void console_select_cb(Fl_Widget* widget, void* v) 
+static void console_select_cb(Fl_Widget* widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->select_monitor();
 }
 
-static void console_attach_cb(Fl_Widget* widget, void* v) 
+static void console_attach_cb(Fl_Widget* widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->attach();
 }
 
-static void console_detach_cb(Fl_Widget *widget, void* v) 
+static void console_detach_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->detach();
 }
 
-static void console_send_ctrl_alt_del_cb(Fl_Widget* widget, void* v) 
+static void console_send_ctrl_alt_del_cb(Fl_Widget* widget, void* v)
 {
 	((console_window_t *)(((Fl_Menu_Item*)v)->user_data_))->send_ctrl_alt_del(
 					CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL);
@@ -74,7 +74,7 @@ static void console_send_poweroff_cb(Fl_Widget* widget, void* v)
 					CO_LINUX_MESSAGE_POWER_OFF);
 }
 
-static void console_about_cb(Fl_Widget* widget, void* v) 
+static void console_about_cb(Fl_Widget* widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->about();
 }
@@ -84,36 +84,36 @@ void console_idle(void* data)
 	((console_window_t*)data)->idle();
 }
 
-static void console_copy_cb(Fl_Widget *widget, void* v) 
+static void console_copy_cb(Fl_Widget *widget, void* v)
 {
 	CopyLinuxIntoClipboard();
 }
 
-static void console_paste_cb(Fl_Widget *widget, void* v) 
+static void console_paste_cb(Fl_Widget *widget, void* v)
 {
 	PasteClipboardIntoColinux();
 }
 
-static void console_copyspaces_cb(Fl_Widget *widget, void* v) 
+static void console_copyspaces_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->toggle_copy_spaces();
-	WriteRegistry(REGISTRY_COPYSPACES, 
+	WriteRegistry(REGISTRY_COPYSPACES,
 		((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->get_copy_spaces());
 }
 
-static void console_exitdetach_cb(Fl_Widget *widget, void* v) 
+static void console_exitdetach_cb(Fl_Widget *widget, void* v)
 {
 	console_window_t* cw_inst = (console_window_t*)(((Fl_Menu_Item*)v)->user_data_);
 	cw_inst->toggle_exitdetach();
 	WriteRegistry(REGISTRY_EXITDETACH, cw_inst->get_exitdetach());
 }
 
-static void console_scrollpageup_cb(Fl_Widget *widget, void* v) 
+static void console_scrollpageup_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->scroll_page_up();
 }
 
-static void console_scrollpagedown_cb(Fl_Widget *widget, void* v) 
+static void console_scrollpagedown_cb(Fl_Widget *widget, void* v)
 {
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->get_widget()->scroll_page_down();
 }
@@ -121,7 +121,7 @@ static void console_scrollpagedown_cb(Fl_Widget *widget, void* v)
 static void console_font_cb(Fl_Widget *widget, void* v)
 {
 	console_window_t* cw_inst = ((console_window_t*)(((Fl_Menu_Item*)v)->user_data_));
-	cw_inst->fsd = new FontSelectDialog(v, 
+	cw_inst->fsd = new FontSelectDialog(v,
 		cw_inst->get_widget()->get_font_name(),
 		cw_inst->get_widget()->get_font_size());
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->fsd->show();
@@ -140,7 +140,7 @@ int console_main_window_t::handle(int event)
 
 	x = Fl::event_x();
 	y = Fl::event_y();
-	
+
 	switch (event) {
 	case FL_FOCUS:
 		keyboard_focus = 1;
@@ -149,7 +149,7 @@ int console_main_window_t::handle(int event)
 	case FL_UNFOCUS:
 		keyboard_focus = 0;
 		break;
-        
+
 	case FL_PUSH:
 		if(y<MENU_SIZE_PIXELS)
 			break;
@@ -158,7 +158,7 @@ int console_main_window_t::handle(int event)
 		else if(Fl::event_button() == FL_LEFT_MOUSE)
 			console->get_widget()->mouse_push(x, y, false);
 		break;
-		
+
 	case FL_DRAG:
 		console->get_widget()->mouse_drag(x, y);
 		break;
@@ -175,7 +175,7 @@ int console_main_window_t::handle(int event)
 
 	if (last_focus != keyboard_focus)
 		co_user_console_keyboard_focus_change(keyboard_focus);
-		
+
 	return Fl_Double_Window::handle(event);
 }
 
@@ -249,7 +249,7 @@ co_rc_t console_window_t::start()
 {
 	window = new console_main_window_t(this);
 	window->callback(console_window_cb, this);
-	
+
 	// read font and font size from registry
 	reg_font = ReadRegistry(REGISTRY_FONT);
 	reg_font_size = ReadRegistry(REGISTRY_FONT_SIZE);
@@ -265,7 +265,7 @@ co_rc_t console_window_t::start()
 	if(reg_exitdetach==-1)
 		reg_exitdetach = 0;
 
-		
+
 	Fl_Menu_Item console_menuitems[] = {
 		{ "File", 0, NULL, NULL, FL_SUBMENU },
 		{ "Select"   , 0, (Fl_Callback*)console_select_cb, this, FL_MENU_DIVIDER },
@@ -286,23 +286,23 @@ co_rc_t console_window_t::start()
 		{ "Page up (WinKey+PgUp, mouse wheel)", 0, (Fl_Callback*)console_scrollpageup_cb, this, },
 		{ "Page down (WinKey+PgDn, mouse wheel)", 0, (Fl_Callback*)console_scrollpagedown_cb, this, },
 		{ 0 },
-		
+
 		{ "Config" , 0, NULL, NULL, FL_SUBMENU },
 		{ "Font..." , 0, (Fl_Callback*)console_font_cb, this,  FL_MENU_DIVIDER },
-		{ "Copy trailing spaces", 0, (Fl_Callback*)console_copyspaces_cb, this, 
+		{ "Copy trailing spaces", 0, (Fl_Callback*)console_copyspaces_cb, this,
 			FL_MENU_TOGGLE | ((reg_copyspaces) ? FL_MENU_VALUE : 0)},
-		{ "Exit on Detach", 0, (Fl_Callback*)console_exitdetach_cb, this, 
+		{ "Exit on Detach", 0, (Fl_Callback*)console_exitdetach_cb, this,
 			FL_MENU_TOGGLE |  ((reg_exitdetach) ? FL_MENU_VALUE : 0)},
 		{ 0 },
-		
+
 		{ "Help" , 0, NULL, NULL, FL_SUBMENU },
 		{ "About", 0, (Fl_Callback*)console_about_cb, this, },
 		{ 0 },
-		{ 0 }		
+		{ 0 }
 	};
 
 	unsigned int i;
-	
+
 	for (i = 0; i < sizeof(console_menuitems) / sizeof(console_menuitems[0]); i++)
 		console_menuitems[i].user_data((void*)this);
 
@@ -316,21 +316,21 @@ co_rc_t console_window_t::start()
 	menu->copy(console_menuitems, window);
 
 	Fl_Group* tile = new Fl_Group(0, MENU_SIZE_PIXELS, swidth, sheight-MENU_SIZE_PIXELS);
-	
+
 	widget	    = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, sheight - 120);
 	if(widget->get_copy_spaces()!=reg_copyspaces)
 		widget->toggle_copy_spaces();
 	text_widget = new Fl_Text_Display(0, sheight - 120 + MENU_SIZE_PIXELS, swidth, 70);
 
 	Fl_Group* tile2 = new Fl_Group(0, sheight - 120 + MENU_SIZE_PIXELS, swidth, 90);
-	
+
 	text_widget->buffer(new Fl_Text_Buffer());
 	text_widget->insert_position(0);
 
 	Fl_Box* box = new Fl_Box(0, sheight - 20, swidth, 20);
-	
+
 	box->label("");
-	box->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE); 
+	box->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
 	tile2->end();
 
 	tile->resizable(widget);
@@ -351,24 +351,24 @@ co_rc_t console_window_t::start()
 	// Sample WinNT environment: set COLINUX_CONSOLE_FONT=Lucida Console:12
 	// Change only font size:    set COLINUX_CONSOLE_FONT=:12
 	char* env_font = getenv("COLINUX_CONSOLE_FONT");
-	
-	if (env_font) 
+
+	if (env_font)
 	{
 		char* p = strchr (env_font, ':');
 
-		if (p) 
+		if (p)
 		{
 			int size = atoi (p+1);
-			if (size >= 4 && size <= 24) 
+			if (size >= 4 && size <= 24)
 			{
 				// Set size
 				widget->set_font_size(size);
 			}
 			*p = 0; // End for Fontname
 		}
-		
+
 		// Set new font style
-		if(strlen(env_font)) 
+		if(strlen(env_font))
 		{
 			// Remember: set_font need a non stack buffer!
 			// Environment is global static.
@@ -376,7 +376,7 @@ co_rc_t console_window_t::start()
 
 			// Now check font width
 			fl_font(FL_SCREEN, 18); // Use default High for test here
-			if ((int)fl_width('i') != (int)fl_width('W')) 
+			if ((int)fl_width('i') != (int)fl_width('W'))
 			{
 				Fl::set_font(FL_SCREEN, "Terminal"); // Restore standard font
 				log("%s: is not fixed font. Using 'Terminal'\n", env_font);
@@ -391,7 +391,7 @@ co_rc_t console_window_t::start()
 	}
 
 	log("Cooperative Linux console started\n");
-	
+
 	if (start_parameters.attach_id != CO_INVALID_ID)
 		attached_id = start_parameters.attach_id;
 	else
@@ -406,7 +406,7 @@ co_rc_t console_window_t::start()
 console_window_t* g_console;
 
 co_rc_t console_window_t::message_receive(co_reactor_user_t user,
-		                          unsigned char*    buffer, 
+		                          unsigned char*    buffer,
 		                          unsigned long     size)
 {
 	co_message_t* message;
@@ -429,7 +429,7 @@ co_rc_t console_window_t::message_receive(co_reactor_user_t user,
 
 co_rc_t console_window_t::attach()
 {
-	co_rc_t				rc        = CO_RC(OK);  
+	co_rc_t				rc        = CO_RC(OK);
 	co_module_t			modules[] = {CO_MODULE_CONSOLE, };
 	co_monitor_ioctl_get_console_t 	get_console;
 	co_console_t*			console;
@@ -441,10 +441,10 @@ co_rc_t console_window_t::attach()
 
 	g_console = this;
 
-	rc = co_user_monitor_open(reactor, 
+	rc = co_user_monitor_open(reactor,
 				  message_receive,
-				  attached_id, 
-				  modules, 
+				  attached_id,
+				  modules,
 				  sizeof(modules) / sizeof(co_module_t),
 				  &message_monitor);
 	if (!CO_OK(rc)) {
@@ -480,7 +480,7 @@ co_rc_t console_window_t::attach()
 
 	log("Monitor%d: Attached\n", attached_id);
 
-out:	
+out:
 	return rc;
 }
 
@@ -508,9 +508,9 @@ co_rc_t console_window_t::detach()
 	menu_item_deactivate(console_send_ctrl_alt_del_cb);
 	menu_item_deactivate(console_send_shutdown_cb);
 	menu_item_deactivate(console_detach_cb);
-	menu_item_activate(console_attach_cb);	
+	menu_item_activate(console_attach_cb);
 
-	co_user_monitor_close(message_monitor);	
+	co_user_monitor_close(message_monitor);
 
 	Fl::remove_idle(console_idle, this);
 
@@ -533,17 +533,17 @@ co_rc_t console_window_t::send_ctrl_alt_del(co_linux_message_power_type_t powero
 		co_linux_message_t	 linux_msg;
 		co_linux_message_power_t data;
 	} message;
-	
+
 	message.message.from     = CO_MODULE_DAEMON;
 	message.message.to	 = CO_MODULE_LINUX;
 	message.message.priority = CO_PRIORITY_IMPORTANT;
 	message.message.type	 = CO_MESSAGE_TYPE_OTHER;
 	message.message.size     = sizeof(message.linux_msg) + sizeof(message.data);
-	
+
 	message.linux_msg.device = CO_DEVICE_POWER;
 	message.linux_msg.unit   = 0;
 	message.linux_msg.size	 = sizeof(message.data);
-	
+
 	message.data.type	 = poweroff;
 
 	co_user_monitor_message_send(message_monitor, &message.message);
@@ -553,7 +553,7 @@ co_rc_t console_window_t::send_ctrl_alt_del(co_linux_message_power_type_t powero
 
 void console_window_t::finish()
 {
-	if (Fl::event_key() == FL_Escape) 
+	if (Fl::event_key() == FL_Escape)
 		return;
 
 	if (state == CO_CONSOLE_STATE_ATTACHED)
@@ -568,12 +568,12 @@ void console_window_t::global_resize_constraint()
 		if (widget->fit_x  &&  widget->fit_y) {
 			int w_diff = (int)(widget->w() - widget->fit_x);
 			int h_diff = (int)(widget->h() - widget->fit_y);
-			
+
 			if (h_diff != 0 || w_diff != 0) {
 				if (resized_on_attach == PFALSE) {
 					/* co_debug("%d, %d", window->w() - w_diff, window->h() - h_diff); */
 					window->size(window->w() - w_diff, window->h() - h_diff);
-					window->size_range(window->w()+2, window->h()+2, 
+					window->size_range(window->w()+2, window->h()+2,
 						window->w()+2, window->h()+2);
 					resized_on_attach = PTRUE;
 				}
@@ -590,16 +590,16 @@ void console_window_t::idle()
 
 	rc = co_reactor_select(reactor, 1);
 
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 	{
 		rc = detach();
 
 		// Option in environment: "COLINUX_CONSOLE_EXIT_ON_DETACH=1"
 		// Exit Console after detach
-		if (CO_OK(rc) && state != CO_CONSOLE_STATE_ATTACHED) 
+		if (CO_OK(rc) && state != CO_CONSOLE_STATE_ATTACHED)
 		{
 			char* str;
-			
+
 			str = getenv("COLINUX_CONSOLE_EXIT_ON_DETACH");
 			if(str != NULL)
 			{
@@ -632,7 +632,7 @@ void console_window_t::select_monitor()
 co_rc_t console_window_t::about()
 {
 	about_box* win = new about_box();
-	
+
 	win->set_modal();
 	win->show();
 
@@ -669,7 +669,7 @@ void console_window_t::handle_scancode(co_scan_code_t sc)
 {
 	if (state != CO_CONSOLE_STATE_ATTACHED)
 		return;
-		
+
 	struct {
 		co_message_t		message;
 		co_linux_message_t	msg_linux;
@@ -681,11 +681,11 @@ void console_window_t::handle_scancode(co_scan_code_t sc)
 	message.message.priority = CO_PRIORITY_DISCARDABLE;
 	message.message.type     = CO_MESSAGE_TYPE_OTHER;
 	message.message.size     = sizeof(message) - sizeof(message.message);
-	
+
 	message.msg_linux.device = CO_DEVICE_KEYBOARD;
 	message.msg_linux.unit	 = 0;
 	message.msg_linux.size	 = sizeof(message.code);
-	
+
 	message.code		 = sc;
 
 	co_user_monitor_message_send(message_monitor, &message.message);
@@ -739,7 +739,7 @@ void console_window_t::log(const char* format, ...)
 
 	text_widget->insert_position(text_widget->buffer()->length());
 	text_widget->show_insert_position();
-	text_widget->insert(buf);	
+	text_widget->insert(buf);
 }
 
 console_widget_t * console_window_t::get_widget()

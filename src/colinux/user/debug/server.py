@@ -9,5 +9,5 @@ s.bind(("0.0.0.0", 63000))
 while 1:
     data, address = s.recvfrom(0x100)
     if len(data) == 0:
-	break    
+	break
     log.write(data)

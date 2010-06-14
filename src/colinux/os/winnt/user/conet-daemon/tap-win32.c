@@ -89,7 +89,7 @@ is_tap_win32_dev(const char *guid)
 			&unit_key);
 
 		if (status != ERROR_SUCCESS) {
-			co_terminal_print("colinux-net-daemon: Error opening registry key: %s\n", unit_string); 
+			co_terminal_print("colinux-net-daemon: Error opening registry key: %s\n", unit_string);
 			return PFALSE;
 		}
 		else
@@ -184,7 +184,7 @@ co_rc_t get_device_guid(
 			return CO_RC(ERROR);
 		}
 
-		snprintf(connection_string, 
+		snprintf(connection_string,
 			 sizeof(connection_string),
 			 "%s\\%s\\Connection",
 			 NETWORK_CONNECTIONS_KEY, enum_name);
@@ -195,7 +195,7 @@ co_rc_t get_device_guid(
 			0,
 			KEY_READ,
 			&connection_key);
-		
+
 		if (status == ERROR_SUCCESS) {
 			len = sizeof (name_data);
 			status = RegQueryValueEx(
@@ -242,7 +242,7 @@ co_rc_t get_device_guid(
 	if (stop == 0)
 		return CO_RC(ERROR);
 
-	return CO_RC(OK); 
+	return CO_RC(OK);
 }
 
 co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
@@ -303,7 +303,7 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 	}
 
 	co_terminal_print("colinux-net-daemon: TAP driver version %ld.%ld\n", version.major, version.minor);
-	
+
 	*phandle = handle;
 
 	return CO_RC(OK);

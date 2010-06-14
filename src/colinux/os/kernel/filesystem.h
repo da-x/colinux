@@ -16,17 +16,17 @@
 /*
  * OS-specific pathname helpers.
  */
-extern co_rc_t co_os_fs_inode_to_path(co_filesystem_t *fs, co_inode_t *dir, 
+extern co_rc_t co_os_fs_inode_to_path(co_filesystem_t *fs, co_inode_t *dir,
 				      char **out_name, int need_len);
 extern int co_os_fs_add_last_component(co_pathname_t *dirname);
 extern co_rc_t co_os_fs_dir_join_unix_path(co_pathname_t *dirname, const char *addition);
-extern co_rc_t co_os_fs_dir_inode_to_path(co_filesystem_t *fs, co_inode_t *dir, 
+extern co_rc_t co_os_fs_dir_inode_to_path(co_filesystem_t *fs, co_inode_t *dir,
 					  char **out_name, char *name);
 
 /*
  * OS-specific operations on files.
  */
-extern co_rc_t co_os_file_read_write(struct co_monitor *linuxvm, char *filename, unsigned long long offset, 
+extern co_rc_t co_os_file_read_write(struct co_monitor *linuxvm, char *filename, unsigned long long offset,
 				     unsigned long size, vm_ptr_t src_buffer, bool_t read);
 extern co_rc_t co_os_file_set_attr(char *filename, unsigned long valid, struct fuse_attr *attr);
 extern co_rc_t co_os_file_get_attr(char *filename, struct fuse_attr *attr);

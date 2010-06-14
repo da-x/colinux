@@ -11,14 +11,14 @@
 static struct co_filesystem_ops flat_mode; /* like UML's hostfs */
 /* static struct co_filesystem_ops unix_attr_mode; like UML's humfs (TODO) */
 
-static co_inode_t *ino_num_to_inode(int ino, co_filesystem_t *filesystem) 
+static co_inode_t *ino_num_to_inode(int ino, co_filesystem_t *filesystem)
 {
 	co_inode_t *inode = NULL;
 
 	if (ino == 1)
 		return filesystem->root;
 
-        co_list_each_entry(inode, 
+        co_list_each_entry(inode,
 			   &filesystem->inode_hashes[ino % CO_FS_HASH_TABLE_SIZE],
 			   hash_node)
 	{
@@ -32,7 +32,7 @@ out:
 	return inode;
 }
 
-static co_inode_t *alloc_inode(co_filesystem_t *filesystem, co_inode_t *parent, const char *name) 
+static co_inode_t *alloc_inode(co_filesystem_t *filesystem, co_inode_t *parent, const char *name)
 {
 	co_inode_t *inode;
 
@@ -71,7 +71,7 @@ static co_inode_t *alloc_inode(co_filesystem_t *filesystem, co_inode_t *parent, 
 	filesystem->inodes_count++;
 	co_debug_lvl(filesystem, 10, "inode [%d] allocated %p child '%s' of %p",
 		     filesystem->inodes_count, inode, name ? name : "<root>", parent);
-	
+
 	return inode;
 }
 
@@ -80,12 +80,12 @@ static void reparent_inode(co_inode_t *node, co_inode_t *new_parent)
 	co_list_del(&node->node);
 	co_list_add_head(&node->node, &new_parent->sub_inodes);
 	node->parent = new_parent;
-} 
+}
 
-static co_inode_t *find_inode(co_filesystem_t *filesystem, co_inode_t *parent, const char *name) 
+static co_inode_t *find_inode(co_filesystem_t *filesystem, co_inode_t *parent, const char *name)
 {
 	co_inode_t *inode = NULL;
-	
+
         co_list_each_entry(inode, &parent->sub_inodes, node) {
 		if (co_strcmp(inode->name, name) == 0)
 			return inode;
@@ -94,7 +94,7 @@ static co_inode_t *find_inode(co_filesystem_t *filesystem, co_inode_t *parent, c
 	return NULL;
 }
 
-static void free_inode(co_filesystem_t *filesystem, co_inode_t *inode) 
+static void free_inode(co_filesystem_t *filesystem, co_inode_t *inode)
 {
 	co_list_del(&inode->flat_node);
 	co_list_del(&inode->hash_node);
@@ -109,7 +109,7 @@ static void free_inode(co_filesystem_t *filesystem, co_inode_t *inode)
 	filesystem->inodes_count--;
 }
 
-static void free_inode_children(co_filesystem_t *filesystem, co_list_t *delete_now, 
+static void free_inode_children(co_filesystem_t *filesystem, co_list_t *delete_now,
 				int level, co_list_t *delete_later)
 {
 	co_inode_t *inode, *inode_new;
@@ -131,7 +131,7 @@ static void free_inode_children(co_filesystem_t *filesystem, co_list_t *delete_n
 static void free_inode_with_children(co_filesystem_t *filesystem, co_inode_t *inode)
 {
 	co_list_t to_delete, to_delete_next;
-	
+
 	co_list_init(&to_delete);
 	free_inode_children(filesystem, &inode->sub_inodes, 0, &to_delete);
 	free_inode(filesystem, inode);
@@ -166,7 +166,7 @@ static co_rc_t inode_dir_open(co_filesystem_t *filesystem, co_inode_t *inode)
 	if (inode->names) {
 		inode->names->refcount++;
 		return CO_RC(OK);
-	} 
+	}
 
 	inode->names = co_os_malloc(sizeof(co_filesystem_dir_names_t));
 	if (!inode->names)
@@ -190,21 +190,21 @@ static co_rc_t inode_open(co_filesystem_t *filesystem, co_inode_t *inode, unsign
 	return CO_RC(OK);
 }
 
-static co_rc_t inode_read(co_monitor_t *cmon, co_filesystem_t *filesystem, co_inode_t *inode, 
+static co_rc_t inode_read(co_monitor_t *cmon, co_filesystem_t *filesystem, co_inode_t *inode,
 			  unsigned long long offset, unsigned long size,
 			  vm_ptr_t dest_buffer)
 {
 	return filesystem->ops->inode_read_write(cmon, filesystem, inode, offset, size, dest_buffer, PTRUE);
 }
 
-static co_rc_t inode_write(co_monitor_t *cmon, co_filesystem_t *filesystem, co_inode_t *inode, 
+static co_rc_t inode_write(co_monitor_t *cmon, co_filesystem_t *filesystem, co_inode_t *inode,
 			   unsigned long long offset, unsigned long size,
 			   vm_ptr_t src_buffer)
 {
 	return filesystem->ops->inode_read_write(cmon, filesystem, inode, offset, size, src_buffer, PFALSE);
 }
 
-static co_rc_t inode_mknod(co_filesystem_t *filesystem, co_inode_t *dir, unsigned long mode, 
+static co_rc_t inode_mknod(co_filesystem_t *filesystem, co_inode_t *dir, unsigned long mode,
 			   unsigned long rdev, char *name, int *ino, struct fuse_attr *attr)
 {
 	co_rc_t rc;
@@ -220,9 +220,9 @@ static co_rc_t inode_mknod(co_filesystem_t *filesystem, co_inode_t *dir, unsigne
 	attr->atime = \
 	attr->mtime = \
 	attr->ctime = co_os_get_time();
-	
+
 	rc = filesystem->ops->inode_mknod(filesystem, dir, mode, rdev, name, ino, attr);
-	
+
 	if (CO_OK(rc)) {
 		co_inode_t *inode;
 
@@ -235,7 +235,7 @@ static co_rc_t inode_mknod(co_filesystem_t *filesystem, co_inode_t *dir, unsigne
 	return rc;
 }
 
-static co_rc_t inode_mkdir(co_filesystem_t *filesystem, co_inode_t *inode, unsigned long mode, 
+static co_rc_t inode_mkdir(co_filesystem_t *filesystem, co_inode_t *inode, unsigned long mode,
 			   char *name)
 {
 	return filesystem->ops->inode_mkdir(filesystem, inode, mode, name);
@@ -264,7 +264,7 @@ static co_rc_t inode_rename(co_filesystem_t *filesystem, co_inode_t *dir,
 	co_rc_t rc;
 
 	new_dir_inode = ino_num_to_inode(new_dir_num, filesystem);
-	if (!new_dir_inode) 
+	if (!new_dir_inode)
 		return CO_RC(ERROR);
 	rc = filesystem->ops->inode_rename(filesystem, dir, new_dir_inode, oldname, newname);
 	if (CO_OK(rc)) {
@@ -289,8 +289,8 @@ static co_rc_t inode_rename(co_filesystem_t *filesystem, co_inode_t *dir,
 
 
 static co_rc_t inode_dir_read(co_monitor_t *cmon,
-			      co_inode_t *inode, 
-			      vm_ptr_t buff, 
+			      co_inode_t *inode,
+			      vm_ptr_t buff,
 			      unsigned long size,
 			      unsigned long *fill_size,
 			      unsigned long file_pos)
@@ -299,7 +299,7 @@ static co_rc_t inode_dir_read(co_monitor_t *cmon,
 	unsigned long file_pos_seek = 0;
 	struct fuse_dirent dirent;
 	unsigned long dirent_size;
-	vm_ptr_t buff_writeptr; 
+	vm_ptr_t buff_writeptr;
 	co_rc_t rc;
 
 	if (!inode)
@@ -313,7 +313,7 @@ static co_rc_t inode_dir_read(co_monitor_t *cmon,
 
         co_list_each_entry(name, &inode->names->list, node) {
 		int slen = co_strlen(name->name);
-		
+
 		dirent_size = FUSE_DIRENT_ALIGN(FUSE_NAME_OFFSET + slen);
 		if (file_pos_seek < file_pos) {
 			file_pos_seek += dirent_size;
@@ -345,13 +345,13 @@ static co_rc_t inode_dir_read(co_monitor_t *cmon,
 
 		dirent.namelen = slen;
 		dirent.type = name->type;
-		
+
 		co_memcpy(dirent.name, name->name, slen);
 
 		rc = co_monitor_host_to_linuxvm(cmon, &dirent, buff_writeptr, dirent_size);
 		if (!CO_OK(rc))
 			return rc;
-		
+
 		buff_writeptr += dirent_size;
 		*fill_size += dirent_size;
 		file_pos_seek += dirent_size;
@@ -370,7 +370,7 @@ static co_rc_t inode_dir_release(co_inode_t *inode)
 		return CO_RC(ERROR);
 
 	inode->names->refcount--;
-	if (inode->names->refcount > 0) 
+	if (inode->names->refcount > 0)
 		return CO_RC(OK);
 
 	co_filesystem_getdir_free(inode->names);
@@ -420,7 +420,7 @@ co_rc_t co_monitor_file_system_init(co_monitor_t *cmon, unsigned int unit,
 	}
 
 	cmon->filesystems[unit] = filesystem;
-		
+
 	return CO_RC(OK);
 }
 
@@ -432,7 +432,7 @@ void co_monitor_file_system_free(co_monitor_t *cmon, int unit)
 	if (!filesystem)
 		return;
 
-	while (!co_list_empty(&filesystem->list_inodes)) {		
+	while (!co_list_empty(&filesystem->list_inodes)) {
 		co_list_entry_assign(filesystem->list_inodes.next, inode, flat_node);
 		free_inode(filesystem, inode);
 	}
@@ -441,7 +441,7 @@ void co_monitor_file_system_free(co_monitor_t *cmon, int unit)
 	cmon->filesystems[unit] = NULL;
 }
 
-static co_rc_t inode_get_attr(co_filesystem_t *filesystem, co_inode_t *inode, 
+static co_rc_t inode_get_attr(co_filesystem_t *filesystem, co_inode_t *inode,
 			      struct fuse_getattr_out *attr)
 {
 	char *name;
@@ -455,7 +455,7 @@ static co_rc_t inode_get_attr(co_filesystem_t *filesystem, co_inode_t *inode,
 	return filesystem->ops->getattr(filesystem, inode, name, &attr->attr);
 }
 
-static co_rc_t inode_lookup(co_filesystem_t *filesystem, co_inode_t *dir, 
+static co_rc_t inode_lookup(co_filesystem_t *filesystem, co_inode_t *dir,
 			    char *name, struct fuse_lookup_out *args)
 {
 	co_rc_t rc = filesystem->ops->getattr(filesystem, dir, name, &args->attr);
@@ -491,7 +491,7 @@ static co_rc_t fs_mount(co_filesystem_t *filesystem, const char *pathname,
 			int uid, int gid,
 			unsigned long dir_mode, unsigned long file_mode,
 			int flags)
-{	
+{
 	co_cofsdev_desc_t *desc;
 	co_rc_t rc;
 
@@ -512,7 +512,7 @@ static co_rc_t fs_mount(co_filesystem_t *filesystem, const char *pathname,
 
 static co_rc_t fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *statfs)
 {
-	return filesystem->ops->fs_stat(filesystem, statfs);	
+	return filesystem->ops->fs_stat(filesystem, statfs);
 }
 
 void co_monitor_file_system(co_monitor_t *cmon, unsigned int unit,
@@ -552,7 +552,7 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned int unit,
 
 	switch (opcode) {
 	case FUSE_SETATTR: {
-		result = inode_set_attr(filesystem, inode, 
+		result = inode_set_attr(filesystem, inode,
 					co_passage_page->params[5],
 					(struct fuse_attr *)(&co_passage_page->params[6]));
 		result = translate_code(result);
@@ -561,7 +561,7 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned int unit,
 
 	case FUSE_RENAME: {
 		char *str = (char *)&co_passage_page->params[30];
-		result = inode_rename(filesystem, inode, 
+		result = inode_rename(filesystem, inode,
 				      co_passage_page->params[5],
 				      str,
 				      str + co_strlen(str) + 1);
@@ -575,7 +575,7 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned int unit,
 	}
 
 	case FUSE_MKNOD:
-		result = inode_mknod(filesystem, inode, 
+		result = inode_mknod(filesystem, inode,
 				     co_passage_page->params[5],
 				     co_passage_page->params[6],
 				     (char *)&co_passage_page->params[30],
@@ -585,26 +585,26 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned int unit,
 		break;
 
 	case FUSE_MKDIR:
-		result = inode_mkdir(filesystem, inode, 
+		result = inode_mkdir(filesystem, inode,
 				      co_passage_page->params[5],
 				      (char *)&co_passage_page->params[30]);
 		result = translate_code(result);
 		break;
 
 	case FUSE_UNLINK:
-		result = inode_unlink(filesystem, inode, 
+		result = inode_unlink(filesystem, inode,
 				      (char *)&co_passage_page->params[30]);
 		result = translate_code(result);
 		break;
 
-	case FUSE_RMDIR: 
-		result = inode_rmdir(filesystem, inode, 
+	case FUSE_RMDIR:
+		result = inode_rmdir(filesystem, inode,
 				     (char *)&co_passage_page->params[30]);
 		result = translate_code(result);
 		break;
 
 	case FUSE_WRITE: {
-		result = inode_write(cmon, filesystem, inode, 
+		result = inode_write(cmon, filesystem, inode,
 				     *((unsigned long long *)&co_passage_page->params[5]),
 				     co_passage_page->params[7],
 				     co_passage_page->params[8]);
@@ -613,7 +613,7 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned int unit,
 	}
 
 	case FUSE_READ: {
-		result = inode_read(cmon, filesystem, inode, 
+		result = inode_read(cmon, filesystem, inode,
 				    *((unsigned long long *)&co_passage_page->params[5]),
 				    co_passage_page->params[7],
 				    co_passage_page->params[8]);
@@ -628,7 +628,7 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned int unit,
 	}
 
 	case FUSE_LOOKUP: {
-		result = 
+		result =
 			inode_lookup(filesystem, inode,
 				     (char *)&co_passage_page->params[30],
 				     (struct fuse_lookup_out *)&co_passage_page->params[5]);
@@ -648,9 +648,9 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned int unit,
 		break;
 
 	case FUSE_DIR_READ:
-		result = inode_dir_read(cmon, inode, 
+		result = inode_dir_read(cmon, inode,
 					co_passage_page->params[6],
-					co_passage_page->params[5], 
+					co_passage_page->params[5],
 					&co_passage_page->params[7],
 					co_passage_page->params[8]);
 		result = translate_code(result);
@@ -665,7 +665,7 @@ void co_monitor_file_system(co_monitor_t *cmon, unsigned int unit,
 		break;
 	default:
 		break;
-	}	
+	}
 
 out:
 	co_passage_page->params[4] = result;
@@ -709,7 +709,7 @@ static co_rc_t co_fs_get_attr(co_filesystem_t *fs, char *filename, struct fuse_a
 	return rc;
 }
 
-static co_rc_t flat_mode_inode_rename(co_filesystem_t *filesystem, co_inode_t *old_inode, co_inode_t *new_inode, 
+static co_rc_t flat_mode_inode_rename(co_filesystem_t *filesystem, co_inode_t *old_inode, co_inode_t *new_inode,
 			     char *oldname, char *newname)
 {
 	char *old_dirname = NULL, *new_dirname = NULL;
@@ -759,7 +759,7 @@ static co_rc_t flat_mode_getdir(co_filesystem_t *fs, co_inode_t *dir, co_filesys
 	return rc;
 }
 
-static co_rc_t flat_mode_inode_read_write(co_monitor_t *linuxvm, co_filesystem_t *filesystem, co_inode_t *inode, 
+static co_rc_t flat_mode_inode_read_write(co_monitor_t *linuxvm, co_filesystem_t *filesystem, co_inode_t *inode,
 				  unsigned long long offset, unsigned long size,
 				  vm_ptr_t src_buffer, bool_t read)
 {
@@ -769,14 +769,14 @@ static co_rc_t flat_mode_inode_read_write(co_monitor_t *linuxvm, co_filesystem_t
 	rc = co_os_fs_inode_to_path(filesystem, inode, &filename, 0);
 	if (!CO_OK(rc))
 		return rc;
-	
+
 	rc = co_os_file_read_write(linuxvm, filename, offset, size, src_buffer, read);
 	co_os_free(filename);
 
 	return rc;
 }
 
-static co_rc_t flat_mode_inode_mknod(co_filesystem_t *filesystem, co_inode_t *inode, unsigned long mode, 
+static co_rc_t flat_mode_inode_mknod(co_filesystem_t *filesystem, co_inode_t *inode, unsigned long mode,
 			     unsigned long rdev, char *name, int *ino, struct fuse_attr *attr)
 {
 	char *filename;
@@ -809,9 +809,9 @@ static co_rc_t flat_mode_inode_set_attr(co_filesystem_t *filesystem, co_inode_t 
 	co_os_free(filename);
 
 	return rc;
-} 
+}
 
-static co_rc_t flat_mode_inode_mkdir(co_filesystem_t *filesystem, co_inode_t *inode, unsigned long mode, 
+static co_rc_t flat_mode_inode_mkdir(co_filesystem_t *filesystem, co_inode_t *inode, unsigned long mode,
 			     char *name)
 {
 	char *dirname;

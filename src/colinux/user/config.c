@@ -6,9 +6,9 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
  /* OS independent command line and configuration file parser */
- 
+
 #include <string.h>
 
 #include <colinux/common/libc.h>
@@ -40,8 +40,8 @@ typedef struct {
 /* A bit mask of all used network types */
 static int used_network_types;
 
-/* 
- * "New" command line configuration gathering scheme. It existed a long time in 
+/*
+ * "New" command line configuration gathering scheme. It existed a long time in
  * User Mode Linux and should be less hussle than handling XML files for the
  * novice users.
  */
@@ -63,7 +63,7 @@ static co_rc_t check_cobd_file(co_pathname_t pathname, char* name, int index)
 	co_rc_t       rc;
 	char*         buf;
 	unsigned long size;
-	
+
 	static const char magic_bz2 [3] = "BZh";		/* bzip2 compressed data */
 	static const char magic_7z  [6] = "7z\274\257\047\034";	/* 7z archive data */
 
@@ -125,10 +125,10 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 	do {
 		co_block_dev_desc_t *cobd;
 
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, 
-							     "cobd", 
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline,
+							     "cobd",
 							     &index,
-							     CO_MODULE_MAX_COBD, 
+							     CO_MODULE_MAX_COBD,
 							     &param,
 							     &exists);
 		if (!CO_OK(rc))
@@ -160,8 +160,8 @@ static co_rc_t parse_args_config_cobd(co_command_line_params_t cmdline, co_confi
 }
 
 static co_rc_t allocate_by_alias(co_config_t* conf,
-                                 const char*  prefix, 
-                                 const char*  suffix, 
+                                 const char*  prefix,
+                                 const char*  suffix,
 				 const char*  param)
 {
 	co_block_dev_desc_t* cobd;
@@ -211,14 +211,14 @@ static co_rc_t parse_args_config_aliases(co_command_line_params_t cmdline, co_co
 		char suffix[5];
 
 		do {
-			rc = co_cmdline_get_next_equality_alloc(cmdline, 
+			rc = co_cmdline_get_next_equality_alloc(cmdline,
 								prefix,
 								sizeof(suffix) - 1,
 								suffix,
-								sizeof(suffix), 
-							  	&param, 
+								sizeof(suffix),
+							  	&param,
 							  	&exists);
-			if (!CO_OK(rc)) 
+			if (!CO_OK(rc))
 				return rc;
 
 			if (!exists)
@@ -333,7 +333,7 @@ static co_rc_t parse_args_config_pci(co_command_line_params_t cmdline, co_config
 	int	d,f,t,u;
 	bool_t 	exists;
 	char*	param;
-	
+
 	comma_buffer_t array [] = {
 		{ sizeof(func), func },
 		{ sizeof(type), type },
@@ -345,10 +345,10 @@ static co_rc_t parse_args_config_pci(co_command_line_params_t cmdline, co_config
 
 	do {
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline,
-							     "pci", 
-							     &index, 
-							     32, 
-							     &param, 
+							     "pci",
+							     &index,
+							     32,
+							     &param,
 							     &exists);
 		if (!CO_OK(rc)) return rc;
 		if (!exists) break;
@@ -779,8 +779,8 @@ static co_rc_t parse_args_networking(co_command_line_params_t cmdline, co_config
 	unsigned int index;
 
 	do {
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "eth", 
-							     &index, CO_MODULE_MAX_CONET, 
+		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "eth",
+							     &index, CO_MODULE_MAX_CONET,
 							     &param, &exists);
 		if (!CO_OK(rc))
 			return rc;
@@ -827,9 +827,9 @@ static co_rc_t parse_args_config_cofs(co_command_line_params_t cmdline, co_confi
 
 	do {
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline,
-							     "cofs", 
+							     "cofs",
 							     &index,
-							     CO_MODULE_MAX_COFS, 
+							     CO_MODULE_MAX_COFS,
 							     &param,
 							     &exists);
 		if (!CO_OK(rc))
@@ -875,7 +875,7 @@ static co_rc_t parse_args_serial_device(co_config_t* conf, int index, const char
 	serial->desc = strdup(name);
 	if (!serial->desc)
 		return CO_RC(OUT_OF_MEMORY);
-	
+
 	if (*mode) {
 		co_debug("mode: %s", mode);
 		serial->mode = strdup(mode);
@@ -895,19 +895,19 @@ static co_rc_t parse_args_config_serial(co_command_line_params_t cmdline, co_con
 
 	do {
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline,
-							    "ttys", 
+							    "ttys",
 							     &index,
-							     CO_MODULE_MAX_SERIAL, 
+							     CO_MODULE_MAX_SERIAL,
 							     &param,
 							     &exists);
-		if (!CO_OK(rc)) 
+		if (!CO_OK(rc))
 			return rc;
 
 		if (!exists)
 			break;
 
 		rc = parse_args_serial_device(conf, index, param);
-		if (!CO_OK(rc)) 
+		if (!CO_OK(rc))
 			return rc;
 	} while (1);
 
@@ -964,19 +964,19 @@ static co_rc_t parse_args_config_execute(co_command_line_params_t cmdline, co_co
 
 	do {
 		rc = co_cmdline_get_next_equality_int_prefix(cmdline,
-							     "exec", 
+							     "exec",
 							     &index,
-							     CO_MODULE_MAX_EXECUTE, 
+							     CO_MODULE_MAX_EXECUTE,
 							     &param,
 							     &exists);
-		if (!CO_OK(rc)) 
+		if (!CO_OK(rc))
 			return rc;
 
 		if (!exists)
 			break;
 
 		rc = parse_args_execute(conf, index, param);
-		if (!CO_OK(rc)) 
+		if (!CO_OK(rc))
 			return rc;
 	} while (1);
 
@@ -998,11 +998,11 @@ static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, co_conf
 					  "cocon",
 					  0,
 					  NULL,
-					  0, 
+					  0,
 					  buf,
 					  sizeof(buf),
 					  &exists);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	if (exists) {
@@ -1015,13 +1015,13 @@ static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, co_conf
 		y = strtol(p, &p, 0);
 		if (*p != '\0') p++;
 		max_y = strtol(p, &p, 0);
-		
+
 		if(!max_y) max_y = CO_CONSOLE_MAX_ROWS;
 		if(max_y < y) max_y = y;
 
 		/* Check screen limits */
-		if(x     < CO_CONSOLE_MIN_COLS	|| 
-		   y     < CO_CONSOLE_MIN_ROWS  || 
+		if(x     < CO_CONSOLE_MIN_COLS	||
+		   y     < CO_CONSOLE_MIN_ROWS  ||
 		   max_y > CO_CONSOLE_MAX_ROWS) {
 			co_terminal_print("Invalid args (%ux%ux%u) for cocon\n",
 					  x, y, max_y);
@@ -1032,9 +1032,9 @@ static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, co_conf
 		conf->console.max_y = max_y;
 	}
 #if COLINUX_DEBUG_COCON
-	co_terminal_print("cocon=%dx%d,%d\n", 
-			  (int)conf->console.x, 
-			  (int)conf->console.y, 
+	co_terminal_print("cocon=%dx%d,%d\n",
+			  (int)conf->console.x,
+			  (int)conf->console.y,
 			  (int)conf->console.max_y);
 #endif
 	return CO_RC(OK);
@@ -1052,14 +1052,14 @@ static co_rc_t parse_args_config_cursor(co_command_line_params_t cmdline,
 	conf->console.curs_type_size = CO_CUR_DEFAULT;
 
 	rc = co_cmdline_get_next_equality(cmdline,
-					  "cursor", 
-					  0, 
-					  NULL, 
-					  0, 
-					  buf, 
-					  sizeof(buf), 
+					  "cursor",
+					  0,
+					  NULL,
+					  0,
+					  buf,
+					  sizeof(buf),
 					  &exists);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	if (exists) {
@@ -1067,11 +1067,11 @@ static co_rc_t parse_args_config_cursor(co_command_line_params_t cmdline,
 
 		size_prc = (int)strtol(buf, &p, 0);
 
-		if (size_prc < 0 || size_prc > 100) { 
+		if (size_prc < 0 || size_prc > 100) {
 			co_terminal_print("Invalid arg (%d) for cursor\n", size_prc);
 			return CO_RC(INVALID_PARAMETER);
 		}
-		
+
 		/* User can set size of cursor == 100, but actual value of
 		 * it can not exceed 99. Set cursor size in accordance with
 		 * the kernel.
@@ -1131,16 +1131,16 @@ static int co_find_color_attr(char** str_pp)
 
 	beg_p = *str_pp;
 	end_p = beg_p;
-	
+
 	/* Find word end */
 	while(*end_p != ',' && *end_p != '\0') {
 		end_p++;
 	}
-	
+
 	len = (int)(end_p - beg_p);
 	if(len > 0) {
 		co_color_tbl_t* tbl_p;
-		
+
 		tbl_p = (co_color_tbl_t*)co_color_tbl;
 		while(tbl_p->name_p != NULL) {
 			if(len == tbl_p->len &&
@@ -1160,20 +1160,20 @@ static int co_find_color_attr(char** str_pp)
 static co_rc_t parse_args_config_color(co_command_line_params_t cmdline,
                                        co_config_t*             conf)
 {
-#if CO_ENABLE_CON_COLOR	
+#if CO_ENABLE_CON_COLOR
 	bool_t  exists;
 	char    buf[32];
 	co_rc_t rc;
 #endif
-	
+
 	conf->console.attr = CO_ATTR_DEFAULT;
 
-#if CO_ENABLE_CON_COLOR	
+#if CO_ENABLE_CON_COLOR
 	rc = co_cmdline_get_next_equality(cmdline,
 					  "color",
 					  0,
 					  NULL,
-					  0, 
+					  0,
 					  buf,
 					  sizeof(buf),
 					  &exists);
@@ -1181,13 +1181,13 @@ static co_rc_t parse_args_config_color(co_command_line_params_t cmdline,
 		char* str_p;
 		int   fg_attr;
 		int   bg_attr;
-		
+
 		str_p = buf;
 
 		fg_attr = co_find_color_attr(&str_p);
 		if(*str_p != '\0') str_p++;
 		bg_attr = co_find_color_attr(&str_p);
-		
+
 		if(fg_attr < 0 || bg_attr < 0) {
 			co_terminal_print("Invalid arg (%s) for color\n", buf);
 			return CO_RC(INVALID_PARAMETER);
@@ -1199,10 +1199,10 @@ static co_rc_t parse_args_config_color(co_command_line_params_t cmdline,
 		conf->console.attr = (bg_attr << 4) | fg_attr;
 	}
 #endif /* CO_ENABLE_CON_COLOR */
-	
+
 #if COLINUX_DEBUG_COLOR
-	co_terminal_print("color=%02x,%02x\n", 
-			  conf->console.attr & 0x0F, 
+	co_terminal_print("color=%02x,%02x\n",
+			  conf->console.attr & 0x0F,
 			  conf->console.attr >> 4);
 #endif
 	return CO_RC(OK);
@@ -1216,9 +1216,9 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t* 
 
 	rc = co_cmdline_get_next_equality_int_value(cmdline,
 						    "mem",
-						    &conf->ram_size, 
+						    &conf->ram_size,
 						    &exists);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	if (exists)
@@ -1255,15 +1255,15 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t* 
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_cmdline_get_next_equality(cmdline, 
-					  "initrd", 
-					  0, 
-					  NULL, 
-					  0, 
-					  conf->initrd_path, 
+	rc = co_cmdline_get_next_equality(cmdline,
+					  "initrd",
+					  0,
+					  NULL,
+					  0,
+					  conf->initrd_path,
 					  sizeof(conf->initrd_path),
 					  &conf->initrd_enabled);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	if (conf->initrd_enabled) {
@@ -1303,7 +1303,7 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t* 
 	rc = parse_args_config_color(cmdline, conf);
 	if (!CO_OK(rc))
 		return rc;
-		
+
 	rc = parse_args_config_cocon(cmdline, conf);
 	if (!CO_OK(rc))
 		return rc;
@@ -1327,7 +1327,7 @@ co_rc_t co_parse_config_args(co_command_line_params_t cmdline,
 				          "kernel",
 				          0,
 				          NULL,
-				          0, 
+				          0,
 					  conf->vmlinux_path,
 					  sizeof(conf->vmlinux_path),
 					  &start_parameters->cmdline_config);

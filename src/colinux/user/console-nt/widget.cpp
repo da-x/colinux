@@ -8,9 +8,9 @@
  *
  */
 
- /* 
+ /*
   * OS independent widget class
-  * Used for building colinux-console-nt.exe 
+  * Used for building colinux-console-nt.exe
   */
 
 #include "console.h"
@@ -18,7 +18,7 @@
 
 extern "C" {
 #include <colinux/os/alloc.h>
-} 
+}
 
 console_widget_t::console_widget_t()
 {
@@ -45,17 +45,17 @@ void console_widget_t::set_console(co_console_t* _console)
 /* Process console messages:
 	CO_OPERATION_CONSOLE_PUTC		- Put single char-attr pair
 	CO_OPERATION_CONSOLE_PUTCS		- Put char-attr pair array
-	
+
 	CO_OPERATION_CONSOLE_CURSOR_MOVE	- Move cursor
 	CO_OPERATION_CONSOLE_CURSOR_DRAW	- Move cursor
 	CO_OPERATION_CONSOLE_CURSOR_ERASE	- Move cursor
-	
+
 	CO_OPERATION_CONSOLE_SCROLL_UP		- Scroll lines up
 	CO_OPERATION_CONSOLE_SCROLL_DOWN	- Scroll lines down
 	CO_OPERATION_CONSOLE_BMOVE		- Move region up/down
-	
+
 	CO_OPERATION_CONSOLE_CLEAR		- Clear region
-	
+
 	CO_OPERATION_CONSOLE_BLANK		- Ignored
 	CO_OPERATION_CONSOLE_SWITCH		- Ignored
 	CO_OPERATION_CONSOLE_FONT_OP		- Ignored
@@ -114,7 +114,7 @@ co_rc_t console_widget_t::event(co_console_message_t* message)
 #if DEBUG_CONSOLE
 		co_debug("CO_OPERATION_CONSOLE_PUTC");
 #endif
-		return op_putc(message->putc.y, 
+		return op_putc(message->putc.y,
 			       message->putc.x,
 			       message->putc.charattr);
 
@@ -122,16 +122,16 @@ co_rc_t console_widget_t::event(co_console_message_t* message)
 #if DEBUG_CONSOLE
 		co_debug("CO_OPERATION_CONSOLE_PUTCS");
 #endif
-		return op_putcs(message->putcs.y, 
+		return op_putcs(message->putcs.y,
 				message->putcs.x,
-				message->putcs.data, 
+				message->putcs.data,
 				message->putcs.count);
 
 	case CO_OPERATION_CONSOLE_SCROLL_UP:
 #if DEBUG_CONSOLE
 		co_debug("CO_OPERATION_CONSOLE_SCROLL_UP");
 #endif
-		return op_scroll_up(message->scroll.top, 
+		return op_scroll_up(message->scroll.top,
 				    message->scroll.bottom,
 				    message->scroll.lines,
 				    message->scroll.charattr);
@@ -139,7 +139,7 @@ co_rc_t console_widget_t::event(co_console_message_t* message)
 #if DEBUG_CONSOLE
 		co_debug("CO_OPERATION_CONSOLE_SCROLL_DOWN");
 #endif
-		return op_scroll_down(message->scroll.top, 
+		return op_scroll_down(message->scroll.top,
 				      message->scroll.bottom,
 				      message->scroll.lines,
 				      message->scroll.charattr);
@@ -229,7 +229,7 @@ co_rc_t console_widget_t::event(co_console_message_t* message)
 		co_debug("CO_OPERATION_CONSOLE_INVERT_REGION");
 #endif
 		// op_invert - dummy function
-		return op_invert(message->invert.y, 
+		return op_invert(message->invert.y,
 				 message->invert.x,
 				 message->invert.count);
 		break;

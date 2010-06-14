@@ -41,7 +41,7 @@ static int __init colinux_module_init(void)
 
 static void __exit colinux_module_exit(void)
 {
-	if (co_global_manager != NULL) {		
+	if (co_global_manager != NULL) {
 		co_manager_t *manager = co_global_manager;
 		co_manager_unload(manager);
 		co_global_manager = NULL;

@@ -32,7 +32,7 @@ static void pci_space_add(co_monitor_t *cmon, int func, int type, int unit) {
 
 	for(x=0; x < COPCI_MAX_SLOTS; x++) {
 		if (cmon->config.pci[x][0].type == 0 || cmon->config.pci[x][0].type == type) {
-			if (pci_space_find(cmon, type, unit) == 0) { 
+			if (pci_space_find(cmon, type, unit) == 0) {
 				if (func && cmon->config.pci[x][0].type == 0) func = 0;
 				co_debug("adding type %d to slot %d func %d", type, x, func);
 				cmon->config.pci[x][func].type = type;

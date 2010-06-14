@@ -587,12 +587,12 @@ findso:
 			 * Nagel, hence there will be no echo)
 			 * The first of these is the original, the second is the
 			 * middle ground between the other 2
-			 */ 
+			 */
 /*			if (((unsigned)ti->ti_len < tp->t_maxseg)) {
- */			     
-/*			if (((unsigned)ti->ti_len < tp->t_maxseg && 
+ */
+/*			if (((unsigned)ti->ti_len < tp->t_maxseg &&
  *			     (so->so_iptos & IPTOS_LOWDELAY) == 0) ||
- *			    ((so->so_iptos & IPTOS_LOWDELAY) && 
+ *			    ((so->so_iptos & IPTOS_LOWDELAY) &&
  *			     ((struct tcpiphdr_2 *)ti)->first_char == (char)27)) {
  */
 			if ((unsigned)ti->ti_len == 1 &&
@@ -1035,8 +1035,8 @@ trimthenstep6:
 		tcpstat.tcps_connects++;
 		tp->t_state = TCPS_ESTABLISHED;
 		/*
-		 * The sent SYN is ack'ed with our sequence number +1 
-		 * The first data byte already in the buffer will get 
+		 * The sent SYN is ack'ed with our sequence number +1
+		 * The first data byte already in the buffer will get
 		 * lost if no correction is made.  This is only needed for
 		 * SS_CTL since the buffer is empty otherwise.
 		 * tp->snd_una++; or:

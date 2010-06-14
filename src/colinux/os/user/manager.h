@@ -20,7 +20,7 @@ extern "C" {
 #include <colinux/user/reactor.h>
 
 struct co_manager_handle;
-typedef struct co_manager_handle* co_manager_handle_t; 
+typedef struct co_manager_handle* co_manager_handle_t;
 
 extern co_manager_handle_t co_os_manager_open(void);
 extern co_manager_handle_t co_os_manager_open_quite(void);

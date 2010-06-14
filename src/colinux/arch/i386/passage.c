@@ -6,12 +6,12 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 /*
- * The passage page and code are responsible for switching between the 
+ * The passage page and code are responsible for switching between the
  * two operating systems.
- */ 
+ */
 
 #include <colinux/common/debug.h>
 #include <colinux/common/libc.h>
@@ -43,7 +43,7 @@
 
 /*
  * These two pseudo variables mark the start and the end of the passage code.
- * The passage code is position indepedent, so we just copy it from the 
+ * The passage code is position indepedent, so we just copy it from the
  * driver's text to the passage page which we allocate when we start running.
  */
 
@@ -85,9 +85,9 @@ asm(""							\
     "    movl %ebx, %cr4"                    "\n"       \
 /*
  *  Relocate to other map of the passage page.
- * 
- *  We do this by changing the current mapping to the passage temporary 
- *  address space, which contains the mapping of the passage page at the 
+ *
+ *  We do this by changing the current mapping to the passage temporary
+ *  address space, which contains the mapping of the passage page at the
  *  two locations which are specific to the two operating systems.
  */							\
                                                         \
@@ -95,8 +95,8 @@ asm(""							\
     "    movl %ecx, %ebx"                    "\n"       \
     "    andl $0xFFFFF000, %ebx"             "\n"       \
                                                         \
-/* 
- * Take the physical address of the temporary address space page directory 
+/*
+ * Take the physical address of the temporary address space page directory
  * pointer and put it in CR3.
  */ \
     "    movl (%ebx), %eax"                  "\n"       \
@@ -107,12 +107,12 @@ asm(""							\
  */ \
     "    movl "CO_ARCH_STATE_STACK_OTHERMAP"(%ebp), %eax"   "\n"  \
    \
-/*  
+/*
  * First, we relocate EIP by putting it in 0x64(%ebp). That's why we load
  * ESP with 0x68(%esp). The call that follows puts the EIP where we want.
- * Afterwards the EIP is in %(esp) so we relocate it by adding the 
+ * Afterwards the EIP is in %(esp) so we relocate it by adding the
  * relocation offset. We also add the difference between 2 and 3 so that
- * the 'ret' that follows will put us in 3 intead of 2, but in the other 
+ * the 'ret' that follows will put us in 3 intead of 2, but in the other
  * mapping.
  */ \
     "    leal "CO_ARCH_STATE_STACK_RELOCATE_EIP_AFTER"(%ebp), %esp"              "\n"       \
@@ -473,7 +473,7 @@ PASSAGE_CODE_WRAP_IBCS(
 		PASSAGE_PAGE_PRESERVATION_SYSENTER(
 			PASSAGE_PAGE_PRESERVATION_DEBUG(
 				PASSAGE_PAGE_PRESERVATION_COMMON(
-					PASSAGE_CODE_NOWHERE_LAND_SHORT() 
+					PASSAGE_CODE_NOWHERE_LAND_SHORT()
 					)
 				)
 			)
@@ -485,7 +485,7 @@ PASSAGE_CODE_WRAP_IBCS(
 	PASSAGE_CODE_WRAP_SWITCH(
 		PASSAGE_PAGE_PRESERVATION_DEBUG(
 			PASSAGE_PAGE_PRESERVATION_COMMON(
-				PASSAGE_CODE_NOWHERE_LAND_SHORT() 
+				PASSAGE_CODE_NOWHERE_LAND_SHORT()
 				)
 			)
 		)
@@ -511,7 +511,7 @@ co_rc_t co_monitor_arch_passage_page_alloc(co_monitor_t *cmon)
 	co_memset(cmon->passage_page, 0, sizeof(co_arch_passage_page_t));
 
 	rc = co_arch_anti_nx_init(cmon);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		goto error;
 
 	return rc;
@@ -566,7 +566,7 @@ static inline void co_passage_page_dump(co_arch_passage_page_t *page)
 	co_passage_page_dump_state(&page->linuxvm_state);
 }
 
-static void short_temp_address_space_init(co_arch_passage_page_normal_address_space_t *pp, 
+static void short_temp_address_space_init(co_arch_passage_page_normal_address_space_t *pp,
 					  unsigned long pa, unsigned long *va)
 {
 	int i;
@@ -583,7 +583,7 @@ static void short_temp_address_space_init(co_arch_passage_page_normal_address_sp
 		maps[i].paddr = co_os_virt_to_phys(&pp->pte[i]);
 	}
 	/*
-	 * Currently this is not the case, but it is possible that 
+	 * Currently this is not the case, but it is possible that
 	 * these two virtual address are on the same PTE page. In that
 	 * case we don't need pte[1].
 	 *
@@ -606,7 +606,7 @@ static void short_temp_address_space_init(co_arch_passage_page_normal_address_sp
 		pp->pte[1][maps[1].pte] = _KERNPG_TABLE | pa;
 	}
 }
- 
+
 
 /*
  * Create the temp_pgd address space.
@@ -616,7 +616,7 @@ static void short_temp_address_space_init(co_arch_passage_page_normal_address_sp
  * address space which contains just these two virtual addresses, mapped
  * to the physical address of the passage page.
  */
-static void normal_temp_address_space_init(co_arch_passage_page_normal_address_space_t *as, 
+static void normal_temp_address_space_init(co_arch_passage_page_normal_address_space_t *as,
 					   unsigned long pa, unsigned long va)
 {
 	int i;
@@ -640,7 +640,7 @@ static void normal_temp_address_space_init(co_arch_passage_page_normal_address_s
 	}
 }
 
-static void pae_temp_address_space_init(co_arch_passage_page_pae_address_space_t *as, 
+static void pae_temp_address_space_init(co_arch_passage_page_pae_address_space_t *as,
 					unsigned long pa, unsigned long va)
 {
 	int i;
@@ -721,18 +721,18 @@ co_rc_t co_monitor_arch_passage_page_init(co_monitor_t *cmon)
 		pp->host_state.other_map = va[0] - va[1];
 
 	} else {
-		pae_temp_address_space_init(&pp->host_pae, pp->self_physical_address, 
+		pae_temp_address_space_init(&pp->host_pae, pp->self_physical_address,
 					    (unsigned long)(&pp->first_page));
 		pp->host_state.temp_cr3 = co_os_virt_to_phys(&pp->host_pae);
 		pp->host_state.va = (unsigned long)(&pp->first_page);
 
 		/*
 		 * Init the Linux context.
-		 */ 
+		 */
 		pp->linuxvm_state.temp_cr3 = co_os_virt_to_phys(&pp->guest_normal);
 		normal_temp_address_space_init(&pp->guest_normal, pp->self_physical_address,
 					       (unsigned long)(cmon->passage_page_vaddr));
-		
+
 		pp->linuxvm_state.va = (unsigned long)(cmon->passage_page_vaddr);
 	}
 

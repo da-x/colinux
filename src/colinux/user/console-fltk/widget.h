@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #ifndef __COLINUX_USER_CONSOLE_WIDGET_H__
 #define __COLINUX_USER_CONSOLE_WIDGET_H__
@@ -28,7 +28,7 @@ public:
 	int fit_x;
 	int fit_y;
 public:
-	console_widget_t(int x, int y, int w, int h, const char* label = 0); 
+	console_widget_t(int x, int y, int w, int h, const char* label = 0);
 	void set_font_size(int new_size);
 	void set_font_name(int new_name);
 	int get_font_name(void) { return font_name; };
@@ -59,11 +59,11 @@ protected:
 	double	      cursor_blink_interval;
 	int 	      cursor_blink_state;
 	int           cursize_tab[CO_CUR_BLOCK+1];
-	
+
 	bool 		mouse_copy, mouse_drag_type, copy_spaces;
 	int 		mouse_start_x, mouse_start_y, mouse_sx, mouse_wx,
 		mouse_sy, mouse_wy, loc_start, loc_end;
-		
+
 	int scroll_lines;
 
 protected:

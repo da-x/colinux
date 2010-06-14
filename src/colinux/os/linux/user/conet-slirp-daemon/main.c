@@ -7,7 +7,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <pthread.h>
 
@@ -25,7 +25,7 @@ co_rc_t co_slirp_mutex_init (void)
 		co_terminal_print("conet-slirp-daemon: Mutex creating failed\n");
 		return CO_RC(ERROR);
 	}
-	return CO_RC(OK);	
+	return CO_RC(OK);
 }
 
 void co_slirp_mutex_destroy (void)
@@ -44,7 +44,7 @@ void co_slirp_mutex_unlock (void)
 }
 
 int main(int argc, char *argv[])
-{	
+{
 	co_rc_t rc;
 
 	rc = co_slirp_main(argc, argv);

@@ -186,9 +186,9 @@ typedef struct {
 	xfer_func_t func;
 } scsi_transfer_file_block_data_t;
 
-static co_rc_t scsi_transfer_file_block(co_monitor_t *cmon, 
-				  void *host_data, void *linuxvm, 
-				  unsigned long size, 
+static co_rc_t scsi_transfer_file_block(co_monitor_t *cmon,
+				  void *host_data, void *linuxvm,
+				  unsigned long size,
 				  co_monitor_transfer_dir_t dir)
 {
 	IO_STATUS_BLOCK isb;
@@ -198,7 +198,7 @@ static co_rc_t scsi_transfer_file_block(co_monitor_t *cmon,
 	status = data->func(data->file_handle,
 				NULL,
 				NULL,
-				NULL, 
+				NULL,
 				&isb,
 				linuxvm,
 				size,

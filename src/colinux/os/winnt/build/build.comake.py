@@ -38,7 +38,7 @@ def generate_options(compiler_def_type, libs=None, lflags=None):
         linker_flags = lflags,
         compiler_libs = libs + [
             'user32', 'gdi32', 'ws2_32', 'ntdll', 'kernel32', 'ole32', 'uuid', 'gdi32',
-            'msvcrt', 'crtdll', 'shlwapi', 
+            'msvcrt', 'crtdll', 'shlwapi',
         ]),
     )
 
@@ -213,7 +213,7 @@ def script_cmdline(scripter, tool_run_inf):
     inputs = tool_run_inf.target.get_actual_inputs()
     command_line = ((
         "%s "
-        "-Wl,--base-file,%s " 
+        "-Wl,--base-file,%s "
         "-Wl,--entry,_DriverEntry@8 "
         "-nostartfiles -nostdlib "
         "-o junk.tmp %s -lndis -lntoskrnl -lhal -lgcc ; "

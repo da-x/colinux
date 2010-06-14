@@ -11,7 +11,7 @@ class BlockDevicesOptionArray(OptionArrayPanel):
     SHORT_TREE_DESC = 'Storage'
     LONG_DESC = """Storage devices are represented in Linux as /dev/cobdX, where
 X is the number identifying the storage device."""
-    
+
     class Item(ConfigurationItem):
         def title(self, long=False):
             index = int(self._xml_item.attr.index)
@@ -30,7 +30,7 @@ X is the number identifying the storage device."""
     class ItemPanel(OptionArrayPanel.ItemPanel):
         def populate(self, panel_sizer):
             sizer = wx.BoxSizer(wx.VERTICAL)
-            
+
             sizer2 = wx.BoxSizer(wx.HORIZONTAL)
             text = wx.StaticText(self.panel, -1, 'Filename: ')
             sizer2.Add(text, 0, 0, 3)
@@ -41,7 +41,7 @@ X is the number identifying the storage device."""
             wx.EVT_BUTTON(button, -1, self.browse)
             sizer2.Add(button, 0, 0, 3)
             sizer.Add(sizer2, 0, wx.EXPAND | wx.ALL, 3)
-            
+
             sizer2 = wx.BoxSizer(wx.HORIZONTAL)
             text = wx.StaticText(self.panel, -1, 'Index: ')
             sizer2.Add(text, 0, 0, 3)
@@ -56,7 +56,7 @@ X is the number identifying the storage device."""
             checkctrl.SetValue(self.item._xml_item.attr.enabled == 'true')
             wx.EVT_CHECKBOX(checkctrl, -1, self.changed)
             sizer.Add(sizer2, 0, wx.EXPAND | wx.ALL, 3)
-            
+
             panel_sizer.Add(sizer, 0, wx.EXPAND | wx.ALL)
 
         def browse(self, event):
@@ -80,7 +80,7 @@ X is the number identifying the storage device."""
             if m:
                 path = DOS_DEVICES + path
             return path
-        
+
         def apply(self, event=None):
             try:
                 ret_index = self.check_index(self.index_text.GetValue(), self.item._xml_item.attr.index)
@@ -102,7 +102,7 @@ X is the number identifying the storage device."""
 
 def run_wizard(mainframe):
     data = minidom.Element("block_device")
-    
+
     class PrevLinkedPage(wxWizard.wxPyWizardPage):
         def __init__(self, prev, wizard, *arg, **kw):
             wxWizard.wxPyWizardPage.__init__(self, wizard, *arg, **kw)
@@ -112,7 +112,7 @@ def run_wizard(mainframe):
 
         def populate(self):
             pass
-        
+
         def GetPrev(self):
             return self.prev
 

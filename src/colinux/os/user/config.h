@@ -25,7 +25,7 @@ co_rc_t co_config_user_string_read(int		monitor_index,
 				   int 		size);
 
 co_rc_t co_config_user_string_write(int		monitor_index,
-				    const char* device_name, 
+				    const char* device_name,
 				    int		device_index,
 				    const char*	value_name,
 				    const char*	value);

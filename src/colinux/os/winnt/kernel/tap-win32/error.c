@@ -160,7 +160,7 @@ GetDebugLine (char *buf, const int len)
 	    ret = TRUE;
 
 	  RELEASE_MUTEX (&g_Debug.lock);
-	}      
+	}
     }
   return ret;
 }
@@ -300,7 +300,7 @@ DumpPacket (const char *prefix,
 	  DEBUGP ((" XXX"));
 	  return;
 	}
-      
+
       // TCP packet?
       if (ip->protocol == IPPROTO_TCP
 	  && blen - hlen >= (sizeof (TCPHDR)))
@@ -321,7 +321,7 @@ DumpPacket (const char *prefix,
 	       && blen - hlen >= (sizeof (UDPHDR)))
 	{
 	  const UDPHDR *udp = (UDPHDR *) (data + sizeof (ETH_HEADER) + hlen);
-	  
+
 	  // DHCP packet?
 	  if ((udp->dest == htons (BOOTPC_PORT) || udp->dest == htons (BOOTPS_PORT))
 	      && blen - hlen >= (sizeof (UDPHDR) + sizeof (DHCP)))
@@ -330,7 +330,7 @@ DumpPacket (const char *prefix,
 					   + hlen
 					   + sizeof (ETH_HEADER)
 					   + sizeof (UDPHDR));
-	      
+
 	      int optlen = len
 		- sizeof (ETH_HEADER)
 		- hlen

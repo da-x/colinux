@@ -49,7 +49,7 @@ typedef struct co_manager_open_desc {
 
 /*
  * The manager module manages the running coLinux systems.
- */ 
+ */
 typedef struct co_manager {
 	co_manager_state_t state;
 
@@ -80,7 +80,7 @@ extern co_manager_t *co_global_manager;
 
 extern co_rc_t co_manager_load(co_manager_t *manager);
 
-extern co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl, 
+extern co_rc_t co_manager_ioctl(co_manager_t *manager, unsigned long ioctl,
 				void *io_buffer, unsigned long in_size,
 				unsigned long out_size, unsigned long *return_size,
 				co_manager_open_desc_t opened);

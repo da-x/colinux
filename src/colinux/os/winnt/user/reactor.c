@@ -34,8 +34,8 @@ co_rc_t co_os_reactor_select(co_reactor_t handle, int miliseconds)
 	wait_time = INFINITE;
 	if (miliseconds != -1)
 		wait_time = miliseconds;
-	
-	status = WaitForMultipleObjects(count, wait_list, FALSE, wait_time); 
+
+	status = WaitForMultipleObjects(count, wait_list, FALSE, wait_time);
 
 	if (status >= WAIT_OBJECT_0  &&  status < WAIT_OBJECT_0 + count) {
 		index = status - WAIT_OBJECT_0;
@@ -68,11 +68,11 @@ static co_rc_t packet_read_async(co_winnt_reactor_packet_user_t handle)
 			  &handle->size,
 			  &handle->read_overlapped);
 
-	if (!result) { 
+	if (!result) {
 		error = GetLastError();
 		switch (error)
-		{ 
-		case ERROR_IO_PENDING: 
+		{
+		case ERROR_IO_PENDING:
 			return CO_RC(OK);
 		case ERROR_NOT_ENOUGH_MEMORY:
 			/* Hack for serial daemon */
@@ -94,7 +94,7 @@ static co_rc_t packet_read_completed(co_winnt_reactor_packet_user_t handle)
 	result = GetOverlappedResult(handle->rhandle,
 				     &handle->read_overlapped,
 				     &handle->size, FALSE);
-	
+
 	if (result) {
 		handle->user.received(&handle->user, handle->buffer, handle->size);
 		return packet_read_async(handle);
@@ -110,7 +110,7 @@ static co_rc_t packet_read_completed(co_winnt_reactor_packet_user_t handle)
 	return CO_RC(OK);
 }
 
-static co_rc_t packet_send_whole(co_winnt_reactor_packet_user_t handle, 
+static co_rc_t packet_send_whole(co_winnt_reactor_packet_user_t handle,
 				 unsigned char *buffer, unsigned long size)
 {
 	BOOL result;
@@ -119,18 +119,18 @@ static co_rc_t packet_send_whole(co_winnt_reactor_packet_user_t handle,
 
 	result = WriteFile(handle->whandle, buffer, size,
 			   &write_size, &handle->write_overlapped);
-	
+
 	/* check write_size == size */
 
-	if (!result) { 
+	if (!result) {
 		switch (error = GetLastError())
-		{ 
-		case ERROR_IO_PENDING: 
+		{
+		case ERROR_IO_PENDING:
 			WaitForSingleObject(handle->os_user.write_event, INFINITE);
 			break;
 		default:
 			return CO_RC(ERROR);
-		} 
+		}
 	}
 
 	return CO_RC(OK);
