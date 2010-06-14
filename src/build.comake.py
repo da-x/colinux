@@ -50,9 +50,9 @@ if settings.host_os == 'winnt':
     compiler_defines['WINVER'] = '0x0500'
 else:
     if settings.gcc_guest_target:
-	cross_compilation_prefix = settings.gcc_guest_target + '-'
+        cross_compilation_prefix = settings.gcc_guest_target + '-'
     else:
-	cross_compilation_prefix = ''
+        cross_compilation_prefix = ''
     compiler_flags = []
 
 settings.target_kernel_source = getenv('COLINUX_TARGET_KERNEL_SOURCE')

@@ -150,14 +150,14 @@ class CTracer(CParser):
         self.outfile.write('extern void co_trace_ret(void *);\n');
         self.outfile.write(
 """
-#define CO_TRACE_RET_VALUE(_value_) ({	\
-        typeof(_value_) __ret_value__;	\
-        co_trace_ret((void *)&TRACE_FUNCTION_NAME);    \
-	__ret_value__ = _value_;	\
+#define CO_TRACE_RET_VALUE(_value_) ({ \
+        typeof(_value_) __ret_value__; \
+        co_trace_ret((void *)&TRACE_FUNCTION_NAME); \
+        __ret_value__ = _value_; \
 })
 
-#define CO_TRACE_RET {	\
-        co_trace_ret((void *)&TRACE_FUNCTION_NAME);    \
+#define CO_TRACE_RET { \
+        co_trace_ret((void *)&TRACE_FUNCTION_NAME); \
 }
 
 """)

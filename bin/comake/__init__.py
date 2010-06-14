@@ -28,20 +28,20 @@ def main(args):
         try:
             target_tree = create_target_tree(filename)
         except BuildCancelError:
-	    sys.exit(3)
+            sys.exit(3)
         except TargetNotFoundError:
-	    sys.exit(2)
+            sys.exit(2)
 
         if '--dump' in args:
             target_tree.dump()
         else:
             print "Starting build"
-	    try:
-		target_tree.build()
-	    except TargetNotBuildError:
-		# Don't Traceback Python scripts for build errors
-		print "Error: Target not build (TargetNotBuildError)"
-		sys.exit(1)
+            try:
+                target_tree.build()
+            except TargetNotBuildError:
+                # Don't Traceback Python scripts for build errors
+                print "Error: Target not build (TargetNotBuildError)"
+                sys.exit(1)
             if statistics.made_targets == 0:
                 print "No targets were rebuilt."
             print "Total number of targets: %d" % (statistics.targets, )
