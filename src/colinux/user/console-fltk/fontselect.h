@@ -41,15 +41,13 @@ public:
 	FontSelectDialog(void*ptr, int def_font, int def_size);
 	void click_font(void);
 	void click_size(void);
-	bool get_fixed_pitch(void) { return btn_fixedpitch->value(); };
 	void *ptr_console;
-	void populate_fonts(bool fixed_pitch);
+	void populate_fonts(bool fixed_pitch, int def_font);
 	FontDisplay *textobj;
 	
 private:
 	Fl_Hold_Browser *sizeobj;
 	Fl_Hold_Browser *fontobj;
-	Fl_Check_Button *btn_fixedpitch;
 	int pickedsize, num_fonts;
 	int **my_sizes;
 	int *numsizes;

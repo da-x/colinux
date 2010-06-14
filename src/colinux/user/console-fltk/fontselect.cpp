@@ -48,12 +48,6 @@ static void on_font_select(Fl_Widget *widget, void* v)
 	WriteRegistry(REGISTRY_FONT_SIZE, fsd_inst->textobj->get_size());
 }
 
-static void on_fixedpitch_select(Fl_Widget *widget, void* v)
-{
-	bool value = ((FontSelectDialog*)v)->get_fixed_pitch();
-	((FontSelectDialog*)v)->populate_fonts(value);
-}
-
 static void on_font_close(Fl_Widget *widget, void* v)
 {
 	((FontSelectDialog*)v)->hide();
@@ -100,20 +94,15 @@ FontSelectDialog::FontSelectDialog(void*ptr, int def_font, int def_size): Fl_Win
     btn_close->box(FL_FRAME_BOX);
 	btn_close->callback((Fl_Callback*)on_font_close, this);
 	
-	// fixed pitch font check button
-	btn_fixedpitch = new Fl_Check_Button(410, 240, 110, 30, "Fixed pitch");
-	btn_fixedpitch->callback((Fl_Callback*)on_fixedpitch_select, this);
-	
 	// done with display
 	end();
-	populate_fonts(false);
+	populate_fonts(true, def_font);
 
-	fontobj->value(def_font+1);
 	click_font();
 	click_size();
 }
 
-void FontSelectDialog::populate_fonts(bool fixed_pitch)
+void FontSelectDialog::populate_fonts(bool fixed_pitch, int def_font)
 {
 	if(!fontobj)
 		return;
@@ -165,6 +154,8 @@ void FontSelectDialog::populate_fonts(bool fixed_pitch)
 			my_sizes[i][j] = sizes_array[j];
 		lookup[i] = index++;
 		fontobj->add(name);
+		if(def_font==i)
+			fontobj->value(index);
 	}
 }
 
