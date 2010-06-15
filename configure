@@ -8,7 +8,7 @@
 # - Henry Nestler <henry@bigfoot.de>
 #
 # More arguments and directory options:
-#	./configure --help
+# ./configure --help
 
 # Some defaults from config file (Kernel version and dir, binutil version)
 . bin/build-common.sh --get-vars
@@ -430,7 +430,7 @@ check_exec_tool()
     warn="yes"
     shift
   fi
-  
+
   echo -n "Checking $1 ... "
   if ($2) </dev/null >/dev/null 2>&1; then
     if [ -n "$3" ]; then
@@ -446,13 +446,13 @@ check_exec_tool()
         # get installed version with two numbers
         eval `($2) 2>&1 | sed -n -e \
           's/^.*\([0-9]\{1,\}\)\.\([0-9]\{1,\}\).*/i1=\1 i2=\2/p'`
-	i3="0"
+        i3="0"
       fi
 
       if [ -z "$i1" -o -z "$v1" -o -z "$i2" -o -z "$v2" -o -z "$i3" -o -z "$v3" ]; then
         echo "Version not dectect"
-	add_failed "$1" $warn
-	return 1
+        add_failed "$1" $warn
+        return 1
       fi
 
       echo -n "($i1.$i2.$i3) "
@@ -460,25 +460,25 @@ check_exec_tool()
       if [ $i1 -lt $v1 -o \
            $i1 -eq $v1 -a $i2 -lt $v2 -o \
            $i1 -eq $v1 -a $i2 -eq $v2 -a $i3 -lt $v3 ]; then
-	echo "wrong version, need $3"
-	add_failed "$1" $warn
-	return 1
+        echo "wrong version, need $3"
+        add_failed "$1" $warn
+        return 1
       fi
 
       if [ -n "$4" ]; then
-	local m1="" m2="" m3=""
-	# get needed version, transform the 'x' into 999
-	eval `echo $4 | sed -e \
-	    's/\([0-9]*\)\.\([0-9x]*\)\.\([0-9x]*\)/m1=\1 m2=\2 m3=\3/'`
-	test "$m2" = "x" && m2="999"
-	test "$m3" = "x" && m3="999"
-	if [ $i1 -gt $m1 -o \
-	     $i1 -eq $m1 -a $i2 -gt $m2 -o \
-	     $i1 -eq $m1 -a $i2 -eq $m2 -a $i3 -gt $m3 ]; then
-	  echo "version not supported, maximum $4"
-	  add_failed "$1" $warn
-	  return 1
-	fi
+        local m1="" m2="" m3=""
+        # get needed version, transform the 'x' into 999
+        eval `echo $4 | sed -e \
+            's/\([0-9]*\)\.\([0-9x]*\)\.\([0-9x]*\)/m1=\1 m2=\2 m3=\3/'`
+        test "$m2" = "x" && m2="999"
+        test "$m3" = "x" && m3="999"
+        if [ $i1 -gt $m1 -o \
+             $i1 -eq $m1 -a $i2 -gt $m2 -o \
+             $i1 -eq $m1 -a $i2 -eq $m2 -a $i3 -gt $m3 ]; then
+          echo "version not supported, maximum $4"
+          add_failed "$1" $warn
+          return 1
+        fi
       fi
     fi
 
@@ -535,7 +535,7 @@ gcc_helper()
 		return
 	fi
 
-	cat << EOF
+	cat <<EOF
 
 	Cross gcc and local gcc should be the same major and minor version.
 
@@ -629,12 +629,12 @@ case $colinux_os in
     check_exec_tool "FLTK devel (patched)" "fltk-config --version" "$FLTK_VERSION" && \
     if nm `fltk-config --libs` | grep -q "fl_x_global_event_hook"
     then
-	if [ "$verbose" = "yes" ]; then
-	    echo "  `fltk-config --libs`: Label fl_x_global_event_hook found"
-	fi
+        if [ "$verbose" = "yes" ]; then
+            echo "  `fltk-config --libs`: Label fl_x_global_event_hook found"
+        fi
     else
-	echo "  `fltk-config --libs`: label fl_x_global_event_hook not found"
-	echo "  Please set right path to a patched FLTK"
+        echo "  `fltk-config --libs`: label fl_x_global_event_hook not found"
+        echo "  Please set right path to a patched FLTK"
     fi
   ;;
   darwin) # for darwin as host
@@ -646,12 +646,12 @@ case $colinux_os in
 #    check_exec_tool "FLTK devel (patched)" "fltk-config --version" "$FLTK_VERSION" && \
 #    if nm `fltk-config --libs` | grep -q "fl_x_global_event_hook"
 #    then
-#	if [ "$verbose" = "yes" ]; then
-#	    echo "  `fltk-config --libs`: Label fl_x_global_event_hook found"
-#	fi
+#        if [ "$verbose" = "yes" ]; then
+#            echo "  `fltk-config --libs`: Label fl_x_global_event_hook found"
+#        fi
 #    else
-#	echo "  `fltk-config --libs`: label fl_x_global_event_hook not found"
-#	echo "  Please set right path to a patched FLTK"
+#        echo "  `fltk-config --libs`: label fl_x_global_event_hook not found"
+#        echo "  Please set right path to a patched FLTK"
 #    fi
   ;;
   *) # for Winnt as host
@@ -804,7 +804,7 @@ ${gcc_guest_build_comment}COLINUX_GCC_GUEST_PATH="\$PREFIX/\$COLINUX_GCC_GUEST_T
 COLINUX_ENABLE_WX="$enable_wx"
 EOF
 
-    cat << EOF
+    cat <<EOF
 Configure DONE
 
 Ready for "make download && make && make package && make installer"

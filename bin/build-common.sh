@@ -153,41 +153,41 @@ KERNEL_CHECKSUM="$MD5DIR/.build-kernel.md5"
 
 # coLinux kernel we are targeting
 if [ -z "$KERNEL_VERSION" -o -z "$KERNEL_DIR" ] ; then
-    # What's wrong here?
-    cat >&2 <<EOF
+	# What's wrong here?
+	cat >&2 <<EOF
 	Failed: \$KERNEL_VERSION or \$KERNEL_DIR
 	Can't find the kernel patch, probably wrong script,
 	or file patch/series-* don't exist?
 EOF
-    exit -1
+	exit -1
 fi
 
 # Get variables only? Then end here.
 if [ "$1" = "--get-vars" ]; then
-    return
+	return
 fi
 
 # where does it go?
 if [ -z "$PREFIX" ] ; then
-    echo "Please specify the $""PREFIX directory in user-build.cfg (e.g, /home/$USER/mingw32)"
-    exit -1
+	echo "Please specify the $""PREFIX directory in user-build.cfg (e.g, /home/$USER/mingw32)"
+	exit -1
 fi
 
 # where does it go?
 if [ -z "$SOURCE_DIR" ] ; then
-    echo "Please specify the $""SOURCE_DIR directory in user-build.cfg (e.g, /tmp/$USER/download)"
-    exit -1
+	echo "Please specify the $""SOURCE_DIR directory in user-build.cfg (e.g, /tmp/$USER/download)"
+	exit -1
 fi
 
 # where does it go?
 if [ -z "$BUILD_DIR" ] ; then
-    echo "Please specify the $""BUILD_DIR directory in user-build.cfg (e.g, /tmp/$USER/build)"
-    exit -1
+	echo "Please specify the $""BUILD_DIR directory in user-build.cfg (e.g, /tmp/$USER/build)"
+	exit -1
 fi
 
 # Default path to modules
 if [ -z "$COLINUX_TARGET_MODULE_PATH" ] ; then
-    COLINUX_TARGET_MODULE_PATH="$COLINUX_TARGET_KERNEL_BUILD/_install"
+	COLINUX_TARGET_MODULE_PATH="$COLINUX_TARGET_KERNEL_BUILD/_install"
 fi
 
 # Default logfile of building (Append), can overwrite in user-build.cfg
@@ -236,7 +236,7 @@ download_file()
 			test -f $1 && mv $1 $1.incomplete
 			exit 1
 		fi
-  		cd "$BINDIR"
+		cd "$BINDIR"
 	else
 		echo "Found $1 in the srcdir $SOURCE_DIR"
 	fi
@@ -377,5 +377,5 @@ build_package()
 
 	# Copy modules file
 	echo "Installing Modules $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
-        cp -p $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz $MODULES_TGZ
+	cp -p $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz $MODULES_TGZ
 }
