@@ -122,18 +122,18 @@ Options:
 -------------------------------------------------------------------------------
 Sample for WinNT as host (default):
   ./configure --target=i686-pc-mingw32 \\
-	--downloaddir=$SOURCE_DIR \\
+	--downloaddir=$DOWNLOADS \\
 	--prefix=$PREFIX
 
 Sample for Linux as host:
   ./configure --target=i686-pc-linux \\
-	--downloaddir=$SOURCE_DIR \\
+	--downloaddir=$DOWNLOADS \\
 	--targetkerneldir=$BUILD_DIR/linux-$KERNEL_VERSION \\
 	--hostkerneldir=/usr/src/linux-`uname -r`
 
 Sample for WinNT and Linux as host in same config:
   ./configure \\
-	--downloaddir=$SOURCE_DIR \\
+	--downloaddir=$DOWNLOADS \\
 	--prefix=$PREFIX \\
 	--targetkerneldir=$BUILD_DIR/linux-$KERNEL_VERSION \\
 	--hostkerneldir=/usr/src/linux-`uname -r`
@@ -719,7 +719,7 @@ USER_TOPDIR="$topdir"
 # Directory where we store download sources or where find source already stored
 # default: \$USER_TOPDIR/download
 #
-SOURCE_DIR="$downloaddir"
+DOWNLOADS="$downloaddir"
 
 # In this directoy the cross-tools will be extract and compile (GCC and Co.)
 # default: \$USER_TOPDIR/build

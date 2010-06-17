@@ -176,7 +176,7 @@ extract_winpcap()
 	echo "Extracting winpcap source"
 	cd "$BUILD_DIR"
 	rm -rf "$WINPCAP_SRC"
-	unzip "$SOURCE_DIR/$WINPCAP_SRC_ARCHIVE"
+	unzip "$DOWNLOADS/$WINPCAP_SRC_ARCHIVE"
 	test $? -ne 0 && error_exit 10 "winpcap extracting failed"
 }
 

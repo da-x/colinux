@@ -174,8 +174,8 @@ if [ -z "$PREFIX" ] ; then
 fi
 
 # where does it go?
-if [ -z "$SOURCE_DIR" ] ; then
-	echo "Please specify the $""SOURCE_DIR directory in user-build.cfg (e.g, /tmp/$USER/download)"
+if [ -z "$DOWNLOADS" ] ; then
+	echo "Please specify the $""DOWNLOADS directory in user-build.cfg (e.g, /tmp/$USER/download)"
 	exit -1
 fi
 
@@ -224,10 +224,10 @@ download_file()
 		exit 1
 	fi
 
-	if [ ! -f "$SOURCE_DIR/$1" ]
+	if [ ! -f "$DOWNLOADS/$1" ]
 	then
-		mkdir -p "$SOURCE_DIR"
-		cd "$SOURCE_DIR"
+		mkdir -p "$DOWNLOADS"
+		cd "$DOWNLOADS"
 		echo "Downloading $1"
 		if ! wget "$2/$1"
 		then
@@ -238,7 +238,7 @@ download_file()
 		fi
 		cd "$BINDIR"
 	else
-		echo "Found $1 in the srcdir $SOURCE_DIR"
+		echo "Found $1 in the srcdir $DOWNLOADS"
 	fi
 }
 
@@ -248,7 +248,7 @@ tar_unpack_to()
 {
 	local tool
 
-	case "$SOURCE_DIR/$1" in
+	case "$DOWNLOADS/$1" in
 		*.tar.gz|*.tgz)
 			tool=gzip
 		;;
@@ -263,7 +263,7 @@ tar_unpack_to()
 
 	mkdir -p "$2"
 	cd "$2"
-	$tool -dc "$SOURCE_DIR/$1" | tar x \
+	$tool -dc "$DOWNLOADS/$1" | tar x \
 	|| { echo "unpack failed for $1" >&2; exit 1; }
 }
 

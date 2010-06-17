@@ -522,7 +522,7 @@ Source tree after building cross compiler and coLinux binaries:
     |   +-- vmlinux-0.7.x.zip
     |   |   +-- vmlinux				(kernel)
     |   +-- modules-2.x.y-co-0.7.x.tgz		(Modules for target kernel)
-    +-- download/				$SOURCE_DIR
+    +-- download/				$DOWNLOADS
     |   ... Source files ...			(source store here)
     +-- log/					$COLINUX_BUILD_LOG
     |   +-- build-colinux-$$.log		(Logfiles of build process)
