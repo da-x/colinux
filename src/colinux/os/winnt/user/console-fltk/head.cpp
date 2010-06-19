@@ -12,7 +12,6 @@
 
 extern "C" {
 	#include <colinux/common/debug.h>
-	#include "../osdep.h"
 }
 
 #include <colinux/user/console-fltk/main.h>
@@ -322,7 +321,7 @@ int WriteRegistry(int key, int new_value)
 	return value;
 }
 
-int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR cmdLine, int)
+int main(int argc, char *argv[])
 {
 	// Initialize keyboard hook
 	memset(vkey_state, 0, sizeof(vkey_state) );
@@ -330,14 +329,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR cmdLine, int)
 					keyboard_hook,
 					NULL,
 					GetCurrentThreadId());
-
-	// "Normalize" arguments
-	// NOTE: I choosed to ignore parsing errors here as they should
-	//       be caught later
-	int    argc = 0;
-	char** argv = NULL;
-
-	co_os_parse_args(cmdLine, &argc, &argv);
 
 	// Run main console procedure
 	return co_user_console_main(argc, argv);
