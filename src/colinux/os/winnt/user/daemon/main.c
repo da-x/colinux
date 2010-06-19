@@ -264,8 +264,6 @@ static co_rc_t co_winnt_main(LPSTR szCmdLine)
 	return co_winnt_daemon_main(&start_parameters);
 }
 
-HINSTANCE co_current_win32_instance;
-
 int WINAPI WinMain(HINSTANCE	hInstance,
 		   HINSTANCE	hPrevInstance,
 		   LPSTR	szCmdLine,
@@ -274,7 +272,6 @@ int WINAPI WinMain(HINSTANCE	hInstance,
 	co_rc_t rc;
 	int ret;
 
-	co_current_win32_instance = hInstance;
 	co_debug_start();
 
 	rc = co_winnt_main(szCmdLine);

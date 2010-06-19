@@ -319,7 +319,7 @@ static co_rc_t co_winnt_load_driver_lowlevel_by_name(char *name, char *path)
 	char driverfullpath[0x100] = {0,};
 	co_rc_t rc;
 
-	GetModuleFileName(co_current_win32_instance, fullpath, sizeof(fullpath));
+	GetModuleFileName(NULL, fullpath, sizeof(fullpath));
 	PathRemoveFileSpec(fullpath);
 	PathCombine(driverfullpath, fullpath, path);
 
