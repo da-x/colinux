@@ -17,6 +17,7 @@ fi
 download_files()
 {
 	download_file "$FLTK_ARCHIVE" "$FLTK_URL"
+	test "$COLINUX_HOST_ARCH" = "x86_64" || \
 	download_file "$W32API_SRC_ARCHIVE" "$MINGW_URL"
 	download_file "$WINPCAP_SRC_ARCHIVE" "$WINPCAP_URL"
 	test "$COLINUX_ENABLE_WX" = "yes" && \
@@ -58,8 +59,15 @@ extract_fltk()
 patch_fltk()
 {
 	cd "$BUILD_DIR/$FLTK"
-	patch -p1 < "$TOPDIR/$FLTK_PATCH"
-	test $? -ne 0 && error_exit 10 "FLTK patch failed"
+	if quilt --version >/dev/null 2>&1
+	then
+		quilt -p1 import $TOPDIR/$FLTK_PATCH
+		quilt push
+		test $? -ne 0 && error_exit 10 "FLTK patch failed"
+	else
+		patch -p1 < "$TOPDIR/$FLTK_PATCH"
+		test $? -ne 0 && error_exit 10 "FLTK patch failed"
+	fi
 }
 
 configure_fltk()
@@ -309,6 +317,7 @@ build_colinux_libs()
 	mkdir -p `dirname $COLINUX_BUILD_LOG`
 
 	build_fltk "$1"
+	test "$COLINUX_HOST_ARCH" = "x86_64" || \
 	build_w32api_src "$1"
 	build_winpcap "$1"
 	test "$COLINUX_ENABLE_WX" = "yes" && \

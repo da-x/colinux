@@ -1,0 +1,47 @@
+Branch for coLinux to build for Windows 64 bit
+==============================================
+
+#############################################################################
+This is not ready. Some daemons and FLTK console can build.
+To start FLTK, you needs to copy the file libgcc_s_sjlj-1.dll to Windows.
+The file will find under bin/ in the MinGW-w64 ToolChain.
+The driver linux.sys can load and the ioctl for "--status-driver" works.
+Of curse, coLinux is NOT running now, because porting is not complete!
+#############################################################################
+
+First download current source from SVN:
+
+	cd ...somewhere in your $HOME...
+	svn co http://colinux.svn.sourceforge.net/svnroot/colinux/branches/devel-64bit devel-64bit
+
+Run with ./configure --help to see all options:
+
+	./configure --help
+
+Mostly can run
+
+	./configure --target=x86_64-w64-mingw32 \
+		--downloaddir=$HOME/MinGW64/downloads \
+		--prefix=$HOME/MinGW64/gcc445
+
+If you have a working 32 bit environment, instead "configure" you can use your
+settings. Only needs to add/change follow entries in your bin/user-build.cfg:
+
+	COLINUX_HOST_OS="winnt"
+	COLINUX_HOST_ARCH="x86_64"
+	PREFIX=$HOME/MinGW64/gcc445
+
+Run "make" will download toolchain and more files, and build all
+
+	make
+
+After changing the source, only needs to build coLinux daemons
+(without rebuilding Linux kernel):
+
+	make colinux
+
+To send your changes back to coLinux project please create the patch with:
+
+	svn diff >colinux.patch
+
+2010-06-20 Henry Nestler

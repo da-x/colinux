@@ -12,8 +12,12 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <windows.h>
+#ifdef WIN64
+#include <winternl.h>
+#else
 #include <ddk/ntddk.h>
 #include <ddk/winddk.h>
+#endif
 #include <unistd.h>
 
 #include <colinux/common/libc.h>
@@ -21,6 +25,25 @@
 #include <colinux/user/cmdline.h>
 #include <colinux/os/user/misc.h>
 #include <colinux/os/user/cobdpath.h>
+
+#ifndef NT_SUCCESS
+#define NT_SUCCESS(Status) ((NTSTATUS)(Status) >= 0)
+#endif
+
+#ifndef NTSTATUS
+#define NTSTATUS long
+#endif
+
+#ifdef WIN64
+/*NTOSAPI*/
+NTSTATUS
+NTAPI
+RtlDosPathNameToNtPathName_U(
+  /*IN*/ PCWSTR  DosPathName,
+  /*OUT*/ PUNICODE_STRING  NtPathName,
+  /*OUT*/ PCWSTR  *NtFileNamePart,
+  /*OUT*/ VOID  *DirectoryInfo);
+#endif
 
 co_rc_t co_canonize_cobd_path(co_pathname_t *pathname)
 {

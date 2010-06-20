@@ -1,0 +1,6 @@
+
+/*
+ Quirks for 64 bit development
+*/
+
+#define CO_TERMINATE_NOT_SUPPORTED CO_TERMINATE_INVALID_OPERATION

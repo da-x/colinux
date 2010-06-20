@@ -1,0 +1,13 @@
+TODO:
+-----
+- Locate for markers like "FIXME: W64:"
+- PCAP fails.
+  --> File colinux-bridged-net-daemon.exe excluded from build.
+- Passage code fails totally.
+  --> Code removed.
+- libndis.a is missing for NT-kernel.
+  --> Disabled in conet.c.
+- Many warnings like
+  "warning: cast from pointer to integer of different size"
+- linux.sys was build and can load. But, nobody should try to run coLinux!!! This will crash all times.
+- Find an official alternate for function RtlDosPathNameToNtPathName_U, or a way to do the same.

@@ -9,8 +9,8 @@
  *
  */
 
-#include <windows.h>
 #include <winsock2.h>
+#include <windows.h>
 #include <pcap.h>
 
 #include <stdio.h>

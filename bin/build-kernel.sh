@@ -175,7 +175,7 @@ EOF
 		OPT="O=\"$COLINUX_TARGET_KERNEL_BUILD\""
 	fi
 
-	make ARCH=$TARGET_ARCH $OPT silentoldconfig >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR \
+	make ARCH=$TARGET_GUEST_ARCH $OPT silentoldconfig >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR \
 	|| error_exit 1 "Kernel $KERNEL_VERSION config failed (check 'make oldconfig' on kerneltree)"
 }
 
@@ -183,7 +183,7 @@ compile_kernel()
 {
 	echo "Making Kernel $KERNEL_VERSION"
 	cd "$COLINUX_TARGET_KERNEL_BUILD" || exit 1
-	make ARCH=$TARGET_ARCH vmlinux >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR \
+	make ARCH=$TARGET_GUEST_ARCH vmlinux >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR \
 	|| error_exit 1 "Kernel $KERNEL_VERSION make failed"
 }
 
@@ -200,7 +200,7 @@ compile_modules()
 	test -z "$COLINUX_DEPMOD" && COLINUX_DEPMOD=/sbin/depmod
 
 	make \
-	    ARCH=$TARGET_ARCH \
+	    ARCH=$TARGET_GUEST_ARCH \
 	    INSTALL_MOD_PATH="$COLINUX_TARGET_MODULE_PATH" \
 	    DEPMOD=$COLINUX_DEPMOD \
 	    modules modules_install >>$COLINUX_BUILD_LOG 2>>$COLINUX_BUILD_ERR \
@@ -258,8 +258,14 @@ build_kernel()
 		configure_kernel
 	fi
 
+	# Skip kernel builds, for Daemons only
+	test -z "$DISABLE_KERNEL_MAKE" || exit 0
+
 	# Build Kernel vmlinux
 	compile_kernel
+
+	# Skip module builds, for short testing vmlinux only
+	test -z "$DISABLE_MODULE_MAKE" || exit 0
 
 	# Build and install Modules
 	compile_modules

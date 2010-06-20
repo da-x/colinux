@@ -4,6 +4,87 @@
 
 . ./build-common.sh
 
+download64()
+{
+	echo "Building ToolChain is not supported. Will download a prebuild now. Needs svn client for this."
+
+	# Prebuild GCC MinGW for Linux (43M download, 227M used)
+	test -f $DOWNLOADS/$MINGW_PACK || \
+	 wget $MINGW_URL -P $DOWNLOADS
+
+	# Get ddk/psdk headers from MinGW testing (7M used)
+	# http://article.gmane.org/gmane.comp.gnu.mingw.w64.general/1079
+	test -d $DDK_MIRROR || \
+	 svn checkout -r $DDK_REV $DDK_SVN $DDK_MIRROR
+}
+
+unpack64()
+{
+	if [ ! -d $PREFIX/$TARGET/include ]
+	then
+		# "sezero" does not tar'ed standard PREFIX. So, unpack somewhere and copy
+		echo "Unpack MinGW binary..."
+		mkdir -p $DOWNLOADS/sezero
+		tar xzf $DOWNLOADS/$MINGW_PACK -C $DOWNLOADS/sezero
+		mkdir -p $PREFIX
+		mv $DOWNLOADS/sezero/W64_160271/* $PREFIX/
+		rm -rf $DOWNLOADS/sezero
+		# Copy over all DDK headers
+		echo "Copy over DDK headers..."
+		cp -a $DDK_MIRROR/include/* $PREFIX/$TARGET/include/
+		# Final patches
+		patch -p0 -d $PREFIX/$TARGET < $TOPDIR/patch/$HEADER_PATCH
+	fi
+}
+
+
+if [ "$COLINUX_HOST_ARCH"="x86_64" ]
+then
+	echo -n "Check cross compiler: "
+	cd "$TOPDIR"
+	if [ -x $PREFIX/bin/$TARGET-gcc -a \
+	     -x $PREFIX/bin/$TARGET-ld -a \
+	     -x $PREFIX/bin/$TARGET-windres -a \
+	     -x $PREFIX/bin/$TARGET-strip ]
+	then
+		echo "Skip $TARGET-gcc, $TARGET-ld"
+		echo " - already installed on $PREFIX/bin"
+		exit 0
+	fi
+
+	# Get host machine type and select the right download
+	MACHINE=`uname -m`
+	test "$MACHINE" = "x86_64" || MACHINE="i686"
+
+	# Download links and names
+	# x86_64:
+	# MINGW_PACK="mingw-w64-bin_x86_64-linux_20100604_sezero.tar.gz"
+	# i686:
+	# MINGW_PACK="mingw-w64-bin_i686-linux_20100604_sezero.tar.gz"
+	#
+	MINGW_PACK="mingw-w64-bin_$MACHINE-linux_20100604_sezero.tar.gz"
+	MINGW_URL="http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/sezero_20100604/$MINGW_PACK/download"
+	# Use fix state for DDK headers
+	DDK_REV="2511"
+	DDK_SVN="http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/experimental/ddk_test"
+	DDK_MIRROR="$DOWNLOADS/MinGW64-ddk_test.svn"
+	HEADER_PATCH="mingw64-sdkddkver.h-r2480.patch"
+
+	mkdir -p $DOWNLOADS
+
+	download64
+	unpack64
+
+	if [ -x $PREFIX/bin/$TARGET-gcc -a -f $PREFIX/$TARGET/include/ddk/ntddk.h ]
+	then
+		echo "MinGW-w64 installation done"
+		exit 0
+	else
+		echo "MinGW-w64 installation failed"
+		exit 1
+	fi
+fi
+
 # Flags for building gcc (not for target)
 BUILD_FLAGS="CFLAGS=-O2 LDFLAGS=-s"
 

@@ -9,6 +9,7 @@
  */
 
 #include <colinux/common/common.h>
+#include <colinux/common/common64.h>
 #include <colinux/common/version.h>
 #include <colinux/common/libc.h>
 #include <colinux/os/user/config.h>
@@ -975,6 +976,10 @@ co_rc_t co_daemon_run(co_daemon_t* daemon)
 
 			case CO_TERMINATE_VMXE:
 				co_terminal_print("colinux: An other virtualization runs in VMX mode.\n");
+				break;
+
+			case CO_TERMINATE_NOT_SUPPORTED:
+				co_terminal_print("colinux: Function currently not implented.\n");
 				break;
 
 			default:

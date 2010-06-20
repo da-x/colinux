@@ -20,8 +20,8 @@ typedef uint32_t u_int32_t;
 typedef uint64_t u_int64_t;
 typedef char *caddr_t;
 
-# include <windows.h>
 # include <winsock2.h>
+# include <windows.h>
 # include <ws2tcpip.h>		/* for 'socklen_t' */
 # include <sys/timeb.h>
 # include <iphlpapi.h>

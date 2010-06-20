@@ -6,16 +6,16 @@ Cooperative Linux support code build system
 
 Defaults
 
-    The build defaults to the '$COLINUX_HOST_OS_DEFAULT' OS under the '$COLINUX_ARCH_DEFAULT' architecture. 
-    You can override this by setting COLINUX_ARCH and COLINUX_HOST_OS. 
+    The build defaults to the '$COLINUX_HOST_OS_DEFAULT' OS under the '$COLINUX_HOST_ARCH_DEFAULT' architecture. 
+    You can override this by setting COLINUX_HOST_ARCH and COLINUX_HOST_OS.
 
     The colinux/arch/current and colinux/os/current symlinks are updated
-    automatically according to COLINUX_ARCH and COLINUX_HOST_OS.
+    automatically according to COLINUX_HOST_ARCH and COLINUX_HOST_OS.
 
-Windows port COLINUX_ARCH=i386 COLINUX_HOST_OS=winnt
- 
+Windows port COLINUX_HOST_ARCH=i386 COLINUX_HOST_OS=winnt
+
     Basically, it's:
-      
+
         make colinux
 
     See the Makefile in the colinux/os/winnt/build directory.
@@ -24,7 +24,7 @@ Linux port COLINUX_HOST_OS=linux
 
     Also needed is the path to the sources of the target kernel.
     Currently only 2.6.3 and above are supported.
-    
+
     COLINUX_HOST_KERNEL_DIR=/path/to/your/kernel/tree
 
     Or:

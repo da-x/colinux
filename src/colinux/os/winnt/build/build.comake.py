@@ -14,7 +14,7 @@ targets['executables'] = Target(
     Input('colinux-console-fltk.exe'),
     Input('colinux-debug-daemon.exe'),
     Input('colinux-console-nt.exe'),
-    Input('colinux-bridged-net-daemon.exe'),
+#    Input('colinux-bridged-net-daemon.exe'),
     Input('colinux-ndis-net-daemon.exe'),
     Input('colinux-slirp-net-daemon.exe'),
     Input('colinux-serial-daemon.exe'),
@@ -31,7 +31,7 @@ def generate_options(compiler_def_type, libs=None, lflags=None):
     return Options(
         overriders = dict(
             compiler_def_type = compiler_def_type,
-            compiler_strip = True,
+            compiler_strip = False,
         ),
         appenders = dict(
         compiler_flags = [ '-mno-cygwin' ],
@@ -154,29 +154,35 @@ targets['driver.o'] = Target(
 )
 
 def script_cmdline(scripter, tool_run_inf):
+    from comake.settings import settings
+    if settings.arch == 'x86_64':
+        driver_entry = 'DriverEntry'
+    else:
+        driver_entry = '_DriverEntry@8'
     inputs = tool_run_inf.target.get_actual_inputs()
+    # FIXME: W64: Missing libndis.a "-lndis"
     command_line = ((
         "%s "
         "-Wl,--strip-debug "
         "-Wl,--subsystem,native "
         "-Wl,--image-base,0x10000 "
-        "-Wl,--file-alignment,0x1000 "
-        "-Wl,--section-alignment,0x1000 "
-        "-Wl,--entry,_DriverEntry@8 "
-        "-Wl,%s "
-        "-mdll -nostartfiles -nostdlib "
-        "-o %s %s -lndis -lntoskrnl -lhal -lgcc ") %
+        "-Wl,--entry,%s "
+        "-shared -nostartfiles -nostdlib "
+        "-o %s %s -lntoskrnl -lhal ") %
     (scripter.get_cross_build_tool('gcc', tool_run_inf),
-     inputs[1].pathname,
+     driver_entry,
      tool_run_inf.target.pathname,
      inputs[0].pathname))
     return command_line
+
+def get_ddk_include():
+    from comake.settings import settings
+    return getenv('PREFIX') + '/' + settings.gcc_host_target + '/include/ddk'
 
 targets['linux.sys'] = Target(
     tool = Script(script_cmdline),
     inputs = [
        Input('driver.o'),
-       Input('driver.base.exp'),
     ],
     options = Options(
         appenders = dict(
@@ -185,50 +191,9 @@ targets['linux.sys'] = Target(
                 CO_KERNEL=None,
                 CO_HOST_KERNEL=None,
             ),
+            compiler_includes = [ get_ddk_include() ],
         )
     )
-)
-
-def script_cmdline(scripter, tool_run_inf):
-    inputs = tool_run_inf.target.get_actual_inputs()
-    command_line = ((
-        "%s "
-        "--dllname linux.sys "
-        "--base-file %s "
-        "--output-exp %s") %
-    (scripter.get_cross_build_tool('dlltool', tool_run_inf),
-     inputs[0].pathname,
-     tool_run_inf.target.pathname))
-    return command_line
-
-
-targets['driver.base.exp'] = Target(
-    tool = Script(script_cmdline),
-    inputs = [
-       Input('driver.base.tmp'),
-    ],
-)
-
-def script_cmdline(scripter, tool_run_inf):
-    inputs = tool_run_inf.target.get_actual_inputs()
-    command_line = ((
-        "%s "
-        "-Wl,--base-file,%s "
-        "-Wl,--entry,_DriverEntry@8 "
-        "-nostartfiles -nostdlib "
-        "-o junk.tmp %s -lndis -lntoskrnl -lhal -lgcc ; "
-        "rm -f junk.tmp") %
-    (scripter.get_cross_build_tool('gcc', tool_run_inf),
-     tool_run_inf.target.pathname,
-     inputs[0].pathname))
-    return command_line
-
-
-targets['driver.base.tmp'] = Target(
-    tool = Script(script_cmdline),
-    inputs = [
-       Input('driver.o'),
-    ],
 )
 
 targets['installer'] = Target(

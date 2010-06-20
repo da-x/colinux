@@ -5,15 +5,13 @@
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
- *
  */
 
-#ifndef __NESTED_WINNT_DDK_H__
-#define __NESTED_WINNT_DDK_H__
+#ifndef __COLINUX_ARCH_I386_APIC_H__
+#define __COLINUX_ARCH_I386_APIC_H__
 
-#include <ddk/ntddk.h>
-#ifndef WIN64
-#include <ddk/ntapi.h>
-#endif
+#include "manager.h"
+
+extern co_rc_t co_manager_arch_init_apic(co_archdep_manager_t manager);
 
 #endif

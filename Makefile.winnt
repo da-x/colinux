@@ -1,10 +1,13 @@
 # Makefile.winnt for coLinux (mingw32)
 
-# Host System architecture
+# Host System operating system
 export COLINUX_HOST_OS := winnt
 
+# Host System architecture
+export COLINUX_HOST_ARCH := $(shell . $(USER_CFG); echo $$COLINUX_HOST_ARCH)
+
 # Host system variables and directories
-PREFIX := $(shell . $(USER_CFG); echo $$PREFIX)
+export PREFIX := $(shell . $(USER_CFG); echo $$PREFIX)
 
 # Need some variables and PATH of cross compiler in make.
 export PATH := $(PATH):$(PREFIX)/bin

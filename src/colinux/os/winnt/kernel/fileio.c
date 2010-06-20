@@ -292,8 +292,8 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 	HANDLE handle;
 	struct {
 		union {
-			FILE_FULL_DIRECTORY_INFORMATION entry;
-			FILE_BOTH_DIRECTORY_INFORMATION entry2;
+			FILE_FULL_DIR_INFORMATION entry;
+			FILE_BOTH_DIR_INFORMATION entry2;
 		};
 		WCHAR name_filler[sizeof(co_pathname_t)];
 	} entry_buffer;

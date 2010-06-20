@@ -5,15 +5,12 @@
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
- *
  */
 
-#ifndef __NESTED_WINNT_DDK_H__
-#define __NESTED_WINNT_DDK_H__
+#ifndef __COLINUX_ARCH_I386_ANTINX_H__
+#define __COLINUX_ARCH_I386_ANTINX_H__
 
-#include <ddk/ntddk.h>
-#ifndef WIN64
-#include <ddk/ntapi.h>
-#endif
+extern co_rc_t co_arch_anti_nx_init(struct co_monitor *cmon);
+extern void co_arch_anti_nx_free(struct co_monitor *cmon);
 
 #endif

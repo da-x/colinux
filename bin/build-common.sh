@@ -47,7 +47,14 @@ case $OSTYPE in
 	;;
     *)
 	# what flavor are we building?
-	TARGET=i686-pc-mingw32
+	case $COLINUX_HOST_ARCH in
+	    x86_64)
+		TARGET=x86_64-w64-mingw32
+		;;
+	    *)
+		TARGET=i686-pc-mingw32
+		;;
+	esac
 
 	# Current developing build system
 	BUILD=i686-pc-linux
@@ -55,7 +62,7 @@ case $OSTYPE in
 esac
 
 # ARCH must overwrite for builds on 64 bit (target kernel)
-TARGET_ARCH=i386
+TARGET_GUEST_ARCH=i386
 
 # Updated by Sam Lantinga <slouken@libsdl.org>
 # These are the files from the current MingW release
@@ -99,13 +106,13 @@ FLTK_PATCH="patch/$FLTK-win32.diff"
 
 WINPCAP_SRC=WpdPack
 # Current release
-#WINPCAP_VERSION="4_0_1"
-#WINPCAP_URL=http://www.winpcap.org/install/bin
-#WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_${WINPCAP_VERSION}.zip
+WINPCAP_VERSION="4_1_1"
+WINPCAP_URL=http://www.winpcap.org/install/bin
+WINPCAP_SRC_ARCHIVE=${WINPCAP_SRC}_${WINPCAP_VERSION}.zip
 # in archive later
-WINPCAP_VERSION="4.0.1"
-WINPCAP_URL=http://www.winpcap.org/archive
-WINPCAP_SRC_ARCHIVE=${WINPCAP_VERSION}-${WINPCAP_SRC}.zip
+#WINPCAP_VERSION="4.1.1"
+#WINPCAP_URL=http://www.winpcap.org/archive
+#WINPCAP_SRC_ARCHIVE=${WINPCAP_VERSION}-${WINPCAP_SRC}.zip
 
 if [ "$COLINUX_ENABLE_WX" = "yes" ]
 then

@@ -325,11 +325,18 @@ co_rc_t co_manager_ioctl(co_manager_t* 		manager,
 		params->periphery_api_version = CO_LINUX_PERIPHERY_API_VERSION;
 		params->linux_api_version     = CO_LINUX_API_VERSION;
 
+#ifdef WIN64
+		if (out_size != sizeof(*params)) {
+			co_debug("CO_MANAGER_IOCTL_STATUS illegal size 0x%lx <> 0x%x\n", out_size, (int)sizeof(*params));
+			return CO_RC(INVALID_PARAMETER);
+		}
+#else
 		if (out_size < sizeof(*params)) {
 			// Fallback: old daemon ask status
 			*return_size = sizeof(*params) - sizeof(params->compile_time);
 			return CO_RC(OK);
 		}
+#endif /* WIN64 */
 
 		co_memcpy(params->compile_time,
 			  compile_time,
@@ -490,8 +497,8 @@ co_rc_t co_manager_ioctl(co_manager_t* 		manager,
 		*return_size = sizeof(*params);
 
 		if (in_size < sizeof(*params)) {
-			co_debug_error("monitor ioctl too small! (%ld < %d)",
-			               in_size, sizeof(*params));
+			co_debug_error("monitor ioctl too small! (%ld < %u)",
+			               in_size, (int)sizeof(*params));
 			params->rc = CO_RC(MONITOR_NOT_LOADED);
 			break;
 		}

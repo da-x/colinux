@@ -10,9 +10,20 @@
  */
 
 #include "ddk.h"
+#ifndef WIN64
 #include <ddk/ntifs.h>
+#endif
 #include <ddk/ntdddisk.h>
 #include <ddk/ntddscsi.h>
+
+#ifdef WIN64
+// FIXME: W64: Collision with Linux kernel headers
+#define uintptr_t dummy_uintptr_t
+#define _SIZE_T
+#define _SSIZE_T
+#define _PTRDIFF_T
+#define _TIME_T
+#endif
 
 #include <colinux/kernel/scsi.h>
 #include <colinux/kernel/transfer.h>
@@ -29,7 +40,7 @@
 #define COSCSI_DEBUG_IO 0
 #define COSCSI_DEBUG_PASS 0
 
-typedef /*NTOSAPI*/ NTSTATUS DDKAPI (*xfer_func_t)( /*IN*/ HANDLE  FileHandle, /*IN*/ HANDLE  Event  /*OPTIONAL*/, /*IN*/ PIO_APC_ROUTINE  ApcRoutine  /*OPTIONAL*/, /*IN*/ PVOID  ApcContext  /*OPTIONAL*/, /*OUT*/ PIO_STATUS_BLOCK  IoStatusBlock, /*IN*/ PVOID  Buffer, /*IN*/ ULONG  Length, /*IN*/ PLARGE_INTEGER  ByteOffset  /*OPTIONAL*/, /*IN*/ PULONG  Key  /*OPTIONAL*/);
+typedef /*NTOSAPI*/ NTSTATUS NTAPI (*xfer_func_t)( /*IN*/ HANDLE  FileHandle, /*IN*/ HANDLE  Event  /*OPTIONAL*/, /*IN*/ PIO_APC_ROUTINE  ApcRoutine  /*OPTIONAL*/, /*IN*/ PVOID  ApcContext  /*OPTIONAL*/, /*OUT*/ PIO_STATUS_BLOCK  IoStatusBlock, /*IN*/ PVOID  Buffer, /*IN*/ ULONG  Length, /*IN*/ PLARGE_INTEGER  ByteOffset  /*OPTIONAL*/, /*IN*/ PULONG  Key  /*OPTIONAL*/);
 
 extern PDEVICE_OBJECT coLinux_DeviceObject;
 
@@ -86,7 +97,7 @@ int scsi_file_open(co_monitor_t *cmon, co_scsi_dev_t *dp) {
 	ULONG FileAttributes, CreateDisposition, CreateOptions;
 	co_rc_t rc;
 
-	co_debug("_io_req size: %d, IO_QUEUE_SIZE: %d", sizeof(struct _io_req), IO_QUEUE_SIZE);
+	co_debug("_io_req size: %d, IO_QUEUE_SIZE: %d", (int)sizeof(struct _io_req), IO_QUEUE_SIZE);
 
 #if COSCSI_DEBUG_OPEN
 	co_debug("scsi_file_open: pathname: %s", dp->conf->pathname);
@@ -217,7 +228,7 @@ static co_rc_t scsi_transfer_file_block(co_monitor_t *cmon,
 }
 
 #if COSCSI_ASYNC
-static VOID DDKAPI _scsi_dio(PDEVICE_OBJECT DeviceObject, PVOID Context) {
+static VOID NTAPI _scsi_dio(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 #else
 static int _scsi_dio(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 #endif

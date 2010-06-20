@@ -8,6 +8,15 @@
  *
  */
 
+
+#ifdef WIN64
+/*
+  Hack to fix intrin.h externals
+  src/colinux/os/winnt/build/driver.o:mutex.c:(.text+0xb9e9): undefined reference to `__readcr8'
+ */
+#include <conio.h>
+#endif
+
 #include "../ddk.h"
 
 #include <colinux/os/alloc.h>

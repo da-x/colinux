@@ -176,6 +176,57 @@ co_rc_t co_winnt_status_driver(int verbose)
 	return rc;
 }
 
+static co_rc_t co_winnt_check_running_state(IN SC_HANDLE SchSCManager, IN LPCTSTR DriverName)
+{
+	SC_HANDLE  schService;
+
+	schService = OpenService(
+			SchSCManager,
+			DriverName,
+			SERVICE_ALL_ACCESS /* SERVICE_START */ );
+	if( schService ) {
+
+		// Check the status in case the service is not stopped. 
+		SERVICE_STATUS_PROCESS ssStatus;
+		DWORD dwBytesNeeded;
+
+		if (!QueryServiceStatusEx (
+				schService,                     // handle to service 
+				SC_STATUS_PROCESS_INFO,         // information level
+				(LPBYTE) &ssStatus,             // address of structure
+				sizeof(SERVICE_STATUS_PROCESS), // size of structure
+				&dwBytesNeeded ) )              // size needed if buffer is too small
+		{
+			co_terminal_print("%s(%d): QueryServiceStatusEx failed (%ld)\n", __FILE__, __LINE__, GetLastError());
+			CloseServiceHandle(schService);
+			return CO_RC(ERROR_INSTALLING_DRIVER);
+		}
+
+		// FIXME: W64: Remive debug prints
+		switch (ssStatus.dwCurrentState) {
+		case SERVICE_STOPPED:
+			co_terminal_print("%s(%d): QueryServiceStatusEx : %ld (SERVICE_STOPPED)\n", __FILE__, __LINE__, ssStatus.dwCurrentState);
+			break;
+		case SERVICE_STOP_PENDING:
+			co_terminal_print("%s(%d): QueryServiceStatusEx : %ld (SERVICE_STOP_PENDING)\n", __FILE__, __LINE__, ssStatus.dwCurrentState);
+			break;
+		case SERVICE_RUNNING:
+			co_terminal_print("%s(%d): QueryServiceStatusEx : %ld (SERVICE_RUNNING)\n", __FILE__, __LINE__, ssStatus.dwCurrentState);
+			break;
+		default:
+			co_terminal_print("%s(%d): QueryServiceStatusEx : %ld 0x%lx\n", __FILE__, __LINE__, ssStatus.dwCurrentState, ssStatus.dwCurrentState);
+		}
+
+		CloseServiceHandle( schService );
+		return CO_RC(OK);
+	} else {
+		co_terminal_print("%s(%d): Can't open service 0x%lx\n", __FILE__, __LINE__, GetLastError());
+	}
+
+	return CO_RC(ERROR_INSTALLING_DRIVER);
+}
+
+
 static co_rc_t co_winnt_install_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LPCTSTR  DriverName, IN LPCTSTR ServiceExe)
 {
 	SC_HANDLE  schService;
@@ -185,7 +236,7 @@ static co_rc_t co_winnt_install_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LP
 				   DriverName,
 				   SERVICE_ALL_ACCESS,
 				   SERVICE_KERNEL_DRIVER,
-				   SERVICE_AUTO_START,
+				   SERVICE_DEMAND_START, // FIXME: W64: SERVICE_AUTO_START,
 				   SERVICE_ERROR_NORMAL,
 				   ServiceExe,
 				   NULL,
@@ -195,6 +246,13 @@ static co_rc_t co_winnt_install_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LP
 				   NULL);
 
 	if (schService == NULL) {
+		switch (GetLastError()) {
+		case ERROR_SERVICE_EXISTS:
+			return co_winnt_check_running_state(SchSCManager, DriverName);
+		case ERROR_SERVICE_MARKED_FOR_DELETE:
+			co_terminal_print("%s(%d): MARKED_FOR_DELETE ...\n", __FILE__, __LINE__);
+			break;
+		}
 		co_terminal_print_last_error("Install lowlevel driver failed");
 		return CO_RC(ERROR_INSTALLING_DRIVER);
 	}
@@ -246,12 +304,10 @@ static co_rc_t co_winnt_start_driver_lowlevel(IN SC_HANDLE SchSCManager, IN LPCT
 		ret = CO_RC(ERROR_STARTING_DRIVER);
 
 		err = GetLastError();
-#if 1
-		if (err == ERROR_SERVICE_ALREADY_RUNNING)
-			co_terminal_print("failure: StartService, ERROR_SERVICE_ALREADY_RUNNING\n");
-		else
-			co_terminal_print("failure: StartService (0x%lx)\n", err);
-#endif
+		co_terminal_print_last_error("StartService");
+		/* Error 0x1e7 (ERROR_INVALID_ADDRESS) is mostly wrong linked driver linux.sys */
+		/* if (err != ERROR_SERVICE_ALREADY_RUNNING) */
+		co_terminal_print("failure: StartService (0x%lx)\n", err);
 	}
 
 	CloseServiceHandle(schService);

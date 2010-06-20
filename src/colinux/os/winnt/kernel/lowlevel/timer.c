@@ -22,7 +22,7 @@ struct co_os_timer {
 };
 
 VOID
-DDKAPI
+NTAPI
 co_os_timer_routine(
 	IN PKDPC Dpc,
 	IN PVOID DeferredContext,

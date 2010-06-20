@@ -110,6 +110,12 @@ co_rc_t co_os_file_block_read_write(co_monitor_t *monitor,
 	return rc;
 }
 
+#ifdef WIN64
+#ifndef CALLBACK
+#define CALLBACK __stdcall
+#endif
+#endif
+
 static void CALLBACK transfer_file_block_callback(callback_context_t *context, PIO_STATUS_BLOCK IoStatusBlock, ULONG Reserved)
 {
 	co_debug_lvl(filesystem, 10, "cobd%d callback size=%ld info=%ld status=%X",
@@ -323,7 +329,7 @@ static co_rc_t co_os_file_block_detect_size_binary_search(HANDLE handle, unsigne
 	build_size.QuadPart += test_buffer_size;
 
 	*out_size = build_size.QuadPart;
-	co_debug("detected size: %llu KBs", (build_size.QuadPart >> 10));
+	co_debug("detected size: %lu KBs", (unsigned long)(build_size.QuadPart >> 10));
 
 	co_os_free(test_buffer);
 	return CO_RC(OK);
@@ -343,7 +349,7 @@ static co_rc_t co_os_file_block_detect_size_harddisk(HANDLE handle, unsigned lon
 
 	if (status == STATUS_SUCCESS) {
 		*out_size = length.Length.QuadPart;
-		co_debug("returned size: %llu KBs", (*out_size >> 10));
+		co_debug("returned size: %lu KBs", (unsigned long)(*out_size >> 10));
 		return CO_RC(OK);
 	}
 	co_debug("fail status %X", (int)status);
@@ -365,7 +371,7 @@ static co_rc_t co_os_file_block_detect_size_standard(HANDLE handle, unsigned lon
 
 	if (status == STATUS_SUCCESS) {
 		*out_size = fsi.EndOfFile.QuadPart;
-		co_debug("reported size: %llu KBs", (*out_size >> 10));
+		co_debug("reported size: %lu KBs", (unsigned long)(*out_size >> 10));
 		return CO_RC(OK);
 	} if (status != STATUS_INVALID_DEVICE_REQUEST)
 		co_debug("fail status %X", (int)status);

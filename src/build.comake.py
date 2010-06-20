@@ -5,7 +5,7 @@ import os
 
 from comake.settings import settings
 
-settings.arch = os.getenv('COLINUX_ARCH')
+settings.arch = os.getenv('COLINUX_HOST_ARCH')
 if not settings.arch:
     settings.arch = 'i386'
     print "Target architecture not specified, defaulting to %s" % (settings.arch, )
@@ -41,13 +41,18 @@ compiler_defines = dict(
     COLINUX=None,
     CO_HOST_API=None,
     COLINUX_DEBUG=None,
-    COLINUX_ARCH=settings.host_os,
+    COLINUX_HOST_ARCH=settings.host_os,
 )
 
 if settings.host_os == 'winnt':
-    cross_compilation_prefix = 'i686-pc-mingw32-'
-    compiler_flags = ['-mpush-args', '-mno-accumulate-outgoing-args']
-    compiler_defines['WINVER'] = '0x0500'
+    if settings.arch == 'x86_64':
+        settings.gcc_host_target = 'x86_64-w64-mingw32'
+        compiler_flags = ['-D_AMD64_', '-fms-extensions']
+    else:
+        settings.gcc_host_target = 'i686-pc-mingw32'
+        compiler_flags = ['-mpush-args', '-mno-accumulate-outgoing-args']
+        compiler_defines['WINVER'] = '0x0500'
+    cross_compilation_prefix = settings.gcc_host_target + '-'
 else:
     if settings.gcc_guest_target:
         cross_compilation_prefix = settings.gcc_guest_target + '-'
@@ -79,9 +84,14 @@ if settings.target_kernel_build == settings.target_kernel_source:
 else:
     settings.target_kernel_includes = [
         pathjoin(settings.target_kernel_build, 'include'),
-        pathjoin(settings.target_kernel_build, 'include2'),
-        pathjoin(settings.target_kernel_source, 'arch/x86/include'),
-        pathjoin(settings.target_kernel_source, 'include') ]
+        ]
+    x = pathjoin(settings.target_kernel_build, 'include2')
+    if os.path.exists(x):
+        settings.target_kernel_includes += [ x ]
+    x = pathjoin(settings.target_kernel_source, 'arch/x86/include')
+    if os.path.exists(x):
+        settings.target_kernel_includes += [ x ]
+    settings.target_kernel_includes += [ pathjoin(settings.target_kernel_source, 'include') ]
 
 if not hasattr(settings, 'final_build_target'):
     settings.final_build_target = 'executables'

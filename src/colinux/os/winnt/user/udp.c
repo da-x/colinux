@@ -11,8 +11,8 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include <windows.h>
 #include <winsock2.h>
+#include <windows.h>
 
 #include <colinux/os/alloc.h>
 #include <colinux/common/libc.h>

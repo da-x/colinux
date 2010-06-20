@@ -28,6 +28,7 @@ targetkerneldir=NONE
 targetmoduledir="\$COLINUX_TARGET_KERNEL_BUILD/_install"
 hostkerneldir=NONE
 colinux_os=NONE
+colinux_arch=NONE
 configfile="bin/user-build.cfg"
 no_create=""
 verbose=no
@@ -125,6 +126,11 @@ Sample for WinNT as host (default):
 	--downloaddir=$DOWNLOADS \\
 	--prefix=$PREFIX
 
+Sample for WinNT 64 bit as host:
+  ./configure --target=x86_64-w64-mingw32 \\
+	--downloaddir=$DOWNLOADS \\
+	--prefix=$PREFIX
+
 Sample for Linux as host:
   ./configure --target=i686-pc-linux \\
 	--downloaddir=$DOWNLOADS \\
@@ -206,6 +212,11 @@ EOF
     prev=colinux-os ;;
   --colinux-os=*)
     colinux_os="$optarg" ;;
+
+  --colinux-arch)
+    prev=colinux-arch ;;
+  --colinux-arch=*)
+    colinux_arch="$optarg" ;;
 
   --configfile)
     prev=configfile ;;
@@ -304,6 +315,18 @@ NONE)
   esac ;;
 esac
 echo "Setting colinux_os=$colinux_os"
+
+#
+# Check defaulting arch
+#
+case $colinux_arch in
+NONE)
+  case $target_cpu in
+  x86_64) colinux_arch=$target_cpu ;;
+  *) colinux_arch="i386" ;;
+  esac ;;
+esac
+echo "Setting colinux_arch=$colinux_arch"
 
 # Default prefix directory
 case $prefix in
@@ -710,6 +733,10 @@ echo "Create $configfile"
 # Setup target OS (winnt or linux)
 #
 COLINUX_HOST_OS="$colinux_os"
+
+# Setup target architecture (i386 ot x86_64)
+#
+COLINUX_HOST_ARCH="$colinux_arch"
 
 # Directory where we start for all subdirs in build processing
 # default: \$HOME/colinux-devel  (use only in this file)

@@ -1,7 +1,12 @@
+# * X11 is disabled, don't try to find it
+# * Fix: undefined reference to `__TrackMouseEvent@4'
+# * Fix "void *" to long cast.
+#   Original patch from http://www.fltk.org/strfiles/2308/changes.txt
+#   See Bug STR #2308  http://www.fltk.org/str.php?L2308
 #
-# X11 is disabled, don't try to find it
-#
---- fltk-1.1.10/configure
+Index: fltk-1.1.10/configure
+===================================================================
+--- fltk-1.1.10.orig/configure
 +++ fltk-1.1.10/configure
 @@ -11222,7 +11222,7 @@
  fi
@@ -12,10 +17,9 @@
  	    { { echo "$as_me:$LINENO: error: Configure could not find required X11 libraries" >&5
  echo "$as_me: error: Configure could not find required X11 libraries" >&2;}
     { (exit aborting.); exit aborting.; }; }
-#
-# Fix: undefined reference to `__TrackMouseEvent@4'
-#
---- fltk-1.1.10/src/Fl_win32.cxx
+Index: fltk-1.1.10/src/Fl_win32.cxx
+===================================================================
+--- fltk-1.1.10.orig/src/Fl_win32.cxx
 +++ fltk-1.1.10/src/Fl_win32.cxx
 @@ -85,7 +85,7 @@
  // means that the top level window has been left (otherwise we would have
@@ -26,3 +30,317 @@
  
  #if !defined(NO_TRACK_MOUSE)
  # define USE_TRACK_MOUSE
+diff -ru -x .o -x .a -x .exe fltk-1.1.10/FL/Fl_Menu_Item.H fltk-first/FL/Fl_Menu_Item.H
+--- fltk-1.1.10/FL/Fl_Menu_Item.H	2005-04-15 20:13:17.000000000 -0400
++++ fltk-first/FL/Fl_Menu_Item.H	2010-01-20 15:00:43.736288700 -0500
+@@ -30,6 +30,7 @@
+ 
+ #  include "Fl_Widget.H"
+ #  include "Fl_Image.H"
++# include <stdint.h>
+ 
+ #  if defined(__APPLE__) && defined(check)
+ #    undef check
+@@ -88,7 +89,7 @@
+   void callback(Fl_Callback1*c, long p=0) {callback_=(Fl_Callback*)c; user_data_=(void*)p;}
+   void* user_data() const {return user_data_;}
+   void user_data(void* v) {user_data_ = v;}
+-  long argument() const {return (long)user_data_;}
++  intptr_t argument() const {return (intptr_t)user_data_;}
+   void argument(long v) {user_data_ = (void*)v;}
+   int shortcut() const {return shortcut_;}
+   void shortcut(int s) {shortcut_ = s;}
+diff -ru -x .o -x .a -x .exe fltk-1.1.10/FL/Fl_Widget.H fltk-first/FL/Fl_Widget.H
+--- fltk-1.1.10/FL/Fl_Widget.H	2007-11-19 11:21:48.000000000 -0500
++++ fltk-first/FL/Fl_Widget.H	2010-01-20 14:59:41.622819100 -0500
+@@ -29,7 +29,7 @@
+ #define Fl_Widget_H
+ 
+ #include "Enumerations.H"
+-
++#include <stdint.h>
+ class Fl_Widget;
+ class Fl_Window;
+ class Fl_Group;
+@@ -155,7 +155,7 @@
+   void callback(Fl_Callback1*c, long p=0) {callback_=(Fl_Callback*)c; user_data_=(void*)p;}
+   void* user_data() const {return user_data_;}
+   void user_data(void* v) {user_data_ = v;}
+-  long argument() const {return (long)user_data_;}
++  intptr_t argument() const {return (intptr_t)user_data_;}
+   void argument(long v) {user_data_ = (void*)v;}
+   Fl_When when() const {return (Fl_When)when_;}
+   void when(uchar i) {when_ = i;}
+
+diff -ru -x .o -x .a -x .exe fltk-1.1.10/fluid/Fl_Widget_Type.cxx fltk-first/fluid/Fl_Widget_Type.cxx
+--- fltk-1.1.10/fluid/Fl_Widget_Type.cxx	2009-06-28 18:09:25.000000000 -0400
++++ fltk-first/fluid/Fl_Widget_Type.cxx	2010-01-20 15:12:35.618978400 -0500
+@@ -37,6 +37,7 @@
+ #include "../src/flstring.h"
+ #include <stdio.h>
+ #include <stdlib.h>
++#include <stdint.h>
+ 
+ // Make an Fl_Widget_Type subclass instance.
+ // It figures out the automatic size and parent of the new widget,
+@@ -1133,7 +1134,7 @@
+ {0}};
+ 
+ void align_cb(Fl_Button* i, void *v) {
+-  int b = int(long(i->user_data()));
++  int b = int(intptr_t(i->user_data()));
+   if (v == LOAD) {
+     if (current_widget->is_menu_item()) {i->deactivate(); return;} else i->activate();
+     i->value(current_widget->o->align() & b);
+@@ -1244,7 +1245,7 @@
+ // "v_attributes" let user type in random code for attribute settings:
+ 
+ void v_input_cb(Fl_Input* i, void* v) {
+-  int n = int(long(i->user_data()));
++  int n = int(intptr_t(i->user_data()));
+   if (v == LOAD) {
+     i->static_value(current_widget->extra_code(n));
+   } else {
+
+diff -ru -x .o -x .a -x .exe fltk-1.1.10/src/fl_open_uri.cxx fltk-first/src/fl_open_uri.cxx
+--- fltk-1.1.10/src/fl_open_uri.cxx	2007-01-23 15:45:28.000000000 -0500
++++ fltk-first/src/fl_open_uri.cxx	2010-01-20 14:46:01.319288900 -0500
+@@ -114,7 +114,7 @@
+ #ifdef WIN32
+   if (msg) snprintf(msg, msglen, "open %s", uri);
+ 
+-  return (int)ShellExecute(HWND_DESKTOP, "open", uri, NULL, NULL, SW_SHOW) > 32;
++  return (INT_PTR)ShellExecute(HWND_DESKTOP, "open", uri, NULL, NULL, SW_SHOW) > 32;
+ 
+ #elif defined(__APPLE__)
+   char	*argv[3];			// Command-line arguments
+
+diff -ru -x .o -x .a -x .exe fltk-1.1.10/src/glut_compatability.cxx fltk-first/src/glut_compatability.cxx
+--- fltk-1.1.10/src/glut_compatability.cxx	2007-05-19 20:01:06.000000000 -0400
++++ fltk-first/src/glut_compatability.cxx	2010-01-20 14:48:39.819744200 -0500
+@@ -295,7 +295,7 @@
+   if (glut_menustate_function) glut_menustate_function(1);
+   if (glut_menustatus_function) glut_menustatus_function(1,ex,ey);
+   const Fl_Menu_Item* g = m->m->popup(Fl::event_x(), Fl::event_y(), 0);
+-  if (g && g->callback_) ((void (*)(int))(g->callback_))(int(g->argument()));
++  if (g && g->callback_) ((void (*)(INT_PTR))(g->callback_))(INT_PTR(g->argument()));
+   if (glut_menustatus_function) glut_menustatus_function(0,ex,ey);
+   if (glut_menustate_function) glut_menustate_function(0);
+ }
+
+diff -ru -x .o -x .a -x .exe fltk-1.1.10/test/arc.cxx fltk-first/test/arc.cxx
+--- fltk-1.1.10/test/arc.cxx	2006-10-10 23:12:15.000000000 -0400
++++ fltk-first/test/arc.cxx	2010-01-20 15:32:40.947259700 -0500
+@@ -30,6 +30,8 @@
+ #include <FL/Fl_Hor_Value_Slider.H>
+ #include <FL/fl_draw.H>
+ 
++#include <stdint.h>
++
+ double args[6] = {140, 140, 50, 0, 360, 0};
+ const char* name[6] = {"X", "Y", "R", "start", "end", "rotate"};
+ 
+@@ -66,7 +68,7 @@
+ 
+ void slider_cb(Fl_Widget* o, void* v) {
+   Fl_Slider* s = (Fl_Slider*)o;
+-  args[long(v)] = s->value();
++  args[intptr_t(v)] = s->value();
+   d->redraw();
+ }
+ 
+
+diff -ru -x .o -x .a -x .exe fltk-1.1.10/test/cursor.cxx fltk-first/test/cursor.cxx
+--- fltk-1.1.10/test/cursor.cxx	2006-10-10 23:12:15.000000000 -0400
++++ fltk-first/test/cursor.cxx	2010-01-20 15:34:47.284252300 -0500
+@@ -32,6 +32,8 @@
+ #include <FL/fl_draw.H>
+ #include <FL/Fl_Box.H>
+ 
++#include <stdint.h>
++
+ Fl_Color fg = FL_BLACK;
+ Fl_Color bg = FL_WHITE;
+ Fl_Cursor cursor = FL_CURSOR_DEFAULT;
+@@ -39,7 +41,7 @@
+ Fl_Hor_Value_Slider *cursor_slider;
+ 
+ void choice_cb(Fl_Widget *, void *v) {
+-  cursor = (Fl_Cursor)(long)v;
++  cursor = (Fl_Cursor)(intptr_t)v;
+   cursor_slider->value(cursor);
+   fl_cursor(cursor,fg,bg);
+ }
+
+diff -ru -x .o -x .a -x .exe fltk-1.1.10/test/curve.cxx fltk-first/test/curve.cxx
+--- fltk-1.1.10/test/curve.cxx	2006-10-10 23:12:15.000000000 -0400
++++ fltk-first/test/curve.cxx	2010-01-20 15:35:44.526276100 -0500
+@@ -31,6 +31,8 @@
+ #include <FL/fl_draw.H>
+ #include <FL/Fl_Toggle_Button.H>
+ 
++#include <stdint.h>
++
+ double args[9] = {
+   20,20, 50,200, 100,20, 200,200, 0};
+ const char* name[9] = {
+@@ -83,7 +85,7 @@
+ 
+ void slider_cb(Fl_Widget* o, void* v) {
+   Fl_Slider* s = (Fl_Slider*)o;
+-  args[long(v)] = s->value();
++  args[intptr_t(v)] = s->value();
+   d->redraw();
+ }
+ 
+
+diff -ru -x .o -x .a -x .exe fltk-1.1.10/test/fractals.cxx fltk-first/test/fractals.cxx
+--- fltk-1.1.10/test/fractals.cxx	2007-05-19 20:01:06.000000000 -0400
++++ fltk-first/test/fractals.cxx	2010-01-20 16:10:10.339247700 -0500
+@@ -768,11 +768,11 @@
+ /***************************************************************/
+ 
+ // FLTK-style callbacks to Glut menu callback translators:
+-void setlevel(Fl_Widget*, void *value) {setlevel(long(value));}
++void setlevel(Fl_Widget*, void *value) {setlevel(intptr_t(value));}
+ 
+-void choosefract(Fl_Widget*, void *value) {choosefract(long(value));}
++void choosefract(Fl_Widget*, void *value) {choosefract(intptr_t(value));}
+ 
+-void handlemenu(Fl_Widget*, void *value) {handlemenu(long(value));}
++void handlemenu(Fl_Widget*, void *value) {handlemenu(intptr_t(value));}
+ 
+ #include <FL/Fl_Button.H>
+ #include <FL/Fl_Group.H>
+
+diff -ru -x .o -x .a -x .exe fltk-1.1.10/test/input.cxx fltk-first/test/input.cxx
+--- fltk-1.1.10/test/input.cxx	2006-10-10 23:12:15.000000000 -0400
++++ fltk-first/test/input.cxx	2010-01-20 15:37:37.589422400 -0500
+@@ -26,6 +26,7 @@
+ //
+ 
+ #include <stdio.h>
++#include <stdint.h>
+ #include <FL/Fl.H>
+ #include <FL/Fl_Window.H>
+ #include <FL/Fl_Input.H>
+@@ -61,7 +62,7 @@
+ 
+ void color_cb(Fl_Widget* button, void* v) {
+   Fl_Color c;
+-  switch ((long)v) {
++  switch ((intptr_t)v) {
+   case 0: c = FL_BACKGROUND2_COLOR; break;
+   case 1: c = FL_SELECTION_COLOR; break;
+   default: c = FL_FOREGROUND_COLOR; break;
+
+diff -ru -x .o -x .a -x .exe fltk-1.1.10/test/keyboard.cxx fltk-first/test/keyboard.cxx
+--- fltk-1.1.10/test/keyboard.cxx	2007-02-21 10:49:38.000000000 -0500
++++ fltk-first/test/keyboard.cxx	2010-01-20 15:40:01.717736300 -0500
+@@ -43,7 +43,7 @@
+ #include "keyboard_ui.h"
+ 
+ #include <string.h>
+-
++#include <stdint.h>
+ 
+ // these are used to identify which buttons are which:
+ void key_cb(Fl_Button*, void*) {}
+@@ -109,14 +109,14 @@
+     for (int i = 0; i < window->children(); i++) {
+       Fl_Widget* b = window->child(i);
+       if (b->callback() == (Fl_Callback*)key_cb) {
+-	int i = (long)b->user_data();
++	int i = (intptr_t)b->user_data();
+ 	if (!i) i = b->label()[0];
+         Fl_Button *btn = ((Fl_Button*)b);
+         int state = Fl::event_key(i);
+         if (btn->value()!=state)
+ 	  btn->value(state);
+       } else if (b->callback() == (Fl_Callback*)shift_cb) {
+-	int i = (long)b->user_data();
++	int i = (intptr_t)b->user_data();
+         Fl_Button *btn = ((Fl_Button*)b);
+         int state = Fl::event_state(i);
+         if (btn->value()!=state)
+
+diff -ru -x .o -x .a -x .exe fltk-1.1.10/test/line_style.cxx fltk-first/test/line_style.cxx
+--- fltk-1.1.10/test/line_style.cxx	2006-10-10 23:12:15.000000000 -0400
++++ fltk-first/test/line_style.cxx	2010-01-20 15:41:07.186296300 -0500
+@@ -30,7 +30,7 @@
+ #include <FL/Fl_Value_Slider.H>
+ #include <FL/fl_draw.H>
+ #include <FL/Fl_Choice.H>
+-
++#include <stdint.h>
+ Fl_Window *form;
+ Fl_Slider *sliders[8];
+ Fl_Choice *choice[3];
+@@ -54,9 +54,9 @@
+   buf[3] = char(sliders[7]->value());
+   buf[4] = 0;
+   fl_line_style(
+-    (long)(choice[0]->mvalue()->user_data()) +
+-    (long)(choice[1]->mvalue()->user_data()) +
+-    (long)(choice[2]->mvalue()->user_data()),
++    (intptr_t)(choice[0]->mvalue()->user_data()) +
++    (intptr_t)(choice[1]->mvalue()->user_data()) +
++    (intptr_t)(choice[2]->mvalue()->user_data()),
+     (long)(sliders[3]->value()),
+     buf);
+   fl_rect(10,10,w()-20,h()-20);
+
+diff -ru -x .o -x .a -x .exe fltk-1.1.10/test/scroll.cxx fltk-first/test/scroll.cxx
+--- fltk-1.1.10/test/scroll.cxx	2007-05-19 20:01:06.000000000 -0400
++++ fltk-first/test/scroll.cxx	2010-01-20 15:45:39.651282900 -0500
+@@ -71,7 +71,7 @@
+ }
+ 
+ void type_cb(Fl_Widget*, void* v) {
+-  thescroll->type((uchar)((long)v));
++  thescroll->type((uchar)((intptr_t)v));
+   thescroll->redraw();
+ }
+ 
+@@ -87,7 +87,7 @@
+ };
+ 
+ void align_cb(Fl_Widget*, void* v) {
+-  thescroll->scrollbar.align((uchar)((long)v));
++  thescroll->scrollbar.align((uchar)((intptr_t)v));
+   thescroll->redraw();
+ }
+ 
+
+diff -ru -x .o -x .a -x .exe fltk-1.1.10/test/sudoku.rc fltk-first/test/sudoku.rc
+--- fltk-1.1.10/test/sudoku.rc	2005-11-27 09:45:48.000000000 -0500
++++ fltk-first/test/sudoku.rc	2010-01-20 15:51:55.897299300 -0500
+@@ -16,7 +16,7 @@
+ // English (U.S.) resources
+ 
+ #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+-#ifdef _WIN32
++#ifdef _ADM64
+ //LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+ #pragma code_page(1252)
+ #endif //_WIN32
+
+diff -ru -x .o -x .a -x .exe fltk-1.1.10/test/unittests.cxx fltk-first/test/unittests.cxx
+--- fltk-1.1.10/test/unittests.cxx	2007-05-19 20:01:06.000000000 -0400
++++ fltk-first/test/unittests.cxx	2010-01-20 15:31:05.536455500 -0500
+@@ -32,12 +32,14 @@
+ #include <FL/Fl_Box.H>
+ #include <FL/fl_draw.H>
+ 
++#include <stdint.h>
++
+ Fl_Window *win = 0;
+ 
+ int point_test_ix, line_test_ix, rect_test_ix, viewport_test_ix, circle_test_ix;
+ 
+ void changePageCB(Fl_Widget*, void *ixvp) {
+-  long ix = (long)ixvp;
++  intptr_t ix = (intptr_t)ixvp;
+   long i = 0, n = win->children();
+   for ( ; i<n; i++) 
+     win->child(i)->hide();
