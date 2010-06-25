@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.33.5
-# Tue Jun 22 21:15:28 2010
+# Fri Jun 25 21:54:16 2010
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -742,7 +742,18 @@ CONFIG_SCSI_COOPERATIVE=y
 # CONFIG_SCSI_DH is not set
 # CONFIG_SCSI_OSD_INITIATOR is not set
 # CONFIG_ATA is not set
-# CONFIG_MD is not set
+CONFIG_MD=y
+# CONFIG_BLK_DEV_MD is not set
+CONFIG_BLK_DEV_DM=m
+# CONFIG_DM_DEBUG is not set
+CONFIG_DM_CRYPT=m
+CONFIG_DM_SNAPSHOT=m
+CONFIG_DM_MIRROR=m
+# CONFIG_DM_LOG_USERSPACE is not set
+CONFIG_DM_ZERO=m
+# CONFIG_DM_MULTIPATH is not set
+# CONFIG_DM_DELAY is not set
+# CONFIG_DM_UEVENT is not set
 # CONFIG_FUSION is not set
 
 #
@@ -1006,7 +1017,8 @@ CONFIG_XFS_QUOTA=y
 CONFIG_XFS_POSIX_ACL=y
 CONFIG_XFS_RT=y
 # CONFIG_XFS_DEBUG is not set
-# CONFIG_GFS2_FS is not set
+CONFIG_GFS2_FS=m
+# CONFIG_GFS2_FS_LOCKING_DLM is not set
 CONFIG_OCFS2_FS=m
 CONFIG_OCFS2_FS_O2CB=m
 CONFIG_OCFS2_FS_STATS=y
