@@ -22,7 +22,7 @@ extern "C" {
  * to the colinux instance.
  *
  * Instead of creating a virtual class, I decided to just put the
- * implementation of handle_key_event() in the os/current/console/head.cpp
+ * implementation of handle_key_event() in the os/current/user/console-fltk/head.cpp
  * as that is the only OS specific function.
  */
 class console_input
@@ -37,6 +37,7 @@ public:
 
     // Resumes event handling
     void resume( co_user_monitor_t* monitor );
+    void resume(){monitor_=old_monitor_;};
 
     // Returns true if input is paused.
     bool is_paused( ) const;
@@ -86,6 +87,7 @@ private:
     unsigned char           kstate_[512>>3];        // Keyboard state
     unsigned                pressed_;               // Number of keys pressed
     co_user_monitor_t   *   monitor_;               // The attached monitor
+    co_user_monitor_t   *   old_monitor_;               // The attached monitor
     co_mouse_data_t         last_mouse_;            // Last mouse data sent
 };
 

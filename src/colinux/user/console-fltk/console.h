@@ -29,6 +29,7 @@ extern int PasteClipboardIntoColinux();
 
 class console_screen;
 class console_log_window;
+class client_console_window;
 struct console_parameters_t;
 
 
@@ -119,6 +120,7 @@ private:
     static void on_change_view( Fl_Widget*, void* );
     static void on_about( Fl_Widget*, void* );
     static void on_show_hide_log( Fl_Widget*, void* );
+    static void on_show_hide_console( Fl_Widget*, void* );
     static void on_mark( Fl_Widget*, void* );
     static void on_paste( Fl_Widget*, void* );
     static void on_calibrate( Fl_Widget*, void* );
@@ -150,6 +152,7 @@ private:
     Fl_Scroll           *   wScroll_;
     console_screen      *   wScreen_;
     console_log_window  *   wLog_;
+    client_console_window  *   wConsole_;
     Fl_Group            *   wStatus_;
     Fl_Box              *   status_line_;
     Fl_Button           *   btn_log_;

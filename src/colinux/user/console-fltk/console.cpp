@@ -97,6 +97,7 @@ Fl_Menu_Item console_main_window::menu_items_[]
             { " Manager Info "  , 0, on_inspect, (void*)2 },
             { 0 },
         { "View", 0,0,0, FL_SUBMENU },
+            { " Show Console window "   , 0, on_show_hide_console, 0, FL_MENU_TOGGLE },
             { " Show Log window "   , 0, on_show_hide_log, 0, FL_MENU_TOGGLE },
             { " Show Status Bar "   , 0, on_change_view  , (void*)1, FL_MENU_TOGGLE|FL_MENU_VALUE },
             { " Full Screen "       , 0, on_change_view  , (void*)2, FL_MENU_TOGGLE|FL_MENU_DIVIDER },
@@ -192,6 +193,8 @@ console_main_window::console_main_window( )
 
     // Create (hidden) log window (will be shown upon request)
     wLog_ = new console_log_window( 400,300, "Message Log" );
+    wConsole_ = new client_console_window(input_, 800,600, "Message Log" );
+    wConsole_->show();
     center_widget( wLog_ );
 
     // Update menu items state & status bar
@@ -555,6 +558,19 @@ co_id_t console_main_window::find_first_monitor( )
  */
 void console_main_window::handle_message( co_message_t * msg )
 {
+
+        switch (msg->from) {
+        case CO_MODULE_MONITOR:
+        case CO_MODULE_LINUX: {
+                co_console_message_t* console_message;
+
+                console_message = (typeof(console_message))(msg->data);
+                wConsole_->handle_console_event(console_message);
+                break;
+        }
+	default: { break; }
+        }
+
     // Messages received from other modules (daemons)
     if ( msg->type == CO_MESSAGE_TYPE_STRING )
     {
@@ -579,6 +595,8 @@ bool console_main_window::attach( co_id_t id )
 {
     co_rc_t                         rc;
     co_module_t                     modules[1] = { CO_MODULE_CONSOLE, };
+    co_monitor_ioctl_get_console_t  get_console;
+    co_console_t*                   console;
     co_monitor_ioctl_video_attach_t ioctl_video;
     co_user_monitor_t           *   mon;
 
@@ -598,6 +616,19 @@ bool console_main_window::attach( co_id_t id )
         log( "Monitor%d: Error connecting! (rc=%X)\n", id, rc );
         return false;
     }
+
+        rc = co_user_monitor_get_console(mon, &get_console);
+        if (!CO_OK(rc)) {
+                log("Monitor%d: Error getting console\n");
+                return rc;
+        }
+
+        rc = co_console_create(&get_console.config, &console);
+        if (!CO_OK(rc))
+                return rc;
+
+        wConsole_->set_console(console);
+
 
     /* Get pointer to shared video buffer */
     rc = co_user_monitor_video_attach( mon, &ioctl_video );
@@ -870,6 +901,19 @@ void console_main_window::on_change_view( Fl_Widget*, void* data )
     }
 }
 
+void console_main_window::on_show_hide_console( Fl_Widget* w, void* v )
+{
+    assert( this_ );
+
+    // Show/hide window
+    //if ( this_->wLog_->visible() )
+    //    this_->wLog_->hide( );
+    //else
+        this_->wConsole_->show( );
+    // Update UI hints to the user
+    //this_->update_ui_state( );
+}
+
 /* ----------------------------------------------------------------------- */
 /**
  * Handler for show/hide log window.
@@ -889,6 +933,7 @@ void console_main_window::on_show_hide_log( Fl_Widget* w, void* v )
     // Update UI hints to the user
     this_->update_ui_state( );
 }
+
 
 /* ----------------------------------------------------------------------- */
 /**

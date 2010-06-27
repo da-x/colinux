@@ -44,6 +44,7 @@ console_input::~console_input( )
  */
 void console_input::pause( )
 {
+    old_monitor_ = monitor_;
     monitor_ = NULL;
 }
 

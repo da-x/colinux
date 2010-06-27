@@ -34,11 +34,21 @@ console_log_window::console_log_window( int w, int h, const char* label )
     resizable( wText_ );
     end();
 }
+client_console_window::client_console_window( console_input& in, int w, int h, const char* label )
+    : mInput_(in),super_( w,h, label )
+{
+    //mWidget_      = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, sheight - 120);
+    mWidget_      = new console_widget_t(0, 0, 800, 600);
+}
 
 /**
  * Class destructor.
  */
 console_log_window::~console_log_window( )
+{
+}
+
+client_console_window::~client_console_window( )
 {
 }
 
@@ -80,3 +90,50 @@ int console_log_window::handle( int event )
     // Let base class handle other events
     return super_::handle( event );
 }
+int client_console_window::handle( int event )
+{
+        int x, y;
+
+        x = Fl::event_x();
+        y = Fl::event_y();
+
+    switch(event){
+    case FL_FOCUS:
+        //if ( is_attached() )
+            mInput_.resume();
+        break;
+    case FL_UNFOCUS:
+        //if ( is_attached() )
+        //{
+            mInput_.reset( false );
+            mInput_.pause( );
+        //}
+        break;
+    case FL_DRAG:
+                mWidget_->mouse_drag(x, y);
+                break;
+    case FL_RELEASE:
+                mWidget_->mouse_release(x, y);
+                break;
+    case FL_MOUSEWHEEL:
+                mWidget_->scroll_back_buffer(Fl::event_dy());
+                break;
+    case FL_KEYUP:
+    case FL_KEYDOWN:
+        //if ( mouse_mode_ != MouseMark )
+            return mInput_.handle_key_event( );
+        // Any key will stop the mark mode
+        //end_mark_mode( );
+        return 1;
+    case FL_PASTE:
+      {
+        int c = mInput_.paste_text( Fl::event_length(), Fl::event_text() );
+        //status( "%ddd of %d characters pasted...\n",c, Fl::event_length() );
+        return 1;
+      }
+    }
+    
+    // Let base class handle other events
+    return super_::handle( event );
+}
+
