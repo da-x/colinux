@@ -988,7 +988,23 @@ Index: linux-2.6.33-source/arch/x86/mm/init_32.c
  
  pte_t *kmap_pte;
  pgprot_t kmap_prot;
-@@ -717,7 +725,18 @@
+@@ -471,6 +479,7 @@
+ 
+ void __init native_pagetable_setup_start(pgd_t *base)
+ {
++#ifndef CONFIG_COOPERATIVE
+ 	unsigned long pfn, va;
+ 	pgd_t *pgd;
+ 	pud_t *pud;
+@@ -499,6 +508,7 @@
+ 		pte_clear(NULL, va, pte);
+ 	}
+ 	paravirt_alloc_pmd(&init_mm, __pa(base) >> PAGE_SHIFT);
++#endif /* CONFIG_COOPERATIVE */
+ }
+ 
+ void __init native_pagetable_setup_done(pgd_t *base)
+@@ -717,7 +727,18 @@
  	num_physpages = highend_pfn;
  	high_memory = (void *) __va(highstart_pfn * PAGE_SIZE - 1) + 1;
  #else
@@ -1007,7 +1023,7 @@ Index: linux-2.6.33-source/arch/x86/mm/init_32.c
  	sparse_memory_present_with_active_regions(0);
  	num_physpages = max_low_pfn;
  	high_memory = (void *) __va(max_low_pfn * PAGE_SIZE - 1) + 1;
-@@ -738,8 +757,10 @@
+@@ -738,8 +759,10 @@
  {
  	unsigned long max_zone_pfns[MAX_NR_ZONES];
  	memset(max_zone_pfns, 0, sizeof(max_zone_pfns));
@@ -1018,7 +1034,7 @@ Index: linux-2.6.33-source/arch/x86/mm/init_32.c
  	max_zone_pfns[ZONE_NORMAL] = max_low_pfn;
  #ifdef CONFIG_HIGHMEM
  	max_zone_pfns[ZONE_HIGHMEM] = highend_pfn;
-@@ -748,6 +769,7 @@
+@@ -748,6 +771,7 @@
  	free_area_init_nodes(max_zone_pfns);
  }
  
@@ -1026,7 +1042,7 @@ Index: linux-2.6.33-source/arch/x86/mm/init_32.c
  static unsigned long __init setup_node_bootmem(int nodeid,
  				 unsigned long start_pfn,
  				 unsigned long end_pfn,
-@@ -768,25 +790,40 @@
+@@ -768,25 +792,40 @@
  
  	return bootmap + bootmap_size;
  }
@@ -1069,7 +1085,7 @@ Index: linux-2.6.33-source/arch/x86/mm/init_32.c
  	for_each_online_node(nodeid) {
  		 unsigned long start_pfn, end_pfn;
  
-@@ -804,6 +841,7 @@
+@@ -804,6 +843,7 @@
  		bootmap = setup_node_bootmem(nodeid, start_pfn, end_pfn,
  						 bootmap);
  	}
@@ -1077,7 +1093,7 @@ Index: linux-2.6.33-source/arch/x86/mm/init_32.c
  
  	after_bootmem = 1;
  }
-@@ -836,6 +874,7 @@
+@@ -836,6 +876,7 @@
   * black magic jumps to work around some nasty CPU bugs, but fortunately the
   * switch to using exceptions got rid of all that.
   */
@@ -1085,7 +1101,7 @@ Index: linux-2.6.33-source/arch/x86/mm/init_32.c
  static void __init test_wp_bit(void)
  {
  	printk(KERN_INFO
-@@ -856,13 +895,16 @@
+@@ -856,13 +897,16 @@
  		printk(KERN_CONT "Ok.\n");
  	}
  }
@@ -1102,7 +1118,7 @@ Index: linux-2.6.33-source/arch/x86/mm/init_32.c
  
  #ifdef CONFIG_FLATMEM
  	BUG_ON(!mem_map);
-@@ -895,15 +937,15 @@
+@@ -895,15 +939,15 @@
  		totalhigh_pages << (PAGE_SHIFT-10));
  
  	printk(KERN_INFO "virtual kernel memory layout:\n"
@@ -1125,7 +1141,7 @@ Index: linux-2.6.33-source/arch/x86/mm/init_32.c
  		FIXADDR_START, FIXADDR_TOP,
  		(FIXADDR_TOP - FIXADDR_START) >> 10,
  
-@@ -911,9 +953,19 @@
+@@ -911,9 +955,19 @@
  		PKMAP_BASE, PKMAP_BASE+LAST_PKMAP*PAGE_SIZE,
  		(LAST_PKMAP*PAGE_SIZE) >> 10,
  #endif
@@ -1146,7 +1162,7 @@ Index: linux-2.6.33-source/arch/x86/mm/init_32.c
  
  		(unsigned long)__va(0), (unsigned long)high_memory,
  		((unsigned long)high_memory - (unsigned long)__va(0)) >> 20,
-@@ -946,11 +998,19 @@
+@@ -946,11 +1000,19 @@
  	BUG_ON(PKMAP_BASE + LAST_PKMAP*PAGE_SIZE	> FIXADDR_START);
  	BUG_ON(VMALLOC_END				> PKMAP_BASE);
  #endif
@@ -1166,7 +1182,7 @@ Index: linux-2.6.33-source/arch/x86/mm/init_32.c
  
  	save_pg_dir();
  	zap_low_mappings(true);
-@@ -972,6 +1032,7 @@
+@@ -972,6 +1034,7 @@
   * This function cannot be __init, since exceptions don't work in that
   * section.  Put this after the callers, so that it cannot be inlined.
   */
@@ -1174,7 +1190,7 @@ Index: linux-2.6.33-source/arch/x86/mm/init_32.c
  static noinline int do_test_wp_bit(void)
  {
  	char tmp_reg;
-@@ -991,6 +1052,7 @@
+@@ -991,6 +1054,7 @@
  
  	return flag;
  }

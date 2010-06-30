@@ -11,6 +11,7 @@
 
   Kernel:
   * Version 2.6.33.5
+  * Bug #3021253: Hang/Crash with memory size not bounding on 4MB.
 
   Buildsystem:
   * Suppress warnings from Python 2.6. (Shai Vaingast)
