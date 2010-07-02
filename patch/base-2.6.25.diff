@@ -953,7 +953,23 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  #ifdef CONFIG_HIGHMEM
  pte_t *kmap_pte;
-@@ -390,6 +395,7 @@
+@@ -330,6 +335,7 @@
+ 
+ void __init native_pagetable_setup_start(pgd_t *base)
+ {
++#ifndef CONFIG_COOPERATIVE
+ 	unsigned long pfn, va;
+ 	pgd_t *pgd;
+ 	pud_t *pud;
+@@ -358,6 +364,7 @@
+ 		pte_clear(NULL, va, pte);
+ 	}
+ 	paravirt_alloc_pd(&init_mm, __pa(base) >> PAGE_SHIFT);
++#endif /* CONFIG_COOPERATIVE */
+ }
+ 
+ void __init native_pagetable_setup_done(pgd_t *base)
+@@ -390,6 +397,7 @@
  
  	paravirt_pagetable_setup_start(pgd_base);
  
@@ -961,7 +977,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  	/* Enable PSE if available */
  	if (cpu_has_pse)
  		set_in_cr4(X86_CR4_PSE);
-@@ -403,6 +409,7 @@
+@@ -403,6 +411,7 @@
  
  	kernel_physical_mapping_init(pgd_base);
  	remap_numa_kva();
@@ -969,7 +985,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  	/*
  	 * Fixed mappings, only the page table structure has to be
-@@ -543,6 +550,7 @@
+@@ -543,6 +552,7 @@
   * used to involve black magic jumps to work around some nasty CPU bugs,
   * but fortunately the switch to using exceptions got rid of all that.
   */
@@ -977,7 +993,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  static void __init test_wp_bit(void)
  {
  	printk(KERN_INFO
-@@ -563,6 +571,7 @@
+@@ -563,6 +573,7 @@
  		printk(KERN_CONT "Ok.\n");
  	}
  }
@@ -985,7 +1001,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  static struct kcore_list kcore_mem, kcore_vmalloc;
  
-@@ -621,15 +630,15 @@
+@@ -621,15 +632,15 @@
  
  #if 1 /* double-sanity-check paranoia */
  	printk(KERN_INFO "virtual kernel memory layout:\n"
@@ -1008,7 +1024,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  		FIXADDR_START, FIXADDR_TOP,
  		(FIXADDR_TOP - FIXADDR_START) >> 10,
  
-@@ -638,8 +647,19 @@
+@@ -638,8 +649,19 @@
  		(LAST_PKMAP*PAGE_SIZE) >> 10,
  #endif
  
@@ -1029,7 +1045,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  		(unsigned long)__va(0), (unsigned long)high_memory,
  		((unsigned long)high_memory - (unsigned long)__va(0)) >> 20,
-@@ -658,12 +678,20 @@
+@@ -658,12 +680,20 @@
  	BUG_ON(PKMAP_BASE + LAST_PKMAP*PAGE_SIZE	> FIXADDR_START);
  	BUG_ON(VMALLOC_END				> PKMAP_BASE);
  #endif
@@ -1050,7 +1066,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  	cpa_init();
  
-@@ -694,6 +722,7 @@
+@@ -694,6 +724,7 @@
   * This function cannot be __init, since exceptions don't work in that
   * section.  Put this after the callers, so that it cannot be inlined.
   */
@@ -1058,7 +1074,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  static noinline int do_test_wp_bit(void)
  {
  	char tmp_reg;
-@@ -713,6 +742,7 @@
+@@ -713,6 +744,7 @@
  
  	return flag;
  }
@@ -1066,7 +1082,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  
  #ifdef CONFIG_DEBUG_RODATA
  const int rodata_test_data = 0xC3;
-@@ -770,7 +800,9 @@
+@@ -770,7 +802,9 @@
  	 */
  	printk(KERN_INFO "debug: unmapping init memory %08lx..%08lx\n",
  		begin, PAGE_ALIGN(end));
@@ -1076,7 +1092,7 @@ Index: linux-2.6.25-source/arch/x86/mm/init_32.c
  #else
  	unsigned long addr;
  
-@@ -779,7 +811,9 @@
+@@ -779,7 +813,9 @@
  	 * we are going to free part of that, we need to make that
  	 * writeable first.
  	 */
