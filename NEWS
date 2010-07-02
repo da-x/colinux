@@ -1,3 +1,7 @@
+* Version 0.7.7.1
+  Kernel 2.6.25.20 and 2.6.26.8:
+  * Bug #3021253: Hang/Crash with memory size not bounding on 4MB.
+
 * Version 0.7.7
   Console and daemons:
   * New: "color=black,white" sets default color. (Peter Kuznetsov)
