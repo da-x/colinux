@@ -10,6 +10,10 @@
  */ 
 #include <colinux/user/console-fltk/input.h>
 #include <FL/x.H>
+#include <colinux/user/console-fltk/main.h>
+
+
+#define SOFTWARE_COLINUX_CONSOLE_FONT_KEY "Software\\coLinux\\console\\Font"
 
 /**
  * Called to handle FLTK key events.
@@ -78,3 +82,80 @@ int console_input::handle_key_event( )
     // Let colinux handle all our keys
     return 1;
 }
+
+int ReadRegistry(int key)
+{
+        HKEY hKey;
+
+        DWORD value=-1, reg_size = sizeof(value);
+
+        if(::RegOpenKeyEx(HKEY_CURRENT_USER, TEXT(SOFTWARE_COLINUX_CONSOLE_FONT_KEY), 0, KEY_READ, &hKey)==ERROR_SUCCESS)
+        {
+                switch(key)
+                {
+                        case REGISTRY_FONT_SIZE:
+                                if(::RegQueryValueEx(hKey, TEXT("Size"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
+                                        value = -1;
+                                break;
+
+                        case REGISTRY_FONT:
+                                if(::RegQueryValueEx(hKey, TEXT("Font"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
+                                        value = -1;
+                                break;
+
+                        case REGISTRY_COPYSPACES:
+                                if(::RegQueryValueEx(hKey, TEXT("CopySpaces"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
+                                        value = -1;
+                                break;
+
+                        case REGISTRY_EXITDETACH:
+                                if(::RegQueryValueEx(hKey, TEXT("ExitDetach"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
+                                        value = -1;
+                                break;
+
+                        default:
+                                break;
+                }
+        }
+        RegCloseKey(hKey);
+
+        return value;
+}
+
+int WriteRegistry(int key, int new_value)
+{
+        HKEY hKey;
+
+        DWORD value=new_value, reg_size = sizeof(value);
+        LONG retval;
+        retval = ::RegCreateKeyEx(HKEY_CURRENT_USER, TEXT(SOFTWARE_COLINUX_CONSOLE_FONT_KEY), 0, NULL, REG_OPTION_NON_VOLATILE,
+                KEY_ALL_ACCESS, NULL, &hKey, NULL);
+        if(retval==ERROR_SUCCESS)
+        {
+                switch(key)
+                {
+                        case REGISTRY_FONT_SIZE:
+                                ::RegSetValueEx(hKey, TEXT("Size"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
+                                break;
+
+                        case REGISTRY_FONT:
+                                ::RegSetValueEx(hKey, TEXT("Font"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
+                                break;
+
+                        case REGISTRY_COPYSPACES:
+                                ::RegSetValueEx(hKey, TEXT("CopySpaces"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
+                                break;
+
+                        case REGISTRY_EXITDETACH:
+                                ::RegSetValueEx(hKey, TEXT("ExitDetach"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
+                                break;
+
+                        default:
+                                break;
+                }
+        }
+        RegCloseKey(hKey);
+
+        return value;
+}
+

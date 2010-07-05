@@ -12,9 +12,12 @@
 
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Text_Display.H>
+#include <FL/Fl_Menu_Bar.H>
 
 #include  "widget.h"
 #include "input.h"
+
+class FontSelectDialog;
 
 /**
  * Tool window for displaying log messages.
@@ -41,13 +44,13 @@ private:
 
 };
 
-class client_console_window : public Fl_Window
+class console_window_t : public Fl_Window
 {
     typedef Fl_Window           super_;
     typedef console_log_window  self_t;
 public:
-     client_console_window(console_input&, int w, int h, const char* label=0 );
-    ~client_console_window( );
+     console_window_t(console_input&, int w, int h, const char* label=0 );
+    ~console_window_t( );
 
     void set_console(co_console_t* _console){
         mWidget_->set_console(_console);
@@ -55,14 +58,25 @@ public:
     };
     co_rc_t handle_console_event(co_console_message_t* msg){mWidget_->handle_console_event(msg);};
     console_input& mInput_;
+        console_widget_t * get_widget();
+        void resize_font(void);
+        FontSelectDialog* fsd;
+
+
 protected:
     console_widget_t *mWidget_;
 private:
     int handle( int event );
+    /* Menu handlers */
+    static void on_copy( Fl_Widget*, void* );
+    static void on_paste( Fl_Widget*, void* );
+    static void console_font_cb( Fl_Widget*, void* );
+  
 
-    // Child controls
-    Fl_Text_Display         *   wText_;
-
+   // Child widgets
+    Fl_Menu_Bar         *   menu_;        // Static Data
+    static Fl_Menu_Item     menu_items_[];      // Application menu items
+    static console_window_t *this_;
 };
 
 

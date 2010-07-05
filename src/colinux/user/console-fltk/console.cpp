@@ -193,7 +193,7 @@ console_main_window::console_main_window( )
 
     // Create (hidden) log window (will be shown upon request)
     wLog_ = new console_log_window( 400,300, "Message Log" );
-    wConsole_ = new client_console_window(input_, 800,600, "Message Log" );
+    wConsole_ = new console_window_t(input_, 800,600, "Message Log" );
     wConsole_->show();
     center_widget( wLog_ );
 

@@ -13,12 +13,31 @@
 #include <assert.h>
 #include <string.h>
 
+#include "fontselect.h"
+console_window_t *console_window_t::this_ = NULL;
+
 /*
  * TODO:
  *      - Discover how to make the text copy/paste 'able.
  *      - Maybe two columns: 1 for source name a the other with the text.
  *      - Make the signaling logic better (check if window fully visible).
  */
+Fl_Menu_Item console_window_t::menu_items_[]
+    = {
+        { "Edit", 0,0,0, FL_SUBMENU },
+            { " Copy "              , 0, on_copy      },
+            { " Paste "             , 0, on_paste     , 0, FL_MENU_DIVIDER },
+            { 0 },
+        { 0 },
+        { "Config" , 0, NULL, NULL, FL_SUBMENU },
+        { "Font..." , 0, console_font_cb, 0,  FL_MENU_DIVIDER },
+ /*       { "Copy trailing spaces", 0, console_copyspaces_cb, 0,
+                        FL_MENU_TOGGLE | ((reg_copyspaces) ? FL_MENU_VALUE : 0)},
+        { "Exit on Detach", 0, console_exitdetach_cb, 0,
+                        FL_MENU_TOGGLE |  ((reg_exitdetach) ? FL_MENU_VALUE : 0)},
+   */     { 0 },
+
+    };
 
 
 /**
@@ -34,11 +53,65 @@ console_log_window::console_log_window( int w, int h, const char* label )
     resizable( wText_ );
     end();
 }
-client_console_window::client_console_window( console_input& in, int w, int h, const char* label )
+console_window_t::console_window_t( console_input& in, int w, int h, const char* label )
     : mInput_(in),super_( w,h, label )
 {
-    //mWidget_      = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, sheight - 120);
-    mWidget_      = new console_widget_t(0, 0, 800, 600);
+    this_ = this;
+    // Setup window menu
+    menu_ = new Fl_Menu_Bar( 0,0, w,24 );
+    menu_->box( FL_FLAT_BOX );
+    menu_->align( FL_ALIGN_CENTER );
+    menu_->when( FL_WHEN_RELEASE_ALWAYS );
+    // This doesn't make a copy, so we can use the array directly
+    menu_->menu( menu_items_ );
+    
+  //mWidget_      = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, sheight - 120);
+    mWidget_      = new console_widget_t(0, 24, 800, 600);
+    
+	// Default Font is "Terminal" with size 18
+	// Sample WinNT environment: set COLINUX_CONSOLE_FONT=Lucida Console:12
+	// Change only font size:    set COLINUX_CONSOLE_FONT=:12
+	char* env_font = getenv("COLINUX_CONSOLE_FONT");
+
+	if (env_font)
+	{
+		char* p = strchr (env_font, ':');
+
+		if (p)
+		{
+			int size = atoi (p+1);
+			if (size >= 4 && size <= 24)
+			{
+				// Set size
+				mWidget_->set_font_size(size);
+			}
+			*p = 0; // End for Fontname
+		}
+
+		// Set new font style
+		if(strlen(env_font))
+		{
+			// Remember: set_font need a non stack buffer!
+			// Environment is global static.
+			Fl::set_font(FL_SCREEN, env_font);
+
+			// Now check font width
+			fl_font(FL_SCREEN, 18); // Use default High for test here
+			if ((int)fl_width('i') != (int)fl_width('W'))
+			{
+				Fl::set_font(FL_SCREEN, "Terminal"); // Restore standard font
+				//log("%s: is not fixed font. Using 'Terminal'\n", env_font);
+			}
+		}
+	}
+	else
+	{
+		// use registry values and not environment variable
+		//mWidget_->set_font_name(reg_font);
+		//mWidget_->set_font_size(reg_font_size);
+	}
+    
+    
 }
 
 /**
@@ -48,7 +121,7 @@ console_log_window::~console_log_window( )
 {
 }
 
-client_console_window::~client_console_window( )
+console_window_t::~console_window_t( )
 {
 }
 
@@ -90,7 +163,7 @@ int console_log_window::handle( int event )
     // Let base class handle other events
     return super_::handle( event );
 }
-int client_console_window::handle( int event )
+int console_window_t::handle( int event )
 {
         int x, y;
 
@@ -135,5 +208,37 @@ int client_console_window::handle( int event )
     
     // Let base class handle other events
     return super_::handle( event );
+}
+
+void console_window_t::on_copy( Fl_Widget*, void* )
+{
+    //assert( this_ );
+    // We will receive a FL_PASTE event to complete this
+    //Fl::paste( *this_, 1 );
+}
+void console_window_t::on_paste( Fl_Widget*, void* )
+{
+    //assert( this_ );
+    // We will receive a FL_PASTE event to complete this
+    //Fl::paste( *this_, 1 );
+}
+void console_window_t::console_font_cb( Fl_Widget*, void* )
+{
+        this_->fsd = new FontSelectDialog(this_,
+                this_->mWidget_->get_font_name(),
+                this_->mWidget_->get_font_size());
+        this_->fsd->show();
+
+}
+
+console_widget_t * console_window_t::get_widget()
+{
+    return mWidget_;
+}
+
+void console_window_t::resize_font(void)
+{
+ //tocopy       resized_on_attach = PFALSE;
+ //tocopy       global_resize_constraint();
 }
 

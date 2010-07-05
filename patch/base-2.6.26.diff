@@ -949,7 +949,23 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  	return 0;
  }
  
-@@ -387,6 +394,7 @@
+@@ -327,6 +334,7 @@
+ 
+ void __init native_pagetable_setup_start(pgd_t *base)
+ {
++#ifndef CONFIG_COOPERATIVE
+ 	unsigned long pfn, va;
+ 	pgd_t *pgd;
+ 	pud_t *pud;
+@@ -355,6 +363,7 @@
+ 		pte_clear(NULL, va, pte);
+ 	}
+ 	paravirt_alloc_pmd(&init_mm, __pa(base) >> PAGE_SHIFT);
++#endif /* CONFIG_COOPERATIVE */
+ }
+ 
+ void __init native_pagetable_setup_done(pgd_t *base)
+@@ -387,6 +396,7 @@
  
  	paravirt_pagetable_setup_start(pgd_base);
  
@@ -957,7 +973,7 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  	/* Enable PSE if available */
  	if (cpu_has_pse)
  		set_in_cr4(X86_CR4_PSE);
-@@ -400,6 +408,7 @@
+@@ -400,6 +410,7 @@
  
  	kernel_physical_mapping_init(pgd_base);
  	remap_numa_kva();
@@ -965,7 +981,7 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  
  	/*
  	 * Fixed mappings, only the page table structure has to be
-@@ -538,6 +547,7 @@
+@@ -538,6 +549,7 @@
   * black magic jumps to work around some nasty CPU bugs, but fortunately the
   * switch to using exceptions got rid of all that.
   */
@@ -973,7 +989,7 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  static void __init test_wp_bit(void)
  {
  	printk(KERN_INFO
-@@ -558,6 +568,7 @@
+@@ -558,6 +570,7 @@
  		printk(KERN_CONT "Ok.\n");
  	}
  }
@@ -981,7 +997,7 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  
  static struct kcore_list kcore_mem, kcore_vmalloc;
  
-@@ -616,15 +627,15 @@
+@@ -616,15 +629,15 @@
  
  #if 1 /* double-sanity-check paranoia */
  	printk(KERN_INFO "virtual kernel memory layout:\n"
@@ -1004,7 +1020,7 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  		FIXADDR_START, FIXADDR_TOP,
  		(FIXADDR_TOP - FIXADDR_START) >> 10,
  
-@@ -632,9 +643,19 @@
+@@ -632,9 +645,19 @@
  		PKMAP_BASE, PKMAP_BASE+LAST_PKMAP*PAGE_SIZE,
  		(LAST_PKMAP*PAGE_SIZE) >> 10,
  #endif
@@ -1025,7 +1041,7 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  
  		(unsigned long)__va(0), (unsigned long)high_memory,
  		((unsigned long)high_memory - (unsigned long)__va(0)) >> 20,
-@@ -653,12 +674,20 @@
+@@ -653,12 +676,20 @@
  	BUG_ON(PKMAP_BASE + LAST_PKMAP*PAGE_SIZE	> FIXADDR_START);
  	BUG_ON(VMALLOC_END				> PKMAP_BASE);
  #endif
@@ -1046,7 +1062,7 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  
  	cpa_init();
  	save_pg_dir();
-@@ -681,6 +710,7 @@
+@@ -681,6 +712,7 @@
   * This function cannot be __init, since exceptions don't work in that
   * section.  Put this after the callers, so that it cannot be inlined.
   */
@@ -1054,7 +1070,7 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  static noinline int do_test_wp_bit(void)
  {
  	char tmp_reg;
-@@ -700,6 +730,7 @@
+@@ -700,6 +732,7 @@
  
  	return flag;
  }
@@ -1062,7 +1078,7 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  
  #ifdef CONFIG_DEBUG_RODATA
  const int rodata_test_data = 0xC3;
-@@ -749,7 +780,9 @@
+@@ -749,7 +782,9 @@
  	 */
  	printk(KERN_INFO "debug: unmapping init memory %08lx..%08lx\n",
  		begin, PAGE_ALIGN(end));
@@ -1072,7 +1088,7 @@ Index: linux-2.6.26-source/arch/x86/mm/init_32.c
  #else
  	unsigned long addr;
  
-@@ -758,7 +791,9 @@
+@@ -758,7 +793,9 @@
  	 * we are going to free part of that, we need to make that
  	 * writeable first.
  	 */
@@ -1622,7 +1638,7 @@ Index: linux-2.6.26-source/include/linux/cooperative.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.26-source/include/linux/cooperative.h
-@@ -0,0 +1,398 @@
+@@ -0,0 +1,399 @@
 +/*
 + *  linux/include/linux/cooperative.h
 + *
@@ -1861,6 +1877,7 @@ Index: linux-2.6.26-source/include/linux/cooperative.h
 +	CO_OPERATION_CONSOLE_SAVE_SCREEN,
 +	CO_OPERATION_CONSOLE_INVERT_REGION,
 +	CO_OPERATION_CONSOLE_CONFIG,
++	CO_OPERATION_CONSOLE_INIT_SCROLLBUFFER,
 +} co_operation_console_t;
 +
 +
