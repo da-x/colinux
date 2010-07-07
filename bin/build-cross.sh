@@ -27,13 +27,11 @@ unpack64()
 		mkdir -p $DOWNLOADS/sezero
 		tar xzf $DOWNLOADS/$MINGW_PACK -C $DOWNLOADS/sezero
 		mkdir -p $PREFIX
-		mv $DOWNLOADS/sezero/W64_160271/* $PREFIX/
+		mv $DOWNLOADS/sezero/$MINGW_BDIR/* $PREFIX/
 		rm -rf $DOWNLOADS/sezero
 		# Copy over all DDK headers
 		echo "Copy over DDK headers..."
 		cp -a $DDK_MIRROR/include/* $PREFIX/$TARGET/include/
-		# Final patches
-		patch -p0 -d $PREFIX/$TARGET < $TOPDIR/patch/$HEADER_PATCH
 	fi
 }
 
@@ -57,18 +55,17 @@ then
 	test "$MACHINE" = "x86_64" || MACHINE="i686"
 
 	# Download links and names
-	# x86_64:
-	# MINGW_PACK="mingw-w64-bin_x86_64-linux_20100604_sezero.tar.gz"
-	# i686:
-	# MINGW_PACK="mingw-w64-bin_i686-linux_20100604_sezero.tar.gz"
+	# x86_64 (64 bit): MINGW_PACK="mingw-w64-bin_x86_64-linux_20100702_sezero.tar.gz"
+	# i686   (32 bit): MINGW_PACK="mingw-w64-bin_i686-linux_20100702_sezero.tar.gz"
 	#
-	MINGW_PACK="mingw-w64-bin_$MACHINE-linux_20100604_sezero.tar.gz"
-	MINGW_URL="http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/sezero_20100604/$MINGW_PACK/download"
+	MINGW_DATE="20100702"
+	MINGW_BDIR="W64_161668"
+	MINGW_PACK="mingw-w64-bin_$MACHINE-linux_${MINGW_DATE}_sezero.tar.gz"
+	MINGW_URL="http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/sezero_${MINGW_DATE}/$MINGW_PACK/download"
 	# Use fix state for DDK headers
 	DDK_REV="2511"
 	DDK_SVN="http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/experimental/ddk_test"
 	DDK_MIRROR="$DOWNLOADS/MinGW64-ddk_test.svn"
-	HEADER_PATCH="mingw64-sdkddkver.h-r2480.patch"
 
 	mkdir -p $DOWNLOADS
 
