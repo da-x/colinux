@@ -9,6 +9,7 @@
  * the root directory.
  */
 
+#pragma once
 #ifndef __COLINUX_ARCH_I386_MMU_H__
 #define __COLINUX_ARCH_I386_MMU_H__
 

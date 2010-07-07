@@ -7,8 +7,9 @@
  * the root directory.
  */
 
-#ifndef __COLINUX_ARCH_I386_MANAGER_H__
-#define __COLINUX_ARCH_I386_MANAGER_H__
+#pragma once
+#ifndef __COLINUX_ARCH_X86_64_MANAGER_H__
+#define __COLINUX_ARCH_X86_64_MANAGER_H__
 
 #include <colinux/common/common.h>
 #include <colinux/kernel/manager.h>
@@ -19,7 +20,7 @@
 
 struct co_archdep_manager {
 	bool_t has_cpuid;
-	unsigned long caps[2];
+	uint32_t caps[2];
 };
 
 struct co_archdep_monitor {

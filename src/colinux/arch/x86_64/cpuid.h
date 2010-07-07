@@ -7,23 +7,24 @@
  * the root directory.
  */
 
-#ifndef __COLINUX_ARCH_I386_CPUID_H__
-#define __COLINUX_ARCH_I386_CPUID_H__
+#pragma once
+#ifndef __COLINUX_ARCH_X86_64_CPUID_H__
+#define __COLINUX_ARCH_X86_64_CPUID_H__
 
 #include <colinux/common/common.h>
 
 typedef union {
 	struct {
-		unsigned long eax, ebx, ecx, edx;
+		uint32_t eax, ebx, ecx, edx;
 	};
 	struct {
-		unsigned long highest_op;
+		uint32_t highest_op;
 		char id_string[12];
 	};
 } cpuid_t;
 
 bool_t co_i386_has_cpuid(void);
-void co_i386_get_cpuid(unsigned long op, cpuid_t *cpuid);
-co_rc_t co_i386_get_cpuid_capabilities(unsigned long *caps);
+void co_i386_get_cpuid(uint32_t op, cpuid_t *cpuid);
+co_rc_t co_i386_get_cpuid_capabilities(uint32_t *caps);
 
 #endif

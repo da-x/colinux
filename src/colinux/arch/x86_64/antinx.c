@@ -24,7 +24,7 @@
 /* 3.12 TRANSLATION LOOKASIDE BUFFERS (TLBS) */
 #define flush_tlb()							\
 	do {								\
-		unsigned long long tmpreg;				\
+		uint64_t tmpreg;					\
 									\
 		__asm__ __volatile__(					\
 			"mov %%cr3, %0;              \n"		\

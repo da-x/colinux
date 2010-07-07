@@ -9,8 +9,9 @@
  * the root directory.
  */
 
-#ifndef __COLINUX_ARCH_I386_DEFS_H__
-#define __COLINUX_ARCH_I386_DEFS_H__
+#pragma once
+#ifndef __COLINUX_ARCH_X86_64_DEFS_H__
+#define __COLINUX_ARCH_X86_64_DEFS_H__
 
 /*
  * Some declarations copied from Linux.

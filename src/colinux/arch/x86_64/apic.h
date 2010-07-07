@@ -7,8 +7,9 @@
  * the root directory.
  */
 
-#ifndef __COLINUX_ARCH_I386_APIC_H__
-#define __COLINUX_ARCH_I386_APIC_H__
+#pragma once
+#ifndef __COLINUX_ARCH_X86_64_APIC_H__
+#define __COLINUX_ARCH_X86_64_APIC_H__
 
 #include "manager.h"
 

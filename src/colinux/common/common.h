@@ -10,6 +10,7 @@
 #ifndef __COLINUX_LINUX_COMMON_H__
 #define __COLINUX_LINUX_COMMON_H__
 
+#include <stdint.h>
 #include "common_base.h"
 
 /*
@@ -35,23 +36,30 @@ typedef unsigned long linux_pgd_t;
 # define NULL 	(void*)0
 #endif
 
+#ifdef WIN64
+static inline uint64_t co_div64(uint64_t a, uint32_t b0)
+{
+        return a/b0;
+}
+#else /* WIN64 */
 /*
  * Following is taken from Linux's ./arch/i386/kernel/smpboot.c
  */
-static inline unsigned long long co_div64(unsigned long long a, unsigned long b0)
+static inline uint64_t co_div64(uint64_t a, uint32_t b0)
 {
-        unsigned int a1, a2;
-        unsigned long long res;
+        uint32_t a1, a2;
+        uint64_t res;
 
-        a1 = ((unsigned int*)&a)[0];
-        a2 = ((unsigned int*)&a)[1];
+        a1 = ((uint32_t*)&a)[0];
+        a2 = ((uint32_t*)&a)[1];
 
         res = a1/b0 +
-                (unsigned long long)a2 * (unsigned long long)(0xffffffff/b0) +
+                (uint64_t)a2 * (uint64_t)(0xffffffff/b0) +
                 a2 / b0 +
                 (a2 * (0xffffffff % b0)) / b0;
 
         return res;
 }
+#endif /* WIN64 */
 
 #endif
