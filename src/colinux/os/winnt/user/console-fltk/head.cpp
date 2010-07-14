@@ -20,13 +20,14 @@ extern "C" {
 COLINUX_DEFINE_MODULE("colinux-console-fltk");
 
 #define SOFTWARE_COLINUX_CONSOLE_FONT_KEY "Software\\coLinux\\console\\Font"
-
 /*
  * Storage of current keyboard state.
  * For every virtual key (256), it is 0 (for released) or the scancode
  * of the key pressed (with 0xE0 in high byte if extended).
  */
-static WORD vkey_state[256];
+#define VKEY_LEN 256
+static WORD vkey_state[VKEY_LEN];
+static bool winkey_state;
 
 /*
  * Handler of hook for keyboard events
@@ -150,20 +151,20 @@ static LRESULT CALLBACK keyboard_hook(
 
 	const BYTE vkey     = wParam & 0xFF;
 	const WORD flags    = lParam >> 16;	/* ignore the repeat count */
-	const bool released = flags & KF_UP;
+	const WORD released = flags & KF_UP;
 	WORD       code     = flags & 0xFF;
 
-	/* Special key processing */
+	// Special key processing
 	switch ( vkey )
 	{
 	case VK_LWIN:
 	case VK_RWIN:
 		// special handling of the Win+V key (paste into colinux)
-		if ( released )	vkey_state[255] &= ~1;
-		else			vkey_state[255] |=  1;
+		winkey_state = released ? false : true;
 		// let Windows process it, for now
 	case VK_APPS:
 		return CallNextHookEx(current_hook, nCode, wParam, lParam);
+		
 	case VK_MENU:	/* Check if AltGr (received as LeftControl+RightAlt) */
 		if ( (flags & KF_EXTENDED) && !released &&
 		     (vkey_state[VK_CONTROL] == 0x009D) )
@@ -172,22 +173,27 @@ static LRESULT CALLBACK keyboard_hook(
 			vkey_state[VK_CONTROL] = 0;
 		}
 		break;
+
 	case 'V':
-		if ( !released && (vkey_state[255] & 1) )
+	case VK_END:
+		if ( !released && winkey_state )
 		{
 			PasteClipboardIntoColinux();
 			return 1;	/* key processed */
 		}
 		break;
+		
 	case 'C':
-		if ( !released && (vkey_state[255] & 1) )
+	case VK_HOME:
+		if ( !released && winkey_state )
 		{
 			CopyLinuxIntoClipboard( );
 			return 1;	/* key processed */
 		}
 		break;
+
 	case VK_PRIOR:
-		if ( !released && (vkey_state[255] & 1) )
+		if ( !released && winkey_state )
 		{
 			// page up with windows key
 			console_widget_t* my_widget = co_user_console_get_window()->get_widget();
@@ -195,8 +201,9 @@ static LRESULT CALLBACK keyboard_hook(
 			return 1;	/* key processed */
 		}
 		break;
+
 	case VK_NEXT:
-		if ( !released && (vkey_state[255] & 1) )
+		if ( !released && winkey_state )
 		{
 			// page down with windows key
 			console_widget_t* my_widget = co_user_console_get_window()->get_widget();
@@ -232,16 +239,14 @@ void co_user_console_keyboard_focus_change( unsigned long keyboard_focus )
 {
 	if ( keyboard_focus == 0 )
 	{
-		/*
-		 * Lost keyboard focus. Release all pressed keys.
-		 */
-		for ( int i = 0; i < 255; ++i )
+		// Lost keyboard focus. Release all pressed keys.
+		for(int i = 0; i < VKEY_LEN; i++)
 			if ( vkey_state[i] )
 			{
 				handle_scancode( vkey_state[i] );
 				vkey_state[i] = 0;
 			}
-		vkey_state[255] = 0;
+		winkey_state = false;
 	}
 }
 
