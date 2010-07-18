@@ -28,7 +28,6 @@ Fl_Menu_Item console_window_t::menu_items_[]
             { " Copy "              , 0, on_copy      },
             { " Paste "             , 0, on_paste     , 0, FL_MENU_DIVIDER },
             { 0 },
-        { 0 },
         { "Config" , 0, NULL, NULL, FL_SUBMENU },
         { "Font..." , 0, console_font_cb, 0,  FL_MENU_DIVIDER },
  /*       { "Copy trailing spaces", 0, console_copyspaces_cb, 0,
@@ -36,6 +35,7 @@ Fl_Menu_Item console_window_t::menu_items_[]
         { "Exit on Detach", 0, console_exitdetach_cb, 0,
                         FL_MENU_TOGGLE |  ((reg_exitdetach) ? FL_MENU_VALUE : 0)},
    */     { 0 },
+        { 0 },
 
     };
 
@@ -65,8 +65,8 @@ console_window_t::console_window_t( console_input& in, int w, int h, const char*
     // This doesn't make a copy, so we can use the array directly
     menu_->menu( menu_items_ );
     
-  //mWidget_      = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, sheight - 120);
-    mWidget_      = new console_widget_t(0, 24, 800, 600);
+  //widget      = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, sheight - 120);
+    widget      = new console_widget_t(0, 24, 800, 600);
     
 	// Default Font is "Terminal" with size 18
 	// Sample WinNT environment: set COLINUX_CONSOLE_FONT=Lucida Console:12
@@ -83,7 +83,7 @@ console_window_t::console_window_t( console_input& in, int w, int h, const char*
 			if (size >= 4 && size <= 24)
 			{
 				// Set size
-				mWidget_->set_font_size(size);
+				widget->set_font_size(size);
 			}
 			*p = 0; // End for Fontname
 		}
@@ -107,8 +107,8 @@ console_window_t::console_window_t( console_input& in, int w, int h, const char*
 	else
 	{
 		// use registry values and not environment variable
-		//mWidget_->set_font_name(reg_font);
-		//mWidget_->set_font_size(reg_font_size);
+		//widget->set_font_name(reg_font);
+		//widget->set_font_size(reg_font_size);
 	}
     
     
@@ -183,13 +183,13 @@ int console_window_t::handle( int event )
         //}
         break;
     case FL_DRAG:
-                mWidget_->mouse_drag(x, y);
+                widget->mouse_drag(x, y);
                 break;
     case FL_RELEASE:
-                mWidget_->mouse_release(x, y);
+                widget->mouse_release(x, y);
                 break;
     case FL_MOUSEWHEEL:
-                mWidget_->scroll_back_buffer(Fl::event_dy());
+                widget->scroll_back_buffer(Fl::event_dy());
                 break;
     case FL_KEYUP:
     case FL_KEYDOWN:
@@ -225,15 +225,15 @@ void console_window_t::on_paste( Fl_Widget*, void* )
 void console_window_t::console_font_cb( Fl_Widget*, void* )
 {
         this_->fsd = new FontSelectDialog(this_,
-                this_->mWidget_->get_font_name(),
-                this_->mWidget_->get_font_size());
+                this_->widget->get_font_name(),
+                this_->widget->get_font_size());
         this_->fsd->show();
 
 }
 
 console_widget_t * console_window_t::get_widget()
 {
-    return mWidget_;
+    return widget;
 }
 
 void console_window_t::resize_font(void)

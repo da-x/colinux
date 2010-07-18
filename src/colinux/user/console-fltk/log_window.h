@@ -53,10 +53,10 @@ public:
     ~console_window_t( );
 
     void set_console(co_console_t* _console){
-        mWidget_->set_console(_console);
-        mWidget_->redraw();
+        widget->set_console(_console);
+        widget->redraw();
     };
-    co_rc_t handle_console_event(co_console_message_t* msg){mWidget_->handle_console_event(msg);};
+    co_rc_t handle_console_event(co_console_message_t* msg){widget->handle_console_event(msg);};
     console_input& mInput_;
         console_widget_t * get_widget();
         void resize_font(void);
@@ -64,7 +64,7 @@ public:
 
 
 protected:
-    console_widget_t *mWidget_;
+    console_widget_t *widget;
 private:
     int handle( int event );
     /* Menu handlers */
