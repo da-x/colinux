@@ -51,7 +51,7 @@ extern void co_debug_system(const char *fmt, ...)
 extern void co_debug_level_system(const char *module, co_debug_facility_t facility, int level,
 			const char *filename, int line, const char *func, const char *text);
 
-extern void co_debug_(const char *module, co_debug_facility_t facility, int level, 
+extern void co_debug_(const char *module, co_debug_facility_t facility, int level,
 		      const char *filename, int line, const char *func,
 		      const char *fmt, ...)
 	__attribute__ ((format (printf, 7, 8)));

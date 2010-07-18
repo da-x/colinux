@@ -12,7 +12,7 @@
 
 typedef int bool_t;
 
-#define PFALSE  0 
+#define PFALSE  0
 #define PTRUE   1
 
 #define PACKED_STRUCT __attribute__((packed))
@@ -51,7 +51,7 @@ typedef enum {
     CO_ERRORS_X_MACRO
 } co_error_value_t;
 #undef X
- 
+
 #define X(name) CO_RC_##name = -CO_RC_ERROR_##name,
 typedef enum {
     CO_RC_OK                         = 0,
@@ -63,11 +63,11 @@ typedef long co_rc_t;
 
 #include "debug.h"
 
-#ifndef COLINUX_FILE_ID           
+#ifndef COLINUX_FILE_ID
 #define COLINUX_FILE_ID           -1
 #endif
 
-/* 
+/*
  * co_rc_t is comprised of:
  *
  * 31                               0
@@ -75,11 +75,11 @@ typedef long co_rc_t;
  *                         eeeeeeeeee   10
  *              lllllllllll             11
  *    iiiiiiiiii                        10
- *    
+ *
  *  i - file id
  *  l - line number
  *  e - error code
- *  
+ *
  */
 
 #define CO_BITS_OFFSET_ERROR_CODE   0
@@ -125,7 +125,7 @@ typedef long co_rc_t;
 #endif
 
 /*
- * Defines a LINUX instance. There are CO_MAX_COLINUXS of these 
+ * Defines a LINUX instance. There are CO_MAX_COLINUXS of these
  */
 typedef unsigned int co_id_t;
 

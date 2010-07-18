@@ -7,7 +7,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -33,7 +33,7 @@ static void co_terminal_printv(const char *format, va_list ap)
 	len = strlen(buf);
 	while (len > 0  &&  buf[len-1] == '\n')
 		buf[len - 1] = '\0';
-		
+
 	co_debug_lvl(prints, 11, "prints \"%s\"\n", buf);
 }
 
@@ -57,7 +57,7 @@ void co_terminal_print_color(co_terminal_color_t color, const char *format, ...)
 		WORD wAttributes;
 		BOOL ret;
 		CONSOLE_SCREEN_BUFFER_INFO ConsoleScreenBufferInfo;
-		
+
 		ret = GetConsoleScreenBufferInfo(output, &ConsoleScreenBufferInfo);
 		if (!ret)
 			return;
@@ -78,7 +78,7 @@ void co_terminal_print_color(co_terminal_color_t color, const char *format, ...)
 
 		SetConsoleTextAttribute(output, wAttributes);
 	}
-	
+
 	va_start(ap, format);
 	co_terminal_printv(format, ap);
 	va_end(ap);
@@ -92,10 +92,10 @@ void co_set_terminal_print_hook(co_terminal_print_hook_func_t func)
 	terminal_print_hook = func;
 }
 
-bool_t co_winnt_get_last_error(char *error_message, int buf_size) 
+bool_t co_winnt_get_last_error(char *error_message, int buf_size)
 {
 	DWORD dwLastError = GetLastError();
-	
+
 	if (!FormatMessage(
 		    FORMAT_MESSAGE_FROM_SYSTEM |
 		    FORMAT_MESSAGE_ARGUMENT_ARRAY,

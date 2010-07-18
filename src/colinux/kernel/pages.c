@@ -82,7 +82,7 @@ co_rc_t co_split_by_pages_and_callback(
 		if (part_size > size)
 			part_size = size;
 
-		rc = func(offset, part_size, data); 
+		rc = func(offset, part_size, data);
 		if (!CO_OK(rc))
 			return rc;
 
@@ -106,7 +106,7 @@ typedef struct {
 	bool_t alloc_pages;
 } co_manager_scan_pfns_callback_data_t;
 
-static co_rc_t 
+static co_rc_t
 scan_pfns_split_callback(
 	unsigned long offset,
 	unsigned long size,
@@ -136,7 +136,7 @@ scan_pfns_split_callback(
 
 	if (!cbdata->alloc_pages)
 		return CO_RC(OK);
-	
+
 	real_pfn = pp_pfns[pfn_group][current_pfn];
 	if (real_pfn == 0) {
 		rc = co_manager_get_page(cbdata->monitor->manager, &real_pfn);
@@ -145,7 +145,7 @@ scan_pfns_split_callback(
 
 		pp_pfns[pfn_group][current_pfn] = real_pfn;
 	}
-	
+
 	if (cbdata->func) {
 		mapped_page = co_os_map(cbdata->monitor->manager, real_pfn);
 		rc = cbdata->func(mapped_page + (offset & (~CO_ARCH_PAGE_MASK)), cbdata->data, size);
@@ -156,7 +156,7 @@ scan_pfns_split_callback(
 }
 
 co_rc_t co_manager_scan_pfns_and_callback(
-	co_monitor_t *monitor, 
+	co_monitor_t *monitor,
 	vm_ptr_t address,
 	unsigned long size,
 	co_manager_scan_pfns_callback_t func,
@@ -171,11 +171,11 @@ co_rc_t co_manager_scan_pfns_and_callback(
 	cbdata.monitor = monitor;
 	cbdata.alloc_pages = alloc_pages;
 
-	return co_split_by_pages_and_callback(address, size, (void **)&cbdata, 
+	return co_split_by_pages_and_callback(address, size, (void **)&cbdata,
 					      scan_pfns_split_callback);
 }
 
-static co_rc_t 
+static co_rc_t
 copy_callback(
 	void *mapped_ptr,
 	void **data,
@@ -195,17 +195,17 @@ copy_callback(
  * the guest's memory at @address.
  */
 
-co_rc_t 
+co_rc_t
 co_monitor_copy_and_create_pfns(
-	co_monitor_t *monitor, 
+	co_monitor_t *monitor,
 	vm_ptr_t address,
 	unsigned long size,
 	char *source
 	)
 {
 	return co_manager_scan_pfns_and_callback(
-		monitor, address, size, 
-		copy_callback, 
+		monitor, address, size,
+		copy_callback,
 		(void **)&source, PTRUE);
 }
 
@@ -214,19 +214,19 @@ co_monitor_copy_and_create_pfns(
  * the given range in the address space of the guest if
  * needed.
  */
-co_rc_t 
+co_rc_t
 co_monitor_scan_and_create_pfns(
-	co_monitor_t *monitor, 
+	co_monitor_t *monitor,
 	vm_ptr_t address,
 	unsigned long size
 	)
 {
 	return co_manager_scan_pfns_and_callback(
-		monitor, address, size, 
+		monitor, address, size,
 		NULL, NULL, PTRUE);
 }
 
-static co_rc_t 
+static co_rc_t
 create_ptes_callback(
 	void *mapped_ptr,
 	void **data,
@@ -236,24 +236,24 @@ create_ptes_callback(
 	co_pfn_t *pfns = (co_pfn_t *)(*data);
 	linux_pte_t *ptes = (linux_pte_t *)mapped_ptr;
 	int i;
-	
+
 	for (i=0; i < size/sizeof(linux_pte_t); i++) {
 		if (*pfns != 0)
-			*ptes = (*pfns << CO_ARCH_PAGE_SHIFT) |  
+			*ptes = (*pfns << CO_ARCH_PAGE_SHIFT) |
 			    _PAGE_PRESENT | _PAGE_RW | _PAGE_DIRTY | _PAGE_ACCESSED;
 		else
 			*ptes = 0;
 		pfns++;
 		ptes++;
 	}
-	
+
 	*data = (void *)pfns;
-	
+
 	return CO_RC(OK);
 }
 
 /**
- * co_monitor_create_ptes - create a page table from a list of 
+ * co_monitor_create_ptes - create a page table from a list of
  * page frame numbers.
  *
  * @monitor: monitor instnace.
@@ -271,7 +271,7 @@ co_monitor_create_ptes(
 	)
 {
 	return co_manager_scan_pfns_and_callback(
-		monitor, address, size, 
+		monitor, address, size,
 		create_ptes_callback,
 		(void **)&source, PTRUE);
 }
@@ -282,7 +282,7 @@ typedef struct {
 	co_monitor_t *monitor;
 } co_monitor_copy_region_callback_data_t;
 
-static co_rc_t 
+static co_rc_t
 copy_region_split_callback(
 	unsigned long offset,
 	unsigned long size,
@@ -310,7 +310,7 @@ copy_region_split_callback(
 	if (cbdata->data) {
 		co_memcpy(in_page, cbdata->data, size);
 		cbdata->data += size;
-	} else 
+	} else
 		co_memset(in_page, 0, size);
 
 	co_os_unmap(cbdata->monitor->manager, mapped_page, real_pfn);
@@ -319,7 +319,7 @@ copy_region_split_callback(
 }
 
 co_rc_t co_monitor_copy_region(
-	struct co_monitor *monitor, 
+	struct co_monitor *monitor,
 	vm_ptr_t address,
 	unsigned long size,
 	void *data_to_copy
@@ -339,7 +339,7 @@ co_rc_t co_monitor_copy_region(
  * map in the guest's virtual address space.
  */
 co_rc_t co_monitor_alloc_and_map_page(
-	struct co_monitor *monitor, 
+	struct co_monitor *monitor,
 	vm_ptr_t address
 	)
 {
@@ -354,7 +354,7 @@ co_rc_t co_monitor_alloc_and_map_page(
 	current_pfn = (address >> CO_ARCH_PAGE_SHIFT);
 	pfn_group = current_pfn / PTRS_PER_PTE;
 	pfn_index = current_pfn % PTRS_PER_PTE;
-	
+
 	if (monitor->pp_pfns[pfn_group] == NULL) {
 		rc = co_monitor_malloc(monitor, sizeof(co_pfn_t)*PTRS_PER_PTE,
 				       (void **)&monitor->pp_pfns[pfn_group]);
@@ -374,22 +374,22 @@ co_rc_t co_monitor_alloc_and_map_page(
 		return rc;
 
 	monitor->pp_pfns[pfn_group][pfn_index] = physical_pfn;
-	
+
 	/* next, map the page */
 	virtual_pfn = ((address - CO_ARCH_KERNEL_OFFSET) >> CO_ARCH_PAGE_SHIFT);
-	pte_address = CO_VPTR_PSEUDO_RAM_PAGE_TABLES; 
+	pte_address = CO_VPTR_PSEUDO_RAM_PAGE_TABLES;
 	pte_address += sizeof(linux_pte_t)*virtual_pfn;
 
-	rc = co_manager_set_reversed_pfn(monitor->manager, 
+	rc = co_manager_set_reversed_pfn(monitor->manager,
 					 physical_pfn, virtual_pfn);
 	if (!CO_OK(rc))
 		return rc;
 
-	/* 
-	 * pte_address is the virtual address where the PTE 
-	 * for this page is located. create the PTE: 
+	/*
+	 * pte_address is the virtual address where the PTE
+	 * for this page is located. create the PTE:
 	 */
-	rc = co_monitor_create_ptes(monitor, pte_address, 
+	rc = co_monitor_create_ptes(monitor, pte_address,
 				    sizeof(linux_pte_t), &physical_pfn);
 	return rc;
 }
@@ -400,7 +400,7 @@ co_rc_t co_monitor_alloc_and_map_page(
  */
 
 co_rc_t co_monitor_free_and_unmap_page(
-	struct co_monitor *monitor, 
+	struct co_monitor *monitor,
 	vm_ptr_t address
 	)
 {
@@ -419,7 +419,7 @@ co_rc_t co_monitor_free_and_unmap_page(
 	virtual_pfn = ((address - CO_ARCH_KERNEL_OFFSET) >> CO_ARCH_PAGE_SHIFT);
 	pte_address = CO_VPTR_PSEUDO_RAM_PAGE_TABLES;
 	pte_address += sizeof(linux_pte_t) * virtual_pfn;
-	
+
 	/* erase the mapping */
 	co_monitor_create_ptes(monitor, pte_address, sizeof(linux_pte_t), &physical_pfn);
 

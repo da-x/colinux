@@ -27,7 +27,7 @@ extern "C" {
 class user_daemon_exception_t {
 public:
 	co_rc_t rc;
-	
+
 	user_daemon_exception_t(co_rc_t _rc) : rc(_rc) {};
 };
 

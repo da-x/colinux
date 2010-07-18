@@ -5,7 +5,7 @@
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
- */ 
+ */
 
 #include <stdio.h>
 #include <fcntl.h>
@@ -101,7 +101,7 @@ co_rc_t co_os_reactor_monitor_create(
 	return co_linux_reactor_packet_user_create(
 		reactor, (int)whandle, receive,
 		(co_linux_reactor_packet_user_t *)handle_out);
-	
+
 }
 
 void co_os_reactor_monitor_destroy(co_reactor_user_t handle)

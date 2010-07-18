@@ -58,15 +58,15 @@ typedef struct co_debug_write_vector {
 	};
 } co_debug_write_vector_t;
 
-extern co_rc_t co_debug_write_log(co_manager_debug_t *debug, 
+extern co_rc_t co_debug_write_log(co_manager_debug_t *debug,
 				  struct co_debug_section **section_ptr,
 				  co_debug_write_vector_t *vec, int vec_size);
 
-extern co_rc_t co_debug_read(co_manager_debug_t *manager, 
-			     char *buf, unsigned long size, 
+extern co_rc_t co_debug_read(co_manager_debug_t *manager,
+			     char *buf, unsigned long size,
 			     unsigned long *read_size);
 
-extern co_rc_t co_debug_fold(co_manager_debug_t *manager, 
+extern co_rc_t co_debug_fold(co_manager_debug_t *manager,
 			     co_debug_section_t *section);
 
 extern co_rc_t co_debug_free(co_manager_debug_t *manager);

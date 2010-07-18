@@ -35,8 +35,8 @@ typedef unsigned long linux_pgd_t;
 # define NULL 	(void*)0
 #endif
 
-/* 
- * Following is taken from Linux's ./arch/i386/kernel/smpboot.c 
+/*
+ * Following is taken from Linux's ./arch/i386/kernel/smpboot.c
  */
 static inline unsigned long long co_div64(unsigned long long a, unsigned long b0)
 {

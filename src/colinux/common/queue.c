@@ -40,7 +40,7 @@ co_rc_t co_queue_malloc(co_queue_t *queue, long bytes, void **ptr)
 
 	*ptr = (void *)(&item->data);
 
-	return CO_RC(OK); 
+	return CO_RC(OK);
 }
 
 co_rc_t co_queue_malloc_copy(co_queue_t *queue, void *fromptr, long bytes, void **ptr)
@@ -69,16 +69,16 @@ co_rc_t co_queue_flush(co_queue_t *queue)
 
 		co_queue_free(queue, ptr);
 	}
-	
+
 	return rc;
 }
 
 void co_queue_add_head(co_queue_t *queue, void *ptr)
 {
 	co_queue_item_t *item;
-	
+
 	item = (co_queue_item_t *)(((char *)ptr) - sizeof(co_queue_item_t));
-	
+
 	co_list_add_head(&item->node, &queue->head);
 
 	queue->items_count += 1;
@@ -87,9 +87,9 @@ void co_queue_add_head(co_queue_t *queue, void *ptr)
 void co_queue_add_tail(co_queue_t *queue, void *ptr)
 {
 	co_queue_item_t *item;
-	
+
 	item = (co_queue_item_t *)(((char *)ptr) - sizeof(co_queue_item_t));
-	
+
 	co_list_add_tail(&item->node, &queue->head);
 
 	queue->items_count += 1;
@@ -118,7 +118,7 @@ co_rc_t co_queue_get_prev(co_queue_t *queue, void **ptr)
 
 	if (prev == &queue->head)
 		return CO_RC(ERROR);
-		
+
 	queue_item = co_list_entry(prev, co_queue_item_t, node);
 	*ptr = (void *)(&queue_item->data);
 
@@ -129,7 +129,7 @@ co_rc_t co_queue_pop_tail(co_queue_t *queue, void **ptr)
 {
 	co_list_t *item;
 	co_queue_item_t *queue_item;
-	
+
 	if (queue->items_count == 0)
 		return CO_RC(ERROR);
 

@@ -28,7 +28,7 @@ static NTAPI void manager_irp_cancel(
 	bool_t myIRP = PFALSE;
 
 	fixme_IoSetCancelRoutine(Irp, NULL);
-	
+
 	manager = (co_manager_t *)DeviceObject->DeviceExtension;
 	if (manager) {
 		opened = (typeof(opened))(Irp->Tail.Overlay.DriverContext[0]);
@@ -37,12 +37,12 @@ static NTAPI void manager_irp_cancel(
 			opened->os->irp = NULL;
 		}
 	}
-	
+
 	Irp->IoStatus.Status = STATUS_CANCELLED;
 	Irp->IoStatus.Information = 0;
-	
+
 	IoReleaseCancelSpinLock(Irp->CancelIrql);
-	
+
 	IoCompleteRequest(Irp, IO_NO_INCREMENT);
 
 	if (myIRP) {
@@ -67,7 +67,7 @@ static NTSTATUS manager_read(co_manager_t *manager, co_manager_open_desc_t opene
 	}
 
 	buffer = Irp->AssociatedIrp.SystemBuffer;
-	
+
 	co_os_mutex_acquire(opened->lock);
 
 	queue = &opened->out_queue;
@@ -75,20 +75,20 @@ static NTSTATUS manager_read(co_manager_t *manager, co_manager_open_desc_t opene
 		unsigned char *io_buffer_start = Irp->AssociatedIrp.SystemBuffer;
 		unsigned char *io_buffer = io_buffer_start;
 		unsigned char *io_buffer_end = io_buffer + Irp->IoStatus.Information;
-	
+
 		while (co_queue_size(queue) != 0)
 		{
 			co_message_queue_item_t *message_item;
 			rc = co_queue_peek_tail(queue, (void **)&message_item);
 			if (!CO_OK(rc))
 				return rc;
-		
+
 			co_message_t *message = message_item->message;
 			unsigned long size = message->size + sizeof(*message);
 			if (io_buffer + size > io_buffer_end) {
 				break;
 			}
-		
+
 			rc = co_queue_pop_tail(queue, (void **)&message_item);
 			if (!CO_OK(rc))
 				break;
@@ -116,7 +116,7 @@ static NTSTATUS manager_read(co_manager_t *manager, co_manager_open_desc_t opene
 		} else {
 			KIRQL irql;
 			IoAcquireCancelSpinLock(&irql);
-			
+
 			opened->ref_count++;
 			ntStatus = STATUS_PENDING;
 			Irp->IoStatus.Status = ntStatus;
@@ -124,7 +124,7 @@ static NTSTATUS manager_read(co_manager_t *manager, co_manager_open_desc_t opene
 			fixme_IoSetCancelRoutine(Irp, manager_irp_cancel);
 			opened->os->irp = Irp;
 			IoMarkIrpPending(Irp);
-			
+
 			IoReleaseCancelSpinLock(irql);
 		}
 	}
@@ -153,7 +153,7 @@ static NTSTATUS manager_write(co_manager_t *manager, co_manager_open_desc_t open
 		unsigned long message_size;
 		long size_left;
 		long position;
-		
+
 		buffer = Irp->AssociatedIrp.SystemBuffer;
 		size = Irp->IoStatus.Information;
 		size_left = size;
@@ -168,7 +168,7 @@ static NTSTATUS manager_write(co_manager_t *manager, co_manager_open_desc_t open
 			}
 			position += message_size;
 		}
-		
+
 
 		ntStatus = STATUS_SUCCESS;
 	} else {
@@ -219,7 +219,7 @@ static NTSTATUS manager_dispatch(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 			break;
 		}
 		case IRP_MJ_CLOSE:
-		case IRP_MJ_CLEANUP: 
+		case IRP_MJ_CLEANUP:
 			break;
 
 		default:
@@ -234,7 +234,7 @@ static NTSTATUS manager_dispatch(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 
 	switch (irpStack->MajorFunction) {
 	case IRP_MJ_CLOSE:
-	case IRP_MJ_CLEANUP: 
+	case IRP_MJ_CLEANUP:
 		if (opened) {
 			irpStack->FileObject->FsContext = NULL;
 			co_manager_open_desc_deactive_and_close(manager, opened);
@@ -280,27 +280,27 @@ static NTSTATUS manager_dispatch(PDEVICE_OBJECT DeviceObject, PIRP Irp)
 		ntStatus = manager_write(manager, opened, Irp);
 		return ntStatus;
 	}
-    
+
 	case IRP_MJ_DEVICE_CONTROL: {
 		ioControlCode = irpStack->Parameters.DeviceIoControl.IoControlCode;
 
 		if (CO_GET_IOCTL_TYPE(ioControlCode) != CO_DRIVER_TYPE) {
-			ntStatus = STATUS_INVALID_PARAMETER; 
+			ntStatus = STATUS_INVALID_PARAMETER;
 			break;
 		}
 
 		if (CO_GET_IOCTL_MTYPE(ioControlCode) != METHOD_BUFFERED) {
-			ntStatus = STATUS_INVALID_PARAMETER; 
+			ntStatus = STATUS_INVALID_PARAMETER;
 			break;
 		}
 
 		if (CO_GET_IOCTL_ACCESS(ioControlCode) != FILE_ANY_ACCESS) {
-			ntStatus = STATUS_INVALID_PARAMETER; 
+			ntStatus = STATUS_INVALID_PARAMETER;
 			break;
 		}
 
 		ioctl = (co_manager_ioctl_t)(CO_GET_IOCTL_METHOD(ioControlCode));
-		co_manager_ioctl(manager, ioctl, ioBuffer, 
+		co_manager_ioctl(manager, ioctl, ioBuffer,
 				 inputBufferLength,
 				 outputBufferLength,
 				 &Irp->IoStatus.Information,
@@ -319,8 +319,8 @@ complete:
 	return ntStatus;
 }
 
-static 
-NTSTATUS 
+static
+NTSTATUS
 NTAPI
 dispatch_wrapper(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 {
@@ -328,7 +328,7 @@ dispatch_wrapper(IN PDEVICE_OBJECT DeviceObject, IN PIRP Irp)
 }
 
 static
-VOID 
+VOID
 NTAPI
 driver_unload(IN PDRIVER_OBJECT DriverObject)
 {
@@ -349,11 +349,11 @@ driver_unload(IN PDRIVER_OBJECT DriverObject)
 
 PDEVICE_OBJECT coLinux_DeviceObject;
 
-NTSTATUS 
+NTSTATUS
 NTAPI
-DriverEntry( 
+DriverEntry(
 	IN PDRIVER_OBJECT  DriverObject,
-	IN PUNICODE_STRING  RegistryPath 
+	IN PUNICODE_STRING  RegistryPath
 	)
 {
 	PDEVICE_OBJECT deviceObject = NULL;
@@ -375,7 +375,7 @@ DriverEntry(
 				   FALSE,
 				   &deviceObject);
 
-	if (!NT_SUCCESS(ntStatus)) 
+	if (!NT_SUCCESS(ntStatus))
 		return ntStatus;
 
 	manager = (co_manager_t *)deviceObject->DeviceExtension;

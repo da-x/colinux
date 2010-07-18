@@ -7,7 +7,7 @@
  * the root directory.
  *
  * This code is based on Linux 2.6.x arch/i386/kernel/apic.c.
- */ 
+ */
 
 #include <colinux/common/common.h>
 
@@ -15,7 +15,7 @@
 #include "apic.h"
 
 co_rc_t co_manager_arch_init_apic(co_archdep_manager_t manager)
-{	
+{
 	co_debug("arch APIC initialization");
 
 	if (!(manager->caps[0] & CO_ARCH_X86_FEATURE_APIC)) {

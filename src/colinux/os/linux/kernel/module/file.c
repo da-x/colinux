@@ -7,7 +7,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include "linux_inc.h"
 
@@ -20,8 +20,8 @@ typedef struct {
 } co_os_transfer_file_block_data_t;
 
 static
-co_rc_t co_os_transfer_file_block(struct co_monitor *cmon, 
-				  void *host_data, void *linuxvm, unsigned long size, 
+co_rc_t co_os_transfer_file_block(struct co_monitor *cmon,
+				  void *host_data, void *linuxvm, unsigned long size,
 				  co_monitor_transfer_dir_t dir)
 {
 	co_os_transfer_file_block_data_t *data;
@@ -38,7 +38,7 @@ co_rc_t co_os_transfer_file_block(struct co_monitor *cmon,
 		if (!filp->f_op->read)
 			return CO_RC(ERROR);
 
-		fs = get_fs();		
+		fs = get_fs();
 		set_fs(KERNEL_DS);
 		size_read = filp->f_op->read(filp, linuxvm, size, &data->offset);
 		set_fs(fs);
@@ -56,7 +56,7 @@ co_rc_t co_os_transfer_file_block(struct co_monitor *cmon,
 		if (!filp->f_op->write)
 			return CO_RC(ERROR);
 
-		fs = get_fs();		
+		fs = get_fs();
 		set_fs(KERNEL_DS);
 		size_written = filp->f_op->write(filp, linuxvm, size, &data->offset);
 		set_fs(fs);
@@ -73,18 +73,18 @@ co_rc_t co_os_transfer_file_block(struct co_monitor *cmon,
 
 static
 co_rc_t co_os_file_block_read(struct co_monitor *linuxvm,
-			      co_block_dev_t *dev, 
+			      co_block_dev_t *dev,
 			      co_monitor_file_block_dev_t *fdev,
 			      co_block_request_t *request)
 {
 	co_rc_t rc;
 	co_os_transfer_file_block_data_t data;
-	
+
 	data.offset = request->offset;
 	data.fdev = fdev;
 
-	rc = co_monitor_host_linuxvm_transfer(linuxvm, 
-					      &data, 
+	rc = co_monitor_host_linuxvm_transfer(linuxvm,
+					      &data,
 					      co_os_transfer_file_block,
 					      request->address,
 					      (unsigned long)request->size,
@@ -96,18 +96,18 @@ co_rc_t co_os_file_block_read(struct co_monitor *linuxvm,
 
 static
 co_rc_t co_os_file_block_write(struct co_monitor *linuxvm,
-			       co_block_dev_t *dev, 
+			       co_block_dev_t *dev,
 			       co_monitor_file_block_dev_t *fdev,
 			       co_block_request_t *request)
 {
 	co_rc_t rc;
 	co_os_transfer_file_block_data_t data;
-	
+
 	data.offset = request->offset;
 	data.fdev = fdev;
-	
+
 	rc = co_monitor_host_linuxvm_transfer(linuxvm,
-					      &data, 
+					      &data,
 					      co_os_transfer_file_block,
 					      request->address,
 					      (unsigned long)request->size,

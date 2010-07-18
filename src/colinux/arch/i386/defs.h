@@ -12,7 +12,7 @@
 #ifndef __COLINUX_ARCH_I386_DEFS_H__
 #define __COLINUX_ARCH_I386_DEFS_H__
 
-/* 
+/*
  * Some declarations copied from Linux.
  */
 
@@ -24,7 +24,7 @@
 #define CO_ARCH_AMD_FEATURE_NX        (20)
 
 
-/* 
+/*
  * Intel CPU features in CR4
  */
 #define CO_ARCH_X86_CR4_VME		0x0001	/* enable vm86 extensions */

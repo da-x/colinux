@@ -28,7 +28,7 @@ int co_os_manager_open(struct inode *inode, struct file *file)
 	rc = co_manager_open(co_global_manager, &opened);
 	if (!CO_OK(rc))
 		return -ENOMEM;
-	
+
 	file->private_data = opened;
 
 	return 0;
@@ -44,8 +44,8 @@ int co_os_manager_ioctl_buffer(co_linux_io_t *ioctl, char *buffer, struct file *
 	if (copy_from_user(buffer, ioctl->input_buffer, ioctl->input_buffer_size))
 		return -EFAULT;
 
-	rc = co_manager_ioctl(co_global_manager, 
-			      ioctl->code, 
+	rc = co_manager_ioctl(co_global_manager,
+			      ioctl->code,
 			      buffer, ioctl->input_buffer_size,
 			      ioctl->output_buffer_size, &return_size,
 			      opened);
@@ -67,7 +67,7 @@ int co_os_manager_ioctl_buffer(co_linux_io_t *ioctl, char *buffer, struct file *
 }
 
 static
-int co_os_manager_ioctl(struct inode *inode, struct file *file, 
+int co_os_manager_ioctl(struct inode *inode, struct file *file,
 			unsigned int cmd, unsigned long arg)
 {
 	co_linux_io_t ioctl;
@@ -86,7 +86,7 @@ int co_os_manager_ioctl(struct inode *inode, struct file *file,
 
 	if (buffer_size > 0x400000)
 		return -EIO;
-	
+
 	if (buffer_size > 80) {
 		void *buffer = vmalloc(buffer_size);
 		if (buffer == NULL) {
@@ -100,7 +100,7 @@ int co_os_manager_ioctl(struct inode *inode, struct file *file,
 		char on_stack[80];
 		ret = co_os_manager_ioctl_buffer(&ioctl, on_stack, file);
 	}
-	    
+
 	return ret;
 }
 
@@ -146,7 +146,7 @@ ssize_t co_os_manager_read(struct file *file, char __user *buffer, size_t size, 
 		if (io_buffer + size > io_buffer_end) {
 			break;
 		}
-		
+
 		rc = co_queue_pop_tail(queue, (void **)&message_item);
 		if (!CO_OK(rc))
 			break;
@@ -201,7 +201,7 @@ ssize_t co_os_manager_write(struct file *file, const char __user *buffer, size_t
 	scan_buffer = buffer;
 	size_left = size;
 	position = 0;
-	
+
 	while (size_left > 0) {
 		message = (typeof(message))(&scan_buffer[position]);
 		message_size = 0;
@@ -226,7 +226,7 @@ ssize_t co_os_manager_write(struct file *file, const char __user *buffer, size_t
 
 		position += message_size;
 	}
-		
+
 	if (!ret)
 		return position;
 
@@ -254,7 +254,7 @@ unsigned int co_os_manager_poll(struct file *file, struct poll_table_struct *pol
 		mask |= POLLHUP;
 
         return mask;
-	
+
 }
 
 static

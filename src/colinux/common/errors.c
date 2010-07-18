@@ -45,7 +45,7 @@ void co_rc_format_error(co_rc_t rc, char *buf, int size)
 			while (colinux_obj_filenames[file_id_max])
 				file_id_max++;
 		}
- 
+
 		file_id = CO_RC_GET_FILE_ID(rc);
 		if (file_id < file_id_max) {
 			file_string = colinux_obj_filenames[file_id];
@@ -56,7 +56,7 @@ void co_rc_format_error(co_rc_t rc, char *buf, int size)
 		file_id = 0;
 		file_string = "<unknown file>";
 #endif
- 
+
 		co_snprintf(buf, size, "error - %s, line %ld, file %s (%d)",
 			    code_string, CO_RC_GET_LINE(rc), file_string, file_id);
 	}

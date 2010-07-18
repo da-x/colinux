@@ -5,12 +5,12 @@
 user_daemon_t::user_daemon_t()
 {
 	co_rc_t rc;
-	
+
 	reactor = 0;
 	monitor_handle = 0;
 	param_index = 0;
 	param_instance = 0;
-	
+
 	rc = co_reactor_create(&reactor);
 	if (!CO_OK(rc)) {
 		throw user_daemon_exception_t(rc);
@@ -28,19 +28,19 @@ void user_daemon_t::handle_parameters(int argc, char *argv[])
 		log("error parsing arguments\n");
 		throw user_daemon_exception_t(rc);
 	}
-	
+
 	try {
-	
-		rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-i", 
-								  &instance_specified, 
+
+		rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-i",
+								  &instance_specified,
 								  &param_instance);
-	
+
 		if (!CO_OK(rc)) {
 			syntax();
 			throw user_daemon_exception_t(rc);
 		}
 
-		rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-u", 
+		rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-u",
 								  &unit_specified, &param_index);
 
 		if (!CO_OK(rc)) {
@@ -49,7 +49,7 @@ void user_daemon_t::handle_parameters(int argc, char *argv[])
 		}
 
 		handle_extended_parameters(cmdline);
-	
+
 		rc = co_cmdline_params_check_for_no_unparsed_parameters(cmdline, PTRUE);
 		if (!CO_OK(rc)) {
 			syntax();
@@ -61,7 +61,7 @@ void user_daemon_t::handle_parameters(int argc, char *argv[])
 			syntax();
 			throw user_daemon_exception_t(rc);
 		}
-	
+
 		verify_parameters();
 
 		if (param_index >= get_unit_count())
@@ -89,7 +89,7 @@ void user_daemon_t::handle_extended_parameters(co_command_line_params_t cmdline)
 
 void user_daemon_t::verify_parameters()
 {
-	
+
 }
 
 static user_daemon_t *user_daemon = 0;
@@ -120,13 +120,13 @@ void user_daemon_t::run(int argc, char *argv[])
 	co_rc_t rc;
 
 	handle_parameters(argc, argv);
-	
+
 	prepare_for_loop();
 
 	modules[0] = (co_module_t)(get_base_module() + param_index);
 
 	rc = co_user_monitor_open(reactor, monitor_receive,
-				  param_instance, modules, 
+				  param_instance, modules,
 				  sizeof(modules)/sizeof(co_module_t),
 				  &monitor_handle);
 	if (!CO_OK(rc)) {
@@ -149,7 +149,7 @@ void user_daemon_t::send_to_monitor(co_message_t *message)
 	if (!monitor_handle)
 		return;
 
-	monitor_handle->reactor_user->send(monitor_handle->reactor_user, (unsigned char *)message, 
+	monitor_handle->reactor_user->send(monitor_handle->reactor_user, (unsigned char *)message,
 					   message->size + sizeof(*message));
 }
 
@@ -164,7 +164,7 @@ void user_daemon_t::send_to_monitor_raw(co_device_t device, unsigned char *buffe
 	message = (typeof(message))co_os_malloc(sizeof(*message) + size);
 	if (!message)
 		return;
-		
+
 	message->message.from = (co_module_t)(get_base_module() + param_index);
 	message->message.to = CO_MODULE_LINUX;
 	message->message.priority = CO_PRIORITY_DISCARDABLE;

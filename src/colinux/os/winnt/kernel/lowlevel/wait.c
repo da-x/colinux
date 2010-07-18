@@ -47,6 +47,6 @@ void co_os_wait_wakeup(co_os_wait_t wait)
 
 void co_os_wait_destroy(co_os_wait_t wait)
 {
-	if (wait != NULL) 
+	if (wait != NULL)
 		co_os_free(wait);
 }

@@ -23,7 +23,7 @@ co_rc_t co_os_get_page(struct co_manager *manager, co_pfn_t *pfn)
         page = alloc_pages(GFP_KERNEL | __GFP_REPEAT | __GFP_ZERO, 0);
         if (!page)
                 return CO_RC(ERROR);
-	
+
 	*pfn = page_to_pfn(page);
 
 	return CO_RC(OK);

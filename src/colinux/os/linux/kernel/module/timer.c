@@ -45,7 +45,7 @@ co_rc_t co_os_timer_create(co_os_func_t func, void *data,
 	t->msec = msec;
 	t->func = func;
 	t->data = data;
-	
+
 	*timer_out = (co_os_timer_t)t;
 
 	return CO_RC(OK);

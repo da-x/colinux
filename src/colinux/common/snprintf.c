@@ -1,12 +1,12 @@
 /*
  * Adapted for coLinux by Dan Aloni <da-x@colinux.org>
- * 
+ *
  * I had to remove size_t because we can't use it in coLinux's source,
- * since including the necessary OS-dependent headers for it is quite 
+ * since including the necessary OS-dependent headers for it is quite
  * hairy.
- * 
+ *
  * Originally by Alex Holkner and David Tiktin.
- */ 
+ */
 
 #include <stdarg.h>
 
@@ -158,7 +158,7 @@ int co_snprintf(char *str, long n, const char *format, ...)
         state = STATE_NONE; \
         break;
 #else
-#define CHECK_DOUBLE_TYPE 
+#define CHECK_DOUBLE_TYPE
 #endif
 
 #define CHECK_TYPE \

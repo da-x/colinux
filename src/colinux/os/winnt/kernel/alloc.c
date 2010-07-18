@@ -23,8 +23,8 @@ static inline PMDL co_winnt_MmAllocatePagesForMdl(co_osdep_manager_t osdep)
 	PHYSICAL_ADDRESS HighAddress = { .QuadPart = osdep->hostmem_max_physical_address };
 	PHYSICAL_ADDRESS SkipBytes   = { .QuadPart = 0 };
 
-	return MmAllocatePagesForMdl(LowAddress, 
-				     HighAddress, 
+	return MmAllocatePagesForMdl(LowAddress,
+				     HighAddress,
 				     SkipBytes,
 				     CO_ARCH_PAGE_SIZE * PFN_ALLOCATION_COUNT);
 }
@@ -45,20 +45,20 @@ static co_rc_t co_winnt_new_mdl_bucket(co_osdep_manager_t osdep)
 		rc = CO_RC(OUT_OF_MEMORY);
 	} else {
 		mdl_ptr->use_count = 0;
-		mdl_ptr->pfn_ptrs  = pfn_ptrs; 
+		mdl_ptr->pfn_ptrs  = pfn_ptrs;
 		mdl_ptr->mdl	   = co_winnt_MmAllocatePagesForMdl(osdep);
 
 		if (mdl_ptr->mdl == NULL) {
 			rc = CO_RC(OUT_OF_MEMORY);
 		} else {
 			int pages_allocated = mdl_ptr->mdl->ByteCount >> CO_ARCH_PAGE_SHIFT;
-		
+
 			if (pages_allocated != PFN_ALLOCATION_COUNT) {
 				rc = CO_RC(OUT_OF_MEMORY);
 			} else {
 				osdep->mdls_allocated++;
 				co_list_add_head(&mdl_ptr->node, &osdep->mdl_list);
-	
+
 				for (i = 0; i < PFN_ALLOCATION_COUNT; i++) {
 					co_pfn_t pfn = ((co_pfn_t *)(mdl_ptr->mdl + 1))[i];
 
@@ -128,15 +128,15 @@ static void co_winnt_free_mdl_bucket(co_osdep_manager_t osdep, co_os_mdl_ptr_t* 
 {
 	co_os_pfn_ptr_t* pfn_ptrs = mdl_ptr->pfn_ptrs;
 	int 		 i;
-	
+
 	for (i = 0; i < PFN_ALLOCATION_COUNT; i++) {
 		co_list_del(&pfn_ptrs[i].unused);
 		co_list_del(&pfn_ptrs[i].node);
 	}
-	
+
 	co_winnt_free_mdl_bucket_no_lists(osdep, mdl_ptr);
 }
- 
+
 static void co_os_get_unused_mdl_page(co_osdep_manager_t osdep, co_pfn_t* pfn)
 {
 	co_os_pfn_ptr_t* pfn_ptr;
@@ -151,7 +151,7 @@ static void co_os_get_unused_mdl_page(co_osdep_manager_t osdep, co_pfn_t* pfn)
 static void co_winnt_put_unused_mdl_page(co_osdep_manager_t osdep, co_os_pfn_ptr_t* pfn_ptr)
 {
 	co_os_mdl_ptr_t* mdl_ptr = pfn_ptr->mdl;
-	
+
 	mdl_ptr->use_count--;
 	co_list_add_head(&pfn_ptr->unused, &osdep->pages_unused);
 	if (mdl_ptr->use_count == 0)
@@ -163,15 +163,15 @@ void co_winnt_free_all_pages(co_osdep_manager_t osdep)
 {
 	co_os_mdl_ptr_t* mdl_ptr;
 	co_os_pfn_ptr_t* pfn_ptr;
-	
+
 	while (!co_list_empty(&osdep->mdl_list)) {
 		mdl_ptr = co_list_entry(osdep->mdl_list.next, co_os_mdl_ptr_t, node);
 		co_winnt_free_mdl_bucket_no_lists(osdep, mdl_ptr);
 	}
 
 	while (!co_list_empty(&osdep->mapped_allocated_list)) {
-		pfn_ptr = co_list_entry(osdep->mapped_allocated_list.next, 
-					co_os_pfn_ptr_t, 
+		pfn_ptr = co_list_entry(osdep->mapped_allocated_list.next,
+					co_os_pfn_ptr_t,
 					mapped_allocated_node);
 		co_winnt_free_mapped_allocated_page(osdep, pfn_ptr);
 	}
@@ -189,7 +189,7 @@ co_rc_t co_os_get_page(struct co_manager* manager, co_pfn_t* pfn)
 	if (!co_list_empty(&osdep->pages_unused)) {
 		co_os_get_unused_mdl_page(osdep, pfn);
 	} else {
-	
+
 		rc = co_winnt_new_mdl_bucket(osdep);
 		if (CO_OK(rc)) {
 			co_os_get_unused_mdl_page(osdep, pfn);
@@ -219,7 +219,7 @@ void co_os_put_page(struct co_manager* manager, co_pfn_t pfn)
 			co_winnt_put_unused_mdl_page(osdep, pfn_ptr);
 		else
 			co_winnt_free_mapped_allocated_page(osdep, pfn_ptr);
-		
+
 		break;
 	}
 
@@ -227,7 +227,7 @@ void co_os_put_page(struct co_manager* manager, co_pfn_t pfn)
 }
 
 void* co_os_map(struct co_manager* manager, co_pfn_t pfn)
-{	
+{
 	PVOID*           ret;
 	PHYSICAL_ADDRESS PhysicalAddress;
 

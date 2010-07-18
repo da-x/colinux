@@ -27,7 +27,7 @@ VOID CALLBACK co_os_timer_routine(
 	UINT uMsg,
 	UINT_PTR idEvent,
 	DWORD dwTime
-	) 
+	)
 {
 	co_os_timer_t timer = global_timer;
 
@@ -75,7 +75,7 @@ void co_os_timer_deactivate(co_os_timer_t timer)
 
 void co_os_timer_destroy(co_os_timer_t timer)
 {
-	if (timer != NULL) 
+	if (timer != NULL)
 		co_os_free(timer);
 }
 

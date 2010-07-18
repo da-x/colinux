@@ -30,18 +30,18 @@ co_rc_t co_monitor_host_linuxvm_transfer_map(
 	co_rc_t rc;
 
 	if ((vaddr < CO_ARCH_KERNEL_OFFSET) || (vaddr >= cmon->end_physical)) {
-		co_debug_error("monitor: transfer: off bounds: %p", (void*)vaddr);
+		co_debug_error("monitor: transfer map: off bounds: %p", (void*)vaddr);
 		return CO_RC(TRANSFER_OFF_BOUNDS);
 	}
 
 	if ((vaddr + size < CO_ARCH_KERNEL_OFFSET) || (vaddr + size > cmon->end_physical)) {
-		co_debug_error("monitor: transfer: end off bounds: %p", (void*)(vaddr + size));
+		co_debug_error("monitor: transfer map: end off bounds: %p", (void*)(vaddr + size));
 		return CO_RC(TRANSFER_OFF_BOUNDS);
 	}
 
 	one_copy = ((vaddr + CO_ARCH_PAGE_SIZE) & CO_ARCH_PAGE_MASK) - vaddr;
 	if (size <= 0 || size > one_copy) {
-		co_debug_error("monitor: transfer: bad size: %ld (%ld)", size, one_copy);
+		co_debug_error("monitor: transfer map: bad size: %ld (%ld)", size, one_copy);
 		return CO_RC(TRANSFER_OFF_BOUNDS);
 	}
 
@@ -64,11 +64,11 @@ co_rc_t co_monitor_host_linuxvm_transfer_map(
  */
 
 co_rc_t co_monitor_host_linuxvm_transfer(
-	co_monitor_t *cmon, 
-	void *host_data, 
-	co_monitor_transfer_func_t host_func, 
-	vm_ptr_t vaddr, 
-	unsigned long size, 
+	co_monitor_t *cmon,
+	void *host_data,
+	co_monitor_transfer_func_t host_func,
+	vm_ptr_t vaddr,
+	unsigned long size,
 	co_monitor_transfer_dir_t dir
 	)
 {
@@ -85,13 +85,13 @@ co_rc_t co_monitor_host_linuxvm_transfer(
 	if ((vaddr + size < CO_ARCH_KERNEL_OFFSET) || (vaddr + size > cmon->end_physical)) {
 		co_debug_error("monitor: transfer: end off bounds: %p", (void*)(vaddr + size));
 		return CO_RC(TRANSFER_OFF_BOUNDS);
-	}	
+	}
 
 	while (size > 0) {
 		rc = co_monitor_get_pfn(cmon, vaddr, &pfn);
 		if (!CO_OK(rc))
-			return rc;		
-		
+			return rc;
+
 		one_copy = ((vaddr + CO_ARCH_PAGE_SIZE) & CO_ARCH_PAGE_MASK) - vaddr;
 		if (one_copy > size)
 			one_copy = size;
@@ -103,15 +103,15 @@ co_rc_t co_monitor_host_linuxvm_transfer(
 		if (!CO_OK(rc))
 			return rc;
 
-		size -= one_copy;	
+		size -= one_copy;
 		vaddr += one_copy;
 	}
 
 	return CO_RC(OK);
-} 
+}
 
 
-static co_rc_t co_monitor_transfer_memcpy(co_monitor_t *cmon, void *host_data, void *linuxvm, 
+static co_rc_t co_monitor_transfer_memcpy(co_monitor_t *cmon, void *host_data, void *linuxvm,
 					  unsigned long size, co_monitor_transfer_dir_t dir)
 {
 	unsigned char **host = (unsigned char **)host_data;
@@ -126,7 +126,7 @@ static co_rc_t co_monitor_transfer_memcpy(co_monitor_t *cmon, void *host_data, v
 	return CO_RC(OK);
 }
 
-static co_rc_t co_monitor_host_linuxvm_copy(co_monitor_t *cmon, void *host, vm_ptr_t linuxvm, 
+static co_rc_t co_monitor_host_linuxvm_copy(co_monitor_t *cmon, void *host, vm_ptr_t linuxvm,
 					    unsigned long size, co_monitor_transfer_dir_t dir)
 {
 	return co_monitor_host_linuxvm_transfer(cmon, &host, co_monitor_transfer_memcpy,
@@ -134,14 +134,14 @@ static co_rc_t co_monitor_host_linuxvm_copy(co_monitor_t *cmon, void *host, vm_p
 }
 
 
-co_rc_t co_monitor_host_to_linuxvm(co_monitor_t *cmon, void *from, 
+co_rc_t co_monitor_host_to_linuxvm(co_monitor_t *cmon, void *from,
 				   vm_ptr_t to, unsigned long size)
 {
 	return co_monitor_host_linuxvm_copy(cmon, from, to, size, CO_MONITOR_TRANSFER_FROM_HOST);
 }
 
 
-co_rc_t co_monitor_linuxvm_to_host(co_monitor_t *cmon, vm_ptr_t from, 
+co_rc_t co_monitor_linuxvm_to_host(co_monitor_t *cmon, vm_ptr_t from,
 				   void *to, unsigned long size)
 {
 	return co_monitor_host_linuxvm_copy(cmon, to, from, size, CO_MONITOR_TRANSFER_FROM_LINUX);

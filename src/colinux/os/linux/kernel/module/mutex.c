@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include "linux_inc.h"
 
@@ -57,6 +57,6 @@ void co_os_mutex_release_critical(co_os_mutex_t mutex)
 
 void co_os_mutex_destroy(co_os_mutex_t mutex)
 {
-	if (mutex != NULL) 
+	if (mutex != NULL)
 		co_os_free(mutex);
 }

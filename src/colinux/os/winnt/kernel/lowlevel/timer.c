@@ -22,7 +22,7 @@ struct co_os_timer {
 };
 
 VOID
-DDKAPI 
+DDKAPI
 co_os_timer_routine(
 	IN PKDPC Dpc,
 	IN PVOID DeferredContext,
@@ -59,12 +59,12 @@ co_rc_t co_os_timer_create(co_os_func_t func, void *data,
 co_rc_t co_os_timer_activate(co_os_timer_t timer)
 {
 	LARGE_INTEGER li;
-	
+
 	li.QuadPart = 0;
 
 	KeInitializeDpc(&timer->dpc, &co_os_timer_routine, (PVOID)timer);
 	KeInitializeTimerEx(&timer->ktimer, SynchronizationTimer);
-	KeSetTimerEx(&timer->ktimer, li, timer->msec, &timer->dpc); 
+	KeSetTimerEx(&timer->ktimer, li, timer->msec, &timer->dpc);
 
 	return CO_RC(OK);
 }
@@ -76,7 +76,7 @@ void co_os_timer_deactivate(co_os_timer_t timer)
 
 void co_os_timer_destroy(co_os_timer_t timer)
 {
-	if (timer != NULL) 
+	if (timer != NULL)
 		co_os_free(timer);
 }
 

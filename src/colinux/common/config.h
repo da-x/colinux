@@ -32,27 +32,27 @@ typedef enum co_color_t
 }co_color_t;
 
 #define CO_ATTR_BRIGHT		0x08
-#define CO_ATTR_DEFAULT		((CO_COLOR_BLACK << 4) | CO_COLOR_GRAY)	
+#define CO_ATTR_DEFAULT		((CO_COLOR_BLACK << 4) | CO_COLOR_GRAY)
 
 /*
  * Per block device configuration
  */
 typedef struct co_block_dev_desc {
 	/*
-	 * This bool var determines whether Linux would be given 
+	 * This bool var determines whether Linux would be given
 	 * permission to access this device.
 	 */
 	bool_t enabled;
 
 	/*
-	 * The pathname of the host OS file (or device) that represents 
-	 * this block device. Can be relative to the pathname of the 
+	 * The pathname of the host OS file (or device) that represents
+	 * this block device. Can be relative to the pathname of the
 	 * configration file.
 	 */
 	co_pathname_t pathname;
 
 	/*
-	 * The alias is a synonym device name for the block device on 
+	 * The alias is a synonym device name for the block device on
 	 * the Linux side, for example: hda4, sda2, hdb2.
 	 */
 	bool_t alias_used;
@@ -100,18 +100,18 @@ typedef struct co_netdev_desc {
 	/* Used for indentifing the interface on the host side */
 	char desc[CO_NETDEV_DESC_STR_SIZE];
 
-	/* 
+	/*
 	 * Type of device:
-	 * 
-	 * Bridged pcap - 'desc' is the name of the network interface to 
+	 *
+	 * Bridged pcap - 'desc' is the name of the network interface to
          *                 bridge into
-	 * TAP - 'desc' is the name of the TAP network interface (Win32 TAP 
+	 * TAP - 'desc' is the name of the TAP network interface (Win32 TAP
 	 *       on Windows).
 	 */
 	co_netdev_type_t type;
 
 	/*
-	 * MAC address for the Linux side. 
+	 * MAC address for the Linux side.
 	 */
 	bool_t 	      manual_mac_address;
 	unsigned char mac_address[6];
@@ -126,9 +126,9 @@ typedef struct co_netdev_desc {
 } co_netdev_desc_t;
 
 typedef enum {
-	/* 
+	/*
 	 * Flat mode - we use as much meta data as we can from the hot
-	 * os in order to provide a UNIX file system. It's a simple 
+	 * os in order to provide a UNIX file system. It's a simple
 	 * effortless implementation of an host FS.
 	 */
 	CO_COFS_TYPE_FLAT = 1,
@@ -151,7 +151,7 @@ typedef struct co_cofsdev_desc_t {
 
 	/* Fully qualified kernel pathname for the mounted file system */
 	co_pathname_t pathname;
-	
+
 	/* Host-OS type of mount */
 	co_cofs_type_t type;
 } co_cofsdev_desc_t;
@@ -196,7 +196,7 @@ typedef struct co_execute_desc {
 
 } co_execute_desc_t;
 
-/* User defined console configuration */ 
+/* User defined console configuration */
 typedef struct co_config_console {
 	/* Dimensions of the console screen */
 	int x;
@@ -206,10 +206,10 @@ typedef struct co_config_console {
 	/* int max_x; */
 	int max_y;
 
-	/* Cursor size in Linux kernel types */ 
+	/* Cursor size in Linux kernel types */
 	int curs_type_size;
 
-	/* Colors for clear screen: (bg << 4) | fg */ 
+	/* Colors for clear screen: (bg << 4) | fg */
 	int attr;
 } co_console_config_t;
 
@@ -231,7 +231,7 @@ typedef struct co_config {
 	co_pathname_t config_path;
 
 	/*
-	 * The pathname of the vmlinux file. If this is empty then we 
+	 * The pathname of the vmlinux file. If this is empty then we
 	 * would try by default to locate 'vmlinux' in the same directory
 	 * where the configuration file resides.
 	 */
@@ -255,10 +255,6 @@ typedef struct co_config {
 	 * Video devices
 	 */
 	co_video_dev_desc_t video_devs[CO_MODULE_MAX_COVIDEO];
-	/* for cofb
-	 * Size of the video memory (in KB)
-	 */
-	//unsigned long video_size;
 
 	/*
 	 * SCSI devices
@@ -297,10 +293,10 @@ typedef struct co_config {
 
 	/*
 	 * Size of pseudo physical RAM for this machine (MB).
-	 * 
+	 *
 	 * The default size is 25% of total RAM for systems with more than
 	 * 128MB of physical ram and 16MB for systems with less ram.
-	 */ 
+	 */
 	unsigned int ram_size;
 
 	/*

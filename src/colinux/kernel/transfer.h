@@ -30,7 +30,7 @@ typedef enum {
 
 /*
  * This is lambda function that does the actual copying. In most
- * cases it will copy a maximum of PAGE_SIZE bytes per call, because 
+ * cases it will copy a maximum of PAGE_SIZE bytes per call, because
  * coLinux memory is fragmented.
  *
  * host_data - User information regarding host address
@@ -40,20 +40,20 @@ typedef enum {
  */
 
 typedef co_rc_t (*co_monitor_transfer_func_t)(
-	struct co_monitor *cmon, 
-	void *host_data, 
-	void *linuxvm, 
-	unsigned long size, 
+	struct co_monitor *cmon,
+	void *host_data,
+	void *linuxvm,
+	unsigned long size,
 	co_monitor_transfer_dir_t dir
 	);
 
 
 extern co_rc_t co_monitor_host_linuxvm_transfer(
-	struct co_monitor *cmon, 
-	void *host_data, 
-	co_monitor_transfer_func_t host_func, 
-	vm_ptr_t para, 
-	unsigned long size, 
+	struct co_monitor *cmon,
+	void *host_data,
+	co_monitor_transfer_func_t host_func,
+	vm_ptr_t para,
+	unsigned long size,
 	co_monitor_transfer_dir_t dir
 	);
 
@@ -83,10 +83,10 @@ static inline void co_monitor_host_linuxvm_transfer_unmap(
  * memcpy-like transfer implementation:
  */
 
-extern co_rc_t co_monitor_host_to_linuxvm(struct co_monitor *cmon, void *from, 
-					  vm_ptr_t to, unsigned long size); 
-extern co_rc_t co_monitor_linuxvm_to_host(struct co_monitor *cmon, vm_ptr_t from, 
-					  void *to, unsigned long size); 
+extern co_rc_t co_monitor_host_to_linuxvm(struct co_monitor *cmon, void *from,
+					  vm_ptr_t to, unsigned long size);
+extern co_rc_t co_monitor_linuxvm_to_host(struct co_monitor *cmon, vm_ptr_t from,
+					  void *to, unsigned long size);
 
 
 #endif
