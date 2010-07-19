@@ -57,16 +57,17 @@ console_window_t::console_window_t( console_input& in, int w, int h, const char*
     : mInput_(in),super_( w,h, label )
 {
     this_ = this;
+    int swidth  = w;
+    int sheight = h; 
     // Setup window menu
-    menu_ = new Fl_Menu_Bar( 0,0, w,24 );
+    menu_ = new Fl_Menu_Bar( 0,0, swidth, MENU_SIZE_PIXELS );
     menu_->box( FL_FLAT_BOX );
     menu_->align( FL_ALIGN_CENTER );
     menu_->when( FL_WHEN_RELEASE_ALWAYS );
     // This doesn't make a copy, so we can use the array directly
     menu_->menu( menu_items_ );
-    
-  //widget      = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, sheight - 120);
-    widget      = new console_widget_t(0, 24, 800, 600);
+   
+    widget      = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, sheight - MENU_SIZE_PIXELS);
     
 	// Default Font is "Terminal" with size 18
 	// Sample WinNT environment: set COLINUX_CONSOLE_FONT=Lucida Console:12

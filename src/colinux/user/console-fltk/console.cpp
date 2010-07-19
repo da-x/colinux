@@ -638,7 +638,7 @@ bool console_main_window::attach( co_id_t id )
         co_user_monitor_close( mon );
         return false;
     }
-
+// TODO: find a way to switch back to cocon if framebuffer is disabled
     /* Start rendering coLinux screen */
     wScreen_->attach( ioctl_video.video_buffer );
 
