@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <string.h>
 #include <stdio.h>
@@ -44,7 +44,7 @@ void co_debug_buf(const char *buf, long size)
 }
 
 void co_debug_end(void)
-{	
+{
 	co_manager_handle_t saved_handle = handle;
 
 	handle = NULL;

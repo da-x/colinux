@@ -117,7 +117,7 @@ static co_rc_t get_params_list(char *filename, int *count, char ***list_output)
 		co_terminal_print("error loading config file '%s'\n", filename);
 		return rc;
 	}
-	
+
 	if (size > 0) {
 		char *filescan = buf, *param_start = NULL, *param_end, cur_char;
 		param_parse_state_t state = PARAM_PARSE_STATE_INIT;
@@ -153,10 +153,10 @@ static co_rc_t get_params_list(char *filename, int *count, char ***list_output)
 			default:
 				break;
 			}
-			filescan++;		
+			filescan++;
 		} while (cur_char);
 	}
-	
+
 	co_os_file_free(buf);
 
 	return CO_RC(OK);
@@ -193,7 +193,7 @@ static co_rc_t eval_params_file(co_command_line_params_t cmdline)
 			if (!CO_OK(rc))
 				break;
 			continue;
-		} 
+		}
 
 		rc = dup_param(cmdline->argv[i], co_strlen(cmdline->argv[i]), argv_scan);
 		if (!CO_OK(rc))
@@ -236,7 +236,7 @@ co_rc_t co_cmdline_params_alloc(char **argv, int argc, co_command_line_params_t 
 
 	cmdline->argc = argc;
 	co_memcpy(cmdline->argv, argv, (sizeof(char*))*argc);
-	
+
 	rc = eval_params_file(cmdline);
 	if (!CO_OK(rc)) {
 		co_os_free(cmdline->argv);
@@ -249,7 +249,7 @@ co_rc_t co_cmdline_params_alloc(char **argv, int argc, co_command_line_params_t 
 	return CO_RC(OK);
 }
 
-co_rc_t co_cmdline_params_argumentless_parameter(co_command_line_params_t cmdline, 
+co_rc_t co_cmdline_params_argumentless_parameter(co_command_line_params_t cmdline,
 						 const char *name,
 						 bool_t *out_exists)
 {
@@ -289,16 +289,16 @@ static co_rc_t co_cmdline_get_next_equality_wrapper(co_command_line_params_t cmd
 
 		if (!cmdline->argv[i])
 			continue;
-		
+
 		key_found = co_strstr(cmdline->argv[i], "=");
 		if (!key_found)
 			continue;
-		
+
 		if (co_strncmp(expected_prefix, cmdline->argv[i], prefix_len))
 			continue;
-		
+
 		cmdline->argv[i] = NULL;
-		
+
 		key_len = (key_found - arg) - prefix_len;
 		if (key_len > 0) {
 			if (key_size < key_len + 1) {
@@ -307,7 +307,7 @@ static co_rc_t co_cmdline_get_next_equality_wrapper(co_command_line_params_t cmd
 				co_os_free(arg);
 				return CO_RC(INVALID_PARAMETER);
 			}
-			
+
 			co_memcpy(key, prefix_len + arg, key_len);
 			key[key_len] = '\0';
 		}
@@ -343,7 +343,7 @@ static co_rc_t co_cmdline_get_next_equality_wrapper(co_command_line_params_t cmd
 		co_memcpy(*pp_value, key_found, length);
 		(*pp_value)[length] = '\0';
 		co_os_free(arg);
-		
+
 		*out_exists = PTRUE;
 		break;
 	}
@@ -365,22 +365,22 @@ co_rc_t co_cmdline_get_next_equality_alloc(co_command_line_params_t cmdline, con
 				     key, key_size, pp_value, 0, out_exists);
 }
 
-co_rc_t co_cmdline_get_next_equality_int_prefix(co_command_line_params_t cmdline, const char *expected_prefix, 
+co_rc_t co_cmdline_get_next_equality_int_prefix(co_command_line_params_t cmdline, const char *expected_prefix,
 						unsigned int *key_int, unsigned int max_index,
 						char **pp_value, bool_t *out_exists)
 {
 	char number[11];
 	co_rc_t rc;
-	
+
 	rc = co_cmdline_get_next_equality_alloc(cmdline, expected_prefix, sizeof(number) - 1,
 					  number, sizeof(number), pp_value, out_exists);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
-	
+
 	if (*out_exists) {
 		char *number_parse = NULL;
 		unsigned int value_int;
-		
+
 		value_int = strtoul(number, &number_parse, 10);
 		if (number_parse == number) {
 			/* not a number */
@@ -389,7 +389,7 @@ co_rc_t co_cmdline_get_next_equality_int_prefix(co_command_line_params_t cmdline
 		}
 
 		if (value_int >= max_index) {
-			co_terminal_print("cmdline: invalid %s index: %d\n", 
+			co_terminal_print("cmdline: invalid %s index: %d\n",
 					  expected_prefix, value_int);
 			return CO_RC(INVALID_PARAMETER);
 		}
@@ -400,19 +400,19 @@ co_rc_t co_cmdline_get_next_equality_int_prefix(co_command_line_params_t cmdline
 	return CO_RC(OK);
 }
 
-co_rc_t co_cmdline_get_next_equality_int_value(co_command_line_params_t cmdline, const char *expected_prefix, 
+co_rc_t co_cmdline_get_next_equality_int_value(co_command_line_params_t cmdline, const char *expected_prefix,
 					       unsigned int *value_int, bool_t *out_exists)
 {
 	char value[20];
 	co_rc_t rc;
-	
+
 	rc = co_cmdline_get_next_equality(cmdline, expected_prefix, 0, NULL, 0, value, sizeof(value), out_exists);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
-	
+
 	if (*out_exists) {
 		char *value_parse = NULL;
-		
+
 		*value_int = strtoul(value, &value_parse, 10);
 		if (value_parse == value) {
 			/* not a number */
@@ -425,10 +425,10 @@ co_rc_t co_cmdline_get_next_equality_int_value(co_command_line_params_t cmdline,
 
 
 
-static co_rc_t one_arugment_parameter(co_command_line_params_t cmdline, 
-				      const char *name, 
-				      bool_t *argument, 
-				      bool_t *out_exists, 
+static co_rc_t one_arugment_parameter(co_command_line_params_t cmdline,
+				      const char *name,
+				      bool_t *argument,
+				      bool_t *out_exists,
 				      char *out_arg_buf, int arg_size)
 {
 	int i;
@@ -451,43 +451,43 @@ static co_rc_t one_arugment_parameter(co_command_line_params_t cmdline,
 			argument_specified = PFALSE;
 		else if (cmdline->argv[i+1][0] == '-')
 			argument_specified = PFALSE;
-		
+
 		if (*argument) {
 			if (!argument_specified) {
 				co_terminal_print("error, no argument passed to command line switch '%s'\n", name);
 				return CO_RC(ERROR);
 			}
 		}
-		
+
 		*argument = argument_specified;
 		if (argument_specified) {
 			co_snprintf(out_arg_buf, arg_size, "%s", cmdline->argv[i+1]);
 			co_os_free(cmdline->argv[i+1]);
 			cmdline->argv[i+1] = NULL;
 		}
-		
+
 		co_os_free(cmdline->argv[i]);
 		cmdline->argv[i] = NULL;
 		if (out_exists)
 			*out_exists = PTRUE;
-		
+
 		return CO_RC(OK);
 	}
 
 	return CO_RC(OK);
 }
 
-co_rc_t co_cmdline_params_one_arugment_parameter(co_command_line_params_t cmdline, 
-						 const char *name, 
-						 bool_t *out_exists, 
+co_rc_t co_cmdline_params_one_arugment_parameter(co_command_line_params_t cmdline,
+						 const char *name,
+						 bool_t *out_exists,
 						 char *out_arg_buf, int arg_size)
 {
 	bool_t argument = PTRUE;
 	return one_arugment_parameter(cmdline, name, &argument, out_exists, out_arg_buf, arg_size);
 }
 
-co_rc_t co_cmdline_params_one_arugment_int_parameter(co_command_line_params_t cmdline, 
-						     const char *name, 
+co_rc_t co_cmdline_params_one_arugment_int_parameter(co_command_line_params_t cmdline,
+						     const char *name,
 						     bool_t *out_exists, unsigned int *out_int)
 {
 	char arg_buf[0x20];
@@ -498,7 +498,7 @@ co_rc_t co_cmdline_params_one_arugment_int_parameter(co_command_line_params_t cm
 	if (!CO_OK(rc))
 		return rc;
 
-	if (out_exists && *out_exists) { 
+	if (out_exists && *out_exists) {
 		*out_int = strtoul(arg_buf, &end_ptr, 10);
 		if (end_ptr == arg_buf)
 			return CO_RC(ERROR);
@@ -507,9 +507,9 @@ co_rc_t co_cmdline_params_one_arugment_int_parameter(co_command_line_params_t cm
 	return CO_RC(OK);
 }
 
-co_rc_t co_cmdline_params_one_optional_arugment_parameter(co_command_line_params_t cmdline, 
-							  const char *name, 
-							  bool_t *out_exists, 
+co_rc_t co_cmdline_params_one_optional_arugment_parameter(co_command_line_params_t cmdline,
+							  const char *name,
+							  bool_t *out_exists,
 							  char *out_arg_buf, int arg_size)
 {
 	bool_t argument = PFALSE;

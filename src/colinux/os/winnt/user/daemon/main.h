@@ -17,6 +17,5 @@ extern co_rc_t co_winnt_daemon_main(co_start_parameters_t *start_parameters);
 extern void co_winnt_daemon_stop(void);
 
 extern bool_t 	 co_running_as_service;
-extern HINSTANCE co_current_win32_instance;
 
 #endif

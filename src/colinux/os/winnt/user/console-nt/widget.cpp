@@ -9,9 +9,9 @@
  *
  */
 
- /* 
+ /*
   * WinNT dependent widget class
-  * Used for building colinux-console-nt.exe 
+  * Used for building colinux-console-nt.exe
   */
 
 #include <windows.h>
@@ -53,7 +53,7 @@ BOOL WINAPI co_console_widget_control_handler(DWORD T)
 	DWORD        r;
 	INPUT_RECORD c;
 
-	if (!(T == CTRL_CLOSE_EVENT || T == CTRL_LOGOFF_EVENT)) 
+	if (!(T == CTRL_CLOSE_EVENT || T == CTRL_LOGOFF_EVENT))
 		return false;
 
 	memset(&c, 0, sizeof(INPUT_RECORD));
@@ -70,22 +70,22 @@ console_widget_NT_t::console_widget_NT_t()
 	std_out_h         = 0;
 	input             = 0;
 	screen            = NULL;
-	
+
 	save_standard_console();
 
 	memset(vkey_state, 0, sizeof(vkey_state));
-	
-	blank.Attributes = FOREGROUND_GREEN | 
-	                   FOREGROUND_BLUE  | 
+
+	blank.Attributes = FOREGROUND_GREEN |
+	                   FOREGROUND_BLUE  |
 	                   FOREGROUND_RED;
-	
+
 	blank.Char.AsciiChar = ' ';
 	ctrl_exit            = false;
 	SetConsoleCtrlHandler(co_console_widget_control_handler, true);
 }
 
 void console_widget_NT_t::save_standard_console()
-{	
+{
 	saved_hwnd = GetConsoleWindow();
 	if (saved_hwnd == (HWND)0) {
 		AllocConsole();
@@ -122,7 +122,7 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 	DWORD               error;
 	DWORD               old_curs_size;
 	BOOL		    old_curs_is_vis;
-	
+
 	error  = 0;
 	window = W;
 
@@ -138,7 +138,7 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 
 	win_size.X = console->config.x;
 	win_size.Y = console->config.y;
-	
+
 	input = GetStdHandle(STD_INPUT_HANDLE);
 	SetConsoleMode(input, 0);
 
@@ -154,15 +154,15 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
         		 WS_SYSMENU     |
         		 WS_THICKFRAME  |
         		 WS_MINIMIZEBOX |
-        		 WS_MAXIMIZEBOX, 
+        		 WS_MAXIMIZEBOX,
         		 0);
 
 	hwnd = GetConsoleWindow();
-	SetWindowPos(hwnd, 
+	SetWindowPos(hwnd,
 	             HWND_TOP,
-	             0, 
 	             0,
-                     r.right  - r.left, 
+	             0,
+                     r.right  - r.left,
                      r.bottom - r.top,
                      SWP_NOMOVE);
 
@@ -184,22 +184,22 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 		error = GetLastError();
 		co_debug("SetConsoleWindowInfo() error 0x%lx", error);
 	}
-	
+
 	buf_size = win_size;
 
 #if CO_ENABLE_CON_SCROLL
-	if(console->config.max_y > buf_size.Y) 
+	if(console->config.max_y > buf_size.Y)
 		buf_size.Y = console->config.max_y;
 #endif
 
 	screen = (CHAR_INFO*)co_os_malloc(sizeof(CHAR_INFO) * buf_size.X * buf_size.Y);
-	
+
 	own_out_h = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE,
-	                                      0, 
 	                                      0,
-				              CONSOLE_TEXTMODE_BUFFER, 
+	                                      0,
+				              CONSOLE_TEXTMODE_BUFFER,
 				              0);
-	
+
 	if(!SetConsoleScreenBufferSize(own_out_h, buf_size))
           	co_debug("SetConsoleScreenBufferSize() error 0x%lx", GetLastError());
 
@@ -211,18 +211,18 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 		cci.dwSize   = old_curs_size;
 		SetConsoleCursorInfo(own_out_h, &cci);
 	}
-	
+
 	SetConsoleActiveScreenBuffer(own_out_h);
-	
+
 	/* Set cursor size for own screen buffer */
 	console->cursor.height = console->config.curs_type_size;
 	set_cursor_size(console->cursor.height);
 
 	// Fixup, if resize failed from smaller start window
 	if (error == ERROR_INVALID_PARAMETER) {
-		SetWindowPos(hwnd, 
+		SetWindowPos(hwnd,
 			     HWND_TOP,
-			     0, 
+			     0,
 			     0,
 			     r.right  - r.left + GetSystemMetrics(SM_CYVSCROLL),
 			     r.bottom - r.top  + GetSystemMetrics(SM_CYHSCROLL),
@@ -234,12 +234,12 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 
 console_widget_NT_t::~console_widget_NT_t()
 {
-	/* Restore standard Ctrl Break handler */	
+	/* Restore standard Ctrl Break handler */
 	SetConsoleCtrlHandler(co_console_widget_control_handler, false);
 	if (screen != NULL)
 		co_os_free(screen);
-		
-	/* Restore standard output screen buffer */	
+
+	/* Restore standard output screen buffer */
 	CloseHandle(own_out_h);
         SetConsoleCursorInfo(std_out_h, &cursor_info);
 
@@ -252,17 +252,17 @@ void console_widget_NT_t::draw()
 		COORD c = {0, 0};
 		DWORD z;
 
-		if (!FillConsoleOutputCharacter(own_out_h, 
-		                                blank.Char.AsciiChar, 
-		                                win_size.X * win_size.Y, 
-		                                c, 
+		if (!FillConsoleOutputCharacter(own_out_h,
+		                                blank.Char.AsciiChar,
+		                                win_size.X * win_size.Y,
+		                                c,
 		                                &z))
 			co_debug("FillConsoleOutputCharacter() error 0x%lx",
 				 GetLastError());
-		if (!FillConsoleOutputAttribute(own_out_h, 
+		if (!FillConsoleOutputAttribute(own_out_h,
 		                                blank.Attributes,
-		                                win_size.X * win_size.Y, 
-		                                c, 
+		                                win_size.X * win_size.Y,
+		                                c,
 		                                &z))
 			co_debug("FillConsoleOutputAttribute() error 0x%lx",
 				 GetLastError());
@@ -304,7 +304,7 @@ void console_widget_NT_t::update()
 }
 
 co_rc_t console_widget_NT_t::set_cursor_size(const int curs_size)
-{       
+{
 	co_console_set_cursor_size((void*)own_out_h, curs_size);
 	return CO_RC(OK);
 }
@@ -322,7 +322,7 @@ co_rc_t console_widget_NT_t::op_scroll_up(const co_console_unit& T,
 	src_r.Right  = win_region.Right;
 	src_r.Top    = T;
 	src_r.Bottom = B;
-	
+
 	dst_c.X      = 0;
 	dst_c.Y      = src_r.Top - L;
 
@@ -349,7 +349,7 @@ co_rc_t console_widget_NT_t::op_scroll_down(const co_console_unit& T,
 	src_r.Right  = win_region.Right;
 	src_r.Top    = T;
 	src_r.Bottom = B;
-	
+
 	dst_c.X      = 0;
 	dst_c.Y      = src_r.Top + L;
 
@@ -383,8 +383,8 @@ co_rc_t console_widget_NT_t::op_bmove(const co_console_unit& Y,
 
 	if(!ScrollConsoleScreenBuffer(own_out_h,
 				      &src_r,
-				      &win_region, 
-				      dst_c, 
+				      &win_region,
+				      dst_c,
 				      &blank))
 		co_debug("ScrollConsoleScreenBuffer() error 0x%lx", GetLastError());
 
@@ -411,11 +411,11 @@ console_widget_NT_t::op_putcs(
 	SMALL_RECT r;
 	COORD      c;
 
-	c.X	 = 
+	c.X	 =
 	r.Left 	 = X;
-	
-	c.Y 	 = 
-	r.Top	 = 
+
+	c.Y 	 =
+	r.Top	 =
 	r.Bottom = Y;
 
 	if (--count + r.Left > console->config.x)
@@ -450,16 +450,16 @@ console_widget_NT_t::op_putc(
 		return CO_RC(ERROR);
 	}
 
-	c.X	= 
-	r.Left	= 
+	c.X	=
+	r.Left	=
 	r.Right = X;
-	
-	c.Y      = 
-	r.Top	 = 
+
+	c.Y      =
+	r.Top	 =
 	r.Bottom = Y;
 
 	CHAR_INFO* ci = &screen[(win_size.X * r.Top) + r.Left];
-	
+
 	ci->Attributes     = (C & 0xFF00) >> 8;
 	ci->Char.AsciiChar = (C & 0x00FF);
 
@@ -471,7 +471,7 @@ console_widget_NT_t::op_putc(
 co_rc_t console_widget_NT_t::op_cursor_pos(const co_cursor_pos_t& P)
 {
 	COORD c;
-	
+
 	c.X = P.x;
 	c.Y = P.y;
 	SetConsoleCursorPosition(own_out_h, c);
@@ -511,15 +511,15 @@ co_rc_t console_widget_NT_t::op_clear(const co_console_unit&	 T,
 		y++;
 	}
 
-	r.Top  = 
+	r.Top  =
 	c.Y    = T;
-	
-	r.Left = 
+
+	r.Left =
 	c.X    = L;
-	
+
 	r.Bottom = B;
 	r.Right  = R;
-	
+
 	if(!WriteConsoleOutput(own_out_h, screen, win_size, c, &r))
 		co_debug("WriteConsoleOutput() error 0x%lx", GetLastError());
 
@@ -545,7 +545,7 @@ co_rc_t console_widget_NT_t::loop()
 		return CO_RC(OK);
 
 	INPUT_RECORD i;
-	
+
 	ReadConsoleInput(input, &i, 1, &r);
 	if (ctrl_exit) {
 		window->detach();
@@ -582,7 +582,7 @@ co_rc_t console_widget_NT_t::idle()
 void send_key(DWORD code)
 {
 	co_scan_code_t sc;
-	
+
 	sc.mode = CO_KBD_SCANCODE_RAW;
 	/* send e0 if extended key */
 	if ( code & 0xE000 )
@@ -612,9 +612,9 @@ static int PasteClipboardIntoColinux()
 		::CloseClipboard( );
 		return 0;	// Empty (for text)
 	}
-	
+
 	unsigned char* s = (unsigned char*) ::GlobalLock(h);
-	
+
 	if ( s == NULL )
 	{
 		::CloseClipboard( );
@@ -664,16 +664,16 @@ void console_widget_NT_t::process_key_event(KEY_EVENT_RECORD& ker)
 		}
 
 		// Signal Win key pressed/released
-		if (released)	
+		if (released)
 			vkey_state[CO_WIN_KEY] &= ~1;
-		else	
+		else
 			vkey_state[CO_WIN_KEY] |=  1;
 
 		break;
 	}
 
 	case VK_DELETE: {
-		if (!released  && 
+		if (!released  &&
 		    ((flags & (RIGHT_ALT_PRESSED  | LEFT_ALT_PRESSED))  &&
 		     (flags & (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED)) &&
 		     (flags & (SHIFT_PRESSED))))

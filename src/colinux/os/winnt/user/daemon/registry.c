@@ -12,7 +12,7 @@
 #include <colinux/os/user/config.h>
 #include <colinux/os/user/misc.h>
 
-#define SOFWARE_COLINUX_MONITOR_KEY "SOFTWARE\\coLinux\\monitor"
+#define SOFTWARE_COLINUX_MONITOR_KEY "SOFTWARE\\coLinux\\monitor"
 
 co_rc_t co_config_user_string_read(int		monitor_index,
 				   const char*  device_name,
@@ -28,7 +28,7 @@ co_rc_t co_config_user_string_read(int		monitor_index,
 
 	co_snprintf(key_name,
 	            sizeof(key_name),
-		    SOFWARE_COLINUX_MONITOR_KEY "\\%d\\%s%d",
+		    SOFTWARE_COLINUX_MONITOR_KEY "\\%d\\%s%d",
 		    monitor_index,
 		    device_name,
 		    device_index);
@@ -66,7 +66,7 @@ co_rc_t co_config_user_string_read(int		monitor_index,
 }
 
 co_rc_t co_config_user_string_write(int 	monitor_index,
-		                    const char* device_name, 
+		                    const char* device_name,
 		                    int 	device_index,
 		                    const char* value_name,
 		                    const char* value)
@@ -77,7 +77,7 @@ co_rc_t co_config_user_string_write(int 	monitor_index,
 
 	co_snprintf(key_name,
 	            sizeof(key_name),
-		    SOFWARE_COLINUX_MONITOR_KEY "\\%d\\%s%d",
+		    SOFTWARE_COLINUX_MONITOR_KEY "\\%d\\%s%d",
 		    monitor_index,
 		    device_name,
 		    device_index);

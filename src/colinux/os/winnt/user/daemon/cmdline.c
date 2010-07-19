@@ -47,54 +47,54 @@ co_rc_t co_winnt_daemon_parse_args(co_command_line_params_t cmdline, co_winnt_pa
 	winnt_parameters->status_driver = PFALSE;
 
 	rc = co_cmdline_params_one_optional_arugment_parameter(
-		cmdline, "--install-service", 
+		cmdline, "--install-service",
 		&winnt_parameters->install_service,
 		winnt_parameters->service_name,
 		sizeof(winnt_parameters->service_name));
 
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_one_optional_arugment_parameter(
-		cmdline, "--remove-service", 
+		cmdline, "--remove-service",
 		&winnt_parameters->remove_service,
 		winnt_parameters->service_name,
 		sizeof(winnt_parameters->service_name));
 
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_one_optional_arugment_parameter(
-		cmdline, "--run-service", 
+		cmdline, "--run-service",
 		&winnt_parameters->run_service,
 		winnt_parameters->service_name,  /* service name is obsolate at running time */
 		sizeof(winnt_parameters->service_name));
 
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_argumentless_parameter(
 		cmdline,
-		"--install-driver", 
+		"--install-driver",
 		&winnt_parameters->install_driver);
 
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_argumentless_parameter(
 		cmdline,
-		"--remove-driver", 
+		"--remove-driver",
 		&winnt_parameters->remove_driver);
 
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_argumentless_parameter(
 		cmdline,
-		"--status-driver", 
+		"--status-driver",
 		&winnt_parameters->status_driver);
 
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	return CO_RC(OK);

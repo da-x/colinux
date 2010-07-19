@@ -5,14 +5,14 @@
  *
  * Service support by Jaroslaw Kowalski <jaak@zd.com.pl>, 2004 (c)
  * Driver service separation by Daniel R. Slater <dan_slater@yahoo.com>, 2004 (c)
- * 
+ *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
- 
+ */
+
 /* Main program of the "colinux-daemon.exe" */
- 
+
 #include <stdio.h>
 #include <windows.h>
 #include <stdarg.h>
@@ -27,7 +27,6 @@
 #include <colinux/os/user/manager.h>
 #include <colinux/os/user/misc.h>
 
-#include "../osdep.h"
 #include "cmdline.h"
 #include "misc.h"
 #include "service.h"
@@ -42,7 +41,7 @@ static bool_t	    stoped   = PFALSE;
 
 /*
  * co_winnt_daemon_stop:
- * 
+ *
  * This callback function is called when Windows sends a Stop request to the
  * coLinux service.
  * Or the user closed the command prompt of colinux-daemon.
@@ -74,7 +73,7 @@ static BOOL WINAPI co_winnt_daemon_ctrl_handler(DWORD dwCtrlType)
 	case CTRL_C_EVENT:
 	case CTRL_BREAK_EVENT:
 		return TRUE;	// Don't let the user kill us that easily ;)
-	case CTRL_LOGOFF_EVENT:	
+	case CTRL_LOGOFF_EVENT:
 		// Only shutdown if we are not a service
 		if (co_running_as_service)
 		    return FALSE;
@@ -91,7 +90,7 @@ static BOOL WINAPI co_winnt_daemon_ctrl_handler(DWORD dwCtrlType)
 	return FALSE;
 }
 
-co_rc_t co_winnt_daemon_main(co_start_parameters_t* start_parameters) 
+co_rc_t co_winnt_daemon_main(co_start_parameters_t* start_parameters)
 {
 	co_rc_t rc;
 
@@ -100,7 +99,7 @@ co_rc_t co_winnt_daemon_main(co_start_parameters_t* start_parameters)
 		co_winnt_daemon_syntax();
 		return CO_RC(OK);
 	}
-	
+
 	/* Workaround multiprocessor bug */
 	co_winnt_affinity_workaround();
 
@@ -155,33 +154,23 @@ static void co_winnt_help(void)
 	co_terminal_print("NOTE: Run without arguments to receive help about command line syntax.\n");
 }
 
-static co_rc_t co_winnt_main(LPSTR szCmdLine)
+static co_rc_t co_winnt_main(int argc, char *args[])
 {
 	co_rc_t rc = CO_RC_OK;
 	co_winnt_parameters_t winnt_parameters;
 	co_start_parameters_t start_parameters;
 	co_command_line_params_t cmdline;
-	int argc = 0;
-	char **args = NULL;
 
 	co_memset(&start_parameters, 0, sizeof(start_parameters));
 	co_memset(&winnt_parameters, 0, sizeof(winnt_parameters));
 
 	co_daemon_print_header();
 
-	rc = co_os_parse_args(szCmdLine, &argc, &args);
-	if (!CO_OK(rc)) {
-		co_terminal_print("daemon: error parsing arguments\n");
-		co_winnt_help();
-		return rc;
-	}
-
 	co_winnt_change_directory_for_service(argc, args);
 
 	rc = co_cmdline_params_alloc(args, argc, &cmdline);
 	if (!CO_OK(rc)) {
 		co_terminal_print("daemon: error parsing arguments\n");
-		co_os_free_parsed_args(args);
 		return rc;
 	}
 
@@ -222,10 +211,21 @@ static co_rc_t co_winnt_main(LPSTR szCmdLine)
 	}
 
 	if (winnt_parameters.install_service) {
+		char *szCmdLine, *p, **pp;
+		int size;
+
 		if (!start_parameters.config_specified) {
 			co_terminal_print("daemon: config not specified\n");
 			return CO_RC(ERROR);
 		}
+
+		// Create single command line back
+		for (size = 0, pp = args; *pp; pp++)
+			size += 1+strlen(*pp);
+		szCmdLine = malloc(size);
+		for (p = szCmdLine, pp = args; *pp; pp++)
+			p += snprintf(p, size - (p - szCmdLine), (p == szCmdLine) ? "%s" : " %s", *pp);
+
 		return co_winnt_daemon_install_as_service(winnt_parameters.service_name,
 							  szCmdLine,
 							  start_parameters.network_types);
@@ -264,20 +264,14 @@ static co_rc_t co_winnt_main(LPSTR szCmdLine)
 	return co_winnt_daemon_main(&start_parameters);
 }
 
-HINSTANCE co_current_win32_instance;
-
-int WINAPI WinMain(HINSTANCE	hInstance, 
-		   HINSTANCE	hPrevInstance,
-		   LPSTR	szCmdLine,
-		   int		iCmdShow) 
+int main(int argc, char *argv[])
 {
 	co_rc_t rc;
 	int ret;
 
-	co_current_win32_instance = hInstance;
 	co_debug_start();
 
-	rc = co_winnt_main(szCmdLine);
+	rc = co_winnt_main(argc-1, argv+1);
 
 	// Translate retcode into errorlevel, for --status-driver
 	ret = CO_RC_GET_CODE(rc);
