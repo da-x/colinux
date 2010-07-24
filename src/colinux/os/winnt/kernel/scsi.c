@@ -10,11 +10,13 @@
  */
 
 #include "ddk.h"
-#ifndef WIN64
 #include <ddk/ntifs.h>
-#endif
 #include <ddk/ntdddisk.h>
+#ifdef WIN64
+#include <ntddscsi.h>
+#else
 #include <ddk/ntddscsi.h>
+#endif
 
 #ifdef WIN64
 // FIXME: W64: Collision with Linux kernel headers

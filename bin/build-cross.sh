@@ -4,34 +4,70 @@
 
 . ./build-common.sh
 
+settings64()
+{
+	# Get host machine type and select the right download
+	MACHINE=`uname -m`
+	test "$MACHINE" = "x86_64" || MACHINE="i686"
+
+	# Download links and names
+	# x86_64 (64 bit): MINGW_PACK="mingw-w64-bin_x86_64-linux_20100711_sezero.tar.gz"
+	# i686   (32 bit): MINGW_PACK="mingw-w64-bin_i686-linux_20100711_sezero.tar.gz"
+	#
+	MINGW_DATE="20100711"
+	MINGW_BDIR="W64_162041"
+	MINGW_PACK="mingw-w64-bin_$MACHINE-linux_${MINGW_DATE}_sezero.tar.gz"
+	MINGW_URL="http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/sezero_${MINGW_DATE}"
+	MINGW_PACK_URL="$MINGW_URL/$MINGW_PACK/download"
+
+	# Update headers and libs
+	UPDATE_REV="2951"
+	UPDATE_PACK="sezero_${MINGW_DATE}_w64_runtime_update_$UPDATE_REV.zip"
+	UPDATE_PACK_URL="$MINGW_URL/$UPDATE_PACK/download"
+
+	# Pinned state for DDK headers
+	DDK_REV="2960"
+	DDK_SVN="http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/experimental/ddk_test"
+	DDK_MIRROR="$DOWNLOADS/MinGW64-ddk_test.svn"
+}
+
 download64()
 {
 	echo "Building ToolChain is not supported. Will download a prebuild now. Needs svn client for this."
+	mkdir -p $DOWNLOADS
 
 	# Prebuild GCC MinGW for Linux (43M download, 227M used)
 	test -f $DOWNLOADS/$MINGW_PACK || \
-	 wget $MINGW_URL -P $DOWNLOADS
+	 wget $MINGW_PACK_URL -P $DOWNLOADS
+
+	# Last update
+	test -f $DOWNLOADS/$UPDATE_PACK || \
+	 wget $UPDATE_PACK_URL -P $DOWNLOADS
 
 	# Get ddk/psdk headers from MinGW testing (7M used)
 	# http://article.gmane.org/gmane.comp.gnu.mingw.w64.general/1079
 	test -d $DDK_MIRROR || \
-	 svn checkout -r $DDK_REV $DDK_SVN $DDK_MIRROR
+	 svn checkout -r $DDK_REV $DDK_SVN $DDK_MIRROR && \
+	 svn update -r $DDK_REV $DDK_SVN
 }
 
 unpack64()
 {
 	if [ ! -d $PREFIX/$TARGET/include ]
 	then
-		# "sezero" does not tar'ed standard PREFIX. So, unpack somewhere and copy
+		# "sezero" does not tar'ed standard PREFIX. So, unpack somewhere and move
 		echo "Unpack MinGW binary..."
-		mkdir -p $DOWNLOADS/sezero
-		tar xzf $DOWNLOADS/$MINGW_PACK -C $DOWNLOADS/sezero
-		mkdir -p $PREFIX
-		mv $DOWNLOADS/sezero/$MINGW_BDIR/* $PREFIX/
-		rm -rf $DOWNLOADS/sezero
+		mkdir -p $PREFIX/sezero_tmp
+		tar xzf $DOWNLOADS/$MINGW_PACK -C $PREFIX/sezero_tmp
+		mv $PREFIX/sezero_tmp/$MINGW_BDIR/* $PREFIX
+		rm -rf $PREFIX/sezero_tmp
+		# Update headers and libs
+		echo "Install update pack..."
+		unzip -q -o $DOWNLOADS/$UPDATE_PACK -d $PREFIX
 		# Copy over all DDK headers
 		echo "Copy over DDK headers..."
-		cp -a $DDK_MIRROR/include/* $PREFIX/$TARGET/include/
+		cp -a $DDK_MIRROR/include $PREFIX/$TARGET
+		rm -rf $PREFIX/$TARGET/include/.svn $PREFIX/$TARGET/include/ddk/.svn
 	fi
 }
 
@@ -50,25 +86,7 @@ then
 		exit 0
 	fi
 
-	# Get host machine type and select the right download
-	MACHINE=`uname -m`
-	test "$MACHINE" = "x86_64" || MACHINE="i686"
-
-	# Download links and names
-	# x86_64 (64 bit): MINGW_PACK="mingw-w64-bin_x86_64-linux_20100702_sezero.tar.gz"
-	# i686   (32 bit): MINGW_PACK="mingw-w64-bin_i686-linux_20100702_sezero.tar.gz"
-	#
-	MINGW_DATE="20100702"
-	MINGW_BDIR="W64_161668"
-	MINGW_PACK="mingw-w64-bin_$MACHINE-linux_${MINGW_DATE}_sezero.tar.gz"
-	MINGW_URL="http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/sezero_${MINGW_DATE}/$MINGW_PACK/download"
-	# Use fix state for DDK headers
-	DDK_REV="2511"
-	DDK_SVN="http://mingw-w64.svn.sourceforge.net/svnroot/mingw-w64/experimental/ddk_test"
-	DDK_MIRROR="$DOWNLOADS/MinGW64-ddk_test.svn"
-
-	mkdir -p $DOWNLOADS
-
+	settings64
 	download64
 	unpack64
 

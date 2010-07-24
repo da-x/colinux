@@ -23,8 +23,8 @@
 #include <colinux/os/winnt/monitor.h>
 #include <colinux/os/winnt/kernel/conet.h>
 
-/* FIXME: W64: libndis.a is missing */
-#ifdef CO_NDIS_ENABLED
+#define CO_NDIS_ENABLED		/* Can be disable temporaly for testings without ndis */
+#ifndef CO_NDIS_ENABLED
 
 // #define CONET_DEBUG
 
@@ -72,7 +72,7 @@ static inline VOID NdisResetEvent(
 {
 	KeResetEvent(&Event->Event);
 }
-#endif
+#endif /* !WIN64 */
 
 static void co_FreeBuffersAndPacket(
 	IN PNDIS_PACKET		Packet

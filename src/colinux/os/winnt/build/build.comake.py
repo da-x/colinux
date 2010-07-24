@@ -160,7 +160,6 @@ def script_cmdline(scripter, tool_run_inf):
     else:
         driver_entry = '_DriverEntry@8'
     inputs = tool_run_inf.target.get_actual_inputs()
-    # FIXME: W64: Missing libndis.a "-lndis"
     command_line = ((
         "%s "
         "-Wl,--strip-debug "
@@ -168,7 +167,7 @@ def script_cmdline(scripter, tool_run_inf):
         "-Wl,--image-base,0x10000 "
         "-Wl,--entry,%s "
         "-shared -nostartfiles -nostdlib "
-        "-o %s %s -lntoskrnl -lhal ") %
+        "-o %s %s -lndis -lntoskrnl -lhal ") %
     (scripter.get_cross_build_tool('gcc', tool_run_inf),
      driver_entry,
      tool_run_inf.target.pathname,
