@@ -9,6 +9,9 @@
   * New menu option "exit on detach" (quit console after shutting down).
   * Redesigned menu to be more inline with today's standard menu layout.
 
+  Daemons:
+  * Different descriription for file properties, add original filename.
+
   Kernel:
   * Version 2.6.33.5
   * Bug #3021253: Hang/Crash with memory size not bounding on 4MB.

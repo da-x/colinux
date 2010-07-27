@@ -55,11 +55,10 @@ def generate_wx_options():
     )
 
 user_dep = [Input('../user/user-all.a')]
-user_res = [Input('../user/daemon/res/colinux.res')]
-daemon_res = [Input('../user/daemon/res/daemon.res')]
 
 targets['colinux-daemon.exe'] = Target(
-    inputs = daemon_res + [
+    inputs = [
+        Input('../user/daemon/res/daemon.res'),
         Input('../user/daemon/daemon.o'),
     ] + user_dep,
     tool = Compiler(),
@@ -67,67 +66,75 @@ targets['colinux-daemon.exe'] = Target(
 )
 
 targets['colinux-net-daemon.exe'] = Target(
-    inputs = user_res + [
-       Input('../user/conet-daemon/build.a'),
-       Input('../../../user/daemon-base/build.a'),
+    inputs = [
+        Input('../user/daemon/res/colinux-net.res'),
+        Input('../user/conet-daemon/build.a'),
+        Input('../../../user/daemon-base/build.a'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('g++'),
 )
 
 targets['colinux-bridged-net-daemon.exe'] = Target(
-    inputs = user_res + [
-       Input('../user/conet-bridged-daemon/build.o'),
+    inputs = [
+        Input('../user/daemon/res/colinux-bridged-net.res'),
+        Input('../user/conet-bridged-daemon/build.o'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('gcc', libs=['wpcap']),
 )
 
 targets['colinux-ndis-net-daemon.exe'] = Target(
-    inputs = user_res + [
-       Input('../user/conet-ndis-daemon/build.o'),
+    inputs = [
+        Input('../user/daemon/res/colinux-ndis-net.res'),
+        Input('../user/conet-ndis-daemon/build.o'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('gcc'),
 )
 
 targets['colinux-slirp-net-daemon.exe'] = Target(
-    inputs = user_res + [
-       Input('../user/conet-slirp-daemon/build.o'),
-       Input('../../../user/slirp/build.o'),
+    inputs = [
+        Input('../user/daemon/res/colinux-slirp-net.res'),
+        Input('../user/conet-slirp-daemon/build.o'),
+        Input('../../../user/slirp/build.o'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('gcc', libs=['iphlpapi']),
 )
 
 targets['colinux-serial-daemon.exe'] = Target(
-    inputs = user_res + [
-       Input('../user/coserial-daemon/build.o'),
+    inputs = [
+        Input('../user/daemon/res/colinux-serial.res'),
+        Input('../user/coserial-daemon/build.o'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('gcc'),
 )
 
 targets['colinux-console-fltk.exe'] = Target(
-    inputs = user_res + [
-       Input('../user/console-fltk/build.a'),
-       Input('../../../user/console-fltk/build.a'),
+    inputs = [
+        Input('../user/daemon/res/colinux-fltk.res'),
+        Input('../user/console-fltk/build.a'),
+        Input('../../../user/console-fltk/build.a'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('g++', libs=['fltk', 'mingw32'], lflags=['-mwindows']),
 )
 
 targets['colinux-console-nt.exe'] = Target(
-    inputs = user_res + [
-       Input('../user/console-nt/build.a'),
-       Input('../../../user/console-nt/build.a'),
+    inputs = [
+        Input('../user/daemon/res/colinux-nt.res'),
+        Input('../user/console-nt/build.a'),
+        Input('../../../user/console-nt/build.a'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('g++'),
 )
 
 targets['colinux-console-wx.exe'] = Target(
-    inputs = user_res + [
+    inputs = [
+        Input('../user/daemon/res/colinux-wx.res'),
         Input('../../../user/console-wx/build.o'),
     ],
     tool = Compiler(),
@@ -135,9 +142,10 @@ targets['colinux-console-wx.exe'] = Target(
 )
 
 targets['colinux-debug-daemon.exe'] = Target(
-    inputs = user_res + [
-       Input('../user/debug/build.o'),
-       Input('../../../user/debug/build.o'),
+    inputs = [
+        Input('../user/daemon/res/colinux-debug.res'),
+        Input('../user/debug/build.o'),
+        Input('../../../user/debug/build.o'),
     ] + user_dep,
     tool = Compiler(),
     mono_options = generate_options('gcc'),
