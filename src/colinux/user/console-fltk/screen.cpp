@@ -38,7 +38,7 @@ console_screen::console_screen( int x, int y, int w, int h )
     , render_( NULL )
 {
     // Register check callback that will refresh the screen when needed.
-    Fl::add_check( refresh_callback, this );
+    //remove to use old console Fl::add_check( refresh_callback, this );
 }
 
 /* ----------------------------------------------------------------------- */
@@ -47,7 +47,7 @@ console_screen::console_screen( int x, int y, int w, int h )
  */
 console_screen::~console_screen( )
 {
-    engine_init( NULL );
+    engine_clear();
     Fl::remove_check( refresh_callback, this );
 }
 
@@ -145,7 +145,7 @@ void console_screen::attach( void* video_buffer )
 void console_screen::dettach( )
 {
     // Clear current render engine
-    engine_init( NULL );
+    engine_clear();
     video_buffer_ = NULL;
 }
 
@@ -153,16 +153,17 @@ void console_screen::dettach( )
 /*
  * Initialize rendering engine.
  */
-bool console_screen::engine_init( co_video_header* video )
-{
+void console_screen::engine_clear(){
     // Clear current rendering engine
     if ( render_ )
         delete render_;
     render_ = NULL;
-
-    if ( video == NULL )
-        return false;
-
+    // assert video buffer is null
+}
+// TODO const video?
+bool console_screen::engine_init( co_video_header* video )
+{
+    engine_clear();
     switch ( video->magic )
     {
     case 0:

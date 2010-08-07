@@ -158,8 +158,52 @@ console_main_window::console_main_window( )
     {
         const int bdx = Fl::box_dx( FL_THIN_DOWN_FRAME );
         const int bdy = Fl::box_dx( FL_THIN_DOWN_FRAME );
-        wScreen_ = new console_screen( bdx, bdy + mh,
+        // test wScreen_ = new console_screen( bdx, bdy + mh,
+        wScreen_ = new console_widget_t( bdx, bdy + mh,
                                        640 + bdx*2, 400 + bdy*2 );
+	// Default Font is "Terminal" with size 18
+	// Sample WinNT environment: set COLINUX_CONSOLE_FONT=Lucida Console:12
+	// Change only font size:    set COLINUX_CONSOLE_FONT=:12
+	char* env_font = getenv("COLINUX_CONSOLE_FONT");
+
+	if (env_font)
+	{
+		char* p = strchr (env_font, ':');
+
+		if (p)
+		{
+			int size = atoi (p+1);
+			if (size >= 4 && size <= 24)
+			{
+				// Set size
+				wScreen_->set_font_size(size);
+			}
+			*p = 0; // End for Fontname
+		}
+
+		// Set new font style
+		if(strlen(env_font))
+		{
+			// Remember: set_font need a non stack buffer!
+			// Environment is global static.
+			Fl::set_font(FL_SCREEN, env_font);
+
+			// Now check font width
+			fl_font(FL_SCREEN, 18); // Use default High for test here
+			if ((int)fl_width('i') != (int)fl_width('W'))
+			{
+				Fl::set_font(FL_SCREEN, "Terminal"); // Restore standard font
+				//log("%s: is not fixed font. Using 'Terminal'\n", env_font);
+			}
+		}
+	}
+	else
+	{
+		// use registry values and not environment variable
+		//widget->set_font_name(reg_font);
+		//widget->set_font_size(reg_font_size);
+	}
+
     }
     wScroll_->end( );
 
@@ -193,8 +237,8 @@ console_main_window::console_main_window( )
 
     // Create (hidden) log window (will be shown upon request)
     wLog_ = new console_log_window( 400,300, "Message Log" );
-    wConsole_ = new console_window_t(input_, 800,600, "Message Log" );
-    wConsole_->show();
+    //wConsole_ = new console_window_t(input_, 800,600, "Message Log" );
+    //wConsole_->show();
     center_widget( wLog_ );
 
     // Update menu items state & status bar
@@ -565,7 +609,8 @@ void console_main_window::handle_message( co_message_t * msg )
                 co_console_message_t* console_message;
 
                 console_message = (typeof(console_message))(msg->data);
-                wConsole_->handle_console_event(console_message);
+                //wConsole_->handle_console_event(console_message);
+                wScreen_->handle_console_event(console_message);
                 break;
         }
 	default: { break; }
@@ -627,8 +672,8 @@ bool console_main_window::attach( co_id_t id )
         if (!CO_OK(rc))
                 return rc;
 
-        wConsole_->set_console(console);
-
+        //wConsole_->set_console(console);
+        wScreen_->set_console(console);
 
     /* Get pointer to shared video buffer */
     rc = co_user_monitor_video_attach( mon, &ioctl_video );
@@ -909,7 +954,7 @@ void console_main_window::on_show_hide_console( Fl_Widget* w, void* v )
     //if ( this_->wLog_->visible() )
     //    this_->wLog_->hide( );
     //else
-        this_->wConsole_->show( );
+        //this_->wConsole_->show( );
     // Update UI hints to the user
     //this_->update_ui_state( );
 }

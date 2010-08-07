@@ -12,7 +12,9 @@
 
 #include <FL/Fl_Widget.H>
 #include <time.h>
-
+extern "C" {
+#include <colinux/common/console.h>
+}
 
 struct co_video_header;
 
@@ -64,7 +66,10 @@ public:
     bool can_mark( ) const;
     void set_marked_text( int x1,int y1, int x2,int y2 );
     unsigned get_marked_text( char* buf, unsigned len );
-
+    // support old console mode
+    virtual co_rc_t handle_console_event(co_console_message_t* msg){};
+    virtual void set_console(co_console_t* _console){};
+    virtual void set_font_size(int new_size){};
 private:
     // Do the drawing ourselves
     void draw( );
@@ -72,6 +77,7 @@ private:
     static void refresh_callback( void* v );
     // Initialize rendering engine
     bool engine_init( co_video_header* video );
+    void engine_clear();
     // Current rendering engine ID
     unsigned long engine_id() const;
     // Lock video buffer memory (returns NULL on error)

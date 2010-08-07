@@ -29,7 +29,7 @@ console_widget_t::console_widget_t(int		x,
 			           int		w,
 			           int 		h,
 			           const char* 	label)
-: Fl_Widget(x, y, w, h, label)
+: console_screen(x, y, w, h)
 {
 	font_size 	      = 18;
 	letter_x	      = font_size;
