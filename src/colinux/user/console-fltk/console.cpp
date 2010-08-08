@@ -158,8 +158,9 @@ console_main_window::console_main_window( )
     {
         const int bdx = Fl::box_dx( FL_THIN_DOWN_FRAME );
         const int bdy = Fl::box_dx( FL_THIN_DOWN_FRAME );
-        // test wScreen_ = new console_screen( bdx, bdy + mh,
-        wScreen_ = new console_widget_t( bdx, bdy + mh,
+        wScreen_ = new console_screen( bdx, bdy + mh,
+                                       640 + bdx*2, 400 + bdy*2 );
+        wConsole_ = new console_widget_t( bdx, bdy + mh,
                                        640 + bdx*2, 400 + bdy*2 );
 	// Default Font is "Terminal" with size 18
 	// Sample WinNT environment: set COLINUX_CONSOLE_FONT=Lucida Console:12
@@ -176,7 +177,7 @@ console_main_window::console_main_window( )
 			if (size >= 4 && size <= 24)
 			{
 				// Set size
-				wScreen_->set_font_size(size);
+				wConsole_->set_font_size(size);
 			}
 			*p = 0; // End for Fontname
 		}
@@ -237,8 +238,6 @@ console_main_window::console_main_window( )
 
     // Create (hidden) log window (will be shown upon request)
     wLog_ = new console_log_window( 400,300, "Message Log" );
-    //wConsole_ = new console_window_t(input_, 800,600, "Message Log" );
-    //wConsole_->show();
     center_widget( wLog_ );
 
     // Update menu items state & status bar
@@ -609,8 +608,7 @@ void console_main_window::handle_message( co_message_t * msg )
                 co_console_message_t* console_message;
 
                 console_message = (typeof(console_message))(msg->data);
-                //wConsole_->handle_console_event(console_message);
-                wScreen_->handle_console_event(console_message);
+                if(wScreen_->video_disabled()) wConsole_->handle_console_event(console_message);
                 break;
         }
 	default: { break; }
@@ -672,9 +670,6 @@ bool console_main_window::attach( co_id_t id )
         if (!CO_OK(rc))
                 return rc;
 
-        //wConsole_->set_console(console);
-        wScreen_->set_console(console);
-
     /* Get pointer to shared video buffer */
     rc = co_user_monitor_video_attach( mon, &ioctl_video );
     if ( !CO_OK(rc) )
@@ -686,6 +681,7 @@ bool console_main_window::attach( co_id_t id )
 // TODO: find a way to switch back to cocon if framebuffer is disabled
     /* Start rendering coLinux screen */
     wScreen_->attach( ioctl_video.video_buffer );
+    if(wScreen_->video_disabled()) wConsole_->set_console(console);
 
     attached_id_ = id;
     monitor_ = mon;

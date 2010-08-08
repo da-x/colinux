@@ -21,9 +21,8 @@
 extern "C" {
 #include <colinux/common/console.h>
 }
-#include "screen.h"
 
-class console_widget_t : public console_screen {
+class console_widget_t : public Fl_Widget {
 public:
 
 	int fit_x;

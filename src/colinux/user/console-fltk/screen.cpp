@@ -48,7 +48,6 @@ console_screen::console_screen( int x, int y, int w, int h )
 console_screen::~console_screen( )
 {
     engine_clear();
-    Fl::remove_check( refresh_callback, this );
 }
 
 /* ----------------------------------------------------------------------- */
@@ -134,6 +133,8 @@ void console_screen::attach( void* video_buffer )
 {
     video_buffer_ = video_buffer;
     last_redraw_ = 0;
+    // Register check callback that will refresh the screen when needed.
+    Fl::add_check( refresh_callback, this );
 }
 
 /* ----------------------------------------------------------------------- */
@@ -147,6 +148,7 @@ void console_screen::dettach( )
     // Clear current render engine
     engine_clear();
     video_buffer_ = NULL;
+    Fl::remove_check( refresh_callback, this );
 }
 
 /* ----------------------------------------------------------------------- */

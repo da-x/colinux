@@ -27,6 +27,7 @@ extern "C" {
 
 extern int PasteClipboardIntoColinux();
 
+class console_widget_t;
 class console_screen;
 class console_log_window;
 class console_window_t;
@@ -150,8 +151,8 @@ private:
     Fl_Menu_Bar         *   menu_;
     Fl_Scroll           *   wScroll_;
     console_screen      *   wScreen_;
+    console_widget_t    *   wConsole_;
     console_log_window  *   wLog_;
-    console_window_t  *   wConsole_;
     Fl_Group            *   wStatus_;
     Fl_Box              *   status_line_;
     Fl_Button           *   btn_log_;
