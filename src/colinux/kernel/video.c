@@ -79,15 +79,6 @@ void co_video_request(co_monitor_t *cmon, int op, int unit) {
 	co_debug("op: %d, unit: %d", op, unit);
 #endif
 	dp = get_dp(cmon, unit);
-	// test merge of cofb and covideo, cp->buffer = dp->buffer;
- /*if (op == CO_VIDEO_GET_CONFIG){
-			covideo_config_t *cp = (covideo_config_t *) &co_passage_page->params[1];
-
-			cp->buffer = (int *)cmon->video_vm_address;
-			cp->size   = cmon->video_size;
-			co_passage_page->params[0] = 0;
-	return;
- }*/
 	if (!dp) {
 		co_passage_page->params[0] = 1;
 		return;

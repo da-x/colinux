@@ -65,7 +65,7 @@ console_screen::~console_screen( )
  * FIXME: Make the harcoded values changeable and/or test for better ones.
  */
 void console_screen::refresh_callback( void* v )
-{
+{   
     self_t& this_ = *(self_t*)v;
     bool refresh = false;
     bool resize_widget = false;

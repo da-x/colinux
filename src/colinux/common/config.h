@@ -62,6 +62,9 @@ typedef struct co_block_dev_desc {
 typedef struct co_video_dev_desc {
 	bool_t 	enabled;
 	int	size;
+        int 	width;
+	int 	height;
+	int 	bpp;
 } co_video_dev_desc_t;
 
 typedef struct co_audio_dev_desc {

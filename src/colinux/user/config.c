@@ -456,44 +456,40 @@ static co_rc_t parse_args_config_pci(co_command_line_params_t cmdline, co_config
 //#ifdef CONFIG_COOPERATIVE_VIDEO
 static co_rc_t parse_args_config_video(co_command_line_params_t cmdline, co_config_t *conf)
 {
-	char size[16];
 	co_video_dev_desc_t *video;
 	bool_t exists;
-	char *param;
-	comma_buffer_t array [] = {
-		{ sizeof(size), size },
-		{ 0, NULL }
-	};
+	char buf[32];
+	char *p;
 	co_rc_t rc;
-	unsigned int index;
+        int width=640, height=480, bits=24;
 
-	do {
-		rc = co_cmdline_get_next_equality_int_prefix(cmdline, "cofb_mem",
-							     &index, CO_MODULE_MAX_COVIDEO,
-							     &param, &exists);
-		if (!CO_OK(rc)) return rc;
-		if (!exists) break;
+	rc = co_cmdline_get_next_equality(cmdline, "video", 0, NULL, 0, 
+						buf, sizeof(buf), &exists);
+	if (!CO_OK(rc)) return rc;
+	if (!exists) return CO_RC(OK);
+        // if video=cofb:... exists, use video0 to save it
+	video = &conf->video_devs[0];
+	if (video->enabled) {
+		co_terminal_print("cofb video double defined\n");
+		return CO_RC(INVALID_PARAMETER);
+	}
 
-		video = &conf->video_devs[index];
-		if (video->enabled) {
-			co_terminal_print("cofb%d double defined\n", index);
-			return CO_RC(INVALID_PARAMETER);
-		}
+	width = strtol(buf+5, &p, 10);
+	height = strtol(p+1, &p, 10);
+        bits = strtol(p+1, &p, 10);
+	/* Video size must be between 4K and amount of 16MB, 2 more page 
+	assume page size 4K, add 2 more pages and aligned, check covideo.c*/
+	video->size = 3*4*1024+width*height*((bits+7)>>3)-1;
+	if (video->size < 4*1024 || video->size > 16*1024*1024) {
+		co_terminal_print("cofb: invalid size (%d)\n", video->size);
+		return CO_RC(INVALID_PARAMETER);
+	}
+	video->width = width;
+	video->height = height;
+	video->bpp = bits;
+	co_terminal_print("video=cofb: size %dK\n", video->size>>10);
 
-		split_comma_separated(param, array);
-
-		/* Video size must be between 4K and amount of MB */
-		video->size = atoi(size);
-		if (video->size < 4 || video->size > 16*1024) {
-			co_terminal_print("cofb%d: invalid size (%d)\n", index, video->size);
-			return CO_RC(INVALID_PARAMETER);
-		}
-		video->size *= 1024;
-		//conf->video_size = video->size >> 10;
-		co_debug_info("cofb_mem%d: size: %dK", index, video->size);
-
-		video->enabled = PTRUE;
-	} while (1);
+	video->enabled = PTRUE;
 
 	return CO_RC(OK);
 }
@@ -1222,19 +1218,9 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t* 
 
 	if (exists)
 		co_debug_info("configuring %u MB of virtual RAM", conf->ram_size);
-	/*
-	rc = co_cmdline_get_next_equality_int_value(cmdline, 
-                                                    "video_mem", 
-                                                    (unsigned int *)&conf->video_size, &exists);
-        if (!exists)
-		conf->video_size = 1024;
 
-	if (!CO_OK(rc))
-		return rc;
-		*/
 ///#ifdef CONFIG_COOPERATIVE_VIDEO
 	rc = parse_args_config_video(cmdline, conf);
-	//co_terminal_print("configuring %d KB of video memory\n", (int)conf->video_size);
 	if (!CO_OK(rc))
 		return rc;
 //#endif

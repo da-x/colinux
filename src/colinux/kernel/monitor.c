@@ -61,7 +61,7 @@ co_rc_t co_monitor_free(co_monitor_t* cmon, void* ptr)
 	return CO_RC(OK);
 }
 
-/*
+/* old style, hardcode memory layout for video memory, not used anymore
  * Map video memory into the linux guest.
  *
  * Use memory below CO_VPTR_SELF_MAP, aligned at 4MB (so it can be
@@ -882,10 +882,10 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 
 //#ifdef CONFIG_COOPERATIVE_VIDEO
 	for(i=0; i < CO_MODULE_MAX_COVIDEO; i++) {
-		//comment out for cofb co_video_dev_desc_t *cp = &cmon->config.video_devs[i];
+		co_video_dev_desc_t *cp = &cmon->config.video_devs[i];
 		co_video_dev_t *dev;
 
-		//comment out for cofb if (!cp->enabled) continue;
+		if (!cp->enabled) continue;
 
 		rc = co_monitor_malloc(cmon, sizeof(co_video_dev_t), (void **)&dev);
 		if (!CO_OK(rc)) {
@@ -1266,36 +1266,31 @@ co_rc_t co_monitor_create(co_manager_t*		     manager,
 		goto out_destroy_timer;
 	}
 
-	/*for cofb
+	/* cofb
 	 * Initialize video memory buffer.
-	 * params->config.video_size comes in KB
-	 * We don't allow more than 4MB of video, and assure 4KB at least.
-	if ( params->config.video_size <= 0 )
-		params->config.video_size = 64;
-	else if ( params->config.video_size < 4 )
-		params->config.video_size = 4;
-	else if ( params->config.video_size > 4096 )
-		params->config.video_size = 4096;
+	 * params->config.video_size comes in Bytes
 	*/
 	cmon->video_user_id = CO_INVALID_ID;
 	co_video_dev_t *dp = cmon->video_devs[0];
-	//cmon->video_size = params->config.video_size << 10;
-	if (!params->config.video_devs[0].enabled) dp->size = 4096<<10;
-        else dp->size = params->config.video_devs[0].size;
-	//cmon->video_buffer = co_os_malloc( cmon->video_size );
-	dp->buffer = co_os_malloc( dp->size );
-	if ( dp->buffer == NULL )
-	{
-		rc = CO_RC(OUT_OF_MEMORY);
-		co_debug_system( "Error allocating video buffer (size=%d KB)\n",
+	if (dp) {
+        	dp->size = params->config.video_devs[0].size;
+		dp->buffer = co_os_malloc( dp->size );
+		if ( dp->buffer == NULL )
+		{
+			rc = CO_RC(OUT_OF_MEMORY);
+			co_debug_system( "Error allocating video buffer (size=%d KB)\n",
 				(int)dp->size);
-				//(int)cmon->video_size >> 10 );
-		goto out_free_buffer;
+			goto out_destroy_timer;
+		}
+		/* By zeroing the video buffer we are also locking it */
+		co_memset(dp->buffer, 0, dp->size);
+                // code screen layout
+                /*int *p = (int*)dp->buffer;
+                co_video_dev_desc_t *v = &(params->config.video_devs[0]);
+                *(p+200) = v->width;
+		*(p+201) = v->height;
+		*(p+202) = v->bpp; */
 	}
-	/* By zeroing the video buffer we are also locking it */
-	//co_memset(cmon->video_buffer, 0, cmon->video_size);
-	co_memset(dp->buffer, 0, dp->size);
-
 
 	co_os_mutex_acquire(manager->lock);
 	cmon->refcount = 1;
@@ -1387,8 +1382,11 @@ static co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
 	co_os_mutex_destroy(cmon->linux_message_queue_mutex);
 	co_console_destroy(cmon->console);
 	co_monitor_arch_passage_page_free(cmon);
-	//co_os_free(cmon->video_buffer); //for cofb
-	co_os_free(cmon->video_devs[0]->buffer); //for cofb
+	if (cmon->video_devs[0]){
+		co_os_free(cmon->video_devs[0]->buffer); //cofb
+                co_os_free(cmon->video_devs[0]);
+                cmon->video_devs[0] = NULL;
+        }
 
 	co_debug("after free: %ld blocks", cmon->blocks_allocated);
 	co_os_free(cmon);
@@ -1422,7 +1420,11 @@ co_monitor_user_video_attach( co_monitor_t *monitor,
 				co_monitor_ioctl_video_attach_t *params )
 {
 	co_rc_t rc;
-	//unsigned long video_pages = monitor->video_size >> CO_ARCH_PAGE_SHIFT;
+        if (!monitor->video_devs[0]) {
+        	// use ZERO to indicate video not supported
+                params->video_buffer = NULL;
+        	return CO_RC(OK);
+        }
 	unsigned long video_pages = monitor->video_devs[0]->size >> CO_ARCH_PAGE_SHIFT;
 	co_id_t user_id = co_os_current_id( );
 
@@ -1433,7 +1435,6 @@ co_monitor_user_video_attach( co_monitor_t *monitor,
 	}
 
 	/* Create user space mapping */
-	//rc = co_os_userspace_map( monitor->video_buffer, video_pages,
 	rc = co_os_userspace_map( monitor->video_devs[0]->buffer, video_pages,
 		&monitor->video_user_address, &monitor->video_user_handle );
 	if ( !CO_OK(rc) )
@@ -1442,7 +1443,7 @@ co_monitor_user_video_attach( co_monitor_t *monitor,
 		return rc;
 	}
 
-	co_debug_system("video_user_address=%08lXh", (long)monitor->video_user_address );
+	co_debug_system("monitor: video_user_address=%08lXh", (long)monitor->video_user_address );
 
 	/* Remember which process "owns" the video mapping */
 	monitor->video_user_id = user_id;
@@ -1462,7 +1463,7 @@ co_monitor_user_video_attach( co_monitor_t *monitor,
 static
 void co_monitor_user_video_dettach( co_monitor_t *monitor )
 {
-	//unsigned long video_pages = monitor->video_size >> CO_ARCH_PAGE_SHIFT;
+	if ( !monitor->video_devs[0]) return;
 	unsigned long video_pages = monitor->video_devs[0]->size >> CO_ARCH_PAGE_SHIFT;
 
 	co_os_userspace_unmap( monitor->video_user_address,
@@ -1545,8 +1546,9 @@ static co_rc_t co_monitor_user_reset(co_monitor_t *monitor)
 
 	co_memset(monitor->io_buffer, 0, CO_VPTR_IO_AREA_SIZE);
 	/* By zeroing the video buffer, we are also locking it */
-	//co_memset(monitor->video_buffer, 0, monitor->video_size);
-	co_memset(monitor->video_devs[0]->buffer, 0, monitor->video_devs[0]->size);
+	// not tested yet, could be problematic?
+        if(monitor->video_devs[0])
+	  co_memset(monitor->video_devs[0]->buffer, 0, monitor->video_devs[0]->size);
 
 	monitor->state = CO_MONITOR_STATE_INITIALIZED;
 	monitor->termination_reason = CO_TERMINATE_END;
