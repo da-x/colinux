@@ -466,7 +466,7 @@ Index: linux-2.6.26.8-source/drivers/video/console/fbcon.c
 Index: linux-2.6.26.8-source/include/linux/cooperative.h
 ===================================================================
 --- linux-2.6.26.8-source.orig/include/linux/cooperative.h	2010-07-04 18:09:16.000000000 -0600
-+++ linux-2.6.26.8-source/include/linux/cooperative.h	2010-07-04 18:09:17.000000000 -0600
++++ linux-2.6.26.8-source/include/linux/cooperative.h	2010-08-10 20:48:37.000000000 -0600
 @@ -20,7 +20,7 @@
  
  #include <asm/cooperative.h>
@@ -499,7 +499,7 @@ Index: linux-2.6.26.8-source/arch/x86/pci/copci.c
 Index: linux-2.6.26.8-source/drivers/video/covideo.c
 ===================================================================
 --- linux-2.6.26.8-source.orig/drivers/video/covideo.c	2010-07-04 18:09:17.000000000 -0600
-+++ linux-2.6.26.8-source/drivers/video/covideo.c	2010-08-08 23:19:58.000000000 -0600
++++ linux-2.6.26.8-source/drivers/video/covideo.c	2010-08-10 23:07:07.000000000 -0600
 @@ -1,30 +1,45 @@
 +/*
 + *  linux/drivers/video/cofb.c -- CoLinux Virtual frame buffer device
@@ -550,16 +550,16 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 +static char* co_video_base;
 +static struct cofb_video_mem_info* cofb_mem;
 +/* Startup default mode (fits into the 1MB default) */
-+static int cofb_width   = 640;
-+static int cofb_height  = 480;
-+static int cofb_bpp     = 24;
++static unsigned short cofb_width   = 640;
++static unsigned short cofb_height  = 480;
++static unsigned char cofb_bpp     = 24;
  
 -/* Our info */
 +/* Our info, not used, since pci_probe is not activated */
  struct covideo_par {
  	int unit;
  	void *buffer;
-@@ -34,312 +49,289 @@
+@@ -34,312 +49,290 @@
  };
  typedef struct covideo_par covideo_par_t;
  
@@ -695,6 +695,9 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 -//	uprintk("checking var...\n");
 -
 -//	printk("check_var: xres: %d, yres: %d, bpp: %d\n", var->xres, var->yres, var->bits_per_pixel);
+-
+-	/* We only do 32 BPP */
+-//	if (var->bits_per_pixel != 32) return -EINVAL;
 +	/* Return a mode that works on the 1 MB default video_mem */
 +	if ( var->xres < 320 || var->yres < 200 || var->bits_per_pixel < 16 ) {
 +		var->xres = 640;
@@ -702,8 +705,15 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 +		var->bits_per_pixel = 24;
 +	}
  
--	/* We only do 32 BPP */
--//	if (var->bits_per_pixel != 32) return -EINVAL;
+-        /*
+-         *  FB_VMODE_CONUPDATE and FB_VMODE_SMOOTH_XPAN are equal!
+-         *  as FB_VMODE_SMOOTH_XPAN is only used internally
+-         */
+-        if (var->vmode & FB_VMODE_CONUPDATE) {
+-                var->vmode |= FB_VMODE_YWRAP;
+-                var->xoffset = info->var.xoffset;
+-                var->yoffset = info->var.yoffset;
+-        }
 +	/* No support for virtual screen, yet */
 +	var->xres_virtual = var->xres;
 +	var->yres_virtual = var->yres;
@@ -716,18 +726,6 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 +	/* REMOVE_ME */
 +	printk( "cofb_check_var: %dx%dx%d\n",
 +		var->xres_virtual, var->yres_virtual, var->bits_per_pixel );
- 
--        /*
--         *  FB_VMODE_CONUPDATE and FB_VMODE_SMOOTH_XPAN are equal!
--         *  as FB_VMODE_SMOOTH_XPAN is only used internally
--         */
--        if (var->vmode & FB_VMODE_CONUPDATE) {
--                var->vmode |= FB_VMODE_YWRAP;
--                var->xoffset = info->var.xoffset;
--                var->yoffset = info->var.yoffset;
--        }
-+	if ( info->fix.smem_len < fb_size )
-+		return -ENOMEM;
  
 -        /*
 -         *  Some very basic checks
@@ -826,6 +824,10 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 -        var->green.msb_right = 0;
 -        var->blue.msb_right = 0;
 -        var->transp.msb_right = 0;
++	if ( info->fix.smem_len < fb_size ){
++		printk("enomem %d < %d\n", info->fix.smem_len, fb_size);
++		return -ENOMEM;
++	}
 +	/* Check we support the mode & adjust var if we do */
 +	if ( var->grayscale )
 +		return -EINVAL; /* No grayscale support */
@@ -1075,7 +1077,7 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 +	pd = (unsigned long *)  __va(read_cr3());
 +	//printk(KERN_INFO "pd: %p\n", pd);
 +	pd_index = pgd_index(addr);
-+	//printk(KERN_INFO "pd[%04d]: %lx\n", pd_index, pd[pd_index]);
++	printk(KERN_INFO "pd[%04d]: %lx\n", pd_index, pd[pd_index]);
 +	BUG_ON(pd[pd_index] == 0);
 +	pt = __va(CO_P_TO_PP(pd[pd_index] & PAGE_MASK));
 +	pt_index = pte_index(addr);
@@ -1108,7 +1110,7 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
                          return -EAGAIN;
  
                  start += PAGE_SIZE;
-@@ -353,21 +345,19 @@
+@@ -353,21 +346,19 @@
          return 0;
  }
  
@@ -1141,7 +1143,7 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
  
  #if 0
  	/* XXX currently not implemented */
-@@ -379,7 +369,6 @@
+@@ -379,7 +370,6 @@
  #endif
  };
  
@@ -1149,7 +1151,7 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
  /* Simple page-level checkerboard test */
  static int test_buffer(void *buffer, int unit, int size) {
  	unsigned char *p, *t, *t0, *t1;
-@@ -432,87 +421,182 @@
+@@ -432,87 +422,183 @@
  	printk(KERN_INFO "covideo%d: test %s!\n", unit, (rc ? "failed" : "passed"));
  	return rc;
  }
@@ -1234,6 +1236,7 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 -	cp = (covideo_config_t *) &co_passage_page->params[1];
 -	host_buffer = cp->buffer;
 -	size = cp->size;
+-	co_passage_page_release(flags);
 +#ifdef MODULE_comment_this_out
 +        char *option = NULL;
 +        if ( fb_get_options("cofb", &option) ){
@@ -1245,7 +1248,7 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 +        if ( rc )
 +                return rc;
 +#endif
-+
+ 
 +        /* Get our config */
 +        co_passage_page_assert_valid();
 +        co_passage_page_acquire(&flags);
@@ -1255,20 +1258,29 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 +        co_passage_page->params[2] = 0; // unit, default to only one device
 +        co_switch_wrapper();
 +        rc = co_passage_page->params[0];
-+        cp = (covideo_config_t *) &co_passage_page->params[1];
-+	void* host_buffer = (struct cofb_video_mem_info *) cp->buffer;
++        unsigned long x= co_passage_page->params[3];
++        //cp = (covideo_config_t *) &co_passage_page->params[1];
++	//void* host_buffer = (struct cofb_video_mem_info *) cp->buffer;
++	void* host_buffer = (void *) co_passage_page->params[1];
 +	/* memory address is predeterminged */
 +	//cofb_mem = (struct cofb_video_mem_info *)((CO_VPTR_SELF_MAP-cp->size)&0xffc00000);
-+	fb_avail = cp->size - 2*PAGE_SIZE;
- 	co_passage_page_release(flags);
- 
--	/* If unable to get size, silently skip this device */
++	//fb_avail = cp->size - 2*PAGE_SIZE;
++   	/* shall match settings in colinux/kernel/covideo.c
++        don't know why can not make use of params 3,4,5, so have to encode
++	as 13bits+13bits+6bits = 32bit unsigned long to params[0]*/
++	fb_avail = co_passage_page->params[2] - 2*PAGE_SIZE;
++	co_passage_page_release(flags);
++        
+ 	/* If unable to get size, silently skip this device */
 -	if (rc) return 0;
-+        /* If unable to get size, silently skip this device */
 +        if (rc) return 0;
  
-+	printk( KERN_INFO"cofb: videobase mem: %lu KB\n", fb_avail >> 10 );
-+	printk(KERN_INFO"cofb: host buffer %X\n", host_buffer);
++        cofb_width = x>>19;
++        cofb_height = (x&0x7ffff)>>6;
++        cofb_bpp = x&0x3f;
++
++	printk(KERN_INFO"cofb: videobase mem: %lu KB\n", fb_avail >> 10 );
++	printk(KERN_INFO"%d %d %d\n", cofb_width,cofb_height,cofb_bpp);
  	/* Map host buffer into our space */
 -	buffer = co_map_buffer(host_buffer, size);
 +	void* buffer = co_map_buffer(host_buffer, fb_avail);
@@ -1285,16 +1297,7 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 +	
 +	co_video_base = buffer;
 +	cofb_mem = (struct cofb_video_mem_info *)buffer;
-+        // decode more params
-+        /*int *p = (int*)buffer;
-+        cofb_width = *(p+200);
-+        cofb_height = *(p+201);
-+        cofb_bpp = *(p+202);
-+     	*/
 +	printk(KERN_INFO "cofb: buffer: %p, size: %d\n", buffer, fb_avail);
-+	//printk(KERN_INFO "%d %d %d \n", *(p+200),*(p+201),*(p+202));
-+        //memset
-+        //*(p+200)=*(p+201)=*(p+202)=0;
  #if COVIDEO_MEMTEST
  	/* Test buffer */
 -	if (test_buffer(buffer, unit, size)) return -EIO;
@@ -1381,7 +1384,7 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
  	par = info->par;
  	par->pdev = pdev;
  	par->unit = unit;
-@@ -523,19 +607,18 @@
+@@ -523,19 +609,18 @@
  	printk(KERN_INFO "fb%d: Cooperative video at: %p, size: %dK\n", info->node,
  		buffer, size >> 10);
  
@@ -1405,7 +1408,7 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
  /*
   * PCI Remove - hotplug removal
  */
-@@ -570,9 +653,10 @@
+@@ -570,9 +655,10 @@
  	}
  #endif
  #if COVIDEO_DEBUG
@@ -1418,8 +1421,24 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
  }
  
  /*
-@@ -587,3 +671,4 @@
+@@ -587,3 +673,4 @@
  
  module_init(covideo_pci_init);
  module_exit(covideo_pci_exit);
 +
+Index: linux-2.6.26.8-source/include/linux/covideo.h
+===================================================================
+--- linux-2.6.26.8-source.orig/include/linux/covideo.h	2010-08-10 20:00:33.000000000 -0600
++++ linux-2.6.26.8-source/include/linux/covideo.h	2010-08-10 20:00:12.000000000 -0600
+@@ -9,7 +9,10 @@
+ 
+ typedef struct covideo_config {
+ 	void *buffer;
+-	int size;
++	unsigned int size;
++        unsigned int width;
++	unsigned int height;
++	unsigned int bpp; 
+ } covideo_config_t;
+ 
+ #endif

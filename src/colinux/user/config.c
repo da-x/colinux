@@ -461,7 +461,9 @@ static co_rc_t parse_args_config_video(co_command_line_params_t cmdline, co_conf
 	char buf[32];
 	char *p;
 	co_rc_t rc;
-        int width=640, height=480, bits=24;
+        unsigned int width=640;
+	unsigned int height=480;
+	unsigned int bits=24;
 
 	rc = co_cmdline_get_next_equality(cmdline, "video", 0, NULL, 0, 
 						buf, sizeof(buf), &exists);
@@ -479,15 +481,16 @@ static co_rc_t parse_args_config_video(co_command_line_params_t cmdline, co_conf
         bits = strtol(p+1, &p, 10);
 	/* Video size must be between 4K and amount of 16MB, 2 more page 
 	assume page size 4K, add 2 more pages and aligned, check covideo.c*/
-	video->size = 3*4*1024+width*height*((bits+7)>>3)-1;
-	if (video->size < 4*1024 || video->size > 16*1024*1024) {
-		co_terminal_print("cofb: invalid size (%d)\n", video->size);
+	video->desc.size = 3*4*1024+width*height*((bits+7)/8);
+	video->desc.size = (video->desc.size>>12) <<12;
+	if (video->desc.size < 4*1024 || video->desc.size > 16*1024*1024) {
+		co_terminal_print("cofb: invalid size (%d)\n", video->desc.size);
 		return CO_RC(INVALID_PARAMETER);
 	}
-	video->width = width;
-	video->height = height;
-	video->bpp = bits;
-	co_terminal_print("video=cofb: size %dK\n", video->size>>10);
+	video->desc.width = width;
+	video->desc.height = height;
+	video->desc.bpp = bits;
+	co_terminal_print("video=cofb: %dx%dx%d size %d\n", width,height,bits,video->desc.size);
 
 	video->enabled = PTRUE;
 

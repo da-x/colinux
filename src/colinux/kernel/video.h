@@ -15,11 +15,10 @@
 
 struct co_video_dev {
 	int unit;
-	//cofb int size;			/* Size */
-	unsigned long size;			/* Size */
-	//cofb void *buffer;			/* Page-aligned buffer */
+	//unsigned long size;			/* Size */
 	unsigned long buffer;			/* Page-aligned buffer */
-	int x,y,bpp;			/* Current mode */
+	//int x,y,bpp;			/* Current mode */
+	co_video_desc_t desc;
 };
 
 typedef struct co_video_dev co_video_dev_t;

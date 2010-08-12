@@ -88,10 +88,10 @@ guest_video_init( co_monitor_t *cmon )
 	co_rc_t rc;
 
 	// Align guest address at a page dir offset
-	unsigned long video_vm_address = (CO_VPTR_SELF_MAP - cmon->video_devs[0]->size)&CO_ARCH_PMD_MASK;
+	unsigned long video_vm_address = (CO_VPTR_SELF_MAP - cmon->video_devs[0]->desc.size)&CO_ARCH_PMD_MASK;
 	//cmon->video_vm_address = (CO_VPTR_SELF_MAP - cmon->video_size)&CO_ARCH_PMD_MASK;
 	//cmon->video_vm_address &= CO_ARCH_PMD_MASK;
-	video_num_pages = cmon->video_devs[0]->size >> CO_ARCH_PAGE_SHIFT;
+	video_num_pages = cmon->video_devs[0]->desc.size >> CO_ARCH_PAGE_SHIFT;
 	//video_num_pages = cmon->video_size >> CO_ARCH_PAGE_SHIFT;
 
 	co_debug_system("VRAM guest va=%08lX pages=%d",
@@ -893,7 +893,7 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 			goto error_3;
 		}
 		cmon->video_devs[i] = dev;
-	//co_debug_system("load config video_devs[0] is %x\n",cmon->video_devs[0]);
+co_debug_system("load config video_devs[%d] \n",i);
 /* comment out for cofb
 		rc = co_monitor_video_device_init(cmon, i, cp);
 		if (!CO_OK(rc)) goto error_3;
@@ -1268,28 +1268,25 @@ co_rc_t co_monitor_create(co_manager_t*		     manager,
 
 	/* cofb
 	 * Initialize video memory buffer.
-	 * params->config.video_size comes in Bytes
 	*/
 	cmon->video_user_id = CO_INVALID_ID;
 	co_video_dev_t *dp = cmon->video_devs[0];
 	if (dp) {
-        	dp->size = params->config.video_devs[0].size;
-		dp->buffer = co_os_malloc( dp->size );
+        	dp->desc.size = params->config.video_devs[0].desc.size;
+		dp->buffer = co_os_malloc( dp->desc.size );
 		if ( dp->buffer == NULL )
 		{
 			rc = CO_RC(OUT_OF_MEMORY);
 			co_debug_system( "Error allocating video buffer (size=%d KB)\n",
-				(int)dp->size);
+				(int)dp->desc.size);
 			goto out_destroy_timer;
 		}
 		/* By zeroing the video buffer we are also locking it */
-		co_memset(dp->buffer, 0, dp->size);
-                // code screen layout
-                /*int *p = (int*)dp->buffer;
+		co_memset(dp->buffer, 0, dp->desc.size);
                 co_video_dev_desc_t *v = &(params->config.video_devs[0]);
-                *(p+200) = v->width;
-		*(p+201) = v->height;
-		*(p+202) = v->bpp; */
+                dp->desc.width = v->desc.width;
+		dp->desc.height = v->desc.height;
+		dp->desc.bpp = v->desc.bpp; 
 	}
 
 	co_os_mutex_acquire(manager->lock);
@@ -1425,7 +1422,7 @@ co_monitor_user_video_attach( co_monitor_t *monitor,
                 params->video_buffer = NULL;
         	return CO_RC(OK);
         }
-	unsigned long video_pages = monitor->video_devs[0]->size >> CO_ARCH_PAGE_SHIFT;
+	unsigned long video_pages = monitor->video_devs[0]->desc.size >> CO_ARCH_PAGE_SHIFT;
 	co_id_t user_id = co_os_current_id( );
 
 	/* FIXME: Return a CO_RC_ALREADY_ATTACHED like error */
@@ -1464,7 +1461,7 @@ static
 void co_monitor_user_video_dettach( co_monitor_t *monitor )
 {
 	if ( !monitor->video_devs[0]) return;
-	unsigned long video_pages = monitor->video_devs[0]->size >> CO_ARCH_PAGE_SHIFT;
+	unsigned long video_pages = monitor->video_devs[0]->desc.size >> CO_ARCH_PAGE_SHIFT;
 
 	co_os_userspace_unmap( monitor->video_user_address,
 				monitor->video_user_handle, video_pages );
@@ -1548,7 +1545,7 @@ static co_rc_t co_monitor_user_reset(co_monitor_t *monitor)
 	/* By zeroing the video buffer, we are also locking it */
 	// not tested yet, could be problematic?
         if(monitor->video_devs[0])
-	  co_memset(monitor->video_devs[0]->buffer, 0, monitor->video_devs[0]->size);
+	  co_memset(monitor->video_devs[0]->buffer, 0, monitor->video_devs[0]->desc.size);
 
 	monitor->state = CO_MONITOR_STATE_INITIALIZED;
 	monitor->termination_reason = CO_TERMINATE_END;

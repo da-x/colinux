@@ -58,13 +58,16 @@ typedef struct co_block_dev_desc {
 	bool_t alias_used;
 	char   alias[20];
 } co_block_dev_desc_t;
+typedef struct co_video_desc {
+        unsigned int    size;
+        unsigned short  width;
+        unsigned short  height;
+        unsigned char   bpp;
+} co_video_desc_t;
 
 typedef struct co_video_dev_desc {
 	bool_t 	enabled;
-	int	size;
-        int 	width;
-	int 	height;
-	int 	bpp;
+        co_video_desc_t desc;
 } co_video_dev_desc_t;
 
 typedef struct co_audio_dev_desc {

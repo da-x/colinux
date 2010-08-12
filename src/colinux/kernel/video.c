@@ -31,10 +31,10 @@ static int co_video_test(co_monitor_t *cmon, co_video_dev_t *dp) {
         co_memset(t0, 0, CO_ARCH_PAGE_SIZE);
 	if ((t1 = co_os_malloc(CO_ARCH_PAGE_SIZE)) == 0) goto test_out;
         co_memset(t1, 0xFF, CO_ARCH_PAGE_SIZE);
-        npages = dp->size >> CO_ARCH_PAGE_SHIFT;
+        npages = dp->desc.size >> CO_ARCH_PAGE_SHIFT;
 
 	/* Compare the sent buffer */
-        p = dp->buffer;
+        p = (unsigned char*)dp->buffer;
         for(i=0; i < npages; i++) {
                 t = (i & 1 ? t1 : t0);
                 if (co_memcmp(p, t, CO_ARCH_PAGE_SIZE) != 0)
@@ -43,7 +43,7 @@ static int co_video_test(co_monitor_t *cmon, co_video_dev_t *dp) {
         }
 
 	/* Send the opposite pattern */
-        p = dp->buffer;
+        p = (unsigned char*)dp->buffer;
         for(i=0; i < npages; i++) {
                 t = (i & 1 ? t0 : t1);
                 co_memcpy(p, t, CO_ARCH_PAGE_SIZE);
@@ -57,8 +57,8 @@ test_out:
         return rc;
 }
 
-static struct co_video_dev *get_dp(co_monitor_t *cmon, int unit) {
-	struct co_video_dev *dp;
+static co_video_dev_t *get_dp(co_monitor_t *cmon, int unit) {
+	co_video_dev_t *dp;
 
 #if COVIDEO_DEBUG
 	co_debug("unit: %d", unit);
@@ -87,10 +87,19 @@ void co_video_request(co_monitor_t *cmon, int op, int unit) {
 	switch(op) {
 	case CO_VIDEO_GET_CONFIG:
 		{
-			covideo_config_t *cp = (covideo_config_t *) &co_passage_page->params[1];
+			//covideo_config_t *cp = (covideo_config_t *) &co_passage_page->params[1];
+			co_passage_page->params[1] = dp->buffer;
+			co_passage_page->params[2] = dp->desc.size;
+			unsigned long x = dp->desc.width;
+			x = (x<<13) | (0x1fff & dp->desc.height);
+			x = (x<<6) | (0x3f & dp->desc.bpp);
 
-			cp->buffer = dp->buffer;
-			cp->size = dp->size;
+		/*	cp->buffer = (void*)dp->buffer;
+			cp->size = dp->desc.size;
+			cp->width = dp->desc.width;
+			cp->height = dp->desc.height;
+			cp->bpp = dp->desc.bpp;*/
+			co_passage_page->params[3] = x;
 			co_passage_page->params[0] = 0;
 		}
 		break;
@@ -109,7 +118,7 @@ int co_monitor_video_device_init(co_monitor_t *cmon, int unit, co_video_dev_desc
 	co_rc_t rc;
 
 #if COVIDEO_DEBUG
-	co_debug("unit: %d, size: %d\n", unit, cp->size);
+	co_debug("unit: %d, size: %d\n", unit, cp->desc.size);
 #endif
 
 	rc = co_monitor_malloc(cmon, sizeof(co_video_dev_t), (void **)&dp);
@@ -117,10 +126,10 @@ int co_monitor_video_device_init(co_monitor_t *cmon, int unit, co_video_dev_desc
 
 	co_memset(dp, 0, sizeof(co_video_dev_t *));
 	dp->unit = unit;
-	dp->size = cp->size;
+	dp->desc.size = cp->desc.size;
 	cmon->video_devs[unit] = dp;
 
-	dp->buffer = co_os_malloc(dp->size);
+	dp->buffer = co_os_malloc(dp->desc.size);
 	if (!dp->buffer) return CO_RC(OUT_OF_MEMORY);
 
 	return 0;
@@ -154,7 +163,7 @@ co_rc_t co_video_attach(co_monitor_t *cmon, co_monitor_ioctl_video_t *params) {
 	dp = get_dp(cmon, params->unit);
 	if (!dp) return CO_RC(ERROR);
 
-	npages = dp->size >> CO_ARCH_PAGE_SHIFT;
+	npages = dp->desc.size >> CO_ARCH_PAGE_SHIFT;
 	/* XXX vid size is in meg - this isnt really necessary 
 	if ((npages * CO_ARCH_PAGE_SIZE) < dp->size) npages++; */
 
@@ -178,7 +187,7 @@ co_rc_t co_video_detach(co_monitor_t *cmon, co_monitor_ioctl_video_t *params) {
 	dp = get_dp(cmon, params->unit);
 	if (!dp) return CO_RC(ERROR);
 
-	npages = dp->size >> CO_ARCH_PAGE_SHIFT;
+	npages = dp->desc.size >> CO_ARCH_PAGE_SHIFT;
 	/* XXX vid size is in meg - this isnt really necessary 
 	if ((npages * CO_ARCH_PAGE_SIZE) < dp->size) npages++; */
 
