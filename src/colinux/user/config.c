@@ -481,7 +481,7 @@ static co_rc_t parse_args_config_video(co_command_line_params_t cmdline, co_conf
         bits = strtol(p+1, &p, 10);
 	/* Video size must be between 4K and amount of 16MB, 2 more page 
 	assume page size 4K, add 2 more pages and aligned, check covideo.c*/
-	video->desc.size = 3*4*1024+width*height*((bits+7)/8);
+	video->desc.size = 4*4*1024+width*height*((bits+7)/8);
 	video->desc.size = (video->desc.size>>12) <<12;
 	if (video->desc.size < 4*1024 || video->desc.size > 16*1024*1024) {
 		co_terminal_print("cofb: invalid size (%d)\n", video->desc.size);
