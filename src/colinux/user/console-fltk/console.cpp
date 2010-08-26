@@ -640,7 +640,7 @@ bool console_main_window::attach( co_id_t id )
     co_module_t                     modules[1] = { CO_MODULE_CONSOLE, };
     co_monitor_ioctl_get_console_t  get_console;
     co_console_t*                   console;
-    co_monitor_ioctl_video_attach_t ioctl_video;
+    co_monitor_ioctl_video_t	    ioctl_video;
     co_user_monitor_t           *   mon;
 
     if ( is_attached() )
@@ -671,6 +671,7 @@ bool console_main_window::attach( co_id_t id )
                 return rc;
 
     /* Get pointer to shared video buffer */
+    ioctl_video.unit = 0;
     rc = co_user_monitor_video_attach( mon, &ioctl_video );
     if ( !CO_OK(rc) )
     {
@@ -680,7 +681,7 @@ bool console_main_window::attach( co_id_t id )
     }
 // TODO: find a way to switch back to cocon if framebuffer is disabled
     /* Start rendering coLinux screen */
-    wScreen_->attach( ioctl_video.video_buffer );
+    wScreen_->attach( ioctl_video.address );
     wLog_->add("after attach video here\n");
     if(wScreen_->video_disabled()) wConsole_->set_console(console);
 

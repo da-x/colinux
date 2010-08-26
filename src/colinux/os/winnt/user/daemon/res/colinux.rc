@@ -11,10 +11,10 @@ FILEOS VOS__WINDOWS32
   BLOCK "StringFileInfo"{
     BLOCK "040904B0" {
       VALUE "CompanyName","Open Source software"
-      VALUE "FileDescription", "coLinux daemon program"
+      VALUE "FileDescription", CO_TEXTNAME_STRING
       VALUE "FileVersion", CO_VERSION_STRING
       VALUE "LegalCopyright","Copyright (c) coLinux project"
-      VALUE "OriginalFilename",""
+      VALUE "OriginalFilename", CO_FILENAME_STRING
       VALUE "ProductName", "coLinux"
       VALUE "ProductVersion", CO_PRODUCT_STRING
     }

@@ -1410,48 +1410,6 @@ static void send_monitor_end_messages(co_monitor_t *cmon)
 }
 
 /*
- * Map video buffer into user space.
- */
-static co_rc_t
-co_monitor_user_video_attach( co_monitor_t *monitor,
-				co_monitor_ioctl_video_attach_t *params )
-{
-	co_rc_t rc;
-        if (!monitor->video_devs[0]) {
-        	// use ZERO to indicate video not supported
-                params->video_buffer = NULL;
-        	return CO_RC(OK);
-        }
-	unsigned long video_pages = monitor->video_devs[0]->desc.size >> CO_ARCH_PAGE_SHIFT;
-	co_id_t user_id = co_os_current_id( );
-
-	/* FIXME: Return a CO_RC_ALREADY_ATTACHED like error */
-	if ( monitor->video_user_id != CO_INVALID_ID ){
-		co_debug_system( "Error video already attached fixme \n");
-		return CO_RC(ERROR);
-	}
-
-	/* Create user space mapping */
-	rc = co_os_userspace_map( monitor->video_devs[0]->buffer, video_pages,
-		&monitor->video_user_address, &monitor->video_user_handle );
-	if ( !CO_OK(rc) )
-	{
-		co_debug_system( "Error mapping video into user space! (rc=%x)\n", (unsigned int)rc );
-		return rc;
-	}
-
-	co_debug_system("monitor: video_user_address=%08lXh", (long)monitor->video_user_address );
-
-	/* Remember which process "owns" the video mapping */
-	monitor->video_user_id = user_id;
-
-	/* Return user mapped video buffer address */
-	params->video_buffer = monitor->video_user_address;
-
-	return CO_RC(OK);
-}
-
-/*
  * Unmap video buffer from user space.
  *
  * This can only be done on video client device close, or else it gets
@@ -1644,22 +1602,14 @@ co_rc_t co_monitor_ioctl(co_monitor_t* 		     cmon,
 		return co_monitor_user_get_console(cmon, params);
 	}
 	case CO_MONITOR_IOCTL_VIDEO_ATTACH: {
-		co_monitor_ioctl_video_attach_t *params;
-
-		*return_size = sizeof(*params);
-		params = (typeof(params))(io_buffer);
-
-		return co_monitor_user_video_attach(cmon, params);
-	}
-#ifdef CONFIG_COOPERATIVE_VIDEO
-	/*TODO merge cofb and covideo case CO_MONITOR_IOCTL_VIDEO_ATTACH: {
 		co_monitor_ioctl_video_t* params;
 
 		*return_size = sizeof(*params);
 		params       = (typeof(params))(io_buffer);
 
-		return co_video_attach(cmon, params);
-	}*/
+		return co_monitor_user_video_attach(cmon, params);
+	}
+#ifdef CONFIG_COOPERATIVE_VIDEO_NOT_USED
 	case CO_MONITOR_IOCTL_VIDEO_DETACH: {
 		co_monitor_ioctl_video_t* params;
 

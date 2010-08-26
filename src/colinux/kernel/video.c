@@ -155,27 +155,50 @@ void co_monitor_unregister_video_devices(co_monitor_t *cmon) {
 	}
 }
 
-co_rc_t co_video_attach(co_monitor_t *cmon, co_monitor_ioctl_video_t *params) {
+/*
+ * Map video buffer into user space.
+ */
+co_rc_t
+co_monitor_user_video_attach(co_monitor_t *cmon, co_monitor_ioctl_video_t *params) {
+
 	struct co_video_dev *dp;
 	unsigned int npages;
 	co_rc_t rc;
 
 	dp = get_dp(cmon, params->unit);
-	if (!dp) return CO_RC(ERROR);
+        if (!dp) {
+                // use ZERO to indicate video not supported
+                params->address = NULL;
+                return CO_RC(OK);
+        }
 
 	npages = dp->desc.size >> CO_ARCH_PAGE_SHIFT;
-	/* XXX vid size is in meg - this isnt really necessary 
-	if ((npages * CO_ARCH_PAGE_SIZE) < dp->size) npages++; */
+        co_id_t user_id = co_os_current_id( );
 
-	rc = co_os_userspace_map(dp->buffer, npages, &params->address, &params->handle);
+        /* FIXME: Return a CO_RC_ALREADY_ATTACHED like error */
+        if ( cmon->video_user_id != CO_INVALID_ID ){
+                co_debug_system( "Error video already attached fixme \n");
+                return CO_RC(ERROR);
+        }
+
+	/* Create user space mapping */
+	//rc = co_os_userspace_map(dp->buffer, npages, &params->address, &params->handle);
+        rc = co_os_userspace_map( dp->buffer, npages,
+                &cmon->video_user_address, &cmon->video_user_handle );	
 	if ( !CO_OK(rc) ) {
-		co_debug_system("Error mapping video into user space! (rc=%x)\n", (int)rc);
+		co_debug_system("Error mapping video into user space! (rc=%x)\n", (unsigned int)rc);
 		return rc;
 	}
 
 #ifdef COVDEO_DEBUG
-	co_debug("address: %08lXh\n", params->address );
+        co_debug_system("monitor: video_user_address=%08lXh", (long)cmon->video_user_address );
 #endif
+
+        /* Remember which process "owns" the video mapping */
+        cmon->video_user_id = user_id;
+
+        /* Return user mapped video buffer address */
+        params->address = cmon->video_user_address;
 
         return CO_RC(OK);
 }
@@ -191,7 +214,7 @@ co_rc_t co_video_detach(co_monitor_t *cmon, co_monitor_ioctl_video_t *params) {
 	/* XXX vid size is in meg - this isnt really necessary 
 	if ((npages * CO_ARCH_PAGE_SIZE) < dp->size) npages++; */
 
-	co_os_userspace_unmap(params->address, params->handle, npages);
+	//co_os_userspace_unmap(params->address, params->handle, npages);
 
 	return CO_RC(OK);
 }

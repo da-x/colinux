@@ -49,16 +49,16 @@ typedef struct {
 	co_id_t		    id;
 } co_manager_ioctl_create_t;
 
-/* 
- * ioctls()s under CO_MANAGER_IOCTL_MONITOR: 
+/*
+ * ioctls()s under CO_MANAGER_IOCTL_MONITOR:
  */
 typedef enum {
 	CO_MONITOR_IOCTL_CLOSE,
-	CO_MONITOR_IOCTL_LOAD_SECTION, 
+	CO_MONITOR_IOCTL_LOAD_SECTION,
 	CO_MONITOR_IOCTL_START,
 	CO_MONITOR_IOCTL_RUN,
 	CO_MONITOR_IOCTL_STATUS,
-	CO_MONITOR_IOCTL_LOAD_INITRD, 
+	CO_MONITOR_IOCTL_LOAD_INITRD,
 	CO_MONITOR_IOCTL_GET_CONSOLE,  /* Get console dimentions and max buffer size */
 	CO_MONITOR_IOCTL_GET_STATE,
 	CO_MONITOR_IOCTL_RESET,
@@ -145,12 +145,6 @@ typedef struct {
 	unsigned char		   buf[0];
 } co_monitor_ioctl_load_initrd_t;
 
-/* interface for CO_MONITOR_IOCTL_VIDEO_ATTACH: */
-typedef struct {
-  co_manager_ioctl_monitor_t pc;
-  void * video_buffer;    /* shared video buffer as output */
-} co_monitor_ioctl_video_attach_t;
-
 /* interface for CO_MONITOR_IOCTL_GET_CONSOLE: */
 typedef struct {
 	co_manager_ioctl_monitor_t pc;
@@ -201,7 +195,6 @@ typedef struct {
 	co_manager_ioctl_monitor_t pc;
 	int			   unit;
 	void*			   address;
-	void*			   handle;
 } co_monitor_ioctl_video_t;
 
 /***************** support kernel mode conet ***********************/
