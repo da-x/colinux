@@ -682,7 +682,6 @@ bool console_main_window::attach( co_id_t id )
 // TODO: find a way to switch back to cocon if framebuffer is disabled
     /* Start rendering coLinux screen */
     wScreen_->attach( ioctl_video.address );
-    wLog_->add("after attach video here\n");
     if(wScreen_->video_disabled()) wConsole_->set_console(console);
 
     attached_id_ = id;
@@ -693,7 +692,6 @@ bool console_main_window::attach( co_id_t id )
 
     update_ui_state( );
     status( "Successfully attached to monitor %d", id );
-    wLog_->add("end of attach video here\n");
 
     return true;
 }

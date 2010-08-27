@@ -25,13 +25,13 @@ struct co_monitor_device;
 struct co_monitor;
 struct co_manager_open_desc;
 
-typedef co_rc_t (*co_monitor_service_func_t)(struct co_monitor *cmon, 
+typedef co_rc_t (*co_monitor_service_func_t)(struct co_monitor *cmon,
 					     struct co_monitor_device *device,
 					     unsigned long *params);
 typedef struct co_monitor_device {
 	co_monitor_service_func_t service;
 	unsigned long state;
-	void *data;	
+	void *data;
 	co_queue_t out_queue;
 	co_queue_t in_queue;
 	co_os_mutex_t mutex;
@@ -47,14 +47,14 @@ typedef enum {
 
 #define CO_MONITOR_MODULES_COUNT CO_MODULES_MAX
 /*
- * We use the following struct for each coLinux system. 
+ * We use the following struct for each coLinux system.
  */
 
 typedef struct co_monitor {
 	/*
 	 * Pointer back to the manager.
 	 */
-	struct co_manager* manager; 
+	struct co_manager* manager;
 	int                refcount;
 	bool_t 		   listed_in_manager;
 	co_list_t	   node;
@@ -63,11 +63,11 @@ typedef struct co_monitor {
 	/*
 	 * OS-dependant data:
 	 */
-	struct co_monitor_osdep* osdep; 
+	struct co_monitor_osdep* osdep;
 
 	/*
 	 * State of monitor.
-	 */ 
+	 */
 	co_monitor_state_t		  state;
 	co_termination_reason_t		  termination_reason;
 	co_monitor_linux_bug_invocation_t bug_info;
@@ -76,22 +76,22 @@ typedef struct co_monitor {
 	 * Configuration data.
 	 */
 	co_config_t config;
- 
+
 	/*
 	 * The passage page
 	 */
-	struct co_arch_passage_page* passage_page;       /* The virtual address of the 
+	struct co_arch_passage_page* passage_page;       /* The virtual address of the
 						            PP in the host */
-	vm_ptr_t		     passage_page_vaddr; /* The virtual address of the 
+	vm_ptr_t		     passage_page_vaddr; /* The virtual address of the
 						            PP in Linux */
 	struct co_archdep_monitor*   archdep;            /* Architecture dependent data */
 
 	/*
-	 * Core stuff (Linux kernel image) 
+	 * Core stuff (Linux kernel image)
 	 */
 	vm_ptr_t	    core_vaddr;  /* Where the core sits (the famous C0100000) */
 	vm_ptr_t	    core_end;    /* Where the core ends */
-	unsigned long	    core_pages;  /* number of pages our core takes */    
+	unsigned long	    core_pages;  /* number of pages our core takes */
 	co_symbols_import_t import;      /* Addresse of symbols in the kernel */
 
 	/*
@@ -99,11 +99,11 @@ typedef struct co_monitor {
 	 */
 	unsigned long memory_size;      /* The size of Linux's pseudo physical RAM */
 	unsigned long physical_frames;  /* The number of pages in that RAM */
-	unsigned long end_physical;     /* In what virtual address the map of the 
+	unsigned long end_physical;     /* In what virtual address the map of the
 					   pseudo physical RAM ends */
 	co_pfn_t** pp_pfns;
 
-	/* 
+	/*
 	 * Dynamic allocations in the host
 	 */
 	unsigned long blocks_allocated;
@@ -111,7 +111,7 @@ typedef struct co_monitor {
 	/*
 	 * Page global directory
 	 */
-	linux_pgd_t pgd;             /* Pointer to the physical address PGD of 
+	linux_pgd_t pgd;             /* Pointer to the physical address PGD of
 					Linux (to be put in CR3 eventually */
 	co_pfn_t**  pgd_pfns;
 
@@ -131,22 +131,23 @@ typedef struct co_monitor {
 	unsigned long long timestamp_reminder;
 	co_os_wait_t	   idle_wait;
 
-	/* for cofb
-	 * Video memory
-	 *
-	 * video_buffer      : virtual address the video memory buffer
-	 * video_vm_address  : virtual address of the bufer in the guest (4MB aligned)
-	 * video_size        : size, in bytes, of the video memory.
-	 * video_user_address: virtual address of the buffer in user_space
-	 * video_user_handle : handle for the user address mapping
-	 * video_user_id     : PID of the video client process
-	 */
-	//void *         video_buffer;
-	//unsigned long  video_vm_address;
-	//unsigned long  video_size;
-	void *         video_user_address;
-	void *         video_user_handle;
-	co_id_t        video_user_id;
+        /* for cofb
+         * Video memory
+         *
+         * video_buffer      : virtual address the video memory buffer
+         * video_vm_address  : virtual address of the bufer in the guest (4MB aligned)
+         * video_size        : size, in bytes, of the video memory.
+         * video_user_address: virtual address of the buffer in user_space
+         * video_user_handle : handle for the user address mapping
+         * video_user_id     : PID of the video client process
+         */
+        //void *         video_buffer;
+        //unsigned long  video_vm_address;
+        //unsigned long  video_size;
+        void *         video_user_address;
+        void *         video_user_handle;
+        co_id_t        video_user_id;
+
 	/*
 	 * Video devices
 	*/
@@ -157,7 +158,7 @@ typedef struct co_monitor {
 	 */
 	struct co_scsi_dev* scsi_devs[CO_MODULE_MAX_COSCSI];
 
-	/* 
+	/*
 	 * Block devices
 	 */
 	struct co_block_dev* block_devs[CO_MODULE_MAX_COBD];
@@ -174,7 +175,7 @@ typedef struct co_monitor {
 
 	/*
 	 * Message passing stuff
-	 */ 
+	 */
 	co_queue_t	linux_message_queue;
 	co_os_mutex_t 	linux_message_queue_mutex;
 
@@ -196,7 +197,7 @@ typedef struct co_monitor {
 
 	/*
 	 * Structures copied directly from the vmlinux file before it
-	 * is loaded in order to get kernel-specific info (such as 
+	 * is loaded in order to get kernel-specific info (such as
 	 * segment registers) and API version.
 	 */
 	co_info_t 	info;
@@ -209,10 +210,10 @@ extern co_rc_t co_monitor_refdown(co_monitor_t *cmon, bool_t user_context, bool_
 
 struct co_manager_open_desc;
 
-extern co_rc_t co_monitor_ioctl(co_monitor_t*		     cmon, 
+extern co_rc_t co_monitor_ioctl(co_monitor_t*		     cmon,
 				co_manager_ioctl_monitor_t*  io_buffer,
 				unsigned long		     in_size,
-				unsigned long		     out_size, 
+				unsigned long		     out_size,
 				unsigned long*		     return_size,
 				struct co_manager_open_desc* opened_manager);
 

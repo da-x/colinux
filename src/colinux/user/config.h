@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #ifndef __COLINUX_CORE_CONFIG_H__
 #define __COLINUX_CORE_CONFIG_H__

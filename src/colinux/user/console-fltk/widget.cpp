@@ -29,7 +29,7 @@ console_widget_t::console_widget_t(int		x,
 			           int		w,
 			           int 		h,
 			           const char* 	label)
-: Fl_Widget(x, y, w, h, "")
+: Fl_Widget(x, y, w, h, label)
 {
 	font_size 	      = 18;
 	letter_x	      = font_size;
@@ -413,7 +413,7 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 
 	}
 
-	//case CO_OPERATION_CONSOLE_INIT_SCROLLBUFFER:
+	case CO_OPERATION_CONSOLE_INIT_SCROLLBUFFER:
 	case CO_OPERATION_CONSOLE_STARTUP:
 	case CO_OPERATION_CONSOLE_INIT:
 	case CO_OPERATION_CONSOLE_DEINIT:
