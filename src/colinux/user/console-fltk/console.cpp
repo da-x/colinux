@@ -51,14 +51,23 @@ void console_main_window::unimplemented( Fl_Widget* w, void* )
  */
 Fl_Menu_Item console_main_window::menu_items_[]
     = {
-        { "File", 0,0,0, FL_SUBMENU },
-            { " Options... ", 0, on_options, 0, FL_MENU_DIVIDER },
+        { "Monitor", 0,0,0, FL_SUBMENU },
+            { " Select... ", 0, on_select     , 0, FL_MENU_DIVIDER },
+            { " Attach "   , 0, on_attach     },
+            { " Dettach "  , 0, on_dettach    , 0, FL_MENU_DIVIDER },
+            { " Pause "    , 0, unimplemented },
+            { " Resume "   , 0, unimplemented , 0, FL_MENU_DIVIDER },
+            { " Power off ", 0, on_power      , (void*)CO_LINUX_MESSAGE_POWER_OFF },
+            { " Reboot - Ctrl-Alt-Del ",0, on_power, (void*)CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL },
+            { " Shutdown " , 0, on_power      , (void*)CO_LINUX_MESSAGE_POWER_SHUTDOWN },
             { " Quit "      , 0, on_quit },
             { 0 },
         { "Input", 0,0,0, FL_SUBMENU },
             { " Mark "              , 0, on_mark      },
+            { " Copy "              , 0, on_copy      },
             { " Paste "             , 0, on_paste     , 0, FL_MENU_DIVIDER },
             { " Calibrate mouse... ", 0, on_calibrate , 0, FL_MENU_DIVIDER},
+            { " Options... ", 0, on_options, 0, FL_MENU_DIVIDER },
             { " Special keys "      , 0,0,0, FL_SUBMENU },
                 { " Alt+SysRq+R (unRaw) "      , 0, on_key_seq   , (void*) 1 },
                 { " Alt+SysRq+K (saK) "        , 0, on_key_seq   , (void*) 2 },
@@ -82,22 +91,18 @@ Fl_Menu_Item console_main_window::menu_items_[]
                 { " Ctrl+Alt+Del "             , 0, on_key_seq   , (void*)26 },
                 { 0 },
             { 0 },
-        { "Monitor", 0,0,0, FL_SUBMENU },
-            { " Select... ", 0, on_select     , 0, FL_MENU_DIVIDER },
-            { " Attach "   , 0, on_attach     },
-            { " Dettach "  , 0, on_dettach    , 0, FL_MENU_DIVIDER },
-            { " Pause "    , 0, unimplemented },
-            { " Resume "   , 0, unimplemented , 0, FL_MENU_DIVIDER },
-            { " Power off ", 0, on_power      , (void*)CO_LINUX_MESSAGE_POWER_OFF },
-            { " Reboot - Ctrl-Alt-Del ",0, on_power, (void*)CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL },
-            { " Shutdown " , 0, on_power      , (void*)CO_LINUX_MESSAGE_POWER_SHUTDOWN },
+        { "Config ", 0,0,0, FL_SUBMENU },
+            { " Font "      , 0, on_font_select},
+            { " Copy trailing spaces ", 0, on_copy_spaces},
+            { " Exit on detach "      , 0, on_exit_detach},
             { 0 },
         { "Inspect", 0,0,0, FL_SUBMENU },
             { " Manager Status ", 0, on_inspect, (void*)1 },
             { " Manager Info "  , 0, on_inspect, (void*)2 },
             { 0 },
         { "View", 0,0,0, FL_SUBMENU },
-            { " Show Console window "   , 0, on_show_hide_console, 0, FL_MENU_TOGGLE },
+            { " Page Up "   , 0, on_scroll_page_up },
+            { " Page Down "   , 0, on_scroll_page_down },
             { " Show Log window "   , 0, on_show_hide_log, 0, FL_MENU_TOGGLE },
             { " Show Status Bar "   , 0, on_change_view  , (void*)1, FL_MENU_TOGGLE|FL_MENU_VALUE },
             { " Full Screen "       , 0, on_change_view  , (void*)2, FL_MENU_TOGGLE|FL_MENU_DIVIDER },
@@ -943,19 +948,6 @@ void console_main_window::on_change_view( Fl_Widget*, void* data )
     }
 }
 
-void console_main_window::on_show_hide_console( Fl_Widget* w, void* v )
-{
-    assert( this_ );
-
-    // Show/hide window
-    //if ( this_->wLog_->visible() )
-    //    this_->wLog_->hide( );
-    //else
-        //this_->wConsole_->show( );
-    // Update UI hints to the user
-    //this_->update_ui_state( );
-}
-
 /* ----------------------------------------------------------------------- */
 /**
  * Handler for show/hide log window.
@@ -1085,6 +1077,31 @@ void console_main_window::on_paste( Fl_Widget*, void* )
     // We will receive a FL_PASTE event to complete this
     Fl::paste( *this_, 1 );
 }
+
+void console_main_window::on_copy( Fl_Widget*, void* )
+{
+}
+
+void console_main_window::on_copy_spaces( Fl_Widget*, void* ) 
+{
+}
+
+void console_main_window::on_exit_detach( Fl_Widget*, void* ) 
+{
+}
+
+void console_main_window::on_scroll_page_up( Fl_Widget*, void* ) 
+{
+}
+
+void console_main_window::on_scroll_page_down( Fl_Widget*, void* ) 
+{
+}
+
+void console_main_window::on_font_select( Fl_Widget*, void* ) 
+{
+}
+
 
 /* ----------------------------------------------------------------------- */
 /*

@@ -119,9 +119,14 @@ private:
     static void on_inspect( Fl_Widget*, void* );
     static void on_change_view( Fl_Widget*, void* );
     static void on_about( Fl_Widget*, void* );
+    static void on_font_select( Fl_Widget*, void* );
+    static void on_copy( Fl_Widget*, void* );
+    static void on_copy_spaces( Fl_Widget*, void* );
+    static void on_scroll_page_up( Fl_Widget*, void* );
+    static void on_scroll_page_down( Fl_Widget*, void* );
     static void on_show_hide_log( Fl_Widget*, void* );
-    static void on_show_hide_console( Fl_Widget*, void* );
     static void on_mark( Fl_Widget*, void* );
+    static void on_exit_detach( Fl_Widget*, void* );
     static void on_paste( Fl_Widget*, void* );
     static void on_calibrate( Fl_Widget*, void* );
     static void on_key_seq( Fl_Widget*, void* );
