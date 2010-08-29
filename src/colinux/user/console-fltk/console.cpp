@@ -363,7 +363,7 @@ int console_main_window::handle( int event )
         } else if ( is_attached() && Fl::event_inside(wScroll_) )
         {
         // Pass mouse messages to colinux, if attached
-            handle_mouse_event( );
+            if(!wScreen_->video_disabled())handle_mouse_event( );
         }
         break;
     case FL_KEYUP:
@@ -1147,7 +1147,8 @@ void console_main_window::on_scroll_page_down( Fl_Widget*, void* )
 
 void console_main_window::on_font_select( Fl_Widget*, void* ) 
 {
-    if(!this_->fsd) this_->fsd = new FontSelectDialog(
+    if(!this_->fsd) 
+        this_->fsd = new FontSelectDialog(
                 this_->wConsole_->get_font_name(),
                 this_->wConsole_->get_font_size());
     this_->fsd->show();

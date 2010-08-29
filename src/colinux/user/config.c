@@ -991,7 +991,7 @@ static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, co_conf
 
 	conf->console.x     = CO_CONSOLE_WIDTH;
 	conf->console.y     = CO_CONSOLE_HEIGHT;
-	conf->console.max_y = CO_CONSOLE_HEIGHT;
+	conf->console.max_y = CO_CONSOLE_MAX_ROWS;
 
 	rc = co_cmdline_get_next_equality(cmdline,
 					  "cocon",
@@ -1015,11 +1015,12 @@ static co_rc_t parse_args_config_cocon(co_command_line_params_t cmdline, co_conf
 		if (*p != '\0') p++;
 		max_y = strtol(p, &p, 0);
 
+		if(!max_y) max_y = CO_CONSOLE_MAX_ROWS;
 		if(max_y < y) max_y = y;
 
 		/* Check screen limits */
-		if(x     < CO_CONSOLE_MIN_COLS	|| 
-		   y     < CO_CONSOLE_MIN_ROWS  || 
+		if(x     < CO_CONSOLE_MIN_COLS	||
+		   y     < CO_CONSOLE_MIN_ROWS  ||
 		   max_y > CO_CONSOLE_MAX_ROWS) {
 			co_terminal_print("Invalid args (%ux%u,%u) for cocon\n",
 					  x, y, max_y);
@@ -1216,7 +1217,7 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t* 
 						    "mem",
 						    &conf->ram_size, 
 						    &exists);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	if (exists)
@@ -1253,12 +1254,12 @@ static co_rc_t parse_config_args(co_command_line_params_t cmdline, co_config_t* 
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_cmdline_get_next_equality(cmdline, 
-					  "initrd", 
-					  0, 
-					  NULL, 
-					  0, 
-					  conf->initrd_path, 
+	rc = co_cmdline_get_next_equality(cmdline,
+					  "initrd",
+					  0,
+					  NULL,
+					  0,
+					  conf->initrd_path,
 					  sizeof(conf->initrd_path),
 					  &conf->initrd_enabled);
 	if (!CO_OK(rc)) 
@@ -1325,7 +1326,7 @@ co_rc_t co_parse_config_args(co_command_line_params_t cmdline,
 				          "kernel",
 				          0,
 				          NULL,
-				          0, 
+				          0,
 					  conf->vmlinux_path,
 					  sizeof(conf->vmlinux_path),
 					  &start_parameters->cmdline_config);

@@ -63,7 +63,7 @@ protected:
 	bool 		mouse_copy, mouse_drag_type, copy_spaces;
 	int 		mouse_start_x, mouse_start_y, mouse_sx, mouse_wx,
 		mouse_sy, mouse_wy, loc_start, loc_end;
-
+	// control offset of the viewable
 	int scroll_lines;
 
 protected:
