@@ -36,10 +36,6 @@ public:
     virtual int h() const = 0;
     virtual bool mark_set( int x1,int y1, int x2,int y2 ) { return false; }
     virtual unsigned mark_get( char* buf, unsigned len )      { return 0; }
-    // support old console mode
-/*    virtual co_rc_t handle_console_event(co_console_message_t* msg){};
-    virtual void set_console(co_console_t* _console){};
-    virtual void set_font_size(int new_size){};*/
 };
 
 
@@ -72,10 +68,6 @@ public:
     unsigned get_marked_text( char* buf, unsigned len );
     // support old console mode
     bool video_disabled() const { return (video_buffer_ == NULL); }
-    /*co_rc_t handle_console_event(co_console_message_t* msg){render_->handle_console_event(msg);};
-    void set_console(co_console_t* _console){render_->set_console(_console);};
-    void set_font_size(int new_size){render_->set_font_size(new_size);};
-*/
 private :
     // Do the drawing ourselves
     void draw( );

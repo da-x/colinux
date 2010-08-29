@@ -83,6 +83,50 @@ int console_input::handle_key_event( )
     return 1;
 }
 
+/* copy the str to the clipboard */
+int CopyLinuxIntoClipboard(int str_size, const char* str)
+{
+        /* Lock clipboard for writing -- TODO: try again on failure */
+        if ( ! ::OpenClipboard(NULL) )
+        {
+                co_debug("OpenClipboard() error 0x%lx !", ::GetLastError());
+                return -1;
+        }
+
+        /* clear clipboard */
+        if ( ! ::EmptyClipboard() )
+        {
+                co_debug("EmptyClipboard() error 0x%lx !", ::GetLastError());
+                return -1;
+        }
+
+        /* get control to the widget */
+        //console_widget_t* my_widget = co_user_console_get_window()->get_widget();
+
+        /* allocate memory for clipboard, plus 1 byte for null termination */
+        HGLOBAL hMemClipboard = ::GlobalAlloc(GMEM_MOVEABLE,
+                (str_size+1));
+        if (hMemClipboard==NULL)
+        {
+                ::CloseClipboard();
+                co_debug( "GlobalAlloc() error 0x%lx !", ::GetLastError() );
+                return -1;
+        }
+
+        /* paste data into clipboard */
+        char *p = (char*)::GlobalLock(hMemClipboard);
+        strncpy(p, str, str_size);
+	*(p+str_size) = 0;
+       
+        /* unlock memory (but don't free it-- it's now owned by the OS) */
+        ::GlobalUnlock(hMemClipboard);
+        ::SetClipboardData(CF_TEXT, hMemClipboard);
+        /* and we're done */
+        ::CloseClipboard();
+
+        return 0;
+}
+
 int ReadRegistry(int key)
 {
         HKEY hKey;

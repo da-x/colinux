@@ -74,6 +74,7 @@ typedef struct co_console {
 	 * Defined in 'linux/cooperative.h' as x, y, height.
 	 */
 	co_cursor_pos_t cursor;
+        char selection_buffer[255];
 } co_console_t;
 
 extern co_rc_t co_console_create(co_console_config_t* config_p,

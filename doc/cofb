@@ -9,6 +9,11 @@ ln -s /dev/input/mouse0 /dev/mouse
 To disable X window mouse acceleration.
 xset m 1 0 
 
+cofb added features,
+frame buffer drivers/video/covideo.c
+mouse drivers/mouse/comouse.c
+copy to guest through fltk paste event and send scancode directly to guest.
+
 some links,
 colinux cofb internal, https://docs.google.com/document/pub?id=1FH_D4ukhfqxUFd1aZj6NiN1NVX2EBrzrXxwLpQTRkMo
 

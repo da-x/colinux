@@ -19,6 +19,7 @@ extern "C" {
 //extern int co_user_console_main(int argc, char **argv);
 enum REGISTRY_PARAMS { REGISTRY_FONT, REGISTRY_FONT_SIZE, REGISTRY_COPYSPACES,
         REGISTRY_EXITDETACH };
+extern int CopyLinuxIntoClipboard(int, const char*);
 extern int ReadRegistry(int key);
 extern int WriteRegistry(int key, int new_value);
 

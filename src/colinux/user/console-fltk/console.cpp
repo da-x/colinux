@@ -63,7 +63,7 @@ Fl_Menu_Item console_main_window::menu_items_[]
             { " Quit "      , 0, on_quit },
             { 0 },
         { "Input", 0,0,0, FL_SUBMENU },
-            { " Mark "              , 0, on_mark      },
+            { " to remove, Mark "              , 0, on_mark      },
             { " Copy "              , 0, on_copy      },
             { " Paste "             , 0, on_paste     , 0, FL_MENU_DIVIDER },
             { " Calibrate mouse... ", 0, on_calibrate , 0, FL_MENU_DIVIDER},
@@ -351,11 +351,11 @@ int console_main_window::handle( int event )
     case FL_MOVE:
     case FL_DRAG:
     case FL_MOUSEWHEEL:
-        // Mark mode enabled?
-        if ( mouse_mode_ == MouseMark )
-            return handle_mark_event( event );
+        // if in console mode, don't send mouse event to guest, use client mark mode
+        if ( wScreen_->video_disabled() && Fl::event_inside(wScroll_))
+            handle_mark_event( event );
         // Pass mouse messages to colinux, if attached
-        if ( is_attached() && Fl::event_inside(wScroll_) )
+        else if ( is_attached() && Fl::event_inside(wScroll_) )
         {
             handle_mouse_event( );
             //return 1;
@@ -363,10 +363,10 @@ int console_main_window::handle( int event )
         break;
     case FL_KEYUP:
     case FL_KEYDOWN:
-        if ( mouse_mode_ != MouseMark )
+        //if ( mouse_mode_ != MouseMark )
             return input_.handle_key_event( );
         // Any key will stop the mark mode
-        end_mark_mode( );
+        //end_mark_mode( );
         return 1;
     case FL_PASTE:
       {
@@ -613,7 +613,12 @@ void console_main_window::handle_message( co_message_t * msg )
                 co_console_message_t* console_message;
 
                 console_message = (typeof(console_message))(msg->data);
-                if(wScreen_->video_disabled()) wConsole_->handle_console_event(console_message);
+                if(wScreen_->video_disabled()) {
+			wConsole_->handle_console_event(console_message);
+			co_console_t *con = wConsole_->get_console();
+			if(con)
+		log("cocon %d:%s:\n",console_message->type,con->selection_buffer);
+		}
                 break;
         }
 	default: { break; }
@@ -684,9 +689,9 @@ bool console_main_window::attach( co_id_t id )
         co_user_monitor_close( mon );
         return false;
     }
-// TODO: find a way to switch back to cocon if framebuffer is disabled
     /* Start rendering coLinux screen */
     wScreen_->attach( ioctl_video.address );
+    // switch back to cocon if framebuffer is disabled
     if(wScreen_->video_disabled()) wConsole_->set_console(console);
 
     attached_id_ = id;
@@ -1076,10 +1081,12 @@ void console_main_window::on_paste( Fl_Widget*, void* )
     assert( this_ );
     // We will receive a FL_PASTE event to complete this
     Fl::paste( *this_, 1 );
+//        PasteClipboardIntoColinux();
 }
 
 void console_main_window::on_copy( Fl_Widget*, void* )
 {
+        CopyLinuxIntoClipboard(9,"coconsole");
 }
 
 void console_main_window::on_copy_spaces( Fl_Widget*, void* ) 
@@ -1111,7 +1118,7 @@ void console_main_window::on_mark( Fl_Widget*, void* )
 {
     assert( this_ && this_->mouse_mode_!= MouseMark);
     // Check the screen can be marked
-    if ( !this_->wScreen_->can_mark() )
+    if ( !this_->wScreen_->video_disabled() )
     {
         this_->status( "Can't mark text in graphics mode..." );
         return;
@@ -1146,19 +1153,30 @@ int console_main_window::handle_mark_event( int event )
     case FL_PUSH:
         mx = ex;
         my = ey;
+                if(ey<30) //MENU_SIZE_PIXELS)
+                        break;
+                if(Fl::event_button() == FL_RIGHT_MOUSE)
+                        wConsole_->mouse_push(ex, ey, true);
+                else if(Fl::event_button() == FL_LEFT_MOUSE)
+                        wConsole_->mouse_push(ex, ey, false);
         break;
     case FL_DRAG:
         wScreen_->set_marked_text( mx,my, ex,ey );
 	wScreen_->damage( 1 );
 	status( "Mark: %d,%d --> %d,%d", mx,my, ex,ey );
+	wConsole_->mouse_drag(ex, ey);
         break;
     case FL_RELEASE:
         wScreen_->set_marked_text( mx,my, ex,ey );
 	status( "Mark: %d,%d --> %d,%d", mx,my, ex,ey );
-        end_mark_mode( );
-        return 1;
+        //end_mark_mode( );
+	wConsole_->mouse_release(ex, ey);
+        break;
+    case  FL_MOUSEWHEEL:
+                wConsole_->scroll_back_buffer(Fl::event_dy());
+                break;
     default:
-        return 1;
+        break;
     }
     return 1;
 }

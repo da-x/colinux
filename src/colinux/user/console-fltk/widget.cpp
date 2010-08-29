@@ -281,7 +281,8 @@ void console_widget_t::set_console(co_console_t* _console)
 co_console_t* console_widget_t::get_console()
 {
 	co_console_t* _console = console;
-	console = NULL;
+	/* why we want to give back console in this way ?
+	console = NULL;*/
 
 	return _console;
 }

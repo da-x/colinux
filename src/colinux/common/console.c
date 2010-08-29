@@ -180,6 +180,9 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 		int                y     = message->putcs.y;
 		int                count = message->putcs.count;
 		unsigned long   config_x = console->config.x;
+		int tmpcount;
+		if (count < 255) tmpcount = count;
+		else tmpcount = 254;
 		co_console_cell_t* cells = (co_console_cell_t *)&message->putcs.data;
 		co_console_cell_t* dest;
 
@@ -192,7 +195,12 @@ co_rc_t co_console_op(co_console_t* console, co_console_message_t* message)
 		dest = console->screen + config_x * y + x;
 		while (count-- > 0)
 			*dest++ = *cells++;
-
+		dest = console->screen + config_x * y + x;
+		char *p = console->selection_buffer; 
+		while(tmpcount-- > 0) { 
+                   *p++ = dest->ch; dest++;
+		}
+		*p = 0;
 		break;
 	}
 	case CO_OPERATION_CONSOLE_PUTC: {
