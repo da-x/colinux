@@ -343,7 +343,8 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 	if (!CO_OK(rc))
 		return rc;
 
-	/* clear old mouse selection */
+	/* clear old mouse selection
+	 */
 	if(mouse_copy)
 		mouse_clear();
 
@@ -436,18 +437,19 @@ co_rc_t console_widget_t::handle_console_event(co_console_message_t* message)
 void console_widget_t::mouse_push(int x, int y, bool drag_type)
 {
 	/* mouse button was pressed (left or right) */
-	invert_area(mouse_sx, mouse_sy, mouse_wx, mouse_wy);
-	damage_console(0, 0, console->config.x, console->config.y);
+        invert_area(mouse_sx, mouse_sy, mouse_wx, mouse_wy);
+        damage_console(0, 0, console->config.x, console->config.y);
 
-	mouse_start_x = x;
-	mouse_start_y = y;
-	mouse_sx = 0;
-	mouse_wx = 0;
-	mouse_sy = 0;
-	mouse_wy = 0;
-	loc_start = 0;
-	loc_end = 0;
-	mouse_copy = true;
+        mouse_start_x = x;
+        mouse_start_y = y;
+        mouse_sx = 0;
+        mouse_wx = 0;
+        mouse_sy = 0;
+        mouse_wy = 0;
+        loc_start = 0;
+        loc_end = 0;
+        mouse_copy = true;
+
 
 	/* mouse_drag_type indicates whether rectangle select or line select mode */
 	mouse_drag_type = drag_type;
@@ -549,7 +551,7 @@ void console_widget_t::copy_mouse_selection(char*str)
 	}
 	else
 	{
-		/* copy lines */
+		/* copy lines, todo, add \r\n, and take out trailing spaces*/
 		int d = (console->config.max_y-console->config.y+scroll_lines)*console->config.x;
 		co_console_cell_t* cellp = &console->buffer[loc_start+d];
 		for(int i = loc_end - loc_start; i > 0; i--, cellp++)

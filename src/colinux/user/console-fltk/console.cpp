@@ -63,7 +63,7 @@ Fl_Menu_Item console_main_window::menu_items_[]
             { " Quit "      , 0, on_quit },
             { 0 },
         { "Input", 0,0,0, FL_SUBMENU },
-            { " to remove, Mark "              , 0, on_mark      },
+            { " Enable host mark mode "              , 0, on_mark      },
             { " Copy "              , 0, on_copy      },
             { " Paste "             , 0, on_paste     , 0, FL_MENU_DIVIDER },
             { " Calibrate mouse... ", 0, on_calibrate , 0, FL_MENU_DIVIDER},
@@ -351,22 +351,21 @@ int console_main_window::handle( int event )
     case FL_MOVE:
     case FL_DRAG:
     case FL_MOUSEWHEEL:
-        // if in console mode, don't send mouse event to guest, use client mark mode
-        if ( wScreen_->video_disabled() && Fl::event_inside(wScroll_))
+        if(mouse_mode_ == MouseMark){ 
+	  if ( wScreen_->video_disabled() && Fl::event_inside(wScroll_))
             handle_mark_event( event );
-        // Pass mouse messages to colinux, if attached
-        else if ( is_attached() && Fl::event_inside(wScroll_) )
+        } else if ( is_attached() && Fl::event_inside(wScroll_) )
         {
+        // Pass mouse messages to colinux, if attached
             handle_mouse_event( );
-            //return 1;
         }
         break;
     case FL_KEYUP:
     case FL_KEYDOWN:
-        //if ( mouse_mode_ != MouseMark )
+        if ( mouse_mode_ != MouseMark )
             return input_.handle_key_event( );
         // Any key will stop the mark mode
-        //end_mark_mode( );
+        end_mark_mode( );
         return 1;
     case FL_PASTE:
       {
@@ -615,9 +614,6 @@ void console_main_window::handle_message( co_message_t * msg )
                 console_message = (typeof(console_message))(msg->data);
                 if(wScreen_->video_disabled()) {
 			wConsole_->handle_console_event(console_message);
-			co_console_t *con = wConsole_->get_console();
-			if(con)
-		log("cocon %d:%s:\n",console_message->type,con->selection_buffer);
 		}
                 break;
         }
@@ -1086,7 +1082,14 @@ void console_main_window::on_paste( Fl_Widget*, void* )
 
 void console_main_window::on_copy( Fl_Widget*, void* )
 {
-        CopyLinuxIntoClipboard(9,"coconsole");
+    if (!this_->wScreen_->video_disabled())return;
+    int size = this_->wConsole_->screen_size_bytes();
+    char buf[size+1];
+    this_->wConsole_->copy_mouse_selection(buf);
+    if (0==buf[0]) return; // nothing to copy
+    buf[size] = 0;
+    CopyLinuxIntoClipboard(size,buf);
+    this_->log("marked buffer %d: %s\n",size, buf);
 }
 
 void console_main_window::on_copy_spaces( Fl_Widget*, void* ) 
@@ -1161,16 +1164,20 @@ int console_main_window::handle_mark_event( int event )
                         wConsole_->mouse_push(ex, ey, false);
         break;
     case FL_DRAG:
-        wScreen_->set_marked_text( mx,my, ex,ey );
-	wScreen_->damage( 1 );
+        //wScreen_->set_marked_text( mx,my, ex,ey );
+	//wScreen_->damage( 1 );
 	status( "Mark: %d,%d --> %d,%d", mx,my, ex,ey );
 	wConsole_->mouse_drag(ex, ey);
         break;
     case FL_RELEASE:
-        wScreen_->set_marked_text( mx,my, ex,ey );
-	status( "Mark: %d,%d --> %d,%d", mx,my, ex,ey );
-        //end_mark_mode( );
+        //wScreen_->set_marked_text( mx,my, ex,ey );
+	status( "Relase mark: %d,%d --> %d,%d", mx,my, ex,ey );
+        end_mark_mode( );
 	wConsole_->mouse_release(ex, ey);
+	// unix style, once mouse release, copy to buffer
+	// also this solves mouse_clear to soon problem introduced by
+	// guest mouse cursor message
+        on_copy(0,0);
         break;
     case  FL_MOUSEWHEEL:
                 wConsole_->scroll_back_buffer(Fl::event_dy());
@@ -1193,7 +1200,7 @@ void console_main_window::end_mark_mode( )
     set_menu_state( on_paste, true );
 
     // Get marked text
-    char * buf = NULL;
+    /*char * buf = NULL;
     unsigned len = wScreen_->get_marked_text( 0,0 );
     if ( len ) {
 	buf = new char[len];
@@ -1209,7 +1216,7 @@ void console_main_window::end_mark_mode( )
     else
         status( "%d bytes in the clipboard.", len );
 
-    delete[] buf;
+    delete[] buf;*/
 }
 
 /* ----------------------------------------------------------------------- */
