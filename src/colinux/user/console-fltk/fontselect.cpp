@@ -20,7 +20,7 @@
 #include <windows.h>
 
 #include "main.h"
-#include "log_window.h"
+#include "console.h"
 
 // callback functions
 static void size_cb(Fl_Widget *widget, void*v)
@@ -38,15 +38,18 @@ static void on_font_select(Fl_Widget *widget, void* v)
 {
 	// v points to this FontSelectDialog instance
 	FontSelectDialog *fsd_inst=(FontSelectDialog *)v;
-
-	// fsd_inst->ptr_console points to this console_window_t instance
-	console_window_t* cw_inst = ((console_window_t*)(((Fl_Menu_Item*)fsd_inst->ptr_console)->user_data_));
-
+/*
 	cw_inst->get_widget()->set_font_name(fsd_inst->textobj->get_font());
 	cw_inst->get_widget()->set_font_size(fsd_inst->textobj->get_size());
-	cw_inst->resize_font();
-	WriteRegistry(REGISTRY_FONT, fsd_inst->textobj->get_font());
+	cw_inst->resize_font();*/
 	WriteRegistry(REGISTRY_FONT_SIZE, fsd_inst->textobj->get_size());
+	WriteRegistry(REGISTRY_FONT, fsd_inst->textobj->get_font());
+            // Post to the main thread message queue
+            typedef console_main_window::tm_data_t tm_data_t;
+            tm_data_t* data
+                = new tm_data_t( console_main_window::TMSG_VIEW_RESIZE );
+            Fl::awake( data );
+
 }
 
 static void on_font_close(Fl_Widget *widget, void* v)
@@ -54,9 +57,12 @@ static void on_font_close(Fl_Widget *widget, void* v)
 	((FontSelectDialog*)v)->hide();
 }
 
-FontSelectDialog::FontSelectDialog(void*ptr, int def_font, int def_size): Fl_Window(530, 370, "Font select")
+FontSelectDialog::FontSelectDialog(int def_font, int def_size): 
+Fl_Window(530, 370, "Font select"),
+font_name(def_font),
+font_size(def_size)
 {
-	ptr_console = ptr;
+	//ptr_console = ptr;
 	sizeobj = NULL;
 	textobj = NULL;
 	fontobj = NULL;

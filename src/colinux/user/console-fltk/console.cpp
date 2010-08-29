@@ -16,6 +16,7 @@
 #include "options.h"
 #include "log_window.h"
 #include "select_monitor.h"
+#include "fontselect.h"
 
 extern "C" {
     #include <colinux/common/version.h>
@@ -92,7 +93,7 @@ Fl_Menu_Item console_main_window::menu_items_[]
                 { 0 },
             { 0 },
         { "Config ", 0,0,0, FL_SUBMENU },
-            { " Font "      , 0, on_font_select},
+            { " Font... "      , 0, on_font_select},
             { " Copy trailing spaces ", 0, on_copy_spaces},
             { " Exit on detach "      , 0, on_exit_detach},
             { 0 },
@@ -136,6 +137,7 @@ console_main_window::console_main_window( )
   , mouse_scale_x_( CO_MOUSE_MAX_X )
   , mouse_scale_y_( CO_MOUSE_MAX_Y )
   , prefs_( Fl_Preferences::USER, "coLinux.org", "FLTK console" )
+  , fsd( NULL)
 {
     // Set pointer to self for static methods
     this_ = this;
@@ -167,49 +169,7 @@ console_main_window::console_main_window( )
                                        640 + bdx*2, 400 + bdy*2 );
         wConsole_ = new console_widget_t( bdx, bdy + mh,
                                        640 + bdx*2, 400 + bdy*2 );
-	// Default Font is "Terminal" with size 18
-	// Sample WinNT environment: set COLINUX_CONSOLE_FONT=Lucida Console:12
-	// Change only font size:    set COLINUX_CONSOLE_FONT=:12
-	char* env_font = getenv("COLINUX_CONSOLE_FONT");
-
-	if (env_font)
-	{
-		char* p = strchr (env_font, ':');
-
-		if (p)
-		{
-			int size = atoi (p+1);
-			if (size >= 4 && size <= 24)
-			{
-				// Set size
-				wConsole_->set_font_size(size);
-			}
-			*p = 0; // End for Fontname
-		}
-
-		// Set new font style
-		if(strlen(env_font))
-		{
-			// Remember: set_font need a non stack buffer!
-			// Environment is global static.
-			Fl::set_font(FL_SCREEN, env_font);
-
-			// Now check font width
-			fl_font(FL_SCREEN, 18); // Use default High for test here
-			if ((int)fl_width('i') != (int)fl_width('W'))
-			{
-				Fl::set_font(FL_SCREEN, "Terminal"); // Restore standard font
-				//log("%s: is not fixed font. Using 'Terminal'\n", env_font);
-			}
-		}
-	}
-	else
-	{
-		// use registry values and not environment variable
-		//widget->set_font_name(reg_font);
-		//widget->set_font_size(reg_font_size);
-	}
-
+        set_font();
     }
     wScroll_->end( );
 
@@ -252,7 +212,53 @@ console_main_window::console_main_window( )
     Fl::add_idle( on_idle );
 }
 
-/* ----------------------------------------------------------------------- */
+void console_main_window::set_font(){
+	// TODO, use fltk preference feature should be easier than parsing env variables.
+        // Default Font is "Terminal" with size 18
+        // Sample WinNT environment: set COLINUX_CONSOLE_FONT=Lucida Console:12
+        // Change only font size:    set COLINUX_CONSOLE_FONT=:12
+        char* env_font = getenv("COLINUX_CONSOLE_FONT");
+
+        if (env_font)
+        {
+                char* p = strchr (env_font, ':');
+
+                if (p)
+                {
+                        int size = atoi (p+1);
+                        if (size >= 4 && size <= 24)
+                        {
+                                // Set size
+                                wConsole_->set_font_size(size);
+                        }
+                        *p = 0; // End for Fontname
+                }
+
+                // Set new font style
+                if(strlen(env_font))
+                {
+                        // Remember: set_font need a non stack buffer!
+                        // Environment is global static.
+                        Fl::set_font(FL_SCREEN, env_font);
+
+                        // Now check font width
+                        fl_font(FL_SCREEN, 18); // Use default High for test here
+                        if ((int)fl_width('i') != (int)fl_width('W'))
+                        {
+                                Fl::set_font(FL_SCREEN, "Terminal"); // Restore standard font
+                                //log("%s: is not fixed font. Using 'Terminal'\n", env_font);
+                        }
+                }
+        }
+        else
+        {
+                // use registry values and not environment variable
+                wConsole_->set_font_name(reg_font);
+                wConsole_->set_font_size(reg_font_size);
+        }
+
+}
+
 /**
  * Release any resources not automatically allocated.
  */
@@ -271,11 +277,11 @@ void console_main_window::on_quit( Fl_Widget*, void* )
     // Ask for confirmation, but only if attached.
     if ( this_->is_attached() )
     {
-	int quit = fl_ask(
+	int quit = fl_choice(
 		"You are currently attached to a colinux instance.\n"
 		"The colinux instance will stay running after you exit.\n"
-		"Do you really want to quit?" );
-	if ( !quit )
+		"Do you really want to quit?", "No","Yes",0 );
+	if ( quit == 0 )
 	    return;
 	this_->dettach( );
     }
@@ -695,7 +701,7 @@ bool console_main_window::attach( co_id_t id )
 
     resize_around_console( );
     input_.resume( monitor_ );
-
+    
     update_ui_state( );
     status( "Successfully attached to monitor %d", id );
 
@@ -767,6 +773,10 @@ void console_main_window::on_idle( void* )
             this_->attach( msg->value );
             break;
         case TMSG_VIEW_RESIZE:
+            this_->log(" view resize \n");
+	    this_->wConsole_->set_font_name( ReadRegistry(REGISTRY_FONT));
+            this_->wConsole_->set_font_size( ReadRegistry(REGISTRY_FONT_SIZE));
+
             this_->wScroll_->redraw();
             if ( !this_->fullscreen_mode_ )
                 this_->resize_around_console( );
@@ -813,9 +823,13 @@ void console_main_window::resize_around_console( )
 {
     int fit_x = wScreen_->w() + 2*Fl::box_dx(wScroll_->box());
     int fit_y = wScreen_->h() + 2*Fl::box_dy(wScroll_->box());
+
+    if(wScreen_->video_disabled()){
+        fit_x = wConsole_->fit_x + 2*Fl::box_dx(wScroll_->box());
+        fit_y = wConsole_->fit_y + 2*Fl::box_dy(wScroll_->box());
+    }
     int w_diff = wScroll_->w() - fit_x;
     int h_diff = wScroll_->h() - fit_y;
-
     if ( h_diff != 0 || w_diff != 0 )
         size( w() - w_diff, h() - h_diff );
 }
@@ -987,6 +1001,23 @@ void console_main_window::load_preferences( )
     prefs_.get( "h", oh, -1 );
     if ( ox > 0 && oy > 0 && ow > 100 && oh > 100 )
         resize( ox,oy, ow,oh );
+
+        // read font and font size from registry
+        // TODO, use more portable fltk preference feature
+        reg_font = ReadRegistry(REGISTRY_FONT);
+        reg_font_size = ReadRegistry(REGISTRY_FONT_SIZE);
+        reg_copyspaces = ReadRegistry(REGISTRY_COPYSPACES);
+        reg_exitdetach = ReadRegistry(REGISTRY_EXITDETACH);
+
+        if(reg_font==-1)
+                reg_font = FL_SCREEN;
+        if(reg_font_size==-1)
+                reg_font_size = 18;
+        if(reg_copyspaces==-1)
+                reg_copyspaces = 1;
+        if(reg_exitdetach==-1)
+                reg_exitdetach = 0;
+
 }
 
 /* ----------------------------------------------------------------------- */
@@ -1094,22 +1125,32 @@ void console_main_window::on_copy( Fl_Widget*, void* )
 
 void console_main_window::on_copy_spaces( Fl_Widget*, void* ) 
 {
+    this_->wConsole_->toggle_copy_spaces();
+    WriteRegistry(REGISTRY_COPYSPACES, this_->wConsole_->get_copy_spaces());
 }
 
 void console_main_window::on_exit_detach( Fl_Widget*, void* ) 
 {
+        this_->toggle_exitdetach();
+        WriteRegistry(REGISTRY_EXITDETACH, this_->get_exitdetach());
 }
 
 void console_main_window::on_scroll_page_up( Fl_Widget*, void* ) 
 {
+   this_->wConsole_->scroll_page_up();
 }
 
 void console_main_window::on_scroll_page_down( Fl_Widget*, void* ) 
 {
+   this_->wConsole_->scroll_page_down();
 }
 
 void console_main_window::on_font_select( Fl_Widget*, void* ) 
 {
+    if(!this_->fsd) this_->fsd = new FontSelectDialog(
+                this_->wConsole_->get_font_name(),
+                this_->wConsole_->get_font_size());
+    this_->fsd->show();
 }
 
 
@@ -1282,4 +1323,5 @@ void console_main_window::on_calibrate( Fl_Widget*, void* )
 {
     /* TODO: */
 }
+
 

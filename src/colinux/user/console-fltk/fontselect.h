@@ -35,16 +35,18 @@ private:
 	int font, size;
 };
 
+// input font name and size, return font name and size
 class FontSelectDialog : public Fl_Window
 {
 public:
-	FontSelectDialog(void*ptr, int def_font, int def_size);
+	FontSelectDialog(int def_font, int def_size);
 	void click_font(void);
 	void click_size(void);
-	void *ptr_console;
+	//void *ptr_console;
 	void populate_fonts(bool fixed_pitch, int def_font);
 	FontDisplay *textobj;
-
+        int font_name;
+	int font_size;
 private:
 	Fl_Hold_Browser *sizeobj;
 	Fl_Hold_Browser *fontobj;

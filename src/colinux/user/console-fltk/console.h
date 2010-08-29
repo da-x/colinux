@@ -32,6 +32,7 @@ class console_screen;
 class console_log_window;
 class console_window_t;
 struct console_parameters_t;
+class FontSelectDialog;
 
 /**
  * Main console window.
@@ -56,7 +57,8 @@ public:
     enum tm_id
     {
         TMSG_LOG_WINDOW, TMSG_MONITOR_SELECT, TMSG_OPTIONS,
-        TMSG_VIEW_RESIZE, TMSG_LAST
+        TMSG_VIEW_RESIZE, 
+	TMSG_LAST
     };
     /**
      * Thread messages data structure.
@@ -107,6 +109,11 @@ private:
     // Handle the copy from console event
     int handle_mark_event( int event );
     void end_mark_mode( );
+    FontSelectDialog* fsd;
+
+    int get_exitdetach(void) { return reg_exitdetach; };
+    void toggle_exitdetach(void) { reg_exitdetach=! reg_exitdetach; };
+
 
     /* Menu handlers */
     static void on_quit( Fl_Widget*, void* );
@@ -165,6 +172,10 @@ private:
     // Static Data
     static Fl_Menu_Item     menu_items_[];      // Application menu items
     static self_t       *   this_;              // Used by static handlers
+
+    // registry settings
+    int reg_font, reg_font_size, reg_copyspaces, reg_exitdetach;
+    void set_font();
 };
 
 #endif
