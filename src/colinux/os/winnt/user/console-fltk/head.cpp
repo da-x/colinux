@@ -7,7 +7,8 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
+#include <windows.h> 
 #include <colinux/user/console-fltk/input.h>
 #include <FL/x.H>
 #include <colinux/user/console-fltk/main.h>
@@ -70,6 +71,8 @@ int console_input::handle_key_event( )
         send_scancode( 0x12A ); send_scancode( 0x137 ); // E0 2A E0 37
         send_scancode( 0x1AA ); send_scancode( 0x1B7 ); // E0 AA E0 B7
         return 1;
+    // put more special key here,
+    // TODO, international key support. how about IME?
     }
 
     // Normal key processing

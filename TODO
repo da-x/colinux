@@ -12,10 +12,6 @@
 
  * COFB:
    * FIXME: Host blue screen when guest power down after guest reboot.
-   * Merge with covideo, point colinux_con to cofb so that we don't need cocon.
-     Since once framebuffer is ready, fbcon will be used. Also remove fix guest
-     kernel VM address for cofb.
-   * Merge devel-fltk-console, so that cofb can be disabled.
    * Implement mouse handling X module, ref. vbmouse in vbox.
    * Make screen scroll bar out of guest mouse region.
    * menu->view->fit height to better use 16x9 notebook screen space.
