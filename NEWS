@@ -20,6 +20,7 @@
 
   Buildsystem:
   * Suppress warnings from Python 2.6. (Shai Vaingast)
+  * Config variable changed from SOURCE_DIR to DOWNLOADS.
 
   Updated libraries and tools:
   * FLTK 1.1.10, fixes problems with Window border frame on Vista.
