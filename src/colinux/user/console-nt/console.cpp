@@ -8,10 +8,10 @@
  * the root directory.
  *
  */
- 
- /* 
+
+ /*
   * OS independent main window class.
-  * Used for building colinux-console-nt.exe 
+  * Used for building colinux-console-nt.exe
   */
 
 #include <stdlib.h>
@@ -74,7 +74,7 @@ co_rc_t console_window_t::parse_args(int argc, char** argv)
 	co_rc_t rc;
 
 	/* Default settings */
-	
+
 	rc = co_cmdline_params_alloc(&argv[1], argc-1, &cmdline);
 	if (!CO_OK(rc)) {
 		co_terminal_print("console: error parsing arguments\n");
@@ -84,7 +84,7 @@ co_rc_t console_window_t::parse_args(int argc, char** argv)
 	rc = co_cmdline_params_one_arugment_int_parameter(
 			cmdline,
 			"-a",
-			NULL, 
+			NULL,
 			&start_parameters.attach_id);
 
 	if (!CO_OK(rc)) {
@@ -134,19 +134,19 @@ co_rc_t console_window_t::send_ctrl_alt_del()
 		co_linux_message_t	 linux_msg;
 		co_linux_message_power_t data;
 	} message;
-	
+
 	message.message.from     = CO_MODULE_DAEMON;
 	message.message.to       = CO_MODULE_LINUX;
 	message.message.priority = CO_PRIORITY_IMPORTANT;
 	message.message.type     = CO_MESSAGE_TYPE_OTHER;
 	message.message.size     = sizeof(message.linux_msg) + sizeof(message.data);
-	
+
 	message.linux_msg.device = CO_DEVICE_POWER;
 	message.linux_msg.unit   = 0;
 	message.linux_msg.size   = sizeof(message.data);
-	
+
 	message.data.type = CO_LINUX_MESSAGE_POWER_ALT_CTRL_DEL;
-	
+
 	co_user_monitor_message_send(message_monitor, &message.message);
 
 	return CO_RC(OK);
@@ -204,10 +204,10 @@ co_rc_t console_window_t::attach()
 	if (attached)
 		return CO_RC(ERROR);
 
-	rc = co_user_monitor_open(reactor, 
+	rc = co_user_monitor_open(reactor,
 				  message_receive,
 				  instance_id,
-				  modules, 
+				  modules,
 				  sizeof(modules) / sizeof(co_module_t),
 				  &message_monitor);
 	if (!CO_OK(rc)) {
@@ -230,7 +230,7 @@ co_rc_t console_window_t::attach()
 	rc = widget->set_window(this);
 	if (!CO_OK(rc))
 		return rc;
-	
+
 	widget->redraw();
 	widget->title("Console - Cooperative Linux - [To Exit, Press Window+Alt Keys]");
 
@@ -246,7 +246,7 @@ co_rc_t console_window_t::detach()
 
 	widget->update();
 
-	co_user_monitor_close(message_monitor);	
+	co_user_monitor_close(message_monitor);
 	message_monitor = NULL;
 
 	widget->set_console(0);
@@ -264,9 +264,10 @@ void console_window_t::event(co_message_t *message)
 {
 	switch (message->from) {
 
+	case CO_MODULE_MONITOR:
 	case CO_MODULE_LINUX:{
 		co_console_message_t* console_message;
-		
+
 		console_message = (typeof(console_message)) (message->data);
 		widget->event(console_message);
 		break;

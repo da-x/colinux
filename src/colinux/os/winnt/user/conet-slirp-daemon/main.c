@@ -8,7 +8,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <windows.h>
 #include <stdint.h>
@@ -24,11 +24,11 @@ static HANDLE slirp_mutex;
 co_rc_t co_slirp_mutex_init (void)
 {
 	slirp_mutex = CreateMutex(NULL, FALSE, NULL);
-	if (slirp_mutex == NULL) { 
+	if (slirp_mutex == NULL) {
 		co_terminal_print("conet-slirp-daemon: Mutex creating failed\n");
 		return CO_RC(ERROR);
 	}
-	return CO_RC(OK);	
+	return CO_RC(OK);
 }
 
 void co_slirp_mutex_destroy (void)
@@ -47,7 +47,7 @@ void co_slirp_mutex_unlock (void)
 }
 
 int main(int argc, char *argv[])
-{	
+{
 	co_rc_t rc;
 
 	rc = co_slirp_main(argc, argv);

@@ -18,7 +18,7 @@
 # nm also usable), bc (command line calcualtor), sed, tr, cut, paste.
 #
 # Example from "!analyze -v" of minidump, before converted...
-# STACK_TEXT:  
+# STACK_TEXT:
 # b090bb38 ad06a8a2 89ff9278 00000000 000000a2 nt!KeReleaseMutex+0x14
 # b090bb58 ad063e6b 89ff9278 00000000 b090bb98 linux+0xa8a2
 # b090bb78 ad06451e 87d2cea0 87e98f90 000000a2 linux+0x3e6b
@@ -27,7 +27,7 @@
 # b090bb38 ad06a8a2 89ff9278 00000000 000000a2 nt!KeReleaseMutex+0x14
 # b090bb58 ad063e6b 89ff9278 00000000 b090bb98 linux!co_os_mutex_release+0x12 (linux+0xa8a2)
 # b090bb78 ad06451e 87d2cea0 87e98f90 000000a2 linux!put_section+0x2B (linux+0x3e6b)
-# 
+#
 # Henry Nestler (c), 2007
 # #######################
 

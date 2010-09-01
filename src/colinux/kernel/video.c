@@ -156,7 +156,7 @@ co_rc_t co_video_attach(co_monitor_t *cmon, co_monitor_ioctl_video_t *params) {
 	if (!dp) return CO_RC(ERROR);
 
 	npages = dp->size >> CO_ARCH_PAGE_SHIFT;
-	/* XXX vid size is in meg - this isnt really necessary 
+	/* XXX vid size is in meg - this isnt really necessary
 	if ((npages * CO_ARCH_PAGE_SIZE) < dp->size) npages++; */
 
 	rc = co_os_userspace_map(dp->buffer, npages, &params->address, &params->handle);
@@ -180,7 +180,7 @@ co_rc_t co_video_detach(co_monitor_t *cmon, co_monitor_ioctl_video_t *params) {
 	if (!dp) return CO_RC(ERROR);
 
 	npages = dp->size >> CO_ARCH_PAGE_SHIFT;
-	/* XXX vid size is in meg - this isnt really necessary 
+	/* XXX vid size is in meg - this isnt really necessary
 	if ((npages * CO_ARCH_PAGE_SIZE) < dp->size) npages++; */
 
 	co_os_userspace_unmap(params->address, params->handle, npages);

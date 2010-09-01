@@ -45,7 +45,7 @@ co_rc_t co_os_userspace_map(void *address, unsigned int pages, void **user_addre
 		co_debug("error: co_os_userspace_map: open /dev/kmem failed");
 		return CO_RC(ERROR);
 	}
-	
+
 	pa = co_os_virt_to_phys(address);
 	if (!pa) {
 		co_debug("error: co_os_userspace_map: co_os_virt_to_phys failed");
@@ -53,8 +53,8 @@ co_rc_t co_os_userspace_map(void *address, unsigned int pages, void **user_addre
 		return CO_RC(ERROR);
 	}
 
-	result = (void *)do_mmap_pgoff(filp, 0, ((unsigned long)pages) << PAGE_SHIFT, 
-					     PROT_EXEC | PROT_READ | PROT_WRITE, 
+	result = (void *)do_mmap_pgoff(filp, 0, ((unsigned long)pages) << PAGE_SHIFT,
+					     PROT_EXEC | PROT_READ | PROT_WRITE,
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,12)
 					     MAP_SHARED,
 #else

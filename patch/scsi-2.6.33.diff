@@ -1,0 +1,164 @@
+Index: linux-2.6.33-source/drivers/scsi/Kconfig
+===================================================================
+--- linux-2.6.33-source.orig/drivers/scsi/Kconfig
++++ linux-2.6.33-source/drivers/scsi/Kconfig
+@@ -262,6 +262,7 @@
+ 	default m
+ 	depends on SCSI
+ 	depends on MODULES
++	depends on !COOPERATIVE
+ # scsi_wait_scan is a loadable module which waits until all the async scans are
+ # complete.  The idea is to use it in initrd/ initramfs scripts.  You modprobe
+ # it after all the modprobes of the root SCSI drivers and it will wait until
+@@ -340,6 +341,12 @@
+ 
+ if SCSI_LOWLEVEL && SCSI
+ 
++config SCSI_COOPERATIVE
++	bool "Cooperative Linux support"
++	depends on COOPERATIVE
++	help
++	  SCSI Driver for Cooperative Linux
++
+ config ISCSI_TCP
+ 	tristate "iSCSI Initiator over TCP/IP"
+ 	depends on SCSI && INET
+Index: linux-2.6.33-source/drivers/scsi/Makefile
+===================================================================
+--- linux-2.6.33-source.orig/drivers/scsi/Makefile
++++ linux-2.6.33-source/drivers/scsi/Makefile
+@@ -58,6 +58,7 @@
+ obj-$(CONFIG_SCSI_SIM710)	+= 53c700.o	sim710.o
+ obj-$(CONFIG_SCSI_ADVANSYS)	+= advansys.o
+ obj-$(CONFIG_SCSI_BUSLOGIC)	+= BusLogic.o
++obj-$(CONFIG_SCSI_COOPERATIVE)	+= coscsi.o
+ obj-$(CONFIG_SCSI_DPT_I2O)	+= dpt_i2o.o
+ obj-$(CONFIG_SCSI_U14_34F)	+= u14-34f.o
+ obj-$(CONFIG_SCSI_ARCMSR)	+= arcmsr/
+Index: linux-2.6.33-source/include/linux/blkdev.h
+===================================================================
+--- linux-2.6.33-source.orig/include/linux/blkdev.h
++++ linux-2.6.33-source/include/linux/blkdev.h
+@@ -1011,7 +1011,11 @@
+ 
+ extern int blk_verify_command(unsigned char *cmd, fmode_t has_write_perm);
+ 
++#ifdef CONFIG_COOPERATIVE
++#define MAX_PHYS_SEGMENTS 256
++#else
+ #define MAX_PHYS_SEGMENTS 128
++#endif
+ #define MAX_HW_SEGMENTS 128
+ #define SAFE_MAX_SECTORS 255
+ #define BLK_DEF_MAX_SECTORS 1024
+Index: linux-2.6.33-source/drivers/scsi/coscsi.c
+===================================================================
+--- linux-2.6.33-source.orig/drivers/scsi/coscsi.c
++++ linux-2.6.33-source/drivers/scsi/coscsi.c
+@@ -9,10 +9,6 @@
+ #include <linux/pci.h>
+ #include <linux/delay.h>
+ 
+-#include <asm/system.h>
+-#include <asm/dma-mapping.h>
+-#include <asm/string.h>
+-
+ #include <scsi/scsi.h>
+ #include <scsi/scsi_cmnd.h>
+ #include <scsi/scsi_device.h>
+@@ -28,7 +24,7 @@
+ /* Special pass through type */
+ #define TYPE_PASS 0x1f
+ 
+-#define COSCSI_VERSION "1.01"
++#define COSCSI_VERSION "1.02"
+ 
+ MODULE_AUTHOR("Steve Shoecraft <sshoecraft@earthlink.net>");
+ MODULE_DESCRIPTION("Cooperative Linux SCSI Driver " COSCSI_VERSION);
+@@ -244,6 +240,38 @@
+ static unsigned int max_xfer = 4096;
+ #endif
+ 
++static inline int coscsi_map_sg(struct scatterlist *sgl, int sg_count)
++{
++	unsigned char *virt;
++	size_t sg_len = 0;
++	struct scatterlist *sg;
++	int i;
++
++	// Set dma_address for old host driver
++	for_each_sg(sgl, sg, sg_count, i) {
++		virt = kmap_atomic(sg_page(sg), KM_SOFTIRQ0);
++		sg->dma_address = __pa(virt) + sg->offset;
++		sg_len += sg->length;
++#if COSCSI_DEBUG_HOST
++		printk(KERN_INFO "coscsi_map_sg: sg:%p virt:%p sg->len:%d i:%d sg_count:%d sg->offset:%zx\n",
++			                            sg,     virt,     sg->length, i, sg_count, sg->offset);
++#endif
++		BUG_ON(!virt);
++	}
++
++	return i;
++}
++
++static inline void coscsi_unmap_sg(struct scatterlist *sgl, int sg_count)
++{
++	struct scatterlist *sg;
++	int i;
++
++	for_each_sg(sgl, sg, sg_count, i) {
++		scsi_kunmap_atomic_sg(__va(sgl->dma_address - sg->offset));
++	}
++}
++
+ /*
+  * Read/Write block(s)
+ */
+@@ -257,7 +285,8 @@
+ 	int count,rc,total;
+ 
+ #if COSCSI_DEBUG_HOST
+-	if (wp->dp->debug) printk(KERN_INFO "host_rw: lba: %lld, sector_size: %d, num: %ld, write: %d\n",
++	if (wp->dp->debug) printk(KERN_INFO "host_rw: sg:%p count:%d lba: %lld, sector_size: %d, num: %ld, write: %d\n",
++		sg, scsi_sg_count(scp),
+ 		lba, scp->device->sector_size, num, write);
+ #endif
+ 
+@@ -267,11 +296,13 @@
+ 	}
+ 
+ 	/* XXX needed when clustering is enabled */
+-	count = dma_map_sg(&scp->device->host->shost_gendev, sg, scsi_sg_count(scp), scp->sc_data_direction);
++	local_irq_save(flags);
++	count = coscsi_map_sg(sg, scsi_sg_count(scp));
++	BUG_ON(!count);
+ 
+ 	/* Get passage page */
+ 	co_passage_page_assert_valid();
+-	co_passage_page_acquire(&flags);
++	co_passage_page_ref_up(); /* aka co_passage_page_acquire */
+ 	co_passage_page->operation = CO_OPERATION_DEVICE;
+ 	co_passage_page->params[0] = CO_DEVICE_SCSI;
+ 	co_passage_page->params[1] = CO_SCSI_IO;
+@@ -290,9 +321,10 @@
+ 	co_switch_wrapper();
+ 
+ 	rc = co_passage_page->params[0];
+-	co_passage_page_release(flags);
++	co_passage_page_ref_down(); /* aka co_passage_page_release */
+ 
+-	dma_unmap_sg(&scp->device->host->shost_gendev, sg, scsi_sg_count(scp), scp->sc_data_direction);
++	coscsi_unmap_sg(sg, scsi_sg_count(scp));
++	local_irq_restore(flags);
+ 
+ #if COSCSI_DUMP_STATS
+ 	if (rc == GOOD) {
+@@ -952,7 +984,7 @@
+ 	case TYPE_ROM:
+ 	case TYPE_WORM:
+ 		/* XXX required to get rid of "unaligned transfer" errors */
+-		blk_queue_hardsect_size(sdev->request_queue, 2048);
++	        blk_queue_logical_block_size(sdev->request_queue, 2048);
+ 		break;
+ 	default:
+ 		break;

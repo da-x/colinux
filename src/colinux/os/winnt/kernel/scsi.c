@@ -186,9 +186,9 @@ typedef struct {
 	xfer_func_t func;
 } scsi_transfer_file_block_data_t;
 
-static co_rc_t scsi_transfer_file_block(co_monitor_t *cmon, 
-				  void *host_data, void *linuxvm, 
-				  unsigned long size, 
+static co_rc_t scsi_transfer_file_block(co_monitor_t *cmon,
+				  void *host_data, void *linuxvm,
+				  unsigned long size,
 				  co_monitor_transfer_dir_t dir)
 {
 	IO_STATUS_BLOCK isb;
@@ -198,7 +198,7 @@ static co_rc_t scsi_transfer_file_block(co_monitor_t *cmon,
 	status = data->func(data->file_handle,
 				NULL,
 				NULL,
-				NULL, 
+				NULL,
 				&isb,
 				linuxvm,
 				size,
@@ -253,7 +253,10 @@ static int _scsi_dio(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 				sg->dma_address + CO_ARCH_KERNEL_OFFSET,
 				sg->length,
 				0);
-		if (!CO_OK(rc))	break;
+		if (!CO_OK(rc))	{
+			co_debug("scsi_io: error transfer rc:%x", (unsigned int)rc);
+			break;
+		}
 	}
 
 	co_monitor_host_linuxvm_transfer_unmap(r->mp, sg_page, sg_pfn);

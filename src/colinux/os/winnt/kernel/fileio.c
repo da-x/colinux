@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include "ddk.h"
 #include <ddk/ntifs.h>
@@ -61,7 +61,7 @@ co_rc_t co_status_convert(NTSTATUS status)
 	case STATUS_END_OF_FILE:
 	case STATUS_PENDING:
 	case STATUS_SUCCESS: return CO_RC(OK);
-	case STATUS_NO_SUCH_FILE: 
+	case STATUS_NO_SUCH_FILE:
 	case STATUS_OBJECT_NAME_NOT_FOUND: return CO_RC(NOT_FOUND);
 	case STATUS_CANNOT_DELETE:
 	case STATUS_ACCESS_DENIED: return CO_RC(ACCESS_DENIED);
@@ -73,7 +73,7 @@ co_rc_t co_status_convert(NTSTATUS status)
 co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned long open_flags,
 			  unsigned long file_attribute, unsigned long create_disposition,
 			  unsigned long options)
-{    
+{
 	NTSTATUS status;
 	OBJECT_ATTRIBUTES ObjectAttributes;
 	IO_STATUS_BLOCK IoStatusBlock;
@@ -84,13 +84,13 @@ co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned long open
 	if (!CO_OK(rc))
 		return rc;
 
-	InitializeObjectAttributes(&ObjectAttributes, 
+	InitializeObjectAttributes(&ObjectAttributes,
 				   &unipath,
 				   OBJ_CASE_INSENSITIVE,
 				   NULL,
 				   NULL);
 
-	status = ZwCreateFile(FileHandle, 
+	status = ZwCreateFile(FileHandle,
 			      open_flags,
 			      &ObjectAttributes,
 			      &IoStatusBlock,
@@ -112,12 +112,12 @@ co_rc_t co_os_file_create(char *pathname, PHANDLE FileHandle, unsigned long open
 }
 
 co_rc_t co_os_file_open(char *pathname, PHANDLE FileHandle, unsigned long open_flags)
-{   
+{
 	return co_os_file_create(pathname, FileHandle, open_flags | SYNCHRONIZE, 0, FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT);
 }
 
 co_rc_t co_os_file_close(PHANDLE FileHandle)
-{    
+{
 	NTSTATUS status;
 
 	status = ZwClose(FileHandle);
@@ -177,7 +177,7 @@ co_rc_t co_os_set_file_information(char *filename,
 	return co_status_convert(status);
 }
 
-co_rc_t co_os_file_read_write(co_monitor_t *linuxvm, char *filename, 
+co_rc_t co_os_file_read_write(co_monitor_t *linuxvm, char *filename,
 			      unsigned long long offset, unsigned long size,
 			      vm_ptr_t src_buffer, bool_t read)
 {
@@ -271,15 +271,15 @@ co_rc_t co_os_file_set_attr(char *filename, unsigned long valid, struct fuse_att
 
 	if (valid & FATTR_SIZE) {
 		FILE_END_OF_FILE_INFORMATION feofi;
-		
+
 		feofi.EndOfFile.QuadPart = attr->size;
 
 		rc = co_os_set_file_information(filename, &io_status, &feofi,
 						sizeof(feofi), FileEndOfFileInformation);
-	} 
+	}
 
 	return rc;
-} 
+}
 
 co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 {
@@ -382,7 +382,7 @@ co_rc_t co_os_file_get_attr(char *fullname, struct fuse_attr *attr)
 						      &entry_buffer, sizeof(entry_buffer),
 						      FileBothDirectoryInformation, PTRUE, &filename_unicode,
 						      PTRUE);
-			
+
 			if (!NT_SUCCESS(status)) {
 				co_debug_lvl(filesystem, 5, "error %x ZwQueryDirectoryFile('%s')", (int)status, filename);
 				rc = co_status_convert(status);
@@ -465,7 +465,7 @@ co_rc_t co_os_file_unlink(char *filename)
 	if (!CO_OK(rc))
 		return rc;
 
-	InitializeObjectAttributes(&ObjectAttributes, 
+	InitializeObjectAttributes(&ObjectAttributes,
 				   &unipath,
 				   OBJ_CASE_INSENSITIVE,
 				   NULL,
@@ -478,7 +478,7 @@ co_rc_t co_os_file_unlink(char *filename)
 		FILE_BASIC_INFORMATION fbi;
 		IO_STATUS_BLOCK io_status;
 		int changed = 0;
-			
+
 		rc = co_os_change_file_information(filename, &io_status,
 						   &fbi, sizeof(fbi),
 						   FileBasicInformation,
@@ -565,7 +565,7 @@ co_rc_t co_os_file_rename(char *filename, char *dest_filename)
 		FILE_BASIC_INFORMATION fbi;
 		co_rc_t rc;
 		int changed = 0;
-			
+
 		// Remove readonly attribute and try again
 		rc = co_os_change_file_information(dest_filename, &io_status,
 						   &fbi, sizeof(fbi),
@@ -643,10 +643,10 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 				   OBJ_CASE_INSENSITIVE, NULL, NULL);
 
 	status = ZwCreateFile(&handle, FILE_LIST_DIRECTORY,
-			      &attributes, &io_status, NULL, 0, FILE_SHARE_DIRECTORY, 
-			      FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT | FILE_DIRECTORY_FILE, 
+			      &attributes, &io_status, NULL, 0, FILE_SHARE_DIRECTORY,
+			      FILE_OPEN, FILE_SYNCHRONOUS_IO_NONALERT | FILE_DIRECTORY_FILE,
 			      NULL, 0);
-	
+
 	if (!NT_SUCCESS(status)) {
 		co_debug_lvl(filesystem, 5, "error %x ZwCreateFile('%s')", (int)status, dirname);
 		rc = co_status_convert(status);
@@ -660,17 +660,17 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 	}
 
 	for (;;) {
-		status = ZwQueryDirectoryFile(handle, NULL, NULL, 0, &io_status, 
-					      dir_entries_buffer, dir_entries_buffer_size, 
+		status = ZwQueryDirectoryFile(handle, NULL, NULL, 0, &io_status,
+					      dir_entries_buffer, dir_entries_buffer_size,
 					      FileDirectoryInformation, FALSE, NULL, first_iteration);
 		if (!NT_SUCCESS(status))
 			break;
 
 		entry = dir_entries_buffer;
-  
+
 		for (;;) {
 			int filename_utf8_length;
-			
+
 			filename_utf8_length = co_utf8_wctowbstrlen(entry->FileName, entry->FileNameLength/sizeof(WCHAR));
 
 			new_name = co_os_malloc(filename_utf8_length + sizeof(co_filesystem_name_t) + 2);
@@ -678,7 +678,7 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 				rc = CO_RC(OUT_OF_MEMORY);
 				goto error_2;
 			}
-			
+
 			if (entry->FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 				new_name->type = FUSE_DT_DIR;
 			else
@@ -693,7 +693,7 @@ co_rc_t co_os_file_getdir(char *dirname, co_filesystem_dir_names_t *names)
 			co_list_add_tail(&new_name->node, &names->list);
 			if (entry->NextEntryOffset == 0)
 				break;
-			
+
 			entry = (FILE_DIRECTORY_INFORMATION *)(((char *)entry) + entry->NextEntryOffset);
 		}
 
@@ -726,22 +726,22 @@ co_rc_t co_os_file_fs_stat(co_filesystem_t *filesystem, struct fuse_statfs_out *
 	co_rc_t rc;
 	int len;
 	int loop = 2;
-	
+
 	memcpy(&pathname, &filesystem->base_path, sizeof(co_pathname_t));
 	co_os_fs_add_last_component(&pathname);
 
 	len = strlen(pathname);
 	do {
 		rc = co_os_file_create(pathname,
-				&handle, 
+				&handle,
 				FILE_LIST_DIRECTORY | SYNCHRONIZE,
 				0,
 				FILE_OPEN,
 				FILE_DIRECTORY_FILE | FILE_OPEN_FOR_FREE_SPACE_QUERY | FILE_SYNCHRONOUS_IO_NONALERT);
-		
-		if (CO_OK(rc)) 
+
+		if (CO_OK(rc))
 			break;
-		
+
 		while (len > 0  &&  pathname[len-1] != '\\')
 			len--;
 

@@ -3,7 +3,7 @@
 #
 # This file will source from toplevel Makefile and scripts.
 # It's no designed to execute directly.
-# 
+#
 # - Dan Aloni <da-x@colinux.org>
 #
 
@@ -91,8 +91,8 @@ W32API_ARCHIVE=$W32API-dev.tar.gz
 #W32API_PATCH="patch/$W32API_SRC.diff"
 
 
-FLTK_VERSION="1.1.6"
-FLTK_URL=http://heanet.dl.sourceforge.net/sourceforge/fltk 
+FLTK_VERSION="1.1.10"
+FLTK_URL=http://ftp.funet.fi/pub/mirrors/ftp.easysw.com/pub/fltk/$FLTK_VERSION
 FLTK=fltk-$FLTK_VERSION
 FLTK_ARCHIVE=$FLTK-source.tar.bz2
 FLTK_PATCH="patch/$FLTK-win32.diff"
@@ -129,7 +129,7 @@ KERNEL_URL=http://www.kernel.org/pub/linux/kernel/$KERNEL_DIR
 KERNEL_ARCHIVE=$KERNEL.tar.bz2
 
 CO_VERSION=`cat $TOPDIR/src/colinux/VERSION`
-COMPLETE_KERNEL_NAME=$KERNEL_VERSION-co-$CO_VERSION
+COMPLETE_KERNEL_NAME=$KERNEL_VERSION-co-$CO_VERSION$COLINUX_SVN_REVISION
 
 # Set defaults
 if [ -z "$COLINUX_TARGET_KERNEL_SOURCE" -a -z "$COLINUX_TARGET_KERNEL_BUILD" ]
@@ -153,41 +153,41 @@ KERNEL_CHECKSUM="$MD5DIR/.build-kernel.md5"
 
 # coLinux kernel we are targeting
 if [ -z "$KERNEL_VERSION" -o -z "$KERNEL_DIR" ] ; then
-    # What's wrong here?
-    cat >&2 <<EOF
+	# What's wrong here?
+	cat >&2 <<EOF
 	Failed: \$KERNEL_VERSION or \$KERNEL_DIR
 	Can't find the kernel patch, probably wrong script,
 	or file patch/series-* don't exist?
 EOF
-    exit -1
+	exit -1
 fi
 
 # Get variables only? Then end here.
 if [ "$1" = "--get-vars" ]; then
-    return
+	return
 fi
 
 # where does it go?
 if [ -z "$PREFIX" ] ; then
-    echo "Please specify the $""PREFIX directory in user-build.cfg (e.g, /home/$USER/mingw32)"
-    exit -1
+	echo "Please specify the $""PREFIX directory in user-build.cfg (e.g, /home/$USER/mingw32)"
+	exit -1
 fi
 
 # where does it go?
-if [ -z "$SOURCE_DIR" ] ; then
-    echo "Please specify the $""SOURCE_DIR directory in user-build.cfg (e.g, /tmp/$USER/download)"
-    exit -1
+if [ -z "$DOWNLOADS" ] ; then
+	echo "Please specify the $""DOWNLOADS directory in user-build.cfg (e.g, /tmp/$USER/download)"
+	exit -1
 fi
 
 # where does it go?
 if [ -z "$BUILD_DIR" ] ; then
-    echo "Please specify the $""BUILD_DIR directory in user-build.cfg (e.g, /tmp/$USER/build)"
-    exit -1
+	echo "Please specify the $""BUILD_DIR directory in user-build.cfg (e.g, /tmp/$USER/build)"
+	exit -1
 fi
 
 # Default path to modules
 if [ -z "$COLINUX_TARGET_MODULE_PATH" ] ; then
-    COLINUX_TARGET_MODULE_PATH="$COLINUX_TARGET_KERNEL_BUILD/_install"
+	COLINUX_TARGET_MODULE_PATH="$COLINUX_TARGET_KERNEL_BUILD/_install"
 fi
 
 # Default logfile of building (Append), can overwrite in user-build.cfg
@@ -224,10 +224,10 @@ download_file()
 		exit 1
 	fi
 
-	if [ ! -f "$SOURCE_DIR/$1" ]
+	if [ ! -f "$DOWNLOADS/$1" ]
 	then
-		mkdir -p "$SOURCE_DIR"
-		cd "$SOURCE_DIR"
+		mkdir -p "$DOWNLOADS"
+		cd "$DOWNLOADS"
 		echo "Downloading $1"
 		if ! wget "$2/$1"
 		then
@@ -236,9 +236,9 @@ download_file()
 			test -f $1 && mv $1 $1.incomplete
 			exit 1
 		fi
-  		cd "$BINDIR"
+		cd "$BINDIR"
 	else
-		echo "Found $1 in the srcdir $SOURCE_DIR"
+		echo "Found $1 in the srcdir $DOWNLOADS"
 	fi
 }
 
@@ -248,7 +248,7 @@ tar_unpack_to()
 {
 	local tool
 
-	case "$SOURCE_DIR/$1" in
+	case "$DOWNLOADS/$1" in
 		*.tar.gz|*.tgz)
 			tool=gzip
 		;;
@@ -263,7 +263,7 @@ tar_unpack_to()
 
 	mkdir -p "$2"
 	cd "$2"
-	$tool -dc "$SOURCE_DIR/$1" | tar x \
+	$tool -dc "$DOWNLOADS/$1" | tar x \
 	|| { echo "unpack failed for $1" >&2; exit 1; }
 }
 
@@ -316,7 +316,7 @@ strip_kernel()
 		# Function not found by grep
 		echo -e "\nWARNING: $FROM_SOURCE" >&2
 		echo -e "Can't get symbols for stripping! Don't strip vmlinux\n" >&2
-			
+
 		# Fallback into copy mode
 		cp -a $1 $2
 	fi
@@ -333,7 +333,7 @@ build_package()
 	local MODULES_TGZ=$COLINUX_INSTALL_DIR/modules-$COMPLETE_KERNEL_NAME-$DATE.tgz
 	local EXE_DIR="$TOPDIR/src/colinux/os/winnt/build"
 	local PREMAID="$TOPDIR/src/colinux/os/winnt/user/install/premaid"
-	
+
 	echo "Create ZIP packages into $COLINUX_INSTALL_DIR"
 	mkdir -p $COLINUX_INSTALL_DIR
 
@@ -377,5 +377,5 @@ build_package()
 
 	# Copy modules file
 	echo "Installing Modules $KERNEL_VERSION in $COLINUX_INSTALL_DIR"
-        cp -p $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz $MODULES_TGZ
+	cp -p $COLINUX_TARGET_KERNEL_BUILD/vmlinux-modules.tar.gz $MODULES_TGZ
 }

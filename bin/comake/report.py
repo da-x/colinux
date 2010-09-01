@@ -3,7 +3,7 @@ class Report(object):
         self._indent = 0
         self._parent = None
         self._title = 'None'
-        self._title_printed = False        
+        self._title_printed = False
 
     def title(self, title):
         self._title = title
@@ -22,4 +22,4 @@ class Report(object):
 
     def print_text(self, text):
         print (self._indent*'  ') + text
-            
+

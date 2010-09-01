@@ -5,11 +5,11 @@
  *
  * Service support by Jaroslaw Kowalski <jaak@zd.com.pl>, 2004 (c)
  * Driver service separation by Daniel R. Slater <dan_slater@yahoo.com>, 2004 (c)
- * 
+ *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <windows.h>
 #include <winsvc.h>
@@ -88,7 +88,7 @@ void co_winnt_change_directory_for_service(int argc, char **argv)
 {
 	char *p;
 	static const char run_service []= { "--run-service" };
-	
+
 	while (*argv && argc--) {
 		p = *argv++;
 		if (0 == strncmp(p, run_service, sizeof(run_service)-1)) {
@@ -161,8 +161,8 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char 
 	char command[1024];
 	char patched_commandline[MAX_CMD_LINE_PATCHED];
 
-	/* 
-	 * The coLinux driver that the colinux service depends on - needs 
+	/*
+	 * The coLinux driver that the colinux service depends on - needs
 	 * to be double-null terminated
 	 */
 
@@ -195,12 +195,12 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char 
 		memcpy(dependency_names + len, "NPF\0", 4);
 	}
 
-	schService = CreateService(schSCManager, service_name, service_name, 
-				   SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START, 
-				   SERVICE_ERROR_NORMAL, command, NULL, NULL, dependency_names, 
+	schService = CreateService(schSCManager, service_name, service_name,
+				   SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS, SERVICE_DEMAND_START,
+				   SERVICE_ERROR_NORMAL, command, NULL, NULL, dependency_names,
 				   NULL, NULL);
 
-	if (schService != 0) {	
+	if (schService != 0) {
 	        co_winnt_set_service_restart_options(schService);
 		co_terminal_print("daemon: service installed.\n");
 		CloseServiceHandle(schService);
@@ -214,7 +214,7 @@ co_rc_t co_winnt_daemon_install_as_service(const char *service_name, const char 
 	return CO_RC(ERROR);
 }
 
-co_rc_t co_winnt_daemon_remove_service(const char *service_name) 
+co_rc_t co_winnt_daemon_remove_service(const char *service_name)
 {
 	SC_HANDLE schService;
 	SC_HANDLE schSCManager;
@@ -296,7 +296,7 @@ void WINAPI co_winnt_service_control_callback(DWORD dwCtrlCode)
 	co_winnt_sc_report_status(ssStatus.dwCurrentState, NO_ERROR, 0);
 }
 
-static void WINAPI service_main(int _argc, char** _argv) 
+static void WINAPI service_main(int _argc, char** _argv)
 {
 	sshStatusHandle = RegisterServiceCtrlHandler("", co_winnt_service_control_callback);
 
@@ -312,7 +312,7 @@ static void WINAPI service_main(int _argc, char** _argv)
 	}
 }
 
-bool_t co_winnt_daemon_initialize_service(co_start_parameters_t* start_parameters) 
+bool_t co_winnt_daemon_initialize_service(co_start_parameters_t* start_parameters)
 {
 	SERVICE_TABLE_ENTRY dispatch_table[] = {
 		{ "", (LPSERVICE_MAIN_FUNCTION)service_main },
@@ -364,6 +364,6 @@ void co_ntevent_print(const char* format, ...)
 		szMsgs,				// Message Strings
 		NULL) == 0) 			// Address of Data
 		co_terminal_print_last_error("Error reporting to Event Log!");
-	
+
 	DeregisterEventSource(hEventLog);
 }

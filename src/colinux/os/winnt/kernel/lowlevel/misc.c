@@ -15,7 +15,7 @@
 unsigned long co_os_virt_to_phys(void *addr)
 {
 	PHYSICAL_ADDRESS pa;
-    
+
 	pa = MmGetPhysicalAddress((PVOID)addr);
 
 	return pa.QuadPart;
@@ -30,11 +30,11 @@ co_rc_t co_os_physical_memory_pages(unsigned long *pages)
 	status = NtQuerySystemInformation(SystemBasicInformation, &sbi, sizeof(sbi), NULL);
 	if (status != STATUS_SUCCESS)
 		return CO_RC(ERROR);
-	
+
 	*pages = sbi.NumberOfPhysicalPages;
 
-	/* 
-	 * Round to 16 MB boundars, since Windows doesn't return the 
+	/*
+	 * Round to 16 MB boundars, since Windows doesn't return the
 	 * exact amount but a bit lower.
 	 */
 	*pages = ~0xfff & ((*pages) + 0xfff);

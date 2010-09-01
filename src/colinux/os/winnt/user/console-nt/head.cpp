@@ -8,9 +8,9 @@
  *
  */
 
- /* 
+ /*
   * WinNT dependent main program for the text mode console.
-  * Used for building colinux-console-nt.exe 
+  * Used for building colinux-console-nt.exe
   */
 #include <windows.h>
 
@@ -32,7 +32,7 @@ int main(int argc, char** argv)
 
 	if (global_window == NULL) {
 		co_terminal_print("Unable to create console window");
-		return -1; 
+		return -1;
 	}
 
 	try {

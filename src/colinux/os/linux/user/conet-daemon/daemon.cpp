@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <stdio.h>
 #include <unistd.h>
@@ -62,10 +62,10 @@ int tap_alloc(char *dev)
 {
 	int fd;
 	int ret;
-	
+
 	if ((fd = open("/dev/net/tun", O_RDWR)) < 0)
 		return -1;
-	
+
 	ret = tap_set_name(fd, dev);
 	if (ret < 0) {
 		close(fd);
@@ -90,7 +90,7 @@ void user_network_tap_daemon_t::prepare_for_loop()
 
 	tap_daemon = this;
 
-	if (!tap_name_specified) { 
+	if (!tap_name_specified) {
 		snprintf(tap_name, sizeof(tap_name), "conet-host-%d-%d", (int)param_instance, param_index);
 	}
 
@@ -142,7 +142,7 @@ void user_network_tap_daemon_t::syntax()
 
 
 int main(int argc, char *argv[])
-{	
+{
 	user_daemon_t *daemon = 0;
 
 	co_debug_start();
@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
 		daemon = new user_network_tap_daemon_t;
 		daemon->run(argc, argv);
 	} catch (user_daemon_exception_t e) {
-		
+
 	}
 
 	if (daemon)

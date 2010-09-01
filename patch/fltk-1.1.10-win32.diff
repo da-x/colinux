@@ -1,0 +1,28 @@
+#
+# X11 is disabled, don't try to find it
+#
+--- fltk-1.1.10/configure
++++ fltk-1.1.10/configure
+@@ -11222,7 +11222,7 @@
+ fi
+ 
+ 
+-	if test x$no_x = xyes; then
++	if test x$no_x = xyes -a x$have_x != xdisabled; then
+ 	    { { echo "$as_me:$LINENO: error: Configure could not find required X11 libraries" >&5
+ echo "$as_me: error: Configure could not find required X11 libraries" >&2;}
+    { (exit aborting.); exit aborting.; }; }
+#
+# Fix: undefined reference to `__TrackMouseEvent@4'
+#
+--- fltk-1.1.10/src/Fl_win32.cxx
++++ fltk-1.1.10/src/Fl_win32.cxx
+@@ -85,7 +85,7 @@
+ // means that the top level window has been left (otherwise we would have
+ // got another WM_MOUSEMOVE message before).
+ 
+-// #define NO_TRACK_MOUSE
++#define NO_TRACK_MOUSE
+ 
+ #if !defined(NO_TRACK_MOUSE)
+ # define USE_TRACK_MOUSE

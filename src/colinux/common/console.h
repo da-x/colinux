@@ -11,7 +11,7 @@
 #define __COLINUX_COMMON_CONSOLE__
 
 #ifndef __COLINUX_LINUX_CONFIG_H__ /* Exclude circullar "include" */
-# include "config.h" 
+# include "config.h"
 #endif
 
 #if defined __cplusplus
@@ -48,11 +48,11 @@ extern "C" {
  * from and to userspace (i.e, when attaching and detaching the
  * coLinux console).
  *
- * The type of console messages are defined in linux/cooperative.h 
+ * The type of console messages are defined in linux/cooperative.h
  * (as it is needed by the Linux code).
  */
 
-typedef struct co_console_cell { 
+typedef struct co_console_cell {
 	unsigned char ch;
 	unsigned char attr;
 } co_console_cell_t;
@@ -61,11 +61,14 @@ typedef struct co_console {
 	/* size of this struct */
 	unsigned long	size;
 
-        /* User defined configuration */ 
+        /* User defined configuration */
 	co_console_config_t config;
 
 	/* On-screen data */
 	co_console_cell_t* screen;
+
+	/* back log buffer */
+	co_console_cell_t* buffer;
 
 	/* Cursor position and height in percent
 	 * Defined in 'linux/cooperative.h' as x, y, height.
@@ -77,7 +80,7 @@ extern co_rc_t co_console_create(co_console_config_t* config_p,
 			  	 co_console_t**       console_out);
   /* Create the console object.
   */
-		                 
+
 extern co_rc_t co_console_op(co_console_t* console, co_console_message_t* message);
 extern void co_console_destroy(co_console_t* console);
 

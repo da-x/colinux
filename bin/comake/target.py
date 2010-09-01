@@ -1,8 +1,19 @@
-import os, copy, md5
+import os, copy, sys
+
+if sys.version_info[1]>=5:
+    # md5 is deprecated since Python version 2.5
+    # this will not work in version 3.x of Python but there's some time until then
+    import hashlib
+    use_hashlib = True
+else:
+    # for compatability reasons for those still using ver <= Python 2.4
+    import md5
+    use_hashlib = False
+
 from lib import normal_path
 
 class RawTarget(object):
-    def __init__(self, inputs=None, tool=None, options=None, mono_options=None, settings_options=None): 
+    def __init__(self, inputs=None, tool=None, options=None, mono_options=None, settings_options=None):
         self.inputs = inputs
         if inputs is None:
             self.inputs = []
@@ -66,7 +77,7 @@ class Target(object):
         self.hash = None
         self.built = False
         self.options = options
-        
+
         if not self.tool:
             from defaults import get_default_tool
             self.tool = get_default_tool(self)
@@ -75,7 +86,10 @@ class Target(object):
                 self.tool = Empty()
 
     def cache(self):
-        hasho = md5.md5()
+        if use_hashlib:
+            hasho = hashlib.md5()
+        else:
+            hasho = md5.md5()
         for inputo in self.inputs:
             hasho.update(inputo.hash)
         hasho.update(self.tool.cache(self))
@@ -85,7 +99,7 @@ class Target(object):
             return target_cache[self.hash]
         target_cache[self.hash] = self
         return self
-                
+
     def exists(self):
         return os.path.exists(self.pathname)
 
@@ -103,7 +117,7 @@ class Target(object):
     def _make(self, reporter):
         if os.path.islink(self.pathname):
             os.unlink(self.pathname)
-            
+
         self.tool.make(self, reporter)
         if self.tool.EMPTY:
             return
@@ -132,27 +146,27 @@ class Target(object):
 
         if not self.tool.EMPTY:
             statistics.targets += 1
-            
+
         if reporter is None:
             from report import Report
             reporter = Report()
 
         reporter.title(self.pathname)
-        
+
         rebuild_target = False
-        rebuild_reason = None        
-        
+        rebuild_reason = None
+
         builds = 0
         for tinput in self.inputs:
             builds += tinput.build(reporter.sub())
-            
+
         if os.path.islink(self.pathname):
             link = os.readlink(self.pathname)
             comake_shortname, comake_outdir, comake_pathname, comake_relname = self.filenames()
             if comake_relname != link:
                 os.unlink(self.pathname)
                 os.symlink(comake_relname, self.pathname)
-            
+
         if not os.path.exists(self.pathname):
             rebuild_target = True
             rebuild_reason = "target requires creation"
@@ -230,20 +244,20 @@ def get_global_dict():
         _globals_dict['getenv'] = os.getenv
         _globals_dict['BuildCancelError'] = BuildCancelError
         from comake.tools import exported_tools
-        for tool in exported_tools:            
+        for tool in exported_tools:
             _globals_dict[tool.__name__] = tool
     return _globals_dict
 
 def get_per_directory_comake_file(dirname):
     comake_file = _per_directory_comake_file.get(dirname)
     if comake_file:
-        return comake_file    
+        return comake_file
     comake_file = COMakeFile()
     from comake import DEFAULT_BUILD_NAME
     build_name = os.path.join(dirname, DEFAULT_BUILD_NAME)
     if not os.path.exists(build_name):
         return comake_file
-    
+
     globals_dict = dict(get_global_dict())
     def input_list(ext, new_ext):
         lst = []
@@ -252,14 +266,14 @@ def get_per_directory_comake_file(dirname):
             if ext_part == ext:
                 lst.append(RawInput(base_part + new_ext))
         return lst
-    
+
     def target_pathname(filename):
         return os.path.join(dirname, filename)
 
     def deftarget(filename):
         from comake.defaults import get_default_raw_target
         return get_default_raw_target(target_pathname(filename))
-                            
+
     globals_dict['input_list'] = input_list
     globals_dict['target_pathname'] = target_pathname
     globals_dict['deftarget'] = deftarget
@@ -267,7 +281,7 @@ def get_per_directory_comake_file(dirname):
     execfile(build_name, globals_dict, vars(comake_file))
     _per_directory_comake_file[dirname] = comake_file
     return comake_file
-    
+
 def get_raw_target(pathname):
     dirname = os.path.dirname(pathname)
     basename = os.path.basename(pathname)
@@ -281,7 +295,7 @@ def get_raw_target(pathname):
             if not os.path.islink(pathname):
                 return RawTarget()
             else:
-                print os.readlink(pathname)                
+                print os.readlink(pathname)
     return raw_target
 
 class TargetNotFoundError(Exception):
@@ -293,7 +307,7 @@ def create_target_tree(pathname):
         if not raw_target:
             print "Error, target %s not found" % (pathname, )
             raise TargetNotFoundError()
-            
+
         options = copy.deepcopy(options)
         if raw_target.options:
             raw_target.options.affect(options)
@@ -313,11 +327,11 @@ def create_target_tree(pathname):
                 inputs.append(_recur(abs_name, tinput, options))
             except TargetNotFoundError:
                 print "Included from: %s [%d]" % (pathname, index+1)
-                raise 
+                raise
 
         if raw_target.mono_options:
             raw_target.mono_options.affect(options)
-            
+
         target = Target(pathname, raw_target, inputs, original_tinput, options)
         target = target.cache()
         return target
@@ -332,12 +346,12 @@ def clean():
         pathname_display = pathname[len(build_root)+1:]
         print "removing file %s" % (pathname_display, )
         os.unlink(pathname)
-    
+
     def rmdir(pathname):
         pathname_display = pathname[len(build_root)+1:]
         print "removing dir %s" % (pathname_display, )
         os.rmdir(pathname)
-    
+
     def _recur(pathname):
         comake_dir = os.path.basename(pathname) == COMAKE_OUTPUT_DIRECTORY
         for filename in os.listdir(pathname):
@@ -346,12 +360,12 @@ def clean():
                 link = os.readlink(fullname)
                 if link.startswith(COMAKE_OUTPUT_DIRECTORY):
                     unlink(fullname)
-            
+
             if os.path.isdir(fullname):
                 _recur(fullname)
             if comake_dir:
                 unlink(fullname)
-                
+
         if comake_dir:
             rmdir(pathname)
 

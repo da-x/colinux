@@ -13,7 +13,7 @@ int client()
 	co_daemon_handle_t handle;
 	struct {
 		co_message_t message;
-		char payload[0x2000]; 
+		char payload[0x2000];
 	} message = {{0,}}, *in_message;
 	int i = 0;
 
@@ -59,7 +59,7 @@ typedef struct {
 
 
 co_rc_t connected(co_os_pipe_connection_t *conn,
-		  void *data, 
+		  void *data,
 		  void **data_client)
 {
 	client_data_t *client_data;
@@ -69,12 +69,12 @@ co_rc_t connected(co_os_pipe_connection_t *conn,
 	*data_client = client_data = co_os_malloc(sizeof(client_data_t));
 	if (!client_data)
 		return CO_RC(OUT_OF_MEMORY);
-	
+
 	client_data->state = 0;
 	return CO_RC(OK);
 }
 
-co_rc_t packet(co_os_pipe_connection_t *conn, 
+co_rc_t packet(co_os_pipe_connection_t *conn,
 	       void **data,
 	       char *packet_data,
 	       unsigned long size)
@@ -126,7 +126,7 @@ int server()
 {
 	co_os_pipe_server_t *ps;
 	co_rc_t rc;
-	
+
 	rc = co_os_pipe_server_create(connected, packet, disconnected, NULL, &ps);
 	if (!CO_OK(rc)) {
 		co_debug("pipe_server_create: %x", rc);
@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
         co_list_each_entry_safe(pos, pos_next, &z.node, node) {
 		printf("%x %x %x\n", pos, &pos->node, &z.node);
 	}
-	
+
 
 	return 0;
 }

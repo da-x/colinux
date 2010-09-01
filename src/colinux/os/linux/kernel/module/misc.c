@@ -21,8 +21,8 @@ co_rc_t co_os_physical_memory_pages(unsigned long *pages)
 {
 	*pages = num_physpages;
 
-	/* 
-	 * Round to 16 MB boundars, since Linux doesn't return the 
+	/*
+	 * Round to 16 MB boundars, since Linux doesn't return the
 	 * exact amount but a bit lower.
 	 */
 	*pages = ~0xfff & ((*pages) + 0xfff);

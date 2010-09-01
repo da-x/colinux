@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# 
+#
 # Dan Aloni (c), 2003
 #
 # I use this script in order to automatically add trace macros
@@ -79,7 +79,7 @@ class CParser(object):
                 raise Error('Unterminated string')
 
             break
-            
+
         self.token(self.data[self.pos-1:pos+1], type='string')
         self.pos = pos + 1
 
@@ -150,32 +150,32 @@ class CTracer(CParser):
         self.outfile.write('extern void co_trace_ret(void *);\n');
         self.outfile.write(
 """
-#define CO_TRACE_RET_VALUE(_value_) ({	\
-        typeof(_value_) __ret_value__;	\
-        co_trace_ret((void *)&TRACE_FUNCTION_NAME);    \
-	__ret_value__ = _value_;	\
+#define CO_TRACE_RET_VALUE(_value_) ({ \
+        typeof(_value_) __ret_value__; \
+        co_trace_ret((void *)&TRACE_FUNCTION_NAME); \
+        __ret_value__ = _value_; \
 })
 
-#define CO_TRACE_RET {	\
-        co_trace_ret((void *)&TRACE_FUNCTION_NAME);    \
+#define CO_TRACE_RET { \
+        co_trace_ret((void *)&TRACE_FUNCTION_NAME); \
 }
 
 """)
-        
+
 
     def error(self):
         for debug in self.debug_tokens:
             print debug
-        
+
     def token(self, token, type=None):
         self.debug_tokens.append((token, type))
         if len(self.debug_tokens) > 40:
             del self.debug_tokens[0]
-        
+
         if type == 'close_bracet':
             self.bracet_level -= 1
             del self.bracet[0]
-            
+
         if self.bracet_level == 0:
             if type != 'space':
                 self.last_tokens.append(token)
@@ -195,7 +195,7 @@ class CTracer(CParser):
                                 self.func_name = None
                                 break
                             pos += 1
-                            
+
         elif self.bracet_level >= 1:
             if self.bracet_level == 1:
                 if self.bracet[0] == '(':
@@ -232,7 +232,7 @@ class CTracer(CParser):
                 if not token == 'return':
                     self.sub_tokens_with_return_trace.append(token)
                 self.sub_tokens.append(token)
-                
+
             if token == 'return':
                 self.in_return = True
                 self.in_return_skip_space = True
@@ -251,7 +251,7 @@ class CTracer(CParser):
                 else:
                     self.outfile.write(''.join(self.sub_tokens))
                 self.func_name = None
-                    
+
                 if token == ')':
                     if self.last_level1_token:
                         self.params_list.append(self.last_level1_token)
@@ -271,7 +271,7 @@ class CTracer(CParser):
 
             if not skip_token:
                 self.outfile.write(token)
-            
+
         if type == 'open_bracet':
             self.bracet_level += 1
             self.bracet.append(token)

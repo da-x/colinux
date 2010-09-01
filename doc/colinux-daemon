@@ -148,29 +148,34 @@ don't depend on each other.  The parameters are case sensitive.
 	this parameter out is 1/4 of your RAM if your RAM is >=
 	128, otherwise it's 16.  Default value is generally ok.
 
-    cocon=<COLS>,<ROWS>
+    cocon=<COLS>,<ROWS>,<SCROLLBACK>
 
-	This specifies the console size. Default is 80x25.
-	Minmum is 16x2,	maximum is near 200x80 (total 16384 cells).
+	This specifies the console size. Default is 80x25x500. Minmum is 16x2,
+	maximal value for <ROWS> or <SCROLLBACK> is 500.
+	As separator can use 'x' or comma.
 
-	Example:
+	<SCROLLBACK> is optional and sets total lines in scroll back buffer,
+	usable with mouse weel or key Win+PageUp / Win+PageDown.
+
+	Examples:
 	cocon=120x40
-    
+	cocon=120x40x500
+
     cursor=<SIZE>
-     
-        This option allows you to set the size of the cursor in the percentage.
+
+	This option allows you to set the size of the cursor in the percentage.
 
 	Examples:
 	cursor=0   # Turn off cursor
 	cursor=100 # Set the cursor to the maximum size
 
     color=<FOREGROUND>,<BACKGROUND>
-    
+
 	Set the color '<FOREGROUND> on <BACKGROUND>' instead of the default
 	linux color 'gray on black'. Foreground and background colors can be
 	any of black, red, green, brown, blue, magenta, cyan, gray, darkgray,
 	brightred, brightgreen, yellow, brightblue, brightmagenta, brightcyan,
-	white.    	
+	white.
 
 	Example:
 	color=yellow,black
@@ -206,14 +211,14 @@ don't depend on each other.  The parameters are case sensitive.
     scsiX=<type>,<path to image file>,<image size>
 
 	Use any number <X> of these to specify the block device image file.
-	
+
 	<type> is 'disk' or 'cdrom'.
 
 	<path to image file> is typicaly a filname of your image file,
 	for example the base root fs, you have extracted.  This can be an
 	image of disk (/dev/hda), instead the partition self (dev/hda1).
 	Linux kernel scans for partition tables, fdisk is usable.
-	
+
 	<path to image file> can be a raw disk drive, with format
 	"\\.\PhysicalDriveX", where X starts with 0 for first harddisk.	Be
 	carefully with these configs, you risk datas on your drive C:.
@@ -572,12 +577,19 @@ Used keys in Windows Registry
 [HKEY_CURRENT_USER\Software\coLinux\monitor\M\ethX]
 "mac"="00:ff:XX:XX:XX:XX"
 
+# Font type, font size, copy mode and exit at detach for console FLTK
+[HKEY_CURRENT_USER\Software\coLinux\console\Font]
+"Size"=dword:000000012
+"Font"=dword:0000000d
+"CopySpaces"=dword:00000000
+"ExitDetach"=dword:00000000
+
 # Debug level for kernel driver load
 [HKEY_LOCAL_MACHINE\SOFTWARE\coLinux]
 "Debug"=dword:0000001f
 
 # Message file for event logging, if running as service
-[HKEY_LOCAL_MACHINE\SYSTEM\\CurrentControlSet\Services\Eventlog\Application\coLinux]
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Eventlog\Application\coLinux]
 "EventMessageFile"="C:\coLinux\colinux-daemon.exe"
 
 
@@ -586,7 +598,17 @@ Special keys in consoles
 
     FLTK console:
 
-	Win+V			inserts text from copy & past buffer
+	Win+C
+	WinKey+Home		copy selected text into clipboard buffer
+
+	Win+V
+	WinKey+End		inserts text from  buffer (copy & past)
+
+	Win+PageUp
+	mouse wheel up		Scroll back console
+
+	Win+PageDown
+	mouse wheel down	Scroll down console
 
     NT console:
 

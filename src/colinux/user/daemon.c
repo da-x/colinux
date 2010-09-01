@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <colinux/common/common.h>
 #include <colinux/common/version.h>
@@ -113,12 +113,12 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 	co_snprintf(start_parameters->console, sizeof(start_parameters->console), "fltk");
 
 	/* Parse arguments specific for command line only */
-	
-	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-c", 
+
+	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-c",
 						      &start_parameters->config_specified,
 						      start_parameters->config_path,
 						      sizeof(start_parameters->config_path));
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-p",
@@ -128,21 +128,21 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 	if (!CO_OK(rc))
 		return rc;
 
-	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-t", 
+	rc = co_cmdline_params_one_arugment_parameter(cmdline, "-t",
 						      NULL,
 						      start_parameters->console,
 						      sizeof(start_parameters->console));
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-d", &dont_launch_console);
 
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-k", &start_parameters->suppress_printk);
 
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	rc = co_cmdline_params_one_arugment_int_parameter(cmdline, "-v",
@@ -157,11 +157,11 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 
 	rc = co_cmdline_params_argumentless_parameter(cmdline, "-h", &start_parameters->show_help);
 
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	start_parameters->launch_console = !dont_launch_console;
-	
+
 	/* Parse parameters, common for command line and config file */
 	rc = co_parse_config_args(cmdline, start_parameters);
 
@@ -169,7 +169,7 @@ co_rc_t co_daemon_parse_args(co_command_line_params_t cmdline, co_start_paramete
 		co_terminal_print("daemon: error parsing configuration parameters and boot params\n");
 		return rc;
 	}
-	
+
 	return CO_RC(OK);
 }
 
@@ -198,7 +198,7 @@ co_rc_t co_daemon_create(co_start_parameters_t* start_parameters, co_daemon_t** 
 	memset(daemon, 0, sizeof(*daemon));
 
 	daemon->start_parameters = start_parameters;
-	memcpy(daemon->config.config_path, start_parameters->config_path, 
+	memcpy(daemon->config.config_path, start_parameters->config_path,
 	       sizeof(start_parameters->config_path));
 
 	rc = co_load_config_file(daemon);
@@ -225,8 +225,8 @@ void co_daemon_destroy(co_daemon_t* daemon)
 
 /* Remember: Strip tool scans only this file for needed symbols */
 static
-co_rc_t co_daemon_load_symbol_and_data(co_daemon_t*	daemon, 
-				       const char*	symbol_name, 
+co_rc_t co_daemon_load_symbol_and_data(co_daemon_t*	daemon,
+				       const char*	symbol_name,
 				       unsigned long*	address_out,
 				       void*		buffer,
 				       unsigned long	buffer_size)
@@ -236,20 +236,20 @@ co_rc_t co_daemon_load_symbol_and_data(co_daemon_t*	daemon,
 	void*		 data;
 
 	sym = co_get_symbol_by_name(daemon->elf_data, symbol_name);
-	if (sym) 
+	if (sym)
 		*address_out = co_elf_get_symbol_value(sym);
 	else {
 		co_debug_error("symbol %s not found", symbol_name);
 		return CO_RC(ERROR);
-		
+
 	}
-	
+
 	data = co_elf_get_symbol_data(daemon->elf_data, sym);
 	if (data == NULL) {
 		co_debug_error("data of symbol %s not found", symbol_name);
 		return CO_RC(ERROR);
 	}
-	
+
 	memcpy(buffer, data, buffer_size);
 
 	return rc;
@@ -257,15 +257,15 @@ co_rc_t co_daemon_load_symbol_and_data(co_daemon_t*	daemon,
 
 /* Remember: Strip tool scans only this file for needed symbols */
 static
-co_rc_t co_daemon_load_symbol(co_daemon_t*	daemon, 
-			      const char*	symbol_name, 
+co_rc_t co_daemon_load_symbol(co_daemon_t*	daemon,
+			      const char*	symbol_name,
 			      unsigned long*	address_out)
 {
 	co_rc_t		 rc = CO_RC_OK;
 	co_elf_symbol_t* sym;
 
 	sym = co_get_symbol_by_name(daemon->elf_data, symbol_name);
-	if (sym) 
+	if (sym)
 		*address_out = co_elf_get_symbol_value(sym);
 	else {
 		co_debug_error("symbol %s not found", symbol_name);
@@ -285,7 +285,7 @@ co_rc_t co_net_config_macs_read(int monitor_index, int device_index, unsigned ch
 					"eth",
 					device_index,
 					"mac",
-					mac_string, 
+					mac_string,
 					sizeof(mac_string));
 	if (!CO_OK(rc))
 		return rc;
@@ -313,13 +313,13 @@ void co_daemon_prepare_net_macs(co_daemon_t* daemon, int monitor_index)
 	co_rc_t rc;
 	int	i;
 
-	for (i=0; i < CO_MODULE_MAX_CONET; i++) { 
+	for (i=0; i < CO_MODULE_MAX_CONET; i++) {
 		co_netdev_desc_t *net_dev;
 
 		net_dev = &daemon->config.net_devs[i];
 		if (net_dev->enabled == PFALSE)
 			continue;
-			
+
 		if (net_dev->manual_mac_address != PFALSE)
 			continue;
 
@@ -348,7 +348,7 @@ co_rc_t co_load_initrd(co_daemon_t* daemon)
 {
 	co_rc_t		rc;
 	char*		initrd;
-	unsigned long	initrd_size; 
+	unsigned long	initrd_size;
 
 	if (!daemon->config.initrd_enabled)
 		return CO_RC(OK);
@@ -370,7 +370,7 @@ co_rc_t co_load_initrd(co_daemon_t* daemon)
 	return rc;
 }
 
-static void 
+static void
 memory_usage_limit_resached(co_manager_ioctl_create_t *create_params)
 {
 	co_manager_ioctl_info_t info = {0, };
@@ -412,13 +412,13 @@ co_rc_t co_daemon_monitor_create(co_daemon_t* daemon)
 	co_rc_t				rc;
 
 	import = &create_params.import;
-	
+
 	rc = co_daemon_load_symbol(daemon, "_kernel_start", &import->kernel_start);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		goto out;
 
 	rc = co_daemon_load_symbol(daemon, "_end", &import->kernel_end);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		goto out;
 
 	rc = co_daemon_load_symbol(daemon, "init_thread_union", &import->kernel_init_task_union);
@@ -427,15 +427,15 @@ co_rc_t co_daemon_monitor_create(co_daemon_t* daemon)
 	}
 
 	rc = co_daemon_load_symbol(daemon, "co_start", &import->kernel_colinux_start);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		goto out;
 
 	rc = co_daemon_load_symbol(daemon, "swapper_pg_dir", &import->kernel_swapper_pg_dir);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		goto out;
 
 	rc = co_daemon_load_symbol(daemon, "idt_table", &import->kernel_idt_table);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		goto out;
 
 	rc = co_daemon_load_symbol(daemon, "per_cpu__gdt_page", &import->kernel_gdt_table);
@@ -538,7 +538,7 @@ co_rc_t co_daemon_start_monitor(co_daemon_t* daemon)
 	if (!CO_OK(rc)) {
 		co_terminal_print("%s: error reading image (%ld bytes)\n",
 				  daemon->config.vmlinux_path, size);
-		goto out_free_vmlinux; 
+		goto out_free_vmlinux;
 	}
 
 	co_debug("creating monitor");
@@ -584,11 +584,11 @@ void co_daemon_send_shutdown(co_daemon_t* daemon)
 	message.message.priority = CO_PRIORITY_IMPORTANT;
 	message.message.type     = CO_MESSAGE_TYPE_OTHER;
 	message.message.size     = sizeof(message.linux_msg) + sizeof(message.data);
-	
+
 	message.linux_msg.device = CO_DEVICE_POWER;
 	message.linux_msg.unit   = 0;
 	message.linux_msg.size   = sizeof(message.data);
-	
+
 	message.data.type	 = CO_LINUX_MESSAGE_POWER_SHUTDOWN;
 
 	co_user_monitor_message_send(daemon->message_monitor, &message.message);
@@ -600,7 +600,7 @@ co_rc_t co_daemon_handle_printk(co_daemon_t *daemon, co_message_t* message)
 {
 	if (message->type == CO_MESSAGE_TYPE_STRING) {
 		char *string_start = (char *)message->data;
-               
+
 		if (string_start[0] == '<' && string_start[2] == '>' &&
 		    ((string_start[1] >= '0' && string_start[1] <= '7') ||
 		     string_start[1] == 'c' || string_start[1] == 'd'))
@@ -609,7 +609,7 @@ co_rc_t co_daemon_handle_printk(co_daemon_t *daemon, co_message_t* message)
 		}
 
 		if (!daemon->start_parameters->suppress_printk) {
-			co_terminal_print_color(CO_TERM_COLOR_WHITE, 
+			co_terminal_print_color(CO_TERM_COLOR_WHITE,
 						"%s", string_start);
 		}
 	}
@@ -651,7 +651,7 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t* daemon)
 	int	i;
 	co_rc_t rc;
 
-	for (i=0; i < CO_MODULE_MAX_CONET; i++) { 
+	for (i=0; i < CO_MODULE_MAX_CONET; i++) {
 		co_netdev_desc_t* net_dev;
 		char		  interface_name[CO_NETDEV_DESC_STR_SIZE + 0x10] = {0, };
 
@@ -676,7 +676,7 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t* daemon)
 			rc = co_launch_process(NULL,
 					       "colinux-bridged-net-daemon -i %d -u %d %s -mac %s -p %d",
 					       daemon->id,
-					       i, 
+					       i,
 					       interface_name,
 					       mac_address,
 					       net_dev->promisc_mode);
@@ -687,7 +687,7 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t* daemon)
 			rc = co_launch_process(NULL,
 					       "colinux-net-daemon -i %d -u %d %s",
 					       daemon->id,
-					       i, 
+					       i,
 					       interface_name);
 			break;
 		}
@@ -696,8 +696,8 @@ co_rc_t co_daemon_launch_net_daemons(co_daemon_t* daemon)
 			rc = co_launch_process(NULL,
 					       "colinux-slirp-net-daemon -i %d -u %d%s%s",
 					       daemon->id,
-					       i, 
-					       (*net_dev->redir)?" -r ":"", 
+					       i,
+					       (*net_dev->redir)?" -r ":"",
 					       net_dev->redir);
 			break;
 		}
@@ -745,7 +745,7 @@ static co_rc_t co_daemon_launch_serial_daemons(co_daemon_t *daemon)
 		if (serial->mode)
 			co_snprintf(mode_param, sizeof(mode_param), " -m \"%s\"", serial->mode);
 
-		rc = co_launch_process(NULL, 
+		rc = co_launch_process(NULL,
 				       "colinux-serial-daemon -i %d -u %d -f %s%s",
 			    	       daemon->id, i,
 			    	       serial->desc,	/* -f COM1 */
@@ -905,7 +905,7 @@ co_rc_t co_daemon_run(co_daemon_t* daemon)
 		rc = co_user_monitor_start(daemon->monitor);
 		if (!CO_OK(rc))
 			goto out;
-		
+
 		daemon->running = PTRUE;
 		while (daemon->running) {
 			co_monitor_ioctl_run_t params;
@@ -952,13 +952,13 @@ co_rc_t co_daemon_run(co_daemon_t* daemon)
 				co_terminal_print("colinux: Kernel panic: %s\n", params.bug_info.text);
 
 				if (co_strstr(params.bug_info.text, "VFS: Unable to mount root fs on")) {
-					co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
+					co_terminal_print_color(CO_TERM_COLOR_YELLOW,
 						"colinux: kernel panic suggests that either you forget to supply a\n");
-					co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
+					co_terminal_print_color(CO_TERM_COLOR_YELLOW,
 						"root= kernel boot paramter or the file / device mapped to the root\n");
-					co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
+					co_terminal_print_color(CO_TERM_COLOR_YELLOW,
 						"file system is not found or inaccessible.\n");
-					co_terminal_print_color(CO_TERM_COLOR_YELLOW, 
+					co_terminal_print_color(CO_TERM_COLOR_YELLOW,
 						"Please Check your coLinux configuration and use option \"-v 3\".\n");
 				}
 				break;

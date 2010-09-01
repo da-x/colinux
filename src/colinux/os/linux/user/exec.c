@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 
 #include <stdio.h>
@@ -22,7 +22,7 @@ co_rc_t co_launch_process(int *pid, char *command_line, ...)
 	char buf2[0x100];
 	va_list ap;
 	int ret;
-	
+
 	va_start(ap, command_line);
 	co_vsnprintf(buf, sizeof(buf), command_line, ap);
 	va_end(ap);

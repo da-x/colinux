@@ -32,7 +32,7 @@ co_rc_t co_os_reactor_select(co_reactor_t handle, int miliseconds)
 	wait_time = -1;
 	if (miliseconds >= 0)
 		wait_time = miliseconds;
-	
+
 	ret = poll(wait_list, count, wait_time);
 	if (ret == 0)
 		return CO_RC(OK);
@@ -54,7 +54,7 @@ co_rc_t co_os_reactor_select(co_reactor_t handle, int miliseconds)
 			return CO_RC(BROKEN_PIPE);
 		}
 	}
-	
+
 	return rc;
 }
 
@@ -70,7 +70,7 @@ static co_rc_t packet_read_complete(co_linux_reactor_packet_user_t handle)
 	return CO_RC(OK);
 }
 
-static co_rc_t packet_send_whole(co_linux_reactor_packet_user_t handle, 
+static co_rc_t packet_send_whole(co_linux_reactor_packet_user_t handle,
 				 unsigned char *buffer, unsigned long size)
 {
 	int written;
@@ -96,7 +96,7 @@ static void packet_write(co_reactor_user_t user)
 }
 
 extern co_rc_t co_linux_reactor_packet_user_create(
-	co_reactor_t reactor, int fd, 
+	co_reactor_t reactor, int fd,
 	co_reactor_user_receive_func_t receive,
 	co_linux_reactor_packet_user_t *handle_out)
 {

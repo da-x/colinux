@@ -1,0 +1,278 @@
+Index: linux-2.6.33-source/arch/x86/Kconfig
+===================================================================
+--- linux-2.6.33-source.orig/arch/x86/Kconfig
++++ linux-2.6.33-source/arch/x86/Kconfig
+@@ -1893,6 +1893,9 @@
+ 	  direct access method and falls back to the BIOS if that doesn't
+ 	  work. If unsure, go with the default, which is "Any".
+ 
++config PCI_GOCO
++	bool "Cooperative"
++
+ config PCI_GOBIOS
+ 	bool "BIOS"
+ 
+@@ -1911,6 +1914,11 @@
+ 
+ endchoice
+ 
++config PCI_COOPERATIVE
++	bool
++ 	depends on PCI && PCI_GOCO && COOPERATIVE
++	default y
++
+ config PCI_BIOS
+ 	def_bool y
+ 	depends on X86_32 && PCI && (PCI_GOBIOS || PCI_GOANY)
+@@ -1992,6 +2000,7 @@
+ 
+ # x86_64 have no ISA slots, but do have ISA-style DMA.
+ config ISA_DMA_API
++	depends on !COOPERATIVE
+ 	def_bool y
+ 
+ if X86_32
+Index: linux-2.6.33-source/arch/x86/kernel/cpu/cyrix.c
+===================================================================
+--- linux-2.6.33-source.orig/arch/x86/kernel/cpu/cyrix.c
++++ linux-2.6.33-source/arch/x86/kernel/cpu/cyrix.c
+@@ -254,6 +254,7 @@
+ 
+ 	case 4: /* MediaGX/GXm or Geode GXM/GXLV/GX1 */
+ #ifdef CONFIG_PCI
++#ifndef CONFIG_COOPERATIVE
+ 	{
+ 		u32 vendor, device;
+ 		/*
+@@ -287,6 +288,7 @@
+ 			mark_tsc_unstable("cyrix 5510/5520 detected");
+ 	}
+ #endif
++#endif
+ 		c->x86_cache_size = 16;	/* Yep 16K integrated cache thats it */
+ 
+ 		/* GXm supports extended cpuid levels 'ala' AMD */
+Index: linux-2.6.33-source/arch/x86/pci/init.c
+===================================================================
+--- linux-2.6.33-source.orig/arch/x86/pci/init.c
++++ linux-2.6.33-source/arch/x86/pci/init.c
+@@ -11,6 +11,9 @@
+ 
+ 	type = pci_direct_probe();
+ #endif
++#ifdef CONFIG_PCI_COOPERATIVE
++	pci_cooperative_init();
++#endif
+ 
+ 	if (!(pci_probe & PCI_PROBE_NOEARLY))
+ 		pci_mmcfg_early_init();
+Index: linux-2.6.33-source/arch/x86/include/asm/pci_x86.h
+===================================================================
+--- linux-2.6.33-source.orig/arch/x86/include/asm/pci_x86.h
++++ linux-2.6.33-source/arch/x86/include/asm/pci_x86.h
+@@ -103,6 +103,7 @@
+ 
+ /* arch_initcall level */
+ extern int pci_direct_probe(void);
++extern void pci_cooperative_init(void);
+ extern void pci_direct_init(int type);
+ extern void pci_pcbios_init(void);
+ extern int pci_olpc_init(void);
+Index: linux-2.6.33-source/arch/x86/pci/Makefile
+===================================================================
+--- linux-2.6.33-source.orig/arch/x86/pci/Makefile
++++ linux-2.6.33-source/arch/x86/pci/Makefile
+@@ -1,5 +1,6 @@
+ obj-y				:= i386.o init.o
+ 
++obj-$(CONFIG_PCI_COOPERATIVE)	+= copci.o irq_cooperative.o
+ obj-$(CONFIG_PCI_BIOS)		+= pcbios.o
+ obj-$(CONFIG_PCI_MMCONFIG)	+= mmconfig_$(BITS).o direct.o mmconfig-shared.o
+ obj-$(CONFIG_PCI_DIRECT)	+= direct.o
+@@ -7,13 +8,19 @@
+ 
+ obj-y				+= fixup.o
+ obj-$(CONFIG_ACPI)		+= acpi.o
+-obj-y				+= legacy.o irq.o
++obj-y				+= legacy.o
++ifndef CONFIG_COOPERATIVE
++obj-y				+= irq.o
++endif
+ 
+ obj-$(CONFIG_X86_VISWS)		+= visws.o
+ 
+ obj-$(CONFIG_X86_NUMAQ)		+= numaq_32.o
+ 
+-obj-y				+= common.o early.o
++obj-y				+= common.o
++ifndef CONFIG_COOPERATIVE
++obj-y				+= early.o
++endif
+ obj-y				+= amd_bus.o
+ obj-$(CONFIG_X86_64)		+= bus_numa.o
+ 
+Index: linux-2.6.33-source/drivers/pci/pci.c
+===================================================================
+--- linux-2.6.33-source.orig/drivers/pci/pci.c
++++ linux-2.6.33-source/drivers/pci/pci.c
+@@ -2111,6 +2111,7 @@
+ }
+ 
+ #ifndef HAVE_ARCH_PCI_SET_DMA_MASK
++#error BUG1 HAVE_ARCH_PCI_SET_DMA_MASK
+ /*
+  * These can be overridden by arch-specific implementations
+  */
+@@ -2876,9 +2877,13 @@
+ EXPORT_SYMBOL(pci_try_set_mwi);
+ EXPORT_SYMBOL(pci_clear_mwi);
+ EXPORT_SYMBOL_GPL(pci_intx);
++#ifndef HAVE_ARCH_PCI_SET_DMA_MASK
+ EXPORT_SYMBOL(pci_set_dma_mask);
+ EXPORT_SYMBOL(pci_set_consistent_dma_mask);
++#endif
++#ifndef CONFIG_COOPERATIVE
+ EXPORT_SYMBOL(pci_assign_resource);
++#endif
+ EXPORT_SYMBOL(pci_find_parent_resource);
+ EXPORT_SYMBOL(pci_select_bars);
+ 
+Index: linux-2.6.33-source/arch/x86/include/asm/pci.h
+===================================================================
+--- linux-2.6.33-source.orig/arch/x86/include/asm/pci.h
++++ linux-2.6.33-source/arch/x86/include/asm/pci.h
+@@ -70,7 +70,7 @@
+ 			       int write_combine);
+ 
+ 
+-#ifdef CONFIG_PCI
++#if defined(CONFIG_PCI) && !defined(CONFIG_COOPERATIVE)
+ extern void early_quirks(void);
+ static inline void pci_dma_burst_advice(struct pci_dev *pdev,
+ 					enum pci_dma_burst_strategy *strat,
+@@ -83,12 +83,18 @@
+ static inline void early_quirks(void) { }
+ #endif
+ 
++#ifndef CONFIG_COOPERATIVE
+ extern void pci_iommu_alloc(void);
++#endif
+ 
+ /* MSI arch hook */
+ #define arch_setup_msi_irqs arch_setup_msi_irqs
+ 
++#ifdef CONFIG_COOPERATIVE
++#define PCI_DMA_BUS_IS_PHYS 0
++#else
+ #define PCI_DMA_BUS_IS_PHYS (dma_ops->is_phys)
++#endif
+ 
+ #if defined(CONFIG_X86_64) || defined(CONFIG_DMAR) || defined(CONFIG_DMA_API_DEBUG)
+ 
+Index: linux-2.6.33-source/arch/x86/pci/i386.c
+===================================================================
+--- linux-2.6.33-source.orig/arch/x86/pci/i386.c
++++ linux-2.6.33-source/arch/x86/pci/i386.c
+@@ -242,7 +242,9 @@
+ 	pcibios_allocate_resources(0);
+ 	pcibios_allocate_resources(1);
+ 
++#ifndef CONFIG_COOPERATIVE
+ 	e820_reserve_resources_late();
++#endif
+ 	/*
+ 	 * Insert the IO APIC resources after PCI initialization has
+ 	 * occured to handle IO APICS that are mapped in on a BAR in
+Index: linux-2.6.33-source/arch/x86/pci/legacy.c
+===================================================================
+--- linux-2.6.33-source.orig/arch/x86/pci/legacy.c
++++ linux-2.6.33-source/arch/x86/pci/legacy.c
+@@ -66,7 +66,9 @@
+ #endif
+ 	pci_legacy_init();
+ 	pcibios_fixup_peer_bridges();
++#ifndef CONFIG_COOPERATIVE
+ 	pcibios_irq_init();
++#endif
+ 	pcibios_init();
+ 
+ 	return 0;
+Index: linux-2.6.33-source/drivers/usb/host/Makefile
+===================================================================
+--- linux-2.6.33-source.orig/drivers/usb/host/Makefile
++++ linux-2.6.33-source/drivers/usb/host/Makefile
+@@ -16,7 +16,9 @@
+ 
+ obj-$(CONFIG_USB_WHCI_HCD)	+= whci/
+ 
++ifndef CONFIG_COOPERATIVE
+ obj-$(CONFIG_PCI)		+= pci-quirks.o
++endif
+ 
+ obj-$(CONFIG_USB_EHCI_HCD)	+= ehci-hcd.o
+ obj-$(CONFIG_USB_OXU210HP_HCD)	+= oxu210hp-hcd.o
+Index: linux-2.6.33-source/arch/x86/pci/irq_cooperative.c
+===================================================================
+--- linux-2.6.33-source.orig/arch/x86/pci/irq_cooperative.c
++++ linux-2.6.33-source/arch/x86/pci/irq_cooperative.c
+@@ -7,7 +7,7 @@
+ #include <linux/types.h>
+ #include <linux/kernel.h>
+ #include <linux/pci.h>
+-#include "pci.h"
++#include <asm/pci_x86.h>
+ 
+ /*
+  * Never use: 0, 1, 2 (timer, keyboard, and cascade)
+Index: linux-2.6.33-source/arch/x86/pci/copci.c
+===================================================================
+--- linux-2.6.33-source.orig/arch/x86/pci/copci.c
++++ linux-2.6.33-source/arch/x86/pci/copci.c
+@@ -4,13 +4,14 @@
+  *  Cooperative Linux PCI Driver implementation
+  */
+ 
++
+ #include <linux/kernel.h>
+ #include <linux/pci.h>
+ #include <linux/pci_regs.h>
+ #include <linux/interrupt.h>
+ #include <linux/cooperative_pci.h>
+ #include <linux/cooperative_internal.h>
+-#include "pci.h"
++#include <asm/pci_x86.h>
+ 
+ #include <linux/copci.h>
+ 
+@@ -304,3 +305,15 @@
+ 
+ 	raw_pci_ops = &copci_ops;
+ }
++
++int pci_set_dma_mask(struct pci_dev *dev, u64 mask)
++{
++	return -EIO;
++}
++EXPORT_SYMBOL(pci_set_dma_mask);
++
++int pci_set_consistent_dma_mask(struct pci_dev *dev, u64 mask)
++{
++	return -EIO;
++}
++EXPORT_SYMBOL(pci_set_consistent_dma_mask);
+Index: linux-2.6.33-source/arch/x86/include/asm/dma.h
+===================================================================
+--- linux-2.6.33-source.orig/arch/x86/include/asm/dma.h
++++ linux-2.6.33-source/arch/x86/include/asm/dma.h
+@@ -12,6 +12,11 @@
+ #include <asm/io.h>		/* need byte IO */
+ #include <linux/delay.h>
+ 
++/* coLinux have a dummy implementation of pci_set_dma_mask() */
++#ifdef CONFIG_COOPERATIVE
++# define HAVE_ARCH_PCI_SET_DMA_MASK
++#endif
++
+ #ifdef HAVE_REALLY_SLOW_DMA_CONTROLLER
+ #define dma_outb	outb_p
+ #else

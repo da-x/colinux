@@ -57,7 +57,7 @@ int co_os_fs_add_last_component(co_pathname_t *dirname)
 		(*dirname)[len + 1] = '\0';
 		len++;
 	}
-	
+
 	return len;
 }
 
@@ -85,15 +85,15 @@ co_rc_t co_os_fs_dir_inode_to_path(co_filesystem_t *fs, co_inode_t *dir,
 co_rc_t co_os_fs_dir_join_unix_path(co_pathname_t *dirname, const char *addition)
 {
 	int len, total_len;
-	
+
 	len = co_os_fs_add_last_component(dirname);
 	if (*addition == '/')
 		addition++;
-	
+
 	co_snprintf(&(*dirname)[len], sizeof(*dirname) - len, "%s", addition);
-	
+
 	total_len = co_strlen(*dirname);
-	
+
 	while (len < total_len) {
 		if ((*dirname)[len] == '/') {
 			(*dirname)[len] = '\\';
@@ -104,6 +104,6 @@ co_rc_t co_os_fs_dir_join_unix_path(co_pathname_t *dirname, const char *addition
 	if ((total_len > 0) && (*dirname)[total_len-1] == '\\') {
 		(*dirname)[total_len-1] = '\0';
 	}
-	
+
 	return CO_RC(OK);
 }

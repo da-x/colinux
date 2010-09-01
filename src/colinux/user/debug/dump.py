@@ -11,7 +11,7 @@ class docHandler(ContentHandler):
         ContentHandler.__init__(self, *arg, **kw)
         self.log_elements = {}
         self.log_current_tag = None
-        
+
     def startElement(self, name, args):
         if name == u'log':
             self.log_elements = dict(args)
@@ -21,7 +21,7 @@ class docHandler(ContentHandler):
     def characters(self, context):
         if self.log_current_tag:
             self.log_elements.setdefault(self.log_current_tag, []).append(context)
-        
+
     def endElement(self, name):
         if name == u'log':
             log = {}

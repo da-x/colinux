@@ -91,7 +91,7 @@ install_fltk()
 build_fltk()
 {
 	cd "$TOPDIR"
-	if grep "fltk-1.1.6-win32.diff" $W32LIBS_CHECKSUM | md5sum -c - >/dev/null 2>&1
+	if grep "$FLTK-win32.diff" $W32LIBS_CHECKSUM | md5sum -c - >/dev/null 2>&1
 	then
 		if [ "$1" != "--rebuild" -a \
 		     -f $PREFIX/$TARGET/lib/libfltk.a -a \
@@ -176,7 +176,7 @@ extract_winpcap()
 	echo "Extracting winpcap source"
 	cd "$BUILD_DIR"
 	rm -rf "$WINPCAP_SRC"
-	unzip "$SOURCE_DIR/$WINPCAP_SRC_ARCHIVE"
+	unzip "$DOWNLOADS/$WINPCAP_SRC_ARCHIVE"
 	test $? -ne 0 && error_exit 10 "winpcap extracting failed"
 }
 

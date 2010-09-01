@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #ifndef __COLINUX_USER_CONSOLE_H__
 #define __COLINUX_USER_CONSOLE_H__
@@ -31,6 +31,7 @@ extern "C" {
 }
 
 #include "widget.h"
+#include "fontselect.h"
 
 typedef struct co_console_start_parameters {
 	co_id_t attach_id;
@@ -44,7 +45,7 @@ typedef enum {
 
 class console_window_t;
 
-class console_main_window_t : public Fl_Double_Window 
+class console_main_window_t : public Fl_Double_Window
 {
 public:
 	console_main_window_t(console_window_t *console);
@@ -57,7 +58,7 @@ protected:
 	virtual int handle(int event);
 };
 
-class console_window_t 
+class console_window_t
 {
 public:
 	console_window_t();
@@ -66,7 +67,7 @@ public:
 	co_rc_t parse_args(int argc, char **argv);
 	co_rc_t start();
 	void finish();
-	
+
 	co_rc_t attach();
 	co_rc_t attach_anyhow(co_id_t id);
 	co_rc_t about();
@@ -77,8 +78,13 @@ public:
 
 	void handle_message(co_message_t *message);
 	void handle_scancode(co_scan_code_t sc);
-
+	console_widget_t * get_widget();
 	void log(const char *format, ...);
+	void resize_font(void);
+	FontSelectDialog* fsd;
+
+	int get_exitdetach(void) { return reg_exitdetach; };
+	void toggle_exitdetach(void) { reg_exitdetach=! reg_exitdetach; };
 
 protected:
 	co_console_state_t state;
@@ -99,6 +105,10 @@ protected:
 	void global_resize_constraint();
 
 	static co_rc_t message_receive(co_reactor_user_t user, unsigned char *buffer, unsigned long size);
+
+	// registry settings
+	int reg_font, reg_font_size, reg_copyspaces, reg_exitdetach;
+
 };
 
 extern void console_idle(void *data);

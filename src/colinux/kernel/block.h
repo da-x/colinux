@@ -20,7 +20,7 @@ typedef struct co_block_dev co_block_dev_t;
 struct co_block_dev {
 	unsigned long long size;
 	co_block_dev_desc_t *conf;
-	co_rc_t (*service)(struct co_monitor *cmon, co_block_dev_t *dev, 
+	co_rc_t (*service)(struct co_monitor *cmon, co_block_dev_t *dev,
 			   co_block_request_t *request);
 	void (*free)(struct co_monitor *cmon, co_block_dev_t *dev);
 	unsigned int use_count;

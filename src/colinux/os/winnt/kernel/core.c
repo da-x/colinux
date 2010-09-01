@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include "ddk.h"
 
@@ -30,7 +30,7 @@ co_rc_t co_monitor_os_init(co_monitor_t *cmon)
 	/* ligong liu, 2008/04/08, kernel mod conet support */
 	cmon->osdep->conet_protocol = NULL;
 	co_conet_register_protocol(cmon);
-	
+
 	return rc;
 }
 

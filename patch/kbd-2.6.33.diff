@@ -1,32 +1,32 @@
 Keyboard driver
 
 
-Index: linux-2.6.22-source/drivers/input/keyboard/Kconfig
+Index: linux-2.6.33-source/drivers/input/keyboard/Kconfig
 ===================================================================
---- linux-2.6.22-source.orig/drivers/input/keyboard/Kconfig
-+++ linux-2.6.22-source/drivers/input/keyboard/Kconfig
-@@ -17,7 +17,7 @@
+--- linux-2.6.33-source.orig/drivers/input/keyboard/Kconfig
++++ linux-2.6.33-source/drivers/input/keyboard/Kconfig
+@@ -73,7 +73,7 @@
  	default y
  	select SERIO
  	select SERIO_LIBPS2
--	select SERIO_I8042 if X86_PC
-+	select SERIO_I8042 if X86_PC && !COOPERATIVE
+-	select SERIO_I8042 if X86
++	select SERIO_I8042 if X86 && !COOPERATIVE
  	select SERIO_GSCPS2 if GSC
  	help
  	  Say Y here if you want to use a standard AT or PS/2 keyboard. Usually
-Index: linux-2.6.22-source/drivers/input/keyboard/atkbd.c
+Index: linux-2.6.33-source/drivers/input/keyboard/atkbd.c
 ===================================================================
---- linux-2.6.22-source.orig/drivers/input/keyboard/atkbd.c
-+++ linux-2.6.22-source/drivers/input/keyboard/atkbd.c
+--- linux-2.6.33-source.orig/drivers/input/keyboard/atkbd.c
++++ linux-2.6.33-source/drivers/input/keyboard/atkbd.c
 @@ -28,6 +28,7 @@
- #include <linux/workqueue.h>
  #include <linux/libps2.h>
  #include <linux/mutex.h>
+ #include <linux/dmi.h>
 +#include <linux/cooperative_internal.h>
  
  #define DRIVER_DESC	"AT and PS/2 keyboard driver"
  
-@@ -659,6 +660,9 @@
+@@ -680,6 +681,9 @@
  	struct ps2dev *ps2dev = &atkbd->ps2dev;
  	unsigned char param[2];
  
@@ -36,30 +36,41 @@ Index: linux-2.6.22-source/drivers/input/keyboard/atkbd.c
  /*
   * Some systems, where the bit-twiddling when testing the io-lines of the
   * controller may confuse the keyboard need a full reset of the keyboard. On
-Index: linux-2.6.22-source/drivers/input/serio/Kconfig
+@@ -1129,8 +1133,8 @@
+ 		}
+ 
+ 		atkbd->set = atkbd_select_set(atkbd, atkbd_set, atkbd_extra);
+-		atkbd_reset_state(atkbd);
+-		atkbd_activate(atkbd);
++		if (!atkbd_reset_state(atkbd))
++			atkbd_activate(atkbd);
+ 
+ 	} else {
+ 		atkbd->set = 2;
+Index: linux-2.6.33-source/drivers/input/serio/Kconfig
 ===================================================================
---- linux-2.6.22-source.orig/drivers/input/serio/Kconfig
-+++ linux-2.6.22-source/drivers/input/serio/Kconfig
+--- linux-2.6.33-source.orig/drivers/input/serio/Kconfig
++++ linux-2.6.33-source/drivers/input/serio/Kconfig
 @@ -21,7 +21,7 @@
  config SERIO_I8042
  	tristate "i8042 PC Keyboard controller" if EMBEDDED || !X86
  	default y
--	depends on !PARISC && (!ARM || ARCH_SHARK || FOOTBRIDGE_HOST) && !M68K
-+	depends on !PARISC && (!ARM || ARCH_SHARK || FOOTBRIDGE_HOST) && !M68K && !COOPERATIVE
- 	---help---
+-	depends on !PARISC && (!ARM || ARCH_SHARK || FOOTBRIDGE_HOST) && !M68K && !BLACKFIN
++	depends on !PARISC && (!ARM || ARCH_SHARK || FOOTBRIDGE_HOST) && !M68K && !BLACKFIN && !COOPERATIVE
+ 	help
  	  i8042 is the chip over which the standard AT keyboard and PS/2
  	  mouse are connected to the computer. If you use these devices,
-@@ -158,6 +158,7 @@
- 
+@@ -169,6 +169,7 @@
  config SERIO_LIBPS2
  	tristate "PS/2 driver library" if EMBEDDED
+ 	depends on SERIO_I8042 || SERIO_I8042=n
 +	depends on !COOPERATIVE
  	help
  	  Say Y here if you are using a driver for device connected
  	  to a PS/2 port, such as PS/2 mouse or standard AT keyboard.
-@@ -180,4 +181,9 @@
+@@ -209,4 +210,9 @@
  	  To compile this driver as a module, choose M here: the
- 	  module will be called serio_raw.
+ 	  module will be called altera_ps2.
  
 +config SERIO_COKBD
 + 	tristate "Cooperative Linux virtual keyboard controller driver"
@@ -67,25 +78,25 @@ Index: linux-2.6.22-source/drivers/input/serio/Kconfig
 + 	default y
 +
  endif
-Index: linux-2.6.22-source/drivers/input/serio/Makefile
+Index: linux-2.6.33-source/drivers/input/serio/Makefile
 ===================================================================
---- linux-2.6.22-source.orig/drivers/input/serio/Makefile
-+++ linux-2.6.22-source/drivers/input/serio/Makefile
-@@ -20,3 +20,4 @@
- obj-$(CONFIG_SERIO_MACEPS2)	+= maceps2.o
- obj-$(CONFIG_SERIO_LIBPS2)	+= libps2.o
+--- linux-2.6.33-source.orig/drivers/input/serio/Makefile
++++ linux-2.6.33-source/drivers/input/serio/Makefile
+@@ -23,3 +23,4 @@
  obj-$(CONFIG_SERIO_RAW)		+= serio_raw.o
+ obj-$(CONFIG_SERIO_XILINX_XPS_PS2)	+= xilinx_ps2.o
+ obj-$(CONFIG_SERIO_ALTERA_PS2)	+= altera_ps2.o
 +obj-$(CONFIG_SERIO_COKBD)	+= cokbd.o
-Index: linux-2.6.22-source/drivers/char/keyboard.c
+Index: linux-2.6.33-source/drivers/char/keyboard.c
 ===================================================================
---- linux-2.6.22-source.orig/drivers/char/keyboard.c
-+++ linux-2.6.22-source/drivers/char/keyboard.c
-@@ -328,6 +328,14 @@
+--- linux-2.6.33-source.orig/drivers/char/keyboard.c
++++ linux-2.6.33-source/drivers/char/keyboard.c
+@@ -379,6 +379,14 @@
  	}
  }
  
 +#ifdef CONFIG_COOPERATIVE
-+void keyboard_inject_utf8(ushort c)
++void keyboard_inject_utf8(uint c)
 +{
 +	to_utf8(vc_cons[fg_console].d, c);
 +}
@@ -95,15 +106,20 @@ Index: linux-2.6.22-source/drivers/char/keyboard.c
  /*
   * Called after returning from RAW mode or when changing consoles - recompute
   * shift_down[] and shift_state from key_down[] maybe called when keymap is
-Index: linux-2.6.22-source/include/linux/kbd_kern.h
+Index: linux-2.6.33-source/include/linux/kbd_kern.h
 ===================================================================
---- linux-2.6.22-source.orig/include/linux/kbd_kern.h
-+++ linux-2.6.22-source/include/linux/kbd_kern.h
-@@ -66,6 +66,7 @@
+--- linux-2.6.33-source.orig/include/linux/kbd_kern.h
++++ linux-2.6.33-source/include/linux/kbd_kern.h
+@@ -1,3 +1,4 @@
++
+ #ifndef _KBD_KERN_H
+ #define _KBD_KERN_H
+ 
+@@ -66,6 +67,7 @@
  
  extern struct kbd_struct kbd_table[];
  
-+extern void keyboard_inject_utf8(ushort c);
++extern void keyboard_inject_utf8(uint c);
  extern int kbd_init(void);
  
  extern unsigned char getledstate(void);

@@ -20,12 +20,12 @@ CO_TRACE_STOP;
 void co_trace_ent_name(void *ptr, const char *name)
 {
 	static int reenter = 0;
-	
+
 	if (reenter)
 		return;
 
 	reenter++;
-	
+
 	co_debug("TRACE: [%p] %s", ptr, name);
 
 	reenter--;
@@ -75,7 +75,7 @@ co_debug_levels_t co_global_debug_levels = {
 };
 #undef X
 
-void co_debug_(const char *module, co_debug_facility_t facility, int level, 
+void co_debug_(const char *module, co_debug_facility_t facility, int level,
 	       const char *filename, int line, const char *func,
 	       const char *fmt, ...)
 {

@@ -40,10 +40,10 @@ VOID DisplayDebugString (char *p_Format, ...)
    {
     static char l_Buffer [4096];
 
-    va_list l_ArgumentList; 
-    va_start (l_ArgumentList, p_Format); 
-    vsprintf (l_Buffer, p_Format, l_ArgumentList); 
-    va_end (l_ArgumentList); 
+    va_list l_ArgumentList;
+    va_start (l_ArgumentList, p_Format);
+    vsprintf (l_Buffer, p_Format, l_ArgumentList);
+    va_end (l_ArgumentList);
 
     OutputDebugStringA (l_Buffer);
    }

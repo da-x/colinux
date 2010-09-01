@@ -1,7 +1,6 @@
-diff -urN fltk-1.1.6/FL/x.H fltk-1.1.6-patch-hook/FL/x.H
---- fltk-1.1.6/FL/x.H
-+++ fltk-1.1.6-patch-hook/FL/x.H
-@@ -137,6 +137,8 @@
+--- fltk-1.1.10/FL/x.H
++++ fltk-1.1.10/FL/x.H
+@@ -140,6 +140,8 @@
  
  extern FL_EXPORT int fl_parse_color(const char* p, uchar& r, uchar& g, uchar& b);
  
@@ -10,10 +9,9 @@ diff -urN fltk-1.1.6/FL/x.H fltk-1.1.6-patch-hook/FL/x.H
  #  endif
  #endif
  
-diff -urN fltk-1.1.6/src/Fl_x.cxx fltk-1.1.6-patch-hook/src/Fl_x.cxx
---- fltk-1.1.6/src/Fl_x.cxx
-+++ fltk-1.1.6/src/Fl_x.cxx
-@@ -508,6 +508,8 @@
+--- fltk-1.1.10/src/Fl_x.cxx
++++ fltk-1.1.10/src/Fl_x.cxx
+@@ -556,6 +556,8 @@
    }
  }
  
@@ -21,8 +19,8 @@ diff -urN fltk-1.1.6/src/Fl_x.cxx fltk-1.1.6-patch-hook/src/Fl_x.cxx
 +
  ////////////////////////////////////////////////////////////////
  
- int fl_handle(const XEvent& thisevent)
-@@ -516,6 +518,12 @@
+ static char unknown[] = "<unknown>";
+@@ -567,6 +569,12 @@
    fl_xevent = &thisevent;
    Window xid = xevent.xany.window;
  

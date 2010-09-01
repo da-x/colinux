@@ -1,5 +1,5 @@
 targets['build.o'] = Target(
     inputs=[
-	Input('main.o'),
+        Input('main.o'),
     ],
 )

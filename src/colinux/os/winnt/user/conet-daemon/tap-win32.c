@@ -30,7 +30,7 @@ is_tap_win32_dev(const char *guid)
 	HKEY netcard_key;
 	LONG status;
 	DWORD len;
-	int i = 0;
+	int i;
 
 	status = RegOpenKeyEx(
 		HKEY_LOCAL_MACHINE,
@@ -40,11 +40,11 @@ is_tap_win32_dev(const char *guid)
 		&netcard_key);
 
 	if (status != ERROR_SUCCESS) {
-		printf("Error opening registry key: %s\n", ADAPTER_KEY);
+		co_terminal_print("colinux-net-daemon: Error opening registry key: %s\n", ADAPTER_KEY);
 		return PFALSE;
 	}
 
-	while (PTRUE)
+	for (i = 0; ; i++)
 	{
 		char enum_name[256];
 		char unit_string[256];
@@ -69,11 +69,15 @@ is_tap_win32_dev(const char *guid)
 		if (status == ERROR_NO_MORE_ITEMS)
 			break;
 		else if (status != ERROR_SUCCESS) {
-			printf("Error enumerating registry subkeys of key: %s\n",
+			co_terminal_print("colinux-net-daemon: Error enumerating registry subkeys of key: %s\n",
 				ADAPTER_KEY);
 			return PFALSE;
 		}
-	
+
+		/* Opening "Properties" not allowed on Vista / Windows7. Skipt it. */
+		if (strcmp(enum_name, "Properties") == 0)
+			continue;
+
 		snprintf (unit_string, sizeof(unit_string), "%s\\%s",
 			  ADAPTER_KEY, enum_name);
 
@@ -85,7 +89,7 @@ is_tap_win32_dev(const char *guid)
 			&unit_key);
 
 		if (status != ERROR_SUCCESS) {
-			printf("Error opening registry key: %s\n", unit_string); 
+			co_terminal_print("colinux-net-daemon: Error opening registry key: %s\n", unit_string);
 			return PFALSE;
 		}
 		else
@@ -122,7 +126,6 @@ is_tap_win32_dev(const char *guid)
 			}
 			RegCloseKey (unit_key);
 		}
-		++i;
 	}
 
 	RegCloseKey (netcard_key);
@@ -149,7 +152,7 @@ co_rc_t get_device_guid(
 		&control_net_key);
 
 	if (status != ERROR_SUCCESS) {
-		printf("Error opening registry key: %s", NETWORK_CONNECTIONS_KEY);
+		co_terminal_print("colinux-net-daemon: Error opening registry key: %s", NETWORK_CONNECTIONS_KEY);
 		return CO_RC(ERROR);
 	}
 
@@ -176,12 +179,12 @@ co_rc_t get_device_guid(
 		if (status == ERROR_NO_MORE_ITEMS)
 			break;
 		else if (status != ERROR_SUCCESS) {
-			printf("Error enumerating registry subkeys of key: %s",
+			co_terminal_print("colinux-net-daemon: Error enumerating registry subkeys of key: %s",
 			       NETWORK_CONNECTIONS_KEY);
 			return CO_RC(ERROR);
 		}
 
-		snprintf(connection_string, 
+		snprintf(connection_string,
 			 sizeof(connection_string),
 			 "%s\\%s\\Connection",
 			 NETWORK_CONNECTIONS_KEY, enum_name);
@@ -192,7 +195,7 @@ co_rc_t get_device_guid(
 			0,
 			KEY_READ,
 			&connection_key);
-		
+
 		if (status == ERROR_SUCCESS) {
 			len = sizeof (name_data);
 			status = RegQueryValueEx(
@@ -239,7 +242,7 @@ co_rc_t get_device_guid(
 	if (stop == 0)
 		return CO_RC(ERROR);
 
-	return CO_RC(OK); 
+	return CO_RC(OK);
 }
 
 co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
@@ -253,7 +256,7 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 	struct {
 		unsigned long major;
 		unsigned long minor;
-		unsigned long debug;		
+		unsigned long debug;
 	} version;
 	DWORD version_len;
 
@@ -294,16 +297,16 @@ co_rc_t open_tap_win32(HANDLE *phandle, char *prefered_name)
 			       &version, sizeof (version), &version_len, NULL);
 
 	if (bret == FALSE) {
-		co_terminal_print_last_error("colinux-net-daemon: error getting driver version");
+		co_terminal_print_last_error("colinux-net-daemon: Error getting driver version");
 		CloseHandle(handle);
 		return CO_RC(ERROR);
 	}
 
 	co_terminal_print("colinux-net-daemon: TAP driver version %ld.%ld\n", version.major, version.minor);
-	
+
 	*phandle = handle;
 
-	return CO_RC(OK);	
+	return CO_RC(OK);
 }
 
 

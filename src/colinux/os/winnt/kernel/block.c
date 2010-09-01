@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include "ddk.h"
 
@@ -40,9 +40,9 @@ typedef struct {
 	LARGE_INTEGER offset;
 } co_os_transfer_file_block_data_t;
 
-static co_rc_t transfer_file_block(co_monitor_t *cmon, 
-				  void *host_data, void *linuxvm, 
-				  unsigned long size, 
+static co_rc_t transfer_file_block(co_monitor_t *cmon,
+				  void *host_data, void *linuxvm,
+				  unsigned long size,
 				  co_monitor_transfer_dir_t dir)
 {
 	IO_STATUS_BLOCK isb;
@@ -56,7 +56,7 @@ static co_rc_t transfer_file_block(co_monitor_t *cmon,
 		status = ZwReadFile(data->file_handle,
 				    NULL,
 				    NULL,
-				    NULL, 
+				    NULL,
 				    &isb,
 				    linuxvm,
 				    size,
@@ -67,7 +67,7 @@ static co_rc_t transfer_file_block(co_monitor_t *cmon,
 		status = ZwWriteFile(data->file_handle,
 				     NULL,
 				     NULL,
-				     NULL, 
+				     NULL,
 				     &isb,
 				     linuxvm,
 				     size,
@@ -95,7 +95,7 @@ co_rc_t co_os_file_block_read_write(co_monitor_t *monitor,
 {
 	co_rc_t rc;
 	co_os_transfer_file_block_data_t data;
-	
+
 	data.offset.QuadPart = offset;
 	data.file_handle = file_handle;
 
@@ -195,7 +195,7 @@ static co_rc_t co_os_file_block_async_read_write(co_monitor_t *monitor,
 
 		if (status == STATUS_PENDING || status == STATUS_SUCCESS)
 			return CO_RC(OK);
-		
+
 		rc = co_status_convert(status);
 		co_debug("block io failed: %p %lx (reason: %x)", context->start, size, (int)status);
 		co_monitor_host_linuxvm_transfer_unmap(monitor, context->page, context->pfn);
@@ -225,7 +225,7 @@ static co_rc_t co_os_file_block_async_write(co_monitor_t *linuxvm, co_block_dev_
 						request->irq_request);
 }
 
-static co_rc_t co_os_file_block_read(co_monitor_t *linuxvm, co_block_dev_t *dev, 
+static co_rc_t co_os_file_block_read(co_monitor_t *linuxvm, co_block_dev_t *dev,
 			      co_monitor_file_block_dev_t *fdev, co_block_request_t *request)
 {
 	return co_os_file_block_read_write(linuxvm, (HANDLE)(fdev->sysdep),
@@ -233,7 +233,7 @@ static co_rc_t co_os_file_block_read(co_monitor_t *linuxvm, co_block_dev_t *dev,
 					   request->size, PTRUE);
 }
 
-static co_rc_t co_os_file_block_write(co_monitor_t *linuxvm, co_block_dev_t *dev, 
+static co_rc_t co_os_file_block_write(co_monitor_t *linuxvm, co_block_dev_t *dev,
 			       co_monitor_file_block_dev_t *fdev, co_block_request_t *request)
 {
 	return co_os_file_block_read_write(linuxvm, (HANDLE)(fdev->sysdep),
@@ -258,14 +258,14 @@ static bool_t probe_area(HANDLE handle, LARGE_INTEGER offset, char *test_buffer,
 
 static co_rc_t co_os_file_block_detect_size_binary_search(HANDLE handle, unsigned long long *out_size)
 {
-	/* 
+	/*
 	 * Binary search the size of the device.
 	 *
 	 * Yep, it's ugly.
 	 *
 	 * I haven't found a more reliable way. I thought about switching between
-	 * IOCTL_DISK_GET_DRIVE_GEOMETRY, IOCTL_DISK_GET_PARTITION_INFORMATION, 
-	 * and even IOCTL_CDROM_GET_DRIVE_GEOMETRY depending on the device's type, 
+	 * IOCTL_DISK_GET_DRIVE_GEOMETRY, IOCTL_DISK_GET_PARTITION_INFORMATION,
+	 * and even IOCTL_CDROM_GET_DRIVE_GEOMETRY depending on the device's type,
 	 * but I'm not sure if would work in all cases.
 	 *
 	 * This *would* work in all cases.
@@ -299,7 +299,7 @@ static co_rc_t co_os_file_block_detect_size_binary_search(HANDLE handle, unsigne
 
 	scan_bit.QuadPart = 1;
 
-	/* 
+	/*
 	 * Find the smallest invalid power of 2.
 	 */
 	while (scan_bit.QuadPart != 0) {
@@ -387,7 +387,7 @@ co_rc_t co_os_file_get_size(HANDLE handle, unsigned long long *out_size)
 
 	/*
 	 * Fall back to binary search.
-	 */ 
+	 */
 	rc = co_os_file_block_detect_size_binary_search(handle, out_size);
 	if (CO_OK(rc))
 		return rc;
@@ -410,7 +410,7 @@ static co_rc_t co_os_file_block_get_size(co_monitor_file_block_dev_t *fdev, unsi
 		return rc;
 
 	rc = co_os_file_get_size(FileHandle, size);
-	
+
 	co_os_file_close(FileHandle);
 
 	return rc;

@@ -61,7 +61,7 @@ typedef struct start_parameters {
 } start_parameters_t;
 
 /*******************************************************************************
- * Globals 
+ * Globals
  */
 co_win32_pcap_t pcap_packet;
 co_reactor_t g_reactor = NULL;
@@ -210,9 +210,9 @@ co_rc_t get_device_name(char *name,
 		else {
 			snprintf(actual_name, actual_name_size, "%s", name_data);
 		}
-		
+
 		RegCloseKey(connection_key);
-		
+
 	}
 
 	return CO_RC(OK);
@@ -235,7 +235,7 @@ static co_rc_t co_pcap_search(void)
 		co_terminal_print("conet-bridged-daemon: Looking for interface \"%s\"\n", daemon_parameters->interface_name);
 	else
 		co_terminal_print("conet-bridged-daemon: Auto selecting name for bridged interface\n");
-	
+
 	device = alldevs;
 	char name_data[256];
 	char connection_name_data[256];
@@ -266,13 +266,13 @@ static co_rc_t co_pcap_search(void)
 				   set this device as he found device, but continue
 				   looping through devices.
 				 */
-				
+
 				if (found_device == NULL &&
 				    strstr(connection_name_data, daemon_parameters->interface_name) != NULL) {
 					found_device = device;
 				}
 			} else {
-				/* 
+				/*
 				 If no name specified and network has an address,
 				  autoselect first device.
 				*/
@@ -281,7 +281,7 @@ static co_rc_t co_pcap_search(void)
 					break;
 				}
 			}
-			
+
 		}
 		else {
 			co_terminal_print("conet-bridged-daemon: adapter %s doesn't have a connection\n", device->description);
@@ -413,7 +413,7 @@ static void co_net_syntax(void)
 	co_terminal_print("                            have problems. It's 1 (enabled) by default\n");
 }
 
-static co_rc_t 
+static co_rc_t
 handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 {
 	char **param_scan = argv;
@@ -438,8 +438,8 @@ handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 				return CO_RC(ERROR);
 			}
 
-			co_snprintf(start_parameters->mac_address, 
-				    sizeof(start_parameters->mac_address), 
+			co_snprintf(start_parameters->mac_address,
+				    sizeof(start_parameters->mac_address),
 				    "%s", *param_scan);
 
 			start_parameters->mac_specified = PTRUE;
@@ -481,8 +481,8 @@ handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 				return CO_RC(ERROR);
 			}
 
-			co_snprintf(start_parameters->interface_name, 
-				    sizeof(start_parameters->interface_name), 
+			co_snprintf(start_parameters->interface_name,
+				    sizeof(start_parameters->interface_name),
 				    "%s", *param_scan);
 
 			start_parameters->name_specified = PTRUE;
@@ -517,7 +517,7 @@ handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 	}
 
 	if ((start_parameters->index < 0) ||
-	    (start_parameters->index >= CO_MODULE_MAX_CONET)) 
+	    (start_parameters->index >= CO_MODULE_MAX_CONET))
 	{
 		co_terminal_print("conet-bridged-daemon: invalid index: %d\n", start_parameters->index);
 		return CO_RC(ERROR);
@@ -533,7 +533,7 @@ handle_parameters(start_parameters_t *start_parameters, int argc, char *argv[])
 		return CO_RC(ERROR);
 	}
 
-	return CO_RC(OK);	
+	return CO_RC(OK);
 }
 
 static co_rc_t conet_bridged_main(int argc, char *argv[])
@@ -543,7 +543,7 @@ static co_rc_t conet_bridged_main(int argc, char *argv[])
 	co_module_t modules[] = {CO_MODULE_CONET0, };
 
 	rc = handle_parameters(&start_parameters, argc, argv);
-	if (!CO_OK(rc)) 
+	if (!CO_OK(rc))
 		return rc;
 
 	if (start_parameters.show_help) {
@@ -565,7 +565,7 @@ static co_rc_t conet_bridged_main(int argc, char *argv[])
 
 	modules[0] += start_parameters.index;
 	rc = co_user_monitor_open(g_reactor, monitor_receive,
-				  start_parameters.instance, modules, 
+				  start_parameters.instance, modules,
 				  sizeof(modules)/sizeof(co_module_t),
 				  &g_monitor_handle);
 	if (!CO_OK(rc))
@@ -651,6 +651,6 @@ main(int argc, char *argv[])
 
 	co_debug("exit (rc %x)", (int)rc);
 	co_debug_end();
-    
+
 	return (CO_OK(rc)) ? 0 : -1;
 }

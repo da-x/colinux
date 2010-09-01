@@ -6,26 +6,28 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <windows.h>
 
 extern "C" {
 	#include <colinux/common/debug.h>
-	#include "../osdep.h"
 }
 
 #include <colinux/user/console-fltk/main.h>
+#include <colinux/user/console-fltk/widget.h>
 
 COLINUX_DEFINE_MODULE("colinux-console-fltk");
 
-
+#define SOFTWARE_COLINUX_CONSOLE_FONT_KEY "Software\\coLinux\\console\\Font"
 /*
  * Storage of current keyboard state.
  * For every virtual key (256), it is 0 (for released) or the scancode
  * of the key pressed (with 0xE0 in high byte if extended).
  */
-static WORD vkey_state[256];
+#define VKEY_LEN 256
+static WORD vkey_state[VKEY_LEN];
+static bool winkey_state;
 
 /*
  * Handler of hook for keyboard events
@@ -51,7 +53,7 @@ static void handle_scancode(WORD code)
  * First attempt to make the console copy/paste text.
  * This needs more work to get right, but at least it's a start ;)
  */
-static int PasteClipboardIntoColinux()
+int PasteClipboardIntoColinux(void)
 {
 	// Lock clipboard for inspection -- TODO: try again on failure
 	if ( ! ::OpenClipboard(NULL) )
@@ -59,17 +61,17 @@ static int PasteClipboardIntoColinux()
 		co_debug( "OpenClipboard() error 0x%lx !", ::GetLastError() );
 		return -1;
 	}
-	
+
 	HANDLE h = ::GetClipboardData(CF_TEXT);
-	
+
 	if (h == NULL )
 	{
 		::CloseClipboard();
 		return 0;	// Empty (for text)
 	}
-	
+
 	unsigned char* s = (unsigned char*) ::GlobalLock(h);
-	
+
 	if ( s == NULL )
 	{
 		::CloseClipboard( );
@@ -87,13 +89,55 @@ static int PasteClipboardIntoColinux()
 		sc.code = *s;
 		co_user_console_handle_scancode( sc );
 	}
-	
+
 	::GlobalUnlock(h);
 	::CloseClipboard();
-	
+
 	return 0;
 }
 
+/* copy the entire screen to the clipboard, adding new-line chars at the end of each line */
+int CopyLinuxIntoClipboard(void)
+{
+	/* Lock clipboard for writing -- TODO: try again on failure */
+	if ( ! ::OpenClipboard(NULL) )
+	{
+		co_debug("OpenClipboard() error 0x%lx !", ::GetLastError());
+		return -1;
+	}
+
+	/* clear clipboard */
+	if ( ! ::EmptyClipboard() )
+	{
+		co_debug("EmptyClipboard() error 0x%lx !", ::GetLastError());
+		return -1;
+	}
+
+	/* get control to the widget */
+	console_widget_t* my_widget = co_user_console_get_window()->get_widget();
+
+	/* allocate memory for clipboard, plus 1 byte for null termination */
+	HGLOBAL hMemClipboard = ::GlobalAlloc(GMEM_MOVEABLE,
+		(my_widget->screen_size_bytes()+1));
+	if (hMemClipboard==NULL)
+	{
+		::CloseClipboard();
+		co_debug( "GlobalAlloc() error 0x%lx !", ::GetLastError() );
+		return -1;
+	}
+
+	/* paste data into clipboard */
+	my_widget->copy_mouse_selection((char*)::GlobalLock(hMemClipboard));
+
+	/* unlock memory (but don't free it-- it's now owned by the OS) */
+	::GlobalUnlock(hMemClipboard);
+	::SetClipboardData(CF_TEXT, hMemClipboard);
+
+	/* and we're done */
+	::CloseClipboard();
+
+	return 0;
+}
 
 static LRESULT CALLBACK keyboard_hook(
     int    nCode,
@@ -107,20 +151,20 @@ static LRESULT CALLBACK keyboard_hook(
 
 	const BYTE vkey     = wParam & 0xFF;
 	const WORD flags    = lParam >> 16;	/* ignore the repeat count */
-	const bool released = flags & KF_UP;
+	const WORD released = flags & KF_UP;
 	WORD       code     = flags & 0xFF;
 
-	/* Special key processing */
+	// Special key processing
 	switch ( vkey )
 	{
 	case VK_LWIN:
 	case VK_RWIN:
 		// special handling of the Win+V key (paste into colinux)
-		if ( released )	vkey_state[255] &= ~1;
-		else			vkey_state[255] |=  1;
+		winkey_state = released ? false : true;
 		// let Windows process it, for now
 	case VK_APPS:
 		return CallNextHookEx(current_hook, nCode, wParam, lParam);
+		
 	case VK_MENU:	/* Check if AltGr (received as LeftControl+RightAlt) */
 		if ( (flags & KF_EXTENDED) && !released &&
 		     (vkey_state[VK_CONTROL] == 0x009D) )
@@ -129,10 +173,41 @@ static LRESULT CALLBACK keyboard_hook(
 			vkey_state[VK_CONTROL] = 0;
 		}
 		break;
+
 	case 'V':
-		if ( !released && (vkey_state[255] & 1) )
+	case VK_END:
+		if ( !released && winkey_state )
 		{
-			PasteClipboardIntoColinux( );
+			PasteClipboardIntoColinux();
+			return 1;	/* key processed */
+		}
+		break;
+		
+	case 'C':
+	case VK_HOME:
+		if ( !released && winkey_state )
+		{
+			CopyLinuxIntoClipboard( );
+			return 1;	/* key processed */
+		}
+		break;
+
+	case VK_PRIOR:
+		if ( !released && winkey_state )
+		{
+			// page up with windows key
+			console_widget_t* my_widget = co_user_console_get_window()->get_widget();
+			my_widget->scroll_page_up();
+			return 1;	/* key processed */
+		}
+		break;
+
+	case VK_NEXT:
+		if ( !released && winkey_state )
+		{
+			// page down with windows key
+			console_widget_t* my_widget = co_user_console_get_window()->get_widget();
+			my_widget->scroll_page_down();
 			return 1;	/* key processed */
 		}
 		break;
@@ -164,20 +239,94 @@ void co_user_console_keyboard_focus_change( unsigned long keyboard_focus )
 {
 	if ( keyboard_focus == 0 )
 	{
-		/*
-		 * Lost keyboard focus. Release all pressed keys.
-		 */
-		for ( int i = 0; i < 255; ++i )
+		// Lost keyboard focus. Release all pressed keys.
+		for(int i = 0; i < VKEY_LEN; i++)
 			if ( vkey_state[i] )
 			{
 				handle_scancode( vkey_state[i] );
 				vkey_state[i] = 0;
 			}
-		vkey_state[255] = 0;
+		winkey_state = false;
 	}
 }
 
-int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR cmdLine, int)
+int ReadRegistry(int key)
+{
+	HKEY hKey;
+
+	DWORD value=-1, reg_size = sizeof(value);
+
+	if(::RegOpenKeyEx(HKEY_CURRENT_USER, TEXT(SOFTWARE_COLINUX_CONSOLE_FONT_KEY), 0, KEY_READ, &hKey)==ERROR_SUCCESS)
+	{
+		switch(key)
+		{
+			case REGISTRY_FONT_SIZE:
+				if(::RegQueryValueEx(hKey, TEXT("Size"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
+					value = -1;
+				break;
+
+			case REGISTRY_FONT:
+				if(::RegQueryValueEx(hKey, TEXT("Font"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
+					value = -1;
+				break;
+
+			case REGISTRY_COPYSPACES:
+				if(::RegQueryValueEx(hKey, TEXT("CopySpaces"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
+					value = -1;
+				break;
+
+			case REGISTRY_EXITDETACH:
+				if(::RegQueryValueEx(hKey, TEXT("ExitDetach"), NULL, NULL, (BYTE*)&value, &reg_size)!=ERROR_SUCCESS)
+					value = -1;
+				break;
+
+			default:
+				break;
+		}
+	}
+	RegCloseKey(hKey);
+
+	return value;
+}
+
+int WriteRegistry(int key, int new_value)
+{
+	HKEY hKey;
+
+	DWORD value=new_value, reg_size = sizeof(value);
+	LONG retval;
+	retval = ::RegCreateKeyEx(HKEY_CURRENT_USER, TEXT(SOFTWARE_COLINUX_CONSOLE_FONT_KEY), 0, NULL, REG_OPTION_NON_VOLATILE,
+		KEY_ALL_ACCESS, NULL, &hKey, NULL);
+	if(retval==ERROR_SUCCESS)
+	{
+		switch(key)
+		{
+			case REGISTRY_FONT_SIZE:
+				::RegSetValueEx(hKey, TEXT("Size"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
+				break;
+
+			case REGISTRY_FONT:
+				::RegSetValueEx(hKey, TEXT("Font"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
+				break;
+
+			case REGISTRY_COPYSPACES:
+				::RegSetValueEx(hKey, TEXT("CopySpaces"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
+				break;
+
+			case REGISTRY_EXITDETACH:
+				::RegSetValueEx(hKey, TEXT("ExitDetach"), NULL, REG_DWORD, (BYTE*)&value, reg_size);
+				break;
+
+			default:
+				break;
+		}
+	}
+	RegCloseKey(hKey);
+
+	return value;
+}
+
+int main(int argc, char *argv[])
 {
 	// Initialize keyboard hook
 	memset(vkey_state, 0, sizeof(vkey_state) );
@@ -185,14 +334,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR cmdLine, int)
 					keyboard_hook,
 					NULL,
 					GetCurrentThreadId());
-
-	// "Normalize" arguments
-	// NOTE: I choosed to ignore parsing errors here as they should
-	//       be caught later
-	int    argc = 0;
-	char** argv = NULL;
-	
-	co_os_parse_args(cmdLine, &argc, &argv);
 
 	// Run main console procedure
 	return co_user_console_main(argc, argv);

@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include "unix.h"
 
@@ -81,7 +81,7 @@ co_rc_t co_os_recv(int sock, char *data, unsigned long size, unsigned long *curr
 		}
 		return CO_RC(ERROR);
 	}
-	
+
 	*current_size += received;
 	return CO_RC(OK);
 }

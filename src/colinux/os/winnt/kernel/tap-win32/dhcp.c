@@ -88,7 +88,7 @@ ip_checksum (const UCHAR *buf, const int len_ip_header)
   USHORT word16;
   ULONG sum = 0;
   int i;
-    
+
   // make 16 bit words out of every two adjacent 8 bit words in the packet
   // and add them up
   for (i = 0; i < len_ip_header - 1; i += 2) {
@@ -113,8 +113,8 @@ udp_checksum (const UCHAR *buf,
   USHORT word16;
   ULONG sum = 0;
   int i;
-	
-  // make 16 bit words out of every two adjacent 8 bit words and 
+
+  // make 16 bit words out of every two adjacent 8 bit words and
   // calculate the sum of all 16 bit words
   for (i = 0; i < len_udp; i += 2){
     word16 = ((buf[i] << 8) & 0xFF00) + ((i + 1 < len_udp) ? (buf[i+1] & 0xFF) : 0);
@@ -128,7 +128,7 @@ udp_checksum (const UCHAR *buf,
   }
   for (i = 0; i < 4; i += 2){
     word16 =((dest_addr[i] << 8) & 0xFF00) + (dest_addr[i+1] & 0xFF);
-    sum += word16; 	
+    sum += word16;
   }
 
   // the protocol number and the length of the UDP packet
@@ -137,7 +137,7 @@ udp_checksum (const UCHAR *buf,
   // keep only the last 16 bits of the 32 bit calculated sum and add the carries
   while (sum >> 16)
     sum = (sum & 0xFFFF) + (sum >> 16);
-		
+
   // Take the one's complement of sum
   return ((USHORT) ~sum);
 }
@@ -153,7 +153,7 @@ SetChecksumDHCPMsg (DHCPMsg *m)
   m->msg.pre.ip.check = htons (ip_checksum ((UCHAR *) &m->msg.pre.ip, sizeof (IPHDR)));
 
   // Set UDP Checksum
-  m->msg.pre.udp.check = htons (udp_checksum ((UCHAR *) &m->msg.pre.udp, 
+  m->msg.pre.udp.check = htons (udp_checksum ((UCHAR *) &m->msg.pre.udp,
 					      sizeof (UDPHDR) + sizeof (DHCP) + m->optlen,
 					      (UCHAR *)&m->msg.pre.ip.saddr,
 					      (UCHAR *)&m->msg.pre.ip.daddr));
@@ -561,7 +561,7 @@ DumpDHCP (const ETH_HEADER *eth,
     DEBUGP ((" flags=0x%04x", ntohs (dhcp->flags)));
 
   // extra stuff
-  
+
   if (ip->version_len != 0x45)
     DEBUGP ((" vl=0x%02x", ip->version_len));
   if (ntohs (ip->tot_len) != sizeof (IPHDR) + sizeof (UDPHDR) + sizeof (DHCP) + optlen)
@@ -575,7 +575,7 @@ DumpDHCP (const ETH_HEADER *eth,
     DEBUGP ((" id=0x%04x", ntohs (ip->id)));
   if (ntohs (ip->frag_off))
     DEBUGP ((" frag_off=0x%04x", ntohs (ip->frag_off)));
-  
+
   DEBUGP ((" ttl=%d", ip->ttl));
   DEBUGP ((" ic=0x%04x [0x%04x]", ntohs (ip->check),
 	    ip_checksum ((UCHAR*)ip, sizeof (IPHDR))));

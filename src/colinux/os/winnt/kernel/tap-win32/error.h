@@ -82,7 +82,7 @@ VOID DumpPacket2 (const char *prefix,
 #define DUMP_PACKET2(prefix, eth, data, len) \
   DumpPacket2 (prefix, eth, data, len)
 
-#else 
+#else
 
 #define DEBUGP(fmt)
 #define MYASSERT(exp)

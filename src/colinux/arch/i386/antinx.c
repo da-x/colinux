@@ -5,7 +5,7 @@
  *
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
- */ 
+ */
 
 #include <colinux/common/common.h>
 #include <colinux/common/debug.h>
@@ -96,13 +96,13 @@ co_rc_t co_arch_anti_nx_init(co_monitor_t *mon)
 		co_debug_lvl(misc, 11, "pfn_next = %08lx", pfn_next);
 		co_os_unmap(mon->manager, page, pfn);
 		pfn = pfn_next;
-		
+
 		page = co_os_map(mon->manager, pfn);
 		if (!page) {
 			rc = CO_RC(ERROR);
 			goto out;
 		}
-		
+
 		co_debug_lvl(misc, 11, "page = %p", page);
 		ptes = (unsigned long long *)page;
 		ptes = &ptes[(vaddr & ~CO_ARCH_PAE_PMD_MASK) >> CO_ARCH_PAGE_SHIFT];
@@ -131,9 +131,9 @@ void co_arch_anti_nx_free(co_monitor_t *mon)
 	if (!archdep->antinx_enabled)
 		return;
 
-	co_os_unmap(mon->manager, 
+	co_os_unmap(mon->manager,
 		    archdep->fixed_page_table_mapping,
 		    archdep->fixed_page_table_pfn);
 
-	archdep->antinx_enabled = PFALSE;	
+	archdep->antinx_enabled = PFALSE;
 }

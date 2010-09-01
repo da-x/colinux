@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -19,7 +19,7 @@
 
 COLINUX_DEFINE_MODULE("colinux-debug-daemon");
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
 	co_rc_t rc;
 

@@ -58,7 +58,7 @@ extern void co_queue_add_tail(co_queue_t *queue, void *ptr);
 extern co_rc_t co_queue_get_tail(co_queue_t *queue, void **ptr);
 
 /**
- * get the previous item in the queue (or NULL if we reached the head) 
+ * get the previous item in the queue (or NULL if we reached the head)
  */
 extern co_rc_t co_queue_get_prev(co_queue_t *queue, void **ptr);
 

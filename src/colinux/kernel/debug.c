@@ -31,7 +31,7 @@ static co_rc_t create_section(co_debug_section_t **section_out)
 	section = co_os_malloc(sizeof(co_debug_section_t));
 	if (!section)
 		return CO_RC(OUT_OF_MEMORY);
-	
+
 	section->buffer = co_os_malloc(CO_DEBUG_SECTION_BUFFER_START_SIZE);
 	if (!section->buffer) {
 		co_os_free(section);
@@ -54,7 +54,7 @@ static co_rc_t create_section(co_debug_section_t **section_out)
 	section->max_size = CO_DEBUG_SECTION_BUFFER_MAX_SIZE;
 
 	*section_out = section;
-	
+
 	return CO_RC(OK);
 }
 
@@ -64,9 +64,9 @@ static void resize_section(co_manager_debug_t *debug, co_debug_section_t *sectio
 	char *new_buffer, *old_buffer;
 
 	if (section->filled >= section->buffer_size / 2) {
-		/* 
+		/*
 		 * If the buffer is half full, increase it's size by a factor
-		 * of two. This reduces the chance of losing logs due to write 
+		 * of two. This reduces the chance of losing logs due to write
 		 * bursts but keeps the buffers short.
 		 */
 
@@ -75,7 +75,7 @@ static void resize_section(co_manager_debug_t *debug, co_debug_section_t *sectio
 			return;
 	} else if (section->filled < CO_DEBUG_SECTION_BUFFER_START_SIZE) {
 		/*
-		 * Reduce to half the size of the peak size if the buffer is 
+		 * Reduce to half the size of the peak size if the buffer is
 		 * quite empty.
 		 */
 		new_size = section->peak_size / 2;
@@ -94,7 +94,7 @@ static void resize_section(co_manager_debug_t *debug, co_debug_section_t *sectio
 
 	old_buffer = section->buffer;
 	co_memcpy(new_buffer, old_buffer, section->filled);
-	
+
 	debug->sections_total_size += new_size - old_size;
 	section->buffer_size = new_size;
 	section->buffer = new_buffer;
@@ -128,7 +128,7 @@ static inline long co_debug_write_vector_size(co_debug_write_vector_t *vec, int 
 	return size;
 }
 
-static co_rc_t append_to_buffer(co_manager_debug_t *debug, co_debug_section_t *section, 
+static co_rc_t append_to_buffer(co_manager_debug_t *debug, co_debug_section_t *section,
 				co_debug_write_vector_t *vec, int vec_size)
 {
 	co_rc_t rc = CO_RC(OK);
@@ -157,7 +157,7 @@ static void get_section(struct co_debug_section *section)
 	co_os_mutex_acquire_critical(section->mutex);
 }
 
-static bool_t put_section(co_manager_debug_t *debug, 
+static bool_t put_section(co_manager_debug_t *debug,
 			  struct co_debug_section *section)
 {
 	section->refcount--;
@@ -193,7 +193,7 @@ static co_rc_t co_debug_writev(co_manager_debug_t *debug,
 	section = *section_ptr;
 	if (!section) {
 		rc = create_section(&section);
-		if (!CO_OK(rc)) 
+		if (!CO_OK(rc))
 			goto out;
 
 		debug->sections_count++;
@@ -220,7 +220,7 @@ static co_rc_t co_debug_writev(co_manager_debug_t *debug,
 	if (CO_OK(rc)) {
 		co_os_wait_wakeup(debug->read_wait);
 	}
-	
+
 out:
 	return rc;
 }
@@ -240,7 +240,7 @@ static co_debug_write_vector_t driver_local_vec[2] = {
 	}
 };
 
-co_rc_t co_debug_write_log(co_manager_debug_t *debug, 
+co_rc_t co_debug_write_log(co_manager_debug_t *debug,
 			   struct co_debug_section **section_ptr,
 			   co_debug_write_vector_t *vec, int vec_size)
 {
@@ -256,7 +256,7 @@ co_rc_t co_debug_write_log(co_manager_debug_t *debug,
 
 	tlv.type = CO_DEBUG_TYPE_TLV;
 	tlv.length = size + sizeof(debug_tlv_index) + sizeof(debug_driver_index);
-	
+
 	local_vec[0].vec_size = 0;
 	local_vec[0].size = sizeof(tlv);
 	local_vec[0].ptr = (void *)&tlv;
@@ -268,12 +268,12 @@ co_rc_t co_debug_write_log(co_manager_debug_t *debug,
 	local_vec[2].vec = driver_local_vec;
 	driver_local_vec[0].ptr = (void *)&debug_tlv_index;
 	driver_local_vec[1].ptr = (void *)&debug_driver_index;
-	
+
 	return co_debug_writev(debug, section_ptr, local_vec, 3);
 }
 
-co_rc_t co_debug_read(co_manager_debug_t *debug, 
-		      char *buf, unsigned long size, 
+co_rc_t co_debug_read(co_manager_debug_t *debug,
+		      char *buf, unsigned long size,
 		      unsigned long *read_size)
 {
 	co_rc_t rc;
@@ -282,7 +282,7 @@ co_rc_t co_debug_read(co_manager_debug_t *debug,
 
 	co_os_wait_sleep(debug->read_wait);
 	co_os_mutex_acquire(debug->mutex);
-	
+
 	co_list_each_entry_safe(section, section_new, &debug->sections, node) {
 		bool_t saved = PFALSE;
 		get_section(section);
@@ -324,14 +324,14 @@ co_rc_t co_debug_fold(co_manager_debug_t *debug, co_debug_section_t *section)
 
 	co_os_mutex_acquire(debug->mutex);
 	get_section(section);
-	
+
 	shrunk_buffer = co_os_malloc(section->filled + 1);
 	if (!shrunk_buffer) {
 		rc = CO_RC(OUT_OF_MEMORY);
 	} else {
 		co_memcpy(shrunk_buffer, section->buffer, section->filled);
 		co_os_free(section->buffer);
-		
+
 		debug->sections_total_size -= section->buffer_size;
 		section->buffer = shrunk_buffer;
 		section->buffer_size = section->filled;
@@ -391,7 +391,7 @@ co_rc_t co_debug_free(co_manager_debug_t *debug)
 	co_os_wait_destroy(debug->read_wait);
 	co_os_mutex_destroy(debug->mutex);
 	report_status("done freeing", debug);
-		
+
 	return CO_RC(OK);
 }
 

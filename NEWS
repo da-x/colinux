@@ -1,3 +1,29 @@
+* Version 0.7.8
+  FLTK Console (Shai Vaingast):
+  * New: Select font style and size with menu, store current font in registry.
+  * New: Setect text with right or left mouse and copy&paste with key Win+C.
+  * New: "cocon=COLSxROWSxSCROLLBACK" to use console scrollback with keys
+    Win+PageUP, Win+PageDown or mouse weel.
+  * Disabling console FLTK resize functionality.
+  * Enabled blinking cursor support.
+  * New menu option "exit on detach" (quit console after shutting down).
+  * Redesigned menu to be more inline with today's standard menu layout.
+  * Workaround for some Vista keyboard drivers bugs where WinKey+C and WinKey+V
+    don't work properly.  Now WinKey+Home and WinKey+End is teh alternate.
+
+  Daemons:
+  * Different descriription for file properties, add original filename.
+
+  Kernel:
+  * Version 2.6.33.5
+  * Filesystems EXT4 enabled in kernel, GFS2 enabled as module
+
+  Buildsystem:
+  * Suppress warnings from Python 2.6. (Shai Vaingast)
+
+  Updated libraries and tools:
+  * FLTK 1.1.10, fixes problems with Window border frame on Vista.
+
 * Version 0.7.7.1
   Kernel 2.6.25.20 and 2.6.26.8:
   * Bug #3021253: Hang/Crash with memory size not bounding on 4MB.

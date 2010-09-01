@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <stdio.h>
 #include <stdarg.h>
@@ -69,7 +69,7 @@ static int daemon_main(int argc, char *argv[])
 		co_terminal_print("daemon: error, unable to determine if driver is installed (rc %x)\n", (int)rc);
 		return -1;
 	}
-	
+
 	if (!installed) {
 		co_terminal_print("daemon: error, kernel module is not loaded\n");
 		return -1;
@@ -84,7 +84,7 @@ static int daemon_main(int argc, char *argv[])
 			co_terminal_print("daemon: manager is loaded\n");
 		} else {
 			if (CO_RC_GET_CODE(rc) == CO_RC_VERSION_MISMATCHED) {
-				co_terminal_print("driver version is %d while expected version %d\n", 
+				co_terminal_print("driver version is %d while expected version %d\n",
 					 status.periphery_api_version, CO_LINUX_PERIPHERY_API_VERSION);
 			}
 			co_terminal_print("daemon: can't get manager status\n");
@@ -133,7 +133,7 @@ out:
 	return ret;
 }
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
 	int ret;
 

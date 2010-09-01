@@ -19,7 +19,7 @@ class ToolRunInfo(object):
     def __init__(self, target, reporter, options):
         self.target = target
         self.reporter = reporter
-        self.options = options 
+        self.options = options
 
 class Empty(Tool):
     EMPTY = True
@@ -98,7 +98,7 @@ class Executer(Tool):
         tool_run_inf.reporter.print_text(command_line)
         exit_status = os.system(command_line)
         return exit_status
-    
+
     def make(self, target, reporter):
         tool_run_inf = ToolRunInfo(target, reporter, target.options)
         self.prepare_command(tool_run_inf)
@@ -112,7 +112,7 @@ class Executer(Tool):
 
     def cache(self, target):
         tool_run_inf = ToolRunInfo(target, None, target.options)
-        return self.get_command_line(tool_run_inf)    
+        return self.get_command_line(tool_run_inf)
 
     def prepare_command(self, tool_run_inf):
         pass
@@ -133,7 +133,7 @@ class Compiler(Executer):
         if not compiler_def_type:
             compiler_def_type = 'gcc'
         compiler_path = self.get_cross_build_tool(compiler_def_type, tool_run_inf)
-        
+
         input_pathnames = []
         for tinput in tool_run_inf.target.get_actual_inputs():
             if tinput.get_ext() in ['.c', '.cpp']:
@@ -190,7 +190,7 @@ class Compiler(Executer):
 class Linker(Executer):
     def get_command_line(self, tool_run_inf):
         actual_compile = False
-        
+
         link_path = self.get_cross_build_tool('ld', tool_run_inf)
 
         input_pathnames = []
@@ -201,8 +201,8 @@ class Linker(Executer):
         parameters.append(link_path)
         if tool_run_inf.target.get_ext() == '.o':
             parameters.append('-r')
-            
-        parameters.extend(input_pathnames)   
+
+        parameters.extend(input_pathnames)
         parameters += tool_run_inf.options.get('linker_add', [])
         parameters.append('-o')
         parameters.append(tool_run_inf.target.pathname)
@@ -212,7 +212,7 @@ class Linker(Executer):
 class Archiver(Executer):
     def __init__(self, flat=True):
         self.flat = flat
-        
+
     def get_command_line(self, tool_run_inf):
         ar = self.get_cross_build_tool('ar', tool_run_inf)
         parameters = []
@@ -223,7 +223,7 @@ class Archiver(Executer):
         command_line = ' '.join(parameters)
         return command_line
 
-    def cache(self, target):         
+    def cache(self, target):
         tool_run_inf = ToolRunInfo(target, None, target.options)
         cmdline = self.get_cross_build_tool('ar', tool_run_inf)
         cmdline += ' '.join([target.pathname for target in tool_run_inf.target.get_actual_inputs()])
@@ -236,9 +236,9 @@ class Archiver(Executer):
         tool_run_inf.temp_dir = None
         tool_run_inf.temp_dir_extract = None
         tool_run_inf.temp_inputs = []
-        
+
         ar = self.get_cross_build_tool('ar', tool_run_inf)
-        
+
         input_pathnames = []
         for tinput in tool_run_inf.target.get_actual_inputs():
             if tinput.get_ext() == '.a':
@@ -255,7 +255,7 @@ class Archiver(Executer):
             tool_run_inf.temp_dir = temp_dir
             tool_run_inf.temp_dir_extract = temp_dir_extract
             file_index = 0
-            
+
             for tinput in tool_run_inf.target.get_actual_inputs():
                 if tinput.get_ext() == '.a':
                     cwd = os.getcwd()
@@ -265,7 +265,7 @@ class Archiver(Executer):
                         self.system('ar x %s' % (real_path, ), tool_run_inf)
                     finally:
                         os.chdir(cwd)
-                        
+
                     for pathname in os.listdir(temp_dir_extract):
                         if pathname == '__.SYMDEF SORTED':
                             continue

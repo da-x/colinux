@@ -252,7 +252,7 @@ DriverEntry (IN PDRIVER_OBJECT p_DriverObject,
 //============================================================
 //                         Driver Unload
 //============================================================
-VOID 
+VOID
 TapDriverUnload (IN PDRIVER_OBJECT p_DriverObject)
 {
   DEBUGP (("[TAP] version [%d.%d] %s %s unloaded, instances=%d, imbs=%d\n",
@@ -583,7 +583,7 @@ AdapterHalt (IN NDIS_HANDLE p_AdapterContext)
   l_Adapter->m_InterfaceIsRunning = FALSE;
 
   DEBUGP (("[%s] is being halted\n", NAME (l_Adapter)));
-  
+
   DestroyTapDevice (&l_Adapter->m_Extension);
 
   // Free resources
@@ -608,7 +608,7 @@ AdapterFreeResources (TapAdapterPointer p_Adapter)
 
   if (p_Adapter->m_NameAnsi.Buffer)
     RtlFreeAnsiString (&p_Adapter->m_NameAnsi);
-  
+
   if (p_Adapter->m_RegisteredAdapterShutdownHandler)
     NdisMDeregisterAdapterShutdownHandler (p_Adapter->m_MiniportAdapterHandle);
 
@@ -680,7 +680,7 @@ TapDeviceFreeResources (TapExtensionPointer p_Extension)
   // control panel) while a userspace app still held an open
   // file handle to it.
   //==========================================================
-  
+
   if (p_Extension->m_TapDevice)
     {
       BOOLEAN status;
@@ -691,7 +691,7 @@ TapDeviceFreeResources (TapExtensionPointer p_Extension)
 
   if (p_Extension->m_TapName)
     MemFree (p_Extension->m_TapName, NAME_BUFFER_SIZE);
-  
+
   if (p_Extension->m_AllocatedSpinlocks)
     NdisFreeSpinLock (&p_Extension->m_QueueLock);
 }
@@ -1098,7 +1098,7 @@ NDIS_STATUS AdapterQuery
       l_Query.m_PhysicalMedium = NdisPhysicalMediumUnspecified;
       l_QueryLength = sizeof (NDIS_PHYSICAL_MEDIUM);
       break;
-      
+
     case OID_GEN_LINK_SPEED:
       l_Query.m_Long = 1000000; // rate / 100 bps
       break;
@@ -1250,13 +1250,13 @@ NDIS_STATUS AdapterModify
 	  NdisAcquireSpinLock (&l_Adapter->m_MCLock);
 
 	  NdisZeroMemory(&l_Adapter->m_MCList, sizeof (MC_LIST));
-        
+
 	  NdisMoveMemory(&l_Adapter->m_MCList,
 			 p_Buffer,
 			 p_BufferLength);
 
 	  l_Adapter->m_MCListSize = p_BufferLength / sizeof (ETH_ADDR);
-        
+
 	  NdisReleaseSpinLock (&l_Adapter->m_MCLock);
 
 	  l_Status = NDIS_STATUS_SUCCESS;
@@ -1625,7 +1625,7 @@ AdapterTransmit (IN NDIS_HANDLE p_AdapterContext,
 	if (l_IRP && l_PacketBuffer)
 	  {
 	    CompleteIRP (l_IRP,
-			 l_PacketBuffer, 
+			 l_PacketBuffer,
 			 IO_NETWORK_INCREMENT);
 	  }
 	else
@@ -1642,10 +1642,10 @@ AdapterTransmit (IN NDIS_HANDLE p_AdapterContext,
   NdisFreeMemory (l_PacketBuffer,
 		  TAP_PACKET_SIZE (l_PacketLength),
 		  0);
-  
+
  exit_success:
   return NDIS_STATUS_SUCCESS;
-    
+
  exit_fail:
   return NDIS_STATUS_FAILURE;
 
@@ -1871,7 +1871,7 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 		  NOTE_ERROR ();
 		  p_IRP->IoStatus.Status = l_Status = STATUS_INVALID_PARAMETER;
 		}
-	      
+
 	      break;
 	    }
 
@@ -1908,7 +1908,7 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 		  NOTE_ERROR ();
 		  p_IRP->IoStatus.Status = l_Status = STATUS_INVALID_PARAMETER;
 		}
-	      
+
 	      break;
 	    }
 
@@ -1966,7 +1966,7 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 		  NOTE_ERROR ();
 		  p_IRP->IoStatus.Status = l_Status = STATUS_INVALID_PARAMETER;
 		}
-	      
+
 	      break;
 	    }
 
@@ -1981,8 +1981,8 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 		  NdisMoveMemory (l_Adapter->m_dhcp_user_supplied_options_buffer,
 				  p_IRP->AssociatedIrp.SystemBuffer,
 				  l_IrpSp->Parameters.DeviceIoControl.InputBufferLength);
-		  
-		  l_Adapter->m_dhcp_user_supplied_options_buffer_len = 
+
+		  l_Adapter->m_dhcp_user_supplied_options_buffer_len =
 		    l_IrpSp->Parameters.DeviceIoControl.InputBufferLength;
 
 		  p_IRP->IoStatus.Information = 1; // Simple boolean value
@@ -1992,7 +1992,7 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 		  NOTE_ERROR ();
 		  p_IRP->IoStatus.Status = l_Status = STATUS_INVALID_PARAMETER;
 		}
-	      
+
 	      break;
 	    }
 
@@ -2175,7 +2175,7 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 		   (unsigned char *) p_IRP->AssociatedIrp.SystemBuffer + ETHERNET_HEADER_SIZE,
 		   l_IrpSp->Parameters.Write.Length - ETHERNET_HEADER_SIZE,
 		   l_IrpSp->Parameters.Write.Length - ETHERNET_HEADER_SIZE);
-		
+
 		NdisMEthIndicateReceiveComplete (l_Adapter->m_MiniportAdapterHandle);
 
 		p_IRP->IoStatus.Status = l_Status = STATUS_SUCCESS;
@@ -2301,11 +2301,11 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 	    p_IRP->IoStatus.Status = l_Status = STATUS_UNSUCCESSFUL;
 	    p_IRP->IoStatus.Information = 0;
 	  }
-	
+
 	IoCompleteRequest (p_IRP, IO_NO_INCREMENT);
 	break;
       }
-      
+
       //-----------------------------------------------------------
       //  User mode thread called CloseHandle() on the tap device
       //-----------------------------------------------------------
@@ -2334,7 +2334,7 @@ TapDeviceHook (IN PDEVICE_OBJECT p_DeviceObject, IN PIRP p_IRP)
 	    p_IRP->IoStatus.Status = l_Status = STATUS_UNSUCCESSFUL;
 	    p_IRP->IoStatus.Information = 0;
 	  }
-	
+
 	IoCompleteRequest (p_IRP, IO_NO_INCREMENT);
 	break;
       }
@@ -2432,7 +2432,7 @@ CompleteIRP (IN PIRP p_IRP,
   __except (EXCEPTION_EXECUTE_HANDLER)
     {
     }
-  
+
   if (l_Status == STATUS_SUCCESS)
     {
       IoCompleteRequest (p_IRP, PriorityBoost);
@@ -2485,7 +2485,7 @@ CancelIRP (TapExtensionPointer p_Extension,
       p_IRP->IoStatus.Status = STATUS_CANCELLED;
       p_IRP->IoStatus.Information = 0;
     }
-     
+
   if (callback)
     IoReleaseCancelSpinLock (p_IRP->CancelIrql);
 
@@ -2629,7 +2629,7 @@ ProcessARP (TapAdapterPointer p_Adapter,
 
 	  //----------------------------------------------
 	  // ARP addresses
-	  //----------------------------------------------      
+	  //----------------------------------------------
 	  COPY_MAC (arp->m_MAC_Source, mac);
 	  COPY_MAC (arp->m_MAC_Destination, p_Adapter->m_MAC);
 	  COPY_MAC (arp->m_ARP_MAC_Source, mac);
@@ -2682,7 +2682,7 @@ InjectPacket (TapAdapterPointer p_Adapter,
 	 packet + ETHERNET_HEADER_SIZE,
 	 len - ETHERNET_HEADER_SIZE,
 	 len - ETHERNET_HEADER_SIZE);
-      
+
       NdisMEthIndicateReceiveComplete (p_Adapter->m_MiniportAdapterHandle);
     }
   __except (EXCEPTION_EXECUTE_HANDLER)

@@ -49,16 +49,16 @@ typedef struct {
 	co_id_t		    id;
 } co_manager_ioctl_create_t;
 
-/* 
- * ioctls()s under CO_MANAGER_IOCTL_MONITOR: 
+/*
+ * ioctls()s under CO_MANAGER_IOCTL_MONITOR:
  */
 typedef enum {
 	CO_MONITOR_IOCTL_CLOSE,
-	CO_MONITOR_IOCTL_LOAD_SECTION, 
+	CO_MONITOR_IOCTL_LOAD_SECTION,
 	CO_MONITOR_IOCTL_START,
 	CO_MONITOR_IOCTL_RUN,
 	CO_MONITOR_IOCTL_STATUS,
-	CO_MONITOR_IOCTL_LOAD_INITRD, 
+	CO_MONITOR_IOCTL_LOAD_INITRD,
 	CO_MONITOR_IOCTL_GET_CONSOLE,  /* Get console dimentions and max buffer size */
 	CO_MONITOR_IOCTL_GET_STATE,
 	CO_MONITOR_IOCTL_RESET,

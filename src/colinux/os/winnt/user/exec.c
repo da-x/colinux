@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include <windows.h>
 
@@ -22,7 +22,7 @@ co_rc_t co_launch_process(int *pid, char *command_line, ...)
 	va_list ap;
 	STARTUPINFO si;
 	PROCESS_INFORMATION pi;
-	
+
 	memset(&si, 0, sizeof(si));
 	si.cb = sizeof(si);
 	memset(&pi, 0, sizeof(pi));
@@ -34,13 +34,13 @@ co_rc_t co_launch_process(int *pid, char *command_line, ...)
 	co_debug("executing: %s", buf);
 
 	ret = CreateProcess(NULL,
-			    buf,              // Command line. 
-			    NULL,             // Process handle not inheritable. 
-			    NULL,             // Thread handle not inheritable. 
-			    FALSE,            // Set handle inheritance to FALSE. 
-			    0,                // No creation flags. 
-			    NULL,             // Use parent's environment block. 
-			    NULL,             // Use parent's starting directory. 
+			    buf,              // Command line.
+			    NULL,             // Process handle not inheritable.
+			    NULL,             // Thread handle not inheritable.
+			    FALSE,            // Set handle inheritance to FALSE.
+			    0,                // No creation flags.
+			    NULL,             // Use parent's environment block.
+			    NULL,             // Use parent's starting directory.
 			    &si,              // Pointer to STARTUPINFO structure.
 			    &pi);             // Pointer to PROCESS_INFORMATION structure.
 
@@ -79,8 +79,8 @@ co_rc_t co_kill_process(int pid)
 		co_debug_error("error 0x%lx in temination of pid %d", GetLastError(), pid);
 		rc = CO_RC(ERROR);
 	}
-	
+
 	CloseHandle(hProcess);
-	
+
 	return rc;
 }

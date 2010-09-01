@@ -36,7 +36,7 @@ class FileIdScript(Tool):
 
     def make(self, target, reporter):
         output_file = open(target.pathname, 'wb')
-        output_file.write(self._content())        
+        output_file.write(self._content())
 
     def rebuild_needed(self, target):
         return open(target.pathname, 'rb').read() != self._content()

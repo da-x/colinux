@@ -35,7 +35,7 @@ class DefaultObj(DefaultTarget):
         from target import RawTarget, RawInput, RawOptions
         from tools import Compiler
         base_dep_name = None
-        
+
         full_name = mregex.groups(0)[0] + '.c'
         if os.path.exists(full_name) and not os.path.islink(full_name):
             base_dep_name = os.path.basename(full_name)
@@ -43,10 +43,10 @@ class DefaultObj(DefaultTarget):
             full_name = mregex.groups(0)[0] + '.cpp'
             if os.path.exists(full_name) and not os.path.islink(full_name):
                 base_dep_name = os.path.basename(full_name)
-                
+
         if not base_dep_name:
             return None
-        
+
         inputs = [RawInput(base_dep_name)]
 
         from cdeps import calc_deps
@@ -83,4 +83,4 @@ def get_default_tool(target):
     if target.get_ext() == '.a':
         from tools import Archiver
         return Archiver()
-        
+

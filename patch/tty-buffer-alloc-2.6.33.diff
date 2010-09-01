@@ -1,0 +1,52 @@
+* Fix abundant warning from kmalloc inside tty_buffer_request_room
+* tty_buffer_alloc: Fallback and try to alloc a single page
+
+Index: linux-2.6.33-source/drivers/char/tty_buffer.c
+===================================================================
+--- linux-2.6.33-source.orig/drivers/char/tty_buffer.c
++++ linux-2.6.33-source/drivers/char/tty_buffer.c
+@@ -57,12 +57,27 @@
+ static struct tty_buffer *tty_buffer_alloc(struct tty_struct *tty, size_t size)
+ {
+ 	struct tty_buffer *p;
++	size_t bytes;
+ 
+ 	if (tty->buf.memory_used + size > 65536)
+ 		return NULL;
+-	p = kmalloc(sizeof(struct tty_buffer) + 2 * size, GFP_ATOMIC);
+-	if (p == NULL)
+-		return NULL;
++
++	bytes = sizeof(struct tty_buffer) + 2 * size;
++	p = kmalloc(bytes, GFP_ATOMIC | __GFP_NOWARN);
++	if (p == NULL) {
++		if (bytes <= PAGE_SIZE) {
++			printk(KERN_WARNING "tty_buffer_alloc: kmalloc failed for size:%d (%d) used:%d\n", size, bytes, tty->buf.memory_used);
++			return NULL;
++		}
++
++		/* Try single page */
++		size = (PAGE_SIZE - sizeof(struct tty_buffer)) / 2;
++		p = kmalloc(PAGE_SIZE, GFP_ATOMIC);
++		if (p == NULL) {
++			printk(KERN_WARNING "tty_buffer_alloc: kmalloc second try failed size:%d (%lu) used:%d\n", size, PAGE_SIZE, tty->buf.memory_used);
++			return NULL;
++		}
++	}
+ 	p->used = 0;
+ 	p->size = size;
+ 	p->next = NULL;
+@@ -221,8 +236,12 @@
+ 			} else
+ 				tty->buf.head = n;
+ 			tty->buf.tail = n;
+-		} else
++			if (n->size < size)
++				size = n->size;
++		} else {
++			printk(KERN_WARNING "tty_buffer_find failed for size:%d left:%d used:%d\n", size, left, tty->buf.memory_used);
+ 			size = left;
++		}
+ 	}
+ 
+ 	spin_unlock_irqrestore(&tty->buf.lock, flags);

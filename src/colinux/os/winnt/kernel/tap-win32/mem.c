@@ -174,7 +174,7 @@ QueueExtract (Queue *q, PVOID item)
       else
 	{
 	  q->data[dest] = q->data[src];
-	  QUEUE_ADD_INDEX (dest, 1);	  
+	  QUEUE_ADD_INDEX (dest, 1);
 	}
       QUEUE_ADD_INDEX (src, 1);
     }

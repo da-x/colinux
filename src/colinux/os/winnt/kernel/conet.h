@@ -6,7 +6,7 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #ifndef _CO_CONET_H_
 #define _CO_CONET_H_
@@ -49,7 +49,7 @@ typedef struct _conet_binding_context {
 } conet_binding_context;
 
 typedef struct _conet_message_transfer_context {
-	co_monitor_t	*monitor; 
+	co_monitor_t	*monitor;
 	co_message_t	*message;
 	PIO_WORKITEM	work_item;
 } conet_message_transfer_context_t;

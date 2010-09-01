@@ -9,20 +9,20 @@ from networkdevice import NetworkDevicesOptionArray
 class MainEditor(wx.SplitterWindow):
     def __init__(self, mainframe, *arg, **kw):
         wx.SplitterWindow.__init__(self, mainframe, *arg, **kw)
-        
+
         tree = wx.TreeCtrl(self, -1)
         self.panel = wx.Panel(self, -1)
 
         items = []
         item = item_root = tree.AddRoot('Configuration')
         items.append(item)
-        
+
         def append_item(parent, name, data=None):
             item = tree.AppendItem(parent, name)
             tree.SetPyData(item, data)
             items.append(item)
             return item
-            
+
         self.item_devices = append_item(item_root, 'Devices')
         append_item(item_root, 'Kernel image')
         append_item(item_root, 'Memory')
@@ -39,9 +39,9 @@ class MainEditor(wx.SplitterWindow):
             self.ReplaceWindow(self.panel, instance.panel)
             self.panel.Destroy()
             self.panel = instance.panel
-            
+
         wx.EVT_TREE_SEL_CHANGED(tree, tree.GetId(), sel_changed)
-        
+
         self.SplitVertically(tree, self.panel, 300)
         self.tree = tree
         self.mainframe = mainframe
@@ -54,7 +54,7 @@ class ConfigurationItem(object):
         raise NotImplemented()
 
 class ConfigurationItemList(object):
-    def __init__(self, optionpanel, xmlelements, maineditor, index_range):  
+    def __init__(self, optionpanel, xmlelements, maineditor, index_range):
         self.root = maineditor.item_devices
         self.itemtree = maineditor.tree.AppendItem(self.root, optionpanel.SHORT_TREE_DESC)
         self.list = []
@@ -77,8 +77,8 @@ class ConfigurationItemList(object):
                 return True
         return False
 
-    def check_index(self, str_index, old_index):        
-        try:            
+    def check_index(self, str_index, old_index):
+        try:
             index = int(str_index)
         except ValueError, e:
             raise InvalidArrayIndexChosen("Index must be an integer", index)
@@ -88,7 +88,7 @@ class ConfigurationItemList(object):
                 raise InvalidArrayIndexChosen("Index already used", index)
             if index not in self.index_range:
                 raise InvalidArrayIndexChosen("Index out of range", index)
-            
+
         return str(index)
 
     def get_item_by_index(self, index):
@@ -146,7 +146,7 @@ class MainFrame(wx.Frame):
         self.SetDropTarget(filedropclass())
         self._current_path = None
         self._opened = False
-        
+
         bar = self.CreateStatusBar(2)
         bar.SetStatusWidths([-1, 40])
 
@@ -172,16 +172,16 @@ class MainFrame(wx.Frame):
         menu.Append(wx.ID_EXIT, '&Quit', 'Quit')
         menuBar.Append(menu, '&File')
         self.SetMenuBar(menuBar)
-        
+
         wx.EVT_MENU(self, wx.ID_EXIT, self.on_close_window)
 
     def on_close_window(self, event):
         self.ask_save()
         self.Destroy()
-        
+
     def ask_save(self):
         if not self.is_modified(): return True
-        
+
         flags = wx.ICON_EXCLAMATION | wx.YES_NO | wx.CANCEL | wx.CENTRE
         dlg = wx.MessageDialog(self, 'File is modified. Save before exit?',
                                  'Save before too late?', flags )
@@ -224,7 +224,7 @@ class MainFrame(wx.Frame):
 
     def gui_open(self, path=None):
         if not self.ask_save(): return
-        
+
         if path is None:
             dlg = wx.FileDialog(self, 'Open', '',
                                   '', '*.colinux.xml', wx.OPEN | wx.CHANGE_DIR)
@@ -278,7 +278,7 @@ class MainFrame(wx.Frame):
     def open_xml(self, xml):
         self.xml = xml
         self.xml_colinux, = self.xml.sub.colinux
-        self._opened = True        
+        self._opened = True
         self.menuBar.Enable(wx.ID_CLOSE, True)
         self.menuBar.Enable(wx.ID_SAVE, True)
         self.menuBar.Enable(wx.ID_SAVEAS, True)
@@ -306,7 +306,7 @@ class App(wx.App):
     def __init__(self, configurator, *arg, **kw):
         self._configurator = configurator
         wx.App.__init__(self, *arg, **kw)
-        
+
     def OnInit(self):
         frame = MainFrame(self._configurator, None, -1, 'Cooperative Linux Virtual Machine Configuration')
         frame.Show(True)

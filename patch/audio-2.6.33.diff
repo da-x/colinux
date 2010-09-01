@@ -1,10 +1,10 @@
-Index: linux-2.6.22-source/sound/pci/Kconfig
+Index: linux-2.6.33-source/sound/pci/Kconfig
 ===================================================================
---- linux-2.6.22-source.orig/sound/pci/Kconfig
-+++ linux-2.6.22-source/sound/pci/Kconfig
-@@ -3,6 +3,14 @@
- menu "PCI devices"
- 	depends on SND!=n && PCI
+--- linux-2.6.33-source.orig/sound/pci/Kconfig
++++ linux-2.6.33-source/sound/pci/Kconfig
+@@ -9,6 +9,14 @@
+ 
+ if SND_PCI
  
 +config COOPERATIVE_AUDIO
 +	bool "Cooperative audio support"
@@ -16,12 +16,12 @@ Index: linux-2.6.22-source/sound/pci/Kconfig
 +
  config SND_AD1889
  	tristate "Analog Devices AD1889"
- 	depends on SND
-Index: linux-2.6.22-source/sound/pci/Makefile
+ 	select SND_AC97_CODEC
+Index: linux-2.6.33-source/sound/pci/Makefile
 ===================================================================
---- linux-2.6.22-source.orig/sound/pci/Makefile
-+++ linux-2.6.22-source/sound/pci/Makefile
-@@ -26,6 +26,8 @@
+--- linux-2.6.33-source.orig/sound/pci/Makefile
++++ linux-2.6.33-source/sound/pci/Makefile
+@@ -28,6 +28,8 @@
  snd-via82xx-objs := via82xx.o
  snd-via82xx-modem-objs := via82xx_modem.o
  

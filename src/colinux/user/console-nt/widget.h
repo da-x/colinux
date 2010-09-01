@@ -81,7 +81,7 @@ protected: // methods
 		const co_console_unit& L,
 		const co_console_unit& B,
 		const co_console_unit& R) = 0;
-		
+
 	// Set inverce color
 	virtual co_rc_t op_invert(
 		const co_console_unit& Y,

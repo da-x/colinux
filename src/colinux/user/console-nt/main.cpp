@@ -7,10 +7,10 @@
  * the root directory.
  *
  */
- 
- /* 
+
+ /*
   * OS independent main program for the text mode console.
-  * Used for building colinux-console-nt.exe 
+  * Used for building colinux-console-nt.exe
   */
 
 #include "console.h"
@@ -35,7 +35,7 @@ int co_user_console_main(int argc, char** argv)
 	co_rc_t rc;
 
 	co_debug_start();
-	
+
 	rc = global_window->parse_args(argc, argv);
 	if (!CO_OK(rc)) {
 		co_debug("The console program was unable to parse the parameters.");

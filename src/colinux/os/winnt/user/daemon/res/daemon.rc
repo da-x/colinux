@@ -12,9 +12,9 @@ PRODUCTVERSION CO_VERSION_DWORD
 FILEOS VOS__WINDOWS32
 {
   BLOCK "StringFileInfo"{
-    BLOCK "040904B0" {    
+    BLOCK "040904B0" {
       VALUE "CompanyName","Open Source software"
-      VALUE "FileDescription", "coLinux daemon program"
+      VALUE "FileDescription", "coLinux Main daemon program"
       VALUE "FileVersion", CO_VERSION_STRING
       VALUE "LegalCopyright","Copyright (c) coLinux project"
       VALUE "OriginalFilename","colinux-daemon.exe"

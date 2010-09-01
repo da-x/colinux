@@ -6,21 +6,26 @@
  * The code is licensed under the GPL. See the COPYING file at
  * the root directory.
  *
- */ 
+ */
 
 #include "console.h"
 
 static console_window_t* global_window = NULL;
 
+console_window_t* co_user_console_get_window(void)
+{
+    return global_window;
+}
+
 void co_user_console_handle_scancode(co_scan_code_t sc)
 {
 	if (!global_window)
 		return;
-	
+
 	global_window->handle_scancode(sc);
 }
 
-int co_user_console_main(int argc, char** argv) 
+int co_user_console_main(int argc, char** argv)
 {
 	co_rc_t		 rc;
 	console_window_t window;
@@ -37,7 +42,7 @@ int co_user_console_main(int argc, char** argv)
 		goto out;
 	}
 
-	rc = window.start(); 
+	rc = window.start();
 	if (!CO_OK(rc)) {
 		co_debug("Error %08x starting console", (int)rc);
 		ret = -1;

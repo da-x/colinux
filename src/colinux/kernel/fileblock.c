@@ -13,13 +13,13 @@
 #include "monitor.h"
 
 static co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
-				      co_block_dev_t *dev, 
+				      co_block_dev_t *dev,
 				      co_block_request_t *request)
-{ 
+{
 	co_monitor_file_block_dev_t *fdev = (co_monitor_file_block_dev_t *)dev;
 	co_rc_t rc = CO_RC_ERROR;
 
-	switch (request->type) { 
+	switch (request->type) {
 	case CO_BLOCK_OPEN: {
 		if (fdev->state != CO_MONITOR_FILE_BLOCK_CLOSED) {
 			co_debug_error("monitor: cobd not closed!");
@@ -27,7 +27,7 @@ static co_rc_t co_monitor_file_block_service(co_monitor_t *cmon,
 		}
 
 		co_debug("monitor: cobd opened (%s)", fdev->pathname);
-			
+
 		rc = fdev->op->open(cmon, fdev);
 		if (CO_OK(rc))
 			fdev->state = CO_MONITOR_FILE_BLOCK_OPENED;

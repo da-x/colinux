@@ -15,7 +15,7 @@ TARGET_FILE=$2
 CO_PRODUCT_STRING=`cat $VERSION_FILE`-`date +%Y%m%d`
 
 # Get 4 digit words from full version
-VERSION=`sed -ne 's/\([0-9\.]*\)[-\.][^0-9]*\([0-9]*\).*/\1,\2/p' < $VERSION_FILE`
+VERSION=`sed -ne 's/\([0-9\.]*\)-[^0-9]*\([0-9]*\).*/\1,\2/p' < $VERSION_FILE`
 
 # Get SVN revision number
 REVISION=`svnversion | sed -rne 's/^([0-9]*).*$/\1/p'`
