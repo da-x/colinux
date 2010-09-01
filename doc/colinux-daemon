@@ -577,10 +577,12 @@ Used keys in Windows Registry
 [HKEY_CURRENT_USER\Software\coLinux\monitor\M\ethX]
 "mac"="00:ff:XX:XX:XX:XX"
 
-# Font and font size for console FLTK
+# Font type, font size, copy mode and exit at detach for console FLTK
 [HKEY_CURRENT_USER\Software\coLinux\console\Font]
 "Size"=dword:000000012
 "Font"=dword:0000000d
+"CopySpaces"=dword:00000000
+"ExitDetach"=dword:00000000
 
 # Debug level for kernel driver load
 [HKEY_LOCAL_MACHINE\SOFTWARE\coLinux]
@@ -596,13 +598,17 @@ Special keys in consoles
 
     FLTK console:
 
-	Win+C			copy selected text into clipboard buffer
+	Win+C
+	WinKey+Home		copy selected text into clipboard buffer
 
-	Win+V			inserts text from  buffer (copy & past)
+	Win+V
+	WinKey+End		inserts text from  buffer (copy & past)
 
-	Win+PageUp		Scroll back console
+	Win+PageUp
+	mouse wheel up		Scroll back console
 
-	Win+PageDown		Scroll down console
+	Win+PageDown
+	mouse wheel down	Scroll down console
 
     NT console:
 
