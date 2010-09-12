@@ -401,10 +401,11 @@ void console_main_window::handle_mouse_event( )
      * FIXME:
      *    The scale factors need to be calibrated for each screen resolution
      *    and mode. We need to implement a mouse calibrate option.
-     */
     md.abs_x = mouse_scale_x_*x / wScreen_->w();
     md.abs_y = mouse_scale_y_*y / wScreen_->h();
-
+    */
+    md.abs_x = x;
+    md.abs_y = y;
     // Get button and mousewheel state
     unsigned state = Fl::event_state();
     if ( state & FL_BUTTON1 )
