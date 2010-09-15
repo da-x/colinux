@@ -1,8 +1,8 @@
-Index: linux-2.6.22-source/drivers/input/mouse/comouse.c
+Index: linux-2.6.26-source/drivers/input/mouse/comouse.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/drivers/input/mouse/comouse.c
-@@ -0,0 +1,144 @@
++++ linux-2.6.26-source/drivers/input/mouse/comouse.c
+@@ -0,0 +1,146 @@
 +
 +/*
 + * Cooperative mouse driver
@@ -34,7 +34,7 @@ Index: linux-2.6.22-source/drivers/input/mouse/comouse.c
 +#include <linux/interrupt.h>
 +#include <linux/cooperative_internal.h>
 +
-+#define COMOUSE_DEBUG 1
++#define COMOUSE_DEBUG 0
 +
 +MODULE_AUTHOR("Steve Shoecraft <sshoecraft@earthlink.net");
 +MODULE_DESCRIPTION("Cooperative Mouse Driver");
@@ -58,7 +58,7 @@ Index: linux-2.6.22-source/drivers/input/mouse/comouse.c
 +			input_report_abs( comouse_dev, ABS_Y, data->abs_y );
 +
 +			/* Wheel */
-+			if ( data->rel_z ) input_report_rel( comouse_dev, REL_WHEEL, data->rel_z );
++			if ( data->rel_z ) input_report_rel( comouse_dev, REL_WHEEL, -data->rel_z );
 +
 +			/* Buttons */
 +			input_report_key( comouse_dev, BTN_TOUCH, data->btns & 1 );
@@ -67,7 +67,7 @@ Index: linux-2.6.22-source/drivers/input/mouse/comouse.c
 +			input_report_key( comouse_dev, BTN_MIDDLE, data->btns & 4 );
 +
 +			input_sync( comouse_dev );
-+#ifdef COMOUSE_DEBUG
++#if COMOUSE_DEBUG
 +			printk( KERN_DEBUG "comouse: x:%d y:%d buttons:%u wheel: %d.\n",
 +				data->abs_x, data->abs_y, data->btns, data->rel_z );
 +#endif
@@ -109,18 +109,20 @@ Index: linux-2.6.22-source/drivers/input/mouse/comouse.c
 +#endif
 +
 +	/* Buttons */
-+	comouse_dev->evbit[LONG(EV_KEY)] |= BIT(EV_KEY);
-+	comouse_dev->keybit[LONG(BTN_TOUCH)] |= BIT(BTN_TOUCH);
-+	comouse_dev->keybit[LONG(BTN_LEFT)] |= BIT(BTN_LEFT) | BIT(BTN_MIDDLE) | BIT(BTN_RIGHT);
++	set_bit( EV_KEY, comouse_dev->evbit );
++	set_bit( BTN_TOUCH , comouse_dev->keybit );
++	set_bit( BTN_LEFT  , comouse_dev->keybit );
++	set_bit( BTN_RIGHT , comouse_dev->keybit );
++	set_bit( BTN_MIDDLE, comouse_dev->keybit );
 +
 +	/* Movement */
-+	comouse_dev->evbit[LONG(EV_ABS)] |= BIT(EV_ABS);
++	set_bit( EV_ABS, comouse_dev->evbit );
 +	input_set_abs_params(comouse_dev, ABS_X, 0, CO_MOUSE_MAX_X, 0, 0);
 +	input_set_abs_params(comouse_dev, ABS_Y, 0, CO_MOUSE_MAX_Y, 0, 0);
 +
 +	/* Wheel */
-+	comouse_dev->evbit[LONG(EV_REL)] |= BIT(EV_REL);
-+	comouse_dev->relbit[LONG(REL_WHEEL)] |= BIT(REL_WHEEL);
++	set_bit( EV_REL, comouse_dev->evbit );
++	set_bit( REL_WHEEL, comouse_dev->relbit );
 +
 +	err = input_register_device(comouse_dev);
 +	if (err) {
