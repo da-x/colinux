@@ -15,8 +15,11 @@
   * Different descriription for file properties, add original filename.
 
   Kernel:
-  * Version 2.6.33.5
-  * Filesystems EXT4 enabled in kernel, GFS2 enabled as module
+  * Version 2.6.33.5 added.
+  * Filesystems EXT4 enabled in kernel, GFS2 enabled as module.
+  * comouse.c: Fix build error, with CONFIG_MOUSE_COOPERATIVE. (Yin Sun)
+  * Version 2.6.22.18 removed from patches and config. Cleanup patches.
+    Softlink arch/i386 --> arch/x86 for patches removed.
 
   Buildsystem:
   * Suppress warnings from Python 2.6. (Shai Vaingast)
