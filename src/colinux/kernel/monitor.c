@@ -366,19 +366,15 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 static void callback_return_jiffies(co_monitor_t *cmon)
 {
 	co_timestamp_t timestamp;
-	long long timestamp_diff;
-	unsigned long jiffies = 0;
+	unsigned long long diff;
 
 	co_os_get_timestamp(&timestamp);
 
-	timestamp_diff  = cmon->timestamp_reminder;
-	timestamp_diff += 100 * (((long long)timestamp.quad) - ((long long)cmon->timestamp.quad));  /* HZ value */
-
-	jiffies = co_div64(timestamp_diff, cmon->timestamp_freq.quad);
-	cmon->timestamp_reminder = timestamp_diff - (jiffies * cmon->timestamp_freq.quad);
+	diff = cmon->timestamp_reminder + 100 * (timestamp.quad - cmon->timestamp.quad);  /* HZ value */
+	cmon->timestamp_reminder = co_div64_32(&diff, cmon->timestamp_freq.quad);
 	cmon->timestamp		 = timestamp;
 
-	co_passage_page->params[1] = jiffies;
+	co_passage_page->params[1] = diff; /* jiffies */
 }
 
 static void callback_return(co_monitor_t *cmon)
