@@ -131,6 +131,17 @@ typedef struct co_monitor {
 	unsigned long long timestamp_reminder;
 	co_os_wait_t	   idle_wait;
 
+        /* 
+         * Video memory
+         *
+         * video_user_address: virtual address of the buffer in user_space
+         * video_user_handle : handle for the user address mapping
+         * video_user_id     : PID of the video client process
+         */
+        void *         video_user_address;
+        void *         video_user_handle;
+        co_id_t        video_user_id;
+
 	/*
 	 * Video devices
 	*/
