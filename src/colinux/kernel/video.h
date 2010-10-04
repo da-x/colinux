@@ -11,11 +11,11 @@
  * the root directory.
  *
  */
+#include <colinux/common/ioctl.h>
 
-#ifdef CONFIG_COOPERATIVE_VIDEO
 struct co_video_dev {
 	int unit;
-	void *buffer;			/* Page-aligned buffer */
+	unsigned long buffer;			/* Page-aligned buffer */
 	co_video_desc_t desc;
 };
 
@@ -26,6 +26,5 @@ extern int co_monitor_video_device_init(co_monitor_t *, int, co_video_dev_desc_t
 extern void co_monitor_unregister_video_devices(co_monitor_t *);
 extern co_rc_t co_monitor_user_video_attach(co_monitor_t *, co_monitor_ioctl_video_t *);
 //extern co_rc_t co_video_detach(co_monitor_t *, co_monitor_ioctl_video_t *);
-#endif /* CONFIG_COOPERATIVE_VIDEO */
 
 #endif

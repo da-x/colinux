@@ -16,6 +16,7 @@
 
 #include <colinux/common/debug.h>
 #include <colinux/common/libc.h>
+#include <colinux/common/config.h>
 #include <colinux/os/kernel/alloc.h>
 #include <colinux/os/kernel/misc.h>
 #include <colinux/os/kernel/monitor.h>
@@ -99,6 +100,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		goto out_error;
 	}
 
+        // Allocate a page and map it in CO_VPTR_SELF_MAP
 	rc = co_monitor_create_ptes(cmon,
 			            cmon->import.kernel_swapper_pg_dir,
 			            CO_ARCH_PAGE_SIZE,
@@ -108,6 +110,8 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		goto out_error;
 	}
 
+	// Get PFN of allocated page
+	// Create PTE for it on the page directory
 	reversed_physical_mapping_offset = (CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP >> PGDIR_SHIFT) *
 					   sizeof(linux_pgd_t);
 
@@ -267,11 +271,9 @@ static bool_t device_request(co_monitor_t *cmon, co_device_t device, unsigned lo
 		co_scsi_request(cmon, params[0], params[1]);
 		return PTRUE;
 
-#ifdef CONFIG_COOPERATIVE_VIDEO
 	case CO_DEVICE_VIDEO:
 		co_video_request(cmon, params[0], params[1]);
 		return PTRUE;
-#endif
 
 	default:
 		break;
@@ -509,7 +511,7 @@ static void co_monitor_getpp(co_monitor_t* cmon,
 		t = vaddr;
 		for(i=0; i < len; i += 4) {
 			pa = co_os_virt_to_phys(buffer);
-
+			//if(i<20||i>len-20)co_debug_system( "covideo %d pa %X ",i, pa );
 			*pp++ = pa;
 			t += CO_ARCH_PAGE_SIZE;
 			buffer += CO_ARCH_PAGE_SIZE;
@@ -770,7 +772,7 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 
 	}
 
-#ifdef CONFIG_COOPERATIVE_VIDEO
+//#ifdef CONFIG_COOPERATIVE_VIDEO
 	for(i=0; i < CO_MODULE_MAX_COVIDEO; i++) {
 		co_video_dev_desc_t *cp = &cmon->config.video_devs[i];
 		co_video_dev_t *dev;
@@ -778,23 +780,27 @@ static co_rc_t load_configuration(co_monitor_t *cmon)
 		if (!cp->enabled) continue;
 
 		rc = co_monitor_malloc(cmon, sizeof(co_video_dev_t), (void **)&dev);
-		if (!CO_OK(rc)) goto error_3;
+		if (!CO_OK(rc)) {
+			co_debug_system("error allocate video dev failed\n");
+			goto error_3;
+		}
 		cmon->video_devs[i] = dev;
-
+co_debug_system("load config video_devs[%d] \n",i);
+/* comment out for cofb
 		rc = co_monitor_video_device_init(cmon, i, cp);
 		if (!CO_OK(rc)) goto error_3;
-
+*/
         }
-#endif
+//#endif
 
 	rc = co_pci_setconfig(cmon);
 
 	return rc;
 
-#ifdef CONFIG_COOPERATIVE_VIDEO
+//#ifdef CONFIG_COOPERATIVE_VIDEO
 error_3:
-	co_monitor_unregister_video_devices(cmon);
-#endif
+	// comment out for cofb co_monitor_unregister_video_devices(cmon);
+//#endif
 error_2:
 	co_monitor_unregister_filesystems(cmon);
 error_1:
@@ -1152,6 +1158,29 @@ co_rc_t co_monitor_create(co_manager_t*		     manager,
 		goto out_destroy_timer;
 	}
 
+	/* cofb
+	 * Initialize video memory buffer.
+	*/
+	cmon->video_user_id = CO_INVALID_ID;
+	co_video_dev_t *dp = cmon->video_devs[0];
+	if (dp) {
+        	dp->desc.size = params->config.video_devs[0].desc.size;
+		dp->buffer = co_os_malloc( dp->desc.size );
+		if ( dp->buffer == NULL )
+		{
+			rc = CO_RC(OUT_OF_MEMORY);
+			co_debug_system( "Error allocating video buffer (size=%d KB)\n",
+				(int)dp->desc.size);
+			goto out_destroy_timer;
+		}
+		/* By zeroing the video buffer we are also locking it */
+		co_memset(dp->buffer, 0, dp->desc.size);
+                co_video_dev_desc_t *v = &(params->config.video_devs[0]);
+                dp->desc.width = v->desc.width;
+		dp->desc.height = v->desc.height;
+		dp->desc.bpp = v->desc.bpp; 
+	}
+
 	co_os_mutex_acquire(manager->lock);
 	cmon->refcount = 1;
 	manager->monitors_count++;
@@ -1242,6 +1271,11 @@ static co_rc_t co_monitor_destroy(co_monitor_t *cmon, bool_t user_context)
 	co_os_mutex_destroy(cmon->linux_message_queue_mutex);
 	co_console_destroy(cmon->console);
 	co_monitor_arch_passage_page_free(cmon);
+	if (cmon->video_devs[0]){
+		co_os_free(cmon->video_devs[0]->buffer); //cofb
+                co_os_free(cmon->video_devs[0]);
+                cmon->video_devs[0] = NULL;
+        }
 
 	co_debug("after free: %ld blocks", cmon->blocks_allocated);
 	co_os_free(cmon);
@@ -1267,6 +1301,32 @@ static void send_monitor_end_messages(co_monitor_t *cmon)
 	co_os_mutex_release(cmon->connected_modules_write_lock);
 }
 
+/*
+ * Unmap video buffer from user space.
+ *
+ * This can only be done on video client device close, or else it gets
+ * a SEGFAULT when accessing the video buffer latter.
+ */
+static
+void co_monitor_user_video_dettach( co_monitor_t *monitor )
+{
+	if ( !monitor->video_devs[0]) return;
+	unsigned long video_pages = monitor->video_devs[0]->desc.size >> CO_ARCH_PAGE_SHIFT;
+
+	co_os_userspace_unmap( monitor->video_user_address,
+				monitor->video_user_handle, video_pages );
+
+	monitor->video_user_address = monitor->video_user_handle = NULL;
+	monitor->video_user_id = CO_INVALID_ID;
+}
+
+/*
+ * Decrement monitor reference count.
+ *
+ * Each daemon opens a connection to the driver. The reference count is
+ * incremented/decremented on every open/close.
+ * Only after the count reaches zero, the monitor object is destroyed.
+ */
 co_rc_t co_monitor_refdown(co_monitor_t* cmon, bool_t user_context, bool_t monitor_owner)
 {
 	co_manager_t* manager;
@@ -1275,6 +1335,9 @@ co_rc_t co_monitor_refdown(co_monitor_t* cmon, bool_t user_context, bool_t monit
 		return CO_RC(ERROR);
 
 	manager = cmon->manager;
+
+        if (co_os_current_id() == cmon->video_user_id)
+	        co_monitor_user_video_dettach(cmon);
 
 	co_os_mutex_acquire(manager->lock);
 	if (monitor_owner  &&  cmon->listed_in_manager) {
@@ -1329,6 +1392,10 @@ static co_rc_t co_monitor_user_reset(co_monitor_t *monitor)
 	co_os_mutex_release(monitor->manager->lock);
 
 	co_memset(monitor->io_buffer, 0, CO_VPTR_IO_AREA_SIZE);
+	/* By zeroing the video buffer, we are also locking it */
+	// not tested yet, could be problematic?
+        if(monitor->video_devs[0])
+	  co_memset(monitor->video_devs[0]->buffer, 0, monitor->video_devs[0]->desc.size);
 
 	monitor->state = CO_MONITOR_STATE_INITIALIZED;
 	monitor->termination_reason = CO_TERMINATE_END;
@@ -1440,15 +1507,15 @@ co_rc_t co_monitor_ioctl(co_monitor_t* 		     cmon,
 
 		return co_monitor_user_get_console(cmon, params);
 	}
-#ifdef CONFIG_COOPERATIVE_VIDEO
 	case CO_MONITOR_IOCTL_VIDEO_ATTACH: {
 		co_monitor_ioctl_video_t* params;
 
 		*return_size = sizeof(*params);
 		params       = (typeof(params))(io_buffer);
 
-		return co_video_attach(cmon, params);
+		return co_monitor_user_video_attach(cmon, params);
 	}
+#ifdef CONFIG_COOPERATIVE_VIDEO_NOT_USED
 	case CO_MONITOR_IOCTL_VIDEO_DETACH: {
 		co_monitor_ioctl_video_t* params;
 
