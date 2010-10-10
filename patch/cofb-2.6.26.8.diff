@@ -1,7 +1,5 @@
-Index: linux-2.6.26.8-source/drivers/input/mouse/comouse.c
-===================================================================
---- linux-2.6.26.8-source.orig/drivers/input/mouse/comouse.c	2010-08-11 20:57:23.000000000 -0600
-+++ linux-2.6.26.8-source/drivers/input/mouse/comouse.c	2010-09-12 17:50:04.000000000 -0600
+--- linux-2.6.26.8-source.orig/drivers/input/mouse/comouse.c
++++ linux-2.6.26.8-source/drivers/input/mouse/comouse.c
 @@ -23,19 +23,45 @@
   *
   */
@@ -134,10 +132,8 @@ Index: linux-2.6.26.8-source/drivers/input/mouse/comouse.c
  
  	err = input_register_device(comouse_dev);
  	if (err) {
-Index: linux-2.6.26.8-source/drivers/video/Kconfig
-===================================================================
---- linux-2.6.26.8-source.orig/drivers/video/Kconfig	2010-08-11 20:57:25.000000000 -0600
-+++ linux-2.6.26.8-source/drivers/video/Kconfig	2010-08-11 20:57:25.000000000 -0600
+--- linux-2.6.26.8-source.orig/drivers/video/Kconfig
++++ linux-2.6.26.8-source/drivers/video/Kconfig
 @@ -1968,6 +1968,17 @@
           This enables support for the Metronome display controller used on
           the E-Ink AM-200 EPD devkit.
@@ -156,10 +152,8 @@ Index: linux-2.6.26.8-source/drivers/video/Kconfig
  config FB_VIRTUAL
  	tristate "Virtual Frame Buffer support (ONLY FOR TESTING!)"
  	depends on FB
-Index: linux-2.6.26.8-source/drivers/video/Makefile
-===================================================================
---- linux-2.6.26.8-source.orig/drivers/video/Makefile	2010-08-11 20:57:25.000000000 -0600
-+++ linux-2.6.26.8-source/drivers/video/Makefile	2010-08-11 20:57:25.000000000 -0600
+--- linux-2.6.26.8-source.orig/drivers/video/Makefile
++++ linux-2.6.26.8-source/drivers/video/Makefile
 @@ -27,7 +27,7 @@
  obj-$(CONFIG_FB_DDC)           += fb_ddc.o
  obj-$(CONFIG_FB_DEFERRED_IO)   += fb_defio.o
@@ -177,10 +171,8 @@ Index: linux-2.6.26.8-source/drivers/video/Makefile
  obj-$(CONFIG_FB_BF54X_LQ043)	  += bf54x-lq043fb.o
  obj-$(CONFIG_FB_BFIN_T350MCQB)	  += bfin-t350mcqb-fb.o
  
-Index: linux-2.6.26.8-source/include/linux/cooperative_internal.h
-===================================================================
---- linux-2.6.26.8-source.orig/include/linux/cooperative_internal.h	2010-08-11 20:57:21.000000000 -0600
-+++ linux-2.6.26.8-source/include/linux/cooperative_internal.h	2010-08-11 20:57:25.000000000 -0600
+--- linux-2.6.26.8-source.orig/include/linux/cooperative_internal.h
++++ linux-2.6.26.8-source/include/linux/cooperative_internal.h
 @@ -117,6 +117,43 @@
  	co_passage_page_release(flags);
  }
@@ -225,10 +217,8 @@ Index: linux-2.6.26.8-source/include/linux/cooperative_internal.h
  #else
  
  #define co_printk(line, size)          do {} while (0)
-Index: linux-2.6.26.8-source/include/linux/cooperative_video.h
-===================================================================
---- /dev/null	1970-01-01 00:00:00.000000000 +0000
-+++ linux-2.6.26.8-source/include/linux/cooperative_video.h	2010-08-11 20:57:25.000000000 -0600
+--- /dev/null
++++ linux-2.6.26.8-source/include/linux/cooperative_video.h
 @@ -0,0 +1,180 @@
 +/*
 + *  linux/include/linux/cooperative_video.h
@@ -410,79 +400,9 @@ Index: linux-2.6.26.8-source/include/linux/cooperative_video.h
 +
 +
 +
-Index: linux-2.6.26.8-source/include/linux/mm.h
-===================================================================
---- linux-2.6.26.8-source.orig/include/linux/mm.h	2008-11-10 12:18:24.000000000 -0700
-+++ linux-2.6.26.8-source/include/linux/mm.h	2010-08-11 20:57:25.000000000 -0600
-@@ -108,6 +108,7 @@
- 
- #define VM_CAN_NONLINEAR 0x08000000	/* Has ->fault & does nonlinear pages */
- #define VM_MIXEDMAP	0x10000000	/* Can contain "struct page" and pure PFN pages */
-+//#define VM_CO_IO        0x80000000      /* Pseudo IO memory */
- 
- #ifndef VM_STACK_DEFAULT_FLAGS		/* arch can override this */
- #define VM_STACK_DEFAULT_FLAGS VM_DATA_DEFAULT_FLAGS
-Index: linux-2.6.26.8-source/mm/memory.c
-===================================================================
---- linux-2.6.26.8-source.orig/mm/memory.c	2008-11-10 12:18:24.000000000 -0700
-+++ linux-2.6.26.8-source/mm/memory.c	2010-08-11 20:57:25.000000000 -0600
-@@ -681,6 +681,7 @@
- 				struct vm_area_struct *vma, pmd_t *pmd,
- 				unsigned long addr, unsigned long end,
- 				long *zap_work, struct zap_details *details)
-+				//int io_page)
- {
- 	struct mm_struct *mm = tlb->mm;
- 	pte_t *pte;
-@@ -703,6 +704,7 @@
- 			struct page *page;
- 
- 			page = vm_normal_page(vma, addr, ptent);
-+			//if (unlikely(details) && page && !io_page) {
- 			if (unlikely(details) && page) {
- 				/*
- 				 * unmap_shared_mapping_pages() wants to
-@@ -766,6 +768,7 @@
- 				struct vm_area_struct *vma, pud_t *pud,
- 				unsigned long addr, unsigned long end,
- 				long *zap_work, struct zap_details *details)
-+				//int io_page)
- {
- 	pmd_t *pmd;
- 	unsigned long next;
-@@ -779,6 +782,7 @@
- 		}
- 		next = zap_pte_range(tlb, vma, pmd, addr, next,
- 						zap_work, details);
-+						//zap_work, details,io_page);
- 	} while (pmd++, addr = next, (addr != end && *zap_work > 0));
- 
- 	return addr;
-@@ -788,6 +792,7 @@
- 				struct vm_area_struct *vma, pgd_t *pgd,
- 				unsigned long addr, unsigned long end,
- 				long *zap_work, struct zap_details *details)
-+				//int io_page)
- {
- 	pud_t *pud;
- 	unsigned long next;
-@@ -801,6 +806,7 @@
- 		}
- 		next = zap_pmd_range(tlb, vma, pud, addr, next,
- 						zap_work, details);
-+						//zap_work, details, io_page);
- 	} while (pud++, addr = next, (addr != end && *zap_work > 0));
- 
- 	return addr;
-@@ -828,6 +834,7 @@
- 		}
- 		next = zap_pud_range(tlb, vma, pgd, addr, next,
- 						zap_work, details);
-+				//vma->vm_flags & VM_CO_IO);
- 	} while (pgd++, addr = next, (addr != end && *zap_work > 0));
- 	tlb_end_vma(tlb, vma);
- 
-@@ -1402,7 +1409,11 @@
+--- linux-2.6.26.8-source.orig/mm/memory.c
++++ linux-2.6.26.8-source/mm/memory.c
+@@ -1402,7 +1402,11 @@
  	arch_enter_lazy_mmu_mode();
  	do {
  		BUG_ON(!pte_none(*pte));
@@ -494,7 +414,7 @@ Index: linux-2.6.26.8-source/mm/memory.c
  		pfn++;
  	} while (pte++, addr += PAGE_SIZE, addr != end);
  	arch_leave_lazy_mmu_mode();
-@@ -1468,6 +1479,11 @@
+@@ -1468,6 +1472,11 @@
  	unsigned long end = addr + PAGE_ALIGN(size);
  	struct mm_struct *mm = vma->vm_mm;
  	int err;
@@ -506,10 +426,8 @@ Index: linux-2.6.26.8-source/mm/memory.c
  
  	/*
  	 * Physically remapped pages are special. Tell the
-Index: linux-2.6.26.8-source/drivers/video/console/fbcon.c
-===================================================================
---- linux-2.6.26.8-source.orig/drivers/video/console/fbcon.c	2008-11-10 12:18:24.000000000 -0700
-+++ linux-2.6.26.8-source/drivers/video/console/fbcon.c	2010-08-11 20:57:25.000000000 -0600
+--- linux-2.6.26.8-source.orig/drivers/video/console/fbcon.c
++++ linux-2.6.26.8-source/drivers/video/console/fbcon.c
 @@ -90,6 +90,8 @@
  #endif
  
@@ -541,10 +459,8 @@ Index: linux-2.6.26.8-source/drivers/video/console/fbcon.c
  }
  
  static void fbcon_putc(struct vc_data *vc, int c, int ypos, int xpos)
-Index: linux-2.6.26.8-source/include/linux/cooperative.h
-===================================================================
---- linux-2.6.26.8-source.orig/include/linux/cooperative.h	2010-08-11 20:57:21.000000000 -0600
-+++ linux-2.6.26.8-source/include/linux/cooperative.h	2010-08-11 20:57:25.000000000 -0600
+--- linux-2.6.26.8-source.orig/include/linux/cooperative.h
++++ linux-2.6.26.8-source/include/linux/cooperative.h
 @@ -20,7 +20,7 @@
  
  #include <asm/cooperative.h>
@@ -554,10 +470,8 @@ Index: linux-2.6.26.8-source/include/linux/cooperative.h
  
  #pragma pack(0)
  
-Index: linux-2.6.26.8-source/arch/x86/pci/copci.c
-===================================================================
---- linux-2.6.26.8-source.orig/arch/x86/pci/copci.c	2010-08-11 20:57:24.000000000 -0600
-+++ linux-2.6.26.8-source/arch/x86/pci/copci.c	2010-08-11 20:57:25.000000000 -0600
+--- linux-2.6.26.8-source.orig/arch/x86/pci/copci.c
++++ linux-2.6.26.8-source/arch/x86/pci/copci.c
 @@ -237,13 +237,13 @@
  	cp = guest_cp;
  	for(x=0; x < count; x++, cp++) {
@@ -574,10 +488,8 @@ Index: linux-2.6.26.8-source/arch/x86/pci/copci.c
  #ifdef CONFIG_COOPERATIVE_AUDIO
  		case CO_DEVICE_AUDIO:
  			id = PCI_DEVICE_ID_COAUDIO;
-Index: linux-2.6.26.8-source/drivers/video/covideo.c
-===================================================================
---- linux-2.6.26.8-source.orig/drivers/video/covideo.c	2010-08-11 20:57:25.000000000 -0600
-+++ linux-2.6.26.8-source/drivers/video/covideo.c	2010-08-13 20:51:42.000000000 -0600
+--- linux-2.6.26.8-source.orig/drivers/video/covideo.c
++++ linux-2.6.26.8-source/drivers/video/covideo.c
 @@ -1,30 +1,45 @@
 +/*
 + *  linux/drivers/video/cofb.c -- CoLinux Virtual frame buffer device
@@ -958,7 +870,7 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 +	unsigned bytes_per_pixel = (info->var.bits_per_pixel + 7) >> 3;
 +	unsigned bwidth = info->var.xres_virtual * bytes_per_pixel;
 +	unsigned fb_size  = PAGE_ALIGN( bwidth * info->var.yres_virtual );
-+        
++
 +	BUG_ON( fb_avail < fb_size );
 +
 +	info->fix.line_length   = bwidth;
@@ -1283,8 +1195,7 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 -        int rc, size;
  
  	/* Get our host unit */
--	pci_read_config_byte(pdev, PCI_CO_UNIT, &unit);
-+	pci_read_config_byte(pdev, PCI_CO_UNIT, &unit);  
+ 	pci_read_config_byte(pdev, PCI_CO_UNIT, &unit);
 +	printk( "cofb in pci_probe, NOT IMPLEMENTED.");
 +        return 0;
 +}
@@ -1311,7 +1222,6 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 -	cp = (covideo_config_t *) &co_passage_page->params[1];
 -	host_buffer = cp->buffer;
 -	size = cp->size;
--	co_passage_page_release(flags);
 +#ifdef MODULE_comment_this_out
 +        char *option = NULL;
 +        if ( fb_get_options("cofb", &option) ){
@@ -1323,7 +1233,7 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 +        if ( rc )
 +                return rc;
 +#endif
- 
++
 +        /* Get our config */
 +        co_passage_page_assert_valid();
 +        co_passage_page_acquire(&flags);
@@ -1344,8 +1254,8 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 +        don't know why can not make use of params 3,4,5, so have to encode
 +	as 13bits+13bits+6bits = 32bit unsigned long to params[0]*/
 +	fb_avail = co_passage_page->params[2] - 2*PAGE_SIZE;
-+	co_passage_page_release(flags);
-+        
+ 	co_passage_page_release(flags);
+ 
  	/* If unable to get size, silently skip this device */
 -	if (rc) return 0;
 +        if (rc) return 0;
@@ -1364,12 +1274,11 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 +		printk(KERN_ERR "covideo%d: unable to map video buffer!\n", 0);
  		return 0;
  	}
--
+ 
 -#if COVIDEO_DEBUG
 -	printk(KERN_INFO "covideo%d: buffer: %p, size: %d\n", unit, buffer, size);
 -#endif
 -
-+	
 +	co_video_base = buffer;
 +	cofb_mem = (struct cofb_video_mem_info *)buffer;
 +	printk(KERN_INFO "cofb: buffer: %p, size: %d\n", buffer, fb_avail);
@@ -1405,10 +1314,14 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 -	rc = fb_find_mode(&info->var, info, NULL, NULL, 0, NULL, 8);
 -	if (!rc || (rc == 4)) info->var = covideo_default;
 +	//rc = fb_find_mode(&info->var, info, NULL, NULL, 0, NULL, 8);
-+	//if (!rc || (rc == 4)) 
++	//if (!rc || (rc == 4))
 +	info->var = covideo_default;
-+
-+	info->fix = covideo_fix;	
+ 
+ 	info->fix = covideo_fix;
+-	info->fix.smem_start = (unsigned long) buffer;
+-	info->fix.smem_len = size;
+-	info->pseudo_palette = NULL;
+-	info->flags = FBINFO_FLAG_DEFAULT;
 +	info->fix.smem_start	= PAGE_SIZE;
 +	info->fix.smem_len	= fb_avail;
 +	info->pseudo_palette	= info->par;
@@ -1427,12 +1340,7 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 +		printk( KERN_ERR"cofb: %d bit color not supported yet!\n", cofb_bpp );
 +		goto err1;
 +	}
- 
--	info->fix = covideo_fix;
--	info->fix.smem_start = (unsigned long) buffer;
--	info->fix.smem_len = size;
--	info->pseudo_palette = NULL;
--	info->flags = FBINFO_FLAG_DEFAULT;
++
 +	/* Allocate 256 color map */
 +	rc = fb_alloc_cmap( &info->cmap, 256, 0 );
 +	if ( rc < 0 ) {
@@ -1455,7 +1363,7 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
 +		info->node, info->fix.id, fb_avail >> 10,
 +		info->var.xres, info->var.yres, info->var.bits_per_pixel );
  
-+	/* All done, success! 
++	/* All done, success!
  	par = info->par;
  	par->pdev = pdev;
  	par->unit = unit;
@@ -1501,10 +1409,8 @@ Index: linux-2.6.26.8-source/drivers/video/covideo.c
  module_init(covideo_pci_init);
  module_exit(covideo_pci_exit);
 +
-Index: linux-2.6.26.8-source/include/linux/covideo.h
-===================================================================
---- linux-2.6.26.8-source.orig/include/linux/covideo.h	2010-08-11 20:57:25.000000000 -0600
-+++ linux-2.6.26.8-source/include/linux/covideo.h	2010-08-11 20:57:25.000000000 -0600
+--- linux-2.6.26.8-source.orig/include/linux/covideo.h
++++ linux-2.6.26.8-source/include/linux/covideo.h
 @@ -7,11 +7,12 @@
  	CO_VIDEO_TEST,
  };

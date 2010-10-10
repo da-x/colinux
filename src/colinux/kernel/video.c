@@ -78,6 +78,7 @@ void co_video_request(co_monitor_t *cmon, int op, int unit) {
 #if COVIDEO_DEBUG
 	co_debug("op: %d, unit: %d", op, unit);
 #endif
+
 	dp = get_dp(cmon, unit);
 	if (!dp) {
 		co_passage_page->params[0] = 1;

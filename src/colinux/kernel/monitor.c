@@ -563,7 +563,7 @@ static void incoming_message(co_monitor_t* cmon, co_message_t* message)
 	switch (message->to) {
 	case CO_MODULE_CONSOLE:
 		if (message->from == CO_MODULE_LINUX) {
-			/* Redirect console operations to kernel_shadow */
+			/* Redirect console operations to kernel shadow */
 			co_console_op(cmon->console,
 				      (co_console_message_t*)message->data);
 		}
