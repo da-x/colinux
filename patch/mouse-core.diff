@@ -1,9 +1,8 @@
-Index: linux-2.6.26-source/drivers/input/mouse/comouse.c
+Index: linux-2.6.33-source/drivers/input/mouse/comouse.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.26-source/drivers/input/mouse/comouse.c
-@@ -0,0 +1,146 @@
-+
++++ linux-2.6.33-source/drivers/input/mouse/comouse.c
+@@ -0,0 +1,194 @@
 +/*
 + * Cooperative mouse driver
 + *
@@ -28,11 +27,15 @@ Index: linux-2.6.26-source/drivers/input/mouse/comouse.c
 + *
 + */
 +
++#include <linux/fs.h>
++#include <asm/uaccess.h>
++#include <linux/platform_device.h>
 +#include <linux/module.h>
 +#include <linux/init.h>
 +#include <linux/input.h>
 +#include <linux/interrupt.h>
 +#include <linux/cooperative_internal.h>
++#include <linux/covideo.h>
 +
 +#define COMOUSE_DEBUG 0
 +
@@ -41,6 +44,28 @@ Index: linux-2.6.26-source/drivers/input/mouse/comouse.c
 +MODULE_LICENSE("GPL");
 +
 +static struct input_dev *comouse_dev;
++static struct platform_device *vms_dev; /* Device structure */
++static int comouse_x;
++static int comouse_y;
++
++static ssize_t
++show_vms(struct device *dev,
++ struct device_attribute *attr,
++ char *buf)
++{
++  return snprintf(buf, PAGE_SIZE, "%d %d\n", comouse_x, comouse_y);
++}
++/* Attach the sysfs write method */
++DEVICE_ATTR(coordinates, 0644, show_vms, NULL);
++/* Attribute Descriptor */
++static struct attribute *vms_attrs[] = {
++  &dev_attr_coordinates.attr,
++  NULL
++};
++/* Attribute group */
++static struct attribute_group vms_attr_group = {
++  .attrs = vms_attrs,
++};
 +
 +static irqreturn_t comouse_isr(int irq, void *dev_id) {
 +	co_message_node_t *node_message;
@@ -56,7 +81,8 @@ Index: linux-2.6.26-source/drivers/input/mouse/comouse.c
 +			/* Movement */
 +			input_report_abs( comouse_dev, ABS_X, data->abs_x );
 +			input_report_abs( comouse_dev, ABS_Y, data->abs_y );
-+
++                        comouse_x = data->abs_x;
++			comouse_y = data->abs_y;
 +			/* Wheel */
 +			if ( data->rel_z ) input_report_rel( comouse_dev, REL_WHEEL, -data->rel_z );
 +
@@ -87,9 +113,17 @@ Index: linux-2.6.26-source/drivers/input/mouse/comouse.c
 +	return;
 +}
 +#endif
-+
 +static int __init comouse_init(void) {
 +	int err;
++
++	/* Register a platform device */
++	vms_dev = platform_device_register_simple("vms", -1, NULL, 0);
++	if (IS_ERR(vms_dev)) {
++		PTR_ERR(vms_dev);
++		printk("vms_init: error\n");
++	}
++	/* Create a sysfs node to read simulated coordinates */
++	sysfs_create_group(&vms_dev->dev.kobj, &vms_attr_group);
 +
 +	comouse_dev = input_allocate_device();
 +	if (!comouse_dev) {
@@ -117,8 +151,22 @@ Index: linux-2.6.26-source/drivers/input/mouse/comouse.c
 +
 +	/* Movement */
 +	set_bit( EV_ABS, comouse_dev->evbit );
-+	input_set_abs_params(comouse_dev, ABS_X, 0, CO_MOUSE_MAX_X, 0, 0);
-+	input_set_abs_params(comouse_dev, ABS_Y, 0, CO_MOUSE_MAX_Y, 0, 0);
++        unsigned long flags;
++        co_passage_page_assert_valid();
++        co_passage_page_acquire(&flags);
++        co_passage_page->operation = CO_OPERATION_DEVICE;
++        co_passage_page->params[0] = CO_DEVICE_VIDEO;
++        co_passage_page->params[1] = CO_VIDEO_GET_CONFIG;
++        co_passage_page->params[2] = 0; // unit, default to only one device
++        co_switch_wrapper();
++        //rc = co_passage_page->params[0];
++        unsigned long x= co_passage_page->params[3];
++        co_passage_page_release(flags);
++
++        unsigned short cofb_width = x>>19;
++        unsigned short cofb_height = (x&0x7ffff)>>6;
++	input_set_abs_params(comouse_dev, ABS_X, 0, cofb_width, 0, 0);
++	input_set_abs_params(comouse_dev, ABS_Y, 0, cofb_height, 0, 0);
 +
 +	/* Wheel */
 +	set_bit( EV_REL, comouse_dev->evbit );

@@ -1,7 +1,7 @@
-Index: linux-2.6.25.20-source/drivers/video/console/cocon.c
+Index: linux-2.6.33-source/drivers/video/console/cocon.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.25.20-source/drivers/video/console/cocon.c
++++ linux-2.6.33-source/drivers/video/console/cocon.c
 @@ -0,0 +1,488 @@
 +/*
 + *  linux/drivers/video/cocon.c -- Cooperative Linux console VGA driver
