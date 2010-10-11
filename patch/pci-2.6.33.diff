@@ -244,7 +244,21 @@ Index: linux-2.6.33-source/arch/x86/pci/copci.c
  
  #include <linux/copci.h>
  
-@@ -304,3 +305,15 @@
+@@ -237,13 +238,11 @@
+ 	cp = guest_cp;
+ 	for(x=0; x < count; x++, cp++) {
+ 		switch(cp->type) {
+-#ifdef CONFIG_COOPERATIVE_VIDEO
+ 		case CO_DEVICE_VIDEO:
+ 			id = PCI_DEVICE_ID_COVIDEO;
+ 			class = PCI_CLASS_DISPLAY_OTHER;
+ 			irq = 0;
+ 			break;
+-#endif
+ #ifdef CONFIG_COOPERATIVE_AUDIO
+ 		case CO_DEVICE_AUDIO:
+ 			id = PCI_DEVICE_ID_COAUDIO;
+@@ -304,3 +303,15 @@
  
  	raw_pci_ops = &copci_ops;
  }
