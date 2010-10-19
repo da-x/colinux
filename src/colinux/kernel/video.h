@@ -15,7 +15,7 @@
 
 struct co_video_dev {
 	int unit;
-	unsigned long buffer;			/* Page-aligned buffer */
+	void * buffer;			/* Page-aligned buffer */
 	co_video_desc_t desc;
 };
 

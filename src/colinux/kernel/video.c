@@ -14,6 +14,7 @@
 #include <colinux/kernel/monitor.h>
 #include <colinux/os/alloc.h>
 #include <colinux/os/kernel/alloc.h>
+#include <colinux/os/kernel/misc.h>
 #include <colinux/kernel/video.h>
 
 #include <linux/covideo.h>
@@ -89,7 +90,7 @@ void co_video_request(co_monitor_t *cmon, int op, int unit) {
 	case CO_VIDEO_GET_CONFIG:
 		{
 			//covideo_config_t *cp = (covideo_config_t *) &co_passage_page->params[1];
-			co_passage_page->params[1] = dp->buffer;
+			co_passage_page->params[1] = (unsigned long)dp->buffer;
 			co_passage_page->params[2] = dp->desc.size;
 			unsigned long x = dp->desc.width;
 			x = (x<<13) | (0x1fff & dp->desc.height);
@@ -185,7 +186,7 @@ co_monitor_user_video_attach(co_monitor_t *cmon, co_monitor_ioctl_video_t *param
 	/* Create user space mapping */
 	//rc = co_os_userspace_map(dp->buffer, npages, &params->address, &params->handle);
         rc = co_os_userspace_map( dp->buffer, npages,
-                &cmon->video_user_address, &cmon->video_user_handle );	
+                &cmon->video_user_address, &cmon->video_user_handle );
 	if ( !CO_OK(rc) ) {
 		co_debug_system("Error mapping video into user space! (rc=%x)\n", (unsigned int)rc);
 		return rc;
