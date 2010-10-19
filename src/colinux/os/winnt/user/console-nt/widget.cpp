@@ -76,8 +76,8 @@ console_widget_NT_t::console_widget_NT_t()
 	memset(vkey_state, 0, sizeof(vkey_state));
 
 	blank.Attributes = FOREGROUND_GREEN |
-	                   FOREGROUND_BLUE  |
-	                   FOREGROUND_RED;
+			   FOREGROUND_BLUE  |
+			   FOREGROUND_RED;
 
 	blank.Char.AsciiChar = ' ';
 	ctrl_exit            = false;
@@ -114,14 +114,14 @@ void console_widget_NT_t::restore_console()
 
 co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 {
-	CONSOLE_CURSOR_INFO cci;
-	CONSOLE_FONT_INFO   cfi;
-	COORD               fs;
-	HWND                hwnd;
-	RECT                r;
-	DWORD               error;
-	DWORD               old_curs_size;
-	BOOL		    old_curs_is_vis;
+	CONSOLE_CURSOR_INFO	cci;
+	CONSOLE_FONT_INFO	cfi;
+	COORD			fs;
+	HWND			hwnd;
+	RECT			r;
+	DWORD			error;
+	DWORD			old_curs_size;
+	BOOL			old_curs_is_vis;
 
 	error  = 0;
 	window = W;
@@ -143,42 +143,42 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 	SetConsoleMode(input, 0);
 
 	std_out_h = GetStdHandle(STD_OUTPUT_HANDLE);
-        GetCurrentConsoleFont(std_out_h, 0, &cfi);
-        fs       = GetConsoleFontSize(std_out_h, cfi.nFont);
-        r.top    = 0;
-        r.left   = 0;
-        r.bottom = fs.Y * win_size.Y;
-        r.right  = fs.X * win_size.X;
-        AdjustWindowRect(&r,
-        		 WS_CAPTION     |
-        		 WS_SYSMENU     |
-        		 WS_THICKFRAME  |
-        		 WS_MINIMIZEBOX |
-        		 WS_MAXIMIZEBOX,
-        		 0);
+	GetCurrentConsoleFont(std_out_h, 0, &cfi);
+	fs       = GetConsoleFontSize(std_out_h, cfi.nFont);
+	r.top    = 0;
+	r.left   = 0;
+	r.bottom = fs.Y * win_size.Y;
+	r.right  = fs.X * win_size.X;
+	AdjustWindowRect(&r,
+			 WS_CAPTION     |
+			 WS_SYSMENU     |
+			 WS_THICKFRAME  |
+			 WS_MINIMIZEBOX |
+			 WS_MAXIMIZEBOX,
+			 0);
 
 	hwnd = GetConsoleWindow();
 	SetWindowPos(hwnd,
-	             HWND_TOP,
-	             0,
-	             0,
-                     r.right  - r.left,
-                     r.bottom - r.top,
-                     SWP_NOMOVE);
+		     HWND_TOP,
+		     0,
+		     0,
+		     r.right  - r.left,
+		     r.bottom - r.top,
+		     SWP_NOMOVE);
 
 	// Hide the standard screen cursor
         GetConsoleCursorInfo(std_out_h, &cursor_info);
 	old_curs_is_vis = cci.bVisible;
 	old_curs_size   = cci.dwSize;
-        cci             = cursor_info;
-        cci.bVisible    = FALSE;
-        SetConsoleCursorInfo(std_out_h, &cci);
+	cci             = cursor_info;
+	cci.bVisible    = FALSE;
+	SetConsoleCursorInfo(std_out_h, &cci);
 
 	/* Window region */
-        win_region.Top    = 0;
-        win_region.Left   = 0;
-        win_region.Right  = win_size.X - 1;
-        win_region.Bottom = win_size.Y - 1;
+	win_region.Top    = 0;
+	win_region.Left   = 0;
+	win_region.Right  = win_size.X - 1;
+	win_region.Bottom = win_size.Y - 1;
 
 	if(!SetConsoleWindowInfo(std_out_h, TRUE, &win_region)) {
 		error = GetLastError();
@@ -195,10 +195,10 @@ co_rc_t console_widget_NT_t::set_window(console_window_t* W)
 	screen = (CHAR_INFO*)co_os_malloc(sizeof(CHAR_INFO) * buf_size.X * buf_size.Y);
 
 	own_out_h = CreateConsoleScreenBuffer(GENERIC_READ | GENERIC_WRITE,
-	                                      0,
-	                                      0,
-				              CONSOLE_TEXTMODE_BUFFER,
-				              0);
+					      0,
+					      0,
+					      CONSOLE_TEXTMODE_BUFFER,
+					      0);
 
 	if(!SetConsoleScreenBufferSize(own_out_h, buf_size))
           	co_debug("SetConsoleScreenBufferSize() error 0x%lx", GetLastError());
@@ -241,7 +241,7 @@ console_widget_NT_t::~console_widget_NT_t()
 
 	/* Restore standard output screen buffer */
 	CloseHandle(own_out_h);
-        SetConsoleCursorInfo(std_out_h, &cursor_info);
+	SetConsoleCursorInfo(std_out_h, &cursor_info);
 
 	restore_console();
 }
@@ -253,25 +253,25 @@ void console_widget_NT_t::draw()
 		DWORD z;
 
 		if (!FillConsoleOutputCharacter(own_out_h,
-		                                blank.Char.AsciiChar,
-		                                win_size.X * win_size.Y,
-		                                c,
-		                                &z))
+						blank.Char.AsciiChar,
+						win_size.X * win_size.Y,
+						c,
+						&z))
 			co_debug("FillConsoleOutputCharacter() error 0x%lx",
 				 GetLastError());
 		if (!FillConsoleOutputAttribute(own_out_h,
-		                                blank.Attributes,
-		                                win_size.X * win_size.Y,
-		                                c,
-		                                &z))
+						blank.Attributes,
+						win_size.X * win_size.Y,
+						c,
+						&z))
 			co_debug("FillConsoleOutputAttribute() error 0x%lx",
 				 GetLastError());
 		return;
 	}
 
-	co_console_cell_t* cell  = console->screen;
-	CHAR_INFO*         ci    = screen;
-	int                count = win_size.X * win_size.Y;
+	co_console_cell_t*	cell  = console->screen;
+	CHAR_INFO*		ci    = screen;
+	int			count = win_size.X * win_size.Y;
 
 	do {
 		ci->Attributes         = cell->attr;
@@ -293,9 +293,9 @@ void console_widget_NT_t::update()
 	if (!ReadConsoleOutput(own_out_h, screen, win_size, c, &r))
 		co_debug("ReadConsoleOutput() error 0x%lx", GetLastError());
 
-	co_console_cell_t* cell  = console->screen;
-	CHAR_INFO*         ci    = screen;
-	int                count = win_size.X * win_size.Y;
+	co_console_cell_t*	cell  = console->screen;
+	CHAR_INFO*		ci    = screen;
+	int			count = win_size.X * win_size.Y;
 
 	do {
 		cell->attr   = ci->Attributes;
@@ -342,7 +342,7 @@ co_rc_t console_widget_NT_t::op_scroll_down(const co_console_unit& T,
 					    const co_console_character& C)
 {
 	SMALL_RECT src_r;
-	COORD 	   dst_c;
+	COORD      dst_c;
 	CHAR_INFO  blank;
 
 	src_r.Left   = win_region.Left;
@@ -350,8 +350,8 @@ co_rc_t console_widget_NT_t::op_scroll_down(const co_console_unit& T,
 	src_r.Top    = T;
 	src_r.Bottom = B;
 
-	dst_c.X      = 0;
-	dst_c.Y      = src_r.Top + L;
+	dst_c.X = 0;
+	dst_c.Y = src_r.Top + L;
 
 	blank.Attributes     = (C & 0xFF00) >> 8;
 	blank.Char.AsciiChar = (C & 0x00FF);
@@ -371,7 +371,7 @@ co_rc_t console_widget_NT_t::op_bmove(const co_console_unit& Y,
 				      const co_console_unit& R)
 {
 	SMALL_RECT src_r;
-	COORD 	   dst_c;
+	COORD      dst_c;
 
 	dst_c.Y = Y;
 	dst_c.X = X;
@@ -411,11 +411,11 @@ console_widget_NT_t::op_putcs(
 	SMALL_RECT r;
 	COORD      c;
 
-	c.X	 =
-	r.Left 	 = X;
+	c.X    = \
+	r.Left = X;
 
-	c.Y 	 =
-	r.Top	 =
+	c.Y      = \
+	r.Top    = \
 	r.Bottom = Y;
 
 	if (--count + r.Left > console->config.x)
@@ -450,12 +450,12 @@ console_widget_NT_t::op_putc(
 		return CO_RC(ERROR);
 	}
 
-	c.X	=
-	r.Left	=
+	c.X     = \
+	r.Left  = \
 	r.Right = X;
 
-	c.Y      =
-	r.Top	 =
+	c.Y      = \
+	r.Top    = \
 	r.Bottom = Y;
 
 	CHAR_INFO* ci = &screen[(win_size.X * r.Top) + r.Left];
@@ -489,8 +489,8 @@ co_rc_t console_widget_NT_t::op_clear(const co_console_unit&	 T,
 	CHAR_INFO* s;
 	CHAR_INFO  clear_blank;
 	COORD      c;
-	long 	   x;
-	long 	   y;
+	long       x;
+	long       y;
 
 	if (B < T || R < L)
 		return CO_RC(ERROR);
@@ -511,10 +511,10 @@ co_rc_t console_widget_NT_t::op_clear(const co_console_unit&	 T,
 		y++;
 	}
 
-	r.Top  =
+	r.Top  = \
 	c.Y    = T;
 
-	r.Left =
+	r.Left = \
 	c.X    = L;
 
 	r.Bottom = B;
