@@ -372,9 +372,14 @@ static void callback_return_jiffies(co_monitor_t *cmon)
 
 	co_os_get_timestamp(&timestamp);
 
-	diff = cmon->timestamp_reminder + 100 * (timestamp.quad - cmon->timestamp.quad);  /* HZ value */
-	cmon->timestamp_reminder = co_div64_32(&diff, cmon->timestamp_freq.quad);
-	cmon->timestamp		 = timestamp;
+	/* Skip timestamp glitches, see http://support.microsoft.com/kb/274323 */
+	if (timestamp.quad > cmon->timestamp.quad) {
+		diff = cmon->timestamp_reminder + 100 * (timestamp.quad - cmon->timestamp.quad);  /* 100 = HZ value */
+		cmon->timestamp_reminder = co_div64_32(&diff, cmon->timestamp_freq.quad);
+		cmon->timestamp		 = timestamp;
+	} else {
+		diff = 0;
+	}
 
 	co_passage_page->params[1] = diff; /* jiffies */
 }
