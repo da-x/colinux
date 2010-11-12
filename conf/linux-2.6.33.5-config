@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.33.5
-# Tue Nov  9 23:29:03 2010
+# Fri Nov 12 22:42:00 2010
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -883,8 +883,10 @@ CONFIG_FIX_EARLYCON_MEM=y
 #
 # Non-8250 serial port support
 #
+CONFIG_SERIAL_CORE_CONSOLE=y
 # CONFIG_SERIAL_JSM is not set
 CONFIG_SERIAL_COOPERATIVE=y
+CONFIG_SERIAL_COOPERATIVE_CONSOLE=y
 CONFIG_UNIX98_PTYS=y
 # CONFIG_DEVPTS_MULTIPLE_INSTANCES is not set
 CONFIG_LEGACY_PTYS=y
