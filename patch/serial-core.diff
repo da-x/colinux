@@ -1,10 +1,10 @@
 Serial support
 
-Index: linux-2.6.22-source/drivers/char/coserial.c
+Index: linux-2.6.33-source/drivers/char/coserial.c
 ===================================================================
 --- /dev/null
-+++ linux-2.6.22-source/drivers/char/coserial.c
-@@ -0,0 +1,395 @@
++++ linux-2.6.33-source/drivers/char/coserial.c
+@@ -0,0 +1,256 @@
 +/*
 + *  Copyright (C) 2004 Dan Aloni <da-x@colinux.org>
 + *
@@ -14,120 +14,29 @@ Index: linux-2.6.22-source/drivers/char/coserial.c
 + *  Also based on The tiny_tty.c example driver by Greg Kroah-Hartman (greg@kroah.com).
 + */
 +
-+/*
-+ * 20040908: Ballard, Jonathan H. <jhballard@hotmail.com>
-+ * 	   : Implemented cocd_task() & throttle.
-+ * 20041224: Used schedule() instead of shedule_work().
-+ * 20050101: Uses interruptible_sleep_on() and wake_up() instead of schedule().
-+ *         : Uses list_*() for dispatched data flow to each unit.
-+ *         : Handles multiple units in seperate tasks.
-+ * 20050918: cocd_unit_task() waits for open complete. open_count was unsave.
-+ * 20051023: Endless loop in cocd_unit_task has stopped other consoles.  From
-+ *           schedule_work() should never endless loop. Use schedule_work()
-+ *           instand of interruptible_sleep_on() and wake_up().
-+ *           Remove serial console setup (currently not used).
-+ *           Serial(-boot) console currently not enabled.
-+ *
-+*/
-+
-+
 +#include <linux/major.h>
 +#include <linux/module.h>
 +#include <linux/init.h>
 +#include <linux/fs.h>
-+#include <linux/errno.h>
-+#include <linux/major.h>
-+#include <linux/stat.h>
-+#include <linux/file.h>
 +#include <linux/ioctl.h>
 +#include <linux/device.h>
 +#include <linux/console.h>
-+#include <linux/wait.h>
 +#include <linux/interrupt.h>
 +
-+#include <linux/workqueue.h>
 +#include <linux/tty.h>
 +#include <linux/tty_flip.h>
 +
 +#include <linux/cooperative_internal.h>
 +
-+#include <asm/uaccess.h>
-+
 +static irqreturn_t cocd_interrupt(int irq, void *dev_id);
 +
 +struct cocd_tty {
-+	struct semaphore	sem;		/* locks this structure */
 +	struct tty_struct	*tty;		/* tty for this device */
 +	unsigned		open_count;	/* open()/close() tally */
-+	struct work_struct	work;		/* individual unit task */
-+	struct list_head	inq;		/* input queue */
-+	int			throttled;	/* data flow throttle bit */
-+	int			throttle_index;	/* data flow throttle index */
 +};
 +
 +static struct tty_driver *cocd_driver;
 +DECLARE_MUTEX(cocd_sem);
-+
-+static void cocd_unit_task(struct work_struct *data)
-+{
-+	co_message_node_t *input;
-+	struct cocd_tty *cocd = container_of(data, struct cocd_tty, work);
-+	co_linux_message_t *message;
-+	char *p, *e, *m;
-+	struct tty_struct *tty;
-+	int index;
-+
-+	if (!cocd)
-+		return;
-+
-+	tty = cocd->tty;
-+	if (!tty)
-+		return;
-+
-+	down(&cocd->sem);
-+	index = cocd->throttle_index;
-+	while(cocd->open_count && !list_empty(&cocd->inq)) {
-+		input = list_entry(cocd->inq.prev, co_message_node_t, node);
-+		message = (co_linux_message_t *)&input->msg.data;
-+
-+		e = (m = p = message->data) + message->size;
-+		p += index;
-+		while(p < e && cocd->open_count) {
-+			if(cocd->throttled) {
-+				/* stop here, save position */
-+				cocd->throttle_index = p - (char*)(message->data);
-+				up(&cocd->sem);
-+				return;
-+			}
-+			up(&cocd->sem);
-+			m += tty_buffer_request_room(tty, e - m);
-+			p += tty_insert_flip_string(tty, p, m - p);
-+			tty_flip_buffer_push(tty);
-+			down(&cocd->sem);
-+		}
-+		list_del(&input->node);
-+		co_free_message(input);
-+		cocd->throttle_index = index = 0;
-+	}
-+
-+	if (cocd->open_count == 0) {
-+		/* last close, clear all */
-+		free_irq(SERIAL_IRQ, NULL);
-+		tty->driver_data = NULL;
-+		while(!list_empty(&cocd->inq)) {
-+			input = list_entry(cocd->inq.prev, co_message_node_t, node);
-+			list_del(&input->node);
-+			co_free_message(input);
-+		}
-+		up(&cocd->sem); /* but nobody should wait here! */
-+
-+		kfree(cocd);
-+		return;
-+	}
-+	up(&cocd->sem);
-+
-+	tty_flip_buffer_push(tty);
-+}
 +
 +static int cocd_open(struct tty_struct *tty, struct file * filp)
 +{
@@ -135,14 +44,13 @@ Index: linux-2.6.22-source/drivers/char/coserial.c
 +
 +	down(&cocd_sem);
 +
-+	if ((cocd = (struct cocd_tty *)tty->driver_data)) {
-+		down(&cocd->sem);
-+	} else {
++	if (!(cocd = (struct cocd_tty *)tty->driver_data)) {
 +		int ret;
 +
 +		ret = request_irq(SERIAL_IRQ, &cocd_interrupt, IRQF_SAMPLE_RANDOM, "coserial", NULL);
 +		if (ret) {
 +			printk(KERN_ERR "COSERIAL: unable to get irq %d", SERIAL_IRQ);
++			up(&cocd_sem);
 +			return ret;
 +		}
 +
@@ -151,20 +59,14 @@ Index: linux-2.6.22-source/drivers/char/coserial.c
 +			return -ENOMEM;
 +		}
 +
-+		init_MUTEX_LOCKED(&cocd->sem);
 +		cocd->open_count = 0;
 +		cocd->tty = tty;
-+		cocd->throttled = 0;
-+		cocd->throttle_index = 0;
-+		INIT_WORK(&cocd->work, cocd_unit_task);
-+		INIT_LIST_HEAD(&cocd->inq);
 +		tty->driver_data = cocd;
 +		tty->low_latency = 1;
 +	}
 +
 +	cocd->open_count++;
 +
-+	up(&cocd->sem);
 +	up(&cocd_sem);
 +
 +	return 0;
@@ -182,13 +84,15 @@ Index: linux-2.6.22-source/drivers/char/coserial.c
 +		goto out;
 +	}
 +
-+	down(&cocd->sem);
-+	if (--cocd->open_count == 0)
-+		schedule_work(&cocd->work);
-+	up(&cocd->sem);
++	if (--cocd->open_count == 0) {
++		/* last close, clear all */
++		free_irq(SERIAL_IRQ, NULL);
++		tty->driver_data = NULL;
++		cocd->tty = NULL;
++		kfree(cocd);
++	}
 +
 +out:
-+
 +	up(&cocd_sem);
 +}
 +
@@ -198,39 +102,40 @@ Index: linux-2.6.22-source/drivers/char/coserial.c
 +	co_linux_message_t *message;
 +	struct tty_struct *tty;
 +	struct cocd_tty *cocd;
++	int len;
 +
 +	if (!cocd_driver)
 +		return IRQ_NONE;
 +
-+	if(!co_get_message(&input, CO_DEVICE_SERIAL))
++	if (down_trylock(&cocd_sem))
 +		return IRQ_NONE;
++
++	if(!co_get_message(&input, CO_DEVICE_SERIAL))
++		goto out;
 +
 +	if(!input)
-+		return IRQ_NONE;
++		goto out;
 +
 +	message = (co_linux_message_t *)&input->msg.data;
-+	down(&cocd_sem);
 +	if (message->unit < CO_MODULE_MAX_SERIAL
 +	 && (tty = cocd_driver->ttys[message->unit])
 +	 && (cocd = (struct cocd_tty *)tty->driver_data)) {
 +		up(&cocd_sem);
 +
-+		down(&cocd->sem);
-+		list_add_tail(&input->node,&cocd->inq);
-+		if (!cocd->throttled)
-+			schedule_work(&cocd->work);
-+		up(&cocd->sem);
++		len = tty_insert_flip_string(tty, message->data, message->size);
++		if (len)
++			tty_flip_buffer_push(tty);
 +
++		co_free_message(input);
 +		return IRQ_HANDLED;
 +	}
++	co_free_message(input); /* message lost */
++out:
 +	up(&cocd_sem);
-+	co_free_message(input); /* message lose */
-+
 +	return IRQ_NONE;
 +}
 +
-+static int cocd_write(struct tty_struct * tty,
-+	       const unsigned char *buf, int count)
++static int do_cocd_write(int index, const char *buf, unsigned count)
 +{
 +	const char *kbuf_scan = buf;
 +	int count_left = count;
@@ -241,7 +146,7 @@ Index: linux-2.6.22-source/drivers/char/coserial.c
 +			count_partial = 1000;
 +
 +		co_send_message(CO_MODULE_LINUX,
-+				CO_MODULE_SERIAL0 + tty->index,
++				CO_MODULE_SERIAL0 + index,
 +				CO_PRIORITY_DISCARDABLE,
 +				CO_MESSAGE_TYPE_STRING,
 +				count_partial,
@@ -254,61 +159,22 @@ Index: linux-2.6.22-source/drivers/char/coserial.c
 +	return count;
 +}
 +
++
++static int cocd_write(struct tty_struct * tty, const unsigned char *buf, int count)
++{
++	return do_cocd_write(tty->index, buf, count);
++}
++
 +static int cocd_write_room(struct tty_struct *tty)
 +{
 +	struct cocd_tty *cocd = (struct cocd_tty *)tty->driver_data;
 +	if (!cocd)
 +		return -ENODEV;
-+
-+	down(&cocd->sem);
-+	if (cocd->open_count == 0) {
-+		/* port was not opened */
-+		up(&cocd->sem);
-+		return -EINVAL;
-+	}
-+
-+	up(&cocd->sem);
 +	return 255;
-+}
-+
-+static void cocd_hangup(struct tty_struct *tty)
-+{
-+}
-+
-+static void cocd_throttle(struct tty_struct * tty)
-+{
-+	struct cocd_tty *cocd = (struct cocd_tty *)tty->driver_data;
-+	if (!cocd)
-+		return;
-+
-+	down(&cocd->sem);
-+	cocd->throttled = 1;
-+	up(&cocd->sem);
-+}
-+
-+static void cocd_unthrottle(struct tty_struct * tty)
-+{
-+	struct cocd_tty *cocd = (struct cocd_tty *)tty->driver_data;
-+	if (!cocd)
-+		return;
-+
-+	down(&cocd->sem);
-+	cocd->throttled = 0;
-+	schedule_work(&cocd->work);
-+	up(&cocd->sem);
-+}
-+
-+static void cocd_flush_buffer(struct tty_struct *tty)
-+{
 +}
 +
 +static void cocd_set_termios(struct tty_struct *tty, struct ktermios *old_termios)
 +{
-+}
-+
-+static int cocd_chars_in_buffer(struct tty_struct *tty)
-+{
-+	return 0;
 +}
 +
 +static struct tty_operations cocd_ops = {
@@ -316,11 +182,6 @@ Index: linux-2.6.22-source/drivers/char/coserial.c
 +	.close = cocd_close,
 +	.write = cocd_write,
 +	.write_room = cocd_write_room,
-+	.flush_buffer = cocd_flush_buffer,
-+	.throttle = cocd_throttle,
-+	.unthrottle = cocd_unthrottle,
-+	.hangup = cocd_hangup,
-+	.chars_in_buffer = cocd_chars_in_buffer,
 +	.set_termios = cocd_set_termios,
 +};
 +
@@ -328,8 +189,7 @@ Index: linux-2.6.22-source/drivers/char/coserial.c
 +{
 +	int retval;
 +
-+    	cocd_driver = alloc_tty_driver(CO_MODULE_MAX_SERIAL);
-+
++	cocd_driver = alloc_tty_driver(CO_MODULE_MAX_SERIAL);
 +	if (!cocd_driver) {
 +		printk(KERN_ERR "Couldn't allocate cocd driver");
 +		return -ENOMEM;
@@ -371,9 +231,10 @@ Index: linux-2.6.22-source/drivers/char/coserial.c
 + * Serial console driver
 + * ------------------------------------------------------------
 + */
-+#ifdef CONFIG_SERIAL_CONSOLE
-+static void cocd_console_write(struct console *c, const char *string,  unsigned len)
++#ifdef CONFIG_SERIAL_COOPERATIVE_CONSOLE
++static void cocd_console_write(struct console *c, const char *buf,  unsigned count)
 +{
++	do_cocd_write(c->index, buf, count);
 +}
 +
 +static struct tty_driver *cocd_console_device(struct console *c, int *index)
@@ -399,4 +260,4 @@ Index: linux-2.6.22-source/drivers/char/coserial.c
 +	return 0;
 +}
 +console_initcall(cocd_console_init);
-+#endif
++#endif /* CONFIG_SERIAL_COOPERATIVE_CONSOLE */
