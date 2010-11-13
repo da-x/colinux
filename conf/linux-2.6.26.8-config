@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.26.8
-# Fri Mar  5 17:23:03 2010
+# Fri Nov 12 22:58:09 2010
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -772,7 +772,6 @@ CONFIG_HW_CONSOLE=y
 # CONFIG_DEVKMEM is not set
 # CONFIG_SERIAL_NONSTANDARD is not set
 # CONFIG_NOZOMI is not set
-CONFIG_SERIAL_COOPERATIVE=y
 
 #
 # Serial drivers
@@ -783,7 +782,10 @@ CONFIG_FIX_EARLYCON_MEM=y
 #
 # Non-8250 serial port support
 #
+CONFIG_SERIAL_CORE_CONSOLE=y
 # CONFIG_SERIAL_JSM is not set
+CONFIG_SERIAL_COOPERATIVE=y
+CONFIG_SERIAL_COOPERATIVE_CONSOLE=y
 CONFIG_UNIX98_PTYS=y
 CONFIG_LEGACY_PTYS=y
 CONFIG_LEGACY_PTY_COUNT=256

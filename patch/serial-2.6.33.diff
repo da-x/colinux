@@ -1,17 +1,5 @@
 Serial support
 
-Index: linux-2.6.33-source/drivers/char/Makefile
-===================================================================
---- linux-2.6.33-source.orig/drivers/char/Makefile
-+++ linux-2.6.33-source/drivers/char/Makefile
-@@ -26,6 +26,7 @@
- obj-$(CONFIG_CYCLADES)		+= cyclades.o
- obj-$(CONFIG_STALLION)		+= stallion.o
- obj-$(CONFIG_ISTALLION)		+= istallion.o
-+obj-$(CONFIG_SERIAL_COOPERATIVE) += coserial.o
- obj-$(CONFIG_NOZOMI)		+= nozomi.o
- obj-$(CONFIG_DIGIEPCA)		+= epca.o
- obj-$(CONFIG_SPECIALIX)		+= specialix.o
 Index: linux-2.6.33-source/drivers/char/Kconfig
 ===================================================================
 --- linux-2.6.33-source.orig/drivers/char/Kconfig
@@ -45,3 +33,12 @@ Index: linux-2.6.33-source/drivers/serial/Kconfig
 +	bool "coLinux serial console support"
 +	depends on SERIAL_COOPERATIVE=y
 +	select SERIAL_CORE_CONSOLE
+Index: linux-2.6.33-source/drivers/serial/Makefile
+===================================================================
+--- linux-2.6.33-source.orig/drivers/serial/Makefile
++++ linux-2.6.33-source/drivers/serial/Makefile
+@@ -82,3 +82,4 @@
+ obj-$(CONFIG_SERIAL_QE) += ucc_uart.o
+ obj-$(CONFIG_SERIAL_TIMBERDALE)	+= timbuart.o
+ obj-$(CONFIG_SERIAL_GRLIB_GAISLER_APBUART) += apbuart.o
++obj-$(CONFIG_SERIAL_COOPERATIVE) += coserial.o
