@@ -1039,6 +1039,7 @@ co_rc_t co_monitor_create(co_manager_t*		     manager,
 	co_symbols_import_t* import = &params->import;
 	co_monitor_t*	     cmon;
 	co_rc_t		     rc     = CO_RC_OK;
+	co_video_dev_t *dp;
 
 	if (params->config.magic_size != sizeof(co_config_t))
 		return CO_RC(VERSION_MISMATCHED);
@@ -1167,9 +1168,10 @@ co_rc_t co_monitor_create(co_manager_t*		     manager,
 	 * Initialize video memory buffer.
 	*/
 	cmon->video_user_id = CO_INVALID_ID;
-	co_video_dev_t *dp = cmon->video_devs[0];
+	dp = cmon->video_devs[0];
 	if (dp) {
-        	dp->desc.size = params->config.video_devs[0].desc.size;
+		co_video_dev_desc_t *v = &(params->config.video_devs[0]);
+		dp->desc.size = params->config.video_devs[0].desc.size;
 		dp->buffer = co_os_malloc( dp->desc.size );
 		if ( dp->buffer == NULL )
 		{
@@ -1180,8 +1182,7 @@ co_rc_t co_monitor_create(co_manager_t*		     manager,
 		}
 		/* By zeroing the video buffer we are also locking it */
 		co_memset(dp->buffer, 0, dp->desc.size);
-                co_video_dev_desc_t *v = &(params->config.video_devs[0]);
-                dp->desc.width = v->desc.width;
+		dp->desc.width = v->desc.width;
 		dp->desc.height = v->desc.height;
 		dp->desc.bpp = v->desc.bpp; 
 	}
@@ -1315,9 +1316,11 @@ static void send_monitor_end_messages(co_monitor_t *cmon)
 static
 void co_monitor_user_video_dettach( co_monitor_t *monitor )
 {
-	if ( !monitor->video_devs[0]) return;
-	unsigned long video_pages = monitor->video_devs[0]->desc.size >> CO_ARCH_PAGE_SHIFT;
+	unsigned long video_pages;
 
+	if ( !monitor->video_devs[0])
+		return;
+	video_pages = monitor->video_devs[0]->desc.size >> CO_ARCH_PAGE_SHIFT;
 	co_os_userspace_unmap( monitor->video_user_address,
 				monitor->video_user_handle, video_pages );
 
