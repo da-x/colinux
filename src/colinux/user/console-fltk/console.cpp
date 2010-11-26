@@ -19,6 +19,7 @@
 #include "log_window.h"
 #include "select_monitor.h"
 
+#include <FL/x.H>
 #include <FL/Fl_Select_Browser.H>
 #include <FL/Fl_Hold_Browser.H>
 #include <FL/Fl_Button.H>
@@ -152,6 +153,18 @@ console_main_window_t::console_main_window_t(console_window_t* console)
 : Fl_Double_Window(640, 480-30), console(console)
 {
 	label("Cooperative Linux console");
+#ifdef _WIN32
+    /*
+     * Load application icon and bind it to the main window.
+     *
+     * Maybe this should not be here, but as long as it's done before the
+     * first show() it will work and avoids having an extra co_os_* funtion
+     * just for this.
+     *
+     * FIXME: Icon ID should not be hardcoded.
+     */
+    icon( (char*)LoadIcon(fl_display, MAKEINTRESOURCE(2)) );
+#endif
 }
 
 int console_main_window_t::handle(int event)
