@@ -33,7 +33,7 @@ conf_missing:
 
 endif
 
-.PHONY: colinux clean distclean help
+.PHONY: colinux kernel clean distclean help
 
 # Include host OS specific makefile
 ifneq ($(HOSTOS),)
@@ -42,6 +42,9 @@ include Makefile.$(HOSTOS)
 # Compile daemons
 colinux:
 	@cd src && make colinux
+
+kernel:
+	@cd bin && ./build-kernel.sh
 
 # Dump python build tree
 dump:

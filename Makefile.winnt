@@ -22,9 +22,6 @@ cross:
 libs:
 	@cd bin && ./build-colinux-libs.sh
 
-kernel:
-	@cd bin && ./build-kernel.sh
-
 # Download only all missing sources (for cross compile)
 download:
 	@cd bin && ./build-all.sh --download-only
