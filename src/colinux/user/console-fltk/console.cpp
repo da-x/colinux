@@ -150,7 +150,7 @@ static void on_show_hide_log_cb(Fl_Widget *widget, void* v)
 
 
 console_main_window_t::console_main_window_t(console_window_t* console)
-: Fl_Double_Window(640, 480-30), console(console)
+: Fl_Double_Window(640, 480), console(console)
 {
 	label("Cooperative Linux console");
 #ifdef _WIN32
@@ -351,16 +351,18 @@ co_rc_t console_window_t::start()
 	menu->when(FL_WHEN_RELEASE_ALWAYS);
 	menu->copy(console_menuitems, window);
 
-	wScroll_ = new Fl_Scroll(0, MENU_SIZE_PIXELS, swidth, sheight - MENU_SIZE_PIXELS - sh);
+        Fl_Group* tile = new Fl_Group(0, MENU_SIZE_PIXELS, swidth, sheight-MENU_SIZE_PIXELS);
+	//wScroll_ = new Fl_Scroll(0, MENU_SIZE_PIXELS, swidth, sheight - MENU_SIZE_PIXELS - sh);
         //wScroll_->box(FL_THIN_DOWN_FRAME);
         {
-          //const int bdx = Fl::box_dx( FL_THIN_DOWN_FRAME );
-          //const int bdy = Fl::box_dx( FL_THIN_DOWN_FRAME );
-	  widget	    = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, 360);
+          const int bdx = Fl::box_dx( FL_THIN_DOWN_FRAME );
+          const int bdy = Fl::box_dx( FL_THIN_DOWN_FRAME );
+	  widget = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, sheight - sh - MENU_SIZE_PIXELS);
           if(widget->get_copy_spaces()!=reg_copyspaces)
 		widget->toggle_copy_spaces();
         }
-        wScroll_->end();
+        //wScroll_->resizable(widget);
+        //wScroll_->end();
 
         // Status Bar
 	wStatus_ = new Fl_Group(0, sheight - sh, swidth, sh);
@@ -370,10 +372,12 @@ co_rc_t console_window_t::start()
           btn_log_->clear_visible_focus( );
           btn_log_->box( FL_ENGRAVED_BOX );
           btn_log_->callback( on_show_hide_log, this );
-        wStatus_->resizable( status_line_ );
+        //wStatus_->resizable( status_line_ );
 	wStatus_->end();
-
-	window->resizable(wScroll_);
+        tile->resizable(widget);
+        //tile->resizable(wScroll_);
+        tile->end();
+        window->resizable(tile);
 	window->end();
 	window->show();
 
