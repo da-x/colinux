@@ -16,6 +16,7 @@
 
 #include "console.h"
 #include "about.h"
+#include "log_window.h"
 #include "select_monitor.h"
 
 #include <FL/Fl_Select_Browser.H>
@@ -127,8 +128,28 @@ static void console_font_cb(Fl_Widget *widget, void* v)
 	((console_window_t*)(((Fl_Menu_Item*)v)->user_data_))->fsd->show();
 }
 
+static void on_show_hide_log(Fl_Widget *widget, void* v)
+{
+    console_window_t* this_ = (console_window_t*)v;
+
+    // Show/hide window
+    if ( this_->wLog_->visible() )
+        this_->wLog_->hide( );
+    else
+        this_->wLog_->show( );
+    // Update UI hints to the user
+    //this_->update_ui_state( );
+
+}
+static void on_show_hide_log_cb(Fl_Widget *widget, void* v)
+{
+       console_window_t* cw_inst = ((console_window_t*)(((Fl_Menu_Item*)v)->user_data_));
+       on_show_hide_log(widget, cw_inst);
+}
+
+
 console_main_window_t::console_main_window_t(console_window_t* console)
-: Fl_Double_Window(640, 480), console(console)
+: Fl_Double_Window(640, 480-30), console(console)
 {
 	label("Cooperative Linux console");
 }
@@ -285,6 +306,7 @@ co_rc_t console_window_t::start()
 		{ "View" , 0, NULL, NULL, FL_SUBMENU },
 		{ "Page up (WinKey+PgUp, mouse wheel)", 0, (Fl_Callback*)console_scrollpageup_cb, this, },
 		{ "Page down (WinKey+PgDn, mouse wheel)", 0, (Fl_Callback*)console_scrollpagedown_cb, this, },
+		{ "Message log window", 0, (Fl_Callback*)on_show_hide_log_cb, this, },
 		{ 0 },
 
 		{ "Config" , 0, NULL, NULL, FL_SUBMENU },
@@ -306,8 +328,9 @@ co_rc_t console_window_t::start()
 	for (i = 0; i < sizeof(console_menuitems) / sizeof(console_menuitems[0]); i++)
 		console_menuitems[i].user_data((void*)this);
 
-	int swidth  = 640;
-	int sheight = 480;
+	const int swidth  = window->w();
+	const int sheight = window->h() ;
+        const int sh = 24;  // status bar height
 
 	menu = new Fl_Menu_Bar(0, 0, swidth, MENU_SIZE_PIXELS);
 	menu->box(FL_UP_BOX);
@@ -315,30 +338,34 @@ co_rc_t console_window_t::start()
 	menu->when(FL_WHEN_RELEASE_ALWAYS);
 	menu->copy(console_menuitems, window);
 
-	Fl_Group* tile = new Fl_Group(0, MENU_SIZE_PIXELS, swidth, sheight-MENU_SIZE_PIXELS);
-
-	widget	    = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, sheight - 120);
-	if(widget->get_copy_spaces()!=reg_copyspaces)
+	wScroll_ = new Fl_Scroll(0, MENU_SIZE_PIXELS, swidth, sheight - MENU_SIZE_PIXELS - sh);
+        //wScroll_->box(FL_THIN_DOWN_FRAME);
+        {
+          //const int bdx = Fl::box_dx( FL_THIN_DOWN_FRAME );
+          //const int bdy = Fl::box_dx( FL_THIN_DOWN_FRAME );
+	  widget	    = new console_widget_t(0, MENU_SIZE_PIXELS, swidth, 360);
+          if(widget->get_copy_spaces()!=reg_copyspaces)
 		widget->toggle_copy_spaces();
-	text_widget = new Fl_Text_Display(0, sheight - 120 + MENU_SIZE_PIXELS, swidth, 70);
+        }
+        wScroll_->end();
 
-	Fl_Group* tile2 = new Fl_Group(0, sheight - 120 + MENU_SIZE_PIXELS, swidth, 90);
+        // Status Bar
+	wStatus_ = new Fl_Group(0, sheight - sh, swidth, sh);
+          status_line_ = new Fl_Box(0, sheight-sh, swidth-80,sh );
+          status_line_->align( FL_ALIGN_LEFT | FL_ALIGN_INSIDE );
+          btn_log_ = new Fl_Button( swidth-80,sheight-sh+1, 80,sh-2, "Messages" );
+          btn_log_->clear_visible_focus( );
+          btn_log_->box( FL_ENGRAVED_BOX );
+          btn_log_->callback( on_show_hide_log, this );
+        wStatus_->resizable( status_line_ );
+	wStatus_->end();
 
-	text_widget->buffer(new Fl_Text_Buffer());
-	text_widget->insert_position(0);
-
-	Fl_Box* box = new Fl_Box(0, sheight - 20, swidth, 20);
-
-	box->label("");
-	box->align(FL_ALIGN_LEFT | FL_ALIGN_INSIDE);
-	tile2->end();
-
-	tile->resizable(widget);
-	tile->end();
-
-	window->resizable(tile);
+	window->resizable(wScroll_);
 	window->end();
 	window->show();
+
+        // Create (hidden) log window (will be shown upon request)
+        wLog_ = new console_log_window( 400,300, "Message Log" );
 
 	menu_item_activate(console_select_cb);
 	menu_item_deactivate(console_send_poweroff_cb);
@@ -737,9 +764,10 @@ void console_window_t::log(const char* format, ...)
 	vsnprintf(buf, sizeof(buf), format, ap);
 	va_end(ap);
 
-	text_widget->insert_position(text_widget->buffer()->length());
-	text_widget->show_insert_position();
-	text_widget->insert(buf);
+    // Check if it wasn't destroyed during close
+    if ( wLog_ )
+        wLog_->add( buf );
+
 }
 
 console_widget_t * console_window_t::get_widget()

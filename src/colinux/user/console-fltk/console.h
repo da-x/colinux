@@ -20,6 +20,7 @@
 #include <FL/Fl_Menu.H>
 #include <FL/Fl_Menu_Bar.H>
 #include <FL/Fl_Widget.H>
+#include <FL/Fl_Scroll.H>
 
 extern "C" {
 #include <colinux/user/debug.h>
@@ -43,6 +44,7 @@ typedef enum {
 	CO_CONSOLE_STATE_ATTACHED,
 } co_console_state_t;
 
+class console_log_window;
 class console_window_t;
 
 class console_main_window_t : public Fl_Double_Window
@@ -61,6 +63,27 @@ protected:
 class console_window_t
 {
 public:
+    /**
+     * Thread message identifiers for asynch messages.
+     */
+    enum tm_id
+    {
+        TMSG_LOG_WINDOW, TMSG_MONITOR_SELECT, TMSG_OPTIONS,
+        TMSG_VIEW_RESIZE,
+        TMSG_LAST
+    };
+    /**
+     * Thread messages data structure.
+     */
+    struct tm_data_t
+    {
+        tm_id       id;     // Message ID
+        unsigned    value;  // 32 bit data value
+        void    *   data;   // extra data
+        tm_data_t( tm_id i=tm_id(0), unsigned v=0, void* d=0 )
+                    : id(i), value(v), data(d) {}
+    };
+
 	console_window_t();
 	~console_window_t();
 
@@ -85,6 +108,7 @@ public:
 
 	int get_exitdetach(void) { return reg_exitdetach; };
 	void toggle_exitdetach(void) { reg_exitdetach=! reg_exitdetach; };
+        console_log_window *wLog_;
 
 protected:
 	co_console_state_t state;
@@ -96,8 +120,12 @@ protected:
 	co_reactor_t reactor;
 	co_user_monitor_t *message_monitor;
 
+        // Child widgets
 	Fl_Menu_Bar *menu;
-	Fl_Text_Display *text_widget;
+        Fl_Scroll   *wScroll_;
+        Fl_Group  *wStatus_;
+        Fl_Box    *status_line_;
+        Fl_Button *btn_log_;
 
 	Fl_Menu_Item *find_menu_item_by_callback(Fl_Callback *cb);
 	void menu_item_activate(Fl_Callback *cb);
