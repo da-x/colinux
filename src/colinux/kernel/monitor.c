@@ -38,6 +38,8 @@
 #include "pci.h"
 #include "video.h"
 
+#define co_offsetof(TYPE, MEMBER) ((int) &((TYPE *)0)->MEMBER)
+
 co_rc_t co_monitor_malloc(co_monitor_t* cmon, unsigned long bytes, void** ptr)
 {
 	void* block = co_os_malloc(bytes);
@@ -1436,7 +1438,7 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 
 	params->config = monitor->console->config;
 
-	size = (char*)(&message->putcs + 1) - (char*)message + bytes_per_line;
+	size = co_offsetof(co_console_message_t, putcs) + 1 + bytes_per_line;
 	co_message = co_os_malloc(size + sizeof(*co_message));
 	if (!co_message)
 		return CO_RC(OUT_OF_MEMORY);
