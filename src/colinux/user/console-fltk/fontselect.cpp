@@ -17,8 +17,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <windows.h>
-
 #include "main.h"
 
 // callback functions
