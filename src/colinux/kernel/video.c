@@ -90,11 +90,11 @@ void co_video_request(co_monitor_t *cmon, int op, int unit) {
 	case CO_VIDEO_GET_CONFIG:
 		{
 			//covideo_config_t *cp = (covideo_config_t *) &co_passage_page->params[1];
-			co_passage_page->params[1] = (unsigned long)dp->buffer;
-			co_passage_page->params[2] = dp->desc.size;
 			unsigned long x = dp->desc.width;
 			x = (x<<13) | (0x1fff & dp->desc.height);
 			x = (x<<6) | (0x3f & dp->desc.bpp);
+			co_passage_page->params[1] = (unsigned long)dp->buffer;
+			co_passage_page->params[2] = dp->desc.size;
 
 		/*	cp->buffer = (void*)dp->buffer;
 			cp->size = dp->desc.size;
@@ -175,7 +175,6 @@ co_monitor_user_video_attach(co_monitor_t *cmon, co_monitor_ioctl_video_t *param
         }
 
 	npages = dp->desc.size >> CO_ARCH_PAGE_SHIFT;
-        co_id_t user_id = co_os_current_id( );
 
         /* FIXME: Return a CO_RC_ALREADY_ATTACHED like error */
         if ( cmon->video_user_id != CO_INVALID_ID ){
@@ -197,7 +196,7 @@ co_monitor_user_video_attach(co_monitor_t *cmon, co_monitor_ioctl_video_t *param
 #endif
 
         /* Remember which process "owns" the video mapping */
-        cmon->video_user_id = user_id;
+        cmon->video_user_id = co_os_current_id( );
 
         /* Return user mapped video buffer address */
         params->address = cmon->video_user_address;
