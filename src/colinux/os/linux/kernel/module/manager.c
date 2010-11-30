@@ -14,6 +14,13 @@
 
 #include "../../ioctl.h"
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26)
+ #define CO_PROC_ROOT_PTR NULL
+#else
+ #define CO_PROC_ROOT_PTR &proc_root
+#endif
+
+
 static
 int co_os_manager_open(struct inode *inode, struct file *file)
 {
@@ -292,7 +299,7 @@ co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
 
 	memset(dep, 0, sizeof(*dep));
 
-	dep->proc_root = proc_mkdir("colinux", &proc_root);
+	dep->proc_root = proc_mkdir("colinux", CO_PROC_ROOT_PTR);
 	if (dep->proc_root == NULL) {
 		rc = CO_RC(ERROR);
 		goto error;
@@ -311,7 +318,7 @@ co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
 	return rc;
 
 error_root:
-	remove_proc_entry("colinux", &proc_root);
+	remove_proc_entry("colinux", CO_PROC_ROOT_PTR);
 
 error:
 	co_os_free(dep);
@@ -321,7 +328,7 @@ error:
 void co_os_manager_free(co_osdep_manager_t osdep)
 {
 	remove_proc_entry("ioctl", osdep->proc_root);
-	remove_proc_entry("colinux", &proc_root);
+	remove_proc_entry("colinux", CO_PROC_ROOT_PTR);
 	co_os_free(osdep);
 }
 
