@@ -596,8 +596,8 @@ For building and runnning coLinux on Linux you need:
   export COLINUX_TARGET_KERNEL_PATH=/path/to/your/patched/colinux/kernel/tree
   export COLINUX_HOST_KERNEL_DIR=/path/to/your/host/kernel
   export COLINUX_HOST_OS=linux
-  
-And run make in the 'src' dir.
+
+And run make in the dir 'src'.
 
 Running it is quite simple. For example, consider these list of files:
 
@@ -637,7 +637,7 @@ PATH=.:$PATH is needed, if the executables aren't installed in your e.g
 
 - Patch and build fltk from source
 
-  DIR=$PWD
+  SAVEDIR=$PWD
   cd /tmp
   wget http://ftp.funet.fi/pub/mirrors/ftp.easysw.com/pub/fltk/1.1.10/fltk-1.1.10-source.tar.bz2
   tar xjf fltk-1.1.10-source.tar.bz2
@@ -649,11 +649,11 @@ PATH=.:$PATH is needed, if the executables aren't installed in your e.g
   cp -p /tmp/fltk-1.1.10/fltk-config $HOME/i686-pc-linux-local/bin
   cd /tmp
   rm -r fltk-1.1.10
+  cd $SAVEDIR
 
 - Run coLinux configure with path to this fltk
 
-  cd $DIR
-  export PATH=$HOME/i686-linux-local/bin:$PATH
+  export PATH=$HOME/i686-pc-linux-local/bin:$PATH
   ./configure --target=i686-pc-linux ...
 
 - Run kernel build
