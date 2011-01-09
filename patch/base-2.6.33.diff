@@ -2317,7 +2317,7 @@ Index: linux-2.6.33-source/include/linux/cooperative_internal.h
 ===================================================================
 --- /dev/null
 +++ linux-2.6.33-source/include/linux/cooperative_internal.h
-@@ -0,0 +1,160 @@
+@@ -0,0 +1,143 @@
 +/*
 + *  linux/include/linux/cooperative_internal.h
 + *
@@ -2451,23 +2451,6 @@ Index: linux-2.6.33-source/include/linux/cooperative_internal.h
 +	co_switch_wrapper();
 +	co_passage_page_release(flags);
 +}
-+
-+static inline co_message_t *co_console_message0(unsigned long *pflags)
-+{
-+        co_console_message_t *message;
-+        co_message_t *co_message;
-+        co_message = co_send_message_save(pflags);
-+
-+        if (!co_message) return NULL;
-+        message = (co_console_message_t *)co_message->data;
-+        co_message->from = CO_MODULE_LINUX;
-+        co_message->to = CO_MODULE_CONSOLE;
-+        co_message->priority = CO_PRIORITY_DISCARDABLE;
-+        co_message->type = CO_MESSAGE_TYPE_STRING;
-+        co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
-+        return co_message;
-+}
-+
 +
 +#else
 +

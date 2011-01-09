@@ -898,7 +898,30 @@ Index: linux-2.6.33-source/drivers/video/console/fbcon.c
  
  #ifdef FBCONDEBUG
  #  define DPRINTK(fmt, args...) printk(KERN_DEBUG "%s: " fmt, __func__ , ## args)
-@@ -1258,10 +1261,25 @@
+@@ -196,6 +199,22 @@
+ static void fbcon_exit(void);
+ static struct device *fbcon_device;
+ 
++static inline co_message_t *co_console_message0(unsigned long *pflags)
++{
++        co_console_message_t *message;
++        co_message_t *co_message;
++        co_message = co_send_message_save(pflags);
++
++        if (!co_message) return NULL;
++        message = (co_console_message_t *)co_message->data;
++        co_message->from = CO_MODULE_LINUX;
++        co_message->to = CO_MODULE_CONSOLE;
++        co_message->priority = CO_PRIORITY_DISCARDABLE;
++        co_message->type = CO_MESSAGE_TYPE_STRING;
++        co_message->size = ((char *)(&message->type + 1)) - ((char *)message);
++        return co_message;
++}
++
+ #ifdef CONFIG_FRAMEBUFFER_CONSOLE_ROTATION
+ static inline void fbcon_set_rotation(struct fb_info *info)
+ {
+@@ -1258,10 +1277,25 @@
  	struct display *p = &fb_display[vc->vc_num];
  	struct fbcon_ops *ops = info->fbcon_par;
  
