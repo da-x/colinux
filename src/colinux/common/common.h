@@ -36,22 +36,39 @@ typedef unsigned long linux_pgd_t;
 #endif
 
 /*
- * Following is taken from Linux's ./arch/i386/kernel/smpboot.c
+ * Following is taken from Linux's linux-2.6.33.5-source/lib/div64.c
  */
-static inline unsigned long long co_div64(unsigned long long a, unsigned long b0)
+static inline unsigned long co_div64_32(unsigned long long *n, unsigned long base)
 {
-        unsigned int a1, a2;
-        unsigned long long res;
+	unsigned long long rem = *n;
+	unsigned long long b = base;
+	unsigned long long res, d = 1;
+	unsigned long high = rem >> 32;
 
-        a1 = ((unsigned int*)&a)[0];
-        a2 = ((unsigned int*)&a)[1];
+	/* Reduce the thing a bit first */
+	res = 0;
+	if (high >= base) {
+		high /= base;
+		res = (unsigned long long) high << 32;
+		rem -= (unsigned long long) (high*base) << 32;
+	}
 
-        res = a1/b0 +
-                (unsigned long long)a2 * (unsigned long long)(0xffffffff/b0) +
-                a2 / b0 +
-                (a2 * (0xffffffff % b0)) / b0;
+	while ((signed long long)b > 0 && b < rem) {
+		b = b+b;
+		d = d+d;
+	}
 
-        return res;
+	do {
+		if (rem >= b) {
+			rem -= b;
+			res += d;
+		}
+		b >>= 1;
+		d >>= 1;
+	} while (d);
+
+	*n = res;
+	return rem;
 }
 
 #endif

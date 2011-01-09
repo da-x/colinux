@@ -17,6 +17,7 @@ typedef unsigned long co_pfn_t;
 #define PMD_MASK        (~(PMD_SIZE-1))
 #define _KERNPG_TABLE   (_PAGE_PRESENT | _PAGE_RW | _PAGE_ACCESSED | _PAGE_DIRTY)
 
+#ifndef _PAGE_PRESENT
 #define _PAGE_PRESENT   0x001
 #define _PAGE_RW        0x002
 #define _PAGE_USER      0x004
@@ -25,6 +26,7 @@ typedef unsigned long co_pfn_t;
 #define _PAGE_ACCESSED  0x020
 #define _PAGE_DIRTY     0x040
 #define _PAGE_PSE       0x080   /* 4 MB (or 2MB) page, Pentium+, if present.. */
+#endif /* !_PAGE_PRESENT */
 #define CO_ARCH_PAGE_NX        0x8000000000000000ULL
 
 #define PTRS_PER_PTE    1024

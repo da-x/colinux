@@ -1,32 +1,53 @@
 Serial support
 
-Index: linux-2.6.25-source/drivers/char/Makefile
+Index: linux-2.6.25-source/drivers/serial/Kconfig
 ===================================================================
---- linux-2.6.25-source.orig/drivers/char/Makefile
-+++ linux-2.6.25-source/drivers/char/Makefile
-@@ -26,6 +26,7 @@
- obj-$(CONFIG_CYCLADES)		+= cyclades.o
- obj-$(CONFIG_STALLION)		+= stallion.o
- obj-$(CONFIG_ISTALLION)		+= istallion.o
-+obj-$(CONFIG_SERIAL_COOPERATIVE) += coserial.o
- obj-$(CONFIG_NOZOMI)		+= nozomi.o
- obj-$(CONFIG_DIGIEPCA)		+= epca.o
- obj-$(CONFIG_SPECIALIX)		+= specialix.o
-Index: linux-2.6.25-source/drivers/char/Kconfig
-===================================================================
---- linux-2.6.25-source.orig/drivers/char/Kconfig
-+++ linux-2.6.25-source/drivers/char/Kconfig
-@@ -410,6 +410,13 @@
-          If you have an SGI Altix with an attached SABrick
-          say Y or M here, otherwise say N.
+--- linux-2.6.25-source.orig/drivers/serial/Kconfig
++++ linux-2.6.25-source/drivers/serial/Kconfig
+@@ -1353,3 +1353,15 @@
+ 	  Support for Console on SC2681/SC2692 serial ports.
  
-+config SERIAL_COOPERATIVE
-+       bool "coLinux serial device support"
-+       depends on COOPERATIVE
-+       default y
-+       help
-+         say Y, if you have colinux
+ endmenu
 +
- source "drivers/serial/Kconfig"
++config SERIAL_COOPERATIVE
++	bool "coLinux serial device support"
++	depends on COOPERATIVE
++	default y
++	help
++	  say Y, if you have colinux
++
++config SERIAL_COOPERATIVE_CONSOLE
++	bool "coLinux serial console support"
++	depends on SERIAL_COOPERATIVE=y
++	select SERIAL_CORE_CONSOLE
+Index: linux-2.6.25-source/drivers/serial/Makefile
+===================================================================
+--- linux-2.6.25-source.orig/drivers/serial/Makefile
++++ linux-2.6.25-source/drivers/serial/Makefile
+@@ -67,3 +67,4 @@
+ obj-$(CONFIG_SERIAL_OF_PLATFORM) += of_serial.o
+ obj-$(CONFIG_SERIAL_KS8695) += serial_ks8695.o
+ obj-$(CONFIG_SERIAL_QE) += ucc_uart.o
++obj-$(CONFIG_SERIAL_COOPERATIVE) += coserial.o
+Index: linux-2.6.25-source/drivers/serial/coserial.c
+===================================================================
+--- linux-2.6.25-source.orig/drivers/serial/coserial.c
++++ linux-2.6.25-source/drivers/serial/coserial.c
+@@ -170,11 +170,17 @@
+ {
+ }
  
- config UNIX98_PTYS
++static int cocd_chars_in_buffer(struct tty_struct *tty)
++{
++	return 0;
++}
++
+ static struct tty_operations cocd_ops = {
+ 	.open = cocd_open,
+ 	.close = cocd_close,
+ 	.write = cocd_write,
+ 	.write_room = cocd_write_room,
++	.chars_in_buffer = cocd_chars_in_buffer,
+ 	.set_termios = cocd_set_termios,
+ };
+ 

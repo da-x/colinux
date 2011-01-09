@@ -17,8 +17,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <windows.h>
-
 #include "main.h"
 
 // callback functions
@@ -64,7 +62,6 @@ FontSelectDialog::FontSelectDialog(void*ptr, int def_font, int def_size): Fl_Win
 	numsizes = NULL;
 	lookup = NULL;
 	num_fonts = 0;
-	strnset(str_label, 0, 0x200);
 
 	strcpy(str_label, DISPLAY_STR);
 	//init_display_string();

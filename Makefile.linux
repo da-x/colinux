@@ -22,5 +22,5 @@ PATH := $(shell . $(USER_CFG); echo $$PATH:$$COLINUX_GCC_GUEST_PATH)
 endif
 
 .PHONY: all
-all: colinux
+all: kernel colinux
 

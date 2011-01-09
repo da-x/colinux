@@ -510,10 +510,7 @@ gcc_helper()
 	fi
 
 	# ABI from local GCC
-	touch /tmp/colinux-$$.c
-	LOCAL_ABI=`gcc -E -dM /tmp/colinux-$$.c 2>/dev/null | sed -n -e \
-          's/^#define __GXX_ABI_VERSION \([0-9]*\)$/\1/p'`
-	rm /tmp/colinux-$$.c
+	LOCAL_ABI=`echo | gcc -E -dM - | sed -n -e 's/.* __GXX_ABI_VERSION \([0-9]*\)/\1/p'`
 
 	# ABI from known mingw compilers
 	case $GCC_VERSION in

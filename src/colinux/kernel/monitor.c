@@ -37,6 +37,8 @@
 #include "pci.h"
 #include "video.h"
 
+#define co_offsetof(TYPE, MEMBER) ((int) &((TYPE *)0)->MEMBER)
+
 co_rc_t co_monitor_malloc(co_monitor_t* cmon, unsigned long bytes, void** ptr)
 {
 	void* block = co_os_malloc(bytes);
@@ -99,6 +101,7 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		goto out_error;
 	}
 
+        // Allocate a page and map it in CO_VPTR_SELF_MAP
 	rc = co_monitor_create_ptes(cmon,
 			            cmon->import.kernel_swapper_pg_dir,
 			            CO_ARCH_PAGE_SIZE,
@@ -108,6 +111,8 @@ static co_rc_t guest_address_space_init(co_monitor_t *cmon)
 		goto out_error;
 	}
 
+	// Get PFN of allocated page
+	// Create PTE for it on the page directory
 	reversed_physical_mapping_offset = (CO_VPTR_PHYSICAL_TO_PSEUDO_PFN_MAP >> PGDIR_SHIFT) *
 					   sizeof(linux_pgd_t);
 
@@ -366,19 +371,20 @@ static co_rc_t callback_return_messages(co_monitor_t *cmon)
 static void callback_return_jiffies(co_monitor_t *cmon)
 {
 	co_timestamp_t timestamp;
-	long long timestamp_diff;
-	unsigned long jiffies = 0;
+	unsigned long long diff;
 
 	co_os_get_timestamp(&timestamp);
 
-	timestamp_diff  = cmon->timestamp_reminder;
-	timestamp_diff += 100 * (((long long)timestamp.quad) - ((long long)cmon->timestamp.quad));  /* HZ value */
+	/* Skip timestamp glitches, see http://support.microsoft.com/kb/274323 */
+	if (timestamp.quad > cmon->timestamp.quad) {
+		diff = cmon->timestamp_reminder + 100 * (timestamp.quad - cmon->timestamp.quad);  /* 100 = HZ value */
+		cmon->timestamp_reminder = co_div64_32(&diff, cmon->timestamp_freq.quad);
+		cmon->timestamp		 = timestamp;
+	} else {
+		diff = 0;
+	}
 
-	jiffies = co_div64(timestamp_diff, cmon->timestamp_freq.quad);
-	cmon->timestamp_reminder = timestamp_diff - (jiffies * cmon->timestamp_freq.quad);
-	cmon->timestamp		 = timestamp;
-
-	co_passage_page->params[1] = jiffies;
+	co_passage_page->params[1] = diff; /* jiffies */
 }
 
 static void callback_return(co_monitor_t *cmon)
@@ -1271,6 +1277,13 @@ static void send_monitor_end_messages(co_monitor_t *cmon)
 	co_os_mutex_release(cmon->connected_modules_write_lock);
 }
 
+/*
+ * Decrement monitor reference count.
+ *
+ * Each daemon opens a connection to the driver. The reference count is
+ * incremented/decremented on every open/close.
+ * Only after the count reaches zero, the monitor object is destroyed.
+ */
 co_rc_t co_monitor_refdown(co_monitor_t* cmon, bool_t user_context, bool_t monitor_owner)
 {
 	co_manager_t* manager;
@@ -1365,7 +1378,7 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 
 	params->config = monitor->console->config;
 
-	size = (char*)(&message->putcs + 1) - (char*)message + bytes_per_line;
+	size = co_offsetof(co_console_message_t, putcs) + 1 + bytes_per_line;
 	co_message = co_os_malloc(size + sizeof(*co_message));
 	if (!co_message)
 		return CO_RC(OUT_OF_MEMORY);

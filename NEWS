@@ -1,3 +1,24 @@
+* Version 0.7.9
+  Bugfixes:
+  * Bug #1780633: Skip negative timestamp glitches from QueryPerformanceCounter.
+  * Bug #3071698: Replace co_div64 with more accurate div64_32 from linux-2.6.33.5
+  * scsi: Reading disk from offset at 1TB and above was faulted with
+    end_request: I/O error, dev sda, sector 2147483648
+
+  Kernel:
+  * Change CONFIG_REISERFS_FS as compiled in, instead as module.
+  * Enable CONFIG_SERIAL_COOPERATIVE(_CONSOLE) for serial boot console.
+  * Enable CONFIG_KEYS (FeatureReq #3094228).
+  * Enable more file systems: ADFS_FS, AFFS_FS, ECRYPT_FS, HFS_FS, HFSPLUS_FS,
+    BEFS_FS, BFS_FS, EFS_FS, VXFS_FS, HPFS_FS, QNX4FS_FS, UFS_FS, NFSD_V4.
+  * Enable new CIFS features: CIFS_WEAK_PW_HASH, CIFS_UPCALL, CIFS_XATTR,
+    CIFS_POSIX, CIFS_DFS_UPCALL, CIFS_EXPERIMENTAL
+  * Serial: Remove worker thread. Simple direct post chars in tty buffer,
+    remove semaphores and race conditions. (Suggest by Paolo Minazzi)
+
+  Buildsystem:
+  * Fix various build bugs and warnings under Linux as Host.
+
 * Version 0.7.8
   FLTK Console (Shai Vaingast):
   * New: Select font style and size with menu, store current font in registry.
@@ -9,7 +30,7 @@
   * New menu option "exit on detach" (quit console after shutting down).
   * Redesigned menu to be more inline with today's standard menu layout.
   * Workaround for some Vista keyboard drivers bugs where WinKey+C and WinKey+V
-    don't work properly.  Now WinKey+Home and WinKey+End is teh alternate.
+    don't work properly.  Now WinKey+Home and WinKey+End is the alternate.
 
   Daemons:
   * Different descriription for file properties, add original filename.

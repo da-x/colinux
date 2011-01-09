@@ -17,4 +17,8 @@
 #include <linux/delay.h>
 #include <linux/vmalloc.h>
 #include <linux/wait.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)
 #include <asm/semaphore.h>
+#else
+#include <linux/semaphore.h>
+#endif

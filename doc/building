@@ -596,8 +596,8 @@ For building and runnning coLinux on Linux you need:
   export COLINUX_TARGET_KERNEL_PATH=/path/to/your/patched/colinux/kernel/tree
   export COLINUX_HOST_KERNEL_DIR=/path/to/your/host/kernel
   export COLINUX_HOST_OS=linux
-  
-And run make in the 'src' dir.
+
+And run make in the dir 'src'.
 
 Running it is quite simple. For example, consider these list of files:
 
@@ -633,32 +633,38 @@ PATH=.:$PATH is needed, if the executables aren't installed in your e.g
 
 5.3.1 For Linux as host with different libraries (patched FLTK)
 
+- Install package with X11 headers (libX11-dev)
+
 - Patch and build fltk from source
 
+  SAVEDIR=$PWD
   cd /tmp
+  wget http://ftp.funet.fi/pub/mirrors/ftp.easysw.com/pub/fltk/1.1.10/fltk-1.1.10-source.tar.bz2
   tar xjf fltk-1.1.10-source.tar.bz2
   cd fltk-1.1.10
-  patch -p1 < ...colinux-source/patch/fltk-1.1.10-linux-patch.diff
+  patch -p1 < $DIR/patch/fltk-1.1.10-linux-patch.diff
   ./configure --prefix=$HOME/i686-pc-linux-local
   make -C src install
   make -C FL install
+  cp -p /tmp/fltk-1.1.10/fltk-config $HOME/i686-pc-linux-local/bin
   cd /tmp
   rm -r fltk-1.1.10
+  cd $SAVEDIR
 
 - Run coLinux configure with path to this fltk
 
-  cd ...colinux-source
-  export PATH=$HOME/i686-linux-local/bin:$PATH
+  export PATH=$HOME/i686-pc-linux-local/bin:$PATH
   ./configure --target=i686-pc-linux ...
+
+- Run kernel build
+
+  make kernel
 
 - Run coLinux build with path to FLTK libraries
 
-  export COLINUX_TARGET_KERNEL_PATH=/path/to/your/patched/colinux/kernel/tree
-  export COLINUX_HOST_KERNEL_DIR=/path/to/your/host/kernel
-  export COLINUX_HOST_OS=linux
   export COLINUX_CFLAGS="-I$HOME/i686-pc-linux-local/include"
   export COLINUX_LFLAGS="-L$HOME/i686-pc-linux-local/lib"
-  make HOSTOS=linux colinux
+  make colinux
 
 
 6. Create, resize and optimize images
