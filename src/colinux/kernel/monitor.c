@@ -1378,7 +1378,7 @@ static co_rc_t co_monitor_user_get_console(co_monitor_t*                   monit
 
 	params->config = monitor->console->config;
 
-	size = co_offsetof(co_console_message_t, putcs) + 1 + bytes_per_line;
+	size = co_offsetof(co_console_message_t, putcs.data) + bytes_per_line;
 	co_message = co_os_malloc(size + sizeof(*co_message));
 	if (!co_message)
 		return CO_RC(OUT_OF_MEMORY);
