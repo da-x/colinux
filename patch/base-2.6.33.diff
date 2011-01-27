@@ -926,7 +926,18 @@ Index: linux-2.6.33-source/arch/x86/mm/fault.c
 ===================================================================
 --- linux-2.6.33-source.orig/arch/x86/mm/fault.c
 +++ linux-2.6.33-source/arch/x86/mm/fault.c
-@@ -317,7 +317,7 @@
+@@ -247,10 +247,6 @@
+ 	pmd_t *pmd_k;
+ 	pte_t *pte_k;
+ 
+-	/* Make sure we are in vmalloc area: */
+-	if (!(address >= VMALLOC_START && address < VMALLOC_END))
+-		return -1;
+-
+ 	/*
+ 	 * Synchronize this task's top level page-table
+ 	 * with the 'reference' page table.
+@@ -317,7 +313,7 @@
  		goto out;
  
  	pte = pte_offset_kernel(pmd, address);
@@ -935,6 +946,37 @@ Index: linux-2.6.33-source/arch/x86/mm/fault.c
  out:
  	printk("\n");
  }
+@@ -365,10 +361,6 @@
+ 	pmd_t *pmd, *pmd_ref;
+ 	pte_t *pte, *pte_ref;
+ 
+-	/* Make sure we are in vmalloc area: */
+-	if (!(address >= VMALLOC_START && address < VMALLOC_END))
+-		return -1;
+-
+ 	/*
+ 	 * Copy kernel mappings over when needed. This can also
+ 	 * happen within a race in page table update. In the later
+@@ -984,6 +976,11 @@
+ 	 * protection error (error_code & 9) == 0.
+ 	 */
+ 	if (unlikely(fault_in_kernel_space(address))) {
++
++		/* Make sure we are in vmalloc area */
++		if (!(address >= VMALLOC_START && address < VMALLOC_END))
++			goto bad_area_nosemaphore_in_kernelspace;
++
+ 		if (!(error_code & (PF_RSVD | PF_USER | PF_PROT))) {
+ 			if (vmalloc_fault(address) >= 0)
+ 				return;
+@@ -996,6 +993,7 @@
+ 		if (spurious_fault(error_code, address))
+ 			return;
+ 
++bad_area_nosemaphore_in_kernelspace:
+ 		/* kprobes don't want to hook the spurious faults: */
+ 		if (notify_page_fault(regs))
+ 			return;
 Index: linux-2.6.33-source/arch/x86/mm/init_32.c
 ===================================================================
 --- linux-2.6.33-source.orig/arch/x86/mm/init_32.c
