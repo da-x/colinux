@@ -6,6 +6,7 @@
     end_request: I/O error, dev sda, sector 2147483648
 
   Kernel:
+  * Update Linux kernel to 2.6.33.7
   * Change CONFIG_REISERFS_FS as compiled in, instead as module.
   * Enable CONFIG_SERIAL_COOPERATIVE(_CONSOLE) for serial boot console.
   * Enable CONFIG_KEYS (FeatureReq #3094228).

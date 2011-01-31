@@ -696,7 +696,7 @@ Index: linux-2.6.33-source/arch/x86/kernel/setup.c
  /* List of systems that have known low memory corruption BIOS problems */
  static struct dmi_system_id __initdata bad_bios_dmi_table[] = {
  #ifdef CONFIG_X86_RESERVE_LOW_64K
-@@ -666,6 +687,7 @@
+@@ -677,6 +698,7 @@
  #endif
  	{}
  };
@@ -704,7 +704,7 @@ Index: linux-2.6.33-source/arch/x86/kernel/setup.c
  
  /*
   * Determine if we were loaded by an EFI loader.  If so, then we have also been
-@@ -740,10 +762,12 @@
+@@ -751,10 +773,12 @@
  
  	x86_init.oem.arch_setup();
  
@@ -717,7 +717,7 @@ Index: linux-2.6.33-source/arch/x86/kernel/setup.c
  
  	copy_edd();
  
-@@ -761,6 +785,9 @@
+@@ -772,6 +796,9 @@
  	bss_resource.start = virt_to_phys(&__bss_start);
  	bss_resource.end = virt_to_phys(&__bss_stop)-1;
  
@@ -727,7 +727,7 @@ Index: linux-2.6.33-source/arch/x86/kernel/setup.c
  #ifdef CONFIG_CMDLINE_BOOL
  #ifdef CONFIG_CMDLINE_OVERRIDE
  	strlcpy(boot_command_line, builtin_cmdline, COMMAND_LINE_SIZE);
-@@ -793,8 +820,10 @@
+@@ -804,8 +831,10 @@
  	/* Must be before kernel pagetables are setup */
  	vmi_activate();
  
@@ -738,7 +738,7 @@ Index: linux-2.6.33-source/arch/x86/kernel/setup.c
  
  	if (acpi_mps_check()) {
  #ifdef CONFIG_X86_LOCAL_APIC
-@@ -803,16 +832,19 @@
+@@ -814,16 +843,19 @@
  		setup_clear_cpu_cap(X86_FEATURE_APIC);
  	}
  
@@ -758,7 +758,7 @@ Index: linux-2.6.33-source/arch/x86/kernel/setup.c
  	dmi_scan_machine();
  
  	dmi_check_system(bad_bios_dmi_table);
-@@ -824,13 +856,16 @@
+@@ -835,13 +867,16 @@
  	init_hypervisor_platform();
  
  	x86_init.resources.probe_roms();
@@ -776,7 +776,7 @@ Index: linux-2.6.33-source/arch/x86/kernel/setup.c
  #ifdef CONFIG_X86_32
  	if (ppro_with_ram_bug()) {
  		e820_update_range(0x70000000ULL, 0x40000ULL, E820_RAM,
-@@ -855,6 +890,7 @@
+@@ -866,6 +901,7 @@
  	mtrr_bp_init();
  	if (mtrr_trim_uncached_memory(max_pfn))
  		max_pfn = e820_end_of_ram_pfn();
@@ -784,7 +784,7 @@ Index: linux-2.6.33-source/arch/x86/kernel/setup.c
  
  #ifdef CONFIG_X86_32
  	/* max_low_pfn get updated here */
-@@ -922,8 +958,6 @@
+@@ -933,8 +969,6 @@
  		init_ohci1394_dma_on_all_controllers();
  #endif
  
@@ -793,7 +793,7 @@ Index: linux-2.6.33-source/arch/x86/kernel/setup.c
  	reserve_crashkernel();
  
  	vsmp_init();
-@@ -950,6 +984,7 @@
+@@ -961,6 +995,7 @@
  #endif
  
  	initmem_init(0, max_pfn, acpi, k8);
@@ -801,7 +801,7 @@ Index: linux-2.6.33-source/arch/x86/kernel/setup.c
  
  #ifdef CONFIG_X86_64
  	/*
-@@ -1007,15 +1042,21 @@
+@@ -1018,15 +1053,21 @@
  
  	kvm_guest_init();
  
@@ -824,7 +824,7 @@ Index: linux-2.6.33-source/arch/x86/kernel/setup.c
  	if (!efi_enabled || (efi_mem_type(0xa0000) != EFI_CONVENTIONAL_MEMORY))
  		conswitchp = &vga_con;
  #elif defined(CONFIG_DUMMY_CONSOLE)
-@@ -1029,6 +1070,7 @@
+@@ -1040,6 +1081,7 @@
  
  #ifdef CONFIG_X86_32
  
@@ -832,7 +832,7 @@ Index: linux-2.6.33-source/arch/x86/kernel/setup.c
  static struct resource video_ram_resource = {
  	.name	= "Video RAM area",
  	.start	= 0xa0000,
-@@ -1041,5 +1083,6 @@
+@@ -1052,5 +1094,6 @@
  	request_resource(&iomem_resource, &video_ram_resource);
  	reserve_standard_io_resources();
  }
@@ -897,7 +897,7 @@ Index: linux-2.6.33-source/arch/x86/kernel/traps.c
  
  	nmi_exit();
  }
-@@ -549,6 +559,10 @@
+@@ -558,6 +568,10 @@
  	/* Store the virtualized DR6 value */
  	tsk->thread.debugreg6 = dr6;
  
@@ -908,7 +908,7 @@ Index: linux-2.6.33-source/arch/x86/kernel/traps.c
  	if (notify_die(DIE_DEBUG, "debug", regs, PTR_ERR(&dr6), error_code,
  							SIGTRAP) == NOTIFY_STOP)
  		return;
-@@ -824,6 +838,13 @@
+@@ -833,6 +847,13 @@
  
  	clts();				/* Allow maths ops (or we recurse) */
  
