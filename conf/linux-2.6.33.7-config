@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.33.7
-# Tue Jan 25 21:26:01 2011
+# Fri Feb  4 22:54:38 2011
 #
 # CONFIG_64BIT is not set
 CONFIG_X86_32=y
@@ -689,12 +689,12 @@ CONFIG_SCSI_LOGGING=y
 #
 # CONFIG_SCSI_SPI_ATTRS is not set
 # CONFIG_SCSI_FC_ATTRS is not set
-# CONFIG_SCSI_ISCSI_ATTRS is not set
+CONFIG_SCSI_ISCSI_ATTRS=m
 # CONFIG_SCSI_SAS_LIBSAS is not set
 # CONFIG_SCSI_SRP_ATTRS is not set
 CONFIG_SCSI_LOWLEVEL=y
 CONFIG_SCSI_COOPERATIVE=y
-# CONFIG_ISCSI_TCP is not set
+CONFIG_ISCSI_TCP=m
 # CONFIG_SCSI_BNX2_ISCSI is not set
 # CONFIG_BE2ISCSI is not set
 # CONFIG_BLK_DEV_3W_XXXX_RAID is not set
