@@ -222,29 +222,33 @@ static VOID DDKAPI _scsi_dio(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 static int _scsi_dio(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 #endif
 	struct _io_req *r = Context;
-	struct scatterlist *sg;
-	co_pfn_t sg_pfn;
-	unsigned char *sg_page;
+	struct scatterlist *sg, *sg_buf;
 	int x;
 	co_rc_t rc;
 	scsi_transfer_file_block_data_t data;
 	int bytes_req = 0;
+	int sg_size;
 
 	data.file_handle = (HANDLE)r->dp->os_handle;
 	data.offset.QuadPart = r->io.offset;
 	data.func = r->func;
 
-	/* Map the SG */
-	rc = co_monitor_host_linuxvm_transfer_map(r->mp, r->io.sg,
-					r->io.count * sizeof(struct scatterlist),
-					(void*)&sg, &sg_page, &sg_pfn);
+	/* Copy the SG from Guest */
+	sg_size = r->io.count * sizeof(struct scatterlist);
+	sg_buf = co_os_malloc(sg_size);
+	if (!sg_buf) {
+		rc = CO_RC(ERROR);
+		co_debug("scsi_io: out of memory error");
+		goto io_done;
+	}
+	rc = co_monitor_linuxvm_to_host(r->mp, r->io.sg, sg_buf, sg_size);
 	if (!CO_OK(rc)) {
 		co_debug("scsi_io: error mapping sg");
 		goto io_done;
 	}
 
 	/* For each vector */
-	for(x=0; x < r->io.count; x++, sg++) {
+	for(x = 0, sg = sg_buf; x < r->io.count; x++, sg++) {
 		bytes_req += sg->length;
 		rc = co_monitor_host_linuxvm_transfer(
 				r->mp,
@@ -259,7 +263,7 @@ static int _scsi_dio(PDEVICE_OBJECT DeviceObject, PVOID Context) {
 		}
 	}
 
-	co_monitor_host_linuxvm_transfer_unmap(r->mp, sg_page, sg_pfn);
+	co_os_free(sg_buf);
 
 io_done:
 #if COSCSI_ASYNC
