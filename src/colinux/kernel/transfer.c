@@ -30,7 +30,7 @@ co_rc_t co_monitor_host_linuxvm_transfer_map(
 	co_rc_t rc;
 
 	if ((vaddr < CO_ARCH_KERNEL_OFFSET) || (vaddr >= cmon->end_physical)) {
-		co_debug_error("monitor: transfer map: off bounds: %p", (void*)vaddr);
+		co_debug_error("monitor: transfer map: vaddr off bounds: %p", (void*)vaddr);
 		return CO_RC(TRANSFER_OFF_BOUNDS);
 	}
 
@@ -78,7 +78,7 @@ co_rc_t co_monitor_host_linuxvm_transfer(
 	co_rc_t rc;
 
 	if ((vaddr < CO_ARCH_KERNEL_OFFSET) || (vaddr >= cmon->end_physical)) {
-		co_debug_error("monitor: transfer: off bounds: %p", (void*)vaddr);
+		co_debug_error("monitor: transfer: vaddr off bounds: %p", (void*)vaddr);
 		return CO_RC(TRANSFER_OFF_BOUNDS);
 	}
 

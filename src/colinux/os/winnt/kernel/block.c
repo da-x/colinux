@@ -159,7 +159,7 @@ static co_rc_t co_os_file_block_async_read_write(co_monitor_t *monitor,
 	context->msg.linux_message.size = sizeof (context->msg.intr);
 	context->msg.intr.irq_request = irq_request;
 
-	// map linux kernal memory into host memory
+	// map linux kernel memory into host memory
 	rc = co_monitor_host_linuxvm_transfer_map(
 		monitor,
 		address,
