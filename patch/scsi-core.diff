@@ -2,7 +2,7 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.25-source/drivers/scsi/coscsi.c
-@@ -0,0 +1,1175 @@
+@@ -0,0 +1,1179 @@
 +/*
 + *  Copyright (C) 2008 Steve Shoecraft
 + *
@@ -962,6 +962,10 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
 +	default:
 +		break;
 +	}
++
++	/* Don't have SAI_READ_CAPACITY_16 and other 16 byte commands at the moment */
++	if (sdev->type != SCSI_PTYPE_PASS)
++		sdev->scsi_level = SCSI_SPC_2;
 +
 +	return 0;
 +}
