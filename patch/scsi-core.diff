@@ -2,7 +2,7 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.25-source/drivers/scsi/coscsi.c
-@@ -0,0 +1,1179 @@
+@@ -0,0 +1,1180 @@
 +/*
 + *  Copyright (C) 2008 Steve Shoecraft
 + *
@@ -121,21 +121,22 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
 +
 +#if DUMP_DATA
 +static void _dump_data(int unit, char *str, void *data, int data_len) {
++#define fmt_str  " %02x"
++#define fmt_size  3
++#define line_len 16
++	char buf[line_len*fmt_size+1];
 +	unsigned char *p;
-+	int x,y,len;
++	int x, y;
 +
-+	printk(KERN_INFO "scsi%d: %s(%d bytes):\n",unit,str,data_len);
-+	len = data_len;
++	printk(KERN_INFO "scsi%d: %s(%d bytes):\n", unit, str, data_len);
 +	p = data;
-+	for(x=y=0; x < len; x++) {
-+		printk(KERN_INFO " %02x", p[x]);
-+		y++;
-+		if (y > 15) {
-+			printk(KERN_INFO "\n");
++	for (x = y = 0; x < data_len; x++) {
++		y += sprintf(&buf[y], fmt_str, p[x]);
++		if (sizeof(buf)-y < fmt_size+1 || x == data_len-1) {
++			printk(KERN_INFO "%s\n", buf);
 +			y = 0;
 +		}
 +	}
-+	if (y) printk(KERN_INFO "\n");
 +}
 +#define dump_data(u, s,a,b) _dump_data(u,s,a,b)
 +#else
@@ -303,12 +304,12 @@ Index: linux-2.6.25-source/drivers/scsi/coscsi.c
 +	if (rc == GOOD) {
 +		if (count > max_segs) {
 +			max_segs = count;
-+			printk(KERN_WARN "COSCSI: max_segs: %d\n", max_segs);
++			printk(KERN_WARNING "COSCSI: max_segs: %d\n", max_segs);
 +		}
 +
 +		if (total > max_xfer) {
 +			max_xfer = total;
-+			printk(KERN_WARN "COSCSI: max_xfer: %dKB\n", max_xfer >> 10);
++			printk(KERN_WARNING "COSCSI: max_xfer: %dKB\n", max_xfer >> 10);
 +		}
 +	}
 +#endif

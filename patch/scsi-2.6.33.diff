@@ -75,7 +75,7 @@ Index: linux-2.6.33-source/drivers/scsi/coscsi.c
  
  MODULE_AUTHOR("Steve Shoecraft <sshoecraft@earthlink.net>");
  MODULE_DESCRIPTION("Cooperative Linux SCSI Driver " COSCSI_VERSION);
-@@ -244,6 +240,38 @@
+@@ -245,6 +241,38 @@
  static unsigned int max_xfer = 4096;
  #endif
  
@@ -114,7 +114,7 @@ Index: linux-2.6.33-source/drivers/scsi/coscsi.c
  /*
   * Read/Write block(s)
  */
-@@ -257,7 +285,8 @@
+@@ -258,7 +286,8 @@
  	int count,rc,total;
  
  #if COSCSI_DEBUG_HOST
@@ -124,7 +124,7 @@ Index: linux-2.6.33-source/drivers/scsi/coscsi.c
  		lba, scp->device->sector_size, num, write);
  #endif
  
-@@ -267,11 +296,13 @@
+@@ -268,11 +297,13 @@
  	}
  
  	/* XXX needed when clustering is enabled */
@@ -140,7 +140,7 @@ Index: linux-2.6.33-source/drivers/scsi/coscsi.c
  	co_passage_page->operation = CO_OPERATION_DEVICE;
  	co_passage_page->params[0] = CO_DEVICE_SCSI;
  	co_passage_page->params[1] = CO_SCSI_IO;
-@@ -290,9 +321,10 @@
+@@ -291,9 +322,10 @@
  	co_switch_wrapper();
  
  	rc = co_passage_page->params[0];
@@ -153,7 +153,7 @@ Index: linux-2.6.33-source/drivers/scsi/coscsi.c
  
  #if COSCSI_DUMP_STATS
  	if (rc == GOOD) {
-@@ -952,7 +984,7 @@
+@@ -953,7 +985,7 @@
  	case TYPE_ROM:
  	case TYPE_WORM:
  		/* XXX required to get rid of "unaligned transfer" errors */
