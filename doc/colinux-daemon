@@ -547,8 +547,8 @@ Environment settings
 
     COLINUX_NO_CPU0_WORKAROUND=Y
 
-	Currently exist a problem on some CPUs with a very huge traffic	of
-	interrupts (200,000 or more interrupt per second). In such case we
+	Currently exist a problem on some CPUs with a very huge traffic of
+	interrupts (200,000 or more interrupts per second). In such case we
 	have not enough time for switching between Linux and Windows, because
 	we only have to handle all these interrupts. Typically coLinux have no
 	text in FLTK-Console and boot steps ends after these lines:

@@ -57,7 +57,7 @@ run anything.
 
 1. Run the downloaded installer file to begin the installation.
    Under Vista must run the installer via 'run as ...' and the admin account.
-   
+
 2. Choose an installation directory. It is better to choose c:\coLinux because
    this way you don't need to edit the configuration file since the pathnames
    of block devices files are currently aboslute. However, note that any
@@ -78,10 +78,11 @@ run anything.
 	file and set "slirp" as first parameter.  Inside linux use DHCP-Client
 	to get your network configuration.
 
-	b. TAP driver - This method installs a virtual network adapter that can
-	then be either shared or bridged with a physical network connection.
-	Note that this requires Internet Connection Sharing or Bridging
-	(Windows XP or higher) or a 3rd party Internet connection
+	b. TAP driver - This method installs a virtual network adapter that
+	is typically a separate network between Linux guest and Windows host.
+	This can then be either shared or bridged with a physical network
+	connection.  Note that this requires Internet Connection Sharing
+	or Bridging (Windows XP or higher) or a 3rd party Internet connection
 	sharing application.  The TAP method autmatically chooses the TAP
 	first TAP adapter it finds, if you have multiple TAP WIN32 devices, you
 	can specify the specific adapter by name (for sample "TAP-Colinux").
@@ -89,9 +90,10 @@ run anything.
 	c. Bridging - This method allows the Cooperative Linux network
 	interface to directly interoperate with one of your built in networking
 	interfaces.  You'll need to edit the configuration file to reflect
-	that type "pcap-bridge" and the 'name' parameter needs to be set to a
+	that type "ndis-bridge" and the 'name' parameter needs to be set to a
 	substring of the network connection name that you will be bridging
-	with (e.g. "Local Area Connection").
+	with (e.g. "Local Area Connection"). Bridging does not working with
+	WiFi cards.
 
 	You can select all types on installation and use one of these later.
 	See the Wiki at the page 'Network' for more information/help.
@@ -101,7 +103,7 @@ run anything.
    the next step but if you experience any issues you can visit the
    Sourceforge page directly at:
 
-   http://sourceforge.net/project/showfiles.php?group_id=98788&package_id=122245
+   http://sourceforge.net/projects/colinux/files/
 
    NOTE ABOUT DISK SPACE: Each image extracts to over 1GB (or more), so make
    sure you have enough space there before you start downloading/extracting
@@ -151,7 +153,7 @@ run anything.
 
 	   Last, go to the installation directory and double-click on
 
-		colinux-console-fltk.exe OR
+		colinux-console-fltk.exe  OR
 		colinux-console-nt.exe
 
    The console window opens and you would see a Linux machine booting in
