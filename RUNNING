@@ -27,7 +27,7 @@ NOTES ON UPGRADING:
  -- XML config files have been removed.  Use the command-line
     syntax in a name=value per line plain text file instead:
 
-	kernel=vlinux
+	kernel=vmlinux
 	initrd=initrd.gz
 	mem=32
 	cobd0=fs\root_fs
