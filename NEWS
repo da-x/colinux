@@ -20,6 +20,7 @@
 
   Buildsystem:
   * Fix various build bugs and warnings under Linux as Host.
+  * Fix kernel build error "mixed implicit and normal rules" with make 2.83
 
 * Version 0.7.8
   FLTK Console (Shai Vaingast):
