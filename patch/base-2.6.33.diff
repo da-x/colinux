@@ -4247,3 +4247,19 @@ Index: linux-2.6.33-source/arch/x86/kernel/cpu/intel.c
  			sched_clock_stable = 1;
  	}
  
+Index: linux-2.6.33-source/scripts/mkmakefile
+===================================================================
+--- linux-2.6.33-source.orig/scripts/mkmakefile
++++ linux-2.6.33-source/scripts/mkmakefile
+@@ -44,7 +44,10 @@
+ 
+ Makefile:;
+ 
+-\$(all) %/: all
++\$(all): all
++	@:
++
++%/: all
+ 	@:
+ 
+ EOF
