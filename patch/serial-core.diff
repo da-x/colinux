@@ -4,7 +4,7 @@ Index: linux-2.6.33-source/drivers/serial/coserial.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.33-source/drivers/serial/coserial.c
-@@ -0,0 +1,256 @@
+@@ -0,0 +1,252 @@
 +/*
 + *  Copyright (C) 2004 Dan Aloni <da-x@colinux.org>
 + *
@@ -35,64 +35,50 @@ Index: linux-2.6.33-source/drivers/serial/coserial.c
 +	unsigned		open_count;	/* open()/close() tally */
 +};
 +
++static struct cocd_tty cocd[CO_MODULE_MAX_SERIAL];
 +static struct tty_driver *cocd_driver;
 +DECLARE_MUTEX(cocd_sem);
 +
 +static int cocd_open(struct tty_struct *tty, struct file * filp)
 +{
-+	struct cocd_tty *cocd;
++	struct cocd_tty *info;
++	int line = tty->index;
++
++	if ((line < 0) || (line >= CO_MODULE_MAX_SERIAL))
++	  return -ENODEV;
++
++	info = &cocd[line];
 +
 +	down(&cocd_sem);
-+
-+	if (!(cocd = (struct cocd_tty *)tty->driver_data)) {
-+		int ret;
-+
-+		ret = request_irq(SERIAL_IRQ, &cocd_interrupt, IRQF_SAMPLE_RANDOM, "coserial", NULL);
-+		if (ret) {
-+			printk(KERN_ERR "COSERIAL: unable to get irq %d", SERIAL_IRQ);
-+			up(&cocd_sem);
-+			return ret;
-+		}
-+
-+		if(!(cocd = kmalloc(sizeof(*cocd), GFP_KERNEL))) {
-+			up(&cocd_sem);
-+			return -ENOMEM;
-+		}
-+
-+		cocd->open_count = 0;
-+		cocd->tty = tty;
-+		tty->driver_data = cocd;
-+		tty->low_latency = 1;
-+	}
-+
-+	cocd->open_count++;
-+
++	info->open_count++;
++	info->tty = tty;
 +	up(&cocd_sem);
++
++	tty->driver_data = info;
++	tty->low_latency = 1;
 +
 +	return 0;
 +}
 +
 +static void cocd_close(struct tty_struct *tty, struct file * filp)
 +{
-+	struct cocd_tty *cocd;
++	struct cocd_tty *info = (struct cocd_tty *)tty->driver_data;
++
++	if (!info) {
++	  printk(KERN_ERR "cocd: close no attached struct\n");
++	  return;
++	}
 +
 +	down(&cocd_sem);
-+
-+	cocd = (struct cocd_tty *)tty->driver_data;
-+	if (!cocd) {
-+		printk(KERN_ERR "cocd: close no attached struct\n");
-+		goto out;
++	if (info->open_count == 0) {
++	  printk(KERN_ERR "cocd: close and count=0\n");
++	} else {
++	  info->open_count--;
 +	}
 +
-+	if (--cocd->open_count == 0) {
-+		/* last close, clear all */
-+		free_irq(SERIAL_IRQ, NULL);
-+		tty->driver_data = NULL;
-+		cocd->tty = NULL;
-+		kfree(cocd);
++	if (info->open_count == 0) {
++	  info->tty = NULL;
 +	}
-+
-+out:
 +	up(&cocd_sem);
 +}
 +
@@ -101,7 +87,7 @@ Index: linux-2.6.33-source/drivers/serial/coserial.c
 +	co_message_node_t *input;
 +	co_linux_message_t *message;
 +	struct tty_struct *tty;
-+	struct cocd_tty *cocd;
++	struct cocd_tty *info;
 +	int len;
 +
 +	if (!cocd_driver)
@@ -117,9 +103,10 @@ Index: linux-2.6.33-source/drivers/serial/coserial.c
 +		goto out;
 +
 +	message = (co_linux_message_t *)&input->msg.data;
++
 +	if (message->unit < CO_MODULE_MAX_SERIAL
 +	 && (tty = cocd_driver->ttys[message->unit])
-+	 && (cocd = (struct cocd_tty *)tty->driver_data)) {
++	 && (info = (struct cocd_tty *)tty->driver_data)) {
 +		up(&cocd_sem);
 +
 +		len = tty_insert_flip_string(tty, message->data, message->size);
@@ -167,8 +154,8 @@ Index: linux-2.6.33-source/drivers/serial/coserial.c
 +
 +static int cocd_write_room(struct tty_struct *tty)
 +{
-+	struct cocd_tty *cocd = (struct cocd_tty *)tty->driver_data;
-+	if (!cocd)
++	struct cocd_tty *info = (struct cocd_tty *)tty->driver_data;
++	if (!info)
 +		return -ENODEV;
 +	return 255;
 +}
@@ -214,11 +201,20 @@ Index: linux-2.6.33-source/drivers/serial/coserial.c
 +		return retval;
 +	}
 +
++	retval = request_irq(SERIAL_IRQ, &cocd_interrupt, IRQF_SAMPLE_RANDOM, "coserial", NULL);
++	if (retval) {
++	  printk(KERN_ERR "COSERIAL: unable to get irq %d", SERIAL_IRQ);
++	  return retval;
++	}
++
++	memset(cocd, 0, sizeof(cocd));
++
 +	return 0;
 +}
 +
 +static void __exit cocd_exit(void)
 +{
++	free_irq(SERIAL_IRQ, NULL);
 +	tty_unregister_driver(cocd_driver);
 +	put_tty_driver(cocd_driver);
 +}

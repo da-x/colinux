@@ -1,4 +1,7 @@
 * Version 0.7.10
+  Bugfixes:
+  * Bug #3291398: Using simultaneously two serial devices was not possible
+    (Gilles Casse)
 
 * Version 0.7.9
   Bugfixes:

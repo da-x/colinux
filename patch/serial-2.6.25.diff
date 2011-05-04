@@ -33,7 +33,7 @@ Index: linux-2.6.25-source/drivers/serial/coserial.c
 ===================================================================
 --- linux-2.6.25-source.orig/drivers/serial/coserial.c
 +++ linux-2.6.25-source/drivers/serial/coserial.c
-@@ -170,11 +170,17 @@
+@@ -157,11 +157,17 @@
  {
  }
  
