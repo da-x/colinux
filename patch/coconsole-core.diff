@@ -2,7 +2,7 @@ Index: linux-2.6.33-source/drivers/video/console/cocon.c
 ===================================================================
 --- /dev/null
 +++ linux-2.6.33-source/drivers/video/console/cocon.c
-@@ -0,0 +1,488 @@
+@@ -0,0 +1,501 @@
 +/*
 + *  linux/drivers/video/cocon.c -- Cooperative Linux console VGA driver
 + *
@@ -465,6 +465,18 @@ Index: linux-2.6.33-source/drivers/video/console/cocon.c
 +	return -EINVAL;
 +}
 +
++static int cocon_font_set(struct vc_data *c, struct console_font *font, unsigned flags)
++{
++	if (!c->vc_utf)
++		return -ENOSYS;
++
++	if (font->charcount != 256)
++		return -EINVAL;
++
++	c->vc_font.charcount = 256;
++	return 0;
++}
++
 +/*
 + *  The console `switch' structure for the VGA based console
 + */
@@ -481,6 +493,7 @@ Index: linux-2.6.33-source/drivers/video/console/cocon.c
 +	con_bmove:		cocon_bmove,
 +	con_switch:		cocon_switch,
 +	con_blank:		cocon_blank,
++	con_font_set:		cocon_font_set,
 +	con_resize: 		cocon_resize,
 +	con_set_palette:	cocon_set_palette,
 +	con_scrolldelta:	cocon_scrolldelta,
