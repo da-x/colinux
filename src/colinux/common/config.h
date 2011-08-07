@@ -80,6 +80,7 @@ typedef struct co_scsi_dev_desc {
 	co_pathname_t pathname;			/* Path */
 	int	is_dev;				/* 0 = file, 1 = device */
 	int	size;				/* Size, for files */
+	int	shared;				/* 0 = exclusive, 1 = shared access */
 } co_scsi_dev_desc_t;
 
 typedef enum {

@@ -501,7 +501,7 @@ static co_rc_t parse_args_config_video(co_command_line_params_t cmdline, co_conf
 
 static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_config_t* conf)
 {
-	char type[10], path[256], size[16];
+	char type[10], path[256], size[16], mode[10];
 	co_scsi_dev_desc_t *scsi;
 	bool_t exists;
 	char *param;
@@ -510,6 +510,7 @@ static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_confi
 		{ sizeof(type), type },
 		{ sizeof(path), path },
 		{ sizeof(size), size },
+		{ sizeof(mode), mode },
 		{ 0, NULL }
 	};
 	co_rc_t rc;
@@ -553,6 +554,7 @@ static co_rc_t parse_args_config_scsi(co_command_line_params_t cmdline, co_confi
 		strcpy(scsi->pathname, path);
 		scsi->is_dev = is_device(path);
 		scsi->size = atoi(size);
+		scsi->shared = (strcmp(mode,"shared") == 0);
 
 		switch(scsi->type) {
 		case SCSI_PTYPE_PASS:

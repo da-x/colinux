@@ -83,7 +83,7 @@ int scsi_file_open(co_monitor_t *cmon, co_scsi_dev_t *dp) {
 	IO_STATUS_BLOCK IoStatusBlock;
 	UNICODE_STRING unipath;
 	ACCESS_MASK DesiredAccess;
-	ULONG FileAttributes, CreateDisposition, CreateOptions;
+	ULONG FileAttributes, ShareAccess, CreateDisposition, CreateOptions;
 	co_rc_t rc;
 
 	co_debug("_io_req size: %d, IO_QUEUE_SIZE: %d", sizeof(struct _io_req), IO_QUEUE_SIZE);
@@ -98,6 +98,7 @@ int scsi_file_open(co_monitor_t *cmon, co_scsi_dev_t *dp) {
 	DesiredAccess = FILE_READ_DATA | FILE_WRITE_DATA | SYNCHRONIZE;
 	FileAttributes = FILE_ATTRIBUTE_NORMAL;
 	CreateDisposition = (dp->conf->is_dev ? FILE_OPEN : FILE_OPEN_IF);
+	ShareAccess = (dp->conf->shared ? FILE_SHARE_READ | FILE_SHARE_WRITE : 0);
 	CreateOptions = FILE_SYNCHRONOUS_IO_NONALERT;
 
 	/* Kernel handle needed for IoQueueWorkItem */
@@ -106,7 +107,7 @@ int scsi_file_open(co_monitor_t *cmon, co_scsi_dev_t *dp) {
 
 again:
 	status = ZwCreateFile((HANDLE *)&dp->os_handle, DesiredAccess, &ObjectAttributes, &IoStatusBlock, 0,
-			FileAttributes, 0, CreateDisposition, CreateOptions, NULL, 0);
+			FileAttributes, ShareAccess, CreateDisposition, CreateOptions, NULL, 0);
 #if COSCSI_DEBUG_OPEN
 	co_debug("ZwCreateFile: status: %x, iostatus: %s", (int)status, iostatus_string(IoStatusBlock));
 #endif

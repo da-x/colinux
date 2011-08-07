@@ -208,7 +208,7 @@ don't depend on each other.  The parameters are case sensitive.
 	cobd1=C:\temp\swapfs.img
 	cobd2=\Device\Cdrom0
 
-    scsiX=<type>,<path to image file>,<image size>
+    scsiX=<type>,<path to image file>,<image size>,<share option>
 
 	Use any number <X> of these to specify the block device image file.
 
@@ -220,7 +220,7 @@ don't depend on each other.  The parameters are case sensitive.
 	Linux kernel scans for partition tables, fdisk is usable.
 
 	<path to image file> can be a raw disk drive, with format
-	"\\.\PhysicalDriveX", where X starts with 0 for first harddisk.	Be
+	"\\.\PhysicalDriveX", where X starts with 0 for first harddisk. Be
 	carefully with these configs, you risk datas on your drive C:.
 	Don't mount a partition that is in use on windows side!
 
@@ -228,6 +228,15 @@ don't depend on each other.  The parameters are case sensitive.
 	create the storage device file if it does not exist.
 	BE VERY CAREFULL  with this parameter, as it can increase/decrease the
 	size of a file as well!
+
+	<share option> is optional 'shared' for raw disk drive. 'shared' can
+	use in combination with whole disk access (\\.\PhysicalDrive0) to allow
+	windows read and write access to partions on this disk.
+	But be carefully, do not mount a partition, that is mounted (has a drive
+	letter) under Windows at same time! Use it only, if truly need this.
+	Without this argument the whole disk is exclusively opend by coLinux
+	and blocked for Windows at the time coLinux has opened any partion on
+	this disk. This is the default and risk free access.
 
 	For scsi0 the the device inside coLinux is /dev/sda, if type is cdrom
 	or the image file is a part of partition self (all current images).
@@ -237,6 +246,7 @@ don't depend on each other.  The parameters are case sensitive.
 	Examples:
 	scsi0=disk,file.img
 	scsi1=cdrom,file.iso
+	scsi2=disk,"\\.\PhysicalDrive0"
 
     alias=<path to image file> | :cobdX
 
