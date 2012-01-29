@@ -623,16 +623,16 @@ case $colinux_os in
   linux) # for Linux as host
     check_exec_tool "gcc for kernel" "${gcc_guest_target_prefix}gcc -dumpversion" "$GCC_NEEDED"
     check_exec_tool "gcc g++" "${gcc_guest_target_prefix}g++ --version" "$GCC_NEEDED"
-    check_exec_tool "FLTK devel (patched)" "fltk-config --version" "$FLTK_VERSION" && \
-    if nm `fltk-config --libs` | grep -q "fl_x_global_event_hook"
-    then
-        if [ "$verbose" = "yes" ]; then
-            echo "  `fltk-config --libs`: Label fl_x_global_event_hook found"
-        fi
-    else
-        echo "  `fltk-config --libs`: label fl_x_global_event_hook not found"
-        echo "  Please set right path to a patched FLTK"
-    fi
+#    check_exec_tool "FLTK devel (patched)" "fltk-config --version" "$FLTK_VERSION" && \
+#    if nm `fltk-config --libs` | grep -q "fl_x_global_event_hook"
+#    then
+#        if [ "$verbose" = "yes" ]; then
+#            echo "  `fltk-config --libs`: Label fl_x_global_event_hook found"
+#        fi
+#    else
+#        echo "  `fltk-config --libs`: label fl_x_global_event_hook not found"
+#        echo "  Please set right path to a patched FLTK"
+#    fi
   ;;
   darwin) # for darwin as host
     GCC_NEEDED=""

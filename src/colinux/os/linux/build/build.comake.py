@@ -4,9 +4,9 @@ targets['executables'] = Target(
     Input('colinux-daemon'),
     Input('colinux-net-daemon'),
     Input('colinux-slirp-net-daemon'),
-    Input('colinux-console-fltk'),
     Input('colinux-debug-daemon'),
     Input('colinux-serial-daemon'),
+    Input('colinux-console-fltk'),
     ],
     tool = Empty(),
 )
