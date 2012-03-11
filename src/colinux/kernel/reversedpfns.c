@@ -55,8 +55,9 @@ co_rc_t co_manager_alloc_reversed_pfns(co_manager_t *manager)
 	co_debug("using %ld table entries for reversed physical mapping", manager->reversed_map_pgds_count);
 	manager->reversed_map_pgds = co_os_malloc(manager->reversed_map_pgds_count*sizeof(linux_pgd_t));
 	if (!manager->reversed_map_pgds) {
-		if (!CO_OK(rc)) /* TODO: handle error */
-			return rc;
+		/* TODO: handle error */
+		co_debug("TODO: pgds zero, handle error");
+		return rc;
 	}
 
 	covered_physical = 0;

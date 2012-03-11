@@ -304,17 +304,19 @@ co_rc_t co_os_manager_init(co_manager_t *manager, co_osdep_manager_t *osdep)
 		rc = CO_RC(ERROR);
 		goto error;
 	}
-	//dep->proc_root->owner = THIS_MODULE;
-
-	dep->proc_ioctl = create_proc_entry("ioctl",  S_IFREG|S_IRUSR|S_IWUSR, dep->proc_root);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30)
+	dep->proc_root->owner = THIS_MODULE;
+#endif
+	dep->proc_ioctl = proc_create("ioctl",  S_IFREG|S_IRUSR|S_IWUSR, dep->proc_root, &manager_fileops);
 	if (!dep->proc_ioctl) {
 		rc = CO_RC(ERROR);
 		goto error_root;
 	}
 
-	dep->proc_ioctl->proc_fops = &manager_fileops;
-	//dep->proc_ioctl->owner = THIS_MODULE;
-
+	//dep->proc_ioctl->proc_fops = &manager_fileops;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,30)
+	dep->proc_ioctl->owner = THIS_MODULE;
+#endif
 	return rc;
 
 error_root:

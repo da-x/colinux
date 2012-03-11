@@ -41,8 +41,8 @@ co_rc_t co_os_userspace_map(void *address, unsigned int pages, void **user_addre
 	void *result;
 
 	filp = filp_open("/dev/kmem", O_RDWR | O_LARGEFILE, 0);
-	if (!filp) {
-		co_debug("error: co_os_userspace_map: open /dev/kmem failed");
+	if (IS_ERR(filp)) {
+		co_debug("error: co_os_userspace_map: open /dev/kmem failed %d", filp);
 		return CO_RC(ERROR);
 	}
 
