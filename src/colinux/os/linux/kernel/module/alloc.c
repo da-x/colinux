@@ -40,38 +40,39 @@ co_rc_t co_os_userspace_map(void *address, unsigned int pages, void **user_addre
 	unsigned long pa;
 	void *result;
 
-	filp = filp_open("/dev/kmem", O_RDWR | O_LARGEFILE, 0);
-	if (IS_ERR(filp)) {
-		co_debug("error: co_os_userspace_map: open /dev/kmem failed %d", filp);
-		return CO_RC(ERROR);
-	}
-
 	pa = co_os_virt_to_phys(address);
 	if (!pa) {
 		co_debug("error: co_os_userspace_map: co_os_virt_to_phys failed");
-		filp_close(filp, NULL);
+		//filp_close(filp, NULL);
 		return CO_RC(ERROR);
 	}
 
-	result = (void *)do_mmap_pgoff(filp, 0, ((unsigned long)pages) << PAGE_SHIFT,
-					     PROT_EXEC | PROT_READ | PROT_WRITE,
+	filp = filp_open("/dev/kmem", O_RDWR | O_LARGEFILE, 0);
+	if (IS_ERR(filp) || NULL==filp) {
+		co_debug("co_os_userspace_map: open /dev/kmem failed %d", filp);
+                //if (remap_pfn_range(result, pa, pa>>PAGE_SHIFT, pages<<PAGE_SHIFT, PAGE_SHARED))
+                 //       return -EIO;		
+		return CO_RC(ERROR);
+	} else {
+		result = (void *)do_mmap_pgoff(filp, 0, ((unsigned long)pages) << PAGE_SHIFT,
+						     PROT_EXEC | PROT_READ | PROT_WRITE,
 #if LINUX_VERSION_CODE == KERNEL_VERSION(2,6,12)
-					     MAP_SHARED,
+						     MAP_SHARED,
 #else
-					     MAP_PRIVATE,
+						     MAP_PRIVATE,
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,13)
-					     ((unsigned)__va(pa)) >> PAGE_SHIFT
+						     ((unsigned)__va(pa)) >> PAGE_SHIFT
 #else
-					     pa >> PAGE_SHIFT
+						     pa >> PAGE_SHIFT
 #endif
-	);
-	if (IS_ERR(result)) {
-		co_debug("error: co_os_userspace_map: do_mmap_pgoff failed (errno %ld)", PTR_ERR(result));
-		filp_close(filp, NULL);
-		return CO_RC(ERROR);
+		);
+		if (IS_ERR(result)) {
+			co_debug("error: co_os_userspace_map: do_mmap_pgoff failed (errno %ld)", PTR_ERR(result));
+			filp_close(filp, NULL);
+			return CO_RC(ERROR);
+		}
 	}
-
 	*user_address_out = result;
 	*handle_out = filp;
 
@@ -80,10 +81,16 @@ co_rc_t co_os_userspace_map(void *address, unsigned int pages, void **user_addre
 
 void co_os_userspace_unmap(void *user_address, void *handle, unsigned int pages)
 {
-	struct file *filp = (struct file *)handle;
+	struct file *filp;
+	if (IS_ERR(handle) || NULL==handle) {
+		co_debug("TODO, unmap userspace?");
+	} else {
+		filp = (struct file *)handle;
 
-	if (user_address)
-		do_munmap(current->mm, (unsigned long)user_address, ((unsigned long)pages) << PAGE_SHIFT);
+		if (user_address)
+			do_munmap(current->mm, (unsigned long)user_address, ((unsigned long)pages) << PAGE_SHIFT);
 
-	filp_close(filp, NULL);
+		filp_close(filp, NULL);
+
+	}
 }

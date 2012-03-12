@@ -57,7 +57,7 @@ co_rc_t co_manager_alloc_reversed_pfns(co_manager_t *manager)
 	if (!manager->reversed_map_pgds) {
 		/* TODO: handle error */
 		co_debug("TODO: pgds zero, handle error");
-		return rc;
+		return CO_RC(ERROR);
 	}
 
 	covered_physical = 0;
