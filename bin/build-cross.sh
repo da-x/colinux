@@ -14,9 +14,10 @@ settings64()
 	# x86_64 (64 bit): MINGW_PACK="mingw-w64-bin_x86_64-linux_20100711_sezero.tar.gz"
 	# i686   (32 bit): MINGW_PACK="mingw-w64-bin_i686-linux_20100711_sezero.tar.gz"
 	#
-	MINGW_DATE="20100711"
-	MINGW_BDIR="W64_162041"
-	MINGW_PACK="mingw-w64-bin_$MACHINE-linux_${MINGW_DATE}_sezero.tar.gz"
+	MINGW_DATE="4.5_20111101"
+	MINGW_DATE2="20111101"
+	MINGW_BDIR="W64_180676"
+	MINGW_PACK="mingw-w64-bin_$MACHINE-linux_${MINGW_DATE2}_sezero.tar.gz"
 	MINGW_URL="http://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/sezero_${MINGW_DATE}"
 	MINGW_PACK_URL="$MINGW_URL/$MINGW_PACK/download"
 
@@ -41,8 +42,8 @@ download64()
 	 wget $MINGW_PACK_URL -P $DOWNLOADS
 
 	# Last update
-	test -f $DOWNLOADS/$UPDATE_PACK || \
-	 wget $UPDATE_PACK_URL -P $DOWNLOADS
+	#test -f $DOWNLOADS/$UPDATE_PACK || \
+	# wget $UPDATE_PACK_URL -P $DOWNLOADS
 
 	# Get ddk/psdk headers from MinGW testing (7M used)
 	# http://article.gmane.org/gmane.comp.gnu.mingw.w64.general/1079
@@ -63,7 +64,7 @@ unpack64()
 		rm -rf $PREFIX/sezero_tmp
 		# Update headers and libs
 		echo "Install update pack..."
-		unzip -q -o $DOWNLOADS/$UPDATE_PACK -d $PREFIX
+		#unzip -q -o $DOWNLOADS/$UPDATE_PACK -d $PREFIX
 		# Copy over all DDK headers
 		echo "Copy over DDK headers..."
 		cp -a $DDK_MIRROR/include $PREFIX/$TARGET
