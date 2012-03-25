@@ -42,16 +42,16 @@ co_rc_t co_os_userspace_map(void *address, unsigned int pages, void **user_addre
 
 	pa = co_os_virt_to_phys(address);
 	if (!pa) {
-		co_debug("error: co_os_userspace_map: co_os_virt_to_phys failed");
+		co_debug_error("co_os_virt_to_phys failed");
 		//filp_close(filp, NULL);
 		return CO_RC(ERROR);
 	}
+	printk("kern vmaddr 0x%x, phyaddr 0x%x\n", address, pa);
 
-	filp = filp_open("/dev/kmem", O_RDWR | O_LARGEFILE, 0);
+	//filp = filp_open("/dev/kmem", O_RDWR | O_LARGEFILE, 0);
+	filp = filp_open("/sys/kernel/debug/commap", O_RDWR | O_LARGEFILE, 0);
 	if (IS_ERR(filp) || NULL==filp) {
-		co_debug("co_os_userspace_map: open /dev/kmem failed %d", filp);
-                //if (remap_pfn_range(result, pa, pa>>PAGE_SHIFT, pages<<PAGE_SHIFT, PAGE_SHARED))
-                 //       return -EIO;		
+		co_debug_error("open commap failed %d", filp);
 		return CO_RC(ERROR);
 	} else {
 		result = (void *)do_mmap_pgoff(filp, 0, ((unsigned long)pages) << PAGE_SHIFT,
@@ -68,7 +68,7 @@ co_rc_t co_os_userspace_map(void *address, unsigned int pages, void **user_addre
 #endif
 		);
 		if (IS_ERR(result)) {
-			co_debug("error: co_os_userspace_map: do_mmap_pgoff failed (errno %ld)", PTR_ERR(result));
+			co_debug_error("do_mmap_pgoff failed (errno %ld)", PTR_ERR(result));
 			filp_close(filp, NULL);
 			return CO_RC(ERROR);
 		}
