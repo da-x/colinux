@@ -16,7 +16,7 @@
    * Make screen scroll working.
    * Test linux host cofb.
    * Copy from X window then paste to host.
-   * Seamless window ref. vbox addon
+   * Seamless window, ref. vbox addon
 
  * Consoles:
    * Focus change handling.
@@ -92,3 +92,8 @@
    * Clear out some function naming brain damage and make more use
      of the 'static' keyword :).
    * The usual tidbits: comments, refactoring, etc.
+
+* Linux x86 host:
+   * figure out why this doesn't work under vbox. (vbox program freeze when co_switch())
+   * It maybe easier to port the linux 64bit host first.
+

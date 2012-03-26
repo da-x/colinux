@@ -585,10 +585,11 @@ For building and runnning coLinux on Linux you need:
    the kernel module (colinux.ko).
    Currently works only with host kernel 2.6.x,
    tested up to 2.6.8.1, 2.6.10 - 2.6.18, 2.6.22.
+   tested 2.6.32-40 ubuntu host with 2.6.33.7 colinux
    Host kernel with CONFIG_REGPARM is usable since coLinux 0.7.2.
    Kernel compiler of host must match the ABI.
    Host with 64bit can't compile the module currently.
-2. patched fltk-1.1.6 (see patch directory) installed in the 
+2. patched fltk-1.1.6(or 1.1.10? see patch directory) installed in the 
    system (./configure ; make ; su -c "make install")
    You can also install this version under your HOME (see below).
 3. Properly set the environment variables (e.g.):
@@ -596,8 +597,10 @@ For building and runnning coLinux on Linux you need:
   export COLINUX_TARGET_KERNEL_PATH=/path/to/your/patched/colinux/kernel/tree
   export COLINUX_HOST_KERNEL_DIR=/path/to/your/host/kernel
   export COLINUX_HOST_OS=linux
-
-And run make in the dir 'src'.
+  or it could be as simple as the followin under 'devel'
+> ./configure --target=i686-pc-linux
+  
+And run make in the dir 'devel'.
 
 Running it is quite simple. For example, consider these list of files:
 
@@ -610,7 +613,9 @@ Running it is quite simple. For example, consider these list of files:
 -rwxr-xr-x  1 root root 2614823 Jun 21 13:02 vmlinux
 
 The steps are basically:
-
+note, new kernel kmem has been disables, we changed to debugfs.
+make sure /sys/kernel/debugfs is mounted. Otherwise,
+> sudo mount -t debugfs none /sys/kernel/debug/
     xhost +
     su
     insmod colinux.ko
