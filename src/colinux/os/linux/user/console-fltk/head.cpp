@@ -32,7 +32,19 @@ COLINUX_DEFINE_MODULE("colinux-fltk-console");
  *
  * - DA
  */
-
+static const short int char_key_scan[0x40] =
+{
+        /* unused */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,              /* FF00 */
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,              /* FF08 */
+        /* normal keys */
+        0x10, 0x0b, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,              /* FF10 */
+	0x08, 0x09, 0x0a, 0x0c, 0x0d, 0x1a, 0x1b, 0x27,              /* FF18 */
+        0x28, 0x01, 0x33, 0x34, 0x35, 0x3f, 0x1e, 0x30,              /* FF20 */
+        0x2e, 0x20, 0x12, 0x21, 0x22, 0x23, 0x17, 0x24,              /* FF28 */
+        0x25, 0x26, 0x32, 0x31, 0x18, 0x19, 0x10, 0x13,              /* FF30 */
+        0x1f, 0x14, 0x16, 0x2f, 0x11, 0x2d, 0x15, 0x2c               /* FF38 */
+};
 static const short int nonchar_key_scan[256] =
 {
 	/* unused */
@@ -131,6 +143,7 @@ static int global_event_hook(const XEvent& thisevent)
 		int scan = 0;
 
 		len = XLookupString((XKeyEvent *)&(xevent.xkey), buffer, sizeof(buffer)-1, &keysym, 0);
+		//printf("%x %x %x\n",xevent.type,keycode,keysym);
 
 		if (keysym) {
 			if ((keysym >> 8) == 0xFF) {
@@ -139,21 +152,31 @@ static int global_event_hook(const XEvent& thisevent)
 				scan = nonchar_key_scan2[keysym & 0xff];
 			} else if (keysym == 0x20) {
 				scan = 0x39;
+                        } else if (0x10<keycode && keycode<0x40) {
+                                scan = char_key_scan[keycode];
 			} else {
-				scan = keycode - 8;
+				//scan = keycode - 8;
 			}
 		}
+		sc.mode = CO_KBD_SCANCODE_RAW;
 
 		if (xevent.type != KeyPress) {
-			if (scan_code_state[scan] == 0)
-				return 0;	/* ignore release of not pressed keys */
-			scan_code_state[scan] = 0;
-			scan |= 0x80;
+	           if (scan_code_state[scan] == 0) {
+			/* this happens when key repeated */
+                        /* send e0 if extended key */
+                        if (scan & 0xFF00) {
+                                sc.code = 0xE0;
+                                co_user_console_handle_scancode(sc);
+                        }
+                        sc.code = scan & 0xFF;
+                        co_user_console_handle_scancode(sc);
+        	    }
+		    scan_code_state[scan] = 0;
+		    scan |= 0x80;
 		} else {
-			scan_code_state[scan] = 1;
+		    scan_code_state[scan] = 1;
 		}
 
-		sc.mode = CO_KBD_SCANCODE_RAW;
 		/* send e0 if extended key */
 		if (scan & 0xFF00) {
 			sc.code = 0xE0;
