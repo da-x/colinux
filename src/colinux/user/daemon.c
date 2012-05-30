@@ -413,6 +413,10 @@ co_rc_t co_daemon_monitor_create(co_daemon_t* daemon)
 
 	import = &create_params.import;
 
+// bin/build-common.sh strip_kernel need this format, 
+// --> rc = co_daemon_load_symbol_and_data(daemon, "co_arch_info", &import->kernel_co_arch_info,
+//     _____^^^^^^^^^^^^^^^^^^^^^__________________^************^___^^^^^^______________________
+
 	rc = co_daemon_load_symbol(daemon, "_kernel_start", &import->kernel_start);
 	if (!CO_OK(rc))
 		goto out;
@@ -442,17 +446,13 @@ co_rc_t co_daemon_monitor_create(co_daemon_t* daemon)
 	if (!CO_OK(rc))
 		goto out;
 
-	rc = co_daemon_load_symbol_and_data(daemon,
-					    "co_info",
-					    &import->kernel_co_info,
+	rc = co_daemon_load_symbol_and_data(daemon, "co_info", &import->kernel_co_info,
 					    &create_params.info,
 					    sizeof(create_params.info));
 	if (!CO_OK(rc))
 		goto out;
 
-	rc = co_daemon_load_symbol_and_data(daemon,
-					    "co_arch_info",
-					    &import->kernel_co_arch_info,
+	rc = co_daemon_load_symbol_and_data(daemon, "co_arch_info", &import->kernel_co_arch_info,
 					    &create_params.arch_info,
 					    sizeof(create_params.arch_info));
 	if (!CO_OK(rc))
