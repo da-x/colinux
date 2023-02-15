@@ -17,6 +17,7 @@ http://www.sourceforge.net/projects/colinux
 NOTES ON UPGRADING:
 
  Upgrading from coLinux 0.7.3 and before
+
  -- Some dev distries increase eth1, eth2, eth3, ... on every boot.
     Typicaly have no network, but can see it with "cat /proc/net/dev".
     As workarrount set an unique MAC address for all network interfaces
@@ -24,6 +25,7 @@ NOTES ON UPGRADING:
     Debian: Remove all entries from /etc/udev/rules.d/z25_persistent-net.rules
 
  Upgrading from coLinux 0.6.4 and before
+
  -- XML config files have been removed.  Use the command-line
     syntax in a name=value per line plain text file instead:
 
@@ -44,6 +46,7 @@ NOTES ON UPGRADING:
     After modules are installed, you can remove the initrd from config.
 
  Upgrading from coLinux 0.6.1 and before
+
  -- Gentoo users need to be careful, Gentoo tends to use devfs when
     upgrading from 0.6.1 and so block device names change from cobdX to cobd/X
     and render the image unbootable.  For more details and solutions see the
@@ -232,24 +235,29 @@ The following resources are available if you need help getting going, or find
 bugs, etc.
 
 	IRC
+
 		The official IRC location is at server irc.oftc.net,
 		channel #colinux.
 
 	WEB
+
 		The official website, containing downloads, documentation,
 		FAQ, WIKI, etc., is at http://www.colinux.org
 
 	Project Web-site
+
 		Source Forge Project website is at 
 		http://www.sourceforge.net/projects/colinux
 
 	WIKI
+
 		The community has contributed wonderful and helpful
 		information on numerous topics, which is available at
 		http://colinux.wikia.com/
 		(You can contribute here too!)
 
 	Mailing Lists
+
 		Visit the colinux.org website and choose from the available
 		mailing lists (user and devel) to join, view archives, etc.
 
