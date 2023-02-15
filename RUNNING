@@ -154,9 +154,9 @@ run anything.
 
         net start "Cooperative Linux"
 
-      Last, go to the installation directory and double-click on
+      Last, go to the installation directory and double-click on either of:
 
-        colinux-console-fltk.exe  OR
+        colinux-console-fltk.exe
         colinux-console-nt.exe
 
    The console window opens and you would see a Linux machine booting in
