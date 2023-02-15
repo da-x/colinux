@@ -29,14 +29,14 @@ NOTES ON UPGRADING:
   - XML config files have been removed.  Use the command-line
     syntax in a name=value per line plain text file instead:
 
-    kernel=vmlinux
-    initrd=initrd.gz
-    mem=32
-    cobd0=fs\root_fs
-    cobd1=fs\swap_fs
-    eth0=slirp
-    root=/dev/cobd0
-    ro
+        kernel=vmlinux
+        initrd=initrd.gz
+        mem=32
+        cobd0=fs\root_fs
+        cobd1=fs\swap_fs
+        eth0=slirp
+        root=/dev/cobd0
+        ro
 
     Locate for tool "colinux-xml2cfg", a XML to CFG converter for coLinux.
 
@@ -133,28 +133,28 @@ run anything.
    if not, then you need to change paths (especially for vmlinux) in the
    config file.
 
-    a. Run as an regular application.
+   a. Run as an regular application.
 
         colinux-daemon.exe @example.conf
 
-       See file colinux-daemon.txt for details about possible
-       command-line arguments.
+      See file colinux-daemon.txt for details about possible
+      command-line arguments.
 
-    b. Running as an service.
+   b. Running as an service.
 
         colinux-daemon.exe @example.conf --install-service "Cooperative Linux"
 
-       Also, to remove the service:
+      Also, to remove the service:
 
         colinux-daemon.exe --remove-service "Cooperative Linux".
 
-       Then go to the Service Manager and start the "Cooperative Linux"
-       service,
-       OR start from command prompt:
+      Then go to the Service Manager and start the "Cooperative Linux"
+      service,
+      OR start from command prompt:
 
         net start "Cooperative Linux"
 
-       Last, go to the installation directory and double-click on
+      Last, go to the installation directory and double-click on
 
         colinux-console-fltk.exe  OR
         colinux-console-nt.exe
@@ -236,30 +236,30 @@ bugs, etc.
 
   - IRC
 
-        The official IRC location is at server irc.oftc.net,
-        channel #colinux.
+    The official IRC location is at server irc.oftc.net,
+    channel #colinux.
 
   - WEB
 
-        The official website, containing downloads, documentation,
-        FAQ, WIKI, etc., is at http://www.colinux.org
+    The official website, containing downloads, documentation,
+    FAQ, WIKI, etc., is at http://www.colinux.org
 
   - Project Web-site
 
-        Source Forge Project website is at 
-        http://www.sourceforge.net/projects/colinux
+    Source Forge Project website is at 
+    http://www.sourceforge.net/projects/colinux
 
   - WIKI
 
-        The community has contributed wonderful and helpful
-        information on numerous topics, which is available at
-        http://colinux.wikia.com/
-        (You can contribute here too!)
+    The community has contributed wonderful and helpful
+    information on numerous topics, which is available at
+    http://colinux.wikia.com/
+    (You can contribute here too!)
 
   - Mailing Lists
 
-        Visit the colinux.org website and choose from the available
-        mailing lists (user and devel) to join, view archives, etc.
+    Visit the colinux.org website and choose from the available
+    mailing lists (user and devel) to join, view archives, etc.
 
 
 -
