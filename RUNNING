@@ -4,14 +4,14 @@ Cooperative Linux $CO_VERSION README
   Instructions for running Cooperative Linux for Windows (see source for
 how to build and run coLinux for Linux)
 
-WARNING: 
+WARNING:
 
   Although Cooperative Linux may be actually useful on some setups
 (e.g, stable setups), it is still meant for testing purposes only.
 This means that running it may crash the host (Windows or Linux system).
 
   PLEASE REPORT and read about problems on the colinux-devel@sourceforge.net
-mailing list or file an Bug report at 
+mailing list or file an Bug report at
 http://www.sourceforge.net/projects/colinux
 
 NOTES ON UPGRADING:
@@ -102,7 +102,7 @@ run anything.
     See the Wiki at the page 'Network' for more information/help.
 
 4. Choose whether to download a root file system from the Cooperative Linux
-   sourceforge page. The installer will try to download directly in 
+   sourceforge page. The installer will try to download directly in
    the next step but if you experience any issues you can visit the
    Sourceforge page directly at:
 
@@ -110,7 +110,7 @@ run anything.
 
    NOTE ABOUT DISK SPACE: Each image extracts to over 1GB (or more), so make
    sure you have enough space there before you start downloading/extracting
-   it. If you are manually downloading, put the extracted file in the 
+   it. If you are manually downloading, put the extracted file in the
    installation directory.  To unzip .bz2 files, you can use Winzip or 7-Zip
    (or the bzip utilities in Cygwin, etc).  The image MUST be extracted from
    the compressed archive before use!
@@ -231,7 +231,7 @@ the project out.  Also, subscribing to the Mailing List is helpful.
 Getting Help
 ------------
 
-The following resources are available if you need help getting going, or find 
+The following resources are available if you need help getting going, or find
 bugs, etc.
 
   - IRC
@@ -246,7 +246,7 @@ bugs, etc.
 
   - Project Web-site
 
-    Source Forge Project website is at 
+    Source Forge Project website is at
     http://www.sourceforge.net/projects/colinux
 
   - WIKI
@@ -262,7 +262,7 @@ bugs, etc.
     mailing lists (user and devel) to join, view archives, etc.
 
 
--
+---
 Dan Aloni
 da-x@gmx.net
 
