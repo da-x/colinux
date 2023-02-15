@@ -4,47 +4,50 @@ Cooperative Linux $CO_VERSION README
   Instructions for running Cooperative Linux for Windows (see source for
 how to build and run coLinux for Linux)
 
-WARNING: 
+WARNING:
 
   Although Cooperative Linux may be actually useful on some setups
 (e.g, stable setups), it is still meant for testing purposes only.
 This means that running it may crash the host (Windows or Linux system).
 
   PLEASE REPORT and read about problems on the colinux-devel@sourceforge.net
-mailing list or file an Bug report at 
+mailing list or file an Bug report at
 http://www.sourceforge.net/projects/colinux
 
 NOTES ON UPGRADING:
 
  Upgrading from coLinux 0.7.3 and before
- -- Some dev distries increase eth1, eth2, eth3, ... on every boot.
+
+  - Some dev distries increase eth1, eth2, eth3, ... on every boot.
     Typicaly have no network, but can see it with "cat /proc/net/dev".
     As workarrount set an unique MAC address for all network interfaces
     in config file. Or disable udev.
     Debian: Remove all entries from /etc/udev/rules.d/z25_persistent-net.rules
 
  Upgrading from coLinux 0.6.4 and before
- -- XML config files have been removed.  Use the command-line
+
+  - XML config files have been removed.  Use the command-line
     syntax in a name=value per line plain text file instead:
 
-	kernel=vmlinux
-	initrd=initrd.gz
-	mem=32
-	cobd0=fs\root_fs
-	cobd1=fs\swap_fs
-	eth0=slirp
-	root=/dev/cobd0
-	ro
+        kernel=vmlinux
+        initrd=initrd.gz
+        mem=32
+        cobd0=fs\root_fs
+        cobd1=fs\swap_fs
+        eth0=slirp
+        root=/dev/cobd0
+        ro
 
     Locate for tool "colinux-xml2cfg", a XML to CFG converter for coLinux.
 
- -- The file initrd contains no modules.  Modules are only in the file
+  - The file initrd contains no modules.  Modules are only in the file
     vmlinux-modules.tar.gz.  The initrd extracts modules over device cofs31
     automaticly, if you configure it as "initrd=initrd.gz" in config file.
     After modules are installed, you can remove the initrd from config.
 
  Upgrading from coLinux 0.6.1 and before
- -- Gentoo users need to be careful, Gentoo tends to use devfs when
+
+  - Gentoo users need to be careful, Gentoo tends to use devfs when
     upgrading from 0.6.1 and so block device names change from cobdX to cobd/X
     and render the image unbootable.  For more details and solutions see the
     2.6 related information on the Wiki.
@@ -65,41 +68,41 @@ run anything.
 
 3. Choose networking method(s) to install. Currently there are three choices:
 
-	a. Slirp - The simplest way to use networks in coLinux.  This runs as
-	user application on the Windows host and needs no changes on the host
-	networks.  Slirp is a good choice for dialup networks and WLAN cards.
-	Slirp use all times the current outgoing interface and forwards (NAT)
-	networking from linux to the internet world.  Slirp is a virtual
-	Gateway for all outgoing TCP and UDP connections (no IMCP, no ping).
-	Standard installation works as firewall to your linux.  It means, you
-	can not connect from windows side to your linux.  To allow incomings
-	from host system to linux, must additional configure 'redirections'.
-	Slirp has a DHCP-Server for linux side.  To use slirp, edit your CFG
-	file and set "slirp" as first parameter.  Inside linux use DHCP-Client
-	to get your network configuration.
+    a. Slirp - The simplest way to use networks in coLinux.  This runs as
+    user application on the Windows host and needs no changes on the host
+    networks.  Slirp is a good choice for dialup networks and WLAN cards.
+    Slirp use all times the current outgoing interface and forwards (NAT)
+    networking from linux to the internet world.  Slirp is a virtual
+    Gateway for all outgoing TCP and UDP connections (no IMCP, no ping).
+    Standard installation works as firewall to your linux.  It means, you
+    can not connect from windows side to your linux.  To allow incomings
+    from host system to linux, must additional configure 'redirections'.
+    Slirp has a DHCP-Server for linux side.  To use slirp, edit your CFG
+    file and set "slirp" as first parameter.  Inside linux use DHCP-Client
+    to get your network configuration.
 
-	b. TAP driver - This method installs a virtual network adapter that
-	is typically a separate network between Linux guest and Windows host.
-	This can then be either shared or bridged with a physical network
-	connection.  Note that this requires Internet Connection Sharing
-	or Bridging (Windows XP or higher) or a 3rd party Internet connection
-	sharing application.  The TAP method autmatically chooses the TAP
-	first TAP adapter it finds, if you have multiple TAP WIN32 devices, you
-	can specify the specific adapter by name (for sample "TAP-Colinux").
+    b. TAP driver - This method installs a virtual network adapter that
+    is typically a separate network between Linux guest and Windows host.
+    This can then be either shared or bridged with a physical network
+    connection.  Note that this requires Internet Connection Sharing
+    or Bridging (Windows XP or higher) or a 3rd party Internet connection
+    sharing application.  The TAP method autmatically chooses the TAP
+    first TAP adapter it finds, if you have multiple TAP WIN32 devices, you
+    can specify the specific adapter by name (for sample "TAP-Colinux").
 
-	c. Bridging - This method allows the Cooperative Linux network
-	interface to directly interoperate with one of your built in networking
-	interfaces.  You'll need to edit the configuration file to reflect
-	that type "ndis-bridge" and the 'name' parameter needs to be set to a
-	substring of the network connection name that you will be bridging
-	with (e.g. "Local Area Connection"). Bridging does not working with
-	WiFi cards.
+    c. Bridging - This method allows the Cooperative Linux network
+    interface to directly interoperate with one of your built in networking
+    interfaces.  You'll need to edit the configuration file to reflect
+    that type "ndis-bridge" and the 'name' parameter needs to be set to a
+    substring of the network connection name that you will be bridging
+    with (e.g. "Local Area Connection"). Bridging does not working with
+    WiFi cards.
 
-	You can select all types on installation and use one of these later.
-	See the Wiki at the page 'Network' for more information/help.
+    You can select all types on installation and use one of these later.
+    See the Wiki at the page 'Network' for more information/help.
 
 4. Choose whether to download a root file system from the Cooperative Linux
-   sourceforge page. The installer will try to download directly in 
+   sourceforge page. The installer will try to download directly in
    the next step but if you experience any issues you can visit the
    Sourceforge page directly at:
 
@@ -107,7 +110,7 @@ run anything.
 
    NOTE ABOUT DISK SPACE: Each image extracts to over 1GB (or more), so make
    sure you have enough space there before you start downloading/extracting
-   it. If you are manually downloading, put the extracted file in the 
+   it. If you are manually downloading, put the extracted file in the
    installation directory.  To unzip .bz2 files, you can use Winzip or 7-Zip
    (or the bzip utilities in Cygwin, etc).  The image MUST be extracted from
    the compressed archive before use!
@@ -130,31 +133,31 @@ run anything.
    if not, then you need to change paths (especially for vmlinux) in the
    config file.
 
-	a. Run as an regular application.
+   a. Run as an regular application.
 
-		colinux-daemon.exe @example.conf
+        colinux-daemon.exe @example.conf
 
-	   See file colinux-daemon.txt for details about possible
-	   command-line arguments.
+      See file colinux-daemon.txt for details about possible
+      command-line arguments.
 
-	b. Running as an service.
+   b. Running as an service.
 
-		colinux-daemon.exe @example.conf --install-service "Cooperative Linux"
+        colinux-daemon.exe @example.conf --install-service "Cooperative Linux"
 
-	   Also, to remove the service:
+      Also, to remove the service:
 
-		colinux-daemon.exe --remove-service "Cooperative Linux".
+        colinux-daemon.exe --remove-service "Cooperative Linux".
 
-	   Then go to the Service Manager and start the "Cooperative Linux"
-	   service,
-	   OR start from command prompt:
+      Then go to the Service Manager and start the "Cooperative Linux"
+      service,
+      OR start from command prompt:
 
-		net start "Cooperative Linux"
+        net start "Cooperative Linux"
 
-	   Last, go to the installation directory and double-click on
+      Last, go to the installation directory and double-click on either of:
 
-		colinux-console-fltk.exe  OR
-		colinux-console-nt.exe
+        colinux-console-fltk.exe
+        colinux-console-nt.exe
 
    The console window opens and you would see a Linux machine booting in
    that window.
@@ -168,7 +171,7 @@ run a very limited linux shell from the ramdisk file.  For this you not
 needs to download an image file, and no need any networking.
 For such test use this command line:
 
-	colinux-daemon kernel=vmlinux initrd=initrd.gz root=/dev/ram0
+    colinux-daemon kernel=vmlinux initrd=initrd.gz root=/dev/ram0
 
 Try some Linux commands: sh, ls, cd, pwd, uname -a, halt (shutting down).
 
@@ -184,31 +187,31 @@ See colinux-daemon.txt and the Wiki for additional help on these tasks.
 Common Problems
 ---------------
 
-    "Unable to mount root fs"
+  - "Unable to mount root fs"
 
-	Generally this means that the root filesystem image is
-	missing, was specified incorrectly, or not uncompressed.
+    Generally this means that the root filesystem image is
+    missing, was specified incorrectly, or not uncompressed.
 
-	Check the device name and index (cobd0, hda1).
-	Verify, that the filename behind (cobd0=...) exist and is
-	readable from current working directory, try it with a
-	simple "DIR ..." on command prompt.
+    Check the device name and index (cobd0, hda1).
+    Verify, that the filename behind (cobd0=...) exist and is
+    readable from current working directory, try it with a
+    simple "DIR ..." on command prompt.
 
-    "Vista admin"
+  - "Vista admin"
 
-	Under Vista an user within administrator group must run the file
-	C:\Windows\system32\cmd.exe from explorer context menu "run as ..." and
-	admin account to installing the driver or service from command line.
+    Under Vista an user within administrator group must run the file
+    C:\Windows\system32\cmd.exe from explorer context menu "run as ..." and
+    admin account to installing the driver or service from command line.
 
-    "no network after update" or "network interface increments on every boot"
+  - "no network after update" or "network interface increments on every boot"
 
-	Since PCI is enabled, some distris create a new network interface
-	eth1, eth2, eth3, ... on every boot, because coLinux creates a new
-	randomly MAC on every boot. As workarrount set an unique MAC for all
-	network	interfaces in config file. See examples in colinux-daemon.txt
-	Debian: To go back with eth0 must remove all ethX entries from
-	/etc/udev/rules.d/z25_persistent-net.rules
-	"cat /proc/net/dev" shows all current networks names in coLinux.
+    Since PCI is enabled, some distris create a new network interface
+    eth1, eth2, eth3, ... on every boot, because coLinux creates a new
+    randomly MAC on every boot. As workarrount set an unique MAC for all
+    network interfaces in config file. See examples in colinux-daemon.txt
+    Debian: To go back with eth0 must remove all ethX entries from
+    /etc/udev/rules.d/z25_persistent-net.rules
+    "cat /proc/net/dev" shows all current networks names in coLinux.
 
   Additional problems not know at time of release are typically
 documented on the Wiki (http://colinux.wikia.com/), look
@@ -228,33 +231,38 @@ the project out.  Also, subscribing to the Mailing List is helpful.
 Getting Help
 ------------
 
-The following resources are available if you need help getting going, or find 
+The following resources are available if you need help getting going, or find
 bugs, etc.
 
-	IRC
-		The official IRC location is at server irc.oftc.net,
-		channel #colinux.
+  - IRC
 
-	WEB
-		The official website, containing downloads, documentation,
-		FAQ, WIKI, etc., is at http://www.colinux.org
+    The official IRC location is at server irc.oftc.net,
+    channel #colinux.
 
-	Project Web-site
-		Source Forge Project website is at 
-		http://www.sourceforge.net/projects/colinux
+  - WEB
 
-	WIKI
-		The community has contributed wonderful and helpful
-		information on numerous topics, which is available at
-		http://colinux.wikia.com/
-		(You can contribute here too!)
+    The official website, containing downloads, documentation,
+    FAQ, WIKI, etc., is at http://www.colinux.org
 
-	Mailing Lists
-		Visit the colinux.org website and choose from the available
-		mailing lists (user and devel) to join, view archives, etc.
+  - Project Web-site
+
+    Source Forge Project website is at
+    http://www.sourceforge.net/projects/colinux
+
+  - WIKI
+
+    The community has contributed wonderful and helpful
+    information on numerous topics, which is available at
+    http://colinux.wikia.com/
+    (You can contribute here too!)
+
+  - Mailing Lists
+
+    Visit the colinux.org website and choose from the available
+    mailing lists (user and devel) to join, view archives, etc.
 
 
--
+---
 Dan Aloni
 da-x@gmx.net
 
