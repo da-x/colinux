@@ -18,7 +18,7 @@ NOTES ON UPGRADING:
 
  Upgrading from coLinux 0.7.3 and before
 
- -- Some dev distries increase eth1, eth2, eth3, ... on every boot.
+  - Some dev distries increase eth1, eth2, eth3, ... on every boot.
     Typicaly have no network, but can see it with "cat /proc/net/dev".
     As workarrount set an unique MAC address for all network interfaces
     in config file. Or disable udev.
@@ -26,7 +26,7 @@ NOTES ON UPGRADING:
 
  Upgrading from coLinux 0.6.4 and before
 
- -- XML config files have been removed.  Use the command-line
+  - XML config files have been removed.  Use the command-line
     syntax in a name=value per line plain text file instead:
 
     kernel=vmlinux
@@ -40,14 +40,14 @@ NOTES ON UPGRADING:
 
     Locate for tool "colinux-xml2cfg", a XML to CFG converter for coLinux.
 
- -- The file initrd contains no modules.  Modules are only in the file
+  - The file initrd contains no modules.  Modules are only in the file
     vmlinux-modules.tar.gz.  The initrd extracts modules over device cofs31
     automaticly, if you configure it as "initrd=initrd.gz" in config file.
     After modules are installed, you can remove the initrd from config.
 
  Upgrading from coLinux 0.6.1 and before
 
- -- Gentoo users need to be careful, Gentoo tends to use devfs when
+  - Gentoo users need to be careful, Gentoo tends to use devfs when
     upgrading from 0.6.1 and so block device names change from cobdX to cobd/X
     and render the image unbootable.  For more details and solutions see the
     2.6 related information on the Wiki.
@@ -187,7 +187,7 @@ See colinux-daemon.txt and the Wiki for additional help on these tasks.
 Common Problems
 ---------------
 
-    "Unable to mount root fs"
+  - "Unable to mount root fs"
 
     Generally this means that the root filesystem image is
     missing, was specified incorrectly, or not uncompressed.
@@ -197,13 +197,13 @@ Common Problems
     readable from current working directory, try it with a
     simple "DIR ..." on command prompt.
 
-    "Vista admin"
+  - "Vista admin"
 
     Under Vista an user within administrator group must run the file
     C:\Windows\system32\cmd.exe from explorer context menu "run as ..." and
     admin account to installing the driver or service from command line.
 
-    "no network after update" or "network interface increments on every boot"
+  - "no network after update" or "network interface increments on every boot"
 
     Since PCI is enabled, some distris create a new network interface
     eth1, eth2, eth3, ... on every boot, because coLinux creates a new
@@ -234,29 +234,29 @@ Getting Help
 The following resources are available if you need help getting going, or find 
 bugs, etc.
 
-    IRC
+  - IRC
 
         The official IRC location is at server irc.oftc.net,
         channel #colinux.
 
-    WEB
+  - WEB
 
         The official website, containing downloads, documentation,
         FAQ, WIKI, etc., is at http://www.colinux.org
 
-    Project Web-site
+  - Project Web-site
 
         Source Forge Project website is at 
         http://www.sourceforge.net/projects/colinux
 
-    WIKI
+  - WIKI
 
         The community has contributed wonderful and helpful
         information on numerous topics, which is available at
         http://colinux.wikia.com/
         (You can contribute here too!)
 
-    Mailing Lists
+  - Mailing Lists
 
         Visit the colinux.org website and choose from the available
         mailing lists (user and devel) to join, view archives, etc.
